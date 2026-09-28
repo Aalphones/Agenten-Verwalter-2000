@@ -17,7 +17,7 @@ Die Bedienung orientiert sich an der Claude-Erweiterung für VS Code, damit sich
 MVP (Version 1):
 
 - **Navigation:** Session-Liste (gruppiert nach „Braucht dich“ / „Läuft“ / „Abgeschlossen“), neue Session (drei Schritte: Aufgabe mit Anhängen → Repositories → Agent), Session umbenennen und archivieren
-- **Chat:** Nachrichten von User und Agent, eingeklappte Tool-Aktivität und Gedankengang, Aufgabenliste, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
+- **Chat:** Nachrichten von User und Agent, Antworten als Markdown mit Code-Blöcken (Syntaxfarben, Kopieren-Knopf), eingeklappte Tool-Aktivität und Gedankengang, Aufgabenliste, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
 - **Eingabe:** Bilder und Dateien anhängen (Knopf, Hineinziehen, Einfügen); Skills und Befehle über `/`-Knopf und `/` im Eingabefeld; Modell und Denkaufwand während der Session wechseln; Modus (Manuell, Automatisch bearbeiten, Planen, Auto)
 - **Artefakte:** von Claude in einer Session erstellte Artefakte als Karte im Chat und im Reiter „Artefakte“ der Session
 - **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind in einem Seitenpanel der Session sichtbar und einsehbar
@@ -46,7 +46,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 | Gemeinsame Typen | aus Rust nach TypeScript generiert (`ts-rs`, siehe [ADR 002](decisions/002-typgenerierung-und-listen.md)) | Eine Quelle für Session-, Event- und Status-Typen |
 | Git | native Git-Kommandozeile, vom Rust-Kern aufgerufen | Deterministisch, unabhängig von der KI-Logik |
 | Diff | Monaco Diff Editor, lazy geladen | Nur die aktive Datei, keine Instanz pro Datei |
-| Agent | Claude (Anbindungsweg offen, s.u.) | |
+| Agent | Claude-Kommandozeile im JSON-Stream-Modus, direkt vom Rust-Kern gestartet ([ADR 003](decisions/003-claude-anbindung.md)) | Das SDK startet intern dieselbe Kommandozeile; ein Node-Hilfsprozess pro Agent brächte nur eine Schicht mehr |
 | IPC | Tauri Commands + Events | |
 | Paketmanager | pnpm | |
 | Projektform | eine App (`src/` + `src-tauri/`), kein Monorepo | Monorepo erst, wenn ein zweites Paket echten Bedarf hat |
@@ -67,7 +67,8 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 
 1. **Gerüst:** Rust-Toolchain, Tauri-2-App mit React, Lint/Typecheck/Build lokal und als GitHub-Actions-Prüfung.
 1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten, abgelegt in [design/2026-09-28_hauptansichten/](design/2026-09-28_hauptansichten/README.md) — abgenommen am 2026-09-28. Jeder folgende Meilenstein baut die ihm dort zugeordneten Tafeln gleich nach Entwurf, keine Wegwerf-Oberfläche.
-2. **Agent-Anbindung (Durchstich):** Claude starten, Events empfangen, unterbrechen, fortsetzen, Status erkennen — Entscheidung über den Anbindungsweg fällt hier. Der Durchstich prüft auch, ob Anhänge, Skills aus mehreren Repositories, Modell- und Moduswechsel, Artefakte sowie Dev-Server und Subagenten mit dem gewählten Weg gehen (Fragen in [knowledge/GAPS.md](knowledge/GAPS.md)); gebaut werden Chat-Ansicht und Eingabeleiste nach Entwurf.
+2a. **Durchstich & Chat:** Claude starten, Events empfangen, Rückfragen beantworten, unterbrechen, fortsetzen, Status erkennen, Modell, Modus und Denkaufwand wechseln; gebaut werden App-Rahmen, Leerzustand, Neue Session (ohne Repositories), Chat-Verlauf mit Markdown und kopierbaren Code-Blöcken sowie die Eingabeleiste nach Entwurf. Der Agent arbeitet in einem leeren Ordner pro Session. Anbindungsweg: [ADR 003](decisions/003-claude-anbindung.md).
+2b. **Anhänge, Skills, Hintergrund:** Anhänge, `/`-Menü mit Skills, Hintergrund-Panel mit Prozessen und Subagenten (Fragen in [knowledge/GAPS.md](knowledge/GAPS.md)).
 3. **Worktree-Orchestrierung:** mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 4. **Persistenz & Wiederherstellung:** Sessions, Nachrichten, Events in SQLite; nach Neustart laufende Agenten wiederfinden.
 5. **Changes & Diff:** Diffs über mehrere Repositories zusammenfassen, committed/uncommitted, lazy Diff-Ansicht.
@@ -75,7 +76,5 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 
 ## Offene Fragen
 
-- **Wie wird Claude angebunden?** Das Claude Agent SDK gibt es für TypeScript und Python, nicht für Rust. Möglich sind (a) ein Node-Hilfsprozess mit dem SDK, gesteuert vom Rust-Kern, oder (b) die `claude`-Kommandozeile im JSON-Stream-Modus, direkt vom Rust-Kern gestartet. Das Konzept schließt einen separaten Node-Server aus, meint damit aber einen dauerhaften Server, nicht zwingend einen Hilfsprozess pro Agent. Entscheidung per Durchstich in Meilenstein 2, festgehalten als ADR.
 - **Wie wird die Rechtegrenze pro Session auf Windows durchgesetzt?** Über die Rechte-Einstellungen des Agenten selbst, über das Arbeitsverzeichnis, oder mehr? Für das MVP reicht voraussichtlich die Agent-eigene Konfiguration.
 - **Windows-Pfadlänge:** Worktrees unter einem tiefen Basisordner plus `node_modules` stoßen an die 260-Zeichen-Grenze. Basisordner kurz halten (Vorschlag `~/.verwalter/workspaces/<session>/<repo>`) und `core.longpaths` prüfen.
-- **Anmeldung bei Claude:** nutzt die App die vorhandene Anmeldung der installierten Claude-Kommandozeile oder einen eigenen API-Schlüssel?
