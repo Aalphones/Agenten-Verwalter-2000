@@ -19,12 +19,12 @@ const DATABASE_FILE: &str = "verwalter.db";
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(SessionRegistry::default())
         .setup(|app| {
             // Ohne Datenbank startet die App nicht: ein stiller Weiterlauf verlöre jede Session beim Beenden.
             let database = Arc::new(Database::open(
                 &data_dir(app.handle())?.join(DATABASE_FILE),
             )?);
+            app.manage(SessionRegistry::new(Arc::clone(&database)));
             app.manage(database);
             Ok(())
         })

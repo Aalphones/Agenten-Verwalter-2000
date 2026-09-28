@@ -9,7 +9,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Datenbank-Grundlage | [phase-1-datenbank.md](phase-1-datenbank.md) | standard | complete |
-| 2 | Sessions schreiben mit | [phase-2-schreiben.md](phase-2-schreiben.md) | heikel | pending |
+| 2 | Sessions schreiben mit | [phase-2-schreiben.md](phase-2-schreiben.md) | heikel | complete |
 | 3 | Nach dem Neustart wiederherstellen | [phase-3-wiederherstellen.md](phase-3-wiederherstellen.md) | heikel | pending |
 | 4 | Umbenennen & Archivieren | [phase-4-umbenennen-archivieren.md](phase-4-umbenennen-archivieren.md) | standard | pending |
 | 5 | Ruhende Agenten beenden | [phase-5-ruhende-agenten.md](phase-5-ruhende-agenten.md) | heikel | pending |

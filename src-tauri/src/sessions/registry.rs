@@ -21,6 +21,8 @@ use crate::agents::event::{
     AgentEvent, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer, QuestionKind, TodoItem,
     ToolState, TurnEnd,
 };
+use crate::db::sessions::{self as session_rows, SessionRow};
+use crate::db::{Database, chat_entries};
 use crate::error::CommandError;
 use crate::filesystem::workspace::session_workspace;
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
@@ -36,14 +38,15 @@ const MAX_HISTORY_PAGE: u32 = 500;
 const RESUME_MESSAGE: &str = "Mach weiter.";
 const ANSWER_SEPARATOR: &str = " · ";
 
-#[derive(Default)]
 pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
+    database: Arc<Database>,
 }
 
 pub struct Session {
     pub id: String,
     workspace: PathBuf,
+    database: Arc<Database>,
     state: Mutex<SessionState>,
 }
 
@@ -62,6 +65,9 @@ struct SessionState {
     effort: Effort,
     /// Denkaufwand, mit dem der laufende Prozess gestartet wurde — der lässt sich nur beim Start setzen.
     process_effort: Effort,
+    /// `system/init` wurde mindestens einmal gesehen. Erst dann kennt Claude die Session und
+    /// erlaubt `--resume`; davor bricht es mit „No conversation found“ ab.
+    has_agent_history: bool,
     mode: Mode,
     created_at: f64,
     running_ms: f64,
@@ -95,6 +101,13 @@ struct Outbox {
 }
 
 impl SessionRegistry {
+    pub fn new(database: Arc<Database>) -> SessionRegistry {
+        SessionRegistry {
+            sessions: Mutex::new(HashMap::new()),
+            database,
+        }
+    }
+
     pub fn create(
         &self,
         app: &AppHandle,
@@ -108,6 +121,7 @@ impl SessionRegistry {
         let session = Arc::new(Session {
             id: id.clone(),
             workspace,
+            database: Arc::clone(&self.database),
             state: Mutex::new(SessionState::new(name_from_task(task), model, effort, mode)),
         });
         self.lock_sessions()
@@ -116,7 +130,9 @@ impl SessionRegistry {
             app,
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
-                start_process(app, &session, state, false)?;
+                // Ohne diese Zeile bekäme die neue Session nie ihre Datenbankzeile.
+                outbox.summary_dirty = true;
+                start_process(app, &session, state)?;
                 state.push_user(outbox, task);
                 outbox.write(state, user_message(task))?;
                 Ok(summarize(&session, state))
@@ -124,6 +140,11 @@ impl SessionRegistry {
         );
         if created.is_err() {
             self.lock_sessions().remove(&id);
+            // `update` schreibt auch bei einem Fehler; die Zeile einer nie gestarteten Session
+            // würde sonst beim nächsten Start als Geister-Session wiederkehren.
+            let _ = self
+                .database
+                .with(|connection| session_rows::delete(connection, &id));
         }
         created
     }
@@ -158,7 +179,7 @@ impl SessionRegistry {
                     return Ok(());
                 }
                 if state.effort != state.process_effort {
-                    start_process(app, &session, state, true)?;
+                    start_process(app, &session, state)?;
                 }
                 state.push_user(outbox, text);
                 state.set_status(outbox, SessionStatus::Running);
@@ -252,7 +273,7 @@ impl SessionRegistry {
                 if state.status != SessionStatus::Error {
                     return Ok(());
                 }
-                start_process(app, &session, state, true)?;
+                start_process(app, &session, state)?;
                 state.pause_requested = false;
                 state.set_status(outbox, SessionStatus::Paused);
                 Ok(())
@@ -379,6 +400,7 @@ impl SessionState {
             model,
             effort,
             process_effort: effort,
+            has_agent_history: false,
             mode,
             created_at: now_ms(),
             running_ms: 0.0,
@@ -533,6 +555,10 @@ impl SessionState {
     fn apply_event(&mut self, outbox: &mut Outbox, event: AgentEvent) {
         match event {
             AgentEvent::Ready { .. } => {
+                if !self.has_agent_history {
+                    self.has_agent_history = true;
+                    outbox.summary_dirty = true;
+                }
                 if self.status == SessionStatus::Starting {
                     self.set_status(outbox, SessionStatus::Running);
                 }
@@ -732,6 +758,8 @@ fn update<R>(
     let result = {
         let mut state = session.lock();
         let result = change(&mut state, &mut outbox);
+        // Auch bei einem Fehler: die Closure kann den Zustand schon verändert haben.
+        persist(session, &mut state, &outbox);
         if outbox.summary_dirty {
             outbox.summary = Some(summarize(session, &state));
         }
@@ -741,6 +769,41 @@ fn update<R>(
     let value = result?;
     outbox.deliver(session)?;
     Ok(value)
+}
+
+fn row_of(session: &Session, state: &SessionState) -> SessionRow {
+    SessionRow {
+        id: session.id.clone(),
+        name: state.name.clone(),
+        status: state.status,
+        model: state.model,
+        effort: state.effort,
+        mode: state.mode,
+        created_at: state.created_at,
+        running_ms: state.running_ms,
+        context_used: state.context_used,
+        context_window: state.context_window,
+        has_agent_history: state.has_agent_history,
+    }
+}
+
+/// Schreibt, was der `Outbox` an Änderungen trägt, in die Datenbank — unter der Session-Sperre,
+/// damit zwei Änderungen derselben Session nicht in vertauschter Reihenfolge ankommen.
+/// Ein Fehler landet im Protokoll der Session; die Session läuft weiter.
+fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
+    let saved = session.database.with(|connection| {
+        // Erst die Session, dann ihre Einträge: die Einträge verweisen auf die Zeile.
+        if outbox.summary_dirty {
+            session_rows::upsert(connection, &row_of(session, state))?;
+        }
+        if !outbox.entries.is_empty() {
+            chat_entries::upsert_all(connection, &session.id, &outbox.entries)?;
+        }
+        Ok(())
+    });
+    if let Err(error) = saved {
+        state.push_log(format!("Speichern fehlgeschlagen: {error}"));
+    }
 }
 
 fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
@@ -765,14 +828,15 @@ fn now_ms() -> f64 {
         .map_or(0.0, |elapsed: Duration| elapsed.as_secs_f64() * 1000.0)
 }
 
-/// Startet den Agenten neu (`resume` = mit dem Verlauf der bestehenden Claude-Session) und ersetzt
-/// einen noch laufenden Prozess.
+/// Startet den Agenten neu und ersetzt einen noch laufenden Prozess. Kennt Claude die Session
+/// schon (`has_agent_history`), setzt der Start sie mit ihrem Verlauf fort (`--resume`), sonst
+/// legt er sie unter der Session-ID an (`--session-id`).
 fn start_process(
     app: &AppHandle,
     session: &Arc<Session>,
     state: &mut SessionState,
-    resume: bool,
 ) -> Result<(), CommandError> {
+    let resume = state.has_agent_history;
     let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
     if let Some(previous) = state.process.take() {
         retire_process(previous);
