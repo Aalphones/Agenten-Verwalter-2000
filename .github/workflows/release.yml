@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - name: Tag und Versionen stimmen überein
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          package_version=$(node -p "require('./package.json').version")
+          tauri_version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo_version=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -n 1)
+          echo "Tag: $version | package.json: $package_version | tauri.conf.json: $tauri_version | Cargo.toml: $cargo_version"
+          test "$package_version" = "$version" && test "$tauri_version" = "$version" && test "$cargo_version" = "$version" || { echo "Version im Tag und in den drei Dateien weichen ab - Tag löschen, Versionen angleichen, neu taggen"; exit 1; }
+      - run: pnpm tauri build
+      - name: Release anlegen
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          portable="Agenten-Verwalter-2000_${version}_x64-portable.exe"
+          cp src-tauri/target/release/verwalter.exe "$portable"
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes src-tauri/target/release/bundle/nsis/*-setup.exe "$portable"
