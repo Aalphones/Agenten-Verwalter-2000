@@ -1,6 +1,6 @@
 # Phase 2 — Sessions, Commands & Events
 
-**Status:** pending · **Rating:** standard (Kontrakt und Status-Maschine stehen im README; hier wird verdrahtet)
+**Status:** complete · **Rating:** standard (Kontrakt und Status-Maschine stehen im README; hier wird verdrahtet)
 
 ## Kontext
 
@@ -33,16 +33,16 @@ Lesen vor dem Start:
 
 ### Typen und Fehler
 
-- [ ] `src-tauri/src/sessions/model.rs`: `SessionStatus`, `SessionSummary`, `ChatPage`, `ChatEntryEvent` exakt nach README → „Kontrakt“, mit `derive(Debug, Clone, Serialize, Deserialize, TS)`.
-- [ ] `src-tauri/src/error.rs`: Varianten `SessionNotFound(String)` („Session nicht gefunden: {0}“), `ClaudeNotFound` („Claude-Kommandozeile nicht gefunden“), `SessionClosed` („Session ist abgebrochen“), `AgentStopped` („Agent läuft nicht“), `Io(String)` („Dateisystem: {0}“). `impl From<std::io::Error> for CommandError` → `Io(e.to_string())`. Unit-Varianten serialisieren ohne `message` — das ist bei `tag`/`content` so gewollt.
+- [x] `src-tauri/src/sessions/model.rs`: `SessionStatus`, `SessionSummary`, `ChatPage`, `ChatEntryEvent` exakt nach README → „Kontrakt“, mit `derive(Debug, Clone, Serialize, Deserialize, TS)`.
+- [x] `src-tauri/src/error.rs`: Varianten `SessionNotFound(String)` („Session nicht gefunden: {0}“), `ClaudeNotFound` („Claude-Kommandozeile nicht gefunden“), `SessionClosed` („Session ist abgebrochen“), `AgentStopped` („Agent läuft nicht“), `Io(String)` („Dateisystem: {0}“). `impl From<std::io::Error> for CommandError` → `Io(e.to_string())`. Unit-Varianten serialisieren ohne `message` — das ist bei `tag`/`content` so gewollt.
 
 ### Arbeitsordner
 
-- [ ] `src-tauri/src/filesystem/mod.rs` (`pub mod workspace;`) und `filesystem/workspace.rs`: `pub fn session_workspace(app: &tauri::AppHandle, session_id: &str) -> Result<PathBuf, CommandError>` — `app.path().home_dir()` (Trait `tauri::Manager`), `.join(".verwalter").join("workspaces").join(session_id)`, `std::fs::create_dir_all`.
+- [x] `src-tauri/src/filesystem/mod.rs` (`pub mod workspace;`) und `filesystem/workspace.rs`: `pub fn session_workspace(app: &tauri::AppHandle, session_id: &str) -> Result<PathBuf, CommandError>` — `app.path().home_dir()` (Trait `tauri::Manager`), `.join(".verwalter").join("workspaces").join(session_id)`, `std::fs::create_dir_all`.
 
 ### Registry — `src-tauri/src/sessions/registry.rs`
 
-- [ ] Aufbau:
+- [x] Aufbau:
 
   ```rust
   #[derive(Default)]
@@ -60,21 +60,21 @@ Lesen vor dem Start:
   ```
 
   `context_window` startet mit 200000. Steueranfragen der App bekommen die IDs `app-1`, `app-2` … aus `next_request`.
-- [ ] Hilfsfunktionen im Modul:
+- [x] Hilfsfunktionen im Modul:
   - `now_ms() -> f64` aus `SystemTime::now().duration_since(UNIX_EPOCH)`.
   - `set_status(state, new)`: war `Running` und wird nicht `Running` → `running_ms += now - running_since`, `running_since = None`; wird `Running` und war es nicht → `running_since = Some(now)`.
   - `push_entry(state, build: impl FnOnce(u32) -> ChatEntry) -> ChatEntry` (seq = `entries.len()`), `replace_entry(state, entry)`.
   - `summary(session, state) -> SessionSummary`.
   - `interrupt_running_tools(state) -> Vec<ChatEntry>`: alle `Tool`-Einträge mit `Running` → `Interrupted`, geänderte zurückgeben.
   - `name_from_task(task) -> String` in `sessions/mod.rs`: Text bis zum ersten `.`, `!`, `?` oder Zeilenumbruch, getrimmt; leer → `Neue Session`; über 60 Zeichen → erste 57 Zeichen + `…`.
-- [ ] Ereignisse an die Oberfläche: Änderungen unter gesperrtem Zustand sammeln (`Vec<ChatEntry>` + „Summary geändert“), **nach** dem Freigeben des Locks senden: `app.emit("chat://entry", ChatEntryEvent { … })` bzw. `app.emit("session://changed", summary)` (Trait `tauri::Emitter`). Emit-Fehler ins `log` schreiben, nicht zurückgeben.
-- [ ] `start_process(app, session, resume) -> Result<(), CommandError>`: `find_claude()` → sonst `ClaudeNotFound`; `generation += 1`; `spawn` mit einem Callback, der `app`, `Arc<Session>` und die aktuelle `generation` festhält und `handle_output` ruft; `process_effort = effort`.
-- [ ] `handle_output(app, session, generation, output)`:
+- [x] Ereignisse an die Oberfläche: Änderungen unter gesperrtem Zustand sammeln (`Vec<ChatEntry>` + „Summary geändert“), **nach** dem Freigeben des Locks senden: `app.emit("chat://entry", ChatEntryEvent { … })` bzw. `app.emit("session://changed", summary)` (Trait `tauri::Emitter`). Emit-Fehler ins `log` schreiben, nicht zurückgeben.
+- [x] `start_process(app, session, resume) -> Result<(), CommandError>`: `find_claude()` → sonst `ClaudeNotFound`; `generation += 1`; `spawn` mit einem Callback, der `app`, `Arc<Session>` und die aktuelle `generation` festhält und `handle_output` ruft; `process_effort = effort`.
+- [x] `handle_output(app, session, generation, output)`:
   - `Stderr(line)` → ins `log` (immer, auch bei veralteter Generation).
   - Generation ≠ aktuelle → nur `log`, sonst nichts.
   - `Line(line)` → `translator.handle_line`, jedes Ereignis nach der Tabelle unten anwenden.
   - `Exited(code)` → `process = None`; `cancel_requested` → nichts weiter; sonst `interrupt_running_tools`, alle `pending` entfernen, Fehler-Eintrag `Error { title: "Agent beendet", text: "Claude wurde unerwartet beendet (Exit-Code <code bzw. unbekannt>)." }`, Status `Error`.
-- [ ] Ereignis → Zustand:
+- [x] Ereignis → Zustand:
 
   | Ereignis | Wirkung |
   |---|---|
@@ -90,7 +90,7 @@ Lesen vor dem Start:
   | `Unknown(line)` | ins `log` |
 
   `log` hält höchstens 300 Zeilen (älteste fliegen raus), jede Zeile höchstens 500 Zeichen.
-- [ ] Öffentliche Methoden von `SessionRegistry` (jede nimmt `&tauri::AppHandle`, holt die Session per ID → sonst `SessionNotFound`):
+- [x] Öffentliche Methoden von `SessionRegistry` (jede nimmt `&tauri::AppHandle`, holt die Session per ID → sonst `SessionNotFound`):
   - `create(task, model, effort, mode) -> SessionSummary`: ID `uuid::Uuid::new_v4().to_string()`, Arbeitsordner anlegen, Zustand mit Status `Starting`, in die Map, `start_process(resume = false)`, dann wie `send` die Aufgabe als erste Nachricht (Eintrag `User`, `write_line(user_message)`), Status bleibt `Starting` bis `Ready`.
   - `list() -> Vec<SessionSummary>` nach `created_at` absteigend.
   - `send(text)`: `Cancelled` → `SessionClosed`; `Error` → `AgentStopped`. Gibt es `pending` → wie `answer` für den ältesten Eintrag mit freiem Text: `AskUser` → `Options` mit `text` für jede Frage; `Permission` → `Deny { message: text }`; zusätzlich Eintrag `User`. Sonst: `effort != process_effort` → laufenden Prozess ersetzen (stdin schließen, alte Generation ist ab `generation += 1` in `start_process` stumm) und `start_process(resume = true)`; Eintrag `User`, Status `Running`, `write_line(user_message(text))`; Schreibfehler → `AgentStopped`.
@@ -105,15 +105,33 @@ Lesen vor dem Start:
 
 ### Commands, Registrierung, Wrapper
 
-- [ ] `src-tauri/src/commands/sessions.rs` und `commands/chat.rs`: je ein `#[tauri::command] pub async fn` pro Zeile der Command-Tabelle im README, Parameter wie dort, dazu `app: tauri::AppHandle` und `registry: tauri::State<'_, SessionRegistry>`; Rumpf ruft nur die Registry-Methode. `async`, damit der Prozessstart nicht auf dem Haupt-Thread läuft.
-- [ ] `lib.rs`: `pub mod sessions; pub mod filesystem;`, `.manage(SessionRegistry::default())`, alle Commands in `generate_handler!`.
-- [ ] `gen-bindings.rs`: `SessionStatus`, `SessionSummary`, `ChatPage`, `ChatEntryEvent` ergänzen; `pnpm bindings`.
-- [ ] `src/lib/sessions.ts`: Wrapper nach README-Tabelle (Muster `src/lib/app.ts`, JSDoc mit `@throws`), dazu `onSessionChanged(cb: (s: SessionSummary) => void): Promise<UnlistenFn>` über `listen` aus `@tauri-apps/api/event`.
-- [ ] `src/lib/chat.ts`: `getChatHistory`, `sendMessage`, `answerQuestion`, `onChatEntry(cb: (e: ChatEntryEvent) => void): Promise<UnlistenFn>`.
+- [x] `src-tauri/src/commands/sessions.rs` und `commands/chat.rs`: je ein `#[tauri::command] pub async fn` pro Zeile der Command-Tabelle im README, Parameter wie dort, dazu `app: tauri::AppHandle` und `registry: tauri::State<'_, SessionRegistry>`; Rumpf ruft nur die Registry-Methode. `async`, damit der Prozessstart nicht auf dem Haupt-Thread läuft.
+- [x] `lib.rs`: `pub mod sessions; pub mod filesystem;`, `.manage(SessionRegistry::default())`, alle Commands in `generate_handler!`.
+- [x] `gen-bindings.rs`: `SessionStatus`, `SessionSummary`, `ChatPage`, `ChatEntryEvent` ergänzen; `pnpm bindings`.
+- [x] `src/lib/sessions.ts`: Wrapper nach README-Tabelle (Muster `src/lib/app.ts`, JSDoc mit `@throws`), dazu `onSessionChanged(cb: (s: SessionSummary) => void): Promise<UnlistenFn>` über `listen` aus `@tauri-apps/api/event`.
+- [x] `src/lib/chat.ts`: `getChatHistory`, `sendMessage`, `answerQuestion`, `onChatEntry(cb: (e: ChatEntryEvent) => void): Promise<UnlistenFn>`.
 
 ### Doku
 
-- [ ] `docs/glossary.md`: Zeile **Session-Status** durch die Status-Maschine aus dem README ersetzen (sieben Werte, je ein Halbsatz); neue Zeile **Rechte-Abfrage** („Der Agent fragt vor einem Werkzeug-Aufruf um Erlaubnis; erscheint im Chat wie eine Rückfrage mit Erlauben/Ablehnen“); Zeile **Waiting** auf „Rückfrage oder Rechte-Abfrage“ erweitern.
-- [ ] `docs/code-map.md`: Zeilen Sessions, Chat und Workspace nachziehen (`sessions/registry.rs`, `sessions/model.rs`, `filesystem/workspace.rs`, `commands/sessions.rs`, `commands/chat.rs`, `src/lib/sessions.ts`, `src/lib/chat.ts`); vermerken, dass `db/messages.rs`/`db/events.rs` mit M4 kommen und bis dahin die Registry im Speicher hält.
+- [x] `docs/glossary.md`: Zeile **Session-Status** durch die Status-Maschine aus dem README ersetzen (sieben Werte, je ein Halbsatz); neue Zeile **Rechte-Abfrage** („Der Agent fragt vor einem Werkzeug-Aufruf um Erlaubnis; erscheint im Chat wie eine Rückfrage mit Erlauben/Ablehnen“); Zeile **Waiting** auf „Rückfrage oder Rechte-Abfrage“ erweitern.
+- [x] `docs/code-map.md`: Zeilen Sessions, Chat und Workspace nachziehen (`sessions/registry.rs`, `sessions/model.rs`, `filesystem/workspace.rs`, `commands/sessions.rs`, `commands/chat.rs`, `src/lib/sessions.ts`, `src/lib/chat.ts`); vermerken, dass `db/messages.rs`/`db/events.rs` mit M4 kommen und bis dahin die Registry im Speicher hält.
 
 ## Report-Back
+
+AK 1–5 erfüllt. `pnpm check` grün, Bindings für `SessionStatus`, `SessionSummary`, `ChatPage`, `ChatEntryEvent`, `CommandError` erzeugt. Die Prüfung lief gegen die echte `claude.exe` in `pnpm tauri dev`, die `invoke`-Aufrufe per WebView2-Debug-Port ausgeführt (dieselben Aufrufe wie in der Konsole):
+
+- **AK 2:** `session_create` (Haiku, Niedrig, Auto) → nach 6 s `completed`, `contextUsed` 44562; Verlauf `user` · `thinking` · `text „OK“`. `AskUserQuestion` → `question`-Eintrag, Status `waiting`; `chat_answer` mit `Blau` → `running` → `completed`, Antwort nennt Blau.
+- **AK 3:** `hallo.txt` (Inhalt `hi`) liegt in `~\.verwalter\workspaces\<id>\`; dort und außerhalb sonst nichts.
+- **AK 4:** nicht selbst gesehen (kein Bildschirm) — `CREATE_NO_WINDOW` aus Phase 1 ist gesetzt; bleibt Punkt der Smoke-Checkliste.
+- **AK 5:** `claude.exe` per `Stop-Process` beendet → `error`, Fehlerkasten „Agent beendet (Exit-Code -1)“, `chat_send` → `agentStopped`; `session_restart` → `paused`; „Was war meine erste Nachricht?“ → „Antworte nur mit OK.“ (`--session-id` und `--resume` treffen dieselbe Session).
+- **Zusätzlich geprüft:** Rechte-Abfrage (Modus Manuell/Auto, `Write`) → `Erlauben` → Datei angelegt, Eintrag „Erlaubt“; Pause während `waiting` → `paused`, Frage „Pausiert“; Fortsetzen; Abbrechen → `cancelled`, Werkzeug „unterbrochen“, Frage „Abgebrochen“, `chat_send` → `sessionClosed`, Prozess weg, Laufzeit steht still; Modell-/Modus-Wechsel wirkt (Antwort „Claude Sonnet 5“); Denkaufwand-Wechsel startet mit `--effort medium --resume`; `session://changed` und `chat://entry` kommen an (geänderte Einträge mit gleicher `seq`); `chat_history` mit `before`/`limit` blättert (`hasMore`).
+
+Abweichungen:
+
+- **Zeilen an den Agenten gehen nach dem Freigeben der Sperre hinaus** (`Outbox`), nicht unter der Sperre wie im Plan angedeutet: eine große Nachricht in einer vollen Pipe hätte sich sonst mit dem Lese-Thread verklemmen können. Dazu gehört, dass Abbrechen den Prozess erst nach den eingereihten Zeilen schließt (`retire_process`), und dass ein ersetzter Prozess (Neustart, Denkaufwand-Wechsel) ebenfalls nach 5 s beendet wird, falls er hängt.
+- **Pause und Abbrechen setzen offene Rückfragen aus dem Status `waiting` sofort auf `running`** (bzw. `cancelled`), statt bei `waiting` ohne offene Anfrage zu bleiben.
+- **Abgebrochene, abgestürzte oder fehlgeschlagene Rückfragen bekommen die Antwort „Nicht beantwortet“ bzw. „Abgebrochen“**, damit der Chat sie nicht als offen zeigt.
+- **`Exited` bei Status `error` fügt keinen zweiten Fehlerkasten an** (ein fehlgeschlagenes `result` und ein späterer Prozess-Tod zeigen sonst zweimal Fehler).
+- **`TurnEnded` mit `Failed` unterbricht laufende Werkzeuge und verwirft offene Anfragen** wie ein Prozess-Tod.
+- `push_entry` liefert die `seq` statt des Eintrags.
+- **Nicht geprüft:** `session_log` mit Inhalt (im Lauf blieb die Fehlerausgabe leer), Absturz-Kette mit einem vom Agenten gestarteten Kindprozess (FINDINGS-Punkt 4 aus Phase 1 blieb ohne Auffälligkeit, aber ohne Kindprozess).

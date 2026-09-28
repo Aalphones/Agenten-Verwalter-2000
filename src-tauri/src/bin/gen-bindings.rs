@@ -7,6 +7,7 @@ use verwalter_lib::{
     },
     commands::app::AppInfo,
     error::CommandError,
+    sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
 };
 
 fn main() -> Result<(), ts_rs::ExportError> {
@@ -25,5 +26,9 @@ fn main() -> Result<(), ts_rs::ExportError> {
     QuestionKind::export_all(&cfg)?;
     ChatEntry::export_all(&cfg)?;
     QuestionAnswer::export_all(&cfg)?;
+    SessionStatus::export_all(&cfg)?;
+    SessionSummary::export_all(&cfg)?;
+    ChatPage::export_all(&cfg)?;
+    ChatEntryEvent::export_all(&cfg)?;
     Ok(())
 }

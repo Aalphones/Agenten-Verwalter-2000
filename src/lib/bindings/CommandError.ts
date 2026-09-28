@@ -2,6 +2,6 @@
 
 /**
  * Fehler, den ein Tauri Command an die Oberfläche meldet.
- * Nutzer-relevante Fälle bekommen später eigene Varianten (siehe rust.md).
+ * Nutzer-relevante Fälle bekommen eigene Varianten, damit die UI eine passende Aktion anbieten kann.
  */
-export type CommandError = { "kind": "internal", "message": string };
+export type CommandError = { "kind": "internal", "message": string } | { "kind": "sessionNotFound", "message": string } | { "kind": "claudeNotFound" } | { "kind": "sessionClosed" } | { "kind": "agentStopped" } | { "kind": "io", "message": string };

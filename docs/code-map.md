@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`); die Features folgen (`src/features/`, `src-tauri/src/<feature>/` usw. existieren noch nicht) — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`) und die Sessions samt Chat-Verlauf im Speicher des Core (`src-tauri/src/sessions/`, bis M4 die Datenbank übernimmt); die Oberfläche der Features folgt (`src/features/`, `src-tauri/src/<feature>/` außer `sessions/` existieren noch nicht) — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
@@ -20,8 +20,9 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 
 | Feature | Oberfläche | Core |
 |---|---|---|
-| Sessions (Liste, Anlegen, Archivieren, Status) | `src/features/sessions/` | `src-tauri/src/commands/sessions.rs`, `src-tauri/src/sessions/`, `src-tauri/src/db/sessions.rs` |
-| Chat (Nachrichten, Tool-Aktivität, Rückfragen) | `src/features/chat/` | `src-tauri/src/commands/chat.rs`, `src-tauri/src/db/messages.rs`, `src-tauri/src/db/events.rs` |
+| Sessions (Liste, Anlegen, Archivieren, Status) | `src/features/sessions/`, Wrapper `src/lib/sessions.ts` | `src-tauri/src/commands/sessions.rs`, `src-tauri/src/sessions/` (`model.rs` Typen, `registry.rs` Zustand und Prozess-Anbindung), `src-tauri/src/db/sessions.rs` (mit M4) |
+| Chat (Nachrichten, Tool-Aktivität, Rückfragen) | `src/features/chat/`, Wrapper `src/lib/chat.ts` | `src-tauri/src/commands/chat.rs`, `src-tauri/src/sessions/registry.rs` (Verlauf im Speicher), `src-tauri/src/db/messages.rs`, `src-tauri/src/db/events.rs` (mit M4) |
+| Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` |
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` | `src-tauri/src/commands/changes.rs`, `src-tauri/src/git/` |
 | Repositories (bekannte Repos verwalten) | `src/features/repositories/` | `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
 | Settings | `src/features/settings/` | `src-tauri/src/commands/settings.rs`, `src-tauri/src/db/settings.rs` |

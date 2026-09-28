@@ -16,8 +16,9 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Provider** (`AgentProvider`) | Adapter, der einen bestimmten Agenten-Typ startet, steuert und seine Ausgaben in einheitliche Agent-Events übersetzt (Claude, später OpenCode, LM Studio). |
 | **Agent-Event** | Ein strukturiertes Ereignis aus dem Agentenlauf oder der App (z.B. `tool.started`, `session.waiting`). Wird im Event Store gespeichert und von der UI in lesbare Zustände übersetzt. |
 | **Event Store** | Die SQLite-Tabelle `events`: fortlaufendes Protokoll aller relevanten Zustandsänderungen einer Session. |
-| **Session-Status** | Zustand einer Session in der festen State Machine: `CREATED`, `STARTING`, `RUNNING`, `WAITING`, `PAUSED`, `INTERRUPTED`, `COMPLETED`, `CANCELLED`, `ERROR`. |
-| **Waiting** | Der Agent hat eine Rückfrage gestellt und wartet auf eine Antwort im Chat. Eigener Status, prominent in der Session-Liste. |
+| **Session-Status** | Zustand einer Session, sieben Werte: `starting` (Prozess gestartet, noch kein `system/init`), `running` (Agent arbeitet an einer Antwort), `waiting` (offene Rückfrage oder Rechte-Abfrage), `paused` (nach Pause/Esc oder nach „Agent neu starten“), `completed` (Antwort fertig, Agent wartet auf die nächste Nachricht), `cancelled` (abgebrochen, nimmt keine Nachrichten mehr an), `error` (Prozess unerwartet beendet oder Antwort mit Fehler). Eine Unterbrechung ist immer `paused`. |
+| **Waiting** | Der Agent hat eine Rückfrage oder Rechte-Abfrage gestellt und wartet auf eine Antwort im Chat. Eigener Status, prominent in der Session-Liste. |
+| **Rechte-Abfrage** | Der Agent fragt vor einem Werkzeug-Aufruf um Erlaubnis; erscheint im Chat wie eine Rückfrage mit Erlauben/Ablehnen. |
 | **Tool-Aktivität** | Die Einzelschritte des Agenten (Datei lesen, Befehl ausführen …). Im Chat standardmäßig eingeklappt zusammengefasst. |
 | **Chat-Ansicht** | Hauptansicht einer Session: Gespräch mit dem Agenten, Status, Rückfragen. |
 | **Changes-Ansicht** | Prüfansicht einer Session: geänderte Repositories, Dateien und Diffs gegen die Basis. |

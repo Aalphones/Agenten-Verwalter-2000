@@ -21,7 +21,7 @@ claude.exe -p --input-format stream-json --output-format stream-json --verbose
 - Jede Zeile auf stdin und stdout ist ein JSON-Objekt.
 - `--verbose` ist mit `stream-json` als Ausgabe nötig.
 - Die Einstellungen des Benutzers (`~/.claude/settings.json`: Rechte-Regeln, Hooks, Skills, Ausgabestil) gelten auch für so gestartete Prozesse. Eine Probe im Modus `default` legte eine Datei ohne Rechte-Abfrage an — vermutlich greift eine Freigabe-Regel des Benutzers. Welche Werkzeuge in „Manuell“ tatsächlich nachfragen, hängt also von diesen Einstellungen ab. `--setting-sources` schränkt die Quellen ein (nicht geprüft).
-- `--session-id` legt die Session-ID fest (Flag vorhanden, Wirkung nicht geprüft). `--resume <id>` setzt eine Session mit vollem Verlauf fort: geprüft, der Agent kannte eine vorher per Rückfrage gewählte Antwort.
+- `--session-id` legt die Session-ID fest; geprüft am 2026-09-28: eine mit `--session-id` gestartete Session lässt sich nach hartem Beenden des Prozesses mit `--resume <dieselbe-id>` fortsetzen, der Agent zitiert die erste Nachricht. `--resume <id>` setzt eine Session mit vollem Verlauf fort: geprüft, der Agent kannte eine vorher per Rückfrage gewählte Antwort.
 
 ## Nachrichten an den Agenten (stdin)
 
