@@ -3,12 +3,21 @@ import process from 'node:process';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import postcssNested from 'postcss-nested';
 
 const host = process.env['TAURI_DEV_HOST'];
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
+
+  // Natives CSS-Nesting hängt nichts an den Elternnamen an: `&__name` wird dort nicht zu `.block__name`.
+  // postcss-nested löst die BEM-Verschachtelung auf, bevor Vite bündelt.
+  css: {
+    postcss: {
+      plugins: [postcssNested()],
+    },
+  },
 
   resolve: {
     alias: {

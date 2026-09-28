@@ -4,7 +4,7 @@
 > | Layer | Choice |
 > |---|---|
 > | Tailwind | v4, CSS-first (`@theme`), über das Vite-Plugin |
-> | Komponenten-Styles | eine CSS-Datei pro Komponente, BEM-Klassen, native CSS-Verschachtelung |
+> | Komponenten-Styles | eine CSS-Datei pro Komponente, BEM-Klassen, Verschachtelung über `postcss-nested` |
 > | Themes | Hell / Dunkel / System |
 >
 > Quellen: [Tailwind-Doku](https://tailwindcss.com/docs) · [v4 Release Notes](https://tailwindcss.com/blog/tailwindcss-v4). Projektentscheidungen in dieser Datei haben Vorrang.
@@ -40,6 +40,8 @@ Status-Farben tragen die Absicht, nicht den Farbton, und folgen dem Session-Stat
 Tailwind dient hier als **Token-Pipeline**. Die erzeugten Utility-Klassen werden nicht benutzt. JSX trägt BEM-Klassennamen, die das Ding beschreiben, nicht sein Aussehen; das Styling steht in der CSS-Datei neben der Komponente und liest Tokens über `var(--…)`.
 
 Umgesetzt in `src/styles/theme.css`: `@import 'tailwindcss' source(none);` schaltet die Suche nach Klassennamen ab (sonst erzeugt Tailwind Utilities aus Beispielen in `docs/`), und `@theme static { … }` gibt jedes rohe Token als Variable aus, auch ohne Utility-Nutzung. Die semantischen Tokens stehen darunter in `:root` und in den Dunkel-Blöcken. Hex-Werte gibt es nur in dieser Datei.
+
+**Verschachtelung:** `&__element` und `&--modifier` hängen an den Blocknamen an — das kann natives CSS-Nesting nicht (dort wird `&__name` zu einem kaputten Selektor, nicht zu `.block__name`). `postcss-nested` in `vite.config.ts` löst die Verschachtelung vor dem Bündeln auf. Ein Selektor mit zwei `&` (`&--x &__y`) steht ausgeschrieben unterhalb des Blocks (`.block--x .block__y`). Nach einer Änderung an CSS oder Build-Konfiguration: im gebauten CSS unter `dist/assets/` darf kein Selektor mit `__` oder `--` beginnen.
 
 ```tsx
 // SessionListItem.tsx
