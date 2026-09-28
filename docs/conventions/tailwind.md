@@ -1,0 +1,77 @@
+# Tailwind / Styling Conventions — verwalter
+
+> **Stack** (für dieses Projekt festgelegt):
+> | Layer | Choice |
+> |---|---|
+> | Tailwind | v4, CSS-first (`@theme`), über das Vite-Plugin |
+> | Komponenten-Styles | eine CSS-Datei pro Komponente, BEM-Klassen, native CSS-Verschachtelung |
+> | Themes | Hell / Dunkel / System |
+>
+> Quellen: [Tailwind-Doku](https://tailwindcss.com/docs) · [v4 Release Notes](https://tailwindcss.com/blog/tailwindcss-v4). Projektentscheidungen in dieser Datei haben Vorrang.
+
+Zwei Arten von Regeln: **Upstream** = wie Tailwind v4 und die Plattform funktionieren. **Projektregel** = unsere Entscheidung.
+
+## Upstream — wie v4 funktioniert
+
+- `tailwindcss@^4` + `@tailwindcss/vite@^4` als devDependencies, Plugin in `vite.config.ts`
+- Haupt-Stylesheet beginnt mit `@import "tailwindcss";`, gefolgt von einem `@theme { … }`-Block
+- Keine `tailwind.config.js` — Konfiguration ist CSS
+- Custom Properties in `@theme` werden echte CSS-Variablen **und** erzeugen passende Utility-Klassen (`--color-brand-500` → `bg-brand-500`). Welchen Kanal wir nutzen, ist Projektregel (unten).
+- Dunkelmodus in reinem CSS: `@media (prefers-color-scheme: dark)` für die Systemeinstellung, `:root.dark` bzw. `:root.light` für die in den Settings erzwungene Wahl.
+
+## Projektregel — Tokens in zwei Schichten
+
+1. **Rohe Tokens** — Gestaltungsvokabular ohne Zweck: `--color-gray-700`, `--color-accent-500`, `--space-md`, `--font-sans`.
+2. **Semantische Tokens** — nach Zweck benannt, verweisen auf rohe: `--color-bg-base: var(--color-gray-50)`, `--color-fg-primary`, `--color-border-subtle`.
+
+**Komponenten verwenden nur semantische Tokens.** Hell/Dunkel tauscht ausschließlich semantische Tokens — ein Override-Block, null Änderungen an Komponenten.
+
+Status-Farben tragen die Absicht, nicht den Farbton, und folgen dem Session-Status aus dem [Glossar](../glossary.md): `--color-status-running`, `--color-status-waiting`, `--color-status-error`, `--color-status-completed`.
+
+### Token-Namen
+
+- Sprechende Namen statt Zahlen: `--space-md` statt `--spacing-3`, `--z-modal` statt `--z-400`
+- Abstände und Radien in T-Shirt-Größen (`2xs` … `2xl`)
+- Z-Index nach Ebene: `base`, `dropdown`, `sticky`, `overlay`, `modal`, `toast`, `tooltip`
+- Feste Präfixe: `--color-`, `--space-`, `--radius-`, `--shadow-`, `--z-`, `--duration-`, `--ease-`, `--font-`, `--font-size-`
+
+## Projektregel — BEM + CSS-Datei pro Komponente, keine Utility-Klassen im JSX
+
+Tailwind dient hier als **Token-Pipeline**. Die erzeugten Utility-Klassen werden nicht benutzt. JSX trägt BEM-Klassennamen, die das Ding beschreiben, nicht sein Aussehen; das Styling steht in der CSS-Datei neben der Komponente und liest Tokens über `var(--…)`.
+
+```tsx
+// SessionListItem.tsx
+<li className={`session-item ${isActive ? 'session-item--active' : ''}`}>
+  <span className="session-item__name">{name}</span>
+  <span className={`session-item__status session-item__status--${status}`} />
+</li>
+```
+
+```css
+/* SessionListItem.css */
+.session-item {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+
+  &--active { background: var(--color-bg-selected); }
+}
+
+.session-item__status--waiting { color: var(--color-status-waiting); }
+```
+
+## Anti-Patterns
+
+- ❌ Utility-Klassen im JSX (`className="px-8 flex text-sm"`) → BEM-Klasse + CSS
+- ❌ Rohe Tokens direkt in Komponenten (`var(--color-accent-500)`) → semantisches Token
+- ❌ Hex/RGB-Werte in Komponenten-CSS → Token
+- ❌ `@apply` → `var(--token)` direkt
+- ❌ Arbitrary-Value-Klassen (`bg-[#e8783a]`)
+- ❌ `!important`
+- ❌ Inline-`style` im JSX — Ausnahme: Werte, die sich zur Laufzeit ergeben (z.B. Positionen der virtualisierten Liste)
+- ❌ Dauer/Easing pro Komponente hart kodiert → `var(--duration-base) var(--ease-out)`
+
+## Critical Rules
+
+1. **Komponenten lesen nur semantische Tokens** — sonst bricht Hell/Dunkel an jeder Stelle einzeln.
+2. **Keine Utility-Klassen im JSX** — die Oberfläche bleibt ruhig und konsistent, weil alle Abstände und Farben aus einer Quelle kommen.
+3. **Keine festen Farbwerte außerhalb von `@theme`.**
