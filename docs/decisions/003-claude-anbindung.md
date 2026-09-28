@@ -23,5 +23,5 @@ Das Claude Agent SDK gibt es für TypeScript und Python, nicht für Rust ([PROJE
 
 - Ein Update von Claude Code kann das Protokoll ändern. Unbekannte Zeilen werden deshalb ignoriert und ins Protokoll der Session geschrieben, nie als Fehler behandelt; die geprüfte Version steht in der Wissensdatei.
 - Die Einstellungen des Benutzers (Rechte-Regeln, Hooks, Skills) gelten auch in der App — wie in der VS-Code-Erweiterung. Ob „Manuell“ vor einem Werkzeug nachfragt, hängt damit auch von seinen Freigabe-Regeln ab.
-- Pro offener Session läuft ein `claude.exe` mit rund 390 MB. Prozesse ruhender Sessions zu beenden und bei Bedarf mit `--resume` neu zu starten, gehört zu Meilenstein 4.
+- Pro offener Session läuft ein `claude.exe` mit rund 390 MB. Prozesse ruhender Sessions zu beenden und bei Bedarf mit `--resume` neu zu starten: umgesetzt, siehe [ADR 004](004-persistenz-und-wiederherstellung.md).
 - Die Anmeldung nutzt die der installierten Kommandozeile; die App verwaltet keinen eigenen API-Schlüssel.

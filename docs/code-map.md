@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Meilenstein 2a — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`) und die Sessions samt Chat-Verlauf im Speicher des Core (`src-tauri/src/sessions/`, bis M4 die Datenbank übernimmt); die Oberfläche steht für App-Rahmen, Sessions, Chat-Verlauf und Eingabeleiste (`src/features/sessions/`, `src/features/chat/`, `src/stores/sessions.ts`, `src/stores/chat.ts`, `src/components/`); die übrigen Features und `src-tauri/src/<feature>/` außer `sessions/` folgen — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Meilenstein 4 — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`) und die Sessions samt Chat-Verlauf im Speicher des Core (`src-tauri/src/sessions/`, bis M4 die Datenbank übernimmt); die Oberfläche steht für App-Rahmen, Sessions, Chat-Verlauf und Eingabeleiste (`src/features/sessions/`, `src/features/chat/`, `src/stores/sessions.ts`, `src/stores/chat.ts`, `src/components/`); die übrigen Features und `src-tauri/src/<feature>/` außer `sessions/` folgen — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
@@ -29,7 +29,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | Settings | `src/features/settings/` | `src-tauri/src/commands/settings.rs`, `src-tauri/src/db/settings.rs` |
 | Agent-Provider | — | `src-tauri/src/agents/event.rs` (anbieterneutrale Typen: Chat-Einträge, Modell, Modus, Denkaufwand, Agent-Ereignisse), `src-tauri/src/agents/claude/` (Claude-Kommandozeile: Programm finden, Prozess, Zeilenformate, Übersetzung) — ein Modul pro Provider |
 | Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` |
-| Agent-Prozesse, Wiederherstellung | — | `src-tauri/src/processes/` |
+| Agent-Prozesse, Wiederherstellung | — | `src-tauri/src/sessions/registry.rs` (Wiederherstellung nach Neustart, ruhende Agenten beenden) |
 | Generierte Typen Rust → TS | `src/lib/bindings/` (generiert, nicht von Hand ändern) | Quelle: Typen im Core; Export-Liste `src-tauri/src/bin/gen-bindings.rs` (`pnpm bindings`) |
 | Aufruf-Wrapper für Tauri Commands | `src/lib/<feature>.ts` | `src-tauri/src/commands/<feature>.rs`, registriert in `src-tauri/src/lib.rs` |
 | Fehler am Command-Rand | — | `src-tauri/src/error.rs` |

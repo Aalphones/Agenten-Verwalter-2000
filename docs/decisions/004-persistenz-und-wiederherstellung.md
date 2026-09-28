@@ -1,6 +1,6 @@
 # 004 — Persistenz: Chat-Einträge als JSON in SQLite, Sessions überleben, Agent-Prozesse nicht
 
-**Status:** vorgeschlagen (gilt mit der Freigabe des Plans M4) · **Datum:** 2026-09-28
+**Status:** angenommen · **Datum:** 2026-09-28
 
 ## Kontext
 

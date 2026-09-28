@@ -11,7 +11,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value, json};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
@@ -37,6 +37,9 @@ const MAX_LOG_LINE_CHARS: usize = 500;
 const MAX_HISTORY_PAGE: u32 = 500;
 const RESUME_MESSAGE: &str = "Mach weiter.";
 const ANSWER_SEPARATOR: &str = " · ";
+const DEFAULT_IDLE_SECONDS: u64 = 1800;
+const IDLE_CHECK_INTERVAL: Duration = Duration::from_secs(15);
+const IDLE_SECONDS_VARIABLE: &str = "VERWALTER_IDLE_SECONDS";
 
 pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
@@ -74,6 +77,8 @@ struct SessionState {
     running_since: Option<f64>,
     context_used: u32,
     context_window: u32,
+    /// Seit wann die Session ruht (`completed`/`paused`) — Grundlage für `reap_idle`.
+    idle_since: Option<f64>,
     /// Eine wiederhergestellte Session lädt ihren Verlauf erst beim ersten Zugriff (`Session::lock_loaded`).
     entries_loaded: bool,
     /// Die Session war beim Beenden aktiv: beim Laden des Verlaufs werden offene Rückfragen und
@@ -454,6 +459,72 @@ impl SessionRegistry {
         Ok(lines)
     }
 
+    /// Beendet den Agenten jeder Session, die seit mindestens `idle_ms` ruht (`completed`/`paused`)
+    /// und noch einen Prozess hat. Gibt rund 390 MB je Session frei; die nächste Nachricht startet
+    /// den Agenten mit `--resume` neu.
+    fn reap_idle(&self, app: &AppHandle, idle_ms: f64) {
+        let sessions: Vec<Arc<Session>> = self.lock_sessions().values().cloned().collect();
+        let now = now_ms();
+        for session in sessions {
+            let is_candidate = {
+                let state = session.lock();
+                state.process.is_some()
+                    && state
+                        .idle_since
+                        .is_some_and(|since: f64| now - since >= idle_ms)
+            };
+            if !is_candidate {
+                continue;
+            }
+            // Der Zustand kann sich zwischen der Vorprüfung und hier geändert haben — deshalb erneut
+            // unter `update`. Ein Fehler bedeutet nur, dass der nächste Durchlauf es erneut versucht;
+            // ein nicht mehr laufender Prozess ist ohnehin das Ziel.
+            let _ = update(
+                app,
+                &session,
+                |state: &mut SessionState, outbox: &mut Outbox| {
+                    if state.process.is_some()
+                        && state
+                            .idle_since
+                            .is_some_and(|since: f64| now - since >= idle_ms)
+                    {
+                        // Erhöht vor dem Beenden: das folgende `Exited` gilt dann als Ausgabe eines
+                        // ersetzten Prozesses, nicht als Absturz.
+                        state.generation += 1;
+                        outbox.retire(state);
+                        state.process = None;
+                        state.idle_since = None;
+                    }
+                    Ok(())
+                },
+            );
+        }
+    }
+
+    /// Startet den Hintergrund-Thread, der ruhende Agenten nach der Frist beendet
+    /// (`VERWALTER_IDLE_SECONDS`, Standard 30 Minuten).
+    pub fn start_reaper(app: AppHandle) {
+        let idle_ms: f64 = std::env::var(IDLE_SECONDS_VARIABLE)
+            .ok()
+            .and_then(|value: String| value.parse::<u64>().ok())
+            .filter(|seconds: &u64| *seconds > 0)
+            .unwrap_or(DEFAULT_IDLE_SECONDS) as f64
+            * 1000.0;
+        let spawned = thread::Builder::new()
+            .name("session-reaper".to_owned())
+            .spawn(move || {
+                loop {
+                    thread::sleep(IDLE_CHECK_INTERVAL);
+                    let registry = app.state::<SessionRegistry>();
+                    registry.reap_idle(&app, idle_ms);
+                }
+            });
+        // Ohne den Reaper laufen ruhende Agenten nur länger — kein Grund, die App zu beenden.
+        if let Err(error) = spawned {
+            eprintln!("Reaper für ruhende Agenten nicht gestartet: {error}");
+        }
+    }
+
     fn get(&self, session_id: &str) -> Result<Arc<Session>, CommandError> {
         self.lock_sessions()
             .get(session_id)
@@ -501,6 +572,7 @@ impl SessionState {
             running_since: None,
             context_used: 0,
             context_window: INITIAL_CONTEXT_WINDOW,
+            idle_since: None,
             entries_loaded: true,
             needs_settling: false,
             entries: Vec::new(),
@@ -535,6 +607,7 @@ impl SessionState {
         state.context_used = row.context_used;
         state.context_window = row.context_window;
         state.has_agent_history = row.has_agent_history;
+        state.idle_since = None;
         state.entries_loaded = false;
         state.needs_settling = was_active;
         state
@@ -600,6 +673,8 @@ impl SessionState {
         if status == SessionStatus::Running {
             self.running_since = Some(now);
         }
+        self.idle_since =
+            matches!(status, SessionStatus::Completed | SessionStatus::Paused).then_some(now);
         self.status = status;
         outbox.summary_dirty = true;
     }

@@ -40,8 +40,7 @@ src-tauri/src/
 
 ## Prozesse
 
-- Agent-Prozesse laufen unabhängig vom Fenster; ein geschlossenes oder abgestürztes Fenster beendet sie nicht.
-- Prozess-IDs und Startparameter werden in SQLite gespeichert, damit sie nach einem Neustart wiedergefunden werden.
+- Sessions überleben die UI (Datenbank, `--resume`); der Agent-Prozess endet mit der App und wird bei Bedarf neu gestartet — nicht der Prozess, sondern die Session ist die Einheit, die einen Absturz überlebt.
 - Windows zuerst: Beenden ohne POSIX-Signale, Pfade mit Laufwerksbuchstaben, Pfadlänge beachten. Plattformunterschiede gekapselt in `processes/` und `filesystem/`.
 
 ## Datenbank
@@ -59,5 +58,5 @@ Typen, die über die Tauri-Grenze gehen, werden im Core definiert und nach `src/
 
 1. **Git nur über `git/`** — eine zweite Stelle, die Git aufruft, zerstört die deterministische Sicht auf den Repository-Zustand.
 2. **Kein Shell-Aufruf mit zusammengesetzten Strings** — Agent-Namen, Branch-Namen und Pfade kommen teils aus Nutzereingaben.
-3. **Agent-Prozesse überleben die UI** — Session-Verlust nach einem Fenster-Absturz ist der Fehler, den die App verhindern soll.
+3. **Sessions überleben die UI** — Session-Verlust nach einem Fenster-Absturz ist der Fehler, den die App verhindern soll; der Agent-Prozess selbst darf enden.
 4. **Kein `unwrap()` in Command-Pfaden** — ein Panic im Core reißt die ganze App mit.

@@ -57,7 +57,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 - **Ressourcen:** Zielgerät ist ein Laptop mit rund 16 GB RAM, auf dem die Agenten selbst den Großteil verbrauchen. Der UI-Speicher wächst mit dem sichtbaren Inhalt, nicht mit der Zahl der Sessions oder Events.
 - **Lokal:** kein Server, keine Cloud, kein Docker, kein separater Datenbankdienst. Keine Telemetrie, außer später als Opt-in.
 - **Sicherheit:** Der Session-Workspace ist die Sicherheitsgrenze; Agenten bekommen nicht standardmäßig das ganze Benutzerverzeichnis.
-- **Absturzfestigkeit:** Ein UI-Absturz darf keinen Agenten beenden, keinen Worktree und keine Session verlieren.
+- **Absturzfestigkeit:** Ein UI-Absturz darf keine Session und keinen Worktree verlieren; der Agent-Prozess wird danach neu gestartet.
 - **Team:** Einzelentwickler, keine Deadline.
 - **Qualitätssicherung:** keine automatisierten Tests; abgesichert wird über strenge Typen, Lint, Build und eine manuelle Abnahme-Checkliste pro Plan.
 
@@ -69,8 +69,8 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten, abgelegt in [design/2026-09-28_hauptansichten/](design/2026-09-28_hauptansichten/README.md) — abgenommen am 2026-09-28. Jeder folgende Meilenstein baut die ihm dort zugeordneten Tafeln gleich nach Entwurf, keine Wegwerf-Oberfläche.
 2a. **Durchstich & Chat:** Claude starten, Events empfangen, Rückfragen beantworten, unterbrechen, fortsetzen, Status erkennen, Modell, Modus und Denkaufwand wechseln; gebaut werden App-Rahmen, Leerzustand, Neue Session (ohne Repositories), Chat-Verlauf mit Markdown und kopierbaren Code-Blöcken sowie die Eingabeleiste nach Entwurf. Der Agent arbeitet in einem leeren Ordner pro Session. Anbindungsweg: [ADR 003](decisions/003-claude-anbindung.md).
 2b. **Anhänge, Skills, Hintergrund:** Anhänge, `/`-Menü mit Skills, Hintergrund-Panel mit Prozessen und Subagenten (Fragen in [knowledge/GAPS.md](knowledge/GAPS.md)).
-3. **Worktree-Orchestrierung:** mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
-4. **Persistenz & Wiederherstellung:** Sessions, Nachrichten, Events in SQLite; nach Neustart laufende Agenten wiederfinden.
+4. **Persistenz & Wiederherstellung** (vor 3, siehe [ADR 004](decisions/004-persistenz-und-wiederherstellung.md)): Sessions und Chat-Einträge in SQLite, Wiederherstellung mit `--resume` nach einem Neustart, Umbenennen, Archivieren, ruhende Agenten beenden.
+3. **Worktree-Orchestrierung** (auf der Datenbank aus Meilenstein 4): mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 5. **Changes & Diff:** Diffs über mehrere Repositories zusammenfassen, committed/uncommitted, lazy Diff-Ansicht.
 6. **UI auf Zielbild:** restliche Tafeln des Entwurfs (Einstellungen, Hellmodus), virtuelle Listen, Zustände konsistent über alle Ansichten → MVP.
 

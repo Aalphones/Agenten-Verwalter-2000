@@ -27,6 +27,7 @@ pub fn run() {
             let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
             app.manage(registry);
             app.manage(database);
+            SessionRegistry::start_reaper(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
