@@ -1,6 +1,6 @@
 # Design-Entwurf: Hauptansichten (Meilenstein 1b)
 
-**Status:** abgenommen am 2026-09-28. Nachtrag offen: Ansicht „Hintergrund“ für Dev-Server, Subagenten, ausgeführte Skripte und den Scratchpad-Ordner der Session. Dieser Entwurf ist der verbindliche Kontrakt für alle Oberflächen-Anteile ab Meilenstein 2. Wo die Umsetzung davon abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
+**Status:** abgenommen am 2026-09-28, einschließlich des Nachtrags „Hintergrund“ (Dev-Server, Subagenten, ausgeführte Skripte, Scratchpad der Session). Dieser Entwurf ist der verbindliche Kontrakt für alle Oberflächen-Anteile ab Meilenstein 2. Wo die Umsetzung davon abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
 
 Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweiterung für VS Code (Eingabeleiste, `/`-Menü, Skills, Modell- und Moduswahl, Anhänge, Verlauf), ergänzt um das, was der Verwalter zusätzlich kann: mehrere Sessions, Changes über mehrere Repositories, Artefakte pro Session. Nachgebaut wird die Bedienung, nicht die Marke.
 
@@ -31,6 +31,9 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | `Settings.dc.html` | Einstellungen | M6 |
 | `Empty.dc.html` | Erster Start ohne Sessions | M4 |
 | `Rename.dc.html` | Rechtsklick-Menü auf einer Session (Umbenennen, Archivieren) | M4 |
+| `BgProc.dc.html` | Hintergrund-Panel, Reiter „Prozesse“: laufende Dev-Server und ausgeführte Skripte mit Ausgabe | M2 |
+| `BgAgents.dc.html` | Hintergrund-Panel, Reiter „Subagenten“: Aufgabe, Status, Schritte, Ergebnis | M2 |
+| `BgScratch.dc.html` | Hintergrund-Panel, Reiter „Scratchpad“: Dateien im temporären Ordner der Session mit Vorschau | M3 |
 
 Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwischenlösung. M6 schließt die restlichen Tafeln, den Hellmodus-Feinschliff und die Konsistenz über alle Ansichten ab.
 
@@ -47,7 +50,8 @@ Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwisch
 |---|---|
 | Sidebar | 256 px breit, Kopf 48 px, Session-Zeile mit Statussymbol 14 px + Name + eine Meta-Zeile (abgeschlossene Sessions ohne Meta-Zeile) |
 | Sidebar-Gruppen | „Braucht dich“ (wartet + Fehler), „Läuft“ (läuft + pausiert), „Abgeschlossen“ — in dieser Reihenfolge, leere Gruppen entfallen |
-| Session-Kopfzeile | 48 px, dreispaltig: links Titel + Status-Pille + ⋯-Menü, Mitte Reiter „Chat · Changes · Artefakte“ (mit Zählern), rechts Kontext-Balken 48 × 4 px, Laufzeit, Pause/Abbrechen bzw. Fortsetzen |
+| Session-Kopfzeile | 48 px, dreispaltig: links Titel + Status-Pille + ⋯-Menü, Mitte Reiter „Chat · Changes · Artefakte“ (mit Zählern), rechts Hintergrund-Knopf, Kontext-Balken 48 × 4 px, Laufzeit, Pause/Abbrechen bzw. Fortsetzen |
+| Hintergrund-Panel | rechts neben der jeweiligen Session-Ansicht, 440 px breit, Hintergrund `bg-sidebar`; Kopf 44 px mit Reitern „Prozesse · Subagenten · Scratchpad“ und Schließen; Liste oben (höchstens 330 px, scrollt), Detail darunter: Titel, Meta-Zeile, Aktionen, Ausgabe in `font-mono` 12 px / 19 px auf `bg-base` |
 | Chat-Spalte | höchstens 780 px breit, zentriert, 32 px Seitenrand, Verlauf unten verankert |
 | Eingabeleiste | gleiche Breite wie die Chat-Spalte; Radius 10 px; Rahmen 1 px `border`, **nur bei Fokus** `accent` plus 3 px Ring `accent-subtle`; Anhänge als Zeile über dem Textfeld; unten links `+` und `/` (30 × 30 px) und die Modell-Pille (26 px hoch, Radius 13 px), rechts Modus-Knopf und Senden (30 × 30 px, `accent`) |
 | Menüs der Eingabeleiste | öffnen nach oben, 8 px Abstand, Radius 10 px, `shadow-popover`; `/`-Menü so breit wie die Eingabeleiste, höchstens 470 px Listenhöhe mit Scrollen; `+` 330 px, Modell 340 px, Modus 430 px |
@@ -63,6 +67,8 @@ Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwisch
 - **Modell** gilt ab der nächsten Nachricht, der Verlauf bleibt. **Denkaufwand:** Niedrig · Mittel · Hoch · Sehr hoch · Max. **Modus:** Manuell · Automatisch bearbeiten · Planen · Auto, wechselbar mit Umschalt+Tab.
 - **Artefakte**, die Claude in einer Session erstellt, erscheinen im Verlauf als Karte („In der Session ansehen“) und im Reiter „Artefakte“ mit Vorschau, „Im Chat besprechen“ (setzt einen Verweis ins Eingabefeld) und „Im Browser öffnen“.
 - **Umbenennen:** Rechtsklick auf die Session, F2, Doppelklick oder ⋯ in der Kopfzeile; der Name wird direkt in der Sidebar bearbeitet, Enter speichert, Esc bricht ab. Der Name entsteht sonst aus dem ersten Satz der Aufgabe.
+- **Hintergrund:** Der Knopf in der Kopfzeile zeigt „n im Hintergrund“ (laufende Dev-Server + laufende Subagenten, mit blauem Punkt) bzw. nur „Hintergrund“, und öffnet oder schließt das Panel. Reiter **Prozesse**: „Läuft“ (Befehl, Repository, Adresse, Laufzeit; Aktionen Im Browser öffnen, Neu starten, Beenden) und „Ausgeführt“ (Befehl mit ✓ oder ✕ und Exit-Code; Aktionen Im Chat besprechen, Ausgabe kopieren, Erneut ausführen). Reiter **Subagenten**: Aufgabe, Typ, Modell, Werkzeugaufrufe, Dauer, Ergebnis, Schritte als `⎿`-Zeilen; laufende lassen sich anhalten. Reiter **Scratchpad**: Dateibaum des Ordners mit Größe und Uhrzeit, Vorschau für Text und Bilder; Aktionen Im Chat besprechen, Im Explorer zeigen. Leere Listen sagen in einem Satz, was fehlt.
+- **Im Verlauf** erscheinen gestartete Subagenten als Zeile „● Agent <Typ> <Aufgabe> · <Status> · n Aufrufe“ und Hintergrundprozesse als „● Bash im Hintergrund <Befehl> → <Adresse>“; ein Klick öffnet das Panel auf genau diesem Eintrag.
 - **Verlauf:** eigene Nachrichten im Kasten, Antworten frei; Werkzeugaufrufe als Punkt-Zeilen, gruppiert und eingeklappt, aufgeklappt mit `⎿`-Zeilen; „Gedankengang · n s“ eingeklappt; Aufgabenliste mit Kästchen; Rückfragen mit nummerierten Antwortknöpfen; laufende Arbeit mit „Esc unterbricht“.
 
 ## Tokens
@@ -148,6 +154,7 @@ Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit de
 - Alle Inhalte sind Beispieldaten: Sessions, Nachrichten, Dateien, Diffs, Skill-Namen, Modellbeschreibungen.
 - Die Changes-Daten sind für jede Session dieselben; nur der Diff von `backend/src/auth/oauth.ts` ist ausgearbeitet.
 - Die Artefakt-Vorschauen sind skizzierte Stellvertreter; die App zeigt das echte Artefakt.
+- Hintergrund-Daten gibt es nur für die Session „OAuth Login“; der Pfad `…\workspaces\<session>\.scratch` ist ein Platzhalter — wo der Scratchpad-Ordner liegt, entscheidet Meilenstein 3 (Frage in GAPS).
 - Die Auswahlfelder in „Neue Session“ und in den Einstellungen sind nur als geschlossene Knöpfe gezeichnet; „Archivieren“, „Zurückspulen“, „Verlauf exportieren“ und die Agent-Knöpfe haben im Prototyp keine Funktion.
 - Hover- und Tastaturfokus-Zustände sind nicht gezeichnet (die Zeichenfläche unterstützt sie in eingebetteten Tafeln nicht); Fokus in der Umsetzung: 2 px Ring `accent` mit 2 px Abstand.
 

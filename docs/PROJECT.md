@@ -20,7 +20,7 @@ MVP (Version 1):
 - **Chat:** Nachrichten von User und Agent, eingeklappte Tool-Aktivität und Gedankengang, Aufgabenliste, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
 - **Eingabe:** Bilder und Dateien anhängen (Knopf, Hineinziehen, Einfügen); Skills und Befehle über `/`-Knopf und `/` im Eingabefeld; Modell und Denkaufwand während der Session wechseln; Modus (Manuell, Automatisch bearbeiten, Planen, Auto)
 - **Artefakte:** von Claude in einer Session erstellte Artefakte als Karte im Chat und im Reiter „Artefakte“ der Session
-- **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind sichtbar und einsehbar (Entwurf folgt als Nachtrag zu 1b)
+- **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind in einem Seitenpanel der Session sichtbar und einsehbar
 - **Workspace:** mehrere Repositories pro Session, automatisch angelegte Worktrees und Branches; Skills der beteiligten Repositories stehen in der Session zur Verfügung
 - **Changes:** Repository-Filter, geänderte Dateien, Unified Diff, Trennung committed/uncommitted gegen eine konfigurierbare Basis
 - **Agent:** Claude als einziger Provider
@@ -66,7 +66,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste zuerst, UI-Politur zuletzt.
 
 1. **Gerüst:** Rust-Toolchain, Tauri-2-App mit React, Lint/Typecheck/Build lokal und als GitHub-Actions-Prüfung.
-1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten, abgelegt in [design/2026-09-28_hauptansichten/](design/2026-09-28_hauptansichten/README.md) — abgenommen am 2026-09-28; Nachtrag „Hintergrund“ (Dev-Server, Subagenten, Skripte, Scratchpad) offen. Jeder folgende Meilenstein baut die ihm dort zugeordneten Tafeln gleich nach Entwurf, keine Wegwerf-Oberfläche.
+1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten, abgelegt in [design/2026-09-28_hauptansichten/](design/2026-09-28_hauptansichten/README.md) — abgenommen am 2026-09-28. Jeder folgende Meilenstein baut die ihm dort zugeordneten Tafeln gleich nach Entwurf, keine Wegwerf-Oberfläche.
 2. **Agent-Anbindung (Durchstich):** Claude starten, Events empfangen, unterbrechen, fortsetzen, Status erkennen — Entscheidung über den Anbindungsweg fällt hier. Der Durchstich prüft auch, ob Anhänge, Skills aus mehreren Repositories, Modell- und Moduswechsel, Artefakte sowie Dev-Server und Subagenten mit dem gewählten Weg gehen (Fragen in [knowledge/GAPS.md](knowledge/GAPS.md)); gebaut werden Chat-Ansicht und Eingabeleiste nach Entwurf.
 3. **Worktree-Orchestrierung:** mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 4. **Persistenz & Wiederherstellung:** Sessions, Nachrichten, Events in SQLite; nach Neustart laufende Agenten wiederfinden.

@@ -17,7 +17,10 @@
     "NewSession.dc.html": { "h": 900, "is_interactive": true, "title": "Neue Session", "w": 1440, "x": 0, "y": 3900 },
     "Settings.dc.html": { "h": 900, "is_interactive": true, "title": "Einstellungen", "w": 1440, "x": 1520, "y": 3900 },
     "Empty.dc.html": { "h": 900, "is_interactive": true, "title": "Erster Start · keine Session", "w": 1440, "x": 3040, "y": 3900 },
-    "Rename.dc.html": { "h": 900, "is_interactive": true, "title": "Rechtsklick auf Session · Umbenennen", "w": 1440, "x": 4560, "y": 3900 }
+    "Rename.dc.html": { "h": 900, "is_interactive": true, "title": "Rechtsklick auf Session · Umbenennen", "w": 1440, "x": 4560, "y": 3900 },
+    "BgProc.dc.html": { "h": 900, "is_interactive": true, "title": "Hintergrund · Dev-Server und Skripte", "w": 1440, "x": 0, "y": 5200 },
+    "BgAgents.dc.html": { "h": 900, "is_interactive": true, "title": "Hintergrund · Subagenten", "w": 1440, "x": 1520, "y": 5200 },
+    "BgScratch.dc.html": { "h": 900, "is_interactive": true, "title": "Hintergrund · Scratchpad", "w": 1440, "x": 3040, "y": 5200 }
   },
   "createdOnFiles": { "at": "2026-09-28T12:00:00Z", "v": 1 },
   "designSystems": [],
@@ -26,13 +29,15 @@
     "rowChat": { "kind": "title1", "maxW": 6000, "text": "Chat — die Hauptarbeitsfläche", "w": 240, "x": 0, "y": -300 },
     "rowChanges": { "kind": "title1", "maxW": 6000, "text": "Changes und Artefakte — die Prüfebene", "w": 240, "x": 0, "y": 1000 },
     "rowControl": { "kind": "title1", "maxW": 7520, "text": "Eingabeleiste — Anhänge, Skills, Modell, Modus", "w": 240, "x": 0, "y": 2300 },
-    "rowRest": { "kind": "title1", "maxW": 6000, "text": "Anlegen, Einstellen, Erster Start, Umbenennen", "w": 240, "x": 0, "y": 3600 }
+    "rowRest": { "kind": "title1", "maxW": 6000, "text": "Anlegen, Einstellen, Erster Start, Umbenennen", "w": 240, "x": 0, "y": 3600 },
+    "rowBackground": { "kind": "title1", "maxW": 4480, "text": "Hintergrund — Dev-Server, Subagenten, Skripte, Scratchpad", "w": 240, "x": 0, "y": 4900 }
   },
   "order": [
     "Main.dc.html", "Waiting.dc.html", "Error.dc.html", "Light.dc.html",
     "Changes.dc.html", "Diff.dc.html", "Artifacts.dc.html",
     "Attach.dc.html", "Cmd.dc.html", "Slash.dc.html", "Model.dc.html", "Mode.dc.html",
-    "NewSession.dc.html", "Settings.dc.html", "Empty.dc.html", "Rename.dc.html"
+    "NewSession.dc.html", "Settings.dc.html", "Empty.dc.html", "Rename.dc.html",
+    "BgProc.dc.html", "BgAgents.dc.html", "BgScratch.dc.html"
   ],
   "pages": [],
   "title": "Agenten Verwalter 2000 — Design"
