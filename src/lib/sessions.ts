@@ -42,6 +42,18 @@ export async function cancelSession(sessionId: string): Promise<void> {
   await invoke('session_cancel', { sessionId });
 }
 
+/** Ändert den Namen der Session (höchstens 60 Zeichen, leer ist ein Fehler).
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (leerer Name) */
+export async function renameSession(sessionId: string, name: string): Promise<void> {
+  await invoke('session_rename', { sessionId, name });
+}
+
+/** Beendet den Agenten der Session und nimmt sie aus der Liste; Verlauf und Arbeitsordner bleiben.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
+export async function archiveSession(sessionId: string): Promise<void> {
+  await invoke('session_archive', { sessionId });
+}
+
 /** Startet den Agenten einer Session im Status „Fehler“ mit vollem Verlauf neu; danach „Pausiert“.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `claudeNotFound`, `io` */
 export async function restartSession(sessionId: string): Promise<void> {

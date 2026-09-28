@@ -1,14 +1,10 @@
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { StatusIcon } from '@/components/StatusIcon';
-import {
-  GROUP_LABEL,
-  GROUP_ORDER,
-  STATUS_GROUP,
-  isMetaHighlighted,
-  metaLine,
-} from '@/features/sessions/sessionStatus';
+import { SidebarItem } from '@/app/SidebarItem';
+import { GROUP_LABEL, GROUP_ORDER, STATUS_GROUP } from '@/features/sessions/sessionStatus';
 import type { SessionGroup } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { archiveSession, renameSession } from '@/lib/sessions';
 import './Sidebar.css';
 
 interface SidebarProps {
@@ -16,6 +12,7 @@ interface SidebarProps {
   activeSessionId: string | null;
   onSelect: (sessionId: string) => void;
   onNew: () => void;
+  onArchived: (sessionId: string) => void;
 }
 
 export function Sidebar({
@@ -23,7 +20,47 @@ export function Sidebar({
   activeSessionId,
   onSelect,
   onNew,
+  onArchived,
 }: SidebarProps): ReactElement {
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+
+  // F2 startet das Umbenennen der aktiven Session — außer der Fokus liegt in einem Textfeld.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key !== 'F2' || event.defaultPrevented) {
+        return;
+      }
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('input, textarea')) {
+        return;
+      }
+      if (activeSessionId !== null) {
+        setRenamingId(activeSessionId);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return (): void => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeSessionId]);
+
+  function commitRename(sessionId: string, name: string): void {
+    renameSession(sessionId, name).catch((reason: unknown) => {
+      console.error('Session nicht umbenennbar', reason);
+    });
+    setRenamingId(null);
+  }
+
+  function archive(sessionId: string): void {
+    archiveSession(sessionId)
+      .then(() => {
+        onArchived(sessionId);
+      })
+      .catch((reason: unknown) => {
+        console.error('Session nicht archivierbar', reason);
+      });
+  }
+
   function renderGroup(group: SessionGroup): ReactElement | null {
     const members: SessionSummary[] = sessions.filter(
       (session: SessionSummary) => STATUS_GROUP[session.status] === group,
@@ -37,39 +74,30 @@ export function Sidebar({
           <span>{GROUP_LABEL[group]}</span>
           <span className="sidebar__group-count">{members.length}</span>
         </h2>
-        {members.map((session: SessionSummary) => renderItem(session))}
+        {members.map((session: SessionSummary) => (
+          <SidebarItem
+            key={session.id}
+            session={session}
+            isActive={session.id === activeSessionId}
+            isRenaming={session.id === renamingId}
+            onSelect={(): void => {
+              onSelect(session.id);
+            }}
+            onStartRename={(): void => {
+              setRenamingId(session.id);
+            }}
+            onCommitRename={(name: string): void => {
+              commitRename(session.id, name);
+            }}
+            onCancelRename={(): void => {
+              setRenamingId(null);
+            }}
+            onArchive={(): void => {
+              archive(session.id);
+            }}
+          />
+        ))}
       </section>
-    );
-  }
-
-  function renderItem(session: SessionSummary): ReactElement {
-    const isActive: boolean = session.id === activeSessionId;
-    const meta: string | null = metaLine(session);
-    const itemClass = `sidebar__item${isActive ? ' sidebar__item--active' : ''}`;
-    const nameClass = `sidebar__name${
-      session.status === 'completed' || session.status === 'cancelled' ? ' sidebar__name--done' : ''
-    }`;
-    const metaClass = `sidebar__meta${
-      isMetaHighlighted(session.status) ? ` sidebar__meta--${session.status}` : ''
-    }`;
-    return (
-      <button
-        key={session.id}
-        type="button"
-        className={itemClass}
-        aria-current={isActive ? 'page' : undefined}
-        onClick={(): void => {
-          onSelect(session.id);
-        }}
-      >
-        <span className="sidebar__status">
-          <StatusIcon status={session.status} size={12} />
-        </span>
-        <span className="sidebar__text">
-          <span className={nameClass}>{session.name}</span>
-          {meta !== null && <span className={metaClass}>{meta}</span>}
-        </span>
-      </button>
     );
   }
 

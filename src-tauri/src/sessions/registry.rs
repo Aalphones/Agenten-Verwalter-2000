@@ -26,7 +26,7 @@ use crate::db::{Database, chat_entries};
 use crate::error::CommandError;
 use crate::filesystem::workspace::session_workspace;
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
-use crate::sessions::name_from_task;
+use crate::sessions::{MAX_NAME_CHARS, name_from_task};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
@@ -310,6 +310,42 @@ impl SessionRegistry {
             Err(CommandError::AgentStopped) => Ok(()),
             other => other,
         }
+    }
+
+    pub fn rename(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        name: &str,
+    ) -> Result<(), CommandError> {
+        let name: String = name.trim().chars().take(MAX_NAME_CHARS).collect();
+        if name.is_empty() {
+            return Err(CommandError::Internal(
+                "Der Name darf nicht leer sein.".to_owned(),
+            ));
+        }
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.name = name;
+                outbox.summary_dirty = true;
+                Ok(())
+            },
+        )
+    }
+
+    /// Blendet die Session aus: der Agent wird beendet, die Zeile als archiviert markiert, die Session
+    /// verlässt die Liste. Verlauf und Arbeitsordner bleiben.
+    pub fn archive(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
+        self.cancel(app, session_id)?;
+        let session = self.get(session_id)?;
+        session
+            .database
+            .with(|connection| session_rows::archive(connection, session_id, now_ms()))?;
+        self.lock_sessions().remove(session_id);
+        Ok(())
     }
 
     pub fn restart(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {

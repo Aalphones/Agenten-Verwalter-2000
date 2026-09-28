@@ -52,6 +52,25 @@ pub async fn session_cancel(
 }
 
 #[tauri::command]
+pub async fn session_rename(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    name: String,
+) -> Result<(), CommandError> {
+    registry.rename(&app, &session_id, &name)
+}
+
+#[tauri::command]
+pub async fn session_archive(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+) -> Result<(), CommandError> {
+    registry.archive(&app, &session_id)
+}
+
+#[tauri::command]
 pub async fn session_restart(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,

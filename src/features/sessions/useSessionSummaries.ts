@@ -7,6 +7,8 @@ export interface SessionSummaries {
   sessions: SessionSummary[];
   /** Fügt eine Session ein oder ersetzt die mit gleicher `id` — für Rückgaben, zu denen der Core kein Ereignis sendet. */
   upsertSession: (summary: SessionSummary) => void;
+  /** Nimmt eine Session aus der Liste — für archivierte, zu denen der Core kein Ereignis sendet. */
+  removeSession: (sessionId: string) => void;
 }
 
 function upsert(current: readonly SessionSummary[], summary: SessionSummary): SessionSummary[] {
@@ -23,6 +25,12 @@ export function useSessionSummaries(): SessionSummaries {
 
   const upsertSession = useCallback((summary: SessionSummary): void => {
     setSessions((current: SessionSummary[]) => upsert(current, summary));
+  }, []);
+
+  const removeSession = useCallback((sessionId: string): void => {
+    setSessions((current: SessionSummary[]) =>
+      current.filter((candidate: SessionSummary) => candidate.id !== sessionId),
+    );
   }, []);
 
   useEffect(() => {
@@ -74,5 +82,5 @@ export function useSessionSummaries(): SessionSummaries {
     };
   }, [upsertSession]);
 
-  return { sessions, upsertSession };
+  return { sessions, upsertSession, removeSession };
 }

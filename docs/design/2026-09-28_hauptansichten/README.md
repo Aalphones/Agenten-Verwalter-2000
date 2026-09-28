@@ -185,6 +185,7 @@ Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-
 - **Markdown und Code-Blöcke:** ohne Tafel, gebaut nach Plan M2a Phase 5 — Code-Block mit Kopfzeile (Sprache links, „Kopieren“ rechts) auf `bg-surface`, Syntaxfarben nach VS Code Dark+ / Light+; Links öffnen im Standardbrowser.
 - **Start:** Nach dem Start öffnet sich die neueste Session; der Leerzustand erscheint nur, wenn es keine Session gibt. Eine vorher aktive Session steht als „Pausiert“ da, offene Rückfragen tragen „Nicht beantwortet“.
 - **Eingabeleiste:** ohne die Knöpfe `+` und `/`, Platzhalter „Nachricht an Claude …“ ohne den Zusatz „(/ für Skills, @ für Dateien)“. Wartet der Agent auf eine Rückfrage, lautet er „Antwort an Claude …“; in den Status „Abgebrochen“ und „Fehler“ ist das Feld gesperrt und nennt den Grund. Umschalt+Tab wechselt den Modus reihum, Esc pausiert (ein offenes Menü schließt Esc zuerst).
+- **Menü einer Session:** ein `dialog`-Popover mit den zwei Einträgen „Umbenennen“ (F2) und „Archivieren“, unter der Zeile ausgerichtet statt mit 30-px-Einzug. Archivieren blendet aus, es gibt in Meilenstein 4 keine Archiv-Ansicht.
 - **Fehler-Kasten:** „Protokoll anzeigen“ klappt die letzten Zeilen der Fehlerausgabe im Kasten auf (Schrift `font-mono` 12 px / 19 px auf `bg-base`, höchstens 240 px hoch); „Agent neu starten“ steht nur am letzten Fehler und nur im Status „Fehler“.
 
 ## Platzhalter im Entwurf

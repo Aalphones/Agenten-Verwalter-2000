@@ -36,6 +36,8 @@ pub fn run() {
             commands::sessions::session_pause,
             commands::sessions::session_resume,
             commands::sessions::session_cancel,
+            commands::sessions::session_rename,
+            commands::sessions::session_archive,
             commands::sessions::session_restart,
             commands::sessions::session_set_model,
             commands::sessions::session_set_mode,

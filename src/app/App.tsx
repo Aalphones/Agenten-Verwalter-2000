@@ -11,7 +11,7 @@ import { useSessionsStore } from '@/stores/sessions';
 import './App.css';
 
 export function App(): ReactElement {
-  const { sessions, upsertSession } = useSessionSummaries();
+  const { sessions, upsertSession, removeSession } = useSessionSummaries();
   const activeSessionId: string | null = useSessionsStore((state) => state.activeSessionId);
   const showNewSession: boolean = useSessionsStore((state) => state.showNewSession);
   const selectSession = useSessionsStore((state) => state.selectSession);
@@ -64,6 +64,7 @@ export function App(): ReactElement {
         activeSessionId={showNewSession ? null : (currentSession?.id ?? null)}
         onSelect={selectSession}
         onNew={openNewSession}
+        onArchived={removeSession}
       />
       <main className="app__main">{renderMain()}</main>
     </div>

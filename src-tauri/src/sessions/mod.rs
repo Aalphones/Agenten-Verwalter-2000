@@ -2,7 +2,7 @@ pub mod model;
 pub mod registry;
 
 const DEFAULT_NAME: &str = "Neue Session";
-const MAX_NAME_CHARS: usize = 60;
+pub const MAX_NAME_CHARS: usize = 60;
 const NAME_PREFIX_CHARS: usize = 57;
 
 /// Erster Satz der Aufgabe als Name der Session.
