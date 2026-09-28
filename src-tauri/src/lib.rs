@@ -1,16 +1,33 @@
 pub mod agents;
 pub mod commands;
+pub mod db;
 pub mod error;
 pub mod filesystem;
 pub mod sessions;
 
+use std::sync::Arc;
+
+use tauri::Manager;
+
+use db::Database;
+use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
+
+const DATABASE_FILE: &str = "verwalter.db";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(SessionRegistry::default())
+        .setup(|app| {
+            // Ohne Datenbank startet die App nicht: ein stiller Weiterlauf verlöre jede Session beim Beenden.
+            let database = Arc::new(Database::open(
+                &data_dir(app.handle())?.join(DATABASE_FILE),
+            )?);
+            app.manage(database);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_info,
             commands::sessions::session_create,

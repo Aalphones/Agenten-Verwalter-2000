@@ -46,7 +46,8 @@ src-tauri/src/
 
 ## Datenbank
 
-- Schema-Änderungen nur über nummerierte Migrationen in `db/`.
+- Schema-Änderungen nur über nummerierte Migrationen in `db/` (`db/migrations/NNN_*.sql`, in `db/migrations.rs` an die Liste hängen, nie eine bestehende ändern).
+- Datei `<Benutzerordner>\.verwalter\verwalter.db`, eine Verbindung hinter einem Mutex (`Database::with`), WAL-Modus. Wer die Datenbank unter einer Session-Sperre benutzt, nimmt erst die Session-Sperre, dann die der Datenbank — nie umgekehrt; unter `Database::with` wird keine Session gesperrt.
 - rusqlite ist synchron: längere Zugriffe laufen nicht auf dem Tauri-Haupt-Thread.
 - Chat und Events werden seitenweise gelesen (Cursor), nie vollständig in den Speicher geladen.
 

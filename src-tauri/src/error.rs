@@ -18,6 +18,14 @@ pub enum CommandError {
     AgentStopped,
     #[error("Dateisystem: {0}")]
     Io(String),
+    #[error("Datenbank: {0}")]
+    Database(String),
+}
+
+impl From<rusqlite::Error> for CommandError {
+    fn from(error: rusqlite::Error) -> Self {
+        CommandError::Database(error.to_string())
+    }
 }
 
 impl From<std::io::Error> for CommandError {
