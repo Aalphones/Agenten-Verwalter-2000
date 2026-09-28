@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Toolchain & App startet | [phase-1-toolchain-und-app.md](phase-1-toolchain-und-app.md) | standard | pending |
+| 1 | Toolchain & App startet | [phase-1-toolchain-und-app.md](phase-1-toolchain-und-app.md) | standard | complete |
 | 2 | Prüfkette, Tokens & Typ-Pipeline | [phase-2-pruefkette-und-typen.md](phase-2-pruefkette-und-typen.md) | heikel | pending |
 | 3 | CI & Doku | [phase-3-ci-und-doku.md](phase-3-ci-und-doku.md) | mechanisch | pending |
 

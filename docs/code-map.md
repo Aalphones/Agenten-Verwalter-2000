@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst noch nicht angelegt — die Tabelle beschreibt die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: App-Gerüst (`src/app/`, `src-tauri/`) steht seit Meilenstein 1 Phase 1; die Feature-Ordner (`src/features/`, `src-tauri/src/commands/` usw.) existieren noch nicht — die Tabelle beschreibt weiter die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
