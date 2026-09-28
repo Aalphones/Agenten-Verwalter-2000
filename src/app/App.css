@@ -1,25 +1,21 @@
-.app-shell {
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: var(--space-md);
-  min-height: 100vh;
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
 
-  &__title {
-    margin: 0;
-    font-size: var(--font-size-xl);
+  &__main {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
   }
 
-  &__version,
-  &__error {
-    margin: 0;
-  }
-
-  &__version {
-    color: var(--color-fg-muted);
-  }
-
-  &__error {
-    color: var(--color-status-error);
+  &__content {
+    flex-grow: 1;
+    min-height: 0;
   }
 }

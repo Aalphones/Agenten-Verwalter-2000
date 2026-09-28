@@ -1,52 +1,69 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ReactElement } from 'react';
-import { getAppInfo } from '@/lib/app';
-import type { AppInfo } from '@/lib/bindings/AppInfo';
+import { SessionHeader } from '@/app/SessionHeader';
+import { Sidebar } from '@/app/Sidebar';
+import { EmptyState } from '@/features/sessions/EmptyState';
+import { NewSession } from '@/features/sessions/NewSession';
+import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
+import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { useSessionsStore } from '@/stores/sessions';
 import './App.css';
 
 export function App(): ReactElement {
-  const [info, setInfo] = useState<AppInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { sessions, upsertSession } = useSessionSummaries();
+  const activeSessionId: string | null = useSessionsStore((state) => state.activeSessionId);
+  const showNewSession: boolean = useSessionsStore((state) => state.showNewSession);
+  const selectSession = useSessionsStore((state) => state.selectSession);
+  const openNewSession = useSessionsStore((state) => state.openNewSession);
+  const closeNewSession = useSessionsStore((state) => state.closeNewSession);
 
   useEffect(() => {
-    const controller = new AbortController();
-    getAppInfo()
-      .then((appInfo: AppInfo) => {
-        if (!controller.signal.aborted) {
-          setInfo(appInfo);
-        }
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) {
-          setError(describeError(reason));
-        }
-      });
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        openNewSession();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
     return (): void => {
-      controller.abort();
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [openNewSession]);
 
-  function renderVersion(): ReactElement | null {
-    if (error !== null) {
-      return <p className="app-shell__error">Version nicht lesbar: {error}</p>;
+  const activeSession: SessionSummary | undefined = sessions.find(
+    (session: SessionSummary) => session.id === activeSessionId,
+  );
+
+  // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createSession` muss selbst in die Liste.
+  function handleCreated(summary: SessionSummary): void {
+    upsertSession(summary);
+    selectSession(summary.id);
+  }
+
+  function renderMain(): ReactElement {
+    if (showNewSession) {
+      return <NewSession onCreated={handleCreated} onCancel={closeNewSession} />;
     }
-    if (info === null) {
-      return null;
+    if (activeSession !== undefined) {
+      return (
+        <>
+          <SessionHeader session={activeSession} />
+          <div className="app__content" />
+        </>
+      );
     }
-    return <p className="app-shell__version">Version {info.version}</p>;
+    return <EmptyState onCreate={openNewSession} />;
   }
 
   return (
-    <main className="app-shell">
-      <h1 className="app-shell__title">Agenten Verwalter 2000</h1>
-      {renderVersion()}
-    </main>
+    <div className="app">
+      <Sidebar
+        sessions={sessions}
+        activeSessionId={showNewSession ? null : activeSessionId}
+        onSelect={selectSession}
+        onNew={openNewSession}
+      />
+      <main className="app__main">{renderMain()}</main>
+    </div>
   );
-}
-
-function describeError(reason: unknown): string {
-  if (typeof reason === 'object' && reason !== null && 'message' in reason) {
-    return String(reason.message);
-  }
-  return String(reason);
 }

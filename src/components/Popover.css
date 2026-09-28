@@ -1,0 +1,29 @@
+.popover {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  box-sizing: border-box;
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-popover);
+  box-shadow: var(--shadow-popover);
+
+  &--above {
+    bottom: calc(100% + var(--space-md));
+  }
+
+  &--below {
+    top: calc(100% + var(--space-md));
+  }
+
+  &--start {
+    left: 0;
+  }
+
+  &--end {
+    right: 0;
+  }
+}

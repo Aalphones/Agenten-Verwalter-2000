@@ -25,11 +25,11 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | `Attach.dc.html` | `+`-Menü und angehängte Dateien in der Eingabeleiste | M2 |
 | `Cmd.dc.html` | `/`-Knopf: Menü mit Kontext, Modell, Skills, Session | M2 |
 | `Slash.dc.html` | `/` ins Eingabefeld getippt: nur Skills und Befehle, filtert beim Tippen | M2 |
-| `Model.dc.html` | Modellwahl während der Session | M2 |
-| `Mode.dc.html` | Moduswahl (Manuell / Automatisch bearbeiten / Planen / Auto) und Denkaufwand | M2 |
-| `NewSession.dc.html` | Neue Session im Inhaltsbereich: Aufgabe mit Anhängen → Repositories → Agent | M3 |
+| `Model.dc.html` | Modellwahl während der Session | M2a |
+| `Mode.dc.html` | Moduswahl (Manuell / Automatisch bearbeiten / Planen / Auto) und Denkaufwand | M2a |
+| `NewSession.dc.html` | Neue Session im Inhaltsbereich: Aufgabe mit Anhängen → Repositories → Agent | M2a (Aufgabe, Agent) · M3 (Repositories) · M2b (Anhänge, `/`) |
 | `Settings.dc.html` | Einstellungen | M6 |
-| `Empty.dc.html` | Erster Start ohne Sessions | M4 |
+| `Empty.dc.html` | Erster Start ohne Sessions | M2a |
 | `Rename.dc.html` | Rechtsklick-Menü auf einer Session (Umbenennen, Archivieren) | M4 |
 | `BgProc.dc.html` | Hintergrund-Panel, Reiter „Prozesse“: laufende Dev-Server und ausgeführte Skripte mit Ausgabe | M2 |
 | `BgAgents.dc.html` | Hintergrund-Panel, Reiter „Subagenten“: Aufgabe, Status, Schritte, Ergebnis | M2 |
@@ -148,6 +148,18 @@ Namen folgen [../../conventions/tailwind.md](../../conventions/tailwind.md): roh
 | `--z-base` … `--z-tooltip` | 0 · 10 · 20 · 30 · 40 · 50 · 60 (base, dropdown, sticky, overlay, modal, toast, tooltip) |
 
 Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit der App ausgeliefert.
+
+## Abweichungen bis Meilenstein 3
+
+Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-README](../../planning/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“):
+
+- **Fehlt ganz** (kein toter Knopf): Reiter „Changes“ und „Artefakte“ (M5), Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6), Schritt „Repositories“ in Neue Session (M3).
+- **Neue Session:** Der Agent-Abschnitt trägt die Nummer 2, solange „Repositories“ fehlt.
+- **Status „Abgebrochen“:** Haken-Symbol in gedämpfter Farbe, Sidebar-Gruppe „Abgeschlossen“.
+- **Status „Startet“:** dasselbe Symbol wie „Läuft“.
+- **Status „Wartet“:** Anzeige „Wartet“ statt „Wartet auf dich“ (Sidebar-Zeile sagt weiter „wartet auf deine Antwort“).
+- **Denkaufwand-Punkte:** wie im Entwurf — die gewählte Stufe ist der große Punkt, nicht ein Füllstand.
+- **Leerzustand:** Erklärsatz ohne Worktrees („Er arbeitet in einem eigenen Ordner, damit parallele Agenten sich nicht in die Quere kommen.“).
 
 ## Platzhalter im Entwurf
 

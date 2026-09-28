@@ -1,0 +1,28 @@
+.status-icon {
+  flex-shrink: 0;
+
+  &--starting,
+  &--running {
+    color: var(--color-status-running);
+  }
+
+  &--waiting {
+    color: var(--color-status-waiting);
+  }
+
+  &--error {
+    color: var(--color-status-error);
+  }
+
+  &--paused {
+    color: var(--color-status-paused);
+  }
+
+  &--completed {
+    color: var(--color-status-completed);
+  }
+
+  &--cancelled {
+    color: var(--color-fg-muted);
+  }
+}

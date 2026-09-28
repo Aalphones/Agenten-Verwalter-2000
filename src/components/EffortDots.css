@@ -1,0 +1,56 @@
+.effort-dots {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+
+  &__title {
+    flex-grow: 1;
+  }
+
+  &__value {
+    color: var(--color-fg-muted);
+  }
+
+  &__group {
+    display: flex;
+    align-items: center;
+    padding: 3px var(--space-sm);
+    border-radius: var(--radius-full);
+    background: var(--color-bg-hover);
+  }
+
+  &__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  &__dot {
+    display: block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-fg-muted);
+
+    &--max {
+      background: var(--color-accent);
+    }
+
+    &--selected {
+      width: 12px;
+      height: 12px;
+      background: var(--color-fg-primary);
+    }
+  }
+}
