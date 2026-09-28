@@ -1,6 +1,6 @@
 # Phase 5 — Markdown & Code-Blöcke
 
-**Status:** pending · **Rating:** standard (Bibliotheken, Farben und Aufbau stehen hier fest; kein Entwurf vorhanden, die Struktur unten ist die Vorgabe)
+**Status:** complete · **Rating:** standard (Bibliotheken, Farben und Aufbau stehen hier fest; kein Entwurf vorhanden, die Struktur unten ist die Vorgabe)
 
 ## Kontext
 
@@ -29,12 +29,12 @@ Lesen vor dem Start:
 
 ### Abhängigkeiten
 
-- [ ] `pnpm add react-markdown remark-gfm rehype-highlight` (aktuelle stabile Hauptversionen; Versionen in FINDINGS).
-- [ ] Links: `pnpm add @tauri-apps/plugin-opener`, in `src-tauri/Cargo.toml` `tauri-plugin-opener = "2"`, in `lib.rs` `.plugin(tauri_plugin_opener::init())`, in `capabilities/default.json` die Berechtigung `"opener:default"`. Nach dem Eintragen prüfen, dass `openUrl('https://example.com')` aus der Oberfläche den Browser öffnet; verweigert die Berechtigung (Fehlermeldung in der Konsole) → stattdessen `"opener:allow-open-url"` und in FINDINGS notieren.
+- [x] `pnpm add react-markdown remark-gfm rehype-highlight` (aktuelle stabile Hauptversionen; Versionen in FINDINGS).
+- [x] Links: `pnpm add @tauri-apps/plugin-opener`, in `src-tauri/Cargo.toml` `tauri-plugin-opener = "2"`, in `lib.rs` `.plugin(tauri_plugin_opener::init())`, in `capabilities/default.json` die Berechtigung `"opener:default"`. Nach dem Eintragen prüfen, dass `openUrl('https://example.com')` aus der Oberfläche den Browser öffnet; verweigert die Berechtigung (Fehlermeldung in der Konsole) → stattdessen `"opener:allow-open-url"` und in FINDINGS notieren.
 
 ### Tokens (`src/styles/theme.css`)
 
-- [ ] Rohe Tokens im `@theme`-Block:
+- [x] Rohe Tokens im `@theme`-Block:
 
   | Token | Wert | Token | Wert |
   |---|---|---|---|
@@ -46,7 +46,7 @@ Lesen vor dem Start:
   | `--color-syntax-teal-400` | `#4ec9b0` | `--color-syntax-cyan-700` | `#267f99` |
   | `--color-syntax-sky-200` | `#9cdcfe` | `--color-syntax-navy-800` | `#001080` |
 
-- [ ] Semantische Tokens in allen drei Theme-Blöcken (hell / dunkel):
+- [x] Semantische Tokens in allen drei Theme-Blöcken (hell / dunkel):
 
   | Token | Hell | Dunkel |
   |---|---|---|
@@ -58,11 +58,11 @@ Lesen vor dem Start:
   | `--color-code-type` | `syntax-cyan-700` | `syntax-teal-400` |
   | `--color-code-variable` | `syntax-navy-800` | `syntax-sky-200` |
 
-- [ ] Design-README → „Tokens“ um beide Tabellen ergänzen (Quelle der Werte: VS Code Dark+ / Light+).
+- [x] Design-README → „Tokens“ um beide Tabellen ergänzen (Quelle der Werte: VS Code Dark+ / Light+).
 
 ### Bausteine (`src/components/`)
 
-- [ ] `Markdown.tsx` + `.css`: Props `text: string`. `ReactMarkdown` mit `remarkPlugins={[remarkGfm]}`, `rehypePlugins={[rehypeHighlight]}` (Standard-Sprachsatz von `rehype-highlight`, `detect: false`), **ohne** `rehype-raw`. Eigene Komponenten über `components`: `pre` → `CodeBlock`, `a` → `ExternalLink`. Styles unter der Wurzelklasse `markdown`, Elemente über Kind-Selektoren (`.markdown p`, …), weil `react-markdown` keine BEM-Klassen vergibt — in `Markdown.css` begründen (ein Satz Kommentar):
+- [x] `Markdown.tsx` + `.css`: Props `text: string`. `ReactMarkdown` mit `remarkPlugins={[remarkGfm]}`, `rehypePlugins={[rehypeHighlight]}` (Standard-Sprachsatz von `rehype-highlight`, `detect: false`), **ohne** `rehype-raw`. Eigene Komponenten über `components`: `pre` → `CodeBlock`, `a` → `ExternalLink`. Styles unter der Wurzelklasse `markdown`, Elemente über Kind-Selektoren (`.markdown p`, …), weil `react-markdown` keine BEM-Klassen vergibt — in `Markdown.css` begründen (ein Satz Kommentar):
   - Grundschrift 13,5 px, Zeilenhöhe 1,65; Abstand zwischen Blöcken 8 px, erstes und letztes Kind ohne Außenabstand.
   - `h1` 15 px, `h2` 14 px, `h3` 13,5 px, alle 600, oben 14 px Abstand.
   - Listen mit 20 px Einzug, 2 px zwischen Punkten; Aufgabenlisten-Kästchen gesperrt, in `--color-accent`.
@@ -70,17 +70,23 @@ Lesen vor dem Start:
   - Tabelle: höchstens volle Breite, Zellen mit 1 px `--color-border-subtle`, Innenabstand 4/8 px, Kopfzeile 600 auf `--color-bg-hover`; breite Tabellen scrollen waagrecht in einer Hülle.
   - `hr`: 1 px `--color-border-subtle`.
   - Inline-`code` (nicht in `pre`): `--font-mono` 12,5 px, Hintergrund `--color-bg-hover`, Radius `--radius-sm`, Innenabstand 0 4 px.
-- [ ] `CodeBlock.tsx` + `.css` (Maße aus AK 2): Kopfzeile + `pre` mit `ref`. Sprache aus der Klasse `language-<x>` des inneren `code`-Elements (über das `children`-Element bzw. per `ref.current.querySelector('code')`), Anzeige in der Schreibweise des Kürzels. Kopieren: `navigator.clipboard.writeText(preRef.current.textContent ?? '')`; Zustand `idle | copied | failed`, Rückkehr zu `idle` per Timer nach 1,5 s (Timer im Cleanup löschen). Knopf `aria-label` „Code kopieren“, danach „Kopiert“. Hervorhebungs-Klassen von highlight.js auf die Tokens abbilden: `hljs-keyword`, `hljs-literal`, `hljs-built_in` → keyword; `hljs-string`, `hljs-regexp` → string; `hljs-comment`, `hljs-quote` → comment; `hljs-number` → number; `hljs-title.function_`, `hljs-title` → function; `hljs-type`, `hljs-title.class_` → type; `hljs-variable`, `hljs-attr`, `hljs-property`, `hljs-params` → variable; `hljs-tag`, `hljs-name` → keyword; `hljs-meta` → comment. Kein highlight.js-Stylesheet importieren.
-- [ ] `ExternalLink.tsx` + `.css`: Props `href?: string`, `children`. `http:`/`https:` → `<a href>` mit `onClick` (`preventDefault`, `openUrl(href)` aus `@tauri-apps/plugin-opener`), Farbe `--color-accent-text`, unterstrichen bei Hover und Fokus, `title={href}`. Sonst nur `<span>` mit den Kindern.
+- [x] `CodeBlock.tsx` + `.css` (Maße aus AK 2): Kopfzeile + `pre` mit `ref`. Sprache aus der Klasse `language-<x>` des inneren `code`-Elements (über das `children`-Element bzw. per `ref.current.querySelector('code')`), Anzeige in der Schreibweise des Kürzels. Kopieren: `navigator.clipboard.writeText(preRef.current.textContent ?? '')`; Zustand `idle | copied | failed`, Rückkehr zu `idle` per Timer nach 1,5 s (Timer im Cleanup löschen). Knopf `aria-label` „Code kopieren“, danach „Kopiert“. Hervorhebungs-Klassen von highlight.js auf die Tokens abbilden: `hljs-keyword`, `hljs-literal`, `hljs-built_in` → keyword; `hljs-string`, `hljs-regexp` → string; `hljs-comment`, `hljs-quote` → comment; `hljs-number` → number; `hljs-title.function_`, `hljs-title` → function; `hljs-type`, `hljs-title.class_` → type; `hljs-variable`, `hljs-attr`, `hljs-property`, `hljs-params` → variable; `hljs-tag`, `hljs-name` → keyword; `hljs-meta` → comment. Kein highlight.js-Stylesheet importieren.
+- [x] `ExternalLink.tsx` + `.css`: Props `href?: string`, `children`. `http:`/`https:` → `<a href>` mit `onClick` (`preventDefault`, `openUrl(href)` aus `@tauri-apps/plugin-opener`), Farbe `--color-accent-text`, unterstrichen bei Hover und Fokus, `title={href}`. Sonst nur `<span>` mit den Kindern.
 
 ### Einbau
 
-- [ ] `src/features/chat/TextBlock.tsx` rendert `<Markdown text={entry.text} />` statt des Klartext-Absatzes; `TextBlock.css` verliert `white-space: pre-line`.
+- [x] `src/features/chat/TextBlock.tsx` rendert `<Markdown text={entry.text} />` statt des Klartext-Absatzes; `TextBlock.css` verliert `white-space: pre-line`.
 
 ### Doku
 
-- [ ] Design-README → „Abweichungen bis Meilenstein 3“ um „Markdown und Code-Blöcke ohne Tafel, gebaut nach Plan M2a Phase 5“ ergänzen; Verhalten „Verlauf“ um „Antworten als Markdown, Code-Blöcke mit Sprache und Kopieren-Knopf“.
-- [ ] `docs/code-map.md`: Geteilte UI-Bausteine um `Markdown`, `CodeBlock`, `ExternalLink` ergänzen.
-- [ ] `docs/conventions/react.md` → Stack-Tabelle: Zeile „Markdown | `react-markdown` + `remark-gfm` + `rehype-highlight`, kein rohes HTML“.
+- [x] Design-README → „Abweichungen bis Meilenstein 3“ um „Markdown und Code-Blöcke ohne Tafel, gebaut nach Plan M2a Phase 5“ ergänzen; Verhalten „Verlauf“ um „Antworten als Markdown, Code-Blöcke mit Sprache und Kopieren-Knopf“.
+- [x] `docs/code-map.md`: Geteilte UI-Bausteine um `Markdown`, `CodeBlock`, `ExternalLink` ergänzen.
+- [x] `docs/conventions/react.md` → Stack-Tabelle: Zeile „Markdown | `react-markdown` + `remark-gfm` + `rehype-highlight`, kein rohes HTML“.
 
 ## Report-Back
+
+- Gebaut wie geplant: `Markdown`, `CodeBlock`, `ExternalLink` in `src/components/`, Syntax-Tokens in `theme.css` (alle drei Blöcke), `TextBlock` rendert Markdown, `TextBlock.css` gelöscht (der Baustein trägt kein eigenes Styling mehr).
+- Abweichung: `rehype-highlight` bekommt `{ ...common, powershell }` als Sprachsatz — der Standardsatz (`common`) enthält kein PowerShell, AK 4 verlangt es. Dafür sind `lowlight` und `highlight.js` direkte Abhängigkeiten.
+- Zusätzlich zur Klassen-Zuordnung im Plan gefärbt: `hljs-attribute`, `hljs-selector-*`, `hljs-section`, `hljs-bullet`, `hljs-link`, `hljs-addition`/`hljs-deletion` (sonst bleiben CSS, Markdown und Diff ungefärbt, AK 4).
+- Geprüft: `pnpm check` grün; Probe-Rendering (Node) bestätigt `language-<kürzel>` am `code`, Färbung für ts/powershell, Aufgabenliste mit gesperrtem Kästchen, Tabelle, rohes HTML als Text, `javascript:`-Link ohne Ziel; gebautes CSS ohne Selektoren mit führendem `__`/`--`. `opener:default` umfasst `allow-open-url` für http/https (Plugin-Berechtigungsdatei gelesen).
+- **Nicht im Fenster geprüft:** `openUrl` öffnet den Browser, „Kopieren“ in die echte Zwischenablage, Optik von Hell/Dunkel — das sind die Smoke-Punkte „Code-Block kopieren“ am Plan-Ende.

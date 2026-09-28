@@ -8,6 +8,7 @@
 > | Styling | Tailwind v4 Tokens + BEM, siehe [tailwind.md](tailwind.md) |
 > | State | Zustand (nur flüchtiger UI-Zustand) |
 > | Listen | virtualisiert mit `@tanstack/react-virtual`, siehe [ADR 002](../decisions/002-typgenerierung-und-listen.md) |
+> | Markdown | `react-markdown` + `remark-gfm` + `rehype-highlight`, kein rohes HTML |
 > | Diff | Monaco Diff Editor, lazy |
 >
 > Projektentscheidungen in dieser Datei haben Vorrang vor allgemeinen Gewohnheiten.

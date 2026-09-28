@@ -44,6 +44,22 @@
   --color-red-400: #f47067;
   --color-red-600: #d23b33;
 
+  /* Syntaxfarben nach VS Code Dark+ / Light+ */
+  --color-syntax-blue-400: #569cd6;
+  --color-syntax-blue-700: #0000ff;
+  --color-syntax-orange-300: #ce9178;
+  --color-syntax-red-800: #a31515;
+  --color-syntax-green-500: #6a9955;
+  --color-syntax-green-700: #008000;
+  --color-syntax-lime-200: #b5cea8;
+  --color-syntax-teal-700: #098658;
+  --color-syntax-yellow-200: #dcdcaa;
+  --color-syntax-brown-700: #795e26;
+  --color-syntax-teal-400: #4ec9b0;
+  --color-syntax-cyan-700: #267f99;
+  --color-syntax-sky-200: #9cdcfe;
+  --color-syntax-navy-800: #001080;
+
   --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
 
@@ -117,6 +133,13 @@
   --color-diff-add-fg: var(--color-green-700);
   --color-diff-del-fg: var(--color-red-600);
   --color-diff-hunk-bg: var(--color-slate-50);
+  --color-code-keyword: var(--color-syntax-blue-700);
+  --color-code-string: var(--color-syntax-red-800);
+  --color-code-comment: var(--color-syntax-green-700);
+  --color-code-number: var(--color-syntax-teal-700);
+  --color-code-function: var(--color-syntax-brown-700);
+  --color-code-type: var(--color-syntax-cyan-700);
+  --color-code-variable: var(--color-syntax-navy-800);
   --shadow-popover: var(--shadow-popover-light);
 }
 
@@ -152,6 +175,13 @@
     --color-diff-add-fg: var(--color-green-400);
     --color-diff-del-fg: var(--color-red-400);
     --color-diff-hunk-bg: var(--color-neutral-850);
+    --color-code-keyword: var(--color-syntax-blue-400);
+    --color-code-string: var(--color-syntax-orange-300);
+    --color-code-comment: var(--color-syntax-green-500);
+    --color-code-number: var(--color-syntax-lime-200);
+    --color-code-function: var(--color-syntax-yellow-200);
+    --color-code-type: var(--color-syntax-teal-400);
+    --color-code-variable: var(--color-syntax-sky-200);
     --shadow-popover: var(--shadow-popover-dark);
   }
 }
@@ -185,6 +215,13 @@
   --color-diff-add-fg: var(--color-green-400);
   --color-diff-del-fg: var(--color-red-400);
   --color-diff-hunk-bg: var(--color-neutral-850);
+  --color-code-keyword: var(--color-syntax-blue-400);
+  --color-code-string: var(--color-syntax-orange-300);
+  --color-code-comment: var(--color-syntax-green-500);
+  --color-code-number: var(--color-syntax-lime-200);
+  --color-code-function: var(--color-syntax-yellow-200);
+  --color-code-type: var(--color-syntax-teal-400);
+  --color-code-variable: var(--color-syntax-sky-200);
   --shadow-popover: var(--shadow-popover-dark);
 }
 

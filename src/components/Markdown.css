@@ -1,0 +1,112 @@
+/* react-markdown vergibt keine BEM-Klassen, die Elemente werden deshalb über
+   Kind-Selektoren unterhalb der Wurzelklasse gestaltet. */
+.markdown {
+  font-size: var(--font-size-lg);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+
+  /* :where() hält die Spezifität niedrig, damit die Abstände darunter das Zurücksetzen überstimmen. */
+  :where(p, ul, ol, blockquote, pre, table, h1, h2, h3, h4, h5, h6, hr) {
+    margin: 0;
+  }
+
+  > * + * {
+    margin-top: var(--space-md);
+  }
+
+  > * + :is(h1, h2, h3, h4, h5, h6) {
+    margin-top: calc(var(--space-xl) + var(--space-2xs));
+  }
+
+  h1 {
+    font-size: 15px;
+  }
+
+  h2 {
+    font-size: 14px;
+  }
+
+  :is(h1, h2, h3, h4, h5, h6) {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  :is(h3, h4, h5, h6) {
+    font-size: var(--font-size-lg);
+  }
+
+  :is(ul, ol) {
+    padding-left: var(--space-3xl);
+  }
+
+  li > * + * {
+    margin-top: var(--space-2xs);
+  }
+
+  li + li {
+    margin-top: var(--space-2xs);
+  }
+
+  .contains-task-list {
+    padding-left: var(--space-3xl);
+  }
+
+  .task-list-item {
+    list-style: none;
+
+    > input {
+      margin: 0 var(--space-sm) 0 calc(var(--space-3xl) * -1);
+      vertical-align: middle;
+      accent-color: var(--color-accent);
+    }
+  }
+
+  blockquote {
+    padding-left: var(--space-xl);
+    border-left: 2px solid var(--color-border);
+    color: var(--color-fg-secondary);
+
+    > * + * {
+      margin-top: var(--space-md);
+    }
+  }
+
+  &__table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  :is(th, td) {
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--color-border-subtle);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 600;
+    background: var(--color-bg-hover);
+  }
+
+  hr {
+    height: 0;
+    border: 0;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  /* Inline-Code; Code in Blöcken gestaltet CodeBlock. */
+  :not(pre) > code {
+    padding: 0 var(--space-xs);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-hover);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+  }
+}

@@ -35,7 +35,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | App-Info (Name, Version) | `src/lib/app.ts` | `src-tauri/src/commands/app.rs` |
 | Design-Tokens (roh + semantisch, Hell/Dunkel) | `src/styles/theme.css`; BEM-Verschachtelung (`&__x`) löst `postcss-nested` in `vite.config.ts` auf | — |
 | App-Rahmen (Layout, Sidebar, Session-Kopfzeile) | `src/app/` (`App.tsx`, `Sidebar.tsx`, `SessionHeader.tsx`) | `src-tauri/src/main.rs`, `src-tauri/src/lib.rs` |
-| Geteilte UI-Bausteine | `src/components/` (`StatusIcon`, `Popover`, `ModelMenu`, `ModeMenu`, `EffortDots`) | — |
+| Geteilte UI-Bausteine | `src/components/` (`StatusIcon`, `Popover`, `ModelMenu`, `ModeMenu`, `EffortDots`, `Markdown`, `CodeBlock`, `ExternalLink`) | — |
 | Anzeige-Texte für Modell, Modus, Denkaufwand | `src/lib/labels.ts` | — |
 
 ## Wo was wohnt — Faustregeln

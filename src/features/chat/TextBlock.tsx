@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react';
-import './TextBlock.css';
+import { Markdown } from '@/components/Markdown';
 
 interface TextBlockProps {
   text: string;
 }
 
 export function TextBlock({ text }: TextBlockProps): ReactElement {
-  return <p className="text-block">{text}</p>;
+  return <Markdown text={text} />;
 }

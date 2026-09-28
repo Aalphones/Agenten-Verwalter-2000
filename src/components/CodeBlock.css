@@ -1,0 +1,136 @@
+.code-block {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+    padding: 0 var(--space-md) 0 var(--space-xl);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  &__language {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-fg-muted);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-fg-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+
+    &--copied {
+      color: var(--color-status-completed);
+    }
+
+    &--failed {
+      color: var(--color-status-error);
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__body {
+    margin: 0;
+    padding: var(--space-lg) var(--space-xl);
+    overflow-x: auto;
+    color: var(--color-fg-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    line-height: 1.55;
+    white-space: pre;
+  }
+}
+
+/* Farben der Syntaxhervorhebung: highlight.js vergibt nur Klassen, die Zuordnung
+   auf die Tokens steht hier. Kein highlight.js-Stylesheet, damit Hell/Dunkel über
+   die semantischen Tokens läuft. */
+.code-block__body {
+  .hljs-keyword,
+  .hljs-literal,
+  .hljs-built_in,
+  .hljs-tag,
+  .hljs-name,
+  .hljs-selector-tag,
+  .hljs-bullet {
+    color: var(--color-code-keyword);
+  }
+
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-link {
+    color: var(--color-code-string);
+  }
+
+  .hljs-comment,
+  .hljs-quote,
+  .hljs-meta {
+    color: var(--color-code-comment);
+  }
+
+  .hljs-number {
+    color: var(--color-code-number);
+  }
+
+  .hljs-title,
+  .hljs-title.function_,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-section {
+    color: var(--color-code-function);
+  }
+
+  .hljs-type,
+  .hljs-title.class_ {
+    color: var(--color-code-type);
+  }
+
+  .hljs-variable,
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-property,
+  .hljs-params {
+    color: var(--color-code-variable);
+  }
+
+  .hljs-addition {
+    color: var(--color-diff-add-fg);
+  }
+
+  .hljs-deletion {
+    color: var(--color-diff-del-fg);
+  }
+
+  .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .hljs-strong {
+    font-weight: 600;
+  }
+}

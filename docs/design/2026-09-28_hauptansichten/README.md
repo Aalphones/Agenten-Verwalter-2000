@@ -69,7 +69,7 @@ Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwisch
 - **Umbenennen:** Rechtsklick auf die Session, F2, Doppelklick oder ⋯ in der Kopfzeile; der Name wird direkt in der Sidebar bearbeitet, Enter speichert, Esc bricht ab. Der Name entsteht sonst aus dem ersten Satz der Aufgabe.
 - **Hintergrund:** Der Knopf in der Kopfzeile zeigt „n im Hintergrund“ (laufende Dev-Server + laufende Subagenten, mit blauem Punkt) bzw. nur „Hintergrund“, und öffnet oder schließt das Panel. Reiter **Prozesse**: „Läuft“ (Befehl, Repository, Adresse, Laufzeit; Aktionen Im Browser öffnen, Neu starten, Beenden) und „Ausgeführt“ (Befehl mit ✓ oder ✕ und Exit-Code; Aktionen Im Chat besprechen, Ausgabe kopieren, Erneut ausführen). Reiter **Subagenten**: Aufgabe, Typ, Modell, Werkzeugaufrufe, Dauer, Ergebnis, Schritte als `⎿`-Zeilen; laufende lassen sich anhalten. Reiter **Scratchpad**: Dateibaum des Ordners mit Größe und Uhrzeit, Vorschau für Text und Bilder; Aktionen Im Chat besprechen, Im Explorer zeigen. Leere Listen sagen in einem Satz, was fehlt.
 - **Im Verlauf** erscheinen gestartete Subagenten als Zeile „● Agent <Typ> <Aufgabe> · <Status> · n Aufrufe“ und Hintergrundprozesse als „● Bash im Hintergrund <Befehl> → <Adresse>“; ein Klick öffnet das Panel auf genau diesem Eintrag.
-- **Verlauf:** eigene Nachrichten im Kasten, Antworten frei; Werkzeugaufrufe als Punkt-Zeilen, gruppiert und eingeklappt, aufgeklappt mit `⎿`-Zeilen; „Gedankengang · n s“ eingeklappt; Aufgabenliste mit Kästchen; Rückfragen mit nummerierten Antwortknöpfen; laufende Arbeit mit „Esc unterbricht“.
+- **Verlauf:** eigene Nachrichten im Kasten, Antworten frei als Markdown (Code-Blöcke mit Sprache und Kopieren-Knopf); Werkzeugaufrufe als Punkt-Zeilen, gruppiert und eingeklappt, aufgeklappt mit `⎿`-Zeilen; „Gedankengang · n s“ eingeklappt; Aufgabenliste mit Kästchen; Rückfragen mit nummerierten Antwortknöpfen; laufende Arbeit mit „Esc unterbricht“.
 
 ## Tokens
 
@@ -98,6 +98,18 @@ Namen folgen [../../conventions/tailwind.md](../../conventions/tailwind.md): roh
 | `--color-amber-700` | `#a86a00` | `--color-green-400` | `#4cc38a` |
 | `--color-red-50` | `#fdeceb` | `--color-green-700` | `#16803c` |
 | `--color-red-400` | `#f47067` | `--color-red-600` | `#d23b33` |
+
+Syntaxfarben (Quelle: VS Code Dark+ / Light+):
+
+| Token | Wert | Token | Wert |
+|---|---|---|---|
+| `--color-syntax-blue-400` | `#569cd6` | `--color-syntax-blue-700` | `#0000ff` |
+| `--color-syntax-orange-300` | `#ce9178` | `--color-syntax-red-800` | `#a31515` |
+| `--color-syntax-green-500` | `#6a9955` | `--color-syntax-green-700` | `#008000` |
+| `--color-syntax-lime-200` | `#b5cea8` | `--color-syntax-teal-700` | `#098658` |
+| `--color-syntax-yellow-200` | `#dcdcaa` | `--color-syntax-brown-700` | `#795e26` |
+| `--color-syntax-teal-400` | `#4ec9b0` | `--color-syntax-cyan-700` | `#267f99` |
+| `--color-syntax-sky-200` | `#9cdcfe` | `--color-syntax-navy-800` | `#001080` |
 
 ### Semantische Farben
 
@@ -133,6 +145,13 @@ Namen folgen [../../conventions/tailwind.md](../../conventions/tailwind.md): roh
 | `--color-diff-add-fg` | `green-400` | `green-700` |
 | `--color-diff-del-fg` | `red-400` | `red-600` |
 | `--color-diff-hunk-bg` | `neutral-850` | `slate-50` |
+| `--color-code-keyword` | `syntax-blue-400` | `syntax-blue-700` |
+| `--color-code-string` | `syntax-orange-300` | `syntax-red-800` |
+| `--color-code-comment` | `syntax-green-500` | `syntax-green-700` |
+| `--color-code-number` | `syntax-lime-200` | `syntax-teal-700` |
+| `--color-code-function` | `syntax-yellow-200` | `syntax-brown-700` |
+| `--color-code-type` | `syntax-teal-400` | `syntax-cyan-700` |
+| `--color-code-variable` | `syntax-sky-200` | `syntax-navy-800` |
 
 ### Weitere Tokens
 
@@ -163,6 +182,7 @@ Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-
 - **Werkzeug-Zeile „unterbrochen“:** Ein Aufruf, der bei Pause oder Abbruch noch lief, zeigt hinter dem Ziel „unterbrochen“ in gedämpfter Farbe — nie „nicht ausgeführt“, denn er kann trotzdem gelaufen sein. Ein fehlgeschlagener Aufruf zeigt den Werkzeugnamen in der Fehlerfarbe.
 - **Rückfrage mit Mehrfachauswahl:** Optionen schalten um (gewählt: Rahmen in Akzentfarbe), darunter der Knopf „Antworten“; ohne Mehrfachauswahl sendet der Klick sofort. Mehrere Fragen stehen nacheinander im selben Kasten, jede mit eigener Nummerierung.
 - **Beantwortete Rückfrage:** Der Kasten bleibt im Verlauf, die Knöpfe sind gesperrt, der Kopf lautet „Claude hat gefragt“ in gedämpfter Farbe mit neutralem Rahmen, die Fußzeile „Antwort: …“ nennt die Antwort bzw. wie die Frage erledigt wurde („Erlaubt“, „Pausiert“, „Nicht beantwortet“ …).
+- **Markdown und Code-Blöcke:** ohne Tafel, gebaut nach Plan M2a Phase 5 — Code-Block mit Kopfzeile (Sprache links, „Kopieren“ rechts) auf `bg-surface`, Syntaxfarben nach VS Code Dark+ / Light+; Links öffnen im Standardbrowser.
 - **Fehler-Kasten:** „Protokoll anzeigen“ klappt die letzten Zeilen der Fehlerausgabe im Kasten auf (Schrift `font-mono` 12 px / 19 px auf `bg-base`, höchstens 240 px hoch); „Agent neu starten“ steht nur am letzten Fehler und nur im Status „Fehler“.
 
 ## Platzhalter im Entwurf
