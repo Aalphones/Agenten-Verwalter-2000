@@ -4,7 +4,7 @@ import './StatusIcon.css';
 
 interface StatusIconProps {
   status: SessionStatus;
-  size: 10 | 12;
+  size: 10 | 12 | 14;
 }
 
 export function StatusIcon({ status, size }: StatusIconProps): ReactElement {

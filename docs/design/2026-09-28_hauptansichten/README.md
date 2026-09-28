@@ -16,8 +16,8 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | Datei | Zeigt | Gebaut in |
 |---|---|---|
 | `Main.dc.html` | Klickbarer Prototyp, Start: Chat einer laufenden Session | — |
-| `Waiting.dc.html` | Chat, Agent wartet auf eine Entscheidung (Rückfrage mit Antwortknöpfen) | M2 |
-| `Error.dc.html` | Chat, Agent-Prozess abgestürzt | M2 |
+| `Waiting.dc.html` | Chat, Agent wartet auf eine Entscheidung (Rückfrage mit Antwortknöpfen) | M2a |
+| `Error.dc.html` | Chat, Agent-Prozess abgestürzt | M2a |
 | `Light.dc.html` | Chat im Hellmodus | M6 |
 | `Changes.dc.html` | Changes-Ansicht: Filter, Dateibaum pro Repository, Übersicht | M5 |
 | `Diff.dc.html` | Changes mit geöffneter Datei (Unified Diff) | M5 |
@@ -160,6 +160,10 @@ Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-
 - **Status „Wartet“:** Anzeige „Wartet“ statt „Wartet auf dich“ (Sidebar-Zeile sagt weiter „wartet auf deine Antwort“).
 - **Denkaufwand-Punkte:** wie im Entwurf — die gewählte Stufe ist der große Punkt, nicht ein Füllstand.
 - **Leerzustand:** Erklärsatz ohne Worktrees („Er arbeitet in einem eigenen Ordner, damit parallele Agenten sich nicht in die Quere kommen.“).
+- **Werkzeug-Zeile „unterbrochen“:** Ein Aufruf, der bei Pause oder Abbruch noch lief, zeigt hinter dem Ziel „unterbrochen“ in gedämpfter Farbe — nie „nicht ausgeführt“, denn er kann trotzdem gelaufen sein. Ein fehlgeschlagener Aufruf zeigt den Werkzeugnamen in der Fehlerfarbe.
+- **Rückfrage mit Mehrfachauswahl:** Optionen schalten um (gewählt: Rahmen in Akzentfarbe), darunter der Knopf „Antworten“; ohne Mehrfachauswahl sendet der Klick sofort. Mehrere Fragen stehen nacheinander im selben Kasten, jede mit eigener Nummerierung.
+- **Beantwortete Rückfrage:** Der Kasten bleibt im Verlauf, die Knöpfe sind gesperrt, der Kopf lautet „Claude hat gefragt“ in gedämpfter Farbe mit neutralem Rahmen, die Fußzeile „Antwort: …“ nennt die Antwort bzw. wie die Frage erledigt wurde („Erlaubt“, „Pausiert“, „Nicht beantwortet“ …).
+- **Fehler-Kasten:** „Protokoll anzeigen“ klappt die letzten Zeilen der Fehlerausgabe im Kasten auf (Schrift `font-mono` 12 px / 19 px auf `bg-base`, höchstens 240 px hoch); „Agent neu starten“ steht nur am letzten Fehler und nur im Status „Fehler“.
 
 ## Platzhalter im Entwurf
 

@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`) und die Sessions samt Chat-Verlauf im Speicher des Core (`src-tauri/src/sessions/`, bis M4 die Datenbank übernimmt); die Oberfläche steht für App-Rahmen und Sessions (`src/features/sessions/`, `src/stores/sessions.ts`, `src/components/`); die übrigen Features und `src-tauri/src/<feature>/` außer `sessions/` folgen — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`) und die Sessions samt Chat-Verlauf im Speicher des Core (`src-tauri/src/sessions/`, bis M4 die Datenbank übernimmt); die Oberfläche steht für App-Rahmen, Sessions und Chat-Verlauf (`src/features/sessions/`, `src/features/chat/`, `src/stores/sessions.ts`, `src/components/`); die übrigen Features und `src-tauri/src/<feature>/` außer `sessions/` folgen — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
@@ -21,7 +21,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | Feature | Oberfläche | Core |
 |---|---|---|
 | Sessions (Liste, Anlegen, Archivieren, Status) | `src/features/sessions/` (Leerzustand, Neue Session, Status-Tabellen, Abo auf `session://changed`), `src/stores/sessions.ts` (aktive Session, Ansicht „Neue Session“), Wrapper `src/lib/sessions.ts` | `src-tauri/src/commands/sessions.rs`, `src-tauri/src/sessions/` (`model.rs` Typen, `registry.rs` Zustand und Prozess-Anbindung), `src-tauri/src/db/sessions.rs` (mit M4) |
-| Chat (Nachrichten, Tool-Aktivität, Rückfragen) | `src/features/chat/`, Wrapper `src/lib/chat.ts` | `src-tauri/src/commands/chat.rs`, `src-tauri/src/sessions/registry.rs` (Verlauf im Speicher), `src-tauri/src/db/messages.rs`, `src-tauri/src/db/events.rs` (mit M4) |
+| Chat (Nachrichten, Tool-Aktivität, Rückfragen) | `src/features/chat/` (`ChatView` Spalte, `ChatTimeline` virtualisierter Verlauf mit Ziffern-Tasten, Block-Komponenten je Eintragsart, `useChatEntries` geladener Ausschnitt + Abo auf `chat://entry`, `buildBlocks` Werkzeug-Gruppen, `toolSummary`, `questionDraft` Auswahl und Antwort einer Rückfrage), Wrapper `src/lib/chat.ts` | `src-tauri/src/commands/chat.rs`, `src-tauri/src/sessions/registry.rs` (Verlauf im Speicher), `src-tauri/src/db/messages.rs`, `src-tauri/src/db/events.rs` (mit M4) |
 | Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` |
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` | `src-tauri/src/commands/changes.rs`, `src-tauri/src/git/` |
 | Repositories (bekannte Repos verwalten) | `src/features/repositories/` | `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |

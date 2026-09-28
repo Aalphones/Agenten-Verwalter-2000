@@ -1,0 +1,23 @@
+.working-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--color-accent-text);
+  font-size: var(--font-size-sm);
+
+  & > svg {
+    flex-shrink: 0;
+  }
+
+  &__label {
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__hint {
+    flex-shrink: 0;
+    color: var(--color-fg-muted);
+  }
+}

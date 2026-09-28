@@ -1,6 +1,6 @@
 # Phase 4 — Chat-Verlauf
 
-**Status:** pending · **Rating:** heikel (virtualisierte Liste mit unten verankertem Verlauf, Nachladen nach oben und Live-Aktualisierung einzelner Einträge)
+**Status:** complete · **Rating:** heikel (virtualisierte Liste mit unten verankertem Verlauf, Nachladen nach oben und Live-Aktualisierung einzelner Einträge)
 
 ## Kontext
 
@@ -30,25 +30,25 @@ Lesen vor dem Start:
 
 ### Daten
 
-- [ ] `pnpm add @tanstack/react-virtual` (aktuelle stabile Hauptversion; Version in FINDINGS notieren).
-- [ ] `src/features/chat/useChatEntries.ts`: `useChatEntries(sessionId: string): { entries: readonly ChatEntry[]; hasMore: boolean; loadingOlder: boolean; loadOlder: () => void }`.
+- [x] `pnpm add @tanstack/react-virtual` (aktuelle stabile Hauptversion; Version in FINDINGS notieren).
+- [x] `src/features/chat/useChatEntries.ts`: `useChatEntries(sessionId: string): { entries: readonly ChatEntry[]; hasMore: boolean; loadingOlder: boolean; loadOlder: () => void }`.
   - Beim (Wechsel des) `sessionId`: Liste leeren, `getChatHistory(sessionId, null, 200)`; veraltete Antworten per `AbortController` verwerfen.
   - Abo `onChatEntry`: nur Ereignisse mit gleicher `sessionId`. Ist die Liste leer oder `seq` kleiner als die erste geladene → ignorieren; liegt `seq` im geladenen Bereich → Eintrag an seiner Stelle ersetzen; `seq === letzte + 1` → anhängen; größer → neueste Seite neu laden (Lücke).
   - `loadOlder`: nur wenn `hasMore` und nicht schon ladend: `getChatHistory(sessionId, ersteSeq, 200)`, vorn anfügen.
   - Einträge liegen nur im State dieses Hooks, nicht im Store.
-- [ ] `src/features/chat/buildBlocks.ts`: reine Funktion `buildBlocks(entries): ChatBlock[]` mit `type ChatBlock = { kind: 'entry'; key: string; entry: ChatEntry } | { kind: 'tools'; key: string; tools: ToolEntry[] }` (`ToolEntry` = `Extract<ChatEntry, { kind: 'tool' }>`); aufeinanderfolgende `tool`-Einträge bilden eine Gruppe, `key` = `seq` des ersten Eintrags als String.
-- [ ] `src/features/chat/toolSummary.ts`: `groupTitle(tools)`: alle gleiches `tool` → dieser Name, sonst „Werkzeuge“. `groupSummary(tools)`: genau ein Aufruf → sein `target`; sonst bei einheitlichem Werkzeug `Read`/`Write`/`Edit` → „n Dateien“, `Grep`/`Glob` → „n Suchen“, `Bash` → „n Befehle“, sonst „n Aufrufe“. `groupDot(tools)`: irgendein `failed` → Fehler, irgendein `running` → läuft, sonst fertig (ein `interrupted` ohne `failed` zählt als fertig, die Zeile zeigt „unterbrochen“).
+- [x] `src/features/chat/buildBlocks.ts`: reine Funktion `buildBlocks(entries): ChatBlock[]` mit `type ChatBlock = { kind: 'entry'; key: string; entry: ChatEntry } | { kind: 'tools'; key: string; tools: ToolEntry[] }` (`ToolEntry` = `Extract<ChatEntry, { kind: 'tool' }>`); aufeinanderfolgende `tool`-Einträge bilden eine Gruppe, `key` = `seq` des ersten Eintrags als String.
+- [x] `src/features/chat/toolSummary.ts`: `groupTitle(tools)`: alle gleiches `tool` → dieser Name, sonst „Werkzeuge“. `groupSummary(tools)`: genau ein Aufruf → sein `target`; sonst bei einheitlichem Werkzeug `Read`/`Write`/`Edit` → „n Dateien“, `Grep`/`Glob` → „n Suchen“, `Bash` → „n Befehle“, sonst „n Aufrufe“. `groupDot(tools)`: irgendein `failed` → Fehler, irgendein `running` → läuft, sonst fertig (ein `interrupted` ohne `failed` zählt als fertig, die Zeile zeigt „unterbrochen“).
 
 ### Ansicht (`src/features/chat/`)
 
-- [ ] `ChatView.tsx` + `.css`: Props `session: SessionSummary`; Spalte mit `ChatTimeline` (füllt den Rest) und einem leeren Platz `chat-view__composer` für Phase 6. `TextBlock` bleibt hier Klartext mit `white-space: pre-line`; Phase 5 stellt ihn auf Markdown um. In `App.tsx` den Platzhalter `app__content` durch `ChatView` ersetzen, `key={session.id}`, damit der Zustand beim Wechsel neu beginnt.
-- [ ] `ChatTimeline.tsx` + `.css` mit `useVirtualizer` von `@tanstack/react-virtual`:
+- [x] `ChatView.tsx` + `.css`: Props `session: SessionSummary`; Spalte mit `ChatTimeline` (füllt den Rest) und einem leeren Platz `chat-view__composer` für Phase 6. `TextBlock` bleibt hier Klartext mit `white-space: pre-line`; Phase 5 stellt ihn auf Markdown um. In `App.tsx` den Platzhalter `app__content` durch `ChatView` ersetzen, `key={session.id}`, damit der Zustand beim Wechsel neu beginnt.
+- [x] `ChatTimeline.tsx` + `.css` mit `useVirtualizer` von `@tanstack/react-virtual`:
   - `count` = Blöcke + 1, wenn Status `starting`/`running` (Zeile „arbeitet“ als letztes Element); `getItemKey` = Block-`key` bzw. `'working'`; `estimateSize` 40; `measureElement` für echte Höhen; `overscan` 8.
   - Scroll-Container füllt die Höhe; die innere Fläche hat `height = max(totalSize, Höhe des Containers)`; jedes Element sitzt per `transform: translateY(start + offset)` mit `offset = max(0, Containerhöhe − totalSize)` — so klebt wenig Inhalt unten (Laufzeitwerte per `style`, erlaubt laut tailwind.md). Innen jedes Element: Spalte höchstens 780 px, zentriert, seitlich 32 px, `padding-bottom` 14 px; oben 20 px und unten 12 px als Rand der Fläche.
   - Am Ende kleben: `stickToBottom`-Ref, im `scroll`-Handler `true`, wenn `scrollTop + clientHeight >= scrollHeight − 24`. Nach jeder Änderung der Blöcke (Layout-Effekt) bei `true` → `scrollToIndex(count − 1, { align: 'end' })`.
   - Nachladen: im `scroll`-Handler bei `scrollTop < 200` → `loadOlder()`. Vor dem Voranstellen `scrollHeight` merken; im Layout-Effekt nach dem Voranstellen `scrollTop += neueHöhe − alteHöhe`. Hält die Stelle damit nicht (Sprung sichtbar) → in FINDINGS mit Beobachtung, nicht mit einer zweiten Technik weiterbasteln.
   - `role="log"`, `aria-live="polite"`, `aria-label="Verlauf"`.
-- [ ] Block-Komponenten, je `.tsx` + `.css`, Struktur und Maße nach den Entwurfszeilen aus dem Kontext:
+- [x] Block-Komponenten, je `.tsx` + `.css`, Struktur und Maße nach den Entwurfszeilen aus dem Kontext:
   - `UserMessage` (ohne Anhänge und Skill-Marke — M2b).
   - `TextBlock` (`white-space: pre-line`).
   - `ThinkingBlock`: Knopf „Gedankengang · n s“ mit `aria-expanded`, aufgeklappt kursiv mit linker Linie.
@@ -57,11 +57,22 @@ Lesen vor dem Start:
   - `QuestionBlock`: `role="group"`, `aria-label="Rückfrage des Agenten"`, Rahmen `--color-status-waiting`, Kopf „Claude wartet auf deine Entscheidung“ mit Wartet-Symbol. Eine Frage → ein Absatz + Optionsknöpfe mit Ziffer, Label, Hinweis. Mehrere Fragen → nacheinander im selben Kasten; `multiSelect`-Frage → Optionen schalten um (gewählt: Rahmen `--color-accent`), darunter Knopf „Antworten“ (28 px, Akzent). Gesendet wird, sobald jede Frage eine Antwort hat: `answerQuestion(sessionId, requestId, { kind: 'options', answers })` — `multiSelect`-Antworten mit `, ` verbunden. Bei `questionKind === 'permission'`: „Erlauben“ → `{ kind: 'allow' }`, „Ablehnen“ → `{ kind: 'deny', message: 'Der Benutzer hat abgelehnt.' }`. Beantwortet (`answer !== null`) → Knöpfe gesperrt, Fußzeile „Antwort: <answer>“.
   - `ErrorBlock`: `role="alert"`, Rahmen `--color-status-error`, Titel, Text, Knöpfe „Agent neu starten“ (Akzent, `restartSession`) und „Protokoll anzeigen“ / „Protokoll ausblenden“; aufgeklappt `<pre>` in `--font-mono` 12 px / 19 px auf `--color-bg-base`, höchstens 240 px hoch mit Scrollen, Inhalt aus `getSessionLog` beim Aufklappen geladen.
   - `WorkingIndicator`: Stern-Symbol, Text = Label des `active`-Eintrags der jüngsten geladenen Aufgabenliste, sonst „Claude arbeitet …“; dahinter „· Esc unterbricht“ in `--color-fg-muted`; Farbe `--color-accent-text`.
-- [ ] Ziffern-Tasten (AK 7): Listener auf `window` in `ChatTimeline`, ignoriert Ereignisse mit `defaultPrevented` und solche, deren Ziel ein `input`, `textarea` oder `[contenteditable]` ist; Cleanup.
+- [x] Ziffern-Tasten (AK 7): Listener auf `window` in `ChatTimeline`, ignoriert Ereignisse mit `defaultPrevented` und solche, deren Ziel ein `input`, `textarea` oder `[contenteditable]` ist; Cleanup.
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Zeile Chat um `src/features/chat/` (Verlauf, Blöcke, `useChatEntries`) konkretisieren.
-- [ ] Design-README → „Abweichungen bis Meilenstein 3“ ergänzen: Werkzeug-Zeile „unterbrochen“; Rückfrage mit Mehrfachauswahl bekommt den Knopf „Antworten“; „Protokoll anzeigen“ klappt im Kasten auf; Tafeln `Waiting.dc.html`, `Error.dc.html` → „M2a“.
+- [x] `docs/code-map.md`: Zeile Chat um `src/features/chat/` (Verlauf, Blöcke, `useChatEntries`) konkretisieren.
+- [x] Design-README → „Abweichungen bis Meilenstein 3“ ergänzen: Werkzeug-Zeile „unterbrochen“; Rückfrage mit Mehrfachauswahl bekommt den Knopf „Antworten“; „Protokoll anzeigen“ klappt im Kasten auf; Tafeln `Waiting.dc.html`, `Error.dc.html` → „M2a“.
 
 ## Report-Back
+
+- **Gebaut:** `src/features/chat/` — `ChatView`, `ChatTimeline` (virtualisiert, unten verankert, Nachladen nach oben, Ziffern-Tasten), Blöcke `UserMessage`, `TextBlock`, `ThinkingBlock`, `ToolGroup`, `TodoList`, `QuestionBlock`, `ErrorBlock`, `WorkingIndicator`; Logik `useChatEntries`, `buildBlocks`, `toolSummary`, `questionDraft`. `@tanstack/react-virtual` 3.14.13.
+- **Abweichungen vom Plan:**
+  - Leerer Seitenstand: ein Eintrag mit `seq` 0 wird angehängt, nicht ignoriert (die Plan-Regel „Liste leer → ignorieren“ hätte bei einer frischen Session die erste Nachricht verschluckt). Ereignisse, die eintreffen, während die neueste Seite lädt, werden gepuffert und danach angewendet; das Laden startet erst, wenn das Abo steht.
+  - Am Ende kleben per `scrollTop = scrollHeight` statt `scrollToIndex(…, { align: 'end' })` — schließt den unteren Rand der Fläche ein und braucht keine Nachmess-Runden.
+  - Auf-/zugeklappt, Protokoll offen und halbe Antworten einer Rückfrage liegen in `ChatTimeline`, nicht im Block: ein virtualisierter Block verlässt beim Scrollen das DOM und verlöre sonst seinen Zustand.
+  - Füllt der Verlauf die Höhe nicht, lädt `ChatTimeline` Älteres sofort nach (ohne Scrollleiste gibt es kein Scroll-Ereignis).
+  - Beantwortete Rückfrage: Kopf „Claude hat gefragt“, neutraler Rahmen (im Entwurf nicht gezeichnet; Design-README nachgezogen). Ziffern wirken auf die erste Frage ohne Auswahl, sonst auf die erste Mehrfachauswahl.
+  - Lint: eine Zeilen-Ausnahme für `react-hooks/incompatible-library` am `useVirtualizer`-Aufruf (Warnung gilt dem React Compiler, den das Projekt nicht nutzt) — von Sascha freigegeben.
+- **Nebenbefund, eigener Commit:** Seit Phase 3 wirkte keine verschachtelte BEM-Regel (`&__x`, `&--x`) — natives CSS-Nesting hängt nichts an den Elternnamen an. Behoben mit `postcss-nested` in `vite.config.ts`; Konvention nachgezogen.
+- **Nicht in der App angesehen:** Scroll-Verhalten, Nachladen ohne Sprung und die Maße sind nur gebaut und durch die Prüfkette gelaufen — Prüfung im Smoke am Plan-Ende (Wackelstelle 1).

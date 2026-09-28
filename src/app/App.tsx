@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
+import { ChatView } from '@/features/chat/ChatView';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
@@ -48,7 +49,7 @@ export function App(): ReactElement {
       return (
         <>
           <SessionHeader session={activeSession} />
-          <div className="app__content" />
+          <ChatView key={activeSession.id} session={activeSession} />
         </>
       );
     }

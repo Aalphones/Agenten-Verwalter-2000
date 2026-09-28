@@ -13,9 +13,4 @@
     flex-grow: 1;
     min-width: 0;
   }
-
-  &__content {
-    flex-grow: 1;
-    min-height: 0;
-  }
 }

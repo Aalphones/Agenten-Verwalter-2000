@@ -1,0 +1,7 @@
+.text-block {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: 1.65;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
