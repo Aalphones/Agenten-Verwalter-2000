@@ -137,7 +137,7 @@ Wrapper: `onSessionChanged(cb): Promise<UnlistenFn>` in `src/lib/sessions.ts`, `
 7. Sidebar gruppiert nach „Braucht dich“ / „Läuft“ / „Abgeschlossen“ mit den Statussymbolen des Entwurfs; mehrere Sessions laufen gleichzeitig.
 8. `pnpm check` grün; Code-Map, Glossar, Entwurfs-README, PROJECT.md und GAPS beschreiben den tatsächlichen Stand.
 
-## Smoke-Checkliste (macht Sascha am Plan-Ende)
+## Smoke-Checkliste (macht Sascha, verschoben auf den ersten arbeitsfähigen Stand)
 
 Wackelstellen zuerst:
 
@@ -155,10 +155,35 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Die App startet Claude pro Session als eigenen Prozess im Stream-Modus, zeigt den Verlauf virtualisiert (Nachrichten, Markdown mit farbigen Code-Blöcken, eingeklappter Gedankengang, gruppierte Werkzeug-Zeilen, Aufgabenliste, Rückfragen und Rechte-Abfragen als Kasten mit Knöpfen) und steuert ihn über die Eingabeleiste: Senden, Pause per Esc, Fortsetzen, Abbrechen, Neustart nach Absturz, Modell-, Modus- und Denkaufwand-Wechsel. Sessions und Verlauf liegen im Speicher des Core (bis M4), der Agent arbeitet in einem leeren Ordner pro Session (bis M3). `pnpm check` ist grün; ein Release-Workflow baut bei Versions-Tags Installer und lose exe.
+
 ## Files touched
+
+- Core: `src-tauri/src/agents/` (Claude-Prozess, Protokoll, Übersetzung), `src-tauri/src/sessions/`, `src-tauri/src/commands/{sessions,chat}.rs`, `src-tauri/src/filesystem/workspace.rs`, `src-tauri/src/error.rs`, `src-tauri/src/bin/gen-bindings.rs`
+- Oberfläche: `src/app/`, `src/features/{sessions,chat}/`, `src/components/`, `src/stores/{sessions,chat}.ts`, `src/lib/{sessions,chat,labels}.ts`, `src/lib/bindings/` (generiert), `src/styles/theme.css`, `vite.config.ts`
+- Doku und Betrieb: `AGENTS.md`, `docs/{PROJECT,code-map,glossary}.md`, `docs/conventions/`, `docs/knowledge/`, `docs/design/`, `.github/workflows/release.yml`, Startskript `starten.cmd`
 
 ## Commits
 
+- Phase 1: `dee9739` feat(agents): add claude process, stream protocol and translation
+- Phase 2: `c0d4b43` feat(sessions): add session registry, commands and events
+- Phase 3: `3096a6f` feat(sessions): add app frame, empty state and new session view (dazu `16ad29a` fix(ui): resolve BEM nesting with postcss-nested)
+- Phase 4: `da5f9e0` feat(chat): add virtualized chat timeline with answerable questions
+- Phase 5: `d20d060` feat(chat): render agent replies as markdown with highlighted code blocks
+- Phase 6: `e3fa46f` feat(chat): add composer with model, mode and effort menus
+- Nebenbei: `47e0eb2` ci(setup): build release with installer and exe on version tags
+
 ## Deviations from plan
 
+- **Smoke-Abnahme nicht in diesem Plan:** Sascha hat am Plan-Ende entschieden, dass sich auf dem Stand (Sessions weg nach Neustart, keine Repositories) nicht sauber abnehmen lässt. Die Smoke-Checkliste oben wandert unverändert in die Abnahme des ersten arbeitsfähigen Stands; bis dahin ist sie **nicht abgehakt**.
+- **Kein Versions-Tag:** Die Regel aus `docs/conventions/releases.md` taggt abgenommene Pläne. Weil die Abnahme aussteht, trägt M2a keinen Tag; die Version bleibt `0.1.0`.
+- **Platzhalter „Antwort an Claude …“** hängt am Status `waiting`, nicht an einer aus den Einträgen abgeleiteten offenen Rückfrage.
+- **Werkzeug-Gruppen** werden je Block virtualisiert, nicht je Zeile: 80 aufeinanderfolgende Read-Aufrufe ohne Text dazwischen stehen aufgeklappt alle im DOM.
+
 ## Follow-ups
+
+- Smoke-Checkliste (siehe oben) beim ersten arbeitsfähigen Stand durchspielen; besonders die Wackelstellen (langer Verlauf, Konsolenfenster, Rechte-Abfrage, Code-Block kopieren, Link im Browser).
+- Bündel ~614 kB (Warnung „> 500 kB“) durch den `common`-Sprachsatz von highlight.js und `react-markdown`; Aufteilen erst bei spürbarer Startzeit.
+- Im Fenster ungeprüft: Link öffnet Browser (`opener:default`), Kopieren in die Zwischenablage, Hell/Dunkel-Optik. Schlägt `openUrl` fehl → `opener:allow-open-url` eintragen.
+- Offen aus M1: `gen-bindings.exe` im Installer (Entscheidung steht aus).
+- `→ Vault`-Einträge in `FINDINGS.md` (Rust-`match` und Sperren, BEM-Nesting im Build, `rehype-highlight` und Sprachen) warten auf `session-review`.
