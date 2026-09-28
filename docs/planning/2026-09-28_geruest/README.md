@@ -22,7 +22,7 @@ Umsetzung direkt auf `main`, ein Commit pro Phase. Erkenntnisse während der Ums
 - **Installer:** nur NSIS (`bundle.targets: ["nsis"]`), kein WiX.
 - **CSP:** `default-src 'self'; connect-src ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data:`.
 - **Platzhalter-Hülle statt Layout:** Die Oberfläche in diesem Meilenstein ist bewusst nur ein Titel plus Versionsanzeige. Den App-Rahmen (Sidebar, Header, Ansichten) besitzt der Design-Meilenstein 1b bzw. M6 — hier wird nichts gebaut, woran später angebaut wird.
-- **Token-Werte sind Platzhalter:** Phase 2 legt die Token-*Struktur* fest; die finalen Farben, Abstände und Schriften liefert Meilenstein 1b.
+- **Token-Werte aus dem Design:** Phase 2 übernimmt Farben, Schriften, Abstände und Radien unverändert aus [docs/design/2026-09-28_hauptansichten/README.md](../../design/2026-09-28_hauptansichten/README.md) → „Tokens“. Schriften sind die Windows-Systemschriften Segoe UI Variable und Cascadia Code; es wird keine Schrift ausgeliefert.
 
 ## Finale Abnahmekriterien
 

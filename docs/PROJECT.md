@@ -12,15 +12,22 @@ Leitsatz: **Chat first. Changes second.** Was nicht aktiv beim Agent-Workflow hi
 
 MVP (Version 1):
 
-- **Navigation:** Session-Liste, neue Session (drei Schritte: Aufgabe → Repositories → Agent), Session archivieren
-- **Chat:** Nachrichten von User und Agent, eingeklappte Tool-Aktivität, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
-- **Workspace:** mehrere Repositories pro Session, automatisch angelegte Worktrees und Branches
+Die Bedienung orientiert sich an der Claude-Erweiterung für VS Code, damit sich die Arbeit mit dem Agenten gleich anfühlt. Verbindlicher Entwurf: [design/2026-09-28_hauptansichten/](design/2026-09-28_hauptansichten/README.md).
+
+MVP (Version 1):
+
+- **Navigation:** Session-Liste (gruppiert nach „Braucht dich“ / „Läuft“ / „Abgeschlossen“), neue Session (drei Schritte: Aufgabe mit Anhängen → Repositories → Agent), Session umbenennen und archivieren
+- **Chat:** Nachrichten von User und Agent, eingeklappte Tool-Aktivität und Gedankengang, Aufgabenliste, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
+- **Eingabe:** Bilder und Dateien anhängen (Knopf, Hineinziehen, Einfügen); Skills und Befehle über `/`-Knopf und `/` im Eingabefeld; Modell und Denkaufwand während der Session wechseln; Modus (Manuell, Automatisch bearbeiten, Planen, Auto)
+- **Artefakte:** von Claude in einer Session erstellte Artefakte als Karte im Chat und im Reiter „Artefakte“ der Session
+- **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind sichtbar und einsehbar (Entwurf folgt als Nachtrag zu 1b)
+- **Workspace:** mehrere Repositories pro Session, automatisch angelegte Worktrees und Branches; Skills der beteiligten Repositories stehen in der Session zur Verfügung
 - **Changes:** Repository-Filter, geänderte Dateien, Unified Diff, Trennung committed/uncommitted gegen eine konfigurierbare Basis
 - **Agent:** Claude als einziger Provider
 - **Persistenz:** SQLite, Session-Wiederherstellung nach App-Neustart
 - **Desktop:** Tauri-App für Windows
 
-Danach (Reihenfolge laut Konzept, Abschnitt 66): OpenCode- und LM-Studio-Provider, Modellwechsel, Skills, Rechte-Oberfläche, Suche, Command Palette → Multi-Agent, „Ask about this change“, Commit-Automatik → PR-Workflow, Agent-Pipelines, Session-Vorlagen.
+Danach (Reihenfolge laut Konzept, Abschnitt 66): OpenCode- und LM-Studio-Provider, feinere Rechte-Oberfläche über die Modi hinaus, Suche, app-weite Command Palette → Multi-Agent, „Ask about this change“, Commit-Automatik → PR-Workflow, Agent-Pipelines, Session-Vorlagen.
 
 ## Nicht-Ziele
 
@@ -59,12 +66,12 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste zuerst, UI-Politur zuletzt.
 
 1. **Gerüst:** Rust-Toolchain, Tauri-2-App mit React, Lint/Typecheck/Build lokal und als GitHub-Actions-Prüfung.
-1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten (Session-Liste, neue Session, Chat, Changes, Settings) nach Konzept Abschnitte 8–18, 57 und 69–70, abgelegt in [design/](design/). Er ist die Vorlage für alle Oberflächen-Anteile ab Meilenstein 2, damit M2–M5 keine Wegwerf-Oberfläche bauen; M6 wird Feinschliff statt Neubau. Hängt an keinem Code und kann parallel zu Meilenstein 1 entstehen.
-2. **Agent-Anbindung (Durchstich):** Claude starten, Events empfangen, unterbrechen, fortsetzen, Status erkennen — Entscheidung über den Anbindungsweg fällt hier.
+1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten, abgelegt in [design/2026-09-28_hauptansichten/](design/2026-09-28_hauptansichten/README.md) — abgenommen am 2026-09-28; Nachtrag „Hintergrund“ (Dev-Server, Subagenten, Skripte, Scratchpad) offen. Jeder folgende Meilenstein baut die ihm dort zugeordneten Tafeln gleich nach Entwurf, keine Wegwerf-Oberfläche.
+2. **Agent-Anbindung (Durchstich):** Claude starten, Events empfangen, unterbrechen, fortsetzen, Status erkennen — Entscheidung über den Anbindungsweg fällt hier. Der Durchstich prüft auch, ob Anhänge, Skills aus mehreren Repositories, Modell- und Moduswechsel, Artefakte sowie Dev-Server und Subagenten mit dem gewählten Weg gehen (Fragen in [knowledge/GAPS.md](knowledge/GAPS.md)); gebaut werden Chat-Ansicht und Eingabeleiste nach Entwurf.
 3. **Worktree-Orchestrierung:** mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 4. **Persistenz & Wiederherstellung:** Sessions, Nachrichten, Events in SQLite; nach Neustart laufende Agenten wiederfinden.
 5. **Changes & Diff:** Diffs über mehrere Repositories zusammenfassen, committed/uncommitted, lazy Diff-Ansicht.
-6. **UI auf Zielbild:** Chat- und Changes-Ansicht nach Konzept, virtuelle Listen, Zustände konsistent → MVP.
+6. **UI auf Zielbild:** restliche Tafeln des Entwurfs (Einstellungen, Hellmodus), virtuelle Listen, Zustände konsistent über alle Ansichten → MVP.
 
 ## Offene Fragen
 

@@ -1,0 +1,39 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": { "h": 900, "is_interactive": true, "title": "Prototyp · Chat (läuft) — klickbar", "w": 1440, "x": 0, "y": 0 },
+    "Waiting.dc.html": { "h": 900, "is_interactive": true, "title": "Chat · Agent wartet auf dich", "w": 1440, "x": 1520, "y": 0 },
+    "Error.dc.html": { "h": 900, "is_interactive": true, "title": "Chat · Agent abgestürzt", "w": 1440, "x": 3040, "y": 0 },
+    "Light.dc.html": { "h": 900, "is_interactive": true, "title": "Chat · Hellmodus", "w": 1440, "x": 4560, "y": 0 },
+    "Changes.dc.html": { "h": 900, "is_interactive": true, "title": "Changes · Übersicht", "w": 1440, "x": 0, "y": 1300 },
+    "Diff.dc.html": { "h": 900, "is_interactive": true, "title": "Changes · Datei geöffnet", "w": 1440, "x": 1520, "y": 1300 },
+    "Artifacts.dc.html": { "h": 900, "is_interactive": true, "title": "Artefakte der Session", "w": 1440, "x": 3040, "y": 1300 },
+    "Attach.dc.html": { "h": 900, "is_interactive": true, "title": "+ · Bilder und Dateien anhängen", "w": 1440, "x": 0, "y": 2600 },
+    "Cmd.dc.html": { "h": 900, "is_interactive": true, "title": "/-Knopf · Befehle und Skills", "w": 1440, "x": 1520, "y": 2600 },
+    "Slash.dc.html": { "h": 900, "is_interactive": true, "title": "/ im Eingabefeld getippt · Skills", "w": 1440, "x": 3040, "y": 2600 },
+    "Model.dc.html": { "h": 900, "is_interactive": true, "title": "Modell während der Session wechseln", "w": 1440, "x": 4560, "y": 2600 },
+    "Mode.dc.html": { "h": 900, "is_interactive": true, "title": "Modus und Denkaufwand", "w": 1440, "x": 6080, "y": 2600 },
+    "NewSession.dc.html": { "h": 900, "is_interactive": true, "title": "Neue Session", "w": 1440, "x": 0, "y": 3900 },
+    "Settings.dc.html": { "h": 900, "is_interactive": true, "title": "Einstellungen", "w": 1440, "x": 1520, "y": 3900 },
+    "Empty.dc.html": { "h": 900, "is_interactive": true, "title": "Erster Start · keine Session", "w": 1440, "x": 3040, "y": 3900 },
+    "Rename.dc.html": { "h": 900, "is_interactive": true, "title": "Rechtsklick auf Session · Umbenennen", "w": 1440, "x": 4560, "y": 3900 }
+  },
+  "createdOnFiles": { "at": "2026-09-28T12:00:00Z", "v": 1 },
+  "designSystems": [],
+  "launch": { "view": "canvas" },
+  "notes": {
+    "rowChat": { "kind": "title1", "maxW": 6000, "text": "Chat — die Hauptarbeitsfläche", "w": 240, "x": 0, "y": -300 },
+    "rowChanges": { "kind": "title1", "maxW": 6000, "text": "Changes und Artefakte — die Prüfebene", "w": 240, "x": 0, "y": 1000 },
+    "rowControl": { "kind": "title1", "maxW": 7520, "text": "Eingabeleiste — Anhänge, Skills, Modell, Modus", "w": 240, "x": 0, "y": 2300 },
+    "rowRest": { "kind": "title1", "maxW": 6000, "text": "Anlegen, Einstellen, Erster Start, Umbenennen", "w": 240, "x": 0, "y": 3600 }
+  },
+  "order": [
+    "Main.dc.html", "Waiting.dc.html", "Error.dc.html", "Light.dc.html",
+    "Changes.dc.html", "Diff.dc.html", "Artifacts.dc.html",
+    "Attach.dc.html", "Cmd.dc.html", "Slash.dc.html", "Model.dc.html", "Mode.dc.html",
+    "NewSession.dc.html", "Settings.dc.html", "Empty.dc.html", "Rename.dc.html"
+  ],
+  "pages": [],
+  "title": "Agenten Verwalter 2000 — Design"
+}

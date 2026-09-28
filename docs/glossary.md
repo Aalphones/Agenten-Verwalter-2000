@@ -21,4 +21,12 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Tool-Aktivität** | Die Einzelschritte des Agenten (Datei lesen, Befehl ausführen …). Im Chat standardmäßig eingeklappt zusammengefasst. |
 | **Chat-Ansicht** | Hauptansicht einer Session: Gespräch mit dem Agenten, Status, Rückfragen. |
 | **Changes-Ansicht** | Prüfansicht einer Session: geänderte Repositories, Dateien und Diffs gegen die Basis. |
+| **Anhang** | Bild oder Datei, die mit einer Nachricht an den Agenten geht (per Knopf, Hineinziehen oder Einfügen). |
+| **Skill** | Eine benannte, wiederverwendbare Arbeitsanweisung für den Agenten, aufgerufen mit `/name`. Herkunft: Benutzerordner oder `.claude/skills` eines Repositorys der Session. |
+| **Modus** | Wie selbstständig der Agent arbeitet: Manuell, Automatisch bearbeiten, Planen, Auto. Pro Session, jederzeit wechselbar. |
+| **Denkaufwand** | Wie gründlich das Modell nachdenkt, fünf Stufen von Niedrig bis Max. Pro Session, jederzeit wechselbar. |
+| **Artefakt** | Etwas, das der Agent in einer Session zum Ansehen erstellt und veröffentlicht (Design, Diagramm, Seite). Im Reiter „Artefakte“ der Session. |
+| **Subagent** | Ein vom Agenten selbst gestarteter Hilfs-Agent für eine Teilaufgabe. Läuft innerhalb der Session, wird dort angezeigt. |
+| **Hintergrundprozess** | Ein vom Agenten gestarteter Prozess, der weiterläuft, während der Agent arbeitet (z.B. ein Dev-Server). |
+| **Scratchpad** | Der temporäre Ablageordner einer Session für Zwischenergebnisse des Agenten, die nicht ins Repository gehören. |
 | **Core** | Der Rust-Teil der App (`src-tauri/`): Prozesse, Git, Datenbank, Dateisystem. Die React-Oberfläche spricht nur über Tauri Commands und Events mit ihm. |

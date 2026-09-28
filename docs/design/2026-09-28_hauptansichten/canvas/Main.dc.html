@@ -1,0 +1,1285 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Agenten Verwalter 2000 – Prototyp</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="{{themeVars}} width: 1440px; height: 900px; display: flex; overflow: hidden; background: var(--color-bg-base); color: var(--color-fg-primary); font-family: var(--font-sans); font-size: 13px; line-height: 1.45;">
+
+<nav aria-label="Sessions" style="width: 256px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--color-bg-sidebar); border-right: 1px solid var(--color-border-subtle);">
+  <div style="height: 48px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+    <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="7" height="7" rx="2"></rect><rect x="5.5" y="5.5" width="7" height="7" rx="2"></rect></svg>
+    <span style="font-weight: 600; font-size: 13px;">Agenten Verwalter 2000</span>
+  </div>
+  <div style="padding: 2px 10px 10px; flex-shrink: 0;">
+    <button type="button" onClick="{{goNew}}" style="width: 100%; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: {{newBtnBg}}; color: var(--color-fg-primary); font: inherit; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M7 2.5v9M2.5 7h9"></path></svg>
+      <span style="flex-grow: 1; text-align: left;">Neue Session</span>
+      <kbd style="font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">Ctrl N</kbd>
+    </button>
+  </div>
+  <div style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 2px 10px; display: flex; flex-direction: column; gap: 14px;">
+    <sc-if value="{{showEmptyHint}}" hint-placeholder-val="{{false}}">
+      <p style="margin: 0; padding: 8px; font-size: 12px; color: var(--color-fg-muted);">Noch keine Sessions.</p>
+    </sc-if>
+    <sc-for list="{{groups}}" as="group" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 1px;">
+        <h2 style="margin: 0; padding: 4px 8px; display: flex; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-fg-muted);"><span>{{group.label}}</span><span style="font-weight: 400;">{{group.count}}</span></h2>
+        <sc-for list="{{group.items}}" as="item" hint-placeholder-count="2">
+          <div style="position: relative;">
+          <sc-if value="{{item.isRenaming}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 4px; padding: 4px 6px 6px 30px; border-radius: 6px; background: var(--color-bg-selected);">
+              <input type="text" aria-label="Neuer Name der Session" value="{{renameDraft}}" onChange="{{onRenameDraft}}" onKeyDown="{{onRenameKey}}" onBlur="{{commitRename}}" autoFocus="{{true}}" style="width: 100%; height: 26px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--color-accent); border-radius: 5px; background: var(--color-bg-base); color: var(--color-fg-primary); font: inherit; font-weight: 500; outline: none;">
+              <span style="font-size: 11px; color: var(--color-fg-muted);">Enter speichert · Esc bricht ab</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{item.notRenaming}}" hint-placeholder-val="{{true}}">
+          <button type="button" onClick="{{item.select}}" onDoubleClick="{{item.startRename}}" onContextMenu="{{item.openMenu}}" aria-current="{{item.ariaCurrent}}" style="display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: {{item.bg}}; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+            <span style="flex-shrink: 0; width: 14px; height: 19px; display: flex; align-items: center; justify-content: center; color: {{item.color}};">
+              <sc-if value="{{item.isRunning}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+              <sc-if value="{{item.isWaiting}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.8"></circle><circle cx="6" cy="6" r="1.6" fill="currentColor"></circle></svg></sc-if>
+              <sc-if value="{{item.isError}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.4 11 10.4H1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6 4.8v2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="6" cy="8.8" r="0.75" fill="currentColor"></circle></svg></sc-if>
+              <sc-if value="{{item.isPaused}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect><rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect></svg></sc-if>
+              <sc-if value="{{item.isCompleted}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+            </span>
+            <span style="display: flex; flex-direction: column; min-width: 0; gap: 1px;">
+              <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{item.nameColor}};">{{item.name}}</span>
+              <sc-if value="{{item.showMeta}}" hint-placeholder-val="{{true}}">
+                <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{item.metaColor}};">{{item.meta}}</span>
+              </sc-if>
+            </span>
+          </button>
+          </sc-if>
+          <sc-if value="{{item.menuOpen}}" hint-placeholder-val="{{false}}">
+            <div role="menu" aria-label="Aktionen für {{item.name}}" style="position: absolute; top: calc(100% - 4px); left: 30px; z-index: 30; min-width: 190px; padding: 4px; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg-popover); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; gap: 1px;">
+              <sc-for list="{{item.menuItems}}" as="mi" hint-placeholder-count="2">
+                <button type="button" role="menuitem" onClick="{{mi.pick}}" style="height: 28px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;"><span style="flex-grow: 1;">{{mi.label}}</span><kbd style="font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">{{mi.key}}</kbd></button>
+              </sc-for>
+            </div>
+          </sc-if>
+          </div>
+        </sc-for>
+      </section>
+    </sc-for>
+  </div>
+  <div style="padding: 8px 10px; border-top: 1px solid var(--color-border-subtle); flex-shrink: 0;">
+    <button type="button" onClick="{{goSettings}}" style="width: 100%; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: 6px; background: {{settingsBtnBg}}; color: var(--color-fg-secondary); font: inherit; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"></path><circle cx="9" cy="4" r="1.5"></circle><circle cx="5" cy="10" r="1.5"></circle></svg>
+      <span>Einstellungen</span>
+    </button>
+  </div>
+</nav>
+
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+
+  <sc-if value="{{showSessionHeader}}" hint-placeholder-val="{{true}}">
+    <header style="height: 48px; flex-shrink: 0; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 0 14px 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+        <h1 style="margin: 0; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.name}}</h1>
+        <span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--color-border-subtle); color: {{s.color}}; font-size: 12px; font-weight: 500;">
+          <sc-if value="{{s.isRunning}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+          <sc-if value="{{s.isWaiting}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.8"></circle><circle cx="6" cy="6" r="1.6" fill="currentColor"></circle></svg></sc-if>
+          <sc-if value="{{s.isError}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.4 11 10.4H1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6 4.8v2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="6" cy="8.8" r="0.75" fill="currentColor"></circle></svg></sc-if>
+          <sc-if value="{{s.isPaused}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect><rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect></svg></sc-if>
+          <sc-if value="{{s.isCompleted}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+          <span>{{s.statusLabel}}</span>
+        </span>
+        <div style="position: relative; flex-shrink: 0;">
+          <button type="button" onClick="{{toggleHeaderMenu}}" aria-label="Weitere Aktionen für diese Session" aria-haspopup="menu" aria-expanded="{{headerMenuOpenStr}}" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: {{headerMenuBtnBg}}; color: var(--color-fg-muted); cursor: pointer;"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="3" cy="7" r="1.2" fill="currentColor"></circle><circle cx="7" cy="7" r="1.2" fill="currentColor"></circle><circle cx="11" cy="7" r="1.2" fill="currentColor"></circle></svg></button>
+          <sc-if value="{{headerMenuOpen}}" hint-placeholder-val="{{false}}">
+            <div role="menu" aria-label="Session-Aktionen" style="position: absolute; top: 32px; left: 0; z-index: 30; min-width: 190px; padding: 4px; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg-popover); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; gap: 1px;">
+              <sc-for list="{{s.menuItems}}" as="mi" hint-placeholder-count="2">
+                <button type="button" role="menuitem" onClick="{{mi.pick}}" style="height: 28px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--color-fg-primary); font: inherit; font-weight: 400; text-align: left; cursor: pointer;"><span style="flex-grow: 1;">{{mi.label}}</span><kbd style="font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">{{mi.key}}</kbd></button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div role="tablist" aria-label="Ansicht" style="display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+        <sc-for list="{{tabs}}" as="tab" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{tab.selected}}" onClick="{{tab.pick}}" style="height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; border-radius: 6px; background: {{tab.bg}}; color: {{tab.fg}}; font: inherit; font-weight: 500; cursor: pointer;">{{tab.label}}<sc-if value="{{tab.hasCount}}" hint-placeholder-val="{{false}}"><span style="min-width: 18px; padding: 0 5px; box-sizing: border-box; height: 18px; border-radius: 9px; background: var(--color-bg-hover); font-size: 11px; line-height: 18px; color: var(--color-fg-secondary);">{{tab.count}}</span></sc-if></button>
+        </sc-for>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; font-size: 12px; color: var(--color-fg-muted);">
+        <span title="{{s.ctxTitle}}" style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+          <span style="width: 48px; height: 4px; border-radius: 2px; background: var(--color-bg-hover); overflow: hidden;"><span style="display: block; height: 4px; width: {{s.ctxPct}}; background: {{s.ctxColor}};"></span></span>
+          <span style="font-family: var(--font-mono); font-size: 11.5px;">{{s.ctx}}</span>
+        </span>
+        <span title="Laufzeit der Session" style="display: flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11.5px;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5.5"></circle><path d="M7 4v3.2l2 1.3"></path></svg>{{s.runtime}}</span>
+        <sc-if value="{{s.canControl}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; gap: 6px;">
+            <button type="button" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect><rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect></svg>Pause</button>
+            <button type="button" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" rx="1.2" fill="currentColor"></rect></svg>Abbrechen</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{s.isPaused}}" hint-placeholder-val="{{false}}">
+          <button type="button" onClick="{{resume}}" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 2.2v7.6L10 6Z" fill="currentColor"></path></svg>Fortsetzen</button>
+        </sc-if>
+      </div>
+    </header>
+  </sc-if>
+
+  <sc-if value="{{isChat}}" hint-placeholder-val="{{true}}">
+    <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+      <div style="flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;">
+        <div style="width: 100%; max-width: 780px; margin: 0 auto; padding: 20px 32px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
+          <sc-for list="{{blocks}}" as="b" hint-placeholder-count="4">
+            <sc-if value="{{b.isUser}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg-surface);">
+                <sc-if value="{{b.hasAttachments}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    <sc-for list="{{b.attachments}}" as="att" hint-placeholder-count="2">
+                      <span style="display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 8px 0 4px; border-radius: 5px; background: var(--color-bg-hover); font-size: 12px;">
+                        <sc-if value="{{att.isImage}}" hint-placeholder-val="{{true}}"><span style="width: 26px; height: 18px; border-radius: 3px; background: {{att.thumb}}; border: 1px solid var(--color-border);"></span></sc-if>
+                        <sc-if value="{{att.isFile}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true" style="margin-left: 4px; color: var(--color-fg-muted);"><path d="M3.5 1.5h4.5l3 3v8h-7.5Z"></path><path d="M8 1.5v3h3"></path></svg></sc-if>
+                        <span style="font-weight: 600;">{{att.name}}</span>
+                        <span style="color: var(--color-fg-muted);">{{att.meta}}</span>
+                      </span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <p style="margin: 0; font-size: 13.5px; line-height: 1.6; white-space: pre-line;"><sc-if value="{{b.hasSkill}}" hint-placeholder-val="{{false}}"><span style="display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; background: var(--color-accent-subtle); color: var(--color-accent-text); font-family: var(--font-mono); font-size: 12.5px;">{{b.skill}}</span></sc-if>{{b.text}}</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isText}}" hint-placeholder-val="{{true}}">
+              <p style="margin: 0; font-size: 13.5px; line-height: 1.65; white-space: pre-line;">{{b.text}}</p>
+            </sc-if>
+            <sc-if value="{{b.isThinking}}" hint-placeholder-val="{{false}}">
+              <button type="button" onClick="{{b.toggle}}" aria-expanded="{{b.expandedStr}}" style="align-self: flex-start; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: var(--color-fg-muted); font: inherit; font-size: 12.5px; font-style: italic; cursor: pointer;">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11M3 3l8 8M11 3 3 11"></path></svg>
+                <span>{{b.label}}</span>
+              </button>
+              <sc-if value="{{b.expanded}}" hint-placeholder-val="{{false}}">
+                <p style="margin: 0; padding-left: 18px; border-left: 1px solid var(--color-border); font-size: 12.5px; line-height: 1.6; font-style: italic; color: var(--color-fg-muted);">{{b.text}}</p>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{b.isToolGroup}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <button type="button" onClick="{{b.toggle}}" aria-expanded="{{b.expandedStr}}" style="align-self: flex-start; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: transparent; color: var(--color-fg-secondary); font: inherit; cursor: pointer; text-align: left;">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: {{b.dot}};"></span>
+                  <span style="font-weight: 600; color: var(--color-fg-primary);">{{b.title}}</span>
+                  <span>{{b.summary}}</span>
+                  <sc-if value="{{b.collapsed}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5 9 7l-3.5 3.5"></path></svg></sc-if>
+                  <sc-if value="{{b.expanded}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 7 9l3.5-3.5"></path></svg></sc-if>
+                </button>
+                <sc-if value="{{b.expanded}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; flex-direction: column; gap: 2px; padding-left: 16px;">
+                    <sc-for list="{{b.lines}}" as="line" hint-placeholder-count="4">
+                      <div style="display: flex; align-items: baseline; gap: 8px; font-size: 12.5px;">
+                        <span style="color: var(--color-fg-muted); font-family: var(--font-mono);">⎿</span>
+                        <span style="font-weight: 600;">{{line.tool}}</span>
+                        <span style="font-family: var(--font-mono); font-size: 12px; color: var(--color-fg-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{line.target}}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isSkill}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-status-completed);"></span>
+                <span style="font-weight: 600;">Skill</span>
+                <span style="padding: 0 6px; border-radius: 4px; background: var(--color-accent-subtle); color: var(--color-accent-text); font-family: var(--font-mono); font-size: 12px;">{{b.name}}</span>
+                <span style="font-size: 12.5px; color: var(--color-fg-muted);">{{b.note}}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isTodos}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-status-completed);"></span>
+                  <span style="font-weight: 600;">Aufgaben</span>
+                  <span style="font-size: 12.5px; color: var(--color-fg-muted);">{{b.doneCount}} von {{b.total}} erledigt</span>
+                </div>
+                <sc-for list="{{b.items}}" as="step" hint-placeholder-count="4">
+                  <div style="display: flex; align-items: center; gap: 8px; padding-left: 16px; font-size: 12.5px; color: {{step.fg}};">
+                    <sc-if value="{{step.isDone}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" style="color: var(--color-status-completed);"><rect x="1.5" y="1.5" width="11" height="11" rx="2.5" fill="currentColor" opacity="0.18"></rect><path d="M4 7.2 6.1 9.2 10 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                    <sc-if value="{{step.isActive}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" style="color: var(--color-status-running);"><rect x="1.5" y="1.5" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect><rect x="4.5" y="4.5" width="5" height="5" rx="1" fill="currentColor"></rect></svg></sc-if>
+                    <sc-if value="{{step.isTodo}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" style="color: var(--color-fg-muted);"><rect x="1.5" y="1.5" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"></rect></svg></sc-if>
+                    <span>{{step.label}}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isArtifact}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg-surface);">
+                <span style="width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--color-accent-subtle); color: var(--color-accent-text);"><svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2" width="11" height="10" rx="1.5"></rect><path d="M1.5 5h11M4 7.5h3M4 9.5h5"></path></svg></span>
+                <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+                  <span style="font-weight: 600;">{{b.title}}</span>
+                  <span style="font-size: 12px; color: var(--color-fg-muted);">{{b.meta}}</span>
+                </span>
+                <button type="button" onClick="{{b.open}}" style="height: 28px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12px; cursor: pointer;">In der Session ansehen</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isQuestion}}" hint-placeholder-val="{{false}}">
+              <div role="group" aria-label="Rückfrage des Agenten" style="border: 1px solid var(--color-status-waiting); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--color-bg-surface);">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--color-status-waiting);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.8"></circle><circle cx="6" cy="6" r="1.6" fill="currentColor"></circle></svg>
+                  <span>Claude wartet auf deine Entscheidung</span>
+                </div>
+                <p style="margin: 0; font-size: 13.5px; font-weight: 500;">{{b.question}}</p>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <sc-for list="{{b.options}}" as="opt" hint-placeholder-count="2">
+                    <button type="button" onClick="{{opt.pick}}" style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg-base); color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                      <span style="width: 18px; height: 18px; flex-shrink: 0; border-radius: 4px; background: var(--color-bg-hover); font-size: 11px; line-height: 18px; text-align: center; color: var(--color-fg-secondary);">{{opt.key}}</span>
+                      <span style="display: flex; flex-direction: column; gap: 1px;"><span style="font-weight: 500;">{{opt.label}}</span><span style="font-size: 12px; color: var(--color-fg-muted);">{{opt.hint}}</span></span>
+                    </button>
+                  </sc-for>
+                </div>
+                <div style="font-size: 12px; color: var(--color-fg-muted);">Oder schreib unten eine eigene Antwort.</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isError}}" hint-placeholder-val="{{false}}">
+              <div role="alert" style="border: 1px solid var(--color-status-error); border-radius: 8px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; background: var(--color-bg-surface);">
+                <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px; color: var(--color-status-error);"><path d="M6 1.4 11 10.4H1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6 4.8v2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="6" cy="8.8" r="0.75" fill="currentColor"></circle></svg>
+                <div style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+                  <div style="font-weight: 600;">{{b.title}}</div>
+                  <div style="font-size: 12.5px; color: var(--color-fg-secondary);">{{b.text}}</div>
+                  <div style="display: flex; gap: 8px;">
+                    <button type="button" style="height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;">Agent neu starten</button>
+                    <button type="button" style="height: 28px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12px; cursor: pointer;">Protokoll anzeigen</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isAction}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+                <span style="flex-grow: 1; font-size: 12.5px; color: var(--color-fg-secondary);">{{b.text}}</span>
+                <button type="button" onClick="{{b.onPrimary}}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;">{{b.primary}}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isWorking}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--color-accent-text);">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11M3 3l8 8M11 3 3 11"></path></svg>
+                <span>{{b.text}}</span>
+                <span style="color: var(--color-fg-muted);">· Esc unterbricht</span>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex-shrink: 0; padding: 6px 32px 18px;">
+        <div style="position: relative; max-width: 780px; margin: 0 auto; border: 1px solid {{composerBorder}}; border-radius: 10px; background: var(--color-bg-surface); box-shadow: {{composerRing}}; display: flex; flex-direction: column;">
+
+          <sc-if value="{{menuCmdOpen}}" hint-placeholder-val="{{false}}">
+            <div role="dialog" aria-label="{{cmdTitle}}" style="position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 30; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-popover); box-shadow: var(--shadow-popover); overflow: hidden;">
+              <div style="padding: 8px; border-bottom: 1px solid var(--color-border-subtle);">
+                <input type="text" aria-label="{{cmdTitle}} filtern" placeholder="{{cmdPlaceholder}}" value="{{filter}}" onChange="{{onFilter}}" style="width: 100%; height: 30px; box-sizing: border-box; padding: 0 10px; border: 0; border-radius: 6px; background: var(--color-bg-base); color: var(--color-fg-primary); font: inherit; outline: none;">
+              </div>
+              <div style="padding: 4px 4px 6px; display: flex; flex-direction: column; max-height: 470px; overflow-y: auto;">
+                <sc-for list="{{cmdSections}}" as="sec" hint-placeholder-count="3">
+                  <div style="padding: 8px 10px 3px; font-size: 12px; color: var(--color-fg-muted);">{{sec.title}}</div>
+                  <sc-for list="{{sec.items}}" as="it" hint-placeholder-count="3">
+                    <sc-if value="{{it.isRow}}" hint-placeholder-val="{{true}}">
+                      <button type="button" onClick="{{it.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 30px; padding: 3px 10px; border: 0; border-radius: 5px; background: {{it.bg}}; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                        <sc-if value="{{it.isSkill}}" hint-placeholder-val="{{false}}"><span style="width: 150px; flex-shrink: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--color-accent-text);">{{it.label}}</span></sc-if>
+                        <sc-if value="{{it.isPlain}}" hint-placeholder-val="{{true}}"><span style="flex-shrink: 0;">{{it.label}}</span></sc-if>
+                        <span style="flex-grow: 1; font-size: 12.5px; color: var(--color-fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.desc}}</span>
+                        <span style="font-size: 11.5px; color: var(--color-fg-muted);">{{it.right}}</span>
+                      </button>
+                    </sc-if>
+                    <sc-if value="{{it.isEffort}}" hint-placeholder-val="{{false}}">
+                      <div style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 3px 10px;">
+                        <span style="flex-grow: 1;">Denkaufwand <span style="color: var(--color-fg-muted);">({{effortLabel}})</span></span>
+                        <div role="group" aria-label="Denkaufwand" style="display: flex; align-items: center; gap: 0; padding: 3px 6px; border-radius: 999px; background: var(--color-bg-hover);">
+                          <sc-for list="{{effortDots}}" as="d" hint-placeholder-count="5">
+                            <button type="button" aria-label="Denkaufwand {{d.label}}" aria-pressed="{{d.pressed}}" onClick="{{d.pick}}" style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; cursor: pointer;"><span style="display: block; width: {{d.size}}; height: {{d.size}}; border-radius: 50%; background: {{d.color}};"></span></button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{it.isToggle}}" hint-placeholder-val="{{false}}">
+                      <button type="button" role="switch" aria-checked="{{it.onStr}}" onClick="{{it.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 30px; padding: 3px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                        <span style="flex-grow: 1;">{{it.label}}</span>
+                        <span style="width: 30px; height: 18px; box-sizing: border-box; padding: 2px; border-radius: 9px; background: {{it.trackBg}}; display: flex; justify-content: {{it.justify}};"><span style="width: 14px; height: 14px; border-radius: 50%; background: var(--color-fg-on-toggle);"></span></span>
+                      </button>
+                    </sc-if>
+                  </sc-for>
+                </sc-for>
+                <sc-if value="{{cmdEmpty}}" hint-placeholder-val="{{false}}">
+                  <div style="padding: 12px 10px; font-size: 12.5px; color: var(--color-fg-muted);">Nichts passt zu „{{filter}}“.</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{plusOpen}}" hint-placeholder-val="{{false}}">
+            <div role="menu" aria-label="Hinzufügen" style="position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; width: 330px; padding: 4px; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-popover); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; gap: 1px;">
+              <sc-for list="{{plusItems}}" as="pi" hint-placeholder-count="4">
+                <button type="button" role="menuitem" onClick="{{pi.pick}}" style="display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 3px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;"><span style="flex-grow: 1;">{{pi.label}}</span><kbd style="font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">{{pi.key}}</kbd></button>
+              </sc-for>
+              <div style="margin-top: 3px; padding: 7px 10px 5px; border-top: 1px solid var(--color-border-subtle); font-size: 12px; color: var(--color-fg-muted);">Bilder, PDFs, Text und Code gehen. Einfach ins Fenster ziehen oder mit Ctrl+V einfügen.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{modelOpen}}" hint-placeholder-val="{{false}}">
+            <div role="dialog" aria-label="Modell" style="position: absolute; left: 60px; bottom: calc(100% + 8px); z-index: 30; width: 340px; padding: 4px; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-popover); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; gap: 1px;">
+              <div style="padding: 6px 10px 4px; font-size: 12px; color: var(--color-fg-muted);">Modell für diese Session</div>
+              <sc-for list="{{modelOptions}}" as="m" hint-placeholder-count="4">
+                <button type="button" role="menuitemradio" aria-checked="{{m.checkedStr}}" onClick="{{m.pick}}" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 5px; background: {{m.bg}}; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                  <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px;"><span style="font-weight: 500;">{{m.name}}</span><span style="font-size: 12px; color: var(--color-fg-muted);">{{m.hint}}</span></span>
+                  <sc-if value="{{m.checked}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                </button>
+              </sc-for>
+              <div style="margin-top: 3px; padding: 7px 10px 5px; border-top: 1px solid var(--color-border-subtle); font-size: 12px; color: var(--color-fg-muted);">{{modelNote}}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{modeOpen}}" hint-placeholder-val="{{false}}">
+            <div role="dialog" aria-label="Modus" style="position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 30; width: 430px; padding: 4px; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-popover); box-shadow: var(--shadow-popover); display: flex; flex-direction: column; gap: 1px;">
+              <div style="display: flex; align-items: center; padding: 6px 10px 6px; font-size: 12px; color: var(--color-fg-muted);"><span style="flex-grow: 1;">Modus</span><kbd style="font-family: var(--font-mono); font-size: 11px;">Umschalt + Tab</kbd></div>
+              <sc-for list="{{modeOptions}}" as="mo" hint-placeholder-count="4">
+                <button type="button" role="menuitemradio" aria-checked="{{mo.checkedStr}}" onClick="{{mo.pick}}" style="display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: {{mo.bg}}; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                  <span style="width: 16px; margin-top: 1px; color: var(--color-fg-secondary); font-family: var(--font-mono);">{{mo.icon}}</span>
+                  <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">{{mo.label}}</span><span style="font-size: 12px; color: var(--color-fg-muted);">{{mo.hint}}</span></span>
+                  <sc-if value="{{mo.checked}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true" style="margin-top: 2px;"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                </button>
+              </sc-for>
+              <div style="margin-top: 3px; padding: 8px 10px 6px; border-top: 1px solid var(--color-border-subtle); display: flex; align-items: center; gap: 12px;">
+                <span style="flex-grow: 1;">Denkaufwand <span style="color: var(--color-fg-muted);">({{effortLabel}})</span></span>
+                <div role="group" aria-label="Denkaufwand" style="display: flex; align-items: center; padding: 3px 6px; border-radius: 999px; background: var(--color-bg-hover);">
+                  <sc-for list="{{effortDots}}" as="d" hint-placeholder-count="5">
+                    <button type="button" aria-label="Denkaufwand {{d.label}}" aria-pressed="{{d.pressed}}" onClick="{{d.pick}}" style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; cursor: pointer;"><span style="display: block; width: {{d.size}}; height: {{d.size}}; border-radius: 50%; background: {{d.color}};"></span></button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{hasPending}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--color-border-subtle);">
+              <sc-for list="{{pending}}" as="att" hint-placeholder-count="2">
+                <span style="display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 4px 0 4px; border-radius: 5px; background: var(--color-bg-hover); font-size: 12px;">
+                  <sc-if value="{{att.isImage}}" hint-placeholder-val="{{true}}"><span style="width: 28px; height: 20px; border-radius: 3px; background: {{att.thumb}}; border: 1px solid var(--color-border);"></span></sc-if>
+                  <sc-if value="{{att.isFile}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true" style="margin-left: 4px; color: var(--color-fg-muted);"><path d="M3.5 1.5h4.5l3 3v8h-7.5Z"></path><path d="M8 1.5v3h3"></path></svg></sc-if>
+                  <span style="font-weight: 600;">{{att.name}}</span>
+                  <span style="color: var(--color-fg-muted);">{{att.meta}}</span>
+                  <button type="button" onClick="{{att.remove}}" aria-label="{{att.name}} entfernen" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--color-fg-muted); cursor: pointer;"><svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"></path></svg></button>
+                </span>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <label for="composer" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Nachricht an den Agenten</label>
+          <textarea id="composer" rows="2" placeholder="{{composerPlaceholder}}" value="{{draft}}" onChange="{{onDraft}}" onFocus="{{onComposerFocus}}" onBlur="{{onComposerBlur}}" style="border: 0; outline: none; resize: none; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13.5px; line-height: 1.55; padding: 11px 14px 4px; min-height: 52px;"></textarea>
+          <div style="display: flex; align-items: center; gap: 4px; padding: 4px 6px 6px 6px;">
+            <button type="button" onClick="{{togglePlus}}" aria-label="Bilder und Dateien hinzufügen" aria-haspopup="menu" aria-expanded="{{plusOpenStr}}" title="Bilder und Dateien hinzufügen" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: {{plusBtnBg}}; color: var(--color-fg-secondary); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M7 2v10M2 7h10"></path></svg></button>
+            <button type="button" onClick="{{toggleCmd}}" aria-label="Befehle und Skills" aria-haspopup="dialog" aria-expanded="{{cmdOpenStr}}" title="Befehle und Skills – oder / ins Feld tippen" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: {{cmdBtnBg}}; color: var(--color-fg-secondary); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="11" rx="2"></rect><path d="M8.6 4 5.4 10"></path></svg></button>
+            <button type="button" onClick="{{toggleModel}}" aria-haspopup="dialog" aria-expanded="{{modelOpenStr}}" aria-label="Modell: {{modelName}}, Denkaufwand {{effortLabel}}" style="height: 26px; margin-left: 4px; display: flex; align-items: center; gap: 5px; padding: 0 9px; border: 0; border-radius: 13px; background: {{modelBtnBg}}; color: var(--color-fg-primary); font: inherit; font-size: 12px; cursor: pointer;"><span>{{modelName}}</span><span style="color: var(--color-fg-muted);">{{effortLabel}}</span></button>
+            <span style="flex-grow: 1;"></span>
+            <button type="button" onClick="{{toggleMode}}" aria-haspopup="dialog" aria-expanded="{{modeOpenStr}}" aria-label="Modus: {{modeLabel}}" style="height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: 6px; background: {{modeBtnBg}}; color: var(--color-fg-secondary); font: inherit; font-size: 12.5px; cursor: pointer;"><span style="font-family: var(--font-mono);">{{modeIcon}}</span><span>{{modeLabel}}</span></button>
+            <button type="button" aria-label="Senden (Ctrl+Enter)" title="Senden (Ctrl+Enter)" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 12V2.5M3 6.5 7 2.5l4 4"></path></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isChanges}}" hint-placeholder-val="{{false}}">
+    <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+      <div style="height: 44px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+        <div role="group" aria-label="Repository-Filter" style="display: flex; gap: 4px;">
+          <sc-for list="{{repoChips}}" as="chip" hint-placeholder-count="4">
+            <button type="button" aria-pressed="{{chip.pressed}}" onClick="{{chip.pick}}" style="height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid {{chip.border}}; border-radius: 6px; background: {{chip.bg}}; color: {{chip.fg}}; font: inherit; font-size: 12.5px; cursor: pointer;">{{chip.label}}<span style="font-size: 11px; color: var(--color-fg-muted);">{{chip.count}}</span></button>
+          </sc-for>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--color-fg-muted);">
+          <span>{{sum.files}} Dateien</span>
+          <span style="font-family: var(--font-mono); color: var(--color-diff-add-fg);">+{{sum.add}}</span>
+          <span style="font-family: var(--font-mono); color: var(--color-diff-del-fg);">−{{sum.del}}</span>
+          <span title="Basis: gegen diesen Stand werden alle Änderungen der Session gemessen" style="display: flex; align-items: center; gap: 5px;">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="4" cy="3" r="1.5"></circle><circle cx="4" cy="11" r="1.5"></circle><circle cx="10.5" cy="4.5" r="1.5"></circle><path d="M4 4.5v5M10.5 6c0 2.2-2 3-5.3 3.8"></path></svg>
+            <span>gegen <span style="font-family: var(--font-mono);">origin/main</span></span>
+          </span>
+        </div>
+        <div role="group" aria-label="Commit-Stand" style="display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+          <sc-for list="{{commitSeg}}" as="seg" hint-placeholder-count="3">
+            <button type="button" aria-pressed="{{seg.pressed}}" onClick="{{seg.pick}}" style="height: 24px; padding: 0 10px; border: 0; border-radius: 6px; background: {{seg.bg}}; color: {{seg.fg}}; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;">{{seg.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex-grow: 1; min-height: 0; display: flex;">
+        <div style="width: 340px; flex-shrink: 0; box-sizing: border-box; border-right: 1px solid var(--color-border-subtle); padding: 10px 8px; display: flex; flex-direction: column; gap: 14px; overflow: hidden;">
+          <sc-for list="{{repoBlocks}}" as="repo" hint-placeholder-count="3">
+            <section style="display: flex; flex-direction: column; gap: 1px;">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 3px 8px; font-weight: 600; font-size: 12.5px;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true" style="color: var(--color-fg-muted);"><path d="M2 4.2a1 1 0 0 1 1-1h2.6l1.2 1.3H11a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z"></path></svg>
+                <span style="flex-grow: 1;">{{repo.name}}</span>
+                <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--color-diff-add-fg);">+{{repo.add}}</span>
+                <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--color-diff-del-fg);">−{{repo.del}}</span>
+              </div>
+              <div style="padding: 0 8px 4px 30px; font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">{{repo.branch}}</div>
+              <sc-for list="{{repo.rows}}" as="row" hint-placeholder-count="4">
+                <sc-if value="{{row.isFolder}}" hint-placeholder-val="{{false}}">
+                  <div style="padding: 2px 8px 2px {{row.indent}}; font-size: 12.5px; color: var(--color-fg-muted);">{{row.label}}</div>
+                </sc-if>
+                <sc-if value="{{row.isFile}}" hint-placeholder-val="{{true}}">
+                  <button type="button" onClick="{{row.open}}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 3px 8px 3px {{row.indent}}; border: 0; border-radius: 5px; background: {{row.bg}}; color: var(--color-fg-primary); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;">
+                    <span title="{{row.letterTitle}}" style="width: 10px; flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: {{row.letterColor}};">{{row.letter}}</span>
+                    <span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{row.label}}</span>
+                    <sc-if value="{{row.uncommitted}}" hint-placeholder-val="{{false}}">
+                      <span title="Uncommitted – nur im Arbeitsverzeichnis, noch nicht committed" style="font-size: 10.5px; padding: 0 5px; height: 16px; line-height: 16px; border-radius: 4px; background: var(--color-bg-hover); color: var(--color-fg-secondary);">uncommitted</span>
+                    </sc-if>
+                    <span style="font-family: var(--font-mono); font-size: 11px; color: var(--color-diff-add-fg);">+{{row.add}}</span>
+                    <span style="font-family: var(--font-mono); font-size: 11px; color: var(--color-diff-del-fg);">−{{row.del}}</span>
+                  </button>
+                </sc-if>
+              </sc-for>
+            </section>
+          </sc-for>
+        </div>
+        <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+          <sc-if value="{{noFile}}" hint-placeholder-val="{{true}}">
+            <div style="padding: 28px 32px; display: flex; flex-direction: column; gap: 14px; max-width: 760px;">
+              <h2 style="margin: 0; font-size: 13px; font-weight: 600;">Übersicht</h2>
+              <div style="border: 1px solid var(--color-border-subtle); border-radius: 8px; overflow: hidden;">
+                <sc-for list="{{repoSummary}}" as="rs" hint-placeholder-count="3">
+                  <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px 110px; align-items: center; gap: 12px; padding: 12px 14px; border-top: {{rs.borderTop}};">
+                    <span style="font-weight: 600;">{{rs.name}}</span>
+                    <span style="font-family: var(--font-mono); font-size: 12px; color: var(--color-fg-secondary);">{{rs.branch}}</span>
+                    <span style="font-size: 12px; color: var(--color-fg-muted);">{{rs.commits}}</span>
+                    <span style="font-size: 12px; color: var(--color-fg-muted);">{{rs.uncommitted}}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <p style="margin: 0; font-size: 12.5px; color: var(--color-fg-muted);">Wähle links eine Datei, um ihren Diff zu sehen.</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{hasFile}}" hint-placeholder-val="{{false}}">
+            <div style="height: 40px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--color-border-subtle);">
+              <span style="color: var(--color-fg-muted);">{{openFile.repo}} /</span>
+              <span style="font-family: var(--font-mono); font-size: 12.5px;">{{openFile.path}}</span>
+              <span style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-diff-add-fg);">+{{openFile.add}}</span>
+              <span style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-diff-del-fg);">−{{openFile.del}}</span>
+              <span style="flex-grow: 1;"></span>
+              <span style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-fg-muted);">origin/main → {{openFile.branch}}</span>
+              <button type="button" onClick="{{closeFile}}" aria-label="Diff schließen" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-muted); cursor: pointer;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"></path></svg></button>
+            </div>
+            <div style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 6px 0; font-family: var(--font-mono); font-size: 12px; line-height: 20px;">
+              <sc-for list="{{diffLines}}" as="ln" hint-placeholder-count="12">
+                <div style="display: flex; background: {{ln.bg}};">
+                  <span style="width: 48px; flex-shrink: 0; box-sizing: border-box; padding-right: 10px; text-align: right; color: var(--color-fg-muted);">{{ln.old}}</span>
+                  <span style="width: 48px; flex-shrink: 0; box-sizing: border-box; padding-right: 10px; text-align: right; color: var(--color-fg-muted);">{{ln.nw}}</span>
+                  <span style="width: 20px; flex-shrink: 0; text-align: center; color: {{ln.signColor}};">{{ln.sign}}</span>
+                  <span style="white-space: pre; color: {{ln.fg}};">{{ln.text}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isArtifacts}}" hint-placeholder-val="{{false}}">
+    <div style="flex-grow: 1; min-height: 0; display: flex;">
+      <div style="width: 300px; flex-shrink: 0; box-sizing: border-box; border-right: 1px solid var(--color-border-subtle); padding: 12px 8px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="padding: 0 8px 6px; font-size: 12px; color: var(--color-fg-muted);">Von Claude in dieser Session erstellt</div>
+        <sc-for list="{{artifactList}}" as="a" hint-placeholder-count="2">
+          <button type="button" onClick="{{a.pick}}" aria-current="{{a.current}}" style="display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 6px; background: {{a.bg}}; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+            <span style="width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 5px; background: var(--color-accent-subtle); color: var(--color-accent-text);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2" width="11" height="10" rx="1.5"></rect><path d="M1.5 5h11M4 7.5h3M4 9.5h5"></path></svg></span>
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0;"><span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{a.title}}</span><span style="font-size: 12px; color: var(--color-fg-muted);">{{a.meta}}</span></span>
+          </button>
+        </sc-for>
+        <sc-if value="{{noArtifacts}}" hint-placeholder-val="{{false}}">
+          <p style="margin: 0; padding: 8px; font-size: 12.5px; color: var(--color-fg-muted);">Noch keine Artefakte. Sobald Claude in dieser Session ein Design, ein Diagramm oder eine Seite erstellt, erscheint es hier.</p>
+        </sc-if>
+      </div>
+      <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+        <sc-if value="{{hasArtifact}}" hint-placeholder-val="{{true}}">
+          <div style="height: 44px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+            <span style="font-weight: 600;">{{art.title}}</span>
+            <span style="font-size: 12px; color: var(--color-fg-muted);">{{art.meta}}</span>
+            <span style="flex-grow: 1;"></span>
+            <button type="button" onClick="{{art.mention}}" style="height: 28px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12px; cursor: pointer;">Im Chat besprechen</button>
+            <button type="button" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12px; cursor: pointer;">Im Browser öffnen<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 2.5h6v6M11.5 2.5 4 10"></path></svg></button>
+          </div>
+          <div style="flex-grow: 1; min-height: 0; padding: 20px; box-sizing: border-box; display: flex;">
+            <div style="flex-grow: 1; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-preview-bg); color: var(--color-preview-fg); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <sc-if value="{{art.isFlow}}" hint-placeholder-val="{{true}}">
+                <div style="display: flex; align-items: center; gap: 14px; font-size: 13px;">
+                  <sc-for list="{{flowSteps}}" as="fs" hint-placeholder-count="5">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                      <div style="width: 132px; padding: 14px 10px; box-sizing: border-box; border: 1.5px solid var(--color-preview-line); border-radius: 8px; text-align: center; display: flex; flex-direction: column; gap: 4px;"><span style="font-weight: 600;">{{fs.title}}</span><span style="font-size: 11.5px; opacity: 0.7;">{{fs.sub}}</span></div>
+                      <sc-if value="{{fs.arrow}}" hint-placeholder-val="{{true}}"><span style="font-size: 18px; opacity: 0.6;">→</span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{art.isLogin}}" hint-placeholder-val="{{false}}">
+                <div style="width: 340px; padding: 28px; box-sizing: border-box; border: 1.5px solid var(--color-preview-line); border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+                  <span style="font-size: 18px; font-weight: 600;">Anmelden</span>
+                  <span style="height: 34px; border: 1.5px solid var(--color-preview-line); border-radius: 6px;"></span>
+                  <span style="height: 34px; border: 1.5px solid var(--color-preview-line); border-radius: 6px;"></span>
+                  <span style="height: 36px; border-radius: 6px; background: var(--color-preview-line); opacity: 0.8;"></span>
+                  <span style="text-align: center; font-size: 12px; opacity: 0.7;">oder</span>
+                  <span style="height: 36px; border: 1.5px solid var(--color-preview-line); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12.5px;">Mit OAuth-Anbieter anmelden</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{art.isButtons}}" hint-placeholder-val="{{false}}">
+                <div style="display: flex; flex-direction: column; gap: 18px; align-items: flex-start;">
+                  <span style="font-size: 13px; font-weight: 600;">Variante A – nur Button</span>
+                  <div style="display: flex; gap: 10px;"><span style="padding: 8px 16px; border-radius: 6px; background: var(--color-preview-line); color: var(--color-preview-bg); font-size: 12.5px;">Primär</span><span style="padding: 8px 16px; border-radius: 6px; border: 1.5px solid var(--color-preview-line); font-size: 12.5px;">Sekundär</span></div>
+                  <span style="font-size: 13px; font-weight: 600;">Variante B – alle Komponenten</span>
+                  <div style="display: flex; gap: 10px;"><span style="padding: 8px 16px; border-radius: 999px; background: var(--color-preview-line); color: var(--color-preview-bg); font-size: 12.5px;">Primär</span><span style="padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--color-preview-line); font-size: 12.5px;">Sekundär</span><span style="padding: 8px 16px; font-size: 12.5px; text-decoration: underline;">Link</span></div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isNew}}" hint-placeholder-val="{{false}}">
+    <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+      <header style="height: 48px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+        <h1 style="margin: 0; font-size: 13.5px; font-weight: 600;">Neue Session</h1>
+      </header>
+      <form style="width: 100%; max-width: 720px; margin: 0 auto; padding: 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 26px;">
+        <section style="display: flex; flex-direction: column; gap: 8px;">
+          <label for="task" style="display: flex; align-items: center; gap: 10px; font-weight: 600;"><span style="width: 20px; height: 20px; border-radius: 50%; background: var(--color-bg-selected); display: flex; align-items: center; justify-content: center; font-size: 11px;">1</span>Was soll erledigt werden?</label>
+          <div style="border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-surface); display: flex; flex-direction: column;">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--color-border-subtle);">
+              <span style="display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 4px; border-radius: 5px; background: var(--color-bg-hover); font-size: 12px;"><span style="width: 28px; height: 20px; border-radius: 3px; background: linear-gradient(135deg, #5a6b8c, #2e3547); border: 1px solid var(--color-border);"></span><span style="font-weight: 600;">login-skizze.png</span><span style="color: var(--color-fg-muted);">1218×766</span><button type="button" aria-label="login-skizze.png entfernen" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--color-fg-muted); cursor: pointer;"><svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"></path></svg></button></span>
+            </div>
+            <textarea id="task" rows="4" placeholder="z. B. OAuth Login für Backend und Frontend implementieren. Den bestehenden Session-Mechanismus weiterverwenden." style="border: 0; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13.5px; line-height: 1.55; padding: 10px 14px; resize: none; outline: none;"></textarea>
+            <div style="display: flex; align-items: center; gap: 4px; padding: 4px 6px 6px;">
+              <button type="button" aria-label="Bilder und Dateien hinzufügen" title="Bilder und Dateien hinzufügen" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M7 2v10M2 7h10"></path></svg></button>
+              <button type="button" aria-label="Befehle und Skills" title="Befehle und Skills" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="11" rx="2"></rect><path d="M8.6 4 5.4 10"></path></svg></button>
+              <span style="margin-left: 6px; font-size: 12px; color: var(--color-fg-muted);">Bilder und Dateien hineinziehen oder einfügen. Mit / startest du direkt mit einem Skill.</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 12px; color: var(--color-fg-muted);">Der erste Satz wird zum Namen der Session (später per Rechtsklick änderbar), der ganze Text samt Anhängen zur ersten Nachricht an den Agenten.</p>
+        </section>
+        <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px;">
+          <legend style="padding: 0 0 8px; display: flex; align-items: center; gap: 10px; font-weight: 600;"><span style="width: 20px; height: 20px; border-radius: 50%; background: var(--color-bg-selected); display: flex; align-items: center; justify-content: center; font-size: 11px;">2</span>Repositories</legend>
+          <div style="border: 1px solid var(--color-border-subtle); border-radius: 8px; overflow: hidden;">
+            <sc-for list="{{knownRepos}}" as="kr" hint-placeholder-count="4">
+              <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: {{kr.borderTop}}; cursor: pointer;">
+                <input type="checkbox" checked="{{kr.checked}}" onChange="{{kr.toggle}}" style="margin: 0; width: 14px; height: 14px; accent-color: var(--color-accent);">
+                <span style="width: 120px; font-weight: 500;">{{kr.name}}</span>
+                <span style="flex-grow: 1; font-family: var(--font-mono); font-size: 12px; color: var(--color-fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{kr.path}}</span>
+                <span style="font-size: 12px; color: var(--color-fg-muted);">{{kr.skills}}</span>
+              </label>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <button type="button" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 2.5v9M2.5 7h9"></path></svg>Repository hinzufügen …</button>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-fg-muted);">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5.5"></circle><path d="M7 6.4v3.4"></path><circle cx="7" cy="4.3" r="0.5" fill="currentColor"></circle></svg>
+              <span>Jedes Repository bekommt einen eigenen Worktree. Seine Skills stehen in der Session zur Verfügung.</span>
+            </span>
+          </div>
+        </fieldset>
+        <section style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px; font-weight: 600;"><span style="width: 20px; height: 20px; border-radius: 50%; background: var(--color-bg-selected); display: flex; align-items: center; justify-content: center; font-size: 11px;">3</span>Agent</div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" aria-haspopup="listbox" aria-label="Modell: Sonnet 5, Denkaufwand Hoch" style="height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 15px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12.5px; cursor: pointer;">Claude · Sonnet 5 <span style="color: var(--color-fg-muted);">Hoch</span></button>
+            <button type="button" aria-haspopup="listbox" aria-label="Modus: Auto" style="height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12.5px; cursor: pointer;"><span style="font-family: var(--font-mono);">ϟ</span>Auto</button>
+          </div>
+        </section>
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 18px; border-top: 1px solid var(--color-border-subtle);">
+          <button type="button" onClick="{{startSession}}" style="height: 32px; padding: 0 16px; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); font: inherit; font-weight: 600; cursor: pointer;">Session starten</button>
+          <button type="button" onClick="{{cancelNew}}" style="height: 32px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; cursor: pointer;">Abbrechen</button>
+          <span style="flex-grow: 1;"></span>
+          <span style="font-size: 12px; color: var(--color-fg-muted);">{{pickedSummary}}</span>
+        </div>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isSettings}}" hint-placeholder-val="{{false}}">
+    <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+      <header style="height: 48px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+        <h1 style="margin: 0; font-size: 13.5px; font-weight: 600;">Einstellungen</h1>
+      </header>
+      <div style="width: 100%; max-width: 780px; margin: 0 auto; padding: 20px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; overflow: hidden;">
+        <sc-for list="{{settingSections}}" as="sec" hint-placeholder-count="4">
+          <section style="display: flex; flex-direction: column;">
+            <h2 style="margin: 0 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-fg-muted);">{{sec.title}}</h2>
+            <sc-for list="{{sec.rows}}" as="row" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: center; gap: 16px; padding: 8px 0; border-top: 1px solid var(--color-border-subtle);">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span>{{row.label}}</span>
+                  <button type="button" aria-label="{{row.infoLabel}}" title="{{row.info}}" style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--color-fg-muted); cursor: help;"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5.5"></circle><path d="M7 6.4v3.4"></path><circle cx="7" cy="4.3" r="0.5" fill="currentColor"></circle></svg></button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <sc-if value="{{row.isSegment}}" hint-placeholder-val="{{false}}">
+                    <div role="group" aria-label="{{row.label}}" style="display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+                      <sc-for list="{{row.options}}" as="o" hint-placeholder-count="3">
+                        <button type="button" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="height: 26px; padding: 0 14px; border: 0; border-radius: 6px; background: {{o.bg}}; color: {{o.fg}}; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;">{{o.label}}</button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{row.isSelect}}" hint-placeholder-val="{{true}}">
+                    <button type="button" aria-haspopup="listbox" aria-label="{{row.label}}: {{row.value}}" style="width: 300px; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg-surface); color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;"><span style="flex-grow: 1;">{{row.value}}</span><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 7 9l3.5-3.5"></path></svg></button>
+                  </sc-if>
+                  <sc-if value="{{row.isInput}}" hint-placeholder-val="{{false}}">
+                    <input type="text" aria-label="{{row.label}}" value="{{row.value}}" style="width: 300px; height: 30px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg-surface); color: var(--color-fg-primary); font-family: var(--font-mono); font-size: 12.5px; outline: none;">
+                  </sc-if>
+                  <sc-if value="{{row.isText}}" hint-placeholder-val="{{false}}">
+                    <span style="display: flex; gap: 10px; align-items: baseline; min-width: 0;"><span style="font-family: var(--font-mono); font-size: 12px; color: var(--color-fg-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{row.value}}</span><span style="font-size: 12px; color: var(--color-fg-muted); white-space: nowrap;">{{row.extra}}</span></span>
+                  </sc-if>
+                  <sc-if value="{{row.hasButton}}" hint-placeholder-val="{{false}}">
+                    <button type="button" style="height: 30px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12.5px; cursor: pointer;">{{row.button}}</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </section>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isEmpty}}" hint-placeholder-val="{{false}}">
+    <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+      <div style="max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
+        <svg width="36" height="36" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round" aria-hidden="true" style="color: var(--color-fg-muted);"><rect x="1.5" y="1.5" width="7" height="7" rx="2"></rect><rect x="5.5" y="5.5" width="7" height="7" rx="2"></rect></svg>
+        <h1 style="margin: 0; font-size: 18px; font-weight: 600;">Noch keine Session</h1>
+        <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--color-fg-secondary);">Eine Session ist eine Aufgabe für einen Agenten, über ein oder mehrere Repositories. Jedes bekommt einen eigenen Worktree, damit parallele Agenten sich nicht in die Quere kommen.</p>
+        <button type="button" onClick="{{goNew}}" style="height: 32px; margin-top: 4px; padding: 0 16px; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); font: inherit; font-weight: 600; cursor: pointer;">Erste Session anlegen</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"overlay":{"editor":"enum","options":["","cmd","slash","model","mode","plus","menu","rename"],"default":""},"view":{"editor":"enum","options":["chat","changes","artifacts","new","settings","empty"],"default":"chat"},"session":{"editor":"enum","options":["oauth","design","search","payment","migration","users","bugfix"],"default":"oauth"},"file":{"editor":"enum","options":["","backend/src/auth/oauth.ts"],"default":""},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var st = this.state || {};
+    var p = this.props || {};
+    var self = this;
+    var set = function (patch) { self.setState(patch); };
+    function copy(o) { var n = {}; Object.keys(o).forEach(function (k) { n[k] = o[k]; }); return n; }
+
+    var themeChoice = st.themeChoice || p.theme || 'dark';
+    var theme = themeChoice === 'light' ? 'light' : 'dark';
+    var view = st.view || p.view || 'chat';
+    var sessionId = st.session || p.session || 'oauth';
+    var file = st.file !== undefined ? st.file : (p.file || '');
+    var repoFilter = st.repoFilter || 'all';
+    var commitFilter = st.commitFilter || 'all';
+    var openBlocks = st.openBlocks || {};
+    var answered = st.answered || {};
+    var resumed = st.resumed || {};
+    var picked = st.picked || { backend: true, frontend: true, 'shared-types': true, docs: false };
+    var pOverlay = p.overlay || '';
+    var overlay = st.overlay !== undefined ? st.overlay : (pOverlay === 'menu' ? 'menu:' + sessionId : (pOverlay === 'rename' ? '' : pOverlay));
+    var renaming = st.renaming !== undefined ? st.renaming : (pOverlay === 'rename' ? sessionId : '');
+    var names = st.names || {};
+    var models = st.models || {};
+    var efforts = st.efforts || {};
+    var modes = st.modes || {};
+    var thinking = st.thinking !== undefined ? st.thinking : true;
+    var draft = st.draft !== undefined ? st.draft : (pOverlay === 'slash' ? '/' : '');
+    var filter = st.filter || '';
+    var DEFAULT_PENDING = [
+      { id: 'p1', kind: 'image', name: 'fehler-screenshot.png', meta: '1218×766', thumb: 'linear-gradient(135deg, #4b556b, #23272f)' },
+      { id: 'p2', kind: 'file', name: 'oauth-anbieter.pdf', meta: '214 KB' }
+    ];
+    var pending = st.pending || (pOverlay === 'plus' ? DEFAULT_PENDING : []);
+    var artifactSel = st.artifact || '';
+
+    var FONT_SANS = "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif";
+    var FONT_MONO = "'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace";
+    var THEMES = {
+      dark: {
+        '--color-bg-base': '#1f1f1f', '--color-bg-sidebar': '#181818', '--color-bg-surface': '#252526',
+        '--color-bg-popover': '#252526', '--color-bg-hover': '#2e2e30', '--color-bg-selected': '#37373d',
+        '--color-border-subtle': '#2b2b2b', '--color-border': '#3c3c3c',
+        '--color-fg-primary': '#d4d4d4', '--color-fg-secondary': '#b0b0b0', '--color-fg-muted': '#8f8f8f',
+        '--color-accent': '#e0825c', '--color-fg-on-accent': '#1d130e', '--color-accent-subtle': 'rgba(224, 130, 92, 0.16)', '--color-accent-text': '#eea283',
+        '--color-toggle-on': '#e0825c', '--color-toggle-off': '#4a4a4f', '--color-fg-on-toggle': '#f5f5f5',
+        '--color-status-running': '#5b9dff', '--color-status-waiting': '#f2b33d', '--color-status-error': '#f47067',
+        '--color-status-paused': '#8f8f8f', '--color-status-completed': '#4cc38a',
+        '--color-diff-add-bg': 'rgba(76, 195, 138, 0.11)', '--color-diff-del-bg': 'rgba(244, 112, 103, 0.11)',
+        '--color-diff-add-fg': '#4cc38a', '--color-diff-del-fg': '#f47067', '--color-diff-hunk-bg': '#242428',
+        '--color-preview-bg': '#fbfaf7', '--color-preview-fg': '#2a2a2a', '--color-preview-line': '#3a3a3a',
+        '--shadow-popover': '0 10px 30px rgba(0, 0, 0, 0.45)'
+      },
+      light: {
+        '--color-bg-base': '#ffffff', '--color-bg-sidebar': '#f8f8f8', '--color-bg-surface': '#ffffff',
+        '--color-bg-popover': '#ffffff', '--color-bg-hover': '#f0f0f0', '--color-bg-selected': '#e4e6f1',
+        '--color-border-subtle': '#e5e5e5', '--color-border': '#cecece',
+        '--color-fg-primary': '#3c3c3c', '--color-fg-secondary': '#555555', '--color-fg-muted': '#6e6e6e',
+        '--color-accent': '#c4572f', '--color-fg-on-accent': '#ffffff', '--color-accent-subtle': 'rgba(196, 87, 47, 0.10)', '--color-accent-text': '#a8461f',
+        '--color-toggle-on': '#c4572f', '--color-toggle-off': '#c8c8c8', '--color-fg-on-toggle': '#ffffff',
+        '--color-status-running': '#2563eb', '--color-status-waiting': '#a86a00', '--color-status-error': '#d23b33',
+        '--color-status-paused': '#6e6e6e', '--color-status-completed': '#16803c',
+        '--color-diff-add-bg': '#e8f6ee', '--color-diff-del-bg': '#fdeceb',
+        '--color-diff-add-fg': '#16803c', '--color-diff-del-fg': '#d23b33', '--color-diff-hunk-bg': '#f3f3f6',
+        '--color-preview-bg': '#fbfaf7', '--color-preview-fg': '#2a2a2a', '--color-preview-line': '#3a3a3a',
+        '--shadow-popover': '0 10px 30px rgba(0, 0, 0, 0.14)'
+      }
+    };
+    var tv = copy(THEMES[theme]);
+    tv['--font-sans'] = FONT_SANS;
+    tv['--font-mono'] = FONT_MONO;
+    var themeVars = Object.keys(tv).map(function (k) { return k + ': ' + tv[k] + ';'; }).join(' ');
+
+    var STATUS = {
+      running: { label: 'Läuft', color: 'var(--color-status-running)' },
+      waiting: { label: 'Wartet auf dich', color: 'var(--color-status-waiting)' },
+      error: { label: 'Fehler', color: 'var(--color-status-error)' },
+      paused: { label: 'Pausiert', color: 'var(--color-status-paused)' },
+      completed: { label: 'Abgeschlossen', color: 'var(--color-status-completed)' }
+    };
+    var MODELS = [
+      { id: 'fable', name: 'Fable 5.1', hint: 'Am stärksten, für Planung und Architektur' },
+      { id: 'opus', name: 'Opus 5.5', hint: 'Gründlich, für schwierige Umsetzung' },
+      { id: 'sonnet', name: 'Sonnet 5', hint: 'Schnell und ausgewogen' },
+      { id: 'haiku', name: 'Haiku 4.5', hint: 'Am schnellsten, für Kleinkram' }
+    ];
+    var EFFORTS = [['low', 'Niedrig'], ['medium', 'Mittel'], ['high', 'Hoch'], ['xhigh', 'Sehr hoch'], ['max', 'Max']];
+    var MODES = [
+      { id: 'manual', icon: '✋', label: 'Manuell', hint: 'Claude fragt vor jeder Änderung um Erlaubnis' },
+      { id: 'edit', icon: '</>', label: 'Automatisch bearbeiten', hint: 'Claude ändert Dateien ohne Rückfrage, fragt aber vor Befehlen' },
+      { id: 'plan', icon: '☰', label: 'Planen', hint: 'Claude untersucht den Code und legt einen Plan vor, bevor er etwas ändert' },
+      { id: 'auto', icon: 'ϟ', label: 'Auto', hint: 'Claude führt aus, was eine Sicherheitsprüfung besteht, und hält bei Riskantem an' }
+    ];
+
+    var RAW = [
+      { id: 'design', name: 'Design System', status: 'waiting', repos: 1, modelId: 'sonnet', runtime: '4:31', ctxUsed: 62 },
+      { id: 'search', name: 'Suchindex inkrementell', status: 'error', repos: 2, modelId: 'sonnet', runtime: '7:12', ctxUsed: 41 },
+      { id: 'oauth', name: 'OAuth Login', status: 'running', repos: 3, modelId: 'opus', runtime: '12:04', ctxUsed: 147 },
+      { id: 'payment', name: 'Payment Refactor', status: 'running', repos: 2, modelId: 'opus', runtime: '38:10', ctxUsed: 183 },
+      { id: 'migration', name: 'API Migration', status: 'paused', repos: 4, modelId: 'sonnet', runtime: '1:02:44', ctxUsed: 96 },
+      { id: 'users', name: 'User Management', status: 'completed', repos: 3, modelId: 'sonnet', runtime: '42:18', ctxUsed: 121 },
+      { id: 'bugfix', name: 'Bugfix Login-Redirect', status: 'completed', repos: 1, modelId: 'haiku', runtime: '6:55', ctxUsed: 23 }
+    ];
+    function rawOf(id) { return RAW.filter(function (r) { return r.id === id; })[0] || RAW[2]; }
+    function modelNameOf(id) { return MODELS.filter(function (m) { return m.id === id; })[0].name; }
+    function nameOf(id) { return names[id] || rawOf(id).name; }
+    var renameDraft = st.renameDraft !== undefined ? st.renameDraft : (renaming ? nameOf(renaming) : '');
+    function startRename(id, extra) {
+      var patch = { renaming: id, renameDraft: nameOf(id), overlay: '' };
+      Object.keys(extra || {}).forEach(function (k) { patch[k] = extra[k]; });
+      set(patch);
+    }
+    function commitRename() {
+      if (!renaming) return;
+      var n = copy(names);
+      var v = (renameDraft || '').trim();
+      if (v) n[renaming] = v;
+      set({ names: n, renaming: '', renameDraft: undefined });
+    }
+    function menuItemsFor(id) {
+      return [
+        { label: 'Umbenennen', key: 'F2', pick: function () { startRename(id); } },
+        { label: 'Archivieren', key: '', pick: function () { set({ overlay: '' }); } }
+      ];
+    }
+
+    var inSession = view === 'chat' || view === 'changes' || view === 'artifacts';
+    function statusOf(r) {
+      if (r.id === 'design' && answered.design) return 'running';
+      if (r.id === 'migration' && resumed.migration) return 'running';
+      return r.status;
+    }
+    function decorate(r) {
+      var status = statusOf(r);
+      var modelName = modelNameOf(models[r.id] || r.modelId);
+      var meta = r.repos + (r.repos === 1 ? ' Repository' : ' Repositories') + ' · ' + modelName;
+      var metaColor = 'var(--color-fg-muted)';
+      if (status === 'waiting') { meta = 'wartet auf deine Antwort'; metaColor = 'var(--color-status-waiting)'; }
+      if (status === 'error') { meta = 'Agent-Prozess beendet'; metaColor = 'var(--color-status-error)'; }
+      if (status === 'paused') { meta = 'pausiert · ' + meta; }
+      var active = r.id === sessionId && inSession;
+      var pct = Math.round(r.ctxUsed / 200 * 100);
+      return {
+        id: r.id, name: nameOf(r.id), model: modelName, runtime: r.runtime, status: status,
+        isRenaming: renaming === r.id, notRenaming: renaming !== r.id,
+        menuOpen: overlay === 'menu:' + r.id, menuItems: menuItemsFor(r.id),
+        openMenu: function (e) { if (e && e.preventDefault) e.preventDefault(); set({ overlay: 'menu:' + r.id }); },
+        startRename: function () { startRename(r.id); },
+        statusLabel: STATUS[status].label, color: STATUS[status].color,
+        isRunning: status === 'running', isWaiting: status === 'waiting', isError: status === 'error',
+        isPaused: status === 'paused', isCompleted: status === 'completed',
+        canControl: status === 'running' || status === 'waiting',
+        meta: meta, metaColor: metaColor, showMeta: status !== 'completed',
+        nameColor: status === 'completed' ? 'var(--color-fg-secondary)' : 'var(--color-fg-primary)',
+        bg: active ? 'var(--color-bg-selected)' : 'transparent',
+        ariaCurrent: active ? 'page' : 'false',
+        ctx: r.ctxUsed + 'k / 200k', ctxPct: pct + '%',
+        ctxColor: pct >= 90 ? 'var(--color-status-waiting)' : 'var(--color-fg-secondary)',
+        ctxTitle: 'Kontext: ' + r.ctxUsed + 'k von 200k Tokens belegt',
+        select: function () { set({ session: r.id, view: view === 'changes' || view === 'artifacts' ? view : 'chat', file: '', overlay: '', artifact: '' }); }
+      };
+    }
+    var all = RAW.map(decorate);
+    var groups = [];
+    if (view !== 'empty') {
+      var needs = all.filter(function (x) { return x.isWaiting || x.isError; });
+      var runs = all.filter(function (x) { return x.isRunning || x.isPaused; });
+      var done = all.filter(function (x) { return x.isCompleted; });
+      if (needs.length) groups.push({ label: 'Braucht dich', count: needs.length, items: needs });
+      if (runs.length) groups.push({ label: 'Läuft', count: runs.length, items: runs });
+      if (done.length) groups.push({ label: 'Abgeschlossen', count: done.length, items: done });
+    }
+    var s = all.filter(function (x) { return x.id === sessionId; })[0] || all[2];
+    s.menuItems = menuItemsFor(sessionId);
+
+    var ARTIFACTS = {
+      oauth: [
+        { id: 'a1', title: 'OAuth-Ablauf', kind: 'Diagramm', meta: 'Diagramm · Version 2 · 09:24', preview: 'flow' },
+        { id: 'a2', title: 'Login-Seite – Entwurf', kind: 'Design', meta: 'Design · 09:31', preview: 'login' }
+      ],
+      design: [
+        { id: 'b1', title: 'Button-Varianten', kind: 'Design', meta: 'Design · 10:47', preview: 'buttons' }
+      ]
+    };
+    var sessionArtifacts = ARTIFACTS[sessionId] || [];
+    function openArtifact(id) { set({ view: 'artifacts', artifact: id, overlay: '' }); }
+
+    var KINDS = ['User', 'Text', 'Thinking', 'ToolGroup', 'Skill', 'Todos', 'Artifact', 'Question', 'Error', 'Action', 'Working'];
+    function mk(kind, extra) {
+      var o = {};
+      KINDS.forEach(function (k) { o['is' + k] = k === kind; });
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return o;
+    }
+    function toggler(id) {
+      var expanded = !!openBlocks[id];
+      return {
+        expanded: expanded, collapsed: !expanded, expandedStr: expanded ? 'true' : 'false',
+        toggle: function () { var n = copy(openBlocks); n[id] = !expanded; set({ openBlocks: n }); }
+      };
+    }
+    function user(t, opts) {
+      var o = opts || {};
+      var atts = (o.attachments || []).map(function (a) { return { isImage: a.kind === 'image', isFile: a.kind !== 'image', name: a.name, meta: a.meta, thumb: a.thumb || 'transparent' }; });
+      return mk('User', { text: t, skill: o.skill || '', hasSkill: !!o.skill, attachments: atts, hasAttachments: atts.length > 0 });
+    }
+    function text(t) { return mk('Text', { text: t }); }
+    function thinkingBlock(id, secs, t) { var tg = toggler(id); tg.label = 'Gedankengang · ' + secs + ' s'; tg.text = t; return mk('Thinking', tg); }
+    function tools(id, title, summary, live, lines) {
+      var tg = toggler(id);
+      tg.title = title; tg.summary = summary;
+      tg.dot = live ? 'var(--color-status-running)' : 'var(--color-status-completed)';
+      tg.lines = lines.map(function (l) { return { tool: l[0], target: l[1] }; });
+      return mk('ToolGroup', tg);
+    }
+    function skillBlock(name, note) { return mk('Skill', { name: name, note: note }); }
+    function todos(items) {
+      var mapped = items.map(function (i) {
+        return { label: i[0], isDone: i[1] === 'done', isActive: i[1] === 'active', isTodo: i[1] === 'todo',
+          fg: i[1] === 'done' ? 'var(--color-fg-muted)' : (i[1] === 'active' ? 'var(--color-fg-primary)' : 'var(--color-fg-secondary)') };
+      });
+      return mk('Todos', { items: mapped, total: mapped.length, doneCount: mapped.filter(function (m) { return m.isDone; }).length });
+    }
+    function artifactBlock(a) { return mk('Artifact', { title: a.title, meta: a.meta + ' · als Artefakt veröffentlicht', open: function () { openArtifact(a.id); } }); }
+    function question(q, opts) {
+      return mk('Question', { question: q, options: opts.map(function (o, i) {
+        return { key: String(i + 1), label: o[0], hint: o[1], pick: function () { var n = copy(answered); n[sessionId] = o[0]; set({ answered: n }); } };
+      }) });
+    }
+    function errorBlock(title, t) { return mk('Error', { title: title, text: t }); }
+    function action(t, primary, fn) { return mk('Action', { text: t, primary: primary, onPrimary: fn }); }
+    function working(t) { return mk('Working', { text: t }); }
+    var goChanges = function () { set({ view: 'changes', overlay: '' }); };
+    var resume = function () { set({ resumed: { migration: true } }); };
+
+    var CHATS = {
+      oauth: function () {
+        return [
+          user('Implementiere den OAuth Login für unsere Plattform. Backend und Frontend müssen beide angepasst werden, die gemeinsamen Typen liegen in shared-types. Verwende den bestehenden Session-Mechanismus.', { skill: '/plan', attachments: [{ kind: 'image', name: 'login-skizze.png', meta: '1440×900', thumb: 'linear-gradient(135deg, #5a6b8c, #2e3547)' }, { kind: 'file', name: 'oauth-anbieter.pdf', meta: '214 KB' }] }),
+          skillBlock('mode-planning', 'geladen · aus deinem Benutzerordner'),
+          thinkingBlock('t1', 14, 'Die Skizze zeigt einen zusätzlichen Knopf unter dem Passwort-Login. Laut PDF verlangt der Anbieter PKCE, also braucht der Callback eine State-Prüfung auf dem Server.'),
+          text('Die Skizze und das PDF habe ich gelesen. Der Anbieter verlangt PKCE, darum prüfe ich den State-Parameter serverseitig. Zuerst schaue ich mir die bestehende Authentifizierung in allen drei Repositories an.'),
+          tools('g1', 'Read', '12 Dateien in 3 Repositories', false, [['Read', 'backend/src/auth/index.ts'], ['Read', 'backend/src/auth/session.ts'], ['Read', 'backend/src/auth/provider.ts'], ['Grep', '"createSession" in frontend/src'], ['Read', 'frontend/src/components/Login.tsx'], ['Read', 'shared-types/src/auth.ts']]),
+          todos([['Bestehende Auth analysieren', 'done'], ['OAuth-Flow im Backend', 'active'], ['Callback im Frontend', 'todo'], ['Typen in shared-types ergänzen', 'todo']]),
+          artifactBlock(ARTIFACTS.oauth[0]),
+          text('Oben der geplante Ablauf als Diagramm. Ich baue jetzt den Backend-Teil.'),
+          tools('g2', 'Write', 'backend/src/routes/oauth.ts', true, [['Edit', 'backend/src/auth/oauth.ts'], ['Write', 'backend/src/auth/state.ts'], ['Write', 'backend/src/routes/oauth.ts'], ['Bash', 'pnpm --filter backend typecheck']]),
+          working('Schreibt … 2:14')
+        ];
+      },
+      design: function () {
+        var b = [
+          user('Stell die Button-Komponente auf das neue Token-Schema um. Die alten Farbvariablen sollen danach nirgends mehr vorkommen.', { attachments: [{ kind: 'image', name: 'buttons-ist.png', meta: '980×420', thumb: 'linear-gradient(135deg, #7a5a4c, #3a2b25)' }] }),
+          tools('d1', 'Read', '31 Dateien', false, [['Grep', '"--btn-" in src'], ['Read', 'src/components/Button/Button.tsx'], ['Read', 'src/components/Button/Button.css'], ['Read', 'src/theme/tokens.css'], ['Read', 'src/theme/legacy.css']]),
+          text('Buttons beziehen ihre Farben heute aus zwei Quellen: den neuen Tokens in tokens.css und einem älteren Satz in legacy.css, den noch 14 weitere Komponenten nutzen. Beide Wege habe ich als Entwurf nebeneinandergestellt.'),
+          artifactBlock(ARTIFACTS.design[0])
+        ];
+        if (!answered.design) {
+          b.push(question('Welche Variante soll ich umsetzen?', [['Nur den Button umstellen', 'legacy.css bleibt, die übrigen 14 Komponenten folgen später'], ['Alles auf einmal umstellen', 'legacy.css wird entfernt, alle 15 Komponenten werden angepasst']]));
+        } else {
+          b.push(user(answered.design));
+          b.push(text('Verstanden. Ich fange mit Button.css an und prüfe danach mit einer Suche, dass keine alte Variable übrig bleibt.'));
+          b.push(working('Arbeitet … 0:04'));
+        }
+        return b;
+      },
+      search: function () {
+        return [
+          user('Bau den Suchindex auf inkrementelle Updates um, statt ihn jede Nacht komplett neu aufzubauen.'),
+          text('Ich beginne mit dem Indexer im Backend und schaue mir an, wie Änderungen heute erkannt werden.'),
+          tools('s1', 'Bash', 'pnpm --filter backend test search', false, [['Read', 'backend/src/search/indexer.ts'], ['Read', 'backend/src/search/jobs.ts'], ['Bash', 'pnpm --filter backend test search']]),
+          errorBlock('Der Agent-Prozess wurde unerwartet beendet', 'Exit-Code 1 nach 7:12 Minuten. Worktrees und alle bisherigen Änderungen sind erhalten.')
+        ];
+      },
+      payment: function () {
+        return [
+          user('Zieh die Zahlungslogik aus dem Checkout-Controller in einen eigenen Service, ohne das Verhalten zu ändern.', { skill: '/implement' }),
+          skillBlock('mode-implementing', 'geladen · aus deinem Benutzerordner'),
+          tools('p1', 'Read', '22 Dateien in 2 Repositories', false, [['Read', 'backend/src/checkout/controller.ts'], ['Read', 'backend/src/payment/provider.ts']]),
+          text('Ich verschiebe die Logik schrittweise und lasse nach jedem Schritt die Typprüfung laufen.'),
+          working('Arbeitet … 6:40')
+        ];
+      },
+      migration: function () {
+        var b = [user('Migriere die API-Clients von v1 auf v2.'), text('Drei von vier Repositories sind umgestellt. Im vierten fehlen noch die Paginierungs-Aufrufe.')];
+        b.push(resumed.migration ? working('Arbeitet … 0:02') : action('Von dir pausiert um 11:02.', 'Fortsetzen', resume));
+        return b;
+      },
+      users: function () {
+        return [user('Ergänze die Benutzerverwaltung um eine Rollen-Spalte und einen Filter.'), text('Fertig. Die Rollen-Spalte ist in Tabelle und API ergänzt, der Filter merkt sich die Auswahl in der URL.'), action('Abgeschlossen nach 42:18 · 11 Dateien in 3 Repositories geändert.', 'Changes ansehen', goChanges)];
+      },
+      bugfix: function () {
+        return [user('Nach dem Login landet man manchmal auf einer leeren Seite statt auf dem Dashboard.', { skill: '/debug' }), skillBlock('mode-debugging', 'geladen · aus deinem Benutzerordner'), text('Ursache war ein Redirect auf eine relative URL, wenn der Login aus einem Unterpfad kam. Behoben und mit einem Test abgesichert.'), action('Abgeschlossen nach 6:55.', 'Changes ansehen', goChanges)];
+      }
+    };
+    var blocks = (CHATS[sessionId] || CHATS.oauth)();
+
+    var FILES = [
+      { repo: 'backend', path: 'src/auth/oauth.ts', letter: 'M', add: 42, del: 8, uncommitted: false },
+      { repo: 'backend', path: 'src/auth/session.ts', letter: 'M', add: 18, del: 3, uncommitted: false },
+      { repo: 'backend', path: 'src/auth/state.ts', letter: 'A', add: 37, del: 0, uncommitted: true },
+      { repo: 'backend', path: 'src/routes/index.ts', letter: 'M', add: 4, del: 1, uncommitted: true },
+      { repo: 'backend', path: 'src/routes/oauth.ts', letter: 'A', add: 91, del: 0, uncommitted: false },
+      { repo: 'backend', path: 'test/auth/oauth.test.ts', letter: 'A', add: 64, del: 0, uncommitted: true },
+      { repo: 'frontend', path: 'src/auth/OAuthCallback.tsx', letter: 'A', add: 76, del: 0, uncommitted: false },
+      { repo: 'frontend', path: 'src/auth/useSession.ts', letter: 'M', add: 12, del: 9, uncommitted: true },
+      { repo: 'frontend', path: 'src/components/Login.tsx', letter: 'M', add: 28, del: 6, uncommitted: false },
+      { repo: 'shared-types', path: 'src/auth.ts', letter: 'M', add: 21, del: 4, uncommitted: false },
+      { repo: 'shared-types', path: 'src/legacy/session.ts', letter: 'D', add: 0, del: 38, uncommitted: false }
+    ];
+    var REPOS = ['backend', 'frontend', 'shared-types'];
+    var COMMITS = { backend: 3, frontend: 2, 'shared-types': 1 };
+    var branch = 'verwalter/oauth-login';
+    function commitOk(f) {
+      if (commitFilter === 'uncommitted') return f.uncommitted;
+      if (commitFilter === 'committed') return !f.uncommitted;
+      return true;
+    }
+    function sumOf(list) { return list.reduce(function (a, f) { return { add: a.add + f.add, del: a.del + f.del }; }, { add: 0, del: 0 }); }
+    function fmt(n) { return n.toLocaleString('de-DE'); }
+    var visible = FILES.filter(function (f) { return (repoFilter === 'all' || f.repo === repoFilter) && commitOk(f); });
+    var vs = sumOf(visible);
+    function chip(id, label, count) {
+      var on = repoFilter === id;
+      return { label: label, count: count, pressed: on ? 'true' : 'false',
+        bg: on ? 'var(--color-bg-selected)' : 'transparent', border: on ? 'var(--color-border)' : 'var(--color-border-subtle)',
+        fg: on ? 'var(--color-fg-primary)' : 'var(--color-fg-secondary)', pick: function () { set({ repoFilter: id }); } };
+    }
+    var repoChips = [chip('all', 'Alle', FILES.length)].concat(REPOS.map(function (r) { return chip(r, r, FILES.filter(function (f) { return f.repo === r; }).length); }));
+    var commitSeg = [['all', 'Alle'], ['uncommitted', 'Uncommitted'], ['committed', 'Committed']].map(function (c) {
+      var on = commitFilter === c[0];
+      return { label: c[1], pressed: on ? 'true' : 'false', bg: on ? 'var(--color-bg-selected)' : 'transparent',
+        fg: on ? 'var(--color-fg-primary)' : 'var(--color-fg-secondary)', pick: function () { set({ commitFilter: c[0] }); } };
+    });
+    var LETTER = { A: { color: 'var(--color-diff-add-fg)', title: 'Neu angelegt' }, M: { color: 'var(--color-fg-muted)', title: 'Geändert' }, D: { color: 'var(--color-diff-del-fg)', title: 'Gelöscht' } };
+    function buildRows(files) {
+      var rows = [];
+      var seen = {};
+      files.slice().sort(function (a, b) { return a.path < b.path ? -1 : 1; }).forEach(function (f) {
+        var parts = f.path.split('/');
+        for (var i = 0; i < parts.length - 1; i++) {
+          var key = parts.slice(0, i + 1).join('/');
+          if (!seen[key]) { seen[key] = true; rows.push({ isFolder: true, isFile: false, label: parts[i] + '/', indent: (30 + i * 14) + 'px' }); }
+        }
+        var id = f.repo + '/' + f.path;
+        rows.push({ isFolder: false, isFile: true, label: parts[parts.length - 1], indent: (30 + (parts.length - 1) * 14) + 'px',
+          letter: f.letter, letterColor: LETTER[f.letter].color, letterTitle: LETTER[f.letter].title,
+          add: fmt(f.add), del: fmt(f.del), uncommitted: f.uncommitted,
+          bg: file === id ? 'var(--color-bg-selected)' : 'transparent', open: function () { set({ file: id }); } });
+      });
+      return rows;
+    }
+    var repoBlocks = REPOS.filter(function (r) { return repoFilter === 'all' || repoFilter === r; }).map(function (r) {
+      var fs = visible.filter(function (f) { return f.repo === r; });
+      var sm = sumOf(fs);
+      return { name: r, add: fmt(sm.add), del: fmt(sm.del), branch: branch, rows: buildRows(fs), count: fs.length };
+    }).filter(function (b) { return b.count > 0; });
+    var repoSummary = REPOS.map(function (r, i) {
+      var fs = FILES.filter(function (f) { return f.repo === r; });
+      var unc = fs.filter(function (f) { return f.uncommitted; }).length;
+      return { name: r, branch: branch + ' ← origin/main', commits: COMMITS[r] + (COMMITS[r] === 1 ? ' Commit' : ' Commits'),
+        uncommitted: unc === 0 ? 'alles committed' : unc + ' uncommitted', borderTop: i === 0 ? '0' : '1px solid var(--color-border-subtle)' };
+    });
+    var openFileRec = FILES.filter(function (f) { return f.repo + '/' + f.path === file; })[0] || null;
+    function dl(kind, oldN, newN, t) {
+      var map = {
+        ctx: { bg: 'transparent', sign: '', signColor: 'var(--color-fg-muted)', fg: 'var(--color-fg-secondary)' },
+        add: { bg: 'var(--color-diff-add-bg)', sign: '+', signColor: 'var(--color-diff-add-fg)', fg: 'var(--color-fg-primary)' },
+        del: { bg: 'var(--color-diff-del-bg)', sign: '-', signColor: 'var(--color-diff-del-fg)', fg: 'var(--color-fg-primary)' },
+        hunk: { bg: 'var(--color-diff-hunk-bg)', sign: '', signColor: 'var(--color-fg-muted)', fg: 'var(--color-fg-muted)' }
+      }[kind];
+      return { old: oldN, nw: newN, text: t, bg: map.bg, sign: map.sign, signColor: map.signColor, fg: map.fg };
+    }
+    var OAUTH_DIFF = [
+      dl('hunk', '', '', '@@ -1,6 +1,8 @@'),
+      dl('ctx', '1', '1', "import { Router } from 'express';"),
+      dl('ctx', '2', '2', "import { createSession } from './session';"),
+      dl('add', '', '3', "import { verifyState } from './state';"),
+      dl('add', '', '4', "import type { OAuthProfile } from '@platform/shared-types';"),
+      dl('ctx', '3', '5', ''),
+      dl('ctx', '4', '6', 'const PROVIDER_URL = process.env.OAUTH_PROVIDER_URL;'),
+      dl('hunk', '', '', '@@ -18,14 +20,20 @@ export async function handleCallback(req, res) {'),
+      dl('ctx', '18', '20', 'export async function handleCallback(req, res) {'),
+      dl('del', '19', '', '  const code = req.query.code;'),
+      dl('add', '', '21', "  const code = String(req.query.code ?? '');"),
+      dl('add', '', '22', "  const state = String(req.query.state ?? '');"),
+      dl('add', '', '23', ''),
+      dl('add', '', '24', '  if (!(await verifyState(req.session.id, state))) {'),
+      dl('add', '', '25', "    return res.status(403).json({ error: 'invalid_state' });"),
+      dl('add', '', '26', '  }'),
+      dl('ctx', '20', '27', ''),
+      dl('del', '21', '', '  const token = await exchangeCode(code);'),
+      dl('del', '22', '', '  const user = await fetchUser(token);'),
+      dl('add', '', '28', '  const token = await exchangeCode(code, PROVIDER_URL);'),
+      dl('add', '', '29', '  const profile: OAuthProfile = await fetchProfile(token);'),
+      dl('add', '', '30', '  const user = await findOrCreateUser(profile);'),
+      dl('ctx', '23', '31', ''),
+      dl('ctx', '24', '32', '  await createSession(req, user.id);'),
+      dl('ctx', '25', '33', "  res.redirect('/');"),
+      dl('ctx', '26', '34', '}'),
+      dl('hunk', '', '', '⋯ 3 weitere Abschnitte')
+    ];
+    var diffLines = file === 'backend/src/auth/oauth.ts' ? OAUTH_DIFF : [dl('hunk', '', '', 'Im Entwurf ist nur der Diff von backend/src/auth/oauth.ts ausgearbeitet.')];
+
+    var curArt = sessionArtifacts.filter(function (a) { return a.id === artifactSel; })[0] || sessionArtifacts[0] || null;
+    var artifactList = sessionArtifacts.map(function (a) {
+      var on = curArt && a.id === curArt.id;
+      return { title: a.title, meta: a.meta, bg: on ? 'var(--color-bg-selected)' : 'transparent', current: on ? 'true' : 'false', pick: function () { set({ artifact: a.id }); } };
+    });
+    var art = curArt ? {
+      title: curArt.title, meta: curArt.meta, isFlow: curArt.preview === 'flow', isLogin: curArt.preview === 'login', isButtons: curArt.preview === 'buttons',
+      mention: function () { set({ view: 'chat', draft: 'Zum Artefakt „' + curArt.title + '“: ' }); }
+    } : { title: '', meta: '', isFlow: false, isLogin: false, isButtons: false, mention: function () {} };
+    var flowSteps = [['Browser', 'Klick auf Login'], ['/oauth/start', 'State + PKCE'], ['Anbieter', 'Anmeldung'], ['/oauth/callback', 'State prüfen'], ['Session', 'createSession()']].map(function (x, i, arr) { return { title: x[0], sub: x[1], arrow: i < arr.length - 1 }; });
+
+    var KNOWN = [
+      { id: 'backend', path: 'C:\\dev\\platform\\backend', skills: '2 Skills' },
+      { id: 'frontend', path: 'C:\\dev\\platform\\frontend', skills: '1 Skill' },
+      { id: 'shared-types', path: 'C:\\dev\\platform\\shared-types', skills: 'keine Skills' },
+      { id: 'docs', path: 'C:\\dev\\platform\\docs', skills: 'keine Skills' }
+    ];
+    var knownRepos = KNOWN.map(function (k, i) {
+      return { name: k.id, path: k.path, skills: k.skills, checked: !!picked[k.id], borderTop: i === 0 ? '0' : '1px solid var(--color-border-subtle)',
+        toggle: function () { var n = copy(picked); n[k.id] = !picked[k.id]; set({ picked: n }); } };
+    });
+    var pickedCount = KNOWN.filter(function (k) { return picked[k.id]; }).length;
+
+    var curModelId = models[sessionId] || rawOf(sessionId).modelId;
+    var curEffort = efforts[sessionId] || 'high';
+    var curMode = modes[sessionId] || 'auto';
+    var effortIdx = EFFORTS.map(function (e) { return e[0]; }).indexOf(curEffort);
+    var effortLabel = EFFORTS[effortIdx][1];
+    var effortDots = EFFORTS.map(function (e, i) {
+      var on = i === effortIdx;
+      return { label: e[1], pressed: on ? 'true' : 'false', size: on ? '12px' : '5px',
+        color: on ? 'var(--color-fg-primary)' : (i === EFFORTS.length - 1 ? 'var(--color-accent)' : 'var(--color-fg-muted)'),
+        pick: function () { var n = copy(efforts); n[sessionId] = e[0]; set({ efforts: n }); } };
+    });
+    var modelOptions = MODELS.map(function (m) {
+      var on = m.id === curModelId;
+      return { name: m.name, hint: m.hint, checked: on, checkedStr: on ? 'true' : 'false', bg: on ? 'var(--color-bg-hover)' : 'transparent',
+        pick: function () { var n = copy(models); n[sessionId] = m.id; set({ models: n, overlay: '' }); } };
+    });
+    var modeRec = MODES.filter(function (m) { return m.id === curMode; })[0];
+    var modeOptions = MODES.map(function (m) {
+      var on = m.id === curMode;
+      return { icon: m.icon, label: m.label, hint: m.hint, checked: on, checkedStr: on ? 'true' : 'false', bg: on ? 'var(--color-bg-hover)' : 'transparent',
+        pick: function () { var n = copy(modes); n[sessionId] = m.id; set({ modes: n, overlay: '' }); } };
+    });
+
+    var SKILLS = [
+      ['/plan', 'Plan mit Phasen in docs/planning anlegen', 'Benutzer'],
+      ['/implement', 'Geparkten Plan Phase für Phase umsetzen', 'Benutzer'],
+      ['/review', 'Code-Review der Änderungen, Ergebnis in docs/reviews', 'Benutzer'],
+      ['/debug', 'Fehler vom Symptom zum belegten Fix eingrenzen', 'Benutzer'],
+      ['/code-health', 'Codebasis durchleuchten, Backlog erzeugen', 'Benutzer'],
+      ['/session-review', 'Rückblick auf die Session', 'Benutzer'],
+      ['/release-notes', 'Release-Notes aus den Commits erzeugen', 'backend'],
+      ['/db-migrate', 'Neue Datenbank-Migration anlegen', 'backend'],
+      ['/storybook', 'Story zur geänderten Komponente anlegen', 'frontend']
+    ];
+    var q = filter.toLowerCase();
+    function matches(label, desc) { return !q || label.toLowerCase().indexOf(q) >= 0 || desc.toLowerCase().indexOf(q) >= 0; }
+    var firstSeen = false;
+    function row(kind, label, desc, right, pick) {
+      var first = !firstSeen;
+      firstSeen = true;
+      return { isRow: true, isEffort: false, isToggle: false, isSkill: kind === 'skill', isPlain: kind !== 'skill', label: label, desc: desc, right: right,
+        bg: first ? 'var(--color-bg-hover)' : 'transparent', pick: pick };
+    }
+    function addFile() {
+      var n = pending.slice();
+      n.push({ id: 'p' + (n.length + 1) + Date.now(), kind: 'file', name: 'notizen.md', meta: '3 KB' });
+      set({ pending: n, overlay: '' });
+    }
+    var slashOnly = overlay === 'slash';
+    var cmdSections = [];
+    if (!slashOnly) {
+      var ctxItems = [];
+      [['Datei oder Bild anhängen …', '', 'Ctrl U', addFile], ['Datei aus dem Workspace erwähnen …', '', '@', function () { set({ overlay: '', draft: draft + '@' }); }], ['Zurückspulen', 'Verlauf auf eine frühere Nachricht zurücksetzen', '', function () { set({ overlay: '' }); }], ['Verlauf exportieren', '', '', function () { set({ overlay: '' }); }]].forEach(function (x) {
+        if (matches(x[0], x[1])) ctxItems.push(row('plain', x[0], x[1], x[2], x[3]));
+      });
+      if (ctxItems.length) cmdSections.push({ title: 'Kontext', items: ctxItems });
+      var modelItems = [];
+      if (matches('Modell wechseln', modelNameOf(curModelId))) modelItems.push(row('plain', 'Modell wechseln …', '', modelNameOf(curModelId), function () { set({ overlay: 'model', filter: '' }); }));
+      if (matches('Denkaufwand', '')) modelItems.push({ isRow: false, isEffort: true, isToggle: false });
+      if (matches('Denken', 'thinking')) modelItems.push({ isRow: false, isEffort: false, isToggle: true, label: 'Denken', onStr: thinking ? 'true' : 'false',
+        trackBg: thinking ? 'var(--color-toggle-on)' : 'var(--color-toggle-off)', justify: thinking ? 'flex-end' : 'flex-start', pick: function () { set({ thinking: !thinking }); } });
+      if (modelItems.length) cmdSections.push({ title: 'Modell', items: modelItems });
+    }
+    var skillItems = SKILLS.filter(function (x) { return matches(x[0], x[1]); }).map(function (x) {
+      return row('skill', x[0], x[1], x[2] === 'Benutzer' ? 'Benutzer' : 'aus ' + x[2], function () { set({ draft: x[0] + ' ', overlay: '', filter: '' }); });
+    });
+    if (skillItems.length) cmdSections.push({ title: 'Skills', items: skillItems });
+    var sessItems = [];
+    [['/rename', 'Session umbenennen', function () { startRename(sessionId, { draft: '', filter: '' }); }], ['/changes', 'Changes-Ansicht öffnen', function () { set({ view: 'changes', overlay: '', draft: '', filter: '' }); }], ['/artefakte', 'Artefakte dieser Session öffnen', function () { set({ view: 'artifacts', overlay: '', draft: '', filter: '' }); }], ['/pause', 'Agent pausieren', function () { set({ overlay: '', draft: '', filter: '' }); }]].forEach(function (x) {
+      if (matches(x[0], x[1])) sessItems.push(row('skill', x[0], x[1], '', x[2]));
+    });
+    if (sessItems.length) cmdSections.push({ title: 'Session', items: sessItems });
+
+    var plusItems = [
+      { label: 'Datei oder Bild anhängen …', key: 'Ctrl U', pick: addFile },
+      { label: 'Screenshot aus der Zwischenablage', key: 'Ctrl V', pick: function () { var n = pending.slice(); n.push({ id: 'p' + Date.now(), kind: 'image', name: 'image.png', meta: '1218×766', thumb: 'linear-gradient(135deg, #4b556b, #23272f)' }); set({ pending: n, overlay: '' }); } },
+      { label: 'Datei aus dem Workspace erwähnen …', key: '@', pick: function () { set({ overlay: '', draft: draft + '@' }); } },
+      { label: 'Artefakt dieser Session erwähnen …', key: '', pick: function () { set({ overlay: '' }); } }
+    ];
+    var pendingView = pending.map(function (a) {
+      return { isImage: a.kind === 'image', isFile: a.kind !== 'image', name: a.name, meta: a.meta, thumb: a.thumb || 'transparent',
+        remove: function () { set({ pending: pending.filter(function (x) { return x.id !== a.id; }) }); } };
+    });
+
+    function segOpts(options, current, onPick) {
+      return options.map(function (o) {
+        var on = current === o[0];
+        return { label: o[1], pressed: on ? 'true' : 'false', bg: on ? 'var(--color-bg-selected)' : 'transparent', fg: on ? 'var(--color-fg-primary)' : 'var(--color-fg-secondary)', pick: function () { onPick(o[0]); } };
+      });
+    }
+    function srow(label, info, extra) {
+      var r = { label: label, info: info, infoLabel: 'Erklärung zu ' + label, isSegment: false, isSelect: false, isInput: false, isText: false, hasButton: false, value: '', extra: '', button: '', options: [] };
+      Object.keys(extra).forEach(function (k) { r[k] = extra[k]; });
+      return r;
+    }
+    var settingSections = [
+      { title: 'Darstellung', rows: [
+        srow('Farbschema', 'System folgt der Windows-Einstellung für hell oder dunkel.', { isSegment: true, options: segOpts([['dark', 'Dunkel'], ['light', 'Hell'], ['system', 'System']], themeChoice, function (v) { set({ themeChoice: v }); }) })
+      ] },
+      { title: 'Agent', rows: [
+        srow('Standardmodell', 'Mit diesem Modell und Denkaufwand startet eine neue Session. In der Session jederzeit über die Eingabeleiste änderbar.', { isSelect: true, value: 'Sonnet 5 · Denkaufwand Hoch' }),
+        srow('Standard-Modus', 'Wie selbstständig Claude arbeitet. In der Session mit Umschalt + Tab wechselbar.', { isSelect: true, value: 'Auto' })
+      ] },
+      { title: 'Skills', rows: [
+        srow('Benutzer-Skills', 'Skills aus deinem Benutzerordner stehen in jeder Session zur Verfügung.', { isText: true, value: '~\\.claude\\skills', extra: '6 Skills', hasButton: true, button: 'Ordner öffnen' }),
+        srow('Projekt-Skills', 'Skills aus den .claude\\skills-Ordnern der Repositories einer Session. Welche gelten, hängt davon ab, welche Repositories die Session umfasst.', { isText: true, value: 'backend 2 · frontend 1', extra: 'je Repository' })
+      ] },
+      { title: 'Git', rows: [
+        srow('Basis für Changes', 'Gegen diesen Stand zeigt die Changes-Ansicht, was committed und was uncommitted ist.', { isInput: true, value: 'origin/main' }),
+        srow('Branch-Präfix', 'Jede Session legt pro Repository einen Branch mit diesem Präfix und ihrem Namen an.', { isInput: true, value: 'verwalter/' }),
+        srow('Ordner für Worktrees', 'Hier legt die App die Arbeitsordner der Sessions an. Ein kurzer Pfad vermeidet die Windows-Grenze von 260 Zeichen.', { isInput: true, value: '~\\.verwalter\\workspaces', hasButton: true, button: 'Ändern …' })
+      ] },
+      { title: 'Rechte', rows: [
+        srow('Dateizugriff', 'Ein Agent sieht standardmäßig nur die Worktrees seiner eigenen Session, nicht dein Benutzerverzeichnis.', { isSelect: true, value: 'Nur Session-Workspace' })
+      ] }
+    ];
+
+    var tabDefs = [['chat', 'Chat', 0], ['changes', 'Changes', FILES.length], ['artifacts', 'Artefakte', sessionArtifacts.length]];
+    var tabs = tabDefs.map(function (t) {
+      var on = view === t[0];
+      return { label: t[1], count: t[2], hasCount: t[2] > 0, selected: on ? 'true' : 'false',
+        bg: on ? 'var(--color-bg-selected)' : 'transparent', fg: on ? 'var(--color-fg-primary)' : 'var(--color-fg-secondary)',
+        pick: function () { set({ view: t[0], overlay: '' }); } };
+    });
+
+    function btnBg(on) { return on ? 'var(--color-bg-selected)' : 'transparent'; }
+
+    return {
+      themeVars: themeVars,
+      groups: groups,
+      showEmptyHint: view === 'empty',
+      newBtnBg: view === 'new' ? 'var(--color-bg-selected)' : 'var(--color-bg-surface)',
+      settingsBtnBg: view === 'settings' ? 'var(--color-bg-selected)' : 'transparent',
+      showSessionHeader: inSession,
+      isChat: view === 'chat', isChanges: view === 'changes', isArtifacts: view === 'artifacts', isNew: view === 'new', isSettings: view === 'settings', isEmpty: view === 'empty',
+      s: s, tabs: tabs,
+      headerMenuOpen: overlay === 'hmenu', headerMenuOpenStr: overlay === 'hmenu' ? 'true' : 'false', headerMenuBtnBg: btnBg(overlay === 'hmenu'),
+      toggleHeaderMenu: function () { set({ overlay: overlay === 'hmenu' ? '' : 'hmenu' }); },
+      renameDraft: renameDraft,
+      onRenameDraft: function (e) { set({ renameDraft: e.target.value }); },
+      onRenameKey: function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+        if (e.key === 'Escape') { set({ renaming: '', renameDraft: undefined }); }
+      },
+      commitRename: commitRename,
+      blocks: blocks,
+      composerPlaceholder: s.isWaiting ? 'Antwort an Claude … (/ für Skills)' : 'Nachricht an Claude … (/ für Skills, @ für Dateien)',
+      draft: draft,
+      composerBorder: st.composerFocus ? 'var(--color-accent)' : 'var(--color-border)',
+      composerRing: st.composerFocus ? '0 0 0 3px var(--color-accent-subtle)' : 'none',
+      onComposerFocus: function () { set({ composerFocus: true }); },
+      onComposerBlur: function () { set({ composerFocus: false }); },
+      onDraft: function (e) {
+        var v = e.target.value;
+        var patch = { draft: v };
+        if (v.charAt(0) === '/' && v.indexOf(' ') < 0) { patch.overlay = 'slash'; patch.filter = v.slice(1); }
+        else if (overlay === 'slash') { patch.overlay = ''; patch.filter = ''; }
+        set(patch);
+      },
+      menuCmdOpen: overlay === 'cmd' || overlay === 'slash',
+      cmdTitle: slashOnly ? 'Skills und Befehle' : 'Befehle und Skills',
+      cmdPlaceholder: slashOnly ? 'Weitertippen zum Filtern …' : 'Befehle und Skills filtern …',
+      cmdSections: cmdSections, cmdEmpty: cmdSections.length === 0,
+      cmdOpenStr: overlay === 'cmd' ? 'true' : 'false', cmdBtnBg: btnBg(overlay === 'cmd' || overlay === 'slash'),
+      toggleCmd: function () { set({ overlay: overlay === 'cmd' ? '' : 'cmd', filter: '' }); },
+      filter: filter,
+      onFilter: function (e) { set({ filter: e.target.value }); },
+      plusOpen: overlay === 'plus', plusOpenStr: overlay === 'plus' ? 'true' : 'false', plusBtnBg: btnBg(overlay === 'plus'),
+      togglePlus: function () { set({ overlay: overlay === 'plus' ? '' : 'plus' }); },
+      plusItems: plusItems,
+      pending: pendingView, hasPending: pendingView.length > 0,
+      modelOpen: overlay === 'model', modelOpenStr: overlay === 'model' ? 'true' : 'false', modelBtnBg: overlay === 'model' ? 'var(--color-bg-selected)' : 'var(--color-bg-hover)',
+      toggleModel: function () { set({ overlay: overlay === 'model' ? '' : 'model' }); },
+      modelName: modelNameOf(curModelId), modelOptions: modelOptions,
+      modelNote: s.canControl ? 'Gilt ab der nächsten Nachricht an den Agenten. Der bisherige Verlauf bleibt erhalten.' : 'Gilt ab der nächsten Nachricht in dieser Session.',
+      effortLabel: effortLabel, effortDots: effortDots,
+      modeOpen: overlay === 'mode', modeOpenStr: overlay === 'mode' ? 'true' : 'false', modeBtnBg: btnBg(overlay === 'mode'),
+      toggleMode: function () { set({ overlay: overlay === 'mode' ? '' : 'mode' }); },
+      modeLabel: modeRec.label, modeIcon: modeRec.icon, modeOptions: modeOptions,
+      repoChips: repoChips, commitSeg: commitSeg,
+      sum: { files: visible.length, add: fmt(vs.add), del: fmt(vs.del) },
+      repoBlocks: repoBlocks, repoSummary: repoSummary,
+      noFile: !openFileRec, hasFile: !!openFileRec,
+      openFile: openFileRec ? { repo: openFileRec.repo, path: openFileRec.path, add: fmt(openFileRec.add), del: fmt(openFileRec.del), branch: branch } : { repo: '', path: '', add: '', del: '', branch: branch },
+      diffLines: diffLines,
+      artifactList: artifactList, noArtifacts: sessionArtifacts.length === 0, hasArtifact: !!curArt, art: art, flowSteps: flowSteps,
+      knownRepos: knownRepos,
+      pickedSummary: pickedCount + (pickedCount === 1 ? ' Repository' : ' Repositories') + ' · Sonnet 5 · Auto',
+      settingSections: settingSections,
+      goNew: function () { set({ view: 'new', overlay: '' }); },
+      goSettings: function () { set({ view: 'settings', overlay: '' }); },
+      closeFile: function () { set({ file: '' }); },
+      resume: resume,
+      startSession: function () { set({ view: 'chat', session: 'oauth' }); },
+      cancelNew: function () { set({ view: 'chat' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
