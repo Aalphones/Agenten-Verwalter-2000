@@ -31,9 +31,10 @@ export function App(): ReactElement {
     };
   }, [openNewSession]);
 
-  const activeSession: SessionSummary | undefined = sessions.find(
-    (session: SessionSummary) => session.id === activeSessionId,
-  );
+  // Ohne gewählte Session öffnet sich die neueste (Sessions kommen neueste zuerst) — nach einem Neustart
+  // steht sonst der Leerzustand vor einer vollen Sidebar.
+  const currentSession: SessionSummary | undefined =
+    sessions.find((session: SessionSummary) => session.id === activeSessionId) ?? sessions[0];
 
   // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createSession` muss selbst in die Liste.
   function handleCreated(summary: SessionSummary): void {
@@ -45,11 +46,11 @@ export function App(): ReactElement {
     if (showNewSession) {
       return <NewSession onCreated={handleCreated} onCancel={closeNewSession} />;
     }
-    if (activeSession !== undefined) {
+    if (currentSession !== undefined) {
       return (
         <>
-          <SessionHeader session={activeSession} />
-          <ChatView key={activeSession.id} session={activeSession} />
+          <SessionHeader session={currentSession} />
+          <ChatView key={currentSession.id} session={currentSession} />
         </>
       );
     }
@@ -60,7 +61,7 @@ export function App(): ReactElement {
     <div className="app">
       <Sidebar
         sessions={sessions}
-        activeSessionId={showNewSession ? null : activeSessionId}
+        activeSessionId={showNewSession ? null : (currentSession?.id ?? null)}
         onSelect={selectSession}
         onNew={openNewSession}
       />

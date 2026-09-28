@@ -24,7 +24,8 @@ pub fn run() {
             let database = Arc::new(Database::open(
                 &data_dir(app.handle())?.join(DATABASE_FILE),
             )?);
-            app.manage(SessionRegistry::new(Arc::clone(&database)));
+            let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
+            app.manage(registry);
             app.manage(database);
             Ok(())
         })

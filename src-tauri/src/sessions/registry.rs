@@ -74,6 +74,11 @@ struct SessionState {
     running_since: Option<f64>,
     context_used: u32,
     context_window: u32,
+    /// Eine wiederhergestellte Session lädt ihren Verlauf erst beim ersten Zugriff (`Session::lock_loaded`).
+    entries_loaded: bool,
+    /// Die Session war beim Beenden aktiv: beim Laden des Verlaufs werden offene Rückfragen und
+    /// laufende Werkzeug-Zeilen abgeschlossen (`settle_after_restart`).
+    needs_settling: bool,
     entries: Vec<ChatEntry>,
     tool_seqs: HashMap<String, u32>,
     todos_seq: Option<u32>,
@@ -106,6 +111,48 @@ impl SessionRegistry {
             sessions: Mutex::new(HashMap::new()),
             database,
         }
+    }
+
+    /// Lädt alle nicht archivierten Sessions aus der Datenbank, ohne ihren Verlauf und ohne Agenten.
+    /// Eine vorher aktive Session ist danach pausiert (auch in der Datenbank).
+    pub fn restore(
+        app: &AppHandle,
+        database: Arc<Database>,
+    ) -> Result<SessionRegistry, CommandError> {
+        let rows = database.with(|connection| session_rows::load_active(connection))?;
+        let registry = SessionRegistry::new(Arc::clone(&database));
+        let mut interrupted: Vec<SessionRow> = Vec::new();
+        {
+            let mut sessions = registry.lock_sessions();
+            for row in rows {
+                let state = SessionState::restored(&row);
+                if state.needs_settling {
+                    interrupted.push(SessionRow {
+                        status: SessionStatus::Paused,
+                        ..row.clone()
+                    });
+                }
+                let workspace = session_workspace(app, &row.id)?;
+                sessions.insert(
+                    row.id.clone(),
+                    Arc::new(Session {
+                        id: row.id,
+                        workspace,
+                        database: Arc::clone(&database),
+                        state: Mutex::new(state),
+                    }),
+                );
+            }
+        }
+        if !interrupted.is_empty() {
+            database.with(|connection| {
+                for row in &interrupted {
+                    session_rows::upsert(connection, row)?;
+                }
+                Ok(())
+            })?;
+        }
+        Ok(registry)
     }
 
     pub fn create(
@@ -178,7 +225,8 @@ impl SessionRegistry {
                     state.push_user(outbox, text);
                     return Ok(());
                 }
-                if state.effort != state.process_effort {
+                // Ohne Prozess (wiederhergestellte Session) startet der Agent hier, mit dem bisherigen Verlauf.
+                if state.process.is_none() || state.effort != state.process_effort {
                     start_process(app, &session, state)?;
                 }
                 state.push_user(outbox, text);
@@ -349,7 +397,7 @@ impl SessionRegistry {
         limit: u32,
     ) -> Result<ChatPage, CommandError> {
         let session = self.get(session_id)?;
-        let state = session.lock();
+        let state = session.lock_loaded()?;
         let total = state.entries.len();
         let end = before.map_or(total, |seq: u32| (seq as usize).min(total));
         let start = end.saturating_sub(limit.clamp(1, MAX_HISTORY_PAGE) as usize);
@@ -387,6 +435,16 @@ impl Session {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// Wie `lock`, lädt aber vorher den Verlauf einer wiederhergestellten Session. Alles, was Einträge
+    /// liest oder verändert, geht hierüber; `list`, `log` und Statusabfragen brauchen ihn nicht.
+    fn lock_loaded(&self) -> Result<MutexGuard<'_, SessionState>, CommandError> {
+        let mut state = self.lock();
+        if !state.entries_loaded {
+            state.load_entries(self)?;
+        }
+        Ok(state)
+    }
+
     fn log_line(&self, line: String) {
         self.lock().push_log(line);
     }
@@ -407,6 +465,8 @@ impl SessionState {
             running_since: None,
             context_used: 0,
             context_window: INITIAL_CONTEXT_WINDOW,
+            entries_loaded: true,
+            needs_settling: false,
             entries: Vec::new(),
             tool_seqs: HashMap::new(),
             todos_seq: None,
@@ -418,6 +478,68 @@ impl SessionState {
             pause_requested: false,
             cancel_requested: false,
             next_request: 0,
+        }
+    }
+
+    /// Der Zustand einer Session, wie ihn die Datenbank kennt. Der Agent-Prozess endet mit der App;
+    /// eine vorher aktive Session ist deshalb pausiert und startet mit der nächsten Nachricht neu.
+    fn restored(row: &SessionRow) -> Self {
+        let was_active = matches!(
+            row.status,
+            SessionStatus::Starting | SessionStatus::Running | SessionStatus::Waiting
+        );
+        let mut state = SessionState::new(row.name.clone(), row.model, row.effort, row.mode);
+        state.status = if was_active {
+            SessionStatus::Paused
+        } else {
+            row.status
+        };
+        state.created_at = row.created_at;
+        state.running_ms = row.running_ms;
+        state.context_used = row.context_used;
+        state.context_window = row.context_window;
+        state.has_agent_history = row.has_agent_history;
+        state.entries_loaded = false;
+        state.needs_settling = was_active;
+        state
+    }
+
+    /// Lädt den Verlauf aus der Datenbank. Schlägt das fehl, bleibt `entries_loaded` falsch und der
+    /// nächste Zugriff versucht es erneut.
+    fn load_entries(&mut self, session: &Session) -> Result<(), CommandError> {
+        self.entries = session
+            .database
+            .with(|connection| chat_entries::load_all(connection, &session.id))?;
+        self.entries_loaded = true;
+        if self.needs_settling {
+            let mut outbox = Outbox::default();
+            self.settle_after_restart(&mut outbox);
+            self.needs_settling = false;
+            if !outbox.entries.is_empty() {
+                let saved = session.database.with(|connection| {
+                    chat_entries::upsert_all(connection, &session.id, &outbox.entries)
+                });
+                if let Err(error) = saved {
+                    self.push_log(format!("Speichern fehlgeschlagen: {error}"));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Antworten und Ergebnisse, die nach einem Beenden der App nie mehr kommen.
+    fn settle_after_restart(&mut self, outbox: &mut Outbox) {
+        for entry in &mut self.entries {
+            match entry {
+                ChatEntry::Question { answer, .. } if answer.is_none() => {
+                    *answer = Some("Nicht beantwortet".to_owned());
+                }
+                ChatEntry::Tool { state, .. } if *state == ToolState::Running => {
+                    *state = ToolState::Interrupted;
+                }
+                _ => continue,
+            }
+            outbox.entries.push(entry.clone());
         }
     }
 
@@ -756,7 +878,7 @@ fn update<R>(
 ) -> Result<R, CommandError> {
     let mut outbox = Outbox::default();
     let result = {
-        let mut state = session.lock();
+        let mut state = session.lock_loaded()?;
         let result = change(&mut state, &mut outbox);
         // Auch bei einem Fehler: die Closure kann den Zustand schon verändert haben.
         persist(session, &mut state, &outbox);
