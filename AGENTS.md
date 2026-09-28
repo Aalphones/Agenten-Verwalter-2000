@@ -1,5 +1,7 @@
 # AGENTS.md — Agenten Verwalter 2000
 
+🚧 Aktive Arbeit → [STATE.md](STATE.md)
+
 Lokale Desktop-Kommandozentrale für Coding-Agenten: eine Session = eine Aufgabe über mehrere Git-Repositories mit je eigenem Worktree; der Chat ist die Hauptarbeitsfläche, Changes/Diffs die Prüfebene. Kontext, Scope, Meilensteine und offene Fragen: **[docs/PROJECT.md](docs/PROJECT.md)**. Ausführliches Ursprungskonzept: [docs/konzept.md](docs/konzept.md).
 
 ## Code finden — erst hier, dann suchen

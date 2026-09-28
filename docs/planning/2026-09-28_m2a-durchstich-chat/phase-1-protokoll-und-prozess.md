@@ -1,6 +1,6 @@
 # Phase 1 — Claude-Prozess & Protokoll im Core
 
-**Status:** pending · **Rating:** heikel (Prozess-Threads, Protokoll-Übersetzung; legt die Typen fest, die alle weiteren Phasen benutzen)
+**Status:** complete · **Rating:** heikel (Prozess-Threads, Protokoll-Übersetzung; legt die Typen fest, die alle weiteren Phasen benutzen)
 
 ## Kontext
 
@@ -26,17 +26,17 @@ Lesen vor dem Start:
 
 ### Abhängigkeiten
 
-- [ ] `src-tauri/Cargo.toml`: `uuid = { version = "1", features = ["v4"] }` (wird in Phase 2 benutzt, hier schon eintragen, damit die Phase-2-Umsetzung nichts an `Cargo.toml` ändern muss).
+- [x] `src-tauri/Cargo.toml`: `uuid = { version = "1", features = ["v4"] }` (wird in Phase 2 benutzt, hier schon eintragen, damit die Phase-2-Umsetzung nichts an `Cargo.toml` ändern muss).
 
 ### `src-tauri/src/agents/event.rs` — anbieterneutrale Typen
 
-- [ ] Alle Typen aus README → „Kontrakt → Typen“, Abschnitt `agents/event.rs`, exakt mit den dortigen Namen, Feldern und Serde-Attributen; jeder mit `#[derive(Debug, Clone, Serialize, Deserialize, TS)]`, die einfachen Enums zusätzlich `Copy, PartialEq, Eq`.
-- [ ] Methoden:
+- [x] Alle Typen aus README → „Kontrakt → Typen“, Abschnitt `agents/event.rs`, exakt mit den dortigen Namen, Feldern und Serde-Attributen; jeder mit `#[derive(Debug, Clone, Serialize, Deserialize, TS)]`, die einfachen Enums zusätzlich `Copy, PartialEq, Eq`.
+- [x] Methoden:
   - `ModelId::cli_id(self) -> &'static str`: Fable → `claude-fable-5-1`, Opus → `claude-opus-5-5`, Sonnet → `claude-sonnet-5`, Haiku → `claude-haiku-4-5-20251001`.
   - `Effort::cli_value(self) -> &'static str`: `low`, `medium`, `high`, `xhigh`, `max`.
   - `Mode::cli_value(self) -> &'static str`: Manual → `default`, Edit → `acceptEdits`, Plan → `plan`, Auto → `auto`.
   - `ChatEntry::seq(&self) -> u32`.
-- [ ] Internes (nicht exportiertes) Enum für die Übersetzung, ohne `TS`:
+- [x] Internes (nicht exportiertes) Enum für die Übersetzung, ohne `TS`:
 
   ```rust
   pub enum TurnEnd { Completed, Aborted, Failed(String) }
@@ -58,7 +58,7 @@ Lesen vor dem Start:
 
 ### `src-tauri/src/agents/claude/protocol.rs` — Zeilenformate
 
-- [ ] Eingehende Zeilen als Serde-Typen, nur die Felder, die die Übersetzung braucht; unbekannte Felder werden ignoriert (Serde-Standard), unbekannte `type`-Werte landen in einer Einheitsvariante:
+- [x] Eingehende Zeilen als Serde-Typen, nur die Felder, die die Übersetzung braucht; unbekannte Felder werden ignoriert (Serde-Standard), unbekannte `type`-Werte landen in einer Einheitsvariante:
 
   ```rust
   #[derive(Deserialize)]
@@ -81,7 +81,7 @@ Lesen vor dem Start:
   - `Usage { input_tokens: Option<u64>, cache_creation_input_tokens: Option<u64>, cache_read_input_tokens: Option<u64> }`
   - `ControlRequestLine { request_id: String, request: ControlRequestBody }`, `ControlRequestBody { subtype: String, tool_name: Option<String>, input: Option<serde_json::Value> }`
   - `ResultLine { subtype: String, is_error: bool, terminal_reason: Option<String>, result: Option<String>, #[serde(rename = "modelUsage")] model_usage: Option<HashMap<String, ModelUsage>> }`, `ModelUsage { #[serde(rename = "contextWindow")] context_window: Option<u32> }`
-- [ ] Ausgehende Zeilen als Funktionen, die je einen String **ohne** Zeilenumbruch liefern (gebaut mit `serde_json::json!`, Formate aus der Wissensdatei):
+- [x] Ausgehende Zeilen als Funktionen, die je einen String **ohne** Zeilenumbruch liefern (gebaut mit `serde_json::json!`, Formate aus der Wissensdatei):
   - `user_message(text: &str) -> String`
   - `control_request(request_id: &str, request: serde_json::Value) -> String`
   - `allow(request_id: &str, updated_input: serde_json::Value) -> String`
@@ -89,8 +89,8 @@ Lesen vor dem Start:
 
 ### `src-tauri/src/agents/claude/translate.rs` — Übersetzung
 
-- [ ] `pub struct Translator { thinking_started: Option<std::time::Instant> }` mit `Default` und `pub fn handle_line(&mut self, line: &str) -> Vec<AgentEvent>`.
-- [ ] Regeln (in dieser Reihenfolge prüfen):
+- [x] `pub struct Translator { thinking_started: Option<std::time::Instant> }` mit `Default` und `pub fn handle_line(&mut self, line: &str) -> Vec<AgentEvent>`.
+- [x] Regeln (in dieser Reihenfolge prüfen):
   1. Zeile lässt sich nicht als `Incoming` lesen → `Unknown(line)`.
   2. `System`: `subtype == "init"` → `Ready { model }` (leerer String, wenn `model` fehlt). `subtype == "thinking_tokens"` → `thinking_started` setzen, falls `None`; kein Ereignis. Alles andere → kein Ereignis.
   3. `Assistant` mit `parent_tool_use_id: Some(_)` → kein Ereignis (Subagent, kommt mit M2b).
@@ -108,15 +108,15 @@ Lesen vor dem Start:
      - andere `subtype` → `Unknown(line)`.
   7. `Result` → `TurnEnded { end, context_window }`: `terminal_reason == Some("aborted_streaming")` → `Aborted`; sonst `is_error` → `Failed(result oder subtype)`; sonst `Completed`. `context_window` = erster `context_window` in `model_usage`.
   8. `Other` → kein Ereignis.
-- [ ] `fn target_of(tool: &str, input: &Value) -> String`: bei `Grep` → `"<pattern>" in <path>` bzw. `"<pattern>"` ohne `path`; sonst der erste vorhandene String aus den Feldern `file_path`, `notebook_path`, `path`, `command`, `pattern`, `url`, `query`, `description`, `skill`; nichts davon → leer. Ergebnis: nur die erste Zeile, höchstens 120 Zeichen (Zeichen, nicht Bytes), bei Kürzung mit `…` am Ende.
+- [x] `fn target_of(tool: &str, input: &Value) -> String`: bei `Grep` → `"<pattern>" in <path>` bzw. `"<pattern>"` ohne `path`; sonst der erste vorhandene String aus den Feldern `file_path`, `notebook_path`, `path`, `command`, `pattern`, `url`, `query`, `description`, `skill`; nichts davon → leer. Ergebnis: nur die erste Zeile, höchstens 120 Zeichen (Zeichen, nicht Bytes), bei Kürzung mit `…` am Ende.
 
 ### `src-tauri/src/agents/claude/locate.rs` — Programm finden
 
-- [ ] `pub fn find_claude() -> Option<PathBuf>` in der Reihenfolge aus ADR 003: `VERWALTER_CLAUDE_PATH` (nur wenn die Datei existiert) → `%APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe` → `%USERPROFILE%\.local\bin\claude.exe` → jedes Verzeichnis aus `PATH` + `claude.exe`. Erste existierende Datei gewinnt. Umgebungsvariablen über `std::env::var_os`, Pfade über `PathBuf::join`.
+- [x] `pub fn find_claude() -> Option<PathBuf>` in der Reihenfolge aus ADR 003: `VERWALTER_CLAUDE_PATH` (nur wenn die Datei existiert) → `%APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe` → `%USERPROFILE%\.local\bin\claude.exe` → jedes Verzeichnis aus `PATH` + `claude.exe`. Erste existierende Datei gewinnt. Umgebungsvariablen über `std::env::var_os`, Pfade über `PathBuf::join`.
 
 ### `src-tauri/src/agents/claude/process.rs` — Prozess
 
-- [ ] Typen:
+- [x] Typen:
 
   ```rust
   pub struct SpawnOptions { pub exe: PathBuf, pub cwd: PathBuf, pub session_id: String, pub resume: bool, pub model: ModelId, pub effort: Effort, pub mode: Mode }
@@ -124,18 +124,30 @@ Lesen vor dem Start:
   pub struct ClaudeProcess { child: Arc<Mutex<Child>>, stdin: Mutex<Option<ChildStdin>> }
   ```
 
-- [ ] `pub fn spawn(opts: SpawnOptions, on_output: impl Fn(ProcessOutput) + Send + Sync + 'static) -> std::io::Result<ClaudeProcess>`:
+- [x] `pub fn spawn(opts: SpawnOptions, on_output: impl Fn(ProcessOutput) + Send + Sync + 'static) -> std::io::Result<ClaudeProcess>`:
   - `Command::new(&opts.exe)`, `current_dir(&opts.cwd)`, stdin/stdout/stderr `Stdio::piped()`, unter `#[cfg(windows)]` `std::os::windows::process::CommandExt::creation_flags(0x0800_0000)` (`CREATE_NO_WINDOW`).
   - Argumente einzeln per `.arg(...)`: `-p`, `--input-format`, `stream-json`, `--output-format`, `stream-json`, `--verbose`, `--permission-prompt-tool`, `stdio`, `--model`, `<cli_id>`, `--effort`, `<cli_value>`, `--permission-mode`, `<cli_value>`, dann `--session-id <id>` (bei `resume == false`) bzw. `--resume <id>`.
   - `on_output` in ein `Arc` legen. Thread „stdout“: `BufReader::lines()`, jede nicht leere Zeile → `Line`; nach Dateiende `child.lock()` + `wait()` → `Exited(status.code())` (bei Fehler `Exited(None)`). Thread „stderr“: jede Zeile → `Stderr`.
   - Gesperrte Mutexe nie mit `unwrap()`: `lock().unwrap_or_else(std::sync::PoisonError::into_inner)`.
-- [ ] Methoden: `write_line(&self, line: &str) -> std::io::Result<()>` (Zeile + `\n`, danach `flush`; stdin schon geschlossen → `io::ErrorKind::BrokenPipe`), `close_stdin(&self)` (nimmt stdin heraus und lässt es fallen), `kill(&self)` (Fehler ignorieren), `pid(&self) -> u32`.
+- [x] Methoden: `write_line(&self, line: &str) -> std::io::Result<()>` (Zeile + `\n`, danach `flush`; stdin schon geschlossen → `io::ErrorKind::BrokenPipe`), `close_stdin(&self)` (nimmt stdin heraus und lässt es fallen), `kill(&self)` (Fehler ignorieren), `pid(&self) -> u32`.
 
 ### Verdrahtung und Doku
 
-- [ ] `src-tauri/src/agents/mod.rs` (`pub mod claude; pub mod event;`), `src-tauri/src/agents/claude/mod.rs` (`pub mod locate; pub mod process; pub mod protocol; pub mod translate;`), in `lib.rs` `pub mod agents;`.
-- [ ] Code, der erst in Phase 2 benutzt wird, erzeugt `dead_code`-Warnungen: **nicht** mit `#[allow]` unterdrücken, sondern die Module `pub` halten (öffentliche Elemente einer Bibliothek warnen nicht). Bleibt trotzdem eine Warnung → Findings, nicht wegdrücken.
-- [ ] `gen-bindings.rs`: die elf TS-Typen aus AK 1 eintragen; `pnpm bindings`.
-- [ ] `docs/code-map.md`: Zeile „Agent-Provider“ um `agents/event.rs` (anbieterneutrale Typen) und `agents/claude/` (Protokoll, Prozess, Übersetzung) konkretisieren; Stand-Satz oben anpassen.
+- [x] `src-tauri/src/agents/mod.rs` (`pub mod claude; pub mod event;`), `src-tauri/src/agents/claude/mod.rs` (`pub mod locate; pub mod process; pub mod protocol; pub mod translate;`), in `lib.rs` `pub mod agents;`.
+- [x] Code, der erst in Phase 2 benutzt wird, erzeugt `dead_code`-Warnungen: **nicht** mit `#[allow]` unterdrücken, sondern die Module `pub` halten (öffentliche Elemente einer Bibliothek warnen nicht). Bleibt trotzdem eine Warnung → Findings, nicht wegdrücken.
+- [x] `gen-bindings.rs`: die elf TS-Typen aus AK 1 eintragen; `pnpm bindings`.
+- [x] `docs/code-map.md`: Zeile „Agent-Provider“ um `agents/event.rs` (anbieterneutrale Typen) und `agents/claude/` (Protokoll, Prozess, Übersetzung) konkretisieren; Stand-Satz oben anpassen.
 
 ## Report-Back
+
+AK 1–5 erfüllt: `pnpm check` grün (Clippy ohne Warnung, auch ohne `dead_code`), elf Typen unter `src/lib/bindings/`; `rename_all_fields` wird von `ts-rs` 12 übernommen, keine Einzel-`rename`s nötig; kein `unwrap()`/`expect()` in `agents/`; Start mit `CREATE_NO_WINDOW`, ohne Shell, jedes Argument per `.arg`.
+
+Übersetzungsregeln gegengelesen: 1 ✓ · 2 ✓ · 3 ✓ · 4 ✓ · 5 ✓ · 6 ✓ · 7 ✓ (Abweichung unten) · 8 ✓ · `target_of` ✓.
+
+Abweichungen:
+
+- **Regel 7, `context_window`:** größter Wert aus `modelUsage` statt „erster“ — die Map hat keine Reihenfolge und kann neben dem Hauptmodell Hilfsmodelle enthalten.
+- **`ResultLine.is_error`** mit `#[serde(default)]`: fehlt das Feld, würde die ganze `result`-Zeile sonst unlesbar (`Unknown`) und die Session bliebe auf „Läuft“.
+- **Regel 6, fehlender `tool_name`:** Frage lautet „Claude möchte ein Werkzeug ausführen“ statt eines leeren Namens.
+- **`target_of`:** eine abgeschnittene zweite Zeile bekommt ebenfalls `…`; Ergebnis inklusive `…` höchstens 120 Zeichen.
+- **`process.rs`:** Der stdout-Thread fragt den Exit-Status alle 50 ms per `try_wait` ab statt `wait()` unter der Sperre — sonst blockierte ein gleichzeitiges `kill()` bis zum natürlichen Prozessende. Zusätzliches Feld `pid` in `ClaudeProcess`, damit `pid()` nie auf die Sperre wartet. Zeilen werden als Bytes gelesen und verlustbehaftet nach UTF-8 gewandelt: ein ungültiges Byte beendet das Lesen nicht.

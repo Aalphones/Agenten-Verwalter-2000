@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`); die Features folgen (`src/features/`, `src-tauri/src/<feature>/` usw. existieren noch nicht) — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`), dazu die Claude-Anbindung im Core (`src-tauri/src/agents/`); die Features folgen (`src/features/`, `src-tauri/src/<feature>/` usw. existieren noch nicht) — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
@@ -25,7 +25,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` | `src-tauri/src/commands/changes.rs`, `src-tauri/src/git/` |
 | Repositories (bekannte Repos verwalten) | `src/features/repositories/` | `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
 | Settings | `src/features/settings/` | `src-tauri/src/commands/settings.rs`, `src-tauri/src/db/settings.rs` |
-| Agent-Provider | — | `src-tauri/src/agents/` (ein Modul pro Provider) |
+| Agent-Provider | — | `src-tauri/src/agents/event.rs` (anbieterneutrale Typen: Chat-Einträge, Modell, Modus, Denkaufwand, Agent-Ereignisse), `src-tauri/src/agents/claude/` (Claude-Kommandozeile: Programm finden, Prozess, Zeilenformate, Übersetzung) — ein Modul pro Provider |
 | Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` |
 | Agent-Prozesse, Wiederherstellung | — | `src-tauri/src/processes/` |
 | Generierte Typen Rust → TS | `src/lib/bindings/` (generiert, nicht von Hand ändern) | Quelle: Typen im Core; Export-Liste `src-tauri/src/bin/gen-bindings.rs` (`pnpm bindings`) |
