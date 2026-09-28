@@ -59,6 +59,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste zuerst, UI-Politur zuletzt.
 
 1. **Gerüst:** Rust-Toolchain, Tauri-2-App mit React, Lint/Typecheck/Build lokal und als GitHub-Actions-Prüfung.
+1b. **Design-Entwurf:** klickbarer Entwurf der Hauptansichten (Session-Liste, neue Session, Chat, Changes, Settings) nach Konzept Abschnitte 8–18, 57 und 69–70, abgelegt in [design/](design/). Er ist die Vorlage für alle Oberflächen-Anteile ab Meilenstein 2, damit M2–M5 keine Wegwerf-Oberfläche bauen; M6 wird Feinschliff statt Neubau. Hängt an keinem Code und kann parallel zu Meilenstein 1 entstehen.
 2. **Agent-Anbindung (Durchstich):** Claude starten, Events empfangen, unterbrechen, fortsetzen, Status erkennen — Entscheidung über den Anbindungsweg fällt hier.
 3. **Worktree-Orchestrierung:** mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 4. **Persistenz & Wiederherstellung:** Sessions, Nachrichten, Events in SQLite; nach Neustart laufende Agenten wiederfinden.
