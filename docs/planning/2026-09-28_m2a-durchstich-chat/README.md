@@ -15,7 +15,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 3 | App-Rahmen, Leerzustand, Neue Session | [phase-3-rahmen-und-neue-session.md](phase-3-rahmen-und-neue-session.md) | standard | complete |
 | 4 | Chat-Verlauf | [phase-4-chat-verlauf.md](phase-4-chat-verlauf.md) | heikel | complete |
 | 5 | Markdown & Code-Blöcke | [phase-5-markdown-und-codebloecke.md](phase-5-markdown-und-codebloecke.md) | standard | complete |
-| 6 | Eingabeleiste & Steuerung | [phase-6-eingabeleiste-und-steuerung.md](phase-6-eingabeleiste-und-steuerung.md) | standard | pending |
+| 6 | Eingabeleiste & Steuerung | [phase-6-eingabeleiste-und-steuerung.md](phase-6-eingabeleiste-und-steuerung.md) | standard | complete |
 
 Umsetzung direkt auf `main`, ein Commit pro Phase, `pnpm check` vor jedem Commit grün. Erkenntnisse während der Umsetzung → [FINDINGS.md](FINDINGS.md).
 

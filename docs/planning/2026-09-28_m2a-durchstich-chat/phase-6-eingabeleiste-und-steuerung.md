@@ -1,6 +1,6 @@
 # Phase 6 — Eingabeleiste & Steuerung
 
-**Status:** pending · **Rating:** standard (Menüs aus Phase 3 und Commands aus Phase 2 werden hier zusammengesteckt)
+**Status:** complete · **Rating:** standard (Menüs aus Phase 3 und Commands aus Phase 2 werden hier zusammengesteckt)
 
 ## Kontext
 
@@ -29,19 +29,25 @@ Lesen vor dem Start:
 
 ## Checkliste
 
-- [ ] `src/stores/chat.ts`: `useChatStore` mit `drafts: Record<string, string>` und `setDraft(sessionId, text)`, `clearDraft(sessionId)` — flüchtiger UI-Zustand, erlaubt laut react.md.
-- [ ] `src/features/chat/Composer.tsx` + `.css`: Props `session: SessionSummary`. Unsichtbares `label` „Nachricht an den Agenten“ für das Textfeld. Platzhalter nach Status: `waiting` → „Antwort an Claude …“, `cancelled`/`error` → AK 7, sonst „Nachricht an Claude …“. Zustand lokal: offenes Menü (`'model' | 'mode' | null`), Fehlertext, „sendet gerade“.
+- [x] `src/stores/chat.ts`: `useChatStore` mit `drafts: Record<string, string>` und `setDraft(sessionId, text)`, `clearDraft(sessionId)` — flüchtiger UI-Zustand, erlaubt laut react.md.
+- [x] `src/features/chat/Composer.tsx` + `.css`: Props `session: SessionSummary`. Unsichtbares `label` „Nachricht an den Agenten“ für das Textfeld. Platzhalter nach Status: `waiting` → „Antwort an Claude …“, `cancelled`/`error` → AK 7, sonst „Nachricht an Claude …“. Zustand lokal: offenes Menü (`'model' | 'mode' | null`), Fehlertext, „sendet gerade“.
   - Senden: `sendMessage(session.id, text.trim())` → `clearDraft`; Fehler → AK 8.
   - Tasten im Textfeld: Ctrl+Enter → senden (`preventDefault`); Umschalt+Tab → nächster Modus nach `MODE_OPTIONS`-Reihenfolge, `setSessionMode` (`preventDefault`).
   - Modell-Pille → `ModelMenu` mit `placement="above"`, `align="start"`, `note` nach AK 6; Auswahl → `setSessionModel`, Menü schließt.
   - Modus-Knopf → `ModeMenu` mit `placement="above"`, `align="end"`; Modus → `setSessionMode`, Denkaufwand → `setSessionEffort`; Menü bleibt nach Denkaufwand-Klick offen, schließt nach Modus-Klick.
   - Fokus-Rahmen per `:focus-within` am Kasten.
-- [ ] `ChatView.tsx`: `Composer` in `chat-view__composer` einsetzen. Esc-Listener auf `window` (nur solange Status `starting`/`running`/`waiting`): ignoriert `defaultPrevented` (die Menüs setzen es beim Schließen), sonst `pauseSession(session.id)`; Cleanup.
+- [x] `ChatView.tsx`: `Composer` in `chat-view__composer` einsetzen. Esc-Listener auf `window` (nur solange Status `starting`/`running`/`waiting`): ignoriert `defaultPrevented` (die Menüs setzen es beim Schließen), sonst `pauseSession(session.id)`; Cleanup.
 ### Doku und Abschluss
 
-- [ ] Design-README: Tafeln `Model.dc.html`, `Mode.dc.html` bestätigen („M2a“); „Abweichungen bis Meilenstein 3“ um die fehlenden Knöpfe `+` und `/` und den Platzhalter ohne „(/ für Skills, @ für Dateien)“ ergänzen.
-- [ ] `docs/knowledge/GAPS.md`: offene Fragen aus FINDINGS übernehmen; was die Umsetzung beantwortet hat, nach [claude-stream-json.md](../../knowledge/claude-stream-json.md) verschieben.
-- [ ] `docs/code-map.md`: Composer und `src/stores/chat.ts` ergänzen; Stand-Satz oben auf „Meilenstein 2a“ setzen.
-- [ ] `AGENTS.md`: prüfen, ob Befehle oder Regeln sich geändert haben (erwartet: nein); falls doch, nachziehen.
+- [x] Design-README: Tafeln `Model.dc.html`, `Mode.dc.html` bestätigen („M2a“); „Abweichungen bis Meilenstein 3“ um die fehlenden Knöpfe `+` und `/` und den Platzhalter ohne „(/ für Skills, @ für Dateien)“ ergänzen.
+- [x] `docs/knowledge/GAPS.md`: offene Fragen aus FINDINGS übernehmen; was die Umsetzung beantwortet hat, nach [claude-stream-json.md](../../knowledge/claude-stream-json.md) verschieben.
+- [x] `docs/code-map.md`: Composer und `src/stores/chat.ts` ergänzen; Stand-Satz oben auf „Meilenstein 2a“ setzen.
+- [x] `AGENTS.md`: prüfen, ob Befehle oder Regeln sich geändert haben (erwartet: nein); falls doch, nachziehen.
 
 ## Report-Back
+
+- **Gebaut:** `Composer` (Textfeld, Modell-Pille, Modus-Knopf, Senden), Entwurf je Session in `useChatStore`, Esc-Pause in `ChatView`. Menüs aus Phase 3 unverändert wiederverwendet.
+- **Prüfkette:** `pnpm check` grün (Lint, Typecheck, Prettier, Build, rustfmt, Clippy). Erster Lauf fand einen Lint-Fehler (`delete` auf berechneten Schlüssel in `clearDraft`), behoben mit `Object.entries`/`Object.fromEntries`.
+- **AK 10 (Smoke) offen:** Die App lief in dieser Phase nicht; die Smoke-Punkte macht Sascha am Plan-Ende.
+- **Abweichung:** Der Platzhalter „Antwort an Claude …“ hängt am Status `waiting`, nicht an einer aus `entries` abgeleiteten offenen Rückfrage — der Status deckt dasselbe ab und `Composer` braucht so keine Einträge.
+- **Nicht gebaut, bewusst:** Modell- und Modus-Knopf bleiben auch in `cancelled`/`error` bedienbar (nur Textfeld und Senden sind gesperrt, wie im Plan).
