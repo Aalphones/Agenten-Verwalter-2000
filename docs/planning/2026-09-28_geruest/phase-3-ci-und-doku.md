@@ -22,7 +22,7 @@ Lesen vor dem Start:
 
 ### CI
 
-- [ ] `.github/workflows/check.yml`, Name `check`, Trigger `push` auf `main` und `pull_request`, ein Job `check` auf `windows-latest`. Für jede Action die aktuelle Major-Version von ihrer GitHub-Seite ablesen und eintragen. Schritte in genau dieser Reihenfolge:
+- [x] `.github/workflows/check.yml`, Name `check`, Trigger `push` auf `main` und `pull_request`, ein Job `check` auf `windows-latest`. Für jede Action die aktuelle Major-Version von ihrer GitHub-Seite ablesen und eintragen. Schritte in genau dieser Reihenfolge:
   1. `actions/checkout`
   2. `pnpm/action-setup` (ohne `version` — liest `packageManager` aus `package.json`)
   3. `actions/setup-node` mit `node-version: 24` und `cache: pnpm`
@@ -36,25 +36,31 @@ Lesen vor dem Start:
   11. `run: pnpm rust:fmt`
   12. `run: pnpm rust:clippy`
   13. Bindings-Prüfung, `shell: bash`: `pnpm bindings` und danach `test -z "$(git status --porcelain -- src/lib/bindings)" || { git status --porcelain -- src/lib/bindings; echo "src/lib/bindings ist veraltet - pnpm bindings ausführen und committen"; exit 1; }`
-- [ ] Lokal gegenprobe: `pnpm check` grün, `pnpm bindings` ändert nichts.
+- [x] Lokal gegenprobe: `pnpm check` grün, `pnpm bindings` ändert nichts.
 
 ### Installer
 
-- [ ] `pnpm tauri build`; Installer aus `src-tauri/target/release/bundle/nsis/` einmal installieren und starten: Titel und Versionsnummer sichtbar (Wackelstelle CSP). Ergebnis in FINDINGS.md.
+- [ ] `pnpm tauri build`; Installer aus `src-tauri/target/release/bundle/nsis/` einmal installieren und starten: Titel und Versionsnummer sichtbar (Wackelstelle CSP). Ergebnis in FINDINGS.md. — Build erledigt (Installer erzeugt), Installieren und Starten macht Sascha in der Smoke-Checkliste.
 
 ### Doku
 
-- [ ] `AGENTS.md` → Abschnitt „Befehle“: Platzhalter-Satz ersetzen durch eine Tabelle `pnpm tauri dev` (App im Entwicklungsmodus), `pnpm check` (gesamte Prüfkette), `pnpm bindings` (TS-Typen aus Rust neu erzeugen — nach jeder Änderung an Typen, die die Tauri-Grenze überqueren), `pnpm format`, `pnpm tauri build` (NSIS-Installer).
-- [ ] `README.md`: „Status“ → „Gerüst steht, als Nächstes Design-Entwurf (1b) und Agent-Anbindung“; Quickstart-Block mit den echten Befehlen (`pnpm install`, `pnpm tauri dev`, `pnpm check`); Voraussetzungen um „pnpm per `npm install -g pnpm` — Node 25+ bringt kein Corepack mehr mit“ ergänzen.
-- [ ] `docs/code-map.md`: „Stand“-Satz aktualisieren (Gerüst angelegt, Features folgen). Zeilen ergänzen: App-Info/Version (`src/app/`, `src/lib/app.ts` · `src-tauri/src/commands/app.rs`), Fehlertyp am Command-Rand (— · `src-tauri/src/error.rs`), Design-Tokens (`src/styles/theme.css` · —), Typ-Generator (Ausgabe `src/lib/bindings/` · `src-tauri/src/bin/gen-bindings.rs`). Faustregel ergänzen: „Neuer Typ über die Tauri-Grenze? → `derive(TS)` im Core, in `gen-bindings.rs` eintragen, `pnpm bindings`.“
-- [ ] `docs/conventions/linting.md`: Block „Prüfkette“ durch die tatsächlichen Skriptnamen aus Phase 2 ersetzen, Reihenfolge `build` vor `rust:clippy` mit Grund; Satz „Die genauen Skriptnamen werden beim Gerüst … angelegt“ streichen; CI-Datei `.github/workflows/check.yml` nennen.
-- [ ] `docs/conventions/rust.md` → „Typen für die UI“: „Werkzeug wird beim Gerüst festgelegt“ ersetzen durch: ts-rs, Export über `src/bin/gen-bindings.rs`, kein `#[ts(export)]`, `default-run = "verwalter"` in `Cargo.toml` wegen des zweiten Programms, Verweis auf ADR 002.
-- [ ] `docs/conventions/react.md`: Stack-Zeile „Listen“ → `@tanstack/react-virtual` (ADR 002).
-- [ ] `docs/PROJECT.md`: Stack-Zeile „Gemeinsame Typen“ → „ts-rs, siehe ADR 002“; offene Frage „Womit werden die Typen … generiert“ streichen.
-- [ ] Plan-README: Summary, Files touched, Commits, Deviations, Follow-ups füllen; Status aller Phasen `complete`.
+- [x] `AGENTS.md` → Abschnitt „Befehle“: Platzhalter-Satz ersetzen durch eine Tabelle `pnpm tauri dev` (App im Entwicklungsmodus), `pnpm check` (gesamte Prüfkette), `pnpm bindings` (TS-Typen aus Rust neu erzeugen — nach jeder Änderung an Typen, die die Tauri-Grenze überqueren), `pnpm format`, `pnpm tauri build` (NSIS-Installer).
+- [x] `README.md`: „Status“ → „Gerüst steht, als Nächstes Design-Entwurf (1b) und Agent-Anbindung“; Quickstart-Block mit den echten Befehlen (`pnpm install`, `pnpm tauri dev`, `pnpm check`); Voraussetzungen um „pnpm per `npm install -g pnpm` — Node 25+ bringt kein Corepack mehr mit“ ergänzen.
+- [x] `docs/code-map.md`: „Stand“-Satz aktualisieren (Gerüst angelegt, Features folgen). Zeilen ergänzen: App-Info/Version (`src/app/`, `src/lib/app.ts` · `src-tauri/src/commands/app.rs`), Fehlertyp am Command-Rand (— · `src-tauri/src/error.rs`), Design-Tokens (`src/styles/theme.css` · —), Typ-Generator (Ausgabe `src/lib/bindings/` · `src-tauri/src/bin/gen-bindings.rs`). Faustregel ergänzen: „Neuer Typ über die Tauri-Grenze? → `derive(TS)` im Core, in `gen-bindings.rs` eintragen, `pnpm bindings`.“
+- [x] `docs/conventions/linting.md`: Block „Prüfkette“ durch die tatsächlichen Skriptnamen aus Phase 2 ersetzen, Reihenfolge `build` vor `rust:clippy` mit Grund; Satz „Die genauen Skriptnamen werden beim Gerüst … angelegt“ streichen; CI-Datei `.github/workflows/check.yml` nennen.
+- [x] `docs/conventions/rust.md` → „Typen für die UI“: „Werkzeug wird beim Gerüst festgelegt“ ersetzen durch: ts-rs, Export über `src/bin/gen-bindings.rs`, kein `#[ts(export)]`, `default-run = "verwalter"` in `Cargo.toml` wegen des zweiten Programms, Verweis auf ADR 002.
+- [x] `docs/conventions/react.md`: Stack-Zeile „Listen“ → `@tanstack/react-virtual` (ADR 002).
+- [x] `docs/PROJECT.md`: Stack-Zeile „Gemeinsame Typen“ → „ts-rs, siehe ADR 002“; offene Frage „Womit werden die Typen … generiert“ streichen.
+- [x] Plan-README: Summary, Files touched, Commits, Deviations, Follow-ups füllen; Status aller Phasen `complete`.
 
 ### Commit
 
 - [ ] Commit `ci(setup): add windows check workflow and document commands`, pushen, CI-Ergebnis auf GitHub → Actions ablesen (Sascha, falls kein Zugriff). Rot → beheben, bevor der Plan als fertig gilt.
 
 ## Report-Back
+
+- `pnpm check` lokal grün (Exit 0); `pnpm bindings` lässt `src/lib/bindings/` unverändert (`git status --porcelain` leer).
+- Action-Versionen von den GitHub-Releases gelesen: `actions/checkout@v7` (v7.0.1), `pnpm/action-setup@v6` (v6.1.0), `actions/setup-node@v7` (v7.0.0), `Swatinem/rust-cache@v2` (v2.9.2).
+- `pnpm tauri build` grün (6 min 17 s Release-Kompilierung), Installer `Agenten Verwalter 2000_0.1.0_x64-setup.exe`, 1,4 MiB.
+- **Nicht geprüft:** Installer installiert und gestartet (Versionsanzeige gegen die CSP) und der CI-Lauf auf GitHub — beides deckt die Smoke-Checkliste im Plan-README.
+- Abweichung: `build` vor `rust:clippy` ist nur Vorsicht, keine Pflicht (FINDINGS) — linting.md sagt das so.

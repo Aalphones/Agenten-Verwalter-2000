@@ -43,7 +43,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 | UI-State | Zustand, nur für flüchtigen UI-Zustand | Persistente Daten liegen in SQLite, nicht im React-State |
 | Native Core | Rust | |
 | Datenbank | SQLite über rusqlite | Synchron, schlank, keine Datenbank beim Kompilieren nötig |
-| Gemeinsame Typen | aus Rust nach TypeScript generiert | Eine Quelle für Session-, Event- und Status-Typen; Werkzeug offen (s.u.) |
+| Gemeinsame Typen | aus Rust nach TypeScript generiert (`ts-rs`, siehe [ADR 002](decisions/002-typgenerierung-und-listen.md)) | Eine Quelle für Session-, Event- und Status-Typen |
 | Git | native Git-Kommandozeile, vom Rust-Kern aufgerufen | Deterministisch, unabhängig von der KI-Logik |
 | Diff | Monaco Diff Editor, lazy geladen | Nur die aktive Datei, keine Instanz pro Datei |
 | Agent | Claude (Anbindungsweg offen, s.u.) | |
@@ -76,7 +76,6 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 ## Offene Fragen
 
 - **Wie wird Claude angebunden?** Das Claude Agent SDK gibt es für TypeScript und Python, nicht für Rust. Möglich sind (a) ein Node-Hilfsprozess mit dem SDK, gesteuert vom Rust-Kern, oder (b) die `claude`-Kommandozeile im JSON-Stream-Modus, direkt vom Rust-Kern gestartet. Das Konzept schließt einen separaten Node-Server aus, meint damit aber einen dauerhaften Server, nicht zwingend einen Hilfsprozess pro Agent. Entscheidung per Durchstich in Meilenstein 2, festgehalten als ADR.
-- **Womit werden die Typen von Rust nach TypeScript generiert** (z.B. `ts-rs` oder `tauri-specta`)? Entscheidung beim Gerüst.
 - **Wie wird die Rechtegrenze pro Session auf Windows durchgesetzt?** Über die Rechte-Einstellungen des Agenten selbst, über das Arbeitsverzeichnis, oder mehr? Für das MVP reicht voraussichtlich die Agent-eigene Konfiguration.
 - **Windows-Pfadlänge:** Worktrees unter einem tiefen Basisordner plus `node_modules` stoßen an die 260-Zeichen-Grenze. Basisordner kurz halten (Vorschlag `~/.verwalter/workspaces/<session>/<repo>`) und `core.longpaths` prüfen.
 - **Anmeldung bei Claude:** nutzt die App die vorhandene Anmeldung der installierten Claude-Kommandozeile oder einen eigenen API-Schlüssel?

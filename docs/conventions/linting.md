@@ -12,18 +12,20 @@
 
 ## Prüfkette
 
-Lint, Typecheck und Build sind die Qualitätsschranke dieses Projekts — es gibt keine automatisierten Tests. Die Kette läuft lokal und identisch in GitHub Actions:
+Lint, Typecheck und Build sind die Qualitätsschranke dieses Projekts — es gibt keine automatisierten Tests. `pnpm check` fährt die Kette lokal, [.github/workflows/check.yml](../../.github/workflows/check.yml) identisch in GitHub Actions (plus die Bindings-Prüfung, siehe unten):
 
 ```text
 pnpm lint          ESLint
-pnpm typecheck     tsc --noEmit
+pnpm typecheck     tsc für App und Vite-Konfiguration
 pnpm format:check  Prettier
-cargo fmt --check  (in src-tauri/)
-cargo clippy -- -D warnings  (in src-tauri/)
-pnpm tauri build   bzw. pnpm build + cargo check
+pnpm build         tsc + Vite-Build
+pnpm rust:fmt      cargo fmt --check
+pnpm rust:clippy   cargo clippy --all-targets -- -D warnings
 ```
 
-Die genauen Skriptnamen werden beim Gerüst in `package.json` angelegt und in der [AGENTS.md](../../AGENTS.md) nachgetragen.
+`pnpm build` steht vor Clippy, weil ein Release-Build des Tauri-Kerns `dist/` erwartet; im Debug-Profil (Clippy, `pnpm bindings`) ist das nicht nötig — die Reihenfolge ist Vorsicht, keine Pflicht.
+
+In CI folgt als letzter Schritt `pnpm bindings` und die Prüfung, dass `src/lib/bindings/` dadurch unverändert bleibt — ein Typ im Core ohne nachgezogene Bindings lässt den Lauf rot werden.
 
 ## Regeln
 

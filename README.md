@@ -4,7 +4,7 @@ Eine ruhige, lokale Desktop-Oberfläche, um mehrere Coding-Agenten parallel zu f
 
 Du arbeitest im Chat mit dem Agenten, beantwortest seine Rückfragen direkt dort und siehst in der Changes-Ansicht mit zwei Klicks, was er über alle betroffenen Repositories geändert hat. Alles läuft lokal: Tauri, React, Rust und SQLite, kein Server, keine Cloud.
 
-**Status:** Konzeptphase — das App-Gerüst entsteht als Nächstes.
+**Status:** Gerüst steht, als Nächstes Design-Entwurf (1b) und Agent-Anbindung.
 
 ## Quickstart
 
@@ -12,18 +12,16 @@ Du arbeitest im Chat mit dem Agenten, beantwortest seine Rückfragen direkt dort
 
 - Windows 11 (macOS und Linux folgen später)
 - [Rust](https://rustup.rs/) (stable) und die Microsoft C++ Build Tools
-- Node.js ≥ 22 und [pnpm](https://pnpm.io/)
+- Node.js ≥ 22 und [pnpm](https://pnpm.io/) — pnpm per `npm install -g pnpm` installieren, Node 25+ bringt kein Corepack mehr mit
 - Git
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code), angemeldet
 
 ### Installieren, starten, prüfen
 
-Die Befehle werden ergänzt, sobald das Gerüst steht. Vorgesehen:
-
 ```sh
 pnpm install
 pnpm tauri dev      # App im Entwicklungsmodus
-pnpm lint && pnpm typecheck
+pnpm check          # gesamte Prüfkette
 ```
 
 ## Weiterlesen

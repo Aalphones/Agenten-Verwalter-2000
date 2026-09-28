@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 |---|---|---|---|---|
 | 1 | Toolchain & App startet | [phase-1-toolchain-und-app.md](phase-1-toolchain-und-app.md) | standard | complete |
 | 2 | Prüfkette, Tokens & Typ-Pipeline | [phase-2-pruefkette-und-typen.md](phase-2-pruefkette-und-typen.md) | heikel | complete |
-| 3 | CI & Doku | [phase-3-ci-und-doku.md](phase-3-ci-und-doku.md) | mechanisch | pending |
+| 3 | CI & Doku | [phase-3-ci-und-doku.md](phase-3-ci-und-doku.md) | mechanisch | complete |
 
 Umsetzung direkt auf `main`, ein Commit pro Phase. Erkenntnisse während der Umsetzung → [FINDINGS.md](FINDINGS.md).
 
@@ -44,10 +44,29 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Startfähige Tauri-2-App (React 19, TypeScript strict, Rust-Core) mit vollständiger Prüfkette: `pnpm check` lokal, derselbe Ablauf plus Bindings-Prüfung in GitHub Actions. Der Befehl `app_info` beweist die Kette Rust-Typ → generierter TS-Typ → Wrapper → Oberfläche. Design-Tokens aus dem Entwurf sind übernommen, ADR 002 hält Typ-Generator und Listen-Bibliothek fest, die Doku beschreibt den tatsächlichen Stand.
+
 ## Files touched
+
+- App und Toolchain: `package.json`, `pnpm-lock.yaml`, `vite.config.ts`, `tsconfig*.json`, `rust-toolchain.toml`, `src/`, `src-tauri/`
+- Prüfkette: `eslint.config.js`, `.prettierrc.json`, `.prettierignore`, `.github/workflows/check.yml`
+- Doku: `AGENTS.md`, `README.md`, `docs/code-map.md`, `docs/PROJECT.md`, `docs/conventions/{linting,rust,react,tailwind}.md`, `docs/decisions/002-typgenerierung-und-listen.md`
 
 ## Commits
 
+- Phase 1: `eaa8e78` build(setup): scaffold tauri 2 app with react and typescript
+- Phase 2: `48cbd74` build(setup): add check chain, design tokens and rust-to-ts bindings
+- Phase 3: `ci(setup): add windows check workflow and document commands`
+
 ## Deviations from plan
 
+- `build` vor `rust:clippy` ist Vorsicht, keine Pflicht: der Debug-Build braucht `dist/` nicht (belegt für `gen-bindings`, für Clippy angenommen).
+- Tailwind mit `source(none)`, weil die automatische Quellen-Erkennung Utility-Klassen aus dem Markdown der Konventionen erzeugte.
+- `typescript` auf `~6.0.3` gepinnt, weil `typescript-eslint` 8.70.1 `<6.1.0` verlangt.
+- Vorlagen-Skript `preview` entfernt; `tsconfig.node.json` zusätzlich im Typecheck.
+
 ## Follow-ups
+
+- Smoke-Checkliste (oben) — offen bei Sascha, insbesondere installierte App und grüner CI-Lauf.
+- Linker-Warnung `linker_messages` beim `cargo build` der `cdylib`: harmlos, wird rot, sobald ein Build mit `RUSTFLAGS=-D warnings` läuft.
+- `→ Vault: frameworks/tailwind` (FINDINGS) wartet auf `session-review`.

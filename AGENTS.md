@@ -36,7 +36,15 @@ Begründungen: [docs/decisions/001-stack-und-plattform.md](docs/decisions/001-st
 
 ## Befehle
 
-Das App-Gerüst ist noch nicht angelegt; Befehle werden hier nachgetragen, sobald `package.json` und `src-tauri/` existieren. Die vorgesehene Prüfkette steht in [docs/conventions/linting.md](docs/conventions/linting.md).
+| Befehl | Wirkung |
+|---|---|
+| `pnpm tauri dev` | App im Entwicklungsmodus |
+| `pnpm check` | gesamte Prüfkette (Lint, Typecheck, Format, Build, rustfmt, Clippy) — vor jedem Commit grün |
+| `pnpm bindings` | TS-Typen aus Rust neu erzeugen — nach jeder Änderung an Typen, die die Tauri-Grenze überqueren |
+| `pnpm format` | Prettier schreibt `src/` neu |
+| `pnpm tauri build` | NSIS-Installer unter `src-tauri/target/release/bundle/nsis/` |
+
+Die Prüfkette im Einzelnen und ihre Reihenfolge: [docs/conventions/linting.md](docs/conventions/linting.md).
 
 ## Dokumentation
 

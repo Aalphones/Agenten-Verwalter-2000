@@ -7,7 +7,7 @@
 > | Lang | TypeScript strict, siehe [typescript.md](typescript.md) |
 > | Styling | Tailwind v4 Tokens + BEM, siehe [tailwind.md](tailwind.md) |
 > | State | Zustand (nur flüchtiger UI-Zustand) |
-> | Listen | virtualisiert (Bibliothek beim Gerüst festlegen) |
+> | Listen | virtualisiert mit `@tanstack/react-virtual`, siehe [ADR 002](../decisions/002-typgenerierung-und-listen.md) |
 > | Diff | Monaco Diff Editor, lazy |
 >
 > Projektentscheidungen in dieser Datei haben Vorrang vor allgemeinen Gewohnheiten.

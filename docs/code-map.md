@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: App-Gerüst, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`); die Feature-Ordner (`src/features/`, `src-tauri/src/<feature>/` usw.) existieren noch nicht — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: Gerüst angelegt — App-Rahmen, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`); die Features folgen (`src/features/`, `src-tauri/src/<feature>/` usw. existieren noch nicht) — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
@@ -43,4 +43,5 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 - Nur für die aktuelle Ansicht (aktive Session, gewählte Datei, offene Ansicht)? → `src/stores/<feature>.ts`.
 - Neuer Agenten-Typ? → neues Modul in `src-tauri/src/agents/`, das denselben Provider-Vertrag erfüllt; die UI ändert sich nicht.
 - Ein Typ, den UI und Core beide kennen? → im Core definieren, nach `src/lib/bindings/` generieren.
+- Neuer Typ über die Tauri-Grenze? → `derive(TS)` im Core, in `gen-bindings.rs` eintragen, `pnpm bindings`.
 - Git-Aufruf? → ausschließlich über `src-tauri/src/git/`, nie verstreut `Command::new("git")`.
