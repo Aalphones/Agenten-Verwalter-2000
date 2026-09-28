@@ -1,5 +1,4 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-09-28_geruest/`
-**Phase:** 3/3 — CI & Doku (complete, Abnahme offen)
-**Nächster Schritt:** Sascha arbeitet die Smoke-Checkliste im Plan-README ab (installierte App, CI-Lauf auf GitHub); danach Plan nach `docs/archive/2026-09/` verschieben
+**Aktiver Plan:** (kein aktiver Plan)
+**Nächster Schritt:** Meilenstein 1 (Gerüst) ist archiviert. Als Nächstes Meilenstein 1b/2 planen (`/plan`); offen: Entscheidung zu `gen-bindings.exe` im Installer (Archiv-README → Follow-ups)

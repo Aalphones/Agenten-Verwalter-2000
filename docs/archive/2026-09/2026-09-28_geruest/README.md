@@ -35,12 +35,14 @@ Umsetzung direkt auf `main`, ein Commit pro Phase. Erkenntnisse während der Ums
 
 Wackelstellen zuerst:
 
-- [ ] **Installierte App (nicht Dev-Modus) zeigt die Versionsnummer** — prüft CSP gegen den Kanal zum Core. Leer oder Fehlermeldung → CSP blockiert `invoke`.
-- [ ] **CI-Lauf grün** — prüft die Reihenfolge `pnpm build` vor Clippy (der Tauri-Build braucht `dist/` beim Kompilieren) und die Rust-Toolchain aus `rust-toolchain.toml` auf dem Runner.
-- [ ] **`pnpm tauri dev` startet ohne Linker-Fehler** — prüft Rust mit den installierten VS Build Tools 2026.
-- [ ] Dunkelmodus: Windows auf „Dunkel“ stellen → Fenster wird dunkel, ohne Neustart der App.
-- [ ] Eine absichtlich eingebaute Lint-Verletzung (z.B. `let x: any`) lässt `pnpm lint` rot werden; danach wieder entfernen.
-- [ ] `pnpm bindings` erzeugt keine Änderung an `src/lib/bindings/` (Stand im Repo ist aktuell).
+Alle sechs am 2026-09-28 vom Agenten geprüft (Sascha hat das ausdrücklich verlangt), nicht von Hand:
+
+- [x] **Installierte App (nicht Dev-Modus) zeigt die Versionsnummer** — NSIS-Installer still installiert, gestartet, Fenster fotografiert: Titel „Agenten Verwalter 2000“ und „Version 0.1.0“ sichtbar, CSP blockiert `invoke` nicht. Danach wieder deinstalliert.
+- [x] **CI-Lauf grün** — Lauf zu `3e3aa95` mit `conclusion: success` (GitHub Actions, Workflow `check`).
+- [x] **`pnpm tauri dev` startet ohne Linker-Fehler** — Log: Vite bereit, `cargo run` baut in 17 s, `Running target\debug\verwalter.exe`, Fenster „Agenten Verwalter 2000“ war da. Nur die bekannte `linker_messages`-Warnung. Fensterinhalt im Dev-Modus **nicht** fotografiert (Fokus lag bei VS Code).
+- [x] Dunkelmodus: laufende App auf „Hell“ gestellt (Registry plus `WM_SETTINGCHANGE`) → Fenster und Titelleiste werden hell ohne Neustart; danach zurück auf Dunkel. Ein reines Registry-Schreiben ohne Broadcast reicht dafür nicht — das ist Windows, nicht die App.
+- [x] Eine absichtlich eingebaute Lint-Verletzung (`export const probe: any = 1;`) → `pnpm lint` Exit 1 (`no-explicit-any`); Datei entfernt → Exit 0.
+- [x] `pnpm bindings` erzeugt keine Änderung an `src/lib/bindings/` — `git status --porcelain` leer, lokal und im CI-Schritt.
 
 ## Summary
 
@@ -67,6 +69,7 @@ Startfähige Tauri-2-App (React 19, TypeScript strict, Rust-Core) mit vollständ
 
 ## Follow-ups
 
-- Smoke-Checkliste (oben) — offen bei Sascha, insbesondere installierte App und grüner CI-Lauf.
+- **`gen-bindings.exe` landet im Installer.** Tauri bündelt jedes Programm aus `src-tauri/src/bin/`; im Installationsordner lag neben `verwalter.exe` auch das Entwicklerwerkzeug. Harmlos, aber Ballast. Kandidat: `required-features` an der Bin-Definition, `pnpm bindings` ruft dann mit `--features`. Entscheidung offen.
+- Dev-Modus: Fensterinhalt nicht fotografiert, nur Start per Log belegt.
 - Linker-Warnung `linker_messages` beim `cargo build` der `cdylib`: harmlos, wird rot, sobald ein Build mit `RUSTFLAGS=-D warnings` läuft.
 - `→ Vault: frameworks/tailwind` (FINDINGS) wartet auf `session-review`.

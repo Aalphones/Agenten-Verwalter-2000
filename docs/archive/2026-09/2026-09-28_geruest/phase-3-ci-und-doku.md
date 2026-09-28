@@ -40,7 +40,7 @@ Lesen vor dem Start:
 
 ### Installer
 
-- [ ] `pnpm tauri build`; Installer aus `src-tauri/target/release/bundle/nsis/` einmal installieren und starten: Titel und Versionsnummer sichtbar (Wackelstelle CSP). Ergebnis in FINDINGS.md. — Build erledigt (Installer erzeugt), Installieren und Starten macht Sascha in der Smoke-Checkliste.
+- [x] `pnpm tauri build`; Installer aus `src-tauri/target/release/bundle/nsis/` einmal installieren und starten: Titel und Versionsnummer sichtbar (Wackelstelle CSP). Ergebnis: sichtbar, siehe Plan-README → Smoke-Checkliste.
 
 ### Doku
 
@@ -55,12 +55,13 @@ Lesen vor dem Start:
 
 ### Commit
 
-- [ ] Commit `ci(setup): add windows check workflow and document commands`, pushen, CI-Ergebnis auf GitHub → Actions ablesen (Sascha, falls kein Zugriff). Rot → beheben, bevor der Plan als fertig gilt.
+- [x] Commit `ci(setup): add windows check workflow and document commands`, pushen, CI-Ergebnis auf GitHub → Actions ablesen. Ergebnis: `3e3aa95`, Lauf grün.
 
 ## Report-Back
 
 - `pnpm check` lokal grün (Exit 0); `pnpm bindings` lässt `src/lib/bindings/` unverändert (`git status --porcelain` leer).
 - Action-Versionen von den GitHub-Releases gelesen: `actions/checkout@v7` (v7.0.1), `pnpm/action-setup@v6` (v6.1.0), `actions/setup-node@v7` (v7.0.0), `Swatinem/rust-cache@v2` (v2.9.2).
 - `pnpm tauri build` grün (6 min 17 s Release-Kompilierung), Installer `Agenten Verwalter 2000_0.1.0_x64-setup.exe`, 1,4 MiB.
-- **Nicht geprüft:** Installer installiert und gestartet (Versionsanzeige gegen die CSP) und der CI-Lauf auf GitHub — beides deckt die Smoke-Checkliste im Plan-README.
+- Installer still installiert und gestartet: „Agenten Verwalter 2000“ und „Version 0.1.0“ sichtbar; CI-Lauf zu `3e3aa95` grün. Rest der Smoke-Checkliste ebenfalls belegt (Plan-README).
+- **Nebenbefund:** `gen-bindings.exe` liegt im Installationsordner (Plan-README → Follow-ups).
 - Abweichung: `build` vor `rust:clippy` ist nur Vorsicht, keine Pflicht (FINDINGS) — linting.md sagt das so.
