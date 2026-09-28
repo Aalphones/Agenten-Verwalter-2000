@@ -1,5 +1,25 @@
 .app-shell {
   display: grid;
   place-content: center;
+  justify-items: center;
+  gap: var(--space-md);
   min-height: 100vh;
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+  }
+
+  &__version,
+  &__error {
+    margin: 0;
+  }
+
+  &__version {
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    color: var(--color-status-error);
+  }
 }

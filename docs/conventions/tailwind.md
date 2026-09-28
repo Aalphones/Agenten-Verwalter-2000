@@ -39,6 +39,8 @@ Status-Farben tragen die Absicht, nicht den Farbton, und folgen dem Session-Stat
 
 Tailwind dient hier als **Token-Pipeline**. Die erzeugten Utility-Klassen werden nicht benutzt. JSX trägt BEM-Klassennamen, die das Ding beschreiben, nicht sein Aussehen; das Styling steht in der CSS-Datei neben der Komponente und liest Tokens über `var(--…)`.
 
+Umgesetzt in `src/styles/theme.css`: `@import 'tailwindcss' source(none);` schaltet die Suche nach Klassennamen ab (sonst erzeugt Tailwind Utilities aus Beispielen in `docs/`), und `@theme static { … }` gibt jedes rohe Token als Variable aus, auch ohne Utility-Nutzung. Die semantischen Tokens stehen darunter in `:root` und in den Dunkel-Blöcken. Hex-Werte gibt es nur in dieser Datei.
+
 ```tsx
 // SessionListItem.tsx
 <li className={`session-item ${isActive ? 'session-item--active' : ''}`}>

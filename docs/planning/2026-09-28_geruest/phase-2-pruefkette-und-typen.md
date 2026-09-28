@@ -1,6 +1,6 @@
 # Phase 2 — Prüfkette, Tokens & Typ-Pipeline
 
-**Rating:** heikel (legt die Muster fest, die jeder spätere Befehl, jede Komponente und jeder CI-Lauf kopiert)
+**Status:** complete · **Rating:** heikel (legt die Muster fest, die jeder spätere Befehl, jede Komponente und jeder CI-Lauf kopiert)
 
 ## Kontext
 
@@ -29,9 +29,9 @@ Verifizierte ts-rs-12-API (docs.rs, 2026-09-28): `TS::export_all(cfg: &Config) -
 
 ### Rust
 
-- [ ] `rust-toolchain.toml` im **Repo-Wurzelverzeichnis**: `[toolchain]` mit `channel = "<exakte Version aus FINDINGS.md, z.B. 1.xx.y>"` und `components = ["rustfmt", "clippy"]`.
-- [ ] `src-tauri/Cargo.toml`: Abhängigkeiten `thiserror = "2"` und `ts-rs = "=12.0.1"` ergänzen (serde ist aus der Vorlage da). Abschnitt `[lints.clippy]` mit `unwrap_used = "deny"`.
-- [ ] `src-tauri/src/error.rs`:
+- [x] `rust-toolchain.toml` im **Repo-Wurzelverzeichnis**: `[toolchain]` mit `channel = "<exakte Version aus FINDINGS.md, z.B. 1.xx.y>"` und `components = ["rustfmt", "clippy"]`.
+- [x] `src-tauri/Cargo.toml`: Abhängigkeiten `thiserror = "2"` und `ts-rs = "=12.0.1"` ergänzen (serde ist aus der Vorlage da). Abschnitt `[lints.clippy]` mit `unwrap_used = "deny"`.
+- [x] `src-tauri/src/error.rs`:
 
   ```rust
   use serde::Serialize;
@@ -47,7 +47,7 @@ Verifizierte ts-rs-12-API (docs.rs, 2026-09-28): `TS::export_all(cfg: &Config) -
   }
   ```
 
-- [ ] `src-tauri/src/commands/mod.rs` mit `pub mod app;` und `src-tauri/src/commands/app.rs`:
+- [x] `src-tauri/src/commands/mod.rs` mit `pub mod app;` und `src-tauri/src/commands/app.rs`:
 
   ```rust
   use serde::Serialize;
@@ -72,8 +72,8 @@ Verifizierte ts-rs-12-API (docs.rs, 2026-09-28): `TS::export_all(cfg: &Config) -
   }
   ```
 
-- [ ] `src-tauri/src/lib.rs`: `pub mod commands;` und `pub mod error;` deklarieren; im Builder `.invoke_handler(tauri::generate_handler![commands::app::app_info])` vor `.run(...)`.
-- [ ] `src-tauri/src/bin/gen-bindings.rs` — exportiert jeden Typ, der die Tauri-Grenze überquert; neue Typen werden hier ergänzt:
+- [x] `src-tauri/src/lib.rs`: `pub mod commands;` und `pub mod error;` deklarieren; im Builder `.invoke_handler(tauri::generate_handler![commands::app::app_info])` vor `.run(...)`.
+- [x] `src-tauri/src/bin/gen-bindings.rs` — exportiert jeden Typ, der die Tauri-Grenze überquert; neue Typen werden hier ergänzt:
 
   ```rust
   //! Erzeugt die TypeScript-Typen in src/lib/bindings/. Aufruf: `pnpm bindings`.
@@ -89,27 +89,27 @@ Verifizierte ts-rs-12-API (docs.rs, 2026-09-28): `TS::export_all(cfg: &Config) -
   ```
 
   Schlägt der Build an der API fehl (Signatur weicht ab), in docs.rs/ts-rs/12.0.1 nachsehen und in FINDINGS.md festhalten — nicht auf `#[ts(export)]` ausweichen.
-- [ ] `pnpm bindings` ausführen (Skript unten); Dateien in `src/lib/bindings/` prüfen: `AppInfo` hat `name: string; version: string`.
+- [x] `pnpm bindings` ausführen (Skript unten); Dateien in `src/lib/bindings/` prüfen: `AppInfo` hat `name: string; version: string`.
 
 ### TypeScript-Konfiguration
 
-- [ ] `tsconfig.json` (App-Code): zusätzlich zu dem, was die Vorlage setzt, sicherstellen: `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, `exactOptionalPropertyTypes`, `noImplicitOverride` — alle `true`. `paths: { "@/*": ["./src/*"] }`.
-- [ ] `vite.config.ts`: Alias `'@'` → `fileURLToPath(new URL('./src', import.meta.url))`; Plugin `tailwindcss()` aus `@tailwindcss/vite` in die `plugins`-Liste neben `react()`.
+- [x] `tsconfig.json` (App-Code): zusätzlich zu dem, was die Vorlage setzt, sicherstellen: `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, `exactOptionalPropertyTypes`, `noImplicitOverride` — alle `true`. `paths: { "@/*": ["./src/*"] }`.
+- [x] `vite.config.ts`: Alias `'@'` → `fileURLToPath(new URL('./src', import.meta.url))`; Plugin `tailwindcss()` aus `@tailwindcss/vite` in die `plugins`-Liste neben `react()`.
 
 ### Styles & Tokens
 
-- [ ] devDependencies: `tailwindcss@^4`, `@tailwindcss/vite@^4`.
-- [ ] `src/styles/theme.css` anlegen. Aufbau: `@import "tailwindcss";`, dann **`@theme static { … }`** mit den rohen Tokens (`static`, damit alle Variablen ausgegeben werden — die Komponenten-CSS-Dateien lesen sie per `var()`, ohne dass Tailwind Utility-Nutzung sieht), dann `:root { … }` mit den semantischen Tokens, dann die Dunkel-Blöcke. **Alle Werte kommen exakt aus [docs/design/2026-09-28_hauptansichten/README.md](../../design/2026-09-28_hauptansichten/README.md) → „Tokens“** — dort ist die einzige Quelle, hier werden keine Werte wiederholt:
+- [x] devDependencies: `tailwindcss@^4`, `@tailwindcss/vite@^4`.
+- [x] `src/styles/theme.css` anlegen. Aufbau: `@import "tailwindcss";`, dann **`@theme static { … }`** mit den rohen Tokens (`static`, damit alle Variablen ausgegeben werden — die Komponenten-CSS-Dateien lesen sie per `var()`, ohne dass Tailwind Utility-Nutzung sieht), dann `:root { … }` mit den semantischen Tokens, dann die Dunkel-Blöcke. **Alle Werte kommen exakt aus [docs/design/2026-09-28_hauptansichten/README.md](../../design/2026-09-28_hauptansichten/README.md) → „Tokens“** — dort ist die einzige Quelle, hier werden keine Werte wiederholt:
   - In `@theme static`: jede Zeile aus „Rohe Farben“ und „Weitere Tokens“ (Schriften, Schriftgrößen, Abstände, Radien, `--shadow-popover-dark`/`-light`, Dauer, Z-Ebenen).
   - `:root { … }`: jedes Token aus „Semantische Farben“ mit dem Wert der Spalte **Hell** (Verweis als `var(--color-<roh>)`; `x @ n %` als `color-mix(in srgb, var(--color-x) n%, transparent)`), dazu `--shadow-popover: var(--shadow-popover-light)`.
   - Dunkel: dieselben Namen mit der Spalte **Dunkel** und `--shadow-popover: var(--shadow-popover-dark)`. Dieser Block steht zweimal: in `@media (prefers-color-scheme: dark) { :root:not(.light) { … } }` und in `:root.dark { … }`.
   - Global: `body { margin: 0; background: var(--color-bg-base); color: var(--color-fg-primary); font-family: var(--font-sans); font-size: var(--font-size-md); line-height: 1.45; }`
   - Prüfen: Zahl der Tokens in `theme.css` = Zahl der Zeilen in den drei Token-Tabellen der Design-README (Schriftgrößen, Abstände, Radien, Z-Ebenen zählen einzeln).
-- [ ] `src/main.tsx` importiert `@/styles/theme.css` vor `App`.
+- [x] `src/main.tsx` importiert `@/styles/theme.css` vor `App`.
 
 ### Typisierter Wrapper & Anzeige
 
-- [ ] `src/lib/app.ts`:
+- [x] `src/lib/app.ts`:
 
   ```ts
   import { invoke } from '@tauri-apps/api/core';
@@ -122,15 +122,15 @@ Verifizierte ts-rs-12-API (docs.rs, 2026-09-28): `TS::export_all(cfg: &Config) -
   }
   ```
 
-- [ ] `src/app/App.tsx`: State `info: AppInfo | null` und `error: string | null`; `useEffect` mit `AbortController` ruft `getAppInfo()`, setzt State nur, wenn `!controller.signal.aborted`, Cleanup `controller.abort()`. Unter dem Titel: `<p className="app-shell__version">Version {info.version}</p>` wenn geladen, `<p className="app-shell__error">…</p>` bei Fehler, sonst nichts. Bedingte Anzeige mit mehr als einer Zeile → Render-Funktion `renderVersion()` (react.md).
-- [ ] `src/app/App.css`: BEM-Klassen `.app-shell`, `&__title`, `&__version`, `&__error` nur mit semantischen Tokens (`--color-fg-muted` für die Version, `--color-status-error` für den Fehler, Abstände über `--space-*`).
+- [x] `src/app/App.tsx`: State `info: AppInfo | null` und `error: string | null`; `useEffect` mit `AbortController` ruft `getAppInfo()`, setzt State nur, wenn `!controller.signal.aborted`, Cleanup `controller.abort()`. Unter dem Titel: `<p className="app-shell__version">Version {info.version}</p>` wenn geladen, `<p className="app-shell__error">…</p>` bei Fehler, sonst nichts. Bedingte Anzeige mit mehr als einer Zeile → Render-Funktion `renderVersion()` (react.md).
+- [x] `src/app/App.css`: BEM-Klassen `.app-shell`, `&__title`, `&__version`, `&__error` nur mit semantischen Tokens (`--color-fg-muted` für die Version, `--color-status-error` für den Fehler, Abstände über `--space-*`).
 
 ### Lint & Format
 
-- [ ] devDependencies: `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-config-prettier`, `globals`, `prettier`.
-- [ ] `eslint.config.js` (Flat Config): `ignores: ['dist', 'src-tauri', 'src/lib/bindings']`; `js.configs.recommended`; `tseslint.configs.strictTypeChecked` mit `languageOptions.parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname }`; die Flat-Config-Variante von `eslint-plugin-react-hooks` (Namen in der README der installierten Version nachlesen, z.B. `reactHooks.configs['recommended-latest']` oder `reactHooks.configs.flat.recommended`); Regeln `@typescript-eslint/explicit-function-return-type: 'error'`, `@typescript-eslint/consistent-type-imports: 'error'`; `eslintConfigPrettier` als letzter Eintrag. `vite.config.ts` und `eslint.config.js` dürfen per `tseslint.configs.disableTypeChecked` ausgenommen werden, falls sie nicht in einem tsconfig liegen.
-- [ ] `.prettierrc.json`: `{ "singleQuote": true, "semi": true, "printWidth": 100, "trailingComma": "all" }`. `.prettierignore`: `src/lib/bindings`.
-- [ ] `package.json` Skripte (exakt diese Namen):
+- [x] devDependencies: `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-config-prettier`, `globals`, `prettier`.
+- [x] `eslint.config.js` (Flat Config): `ignores: ['dist', 'src-tauri', 'src/lib/bindings']`; `js.configs.recommended`; `tseslint.configs.strictTypeChecked` mit `languageOptions.parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname }`; die Flat-Config-Variante von `eslint-plugin-react-hooks` (Namen in der README der installierten Version nachlesen, z.B. `reactHooks.configs['recommended-latest']` oder `reactHooks.configs.flat.recommended`); Regeln `@typescript-eslint/explicit-function-return-type: 'error'`, `@typescript-eslint/consistent-type-imports: 'error'`; `eslintConfigPrettier` als letzter Eintrag. `vite.config.ts` und `eslint.config.js` dürfen per `tseslint.configs.disableTypeChecked` ausgenommen werden, falls sie nicht in einem tsconfig liegen.
+- [x] `.prettierrc.json`: `{ "singleQuote": true, "semi": true, "printWidth": 100, "trailingComma": "all" }`. `.prettierignore`: `src/lib/bindings`.
+- [x] `package.json` Skripte (exakt diese Namen):
 
   | Skript | Befehl |
   |---|---|
@@ -147,15 +147,21 @@ Verifizierte ts-rs-12-API (docs.rs, 2026-09-28): `TS::export_all(cfg: &Config) -
   | `tauri` | `tauri` (aus der Vorlage) |
 
   **`build` steht in `check` vor `rust:clippy`** — der Tauri-Build prüft beim Kompilieren, dass `dist/` existiert.
-- [ ] `pnpm format` und `cargo fmt --manifest-path src-tauri/Cargo.toml` einmal laufen lassen, dann `pnpm check` bis grün. Regelverstöße beheben, nicht abschalten (linting.md).
+- [x] `pnpm format` und `cargo fmt --manifest-path src-tauri/Cargo.toml` einmal laufen lassen, dann `pnpm check` bis grün. Regelverstöße beheben, nicht abschalten (linting.md).
 
 ### Doku
 
-- [ ] `docs/decisions/002-typgenerierung-und-listen.md` (Format wie ADR 001, Status angenommen, Datum Umsetzungstag): Kontext (PROJECT.md offene Frage Typ-Generator; react.md „Bibliothek beim Gerüst festlegen“), Optionen (ts-rs 12.0.1 stabil vs. tauri-specta 2.0.0-rc.25), Entscheidung (ts-rs über `gen-bindings`, handgeschriebene Wrapper in `src/lib/<feature>.ts`; `@tanstack/react-virtual` für Listen), Konsequenzen (Command-Namen im Wrapper sind handgepflegt → Wrapper und `generate_handler!` im selben Commit ändern; neue Grenz-Typen in `gen-bindings.rs` eintragen; CI prüft, dass die Bindings aktuell sind).
-- [ ] FINDINGS.md: Abweichungen (react-hooks-Config-Name, tsconfig-Aufteilung der Vorlage).
+- [x] `docs/decisions/002-typgenerierung-und-listen.md` (Format wie ADR 001, Status angenommen, Datum Umsetzungstag): Kontext (PROJECT.md offene Frage Typ-Generator; react.md „Bibliothek beim Gerüst festlegen“), Optionen (ts-rs 12.0.1 stabil vs. tauri-specta 2.0.0-rc.25), Entscheidung (ts-rs über `gen-bindings`, handgeschriebene Wrapper in `src/lib/<feature>.ts`; `@tanstack/react-virtual` für Listen), Konsequenzen (Command-Namen im Wrapper sind handgepflegt → Wrapper und `generate_handler!` im selben Commit ändern; neue Grenz-Typen in `gen-bindings.rs` eintragen; CI prüft, dass die Bindings aktuell sind).
+- [x] FINDINGS.md: Abweichungen (react-hooks-Config-Name, tsconfig-Aufteilung der Vorlage).
 
 ### Commit
 
-- [ ] Commit `build(setup): add check chain, design tokens and rust-to-ts bindings` inkl. `src/lib/bindings/` und ADR 002.
+- [x] Commit `build(setup): add check chain, design tokens and rust-to-ts bindings` inkl. `src/lib/bindings/` und ADR 002.
 
 ## Report-Back
+
+- `pnpm check` grün (Exit 0); Gegenprobe: eine `any`-Annotation macht `pnpm lint` rot.
+- Tokens gegen die Design-README per Skript verglichen: 38 Rohfarben + 35 weitere + 29 semantische (Hell, Dunkel-Media, `:root.dark` je vollständig), 0 Abweichungen, keine Hex-Werte außerhalb `theme.css`. Gebautes CSS enthält nur `.app-shell` und die Tokens.
+- `src/lib/bindings/AppInfo.ts` (`{ name: string, version: string }`) und `CommandError.ts` (`{ kind: "internal", message: string }`) erzeugt. ts-rs-12-API wie im Plan, keine Abweichung.
+- **Nicht geprüft:** AK 2 (`pnpm tauri dev` zeigt „Version 0.1.0“) — Fenster nicht gesehen, nur Kompilieren und Generator-Lauf belegt. Deckt die Smoke-Checkliste am Plan-Ende.
+- Abweichungen und Folgen für Phase 3: [FINDINGS.md](FINDINGS.md).

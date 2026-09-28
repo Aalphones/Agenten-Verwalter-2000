@@ -1,6 +1,6 @@
 # Code-Map
 
-Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: App-Gerüst (`src/app/`, `src-tauri/`) steht seit Meilenstein 1 Phase 1; die Feature-Ordner (`src/features/`, `src-tauri/src/commands/` usw.) existieren noch nicht — die Tabelle beschreibt weiter die Zielstruktur und wird mit dem Code nachgeführt.
+Feature → Ordner. Bewusst grob, keine Zeilennummern. Stand: App-Gerüst, Tokens und Typ-Pipeline stehen (`src/app/`, `src/lib/`, `src/styles/`, `src-tauri/src/commands/`, `src-tauri/src/bin/`); die Feature-Ordner (`src/features/`, `src-tauri/src/<feature>/` usw.) existieren noch nicht — die Tabelle beschreibt dort die Zielstruktur und wird mit dem Code nachgeführt.
 
 ## Namensschema (parallel über die Schichten)
 
@@ -28,7 +28,11 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | Agent-Provider | — | `src-tauri/src/agents/` (ein Modul pro Provider) |
 | Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` |
 | Agent-Prozesse, Wiederherstellung | — | `src-tauri/src/processes/` |
-| Generierte Typen Rust → TS | `src/lib/bindings/` (generiert, nicht von Hand ändern) | Quelle: Typen im Core |
+| Generierte Typen Rust → TS | `src/lib/bindings/` (generiert, nicht von Hand ändern) | Quelle: Typen im Core; Export-Liste `src-tauri/src/bin/gen-bindings.rs` (`pnpm bindings`) |
+| Aufruf-Wrapper für Tauri Commands | `src/lib/<feature>.ts` | `src-tauri/src/commands/<feature>.rs`, registriert in `src-tauri/src/lib.rs` |
+| Fehler am Command-Rand | — | `src-tauri/src/error.rs` |
+| App-Info (Name, Version) | `src/lib/app.ts` | `src-tauri/src/commands/app.rs` |
+| Design-Tokens (roh + semantisch, Hell/Dunkel) | `src/styles/theme.css` | — |
 | App-Rahmen (Layout, Sidebar, Header) | `src/app/` | `src-tauri/src/main.rs`, `src-tauri/src/lib.rs` |
 | Geteilte UI-Bausteine | `src/components/` | — |
 

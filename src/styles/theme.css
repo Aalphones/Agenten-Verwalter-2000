@@ -1,0 +1,198 @@
+/* source(none): keine Utility-Klassen erzeugen — Tailwind dient nur als Token-Pipeline,
+   und die automatische Quellen-Erkennung fände sonst Klassennamen in docs/. */
+@import 'tailwindcss' source(none);
+
+/* Rohe Tokens. `static` gibt jede Variable aus, auch ohne Utility-Nutzung —
+   die Komponenten lesen sie ausschließlich über var(). */
+@theme static {
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8f8f8;
+  --color-neutral-75: #f5f5f5;
+  --color-neutral-100: #f0f0f0;
+  --color-neutral-150: #e5e5e5;
+  --color-neutral-175: #d4d4d4;
+  --color-neutral-200: #cecece;
+  --color-neutral-225: #c8c8c8;
+  --color-neutral-300: #b0b0b0;
+  --color-neutral-400: #8f8f8f;
+  --color-neutral-500: #6e6e6e;
+  --color-neutral-600: #555555;
+  --color-neutral-650: #4a4a4f;
+  --color-neutral-700: #3c3c3c;
+  --color-neutral-750: #37373d;
+  --color-neutral-800: #2e2e30;
+  --color-neutral-820: #2b2b2b;
+  --color-neutral-840: #252526;
+  --color-neutral-850: #242428;
+  --color-neutral-900: #1f1f1f;
+  --color-neutral-950: #181818;
+  --color-slate-50: #f3f3f6;
+  --color-slate-100: #e4e6f1;
+  --color-blue-400: #5b9dff;
+  --color-blue-600: #2563eb;
+  --color-amber-400: #f2b33d;
+  --color-amber-700: #a86a00;
+  --color-orange-300: #eea283;
+  --color-orange-400: #e0825c;
+  --color-orange-600: #c4572f;
+  --color-orange-700: #a8461f;
+  --color-orange-990: #1d130e;
+  --color-green-50: #e8f6ee;
+  --color-green-400: #4cc38a;
+  --color-green-700: #16803c;
+  --color-red-50: #fdeceb;
+  --color-red-400: #f47067;
+  --color-red-600: #d23b33;
+
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+
+  --font-size-2xs: 11px;
+  --font-size-xs: 12px;
+  --font-size-sm: 12.5px;
+  --font-size-md: 13px;
+  --font-size-lg: 13.5px;
+  --font-size-xl: 18px;
+
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 8px;
+  --space-lg: 10px;
+  --space-xl: 12px;
+  --space-2xl: 16px;
+  --space-3xl: 20px;
+  --space-4xl: 24px;
+  --space-5xl: 32px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-full: 999px;
+
+  --shadow-popover-dark: 0 10px 30px rgb(0 0 0 / 0.45);
+  --shadow-popover-light: 0 10px 30px rgb(0 0 0 / 0.14);
+
+  --duration-fast: 100ms;
+  --duration-base: 160ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --z-tooltip: 60;
+}
+
+/* Semantische Tokens, hell. Komponenten lesen nur diese Schicht. */
+:root {
+  --color-bg-base: var(--color-neutral-0);
+  --color-bg-sidebar: var(--color-neutral-50);
+  --color-bg-surface: var(--color-neutral-0);
+  --color-bg-popover: var(--color-neutral-0);
+  --color-bg-hover: var(--color-neutral-100);
+  --color-bg-selected: var(--color-slate-100);
+  --color-border-subtle: var(--color-neutral-150);
+  --color-border: var(--color-neutral-200);
+  --color-fg-primary: var(--color-neutral-700);
+  --color-fg-secondary: var(--color-neutral-600);
+  --color-fg-muted: var(--color-neutral-500);
+  --color-accent: var(--color-orange-600);
+  --color-fg-on-accent: var(--color-neutral-0);
+  --color-accent-subtle: color-mix(in srgb, var(--color-orange-600) 10%, transparent);
+  --color-accent-text: var(--color-orange-700);
+  --color-toggle-on: var(--color-orange-600);
+  --color-toggle-off: var(--color-neutral-225);
+  --color-fg-on-toggle: var(--color-neutral-0);
+  --color-status-running: var(--color-blue-600);
+  --color-status-waiting: var(--color-amber-700);
+  --color-status-error: var(--color-red-600);
+  --color-status-paused: var(--color-neutral-500);
+  --color-status-completed: var(--color-green-700);
+  --color-diff-add-bg: var(--color-green-50);
+  --color-diff-del-bg: var(--color-red-50);
+  --color-diff-add-fg: var(--color-green-700);
+  --color-diff-del-fg: var(--color-red-600);
+  --color-diff-hunk-bg: var(--color-slate-50);
+  --shadow-popover: var(--shadow-popover-light);
+}
+
+/* Dunkel steht zweimal: einmal für die Systemeinstellung, einmal für die in den
+   Einstellungen erzwungene Wahl. Beide Blöcke müssen identisch bleiben. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --color-bg-base: var(--color-neutral-900);
+    --color-bg-sidebar: var(--color-neutral-950);
+    --color-bg-surface: var(--color-neutral-840);
+    --color-bg-popover: var(--color-neutral-840);
+    --color-bg-hover: var(--color-neutral-800);
+    --color-bg-selected: var(--color-neutral-750);
+    --color-border-subtle: var(--color-neutral-820);
+    --color-border: var(--color-neutral-700);
+    --color-fg-primary: var(--color-neutral-175);
+    --color-fg-secondary: var(--color-neutral-300);
+    --color-fg-muted: var(--color-neutral-400);
+    --color-accent: var(--color-orange-400);
+    --color-fg-on-accent: var(--color-orange-990);
+    --color-accent-subtle: color-mix(in srgb, var(--color-orange-400) 16%, transparent);
+    --color-accent-text: var(--color-orange-300);
+    --color-toggle-on: var(--color-orange-400);
+    --color-toggle-off: var(--color-neutral-650);
+    --color-fg-on-toggle: var(--color-neutral-75);
+    --color-status-running: var(--color-blue-400);
+    --color-status-waiting: var(--color-amber-400);
+    --color-status-error: var(--color-red-400);
+    --color-status-paused: var(--color-neutral-400);
+    --color-status-completed: var(--color-green-400);
+    --color-diff-add-bg: color-mix(in srgb, var(--color-green-400) 11%, transparent);
+    --color-diff-del-bg: color-mix(in srgb, var(--color-red-400) 11%, transparent);
+    --color-diff-add-fg: var(--color-green-400);
+    --color-diff-del-fg: var(--color-red-400);
+    --color-diff-hunk-bg: var(--color-neutral-850);
+    --shadow-popover: var(--shadow-popover-dark);
+  }
+}
+
+:root.dark {
+  --color-bg-base: var(--color-neutral-900);
+  --color-bg-sidebar: var(--color-neutral-950);
+  --color-bg-surface: var(--color-neutral-840);
+  --color-bg-popover: var(--color-neutral-840);
+  --color-bg-hover: var(--color-neutral-800);
+  --color-bg-selected: var(--color-neutral-750);
+  --color-border-subtle: var(--color-neutral-820);
+  --color-border: var(--color-neutral-700);
+  --color-fg-primary: var(--color-neutral-175);
+  --color-fg-secondary: var(--color-neutral-300);
+  --color-fg-muted: var(--color-neutral-400);
+  --color-accent: var(--color-orange-400);
+  --color-fg-on-accent: var(--color-orange-990);
+  --color-accent-subtle: color-mix(in srgb, var(--color-orange-400) 16%, transparent);
+  --color-accent-text: var(--color-orange-300);
+  --color-toggle-on: var(--color-orange-400);
+  --color-toggle-off: var(--color-neutral-650);
+  --color-fg-on-toggle: var(--color-neutral-75);
+  --color-status-running: var(--color-blue-400);
+  --color-status-waiting: var(--color-amber-400);
+  --color-status-error: var(--color-red-400);
+  --color-status-paused: var(--color-neutral-400);
+  --color-status-completed: var(--color-green-400);
+  --color-diff-add-bg: color-mix(in srgb, var(--color-green-400) 11%, transparent);
+  --color-diff-del-bg: color-mix(in srgb, var(--color-red-400) 11%, transparent);
+  --color-diff-add-fg: var(--color-green-400);
+  --color-diff-del-fg: var(--color-red-400);
+  --color-diff-hunk-bg: var(--color-neutral-850);
+  --shadow-popover: var(--shadow-popover-dark);
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1.45;
+}
