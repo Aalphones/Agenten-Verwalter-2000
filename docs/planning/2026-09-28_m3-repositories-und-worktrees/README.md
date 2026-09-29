@@ -9,7 +9,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Git-Modul, Schema und Repository-Liste | [phase-1-git-und-repositories.md](phase-1-git-und-repositories.md) | standard | complete |
-| 2 | Worktrees beim Session-Start anlegen | [phase-2-worktrees-anlegen.md](phase-2-worktrees-anlegen.md) | heikel | pending |
+| 2 | Worktrees beim Session-Start anlegen | [phase-2-worktrees-anlegen.md](phase-2-worktrees-anlegen.md) | heikel | complete |
 | 3 | Oberfläche: Schritt „Repositories“ und Sidebar | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 | 4 | Fehlerfälle und Aufräumen | [phase-4-fehlerfaelle-und-aufraeumen.md](phase-4-fehlerfaelle-und-aufraeumen.md) | heikel | pending |
 

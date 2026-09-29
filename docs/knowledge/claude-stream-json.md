@@ -15,13 +15,23 @@ claude.exe -p --input-format stream-json --output-format stream-json --verbose
            --permission-prompt-tool stdio
            --model <id> --effort <low|medium|high|xhigh|max>
            --permission-mode <default|acceptEdits|plan|auto>
+           --add-dir <worktree> …       (je Repository der Session einmal)
            --session-id <uuid>          (neue Session)   bzw.   --resume <uuid>   (fortsetzen)
+Umgebung:  CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1
 ```
 
 - Jede Zeile auf stdin und stdout ist ein JSON-Objekt.
 - `--verbose` ist mit `stream-json` als Ausgabe nötig.
 - Die Einstellungen des Benutzers (`~/.claude/settings.json`: Rechte-Regeln, Hooks, Skills, Ausgabestil) gelten auch für so gestartete Prozesse. Eine Probe im Modus `default` legte eine Datei ohne Rechte-Abfrage an — vermutlich greift eine Freigabe-Regel des Benutzers. Welche Werkzeuge in „Manuell“ tatsächlich nachfragen, hängt also von diesen Einstellungen ab. `--setting-sources` schränkt die Quellen ein (nicht geprüft).
 - `--session-id` legt die Session-ID fest; geprüft am 2026-09-28: eine mit `--session-id` gestartete Session lässt sich nach hartem Beenden des Prozesses mit `--resume <dieselbe-id>` fortsetzen, der Agent zitiert die erste Nachricht. `--resume <id>` setzt eine Session mit vollem Verlauf fort: geprüft, der Agent kannte eine vorher per Rückfrage gewählte Antwort.
+
+## Mehrere Repositories
+
+Belegt am 2026-09-28 mit Claude Code 2.1.220. Der Agent startet im Session-Workspace, die Repositories liegen als Worktrees in Unterordnern darunter.
+
+- **Skills** aus `<repo>\.claude\skills` findet Claude nur mit `--add-dir <worktree>`: ohne ist `skills` in `system/init` leer, mit stehen sie dort.
+- **`CLAUDE.md`** eines mit `--add-dir` hinzugefügten Ordners lädt Claude nur, wenn die Umgebungsvariable `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` gesetzt ist.
+- Geprüft ist nur ein frischer Start (`--session-id`); ob `--add-dir` auf dem `--resume`-Weg genauso wirkt, prüft die Smoke-Abnahme von Meilenstein 3.
 
 ## Nachrichten an den Agenten (stdin)
 

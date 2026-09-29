@@ -22,15 +22,15 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 |---|---|---|
 | Sessions (Liste, Anlegen, Archivieren, Status) | `src/features/sessions/` (Leerzustand, Neue Session, Status-Tabellen, Abo auf `session://changed`), `src/stores/sessions.ts` (aktive Session, Ansicht „Neue Session“), Wrapper `src/lib/sessions.ts` | `src-tauri/src/commands/sessions.rs`, `src-tauri/src/sessions/` (`model.rs` Typen, `registry.rs` Zustand und Prozess-Anbindung), `src-tauri/src/db/sessions.rs` (mit M4) |
 | Chat (Nachrichten, Tool-Aktivität, Rückfragen) | `src/features/chat/` (`ChatView` Spalte, `ChatTimeline` virtualisierter Verlauf mit Ziffern-Tasten, Block-Komponenten je Eintragsart, `useChatEntries` geladener Ausschnitt + Abo auf `chat://entry`, `buildBlocks` Werkzeug-Gruppen, `toolSummary`, `questionDraft` Auswahl und Antwort einer Rückfrage, `Composer` Eingabeleiste mit Modell-/Modus-Menü, Esc-Pause in `ChatView`), `src/stores/chat.ts` (Entwurf je Session), Wrapper `src/lib/chat.ts` | `src-tauri/src/commands/chat.rs`, `src-tauri/src/sessions/registry.rs` (Verlauf im Speicher), `src-tauri/src/db/messages.rs`, `src-tauri/src/db/events.rs` (mit M4) |
-| Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` (`data_dir`, `session_workspace`) |
+| Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` (`data_dir`, `new_session_workspace` für neue Sessions, `stored_session_workspace` für gespeicherte) |
 | Persistenz (SQLite) | — | `src-tauri/src/db/` (`mod.rs` Verbindung und Text-Helfer, `migrations.rs` + `migrations/*.sql`, `sessions.rs`, `chat_entries.rs`, `session_repositories.rs`; Migration 2 = Repositories und Worktrees), Datei `<Benutzerordner>\.verwalter\verwalter.db`, geöffnet in `src-tauri/src/lib.rs` |
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` | `src-tauri/src/commands/changes.rs`, `src-tauri/src/git/` |
 | Repositories (bekannte Repos verwalten) | `src/features/repositories/` (folgt in Phase 3), Wrapper `src/lib/repositories.ts` | `src-tauri/src/repositories/` (Liste, Hinzufügen, Skill-Zahl), `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
 | Git-Aufrufe | — | `src-tauri/src/git/` (einziger Ort, der `git` startet) |
 | Prozesse ohne Konsolenfenster | — | `src-tauri/src/processes/` (`hide_console`) |
 | Settings | `src/features/settings/` | `src-tauri/src/commands/settings.rs`, `src-tauri/src/db/settings.rs` |
-| Agent-Provider | — | `src-tauri/src/agents/event.rs` (anbieterneutrale Typen: Chat-Einträge, Modell, Modus, Denkaufwand, Agent-Ereignisse), `src-tauri/src/agents/claude/` (Claude-Kommandozeile: Programm finden, Prozess, Zeilenformate, Übersetzung) — ein Modul pro Provider |
-| Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` |
+| Agent-Provider | — | `src-tauri/src/agents/event.rs` (anbieterneutrale Typen: Chat-Einträge, Modell, Modus, Denkaufwand, Agent-Ereignisse), `src-tauri/src/agents/claude/` (Claude-Kommandozeile: Programm finden, Prozess mit `--add-dir` je Worktree, Zeilenformate, Übersetzung) — ein Modul pro Provider |
+| Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` (Branch-Name, Ordnernamen, Anlegen mit Rückbau) |
 | Agent-Prozesse, Wiederherstellung | — | `src-tauri/src/sessions/registry.rs` (Wiederherstellung nach Neustart, ruhende Agenten beenden) |
 | Generierte Typen Rust → TS | `src/lib/bindings/` (generiert, nicht von Hand ändern) | Quelle: Typen im Core; Export-Liste `src-tauri/src/bin/gen-bindings.rs` (`pnpm bindings`) |
 | Aufruf-Wrapper für Tauri Commands | `src/lib/<feature>.ts` | `src-tauri/src/commands/<feature>.rs`, registriert in `src-tauri/src/lib.rs` |

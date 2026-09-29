@@ -7,15 +7,18 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 
 const SESSION_CHANGED_EVENT = 'session://changed';
 
-/** Legt eine Session an, startet den Agenten und schickt die Aufgabe als erste Nachricht.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `claudeNotFound`, `io` */
+/** Legt eine Session an — pro Repository einen Worktree mit Session-Branch —, startet den Agenten
+ *  und schickt die Aufgabe als erste Nachricht. Scheitert ein Schritt, bleibt nichts zurück.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `claudeNotFound`, `io`,
+ *    `repositoryMissing`, `git`, `gitNotFound` */
 export function createSession(
   task: string,
+  repositoryIds: string[],
   model: ModelId,
   effort: Effort,
   mode: Mode,
 ): Promise<SessionSummary> {
-  return invoke<SessionSummary>('session_create', { task, model, effort, mode });
+  return invoke<SessionSummary>('session_create', { task, repositoryIds, model, effort, mode });
 }
 
 /** Alle Sessions, neueste zuerst.

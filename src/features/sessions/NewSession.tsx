@@ -47,7 +47,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     }
     setIsStarting(true);
     setErrorMessage(null);
-    createSession(text.trim(), model, effort, mode)
+    createSession(text.trim(), [], model, effort, mode)
       .then((summary: SessionSummary) => {
         onCreated(summary);
       })

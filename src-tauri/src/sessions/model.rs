@@ -31,6 +31,7 @@ pub struct SessionSummary {
     pub running_since: Option<f64>,
     pub context_used: u32,
     pub context_window: u32,
+    pub repository_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

@@ -5,6 +5,7 @@
 //! Schreiben in die Pipe unter der Sperre könnte sich mit dem Lese-Thread verklemmen — der
 //! Agent blockiert auf einer vollen Ausgabe-Pipe, der Lese-Thread wartet auf die Sperre.
 use std::collections::{HashMap, VecDeque};
+use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
@@ -22,11 +23,12 @@ use crate::agents::event::{
     ToolState, TurnEnd,
 };
 use crate::db::sessions::{self as session_rows, SessionRow};
-use crate::db::{Database, chat_entries};
+use crate::db::{Database, chat_entries, repositories as repository_rows, session_repositories};
 use crate::error::CommandError;
-use crate::filesystem::workspace::session_workspace;
+use crate::filesystem::workspace::{new_session_workspace, stored_session_workspace};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
+use crate::worktrees::{self, SessionRepository};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
@@ -44,11 +46,16 @@ const IDLE_SECONDS_VARIABLE: &str = "VERWALTER_IDLE_SECONDS";
 pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
     database: Arc<Database>,
+    /// Hält das Anlegen von Sessions nacheinander: zwei gleichzeitige würden sonst denselben
+    /// freien Branch-Namen wählen.
+    create_lock: Mutex<()>,
 }
 
 pub struct Session {
     pub id: String,
     workspace: PathBuf,
+    /// Nach dem Anlegen unveränderlich.
+    repositories: Vec<SessionRepository>,
     database: Arc<Database>,
     state: Mutex<SessionState>,
 }
@@ -115,6 +122,7 @@ impl SessionRegistry {
         SessionRegistry {
             sessions: Mutex::new(HashMap::new()),
             database,
+            create_lock: Mutex::new(()),
         }
     }
 
@@ -124,12 +132,20 @@ impl SessionRegistry {
         app: &AppHandle,
         database: Arc<Database>,
     ) -> Result<SessionRegistry, CommandError> {
-        let rows = database.with(|connection| session_rows::load_active(connection))?;
+        let loaded: Vec<(SessionRow, Vec<SessionRepository>)> = database.with(|connection| {
+            let rows = session_rows::load_active(connection)?;
+            rows.into_iter()
+                .map(|row: SessionRow| {
+                    let repositories = session_repositories::load(connection, &row.id)?;
+                    Ok((row, repositories))
+                })
+                .collect()
+        })?;
         let registry = SessionRegistry::new(Arc::clone(&database));
         let mut interrupted: Vec<SessionRow> = Vec::new();
         {
             let mut sessions = registry.lock_sessions();
-            for row in rows {
+            for (row, repositories) in loaded {
                 let state = SessionState::restored(&row);
                 if state.needs_settling {
                     interrupted.push(SessionRow {
@@ -137,12 +153,14 @@ impl SessionRegistry {
                         ..row.clone()
                     });
                 }
-                let workspace = session_workspace(app, &row.id)?;
+                let workspace =
+                    stored_session_workspace(app, &row.id, row.workspace_dir.as_deref())?;
                 sessions.insert(
                     row.id.clone(),
                     Arc::new(Session {
                         id: row.id,
                         workspace,
+                        repositories,
                         database: Arc::clone(&database),
                         state: Mutex::new(state),
                     }),
@@ -160,22 +178,56 @@ impl SessionRegistry {
         Ok(registry)
     }
 
+    /// Legt Workspace und Worktrees an, speichert die Session und startet ihren Agenten. Alles
+    /// oder nichts: scheitert ein Schritt, bleibt weder ein Worktree noch ein Branch noch der
+    /// Workspace-Ordner noch eine Datenbankzeile zurück.
     pub fn create(
         &self,
         app: &AppHandle,
         task: &str,
+        repository_ids: &[String],
         model: ModelId,
         effort: Effort,
         mode: Mode,
     ) -> Result<SessionSummary, CommandError> {
+        let _creating = self
+            .create_lock
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        // Vor jedem Git-Aufruf: ohne Agent wären angelegte Worktrees umsonst.
+        find_claude().ok_or(CommandError::ClaudeNotFound)?;
+        let rows = self
+            .database
+            .with(|connection| repository_rows::get_many(connection, repository_ids))?;
         let id = uuid::Uuid::new_v4().to_string();
-        let workspace = session_workspace(app, &id)?;
+        let name = name_from_task(task);
+        // Die Worktrees entstehen ohne Session-Sperre: `worktree add` kann bei großen
+        // Repositories Sekunden dauern.
+        let workspace = new_session_workspace(app, &id)?;
+        let repositories = match worktrees::create_all(&workspace, &name, &rows) {
+            Ok(repositories) => repositories,
+            Err(error) => {
+                let _ = fs::remove_dir_all(&workspace);
+                return Err(error);
+            }
+        };
         let session = Arc::new(Session {
             id: id.clone(),
             workspace,
+            repositories,
             database: Arc::clone(&self.database),
-            state: Mutex::new(SessionState::new(name_from_task(task), model, effort, mode)),
+            state: Mutex::new(SessionState::new(name, model, effort, mode)),
         });
+        // Die Session-Zeile muss vor `session_repositories` stehen, die darauf verweisen.
+        let row = row_of(&session, &session.lock());
+        let saved = self.database.with(|connection| {
+            session_rows::upsert(connection, &row)?;
+            session_repositories::insert_all(connection, &id, &session.repositories)
+        });
+        if let Err(error) = saved {
+            self.discard_created(&session);
+            return Err(error);
+        }
         self.lock_sessions()
             .insert(id.clone(), Arc::clone(&session));
         let created = update(
@@ -192,13 +244,21 @@ impl SessionRegistry {
         );
         if created.is_err() {
             self.lock_sessions().remove(&id);
-            // `update` schreibt auch bei einem Fehler; die Zeile einer nie gestarteten Session
-            // würde sonst beim nächsten Start als Geister-Session wiederkehren.
-            let _ = self
-                .database
-                .with(|connection| session_rows::delete(connection, &id));
+            self.discard_created(&session);
         }
         created
+    }
+
+    /// Rückbau einer Session, deren Anlegen gescheitert ist. Die Zeile einer nie gestarteten
+    /// Session käme sonst beim nächsten Start als Geister-Session wieder. Hält Windows den
+    /// Workspace-Ordner noch fest, bleibt er liegen — für den Nutzer kein Fehler.
+    fn discard_created(&self, session: &Session) {
+        // Löscht über `ON DELETE CASCADE` auch Chat-Einträge und `session_repositories`.
+        let _ = self
+            .database
+            .with(|connection| session_rows::delete(connection, &session.id));
+        worktrees::rollback(&session.workspace, &session.repositories);
+        let _ = fs::remove_dir_all(&session.workspace);
     }
 
     /// Neueste zuerst.
@@ -1053,6 +1113,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         running_since: state.running_since,
         context_used: state.context_used,
         context_window: state.context_window,
+        repository_count: u32::try_from(session.repositories.len()).unwrap_or(u32::MAX),
     }
 }
 
@@ -1088,6 +1149,11 @@ fn start_process(
             model: state.model,
             effort: state.effort,
             mode: state.mode,
+            add_dirs: session
+                .repositories
+                .iter()
+                .map(|repository: &SessionRepository| session.workspace.join(&repository.folder))
+                .collect(),
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);

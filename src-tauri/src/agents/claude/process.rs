@@ -19,6 +19,8 @@ pub struct SpawnOptions {
     pub model: ModelId,
     pub effort: Effort,
     pub mode: Mode,
+    /// Worktrees der Session: ohne `--add-dir` findet Claude ihre Skills nicht.
+    pub add_dirs: Vec<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -107,7 +109,12 @@ fn build_command(opts: &SpawnOptions) -> Command {
         .arg("--effort")
         .arg(opts.effort.cli_value())
         .arg("--permission-mode")
-        .arg(opts.mode.cli_value());
+        .arg(opts.mode.cli_value())
+        // Ohne die Variable lädt Claude die `CLAUDE.md` eines `--add-dir`-Ordners nicht.
+        .env("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1");
+    for dir in &opts.add_dirs {
+        command.arg("--add-dir").arg(dir);
+    }
     if opts.resume {
         command.arg("--resume");
     } else {

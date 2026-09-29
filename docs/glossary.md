@@ -8,7 +8,8 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Repository** | Ein lokales Git-Repository, das in der App bekannt ist (Name, Pfad, Remote). Existiert unabhängig von Sessions. Die App kennt es, sobald es einmal über „Repository hinzufügen“ gewählt wurde; gespeichert ist der Wurzelordner. |
 | **RepositoryWorkspace** | Die Verbindung eines Repositorys mit einer Session: eigener Worktree, eigener Branch, eigene Basis. |
 | **Worktree** | Ein zusätzliches Arbeitsverzeichnis eines Git-Repositorys mit eigenem ausgecheckten Branch (`git worktree`). Pro Session und Repository genau einer. |
-| **Workspace** | Der gemeinsame Ordner einer Session, in dem die Worktrees aller ihrer Repositories nebeneinander liegen. Arbeitsverzeichnis und Sicherheitsgrenze des Agenten. |
+| **Session-Branch** | Der Branch `verwalter/<Name>`, den die App beim Anlegen einer Session in jedem ihrer Repositories anlegt; in allen Repositories einer Session gleich. |
+| **Workspace** | Der gemeinsame Ordner einer Session, in dem die Worktrees aller ihrer Repositories nebeneinander liegen. Arbeitsverzeichnis und Sicherheitsgrenze des Agenten. Liegt unter `<Benutzerordner>\.verwalter\workspaces\<8 Zeichen>`; ändert sich für eine Session nie. |
 | **Workspace Contract** | Die feste Ordnerstruktur, die der Agent sieht: ein Unterordner pro Repository, sonst nichts. |
 | **Base ref** | Der Git-Stand, gegen den Änderungen gemessen werden (z.B. `origin/main`). Pro RepositoryWorkspace. |
 | **Committed / Uncommitted** | Änderungen seit der Basis, die bereits als Commit im Session-Branch liegen bzw. nur im Arbeitsverzeichnis. |

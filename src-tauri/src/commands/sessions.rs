@@ -10,11 +10,12 @@ pub async fn session_create(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,
     task: String,
+    repository_ids: Vec<String>,
     model: ModelId,
     effort: Effort,
     mode: Mode,
 ) -> Result<SessionSummary, CommandError> {
-    registry.create(&app, &task, model, effort, mode)
+    registry.create(&app, &task, &repository_ids, model, effort, mode)
 }
 
 #[tauri::command]
