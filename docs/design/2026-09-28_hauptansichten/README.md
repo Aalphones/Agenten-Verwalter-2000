@@ -170,7 +170,7 @@ Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit de
 
 ## Abweichungen vom Entwurf
 
-Was die Oberfläche in Meilenstein 2a ([Plan-README](../../planning/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“) und Meilenstein 5 ([Plan-README](../../planning/2026-09-29_m5-changes-und-diff/README.md)) bewusst anders oder gar nicht baut:
+Was die Oberfläche in Meilenstein 2a ([Plan-README](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“) und Meilenstein 5 ([Plan-README](../../archive/2026-09/2026-09-29_m5-changes-und-diff/README.md)) bewusst anders oder gar nicht baut:
 
 - **Fehlt ganz** (kein toter Knopf): Reiter „Artefakte“ (offen), Reiter „Changes“ bei Sessions ohne Repository, Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
 - **Repository-Liste:** Ein fehlendes Repository zeigt „nicht gefunden“ in Fehlerfarbe statt der Skill-Zahl, gesperrtes Häkchen und den Knopf „Entfernen“; ohne bekannte Repositories steht ein Satz statt der leeren Liste; ein Fehler beim Hinzufügen steht als Zeile unter der Liste. Während des Anlegens nennt die Fußzeile „Worktrees werden angelegt …“.

@@ -2,7 +2,7 @@
 
 Ziel: Die Session-Kopfzeile bekommt den Reiter „Changes“. Er zeigt, was der Agent in den Worktrees der Session gegenüber der Basis geändert hat — über alle Repositories der Session, umschaltbar zwischen „Alle“, „Uncommitted“ und „Committed“, mit Repository-Filter, Dateibaum und Übersicht. Ein Klick auf eine Datei öffnet ihren Unified Diff. Alles, was die Ansicht zeigt, liest der Core aus Git — nie aus Aussagen des Agenten (AGENTS.md, Regel 2).
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../../PROJECT.md), [ADR 005](../../decisions/005-repositories-und-worktrees.md) (Basis, Worktree-Ordner, Branch), [ADR 006](../../decisions/006-changes-und-diff.md) (entsteht in Phase 1 aus dem Abschnitt „Festgelegte Entscheidungen“ unten), [Design-Entwurf](../../design/2026-09-28_hauptansichten/README.md) (Tafeln `Changes` und `Diff`, Abschnitt „Layout-Maße“ Zeile „Changes“), die Konventionen unter [docs/conventions/](../../conventions/).
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [PROJECT.md](../../../PROJECT.md), [ADR 005](../../../decisions/005-repositories-und-worktrees.md) (Basis, Worktree-Ordner, Branch), [ADR 006](../../../decisions/006-changes-und-diff.md) (entsteht in Phase 1 aus dem Abschnitt „Festgelegte Entscheidungen“ unten), [Design-Entwurf](../../../design/2026-09-28_hauptansichten/README.md) (Tafeln `Changes` und `Diff`, Abschnitt „Layout-Maße“ Zeile „Changes“), die Konventionen unter [docs/conventions/](../../../conventions/).
 
 ## Phasen
 
@@ -151,14 +151,33 @@ Führt Sascha am Plan-Ende durch. Wackelstellen zuerst:
 - [ ] Session ohne Repository → kein Reiter „Changes“. Von einer Session im Reiter „Changes“ zu einer ohne Repository wechseln → Chat.
 - [ ] Session-Wechsel im Reiter „Changes“ → bleibt auf „Changes“ der neuen Session; Filter und geöffnete Datei der alten Session sind beim Zurückwechseln noch da.
 - [ ] Mit Tastatur: Tab erreicht Reiter, Chips, Segment, Dateien und ×; Fokus sichtbar (2 px Ring in Akzentfarbe).
-- [ ] Rückstand aus M3 (Liste im [M3-Archiv](../../archive/2026-09/2026-09-28_m3-repositories-und-worktrees/README.md), „Smoke-Checkliste“) im selben Durchgang abarbeiten.
+- [ ] Rückstand aus M3 (Liste im [M3-Archiv](../2026-09-28_m3-repositories-und-worktrees/README.md), „Smoke-Checkliste“) im selben Durchgang abarbeiten.
 
 ## Summary
 
+Die Session-Kopfzeile hat den Reiter „Changes“ (Zahl geänderter Dateien im Blickwinkel „Alle“). Der Core liest Änderungen je Repository nur mit Git-Plumbing (kein `git diff`/`git status`, damit `index.lock` des Agenten nie gestört wird), in drei Blickwinkeln: Alle, Committed, Uncommitted. Die Oberfläche zeigt Werkzeugleiste, Dateibaum, Übersicht und eine eigene virtualisierte Unified-Diff-Ansicht (statt Monaco, [ADR 006](../../../decisions/006-changes-und-diff.md)); Aktualisierung beim Wählen, Statuswechsel, Fenster-Fokus und alle 5 s bei arbeitendem Agenten.
+
 ## Files touched
+
+- Core: `src-tauri/src/git/mod.rs`, `src-tauri/src/changes/` (`model.rs`, `parse.rs`, `mod.rs`), `src-tauri/src/commands/changes.rs`, `SessionRegistry::repositories_of`, `gen-bindings.rs`
+- Oberfläche: `src/features/changes/` (`ChangesView`, `ChangesToolbar`, `FileTree`, `buildFileRows`, `ChangesOverview`, `DiffView`, `useSessionChanges`, `useFileDiff`, `changesScope`), `src/stores/changes.ts`, `src/lib/changes.ts`, `src/lib/errors.ts`, Reiter in `src/app/SessionHeader.tsx`, `src/stores/sessions.ts`
+- Doku: ADR 006, PROJECT.md, AGENTS.md, `react.md`, Code-Map, Glossar, Entwurfs-README
 
 ## Commits
 
+- Phase 1: `e4bc70f` feat(changes): read session changes from git per repository
+- Phase 2: `c21b9d8` feat(changes): return the unified diff of one file
+- Phase 3: `a688026` feat(changes): add the changes tab with file tree and overview
+- Phase 4: `003ad1b` feat(changes): show the unified diff of the selected file
+
 ## Deviations from plan
 
+- Der Smoke-Test steht aus: archiviert auf Saschas Anweisung „direkt archivieren“ ohne vorherigen Durchgang der Checkliste oben (wie bei M3).
+- Phase 4 wurde nur statisch geprüft (`pnpm check`), nicht in der laufenden App angesehen.
+
 ## Follow-ups
+
+- **Smoke-Checkliste oben** (Wackelstellen zuerst: Mitlesen während der Agent arbeitet, Zeilenenden/Zeilennummern, 30 000 Zeilen und 1000 untracked Dateien, lange Zeilen horizontal) plus M3-Rückstand — offen.
+- Reiter „Artefakte“: offen, ob die Claude-Kommandozeile Artefakte meldet (GAPS).
+- „Basis für Changes“ in den Einstellungen: M6.
+- Offen aus M1 und M4: `gen-bindings.exe` im Installer; Esc-Label „fehlgeschlagen“ statt „unterbrochen“; Lange-Verlauf-Pagination ungetestet.
