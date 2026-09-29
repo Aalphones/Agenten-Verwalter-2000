@@ -12,9 +12,6 @@ import './DiffView.css';
 
 const LINE_HEIGHT = 20;
 const OVERSCAN = 20;
-const TAB_WIDTH = 4;
-const GUTTER_WIDTH = 116; // zwei Nummernspalten (48 px) plus Vorzeichen (20 px)
-const TEXT_PADDING_RIGHT = 16;
 const BINARY_TEXT = 'Kein Textvergleich: Binärdatei oder größer als 8 MB.';
 const EMPTY_TEXT = 'Keine Textänderungen.';
 const TRUNCATED_TEXT = 'Gekürzt: nur die ersten 20.000 Zeilen werden angezeigt.';
@@ -62,20 +59,12 @@ export function DiffView({
   const isTruncated: boolean = diff?.truncated ?? false;
   const count: number = lines.length + (isTruncated ? 1 : 0);
 
-  const maxChars: number = useMemo(() => {
-    let longest = 0;
-    for (const line of lines) {
-      longest = Math.max(longest, visibleLength(line.text));
-    }
-    return longest;
-  }, [lines]);
-
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count,
     getScrollElement: (): HTMLDivElement | null => scrollRef.current,
-    estimateSize: (): number => LINE_HEIGHT,
+    estimateSize: (): number => LINE_HEIGHT, // umgebrochene Zeilen misst measureElement nach
     overscan: OVERSCAN,
   });
 
@@ -98,16 +87,15 @@ export function DiffView({
     return (
       <div
         className="diff-view__canvas"
-        style={{
-          height: `${String(virtualizer.getTotalSize())}px`,
-          width: `max(100%, calc(${String(GUTTER_WIDTH)}px + ${String(maxChars)}ch + ${String(TEXT_PADDING_RIGHT)}px))`,
-        }}
+        style={{ height: `${String(virtualizer.getTotalSize())}px` }}
       >
         {virtualizer.getVirtualItems().map((item: VirtualItem) => {
           const rendered: RenderedLine = renderLine(lines[item.index]);
           return (
             <div
               key={item.key}
+              ref={virtualizer.measureElement}
+              data-index={item.index}
               className={`diff-view__line diff-view__line--${rendered.kind}`}
               style={{ transform: `translateY(${String(item.start)}px)` }}
             >
@@ -177,15 +165,4 @@ function renderLine(line: DiffLine | undefined): RenderedLine {
     sign: SIGN[line.kind],
     text: line.text,
   };
-}
-
-/** Länge in Zeichen, Tabs zählen als vier. */
-function visibleLength(text: string): number {
-  let tabs = 0;
-  for (const character of text) {
-    if (character === '\t') {
-      tabs += 1;
-    }
-  }
-  return text.length + tabs * (TAB_WIDTH - 1);
 }
