@@ -1,0 +1,65 @@
+.changes-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  max-width: 760px;
+  padding: 28px var(--space-5xl);
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-md);
+    font-weight: 600;
+  }
+
+  &__box {
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) 110px 110px;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-xl) 14px;
+
+    & + & {
+      border-top: 1px solid var(--color-border-subtle);
+    }
+  }
+
+  &__name {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__branch {
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__muted {
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    grid-column: 3 / 5;
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+}

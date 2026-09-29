@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { StatusIcon } from '@/components/StatusIcon';
+import { formatCount } from '@/features/changes/changesScope';
 import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
+import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
 import './SessionHeader.css';
 
 const CONTEXT_WARNING_PERCENT = 90;
@@ -11,11 +13,22 @@ const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 
+const VIEW_LABEL: Record<SessionView, string> = { chat: 'Chat', changes: 'Changes' };
+
 interface SessionHeaderProps {
   session: SessionSummary;
+  activeView: SessionView;
+  /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
+  changesCount: number | null;
+  onShowView: (view: SessionView) => void;
 }
 
-export function SessionHeader({ session }: SessionHeaderProps): ReactElement {
+export function SessionHeader({
+  session,
+  activeView,
+  changesCount,
+  onShowView,
+}: SessionHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
   const isTicking: boolean = session.runningSince !== null;
 
@@ -43,6 +56,8 @@ export function SessionHeader({ session }: SessionHeaderProps): ReactElement {
     session.contextWindow === 0
       ? 0
       : Math.round((session.contextUsed / session.contextWindow) * 100);
+  // „Changes“ gibt es nur mit mindestens einem Repository.
+  const views: readonly SessionView[] = session.repositoryCount > 0 ? SESSION_VIEWS : ['chat'];
   const usedThousands: number = Math.round(session.contextUsed / 1000);
   const windowThousands: number = Math.round(session.contextWindow / 1000);
   const contextClass = `session-header__context-fill${
@@ -121,9 +136,23 @@ export function SessionHeader({ session }: SessionHeaderProps): ReactElement {
         </span>
       </div>
       <div className="session-header__tabs" role="tablist" aria-label="Ansicht">
-        <button type="button" className="session-header__tab" role="tab" aria-selected={true}>
-          Chat
-        </button>
+        {views.map((view: SessionView) => (
+          <button
+            key={view}
+            type="button"
+            className={`session-header__tab${view === activeView ? ' session-header__tab--active' : ''}`}
+            role="tab"
+            aria-selected={view === activeView}
+            onClick={(): void => {
+              onShowView(view);
+            }}
+          >
+            {VIEW_LABEL[view]}
+            {view === 'changes' && changesCount !== null && changesCount > 0 && (
+              <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+            )}
+          </button>
+        ))}
       </div>
       <div className="session-header__tools">
         <span

@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 |---|---|---|---|---|
 | 1 | Core: Changes lesen | [phase-1-changes-lesen.md](phase-1-changes-lesen.md) | heikel | complete |
 | 2 | Core: Diff einer Datei | [phase-2-datei-diff.md](phase-2-datei-diff.md) | standard | complete |
-| 3 | Oberfläche: Reiter, Werkzeugleiste, Dateibaum, Übersicht | [phase-3-changes-ansicht.md](phase-3-changes-ansicht.md) | standard | pending |
+| 3 | Oberfläche: Reiter, Werkzeugleiste, Dateibaum, Übersicht | [phase-3-changes-ansicht.md](phase-3-changes-ansicht.md) | standard | complete |
 | 4 | Oberfläche: Diff-Ansicht und Doku-Abschluss | [phase-4-diff-ansicht.md](phase-4-diff-ansicht.md) | standard | pending |
 
 Umsetzung direkt auf `main`, ein Commit pro Phase (Scope `changes`), `pnpm check` vor jedem Commit grün (rustfmt und Clippy brauchen `cargo` im PATH: `$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mit committen. Erkenntnisse während der Umsetzung → [FINDINGS.md](FINDINGS.md).

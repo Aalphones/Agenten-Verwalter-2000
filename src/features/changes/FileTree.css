@@ -1,0 +1,165 @@
+.file-tree {
+  overflow-y: auto;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 340px;
+  padding: var(--space-lg) var(--space-md);
+  border-right: 1px solid var(--color-border-subtle);
+  /* Die Liste ändert sich alle paar Sekunden; ein Ausgleich des Browsers verschöbe die Ansicht zusätzlich. */
+  overflow-anchor: none;
+
+  &__surface {
+    position: relative;
+    width: 100%;
+  }
+
+  &__item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  &__repository {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: 3px var(--space-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+
+    &--spaced {
+      padding-top: 17px;
+    }
+  }
+
+  &__repository-icon {
+    flex-shrink: 0;
+    color: var(--color-fg-muted);
+  }
+
+  &__repository-name {
+    flex-grow: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__added,
+  &__deleted {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    font-weight: 400;
+  }
+
+  &__added {
+    color: var(--color-diff-add-fg);
+  }
+
+  &__deleted {
+    color: var(--color-diff-del-fg);
+  }
+
+  &__branch,
+  &__error {
+    padding: 0 var(--space-md) var(--space-xs) 30px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
+
+  &__folder {
+    padding: var(--space-2xs) var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__file {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    box-sizing: border-box;
+    width: 100%;
+    padding: 3px var(--space-md);
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--color-fg-primary);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+    }
+
+    &--selected,
+    &--selected:hover {
+      background: var(--color-bg-selected);
+    }
+  }
+
+  &__letter {
+    flex-shrink: 0;
+    width: 10px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+
+    &--added {
+      color: var(--color-diff-add-fg);
+    }
+
+    &--modified {
+      color: var(--color-fg-muted);
+    }
+
+    &--deleted {
+      color: var(--color-diff-del-fg);
+    }
+  }
+
+  &__name {
+    flex-grow: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__badge {
+    flex-shrink: 0;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-hover);
+    color: var(--color-fg-secondary);
+    font-size: 10.5px;
+    line-height: 16px;
+  }
+
+  &__binary {
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 3px var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+}

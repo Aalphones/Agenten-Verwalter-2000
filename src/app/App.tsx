@@ -3,17 +3,22 @@ import type { ReactElement } from 'react';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
 import { ChatView } from '@/features/chat/ChatView';
+import { countChangedFiles } from '@/features/changes/changesScope';
+import { ChangesView } from '@/features/changes/ChangesView';
+import { useSessionChanges } from '@/features/changes/useSessionChanges';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { useSessionsStore } from '@/stores/sessions';
+import { useSessionsStore, type SessionView } from '@/stores/sessions';
 import './App.css';
 
 export function App(): ReactElement {
   const { sessions, upsertSession, removeSession } = useSessionSummaries();
   const activeSessionId: string | null = useSessionsStore((state) => state.activeSessionId);
   const showNewSession: boolean = useSessionsStore((state) => state.showNewSession);
+  const activeView: SessionView = useSessionsStore((state) => state.activeView);
+  const showView = useSessionsStore((state) => state.showView);
   const selectSession = useSessionsStore((state) => state.selectSession);
   const openNewSession = useSessionsStore((state) => state.openNewSession);
   const closeNewSession = useSessionsStore((state) => state.closeNewSession);
@@ -36,6 +41,17 @@ export function App(): ReactElement {
   const currentSession: SessionSummary | undefined =
     sessions.find((session: SessionSummary) => session.id === activeSessionId) ?? sessions[0];
 
+  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; eine Session ohne Repository zeigt den Chat.
+  const isChangesView: boolean =
+    !showNewSession &&
+    activeView === 'changes' &&
+    currentSession !== undefined &&
+    currentSession.repositoryCount > 0;
+  const { changes, error: changesError } = useSessionChanges(
+    showNewSession ? null : (currentSession ?? null),
+    isChangesView,
+  );
+
   // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createSession` muss selbst in die Liste.
   function handleCreated(summary: SessionSummary): void {
     upsertSession(summary);
@@ -49,8 +65,22 @@ export function App(): ReactElement {
     if (currentSession !== undefined) {
       return (
         <>
-          <SessionHeader session={currentSession} />
-          <ChatView key={currentSession.id} session={currentSession} />
+          <SessionHeader
+            session={currentSession}
+            activeView={isChangesView ? 'changes' : 'chat'}
+            changesCount={changes === null ? null : countChangedFiles(changes)}
+            onShowView={showView}
+          />
+          {isChangesView ? (
+            <ChangesView
+              key={currentSession.id}
+              session={currentSession}
+              changes={changes}
+              error={changesError}
+            />
+          ) : (
+            <ChatView key={currentSession.id} session={currentSession} />
+          )}
         </>
       );
     }
