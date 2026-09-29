@@ -519,6 +519,16 @@ impl SessionRegistry {
         })
     }
 
+    /// Workspace und Repositories der Session, als Kopie. Ohne Session-Sperre: beide sind nach dem
+    /// Anlegen unveränderlich.
+    pub fn repositories_of(
+        &self,
+        session_id: &str,
+    ) -> Result<(PathBuf, Vec<SessionRepository>), CommandError> {
+        let session = self.get(session_id)?;
+        Ok((session.workspace.clone(), session.repositories.clone()))
+    }
+
     pub fn log(&self, session_id: &str) -> Result<Vec<String>, CommandError> {
         let session = self.get(session_id)?;
         let lines = session.lock().log.iter().cloned().collect();

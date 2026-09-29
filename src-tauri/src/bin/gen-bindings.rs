@@ -5,6 +5,9 @@ use verwalter_lib::{
         ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer, QuestionKind, QuestionOption,
         TodoItem, TodoState, ToolState,
     },
+    changes::model::{
+        ChangeKind, ChangeScope, FileChange, LineStat, RepositoryChanges, SessionChanges,
+    },
     commands::app::AppInfo,
     error::CommandError,
     repositories::model::KnownRepository,
@@ -32,5 +35,11 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ChatPage::export_all(&cfg)?;
     ChatEntryEvent::export_all(&cfg)?;
     KnownRepository::export_all(&cfg)?;
+    ChangeKind::export_all(&cfg)?;
+    ChangeScope::export_all(&cfg)?;
+    LineStat::export_all(&cfg)?;
+    FileChange::export_all(&cfg)?;
+    RepositoryChanges::export_all(&cfg)?;
+    SessionChanges::export_all(&cfg)?;
     Ok(())
 }

@@ -37,6 +37,7 @@ src-tauri/src/
 - Git läuft ausschließlich über das Modul `git/`, das die Kommandozeile mit festen Argumenten aufruft und die Ausgabe in Typen parst (`--porcelain`, `-z`, `--numstat`).
 - Nie Nutzereingaben ungeprüft in Git-Argumente — Branch-Namen validieren, Pfade als eigene Argumente übergeben, nie über eine Shell.
 - Der Git-Zustand, den die UI zeigt, stammt aus diesem Modul, nie aus Aussagen des Agenten.
+- Lesen im Worktree des Agenten nur mit Plumbing (`diff-index`, `diff-tree`, `ls-files`, `rev-list`), nie mit `git diff` oder `git status` — die nehmen kurz `index.lock` und lassen einen gleichzeitigen Commit des Agenten scheitern ([ADR 006](../decisions/006-changes-und-diff.md)). `-z`-Ausgaben über `run_raw` lesen, das nichts abschneidet.
 
 ## Prozesse
 

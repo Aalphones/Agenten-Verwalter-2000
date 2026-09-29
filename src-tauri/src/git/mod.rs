@@ -92,6 +92,75 @@ pub fn branch_delete_force(repo: &Path, branch: &str) -> Result<(), CommandError
     run(repo, &args(&["branch", "-D", branch])).map(|_| ())
 }
 
+/// `git diff-tree -r --no-renames --name-status -z <from> <to>`
+pub fn diff_tree_name_status(
+    worktree: &Path,
+    from: &str,
+    to: &str,
+) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&[
+            "diff-tree",
+            "-r",
+            "--no-renames",
+            "--name-status",
+            "-z",
+            from,
+            to,
+        ]),
+    )
+}
+
+/// `git diff-tree -r --no-renames --numstat -z <from> <to>`
+pub fn diff_tree_numstat(worktree: &Path, from: &str, to: &str) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&[
+            "diff-tree",
+            "-r",
+            "--no-renames",
+            "--numstat",
+            "-z",
+            from,
+            to,
+        ]),
+    )
+}
+
+/// `git diff-index --no-renames --name-status -z <from>` — Stand `from` gegen das Arbeitsverzeichnis.
+pub fn diff_index_name_status(worktree: &Path, from: &str) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&["diff-index", "--no-renames", "--name-status", "-z", from]),
+    )
+}
+
+/// `git diff-index --no-renames --numstat -z <from>` — Stand `from` gegen das Arbeitsverzeichnis.
+pub fn diff_index_numstat(worktree: &Path, from: &str) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&["diff-index", "--no-renames", "--numstat", "-z", from]),
+    )
+}
+
+/// `git ls-files --others --exclude-standard -z` — neue, nicht ignorierte Dateien.
+pub fn untracked_files(worktree: &Path) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&["ls-files", "--others", "--exclude-standard", "-z"]),
+    )
+}
+
+/// `git rev-list --count <from>..HEAD`
+pub fn commit_count(worktree: &Path, from: &str) -> Result<u32, CommandError> {
+    let range = format!("{from}..HEAD");
+    let text = run(worktree, &args(&["rev-list", "--count", &range]))?;
+    text.trim()
+        .parse::<u32>()
+        .map_err(|_| CommandError::Git(format!("rev-list lieferte keine Zahl: {text}")))
+}
+
 fn args<'a>(values: &[&'a str]) -> Vec<&'a OsStr> {
     values
         .iter()
@@ -117,6 +186,15 @@ fn run(dir: &Path, arguments: &[&OsStr]) -> Result<String, CommandError> {
     Err(git_error(&output))
 }
 
+/// Wie `run`, schneidet aber nichts ab: `-z`-Ausgaben und Diff-Text brauchen jedes Zeichen.
+fn run_raw(dir: &Path, arguments: &[&OsStr]) -> Result<String, CommandError> {
+    let output = run_allowing_failure(dir, arguments)?;
+    if output.status.success() {
+        return Ok(String::from_utf8_lossy(&output.stdout).into_owned());
+    }
+    Err(git_error(&output))
+}
+
 fn run_allowing_failure(dir: &Path, arguments: &[&OsStr]) -> Result<Output, CommandError> {
     let mut command = Command::new("git");
     command
@@ -125,7 +203,9 @@ fn run_allowing_failure(dir: &Path, arguments: &[&OsStr]) -> Result<Output, Comm
         .args(arguments)
         .stdin(Stdio::null())
         // Ohne das wartet Git bei fehlender Anmeldung auf eine Eingabe, die nie kommt.
-        .env("GIT_TERMINAL_PROMPT", "0");
+        .env("GIT_TERMINAL_PROMPT", "0")
+        // Lesende Aufrufe sollen nie eine Sperre im Worktree des Agenten nehmen.
+        .env("GIT_OPTIONAL_LOCKS", "0");
     hide_console(&mut command);
     command.output().map_err(|error: io::Error| {
         if error.kind() == io::ErrorKind::NotFound {

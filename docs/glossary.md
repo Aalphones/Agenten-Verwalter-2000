@@ -11,8 +11,9 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Session-Branch** | Der Branch `verwalter/<Name>`, den die App beim Anlegen einer Session in jedem ihrer Repositories anlegt; in allen Repositories einer Session gleich. |
 | **Workspace** | Der gemeinsame Ordner einer Session, in dem die Worktrees aller ihrer Repositories nebeneinander liegen. Arbeitsverzeichnis und Sicherheitsgrenze des Agenten. Liegt unter `<Benutzerordner>\.verwalter\workspaces\<8 Zeichen>`; ändert sich für eine Session nie. |
 | **Workspace Contract** | Die feste Ordnerstruktur, die der Agent sieht: ein Unterordner pro Repository, sonst nichts. |
-| **Base ref** | Der Git-Stand, gegen den Änderungen gemessen werden (z.B. `origin/main`). Pro RepositoryWorkspace. |
-| **Committed / Uncommitted** | Änderungen seit der Basis, die bereits als Commit im Session-Branch liegen bzw. nur im Arbeitsverzeichnis. |
+| **Base ref** | Der Branch, der beim Anlegen der Session im Haupt-Checkout ausgecheckt war (bei losgelöstem HEAD die Commit-ID); angezeigt als „gegen <Basis>“. Gemessen wird gegen `base_commit`, die Commit-ID dieses Stands. Pro RepositoryWorkspace. |
+| **Committed / Uncommitted** | Änderungen seit der Basis, die bereits als Commit im Session-Branch liegen bzw. nur im Arbeitsverzeichnis (gestagte und untracked Dateien eingeschlossen). |
+| **Blickwinkel** (`ChangeScope`) | Welche Änderungen die Changes-Ansicht zeigt: „Alle“ (Basis → Arbeitsverzeichnis), „Committed“ (Basis → `HEAD`), „Uncommitted“ (`HEAD` → Arbeitsverzeichnis). |
 | **Agent** | Der externe Coding-Agent-Prozess (z.B. Claude), der in einer Session arbeitet. Die App orchestriert ihn, ist aber nicht selbst der Agent. |
 | **Provider** (`AgentProvider`) | Adapter, der einen bestimmten Agenten-Typ startet, steuert und seine Ausgaben in einheitliche Agent-Events übersetzt (Claude, später OpenCode, LM Studio). |
 | **Agent-Event** | Ein strukturiertes Ereignis aus dem Agentenlauf oder der App (z.B. `tool.started`, `session.waiting`). Wird im Event Store gespeichert und von der UI in lesbare Zustände übersetzt. |

@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod changes;
 pub mod commands;
 pub mod db;
 pub mod error;
@@ -55,6 +56,7 @@ pub fn run() {
             commands::repositories::repository_list,
             commands::repositories::repository_add,
             commands::repositories::repository_remove,
+            commands::changes::changes_load,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten");

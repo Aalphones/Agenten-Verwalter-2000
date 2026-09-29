@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Changes lesen | [phase-1-changes-lesen.md](phase-1-changes-lesen.md) | heikel | pending |
+| 1 | Core: Changes lesen | [phase-1-changes-lesen.md](phase-1-changes-lesen.md) | heikel | complete |
 | 2 | Core: Diff einer Datei | [phase-2-datei-diff.md](phase-2-datei-diff.md) | standard | pending |
 | 3 | Oberfläche: Reiter, Werkzeugleiste, Dateibaum, Übersicht | [phase-3-changes-ansicht.md](phase-3-changes-ansicht.md) | standard | pending |
 | 4 | Oberfläche: Diff-Ansicht und Doku-Abschluss | [phase-4-diff-ansicht.md](phase-4-diff-ansicht.md) | standard | pending |
