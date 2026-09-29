@@ -49,7 +49,6 @@ const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
 const MAX_SUBAGENT_STEPS: usize = 200;
-const INITIAL_CONTEXT_WINDOW: u32 = 200_000;
 const KILL_GRACE: Duration = Duration::from_secs(5);
 /// Abstand zwischen dem Abschuss des Agenten und dem Aufräumen seiner Worktrees.
 const CLEANUP_MARGIN: Duration = Duration::from_secs(1);
@@ -533,6 +532,7 @@ impl SessionRegistry {
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
                 state.model = model;
+                state.context_window = model.initial_context_window();
                 outbox.summary_dirty = true;
                 state.send_control(
                     outbox,
@@ -840,7 +840,7 @@ impl SessionState {
             running_ms: 0.0,
             running_since: None,
             context_used: 0,
-            context_window: INITIAL_CONTEXT_WINDOW,
+            context_window: model.initial_context_window(),
             idle_since: None,
             entries_loaded: true,
             needs_settling: false,

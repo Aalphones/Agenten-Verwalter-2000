@@ -22,6 +22,14 @@ impl ModelId {
             ModelId::Haiku => "claude-haiku-4-5-20251001",
         }
     }
+
+    /// Kontextfenster bis zum ersten abgeschlossenen Turn; danach meldet die CLI den echten Wert.
+    pub fn initial_context_window(self) -> u32 {
+        match self {
+            ModelId::Fable | ModelId::Opus | ModelId::Sonnet => 1_000_000,
+            ModelId::Haiku => 200_000,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
