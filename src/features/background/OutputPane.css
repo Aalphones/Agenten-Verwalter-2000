@@ -1,7 +1,8 @@
 .output-pane {
   flex-grow: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: var(--space-md) 14px;
   background: var(--color-bg-base);
   font-family: var(--font-mono);
@@ -17,6 +18,7 @@
     margin: 0;
     color: var(--color-fg-secondary);
     font: inherit;
-    white-space: pre;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
 }
