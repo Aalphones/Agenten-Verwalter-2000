@@ -57,6 +57,7 @@ pub fn run() {
             commands::repositories::repository_add,
             commands::repositories::repository_remove,
             commands::changes::changes_load,
+            commands::changes::changes_file_diff,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten");

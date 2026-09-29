@@ -161,6 +161,53 @@ pub fn commit_count(worktree: &Path, from: &str) -> Result<u32, CommandError> {
         .map_err(|_| CommandError::Git(format!("rev-list lieferte keine Zahl: {text}")))
 }
 
+/// `git diff-tree -r -p --no-renames -U3 <from> <to> -- <path>`
+pub fn diff_tree_patch(
+    worktree: &Path,
+    from: &str,
+    to: &str,
+    path: &str,
+) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&[
+            "diff-tree",
+            "-r",
+            "-p",
+            "--no-renames",
+            "-U3",
+            from,
+            to,
+            "--",
+            path,
+        ]),
+    )
+}
+
+/// `git diff-index -p --no-renames -U3 <from> -- <path>` — Stand `from` gegen das Arbeitsverzeichnis.
+pub fn diff_index_patch(worktree: &Path, from: &str, path: &str) -> Result<String, CommandError> {
+    run_raw(
+        worktree,
+        &args(&["diff-index", "-p", "--no-renames", "-U3", from, "--", path]),
+    )
+}
+
+/// Ob `path` eine neue, nicht ignorierte Datei ist, die Git noch nicht kennt.
+pub fn is_untracked(worktree: &Path, path: &str) -> Result<bool, CommandError> {
+    let output = run_raw(
+        worktree,
+        &args(&[
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            path,
+        ]),
+    )?;
+    Ok(!output.is_empty())
+}
+
 fn args<'a>(values: &[&'a str]) -> Vec<&'a OsStr> {
     values
         .iter()

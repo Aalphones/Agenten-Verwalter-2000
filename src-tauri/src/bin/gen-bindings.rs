@@ -6,7 +6,8 @@ use verwalter_lib::{
         TodoItem, TodoState, ToolState,
     },
     changes::model::{
-        ChangeKind, ChangeScope, FileChange, LineStat, RepositoryChanges, SessionChanges,
+        ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
+        RepositoryChanges, SessionChanges,
     },
     commands::app::AppInfo,
     error::CommandError,
@@ -41,5 +42,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     FileChange::export_all(&cfg)?;
     RepositoryChanges::export_all(&cfg)?;
     SessionChanges::export_all(&cfg)?;
+    DiffLineKind::export_all(&cfg)?;
+    DiffLine::export_all(&cfg)?;
+    FileDiff::export_all(&cfg)?;
     Ok(())
 }

@@ -65,3 +65,35 @@ pub struct SessionChanges {
     /// In der Reihenfolge von `session_repositories`.
     pub repositories: Vec<RepositoryChanges>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffLineKind {
+    /// Abschnittskopf `@@ -a,b +c,d @@ …`, ohne Zeilennummern.
+    Hunk,
+    Context,
+    Added,
+    Deleted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffLine {
+    pub kind: DiffLineKind,
+    /// Nummer in der alten Fassung; fehlt bei Hinzugefügtem und Abschnittsköpfen.
+    pub old_line: Option<u32>,
+    /// Nummer in der neuen Fassung; fehlt bei Gelöschtem und Abschnittsköpfen.
+    pub new_line: Option<u32>,
+    /// Ohne Vorzeichen und ohne Zeilenende.
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct FileDiff {
+    pub lines: Vec<DiffLine>,
+    /// Kein Textvergleich möglich; `lines` ist dann leer.
+    pub binary: bool,
+    /// `lines` endet nach der Höchstzahl an Zeilen.
+    pub truncated: bool,
+}
