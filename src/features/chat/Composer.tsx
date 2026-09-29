@@ -61,7 +61,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
     const text: string = draft.trim();
     setIsSending(true);
     setErrorMessage(null);
-    sendMessage(session.id, text)
+    sendMessage(session.id, text, [])
       .then(() => {
         // Wurde während des Sendens weitergetippt, bleibt der neuere Text erhalten.
         if ((useChatStore.getState().drafts[session.id] ?? '') === draft) {

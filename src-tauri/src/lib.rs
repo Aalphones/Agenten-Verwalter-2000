@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod attachments;
 pub mod changes;
 pub mod commands;
 pub mod db;
@@ -30,6 +31,7 @@ pub fn run() {
             let database = Arc::new(Database::open(
                 &data_dir(app.handle())?.join(DATABASE_FILE),
             )?);
+            attachments::clear_staging(app.handle());
             let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
             app.manage(registry);
             app.manage(database);
@@ -53,6 +55,9 @@ pub fn run() {
             commands::chat::chat_history,
             commands::chat::chat_send,
             commands::chat::chat_answer,
+            commands::attachments::attachment_add_files,
+            commands::attachments::attachment_add_bytes,
+            commands::attachments::attachment_discard,
             commands::repositories::repository_list,
             commands::repositories::repository_add,
             commands::repositories::repository_remove,

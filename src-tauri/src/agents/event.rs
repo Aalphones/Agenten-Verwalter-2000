@@ -112,6 +112,28 @@ pub enum QuestionKind {
     Permission,
 }
 
+/// `Image` richtet sich nur nach der Endung — ob ein Bild als Inhalt oder als Pfad an den
+/// Agenten geht, entscheidet zusätzlich seine Größe (`attachments::message_content`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum AttachmentKind {
+    Image,
+    File,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Attachment {
+    pub id: String,
+    pub name: String,
+    pub kind: AttachmentKind,
+    /// serde schreibt eine JSON-Zahl, kein `bigint`; bis 2^53 Bytes ist sie in TypeScript genau.
+    #[ts(type = "number")]
+    pub size_bytes: u64,
+    /// Absolut: vor dem Senden im Zwischenordner, danach `<Workspace>\.anhaenge\<id>\<name>`.
+    pub path: String,
+}
+
 /// Ein Eintrag im Chat-Verlauf. `seq` ist sein Index in der Session; ein geänderter
 /// Eintrag behält seine `seq` und wird erneut gesendet.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -125,6 +147,9 @@ pub enum ChatEntry {
         seq: u32,
         text: String,
         sent_at: f64,
+        /// Einträge aus der Zeit vor Anhängen haben das Feld nicht.
+        #[serde(default)]
+        attachments: Vec<Attachment>,
     },
     Text {
         seq: u32,

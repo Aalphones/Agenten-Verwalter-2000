@@ -16,12 +16,15 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
-use crate::agents::claude::protocol::{allow, control_request, deny, user_message};
+use crate::agents::claude::protocol::{
+    allow, control_request, deny, user_message, user_message_content,
+};
 use crate::agents::claude::translate::Translator;
 use crate::agents::event::{
-    AgentEvent, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer, QuestionKind, TodoItem,
-    ToolState, TurnEnd,
+    AgentEvent, Attachment, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
+    QuestionKind, TodoItem, ToolState, TurnEnd,
 };
+use crate::attachments;
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{Database, chat_entries, repositories as repository_rows, session_repositories};
 use crate::error::CommandError;
@@ -108,6 +111,16 @@ struct SessionState {
     next_request: u32,
 }
 
+/// Alles, woraus `SessionRegistry::create` eine Session anlegt.
+pub struct NewSession<'a> {
+    pub task: &'a str,
+    pub attachment_ids: &'a [String],
+    pub repository_ids: &'a [String],
+    pub model: ModelId,
+    pub effort: Effort,
+    pub mode: Mode,
+}
+
 /// Was nach dem Freigeben der Sperre hinausgeht.
 #[derive(Default)]
 struct Outbox {
@@ -186,12 +199,16 @@ impl SessionRegistry {
     pub fn create(
         &self,
         app: &AppHandle,
-        task: &str,
-        repository_ids: &[String],
-        model: ModelId,
-        effort: Effort,
-        mode: Mode,
+        request: NewSession<'_>,
     ) -> Result<SessionSummary, CommandError> {
+        let NewSession {
+            task,
+            attachment_ids,
+            repository_ids,
+            model,
+            effort,
+            mode,
+        } = request;
         let _creating = self
             .create_lock
             .lock()
@@ -213,6 +230,15 @@ impl SessionRegistry {
                 return Err(error);
             }
         };
+        let task_attachments =
+            match attachments::take_for_workspace(app, attachment_ids, &workspace) {
+                Ok(taken) => taken,
+                Err(error) => {
+                    worktrees::rollback(&workspace, &repositories);
+                    let _ = fs::remove_dir_all(&workspace);
+                    return Err(error);
+                }
+            };
         let session = Arc::new(Session {
             id: id.clone(),
             workspace,
@@ -239,8 +265,9 @@ impl SessionRegistry {
                 // Ohne diese Zeile bekäme die neue Session nie ihre Datenbankzeile.
                 outbox.summary_dirty = true;
                 start_process(app, &session, state, outbox)?;
-                state.push_user(outbox, task);
-                outbox.write(state, user_message(task))?;
+                let line = message_line(task, &task_attachments)?;
+                state.push_user(outbox, task, task_attachments);
+                outbox.write(state, line)?;
                 Ok(summarize(&session, state))
             },
         );
@@ -276,7 +303,13 @@ impl SessionRegistry {
         summaries
     }
 
-    pub fn send(&self, app: &AppHandle, session_id: &str, text: &str) -> Result<(), CommandError> {
+    pub fn send(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        text: &str,
+        attachment_ids: &[String],
+    ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
         update(
             app,
@@ -288,17 +321,25 @@ impl SessionRegistry {
                     _ => {}
                 }
                 if !state.pending.is_empty() {
+                    // Die Antwort auf eine Rückfrage ist reiner Text — Anhänge hätten keinen Platz.
+                    if !attachment_ids.is_empty() {
+                        return Err(CommandError::AttachmentsWhileWaiting);
+                    }
                     answer_oldest_with_text(state, outbox, text)?;
-                    state.push_user(outbox, text);
+                    state.push_user(outbox, text, Vec::new());
                     return Ok(());
                 }
                 // Ohne Prozess (wiederhergestellte Session) startet der Agent hier, mit dem bisherigen Verlauf.
                 if state.process.is_none() || state.effort != state.process_effort {
                     start_process(app, &session, state, outbox)?;
                 }
-                state.push_user(outbox, text);
+                // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
+                let sent_attachments =
+                    attachments::take_for_workspace(app, attachment_ids, &session.workspace)?;
+                let line = message_line(text, &sent_attachments)?;
+                state.push_user(outbox, text, sent_attachments);
                 state.set_status(outbox, SessionStatus::Running);
-                outbox.write(state, user_message(text))
+                outbox.write(state, line)
             },
         )
     }
@@ -346,7 +387,7 @@ impl SessionRegistry {
         if status != SessionStatus::Paused {
             return Ok(());
         }
-        self.send(app, session_id, RESUME_MESSAGE)
+        self.send(app, session_id, RESUME_MESSAGE, &[])
     }
 
     pub fn cancel(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
@@ -764,12 +805,13 @@ impl SessionState {
         seq
     }
 
-    fn push_user(&mut self, outbox: &mut Outbox, text: &str) {
+    fn push_user(&mut self, outbox: &mut Outbox, text: &str, attachments: Vec<Attachment>) {
         let sent_at = now_ms();
         self.push_entry(outbox, |seq: u32| ChatEntry::User {
             seq,
             text: text.to_owned(),
             sent_at,
+            attachments,
         });
     }
 
@@ -1078,6 +1120,17 @@ fn update<R>(
     let value = result?;
     outbox.deliver(session)?;
     Ok(value)
+}
+
+/// Ohne Anhänge bleibt die Nachricht ein String wie vor den Anhängen.
+fn message_line(text: &str, attachments: &[Attachment]) -> Result<String, CommandError> {
+    if attachments.is_empty() {
+        return Ok(user_message(text));
+    }
+    Ok(user_message_content(attachments::message_content(
+        text,
+        attachments,
+    )?))
 }
 
 fn row_of(session: &Session, state: &SessionState) -> SessionRow {

@@ -16,10 +16,16 @@ export function getChatHistory(
   return invoke<ChatPage>('chat_history', { sessionId, before, limit });
 }
 
-/** Schickt eine Nachricht; ist eine Rückfrage offen, beantwortet sie die älteste.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `sessionClosed`, `agentStopped` */
-export async function sendMessage(sessionId: string, text: string): Promise<void> {
-  await invoke('chat_send', { sessionId, text });
+/** Schickt eine Nachricht; ist eine Rückfrage offen, beantwortet sie die älteste. Die Anhänge wandern
+ *  dabei aus dem Zwischenordner in den Workspace der Session.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `sessionClosed`,
+ *    `agentStopped`, `attachmentsWhileWaiting`, `io` (Anhang fehlt oder ungültige ID) */
+export async function sendMessage(
+  sessionId: string,
+  text: string,
+  attachmentIds: string[],
+): Promise<void> {
+  await invoke('chat_send', { sessionId, text, attachmentIds });
 }
 
 /** Beantwortet eine Rückfrage oder Rechte-Abfrage.

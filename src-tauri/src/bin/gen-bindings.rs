@@ -2,8 +2,8 @@
 use ts_rs::{Config, TS};
 use verwalter_lib::{
     agents::event::{
-        ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer, QuestionKind, QuestionOption,
-        TodoItem, TodoState, ToolState,
+        Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
+        QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
     },
     changes::model::{
         ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
@@ -29,6 +29,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     QuestionOption::export_all(&cfg)?;
     Question::export_all(&cfg)?;
     QuestionKind::export_all(&cfg)?;
+    AttachmentKind::export_all(&cfg)?;
+    Attachment::export_all(&cfg)?;
     ChatEntry::export_all(&cfg)?;
     QuestionAnswer::export_all(&cfg)?;
     SessionStatus::export_all(&cfg)?;

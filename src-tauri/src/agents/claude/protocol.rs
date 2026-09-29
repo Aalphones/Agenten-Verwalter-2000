@@ -123,6 +123,15 @@ pub fn user_message(text: &str) -> String {
     .to_string()
 }
 
+/// Nachricht mit Inhaltsblöcken statt Text — für Anhänge (`attachments::message_content`).
+pub fn user_message_content(content: Value) -> String {
+    json!({
+        "type": "user",
+        "message": { "role": "user", "content": content },
+    })
+    .to_string()
+}
+
 pub fn control_request(request_id: &str, request: Value) -> String {
     json!({
         "type": "control_request",

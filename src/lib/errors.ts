@@ -17,6 +17,8 @@ export function commandErrorText(reason: unknown): string {
       return `Repository nicht gefunden: ${reason.message}`;
     case 'sessionNotFound':
       return 'Session nicht gefunden.';
+    case 'attachmentsWhileWaiting':
+      return 'Anhänge gehen erst, wenn die Rückfrage beantwortet ist.';
     default:
       return 'message' in reason ? reason.message : reason.kind;
   }

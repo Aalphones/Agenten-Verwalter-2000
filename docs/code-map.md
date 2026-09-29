@@ -14,7 +14,7 @@ src-tauri/src/<feature>/          Fachlogik im Core
 src-tauri/src/db/<feature>.rs     SQLite-Zugriffe
 ```
 
-Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt ohne Feature-Bezug: `agents` (Provider), `git`, `worktrees`, `processes`, `filesystem` — nur im Core.
+Features: `sessions`, `chat`, `attachments`, `changes`, `repositories`, `settings`. Querschnitt ohne Feature-Bezug: `agents` (Provider), `git`, `worktrees`, `processes`, `filesystem` — nur im Core.
 
 ## Tabelle
 
@@ -22,6 +22,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 |---|---|---|
 | Sessions (Liste, Anlegen, Archivieren, Status) | `src/features/sessions/` (Leerzustand, Neue Session, Status-Tabellen, Abo auf `session://changed`), `src/stores/sessions.ts` (aktive Session, Ansicht „Neue Session“, `activeView` Chat/Changes), Wrapper `src/lib/sessions.ts` | `src-tauri/src/commands/sessions.rs`, `src-tauri/src/sessions/` (`model.rs` Typen, `registry.rs` Zustand und Prozess-Anbindung), `src-tauri/src/db/sessions.rs` (mit M4) |
 | Chat (Nachrichten, Tool-Aktivität, Rückfragen) | `src/features/chat/` (`ChatView` Spalte, `ChatTimeline` virtualisierter Verlauf mit Ziffern-Tasten, Block-Komponenten je Eintragsart, `useChatEntries` geladener Ausschnitt + Abo auf `chat://entry`, `buildBlocks` Werkzeug-Gruppen, `toolSummary`, `questionDraft` Auswahl und Antwort einer Rückfrage, `Composer` Eingabeleiste mit Modell-/Modus-Menü, Esc-Pause in `ChatView`), `src/stores/chat.ts` (Entwurf je Session), Wrapper `src/lib/chat.ts` | `src-tauri/src/commands/chat.rs`, `src-tauri/src/sessions/registry.rs` (Verlauf im Speicher), `src-tauri/src/db/messages.rs`, `src-tauri/src/db/events.rs` (mit M4) |
+| Anhänge (Zwischenordner, Verschieben in den Workspace, Inhaltsblöcke an den Agenten) | Wrapper `src/lib/attachments.ts` | `src-tauri/src/attachments/` (Zwischenordner `<Benutzerordner>\.verwalter\attachments`, beim Start geleert; `take_for_workspace` nach `<Workspace>\.anhaenge`; `message_content`), `src-tauri/src/commands/attachments.rs`; Asset-Protokoll in `src-tauri/tauri.conf.json` |
 | Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` (`data_dir`, `new_session_workspace` für neue Sessions, `stored_session_workspace` für gespeicherte) |
 | Persistenz (SQLite) | — | `src-tauri/src/db/` (`mod.rs` Verbindung und Text-Helfer, `migrations.rs` + `migrations/*.sql`, `sessions.rs`, `chat_entries.rs`, `session_repositories.rs`; Migration 2 = Repositories und Worktrees), Datei `<Benutzerordner>\.verwalter\verwalter.db`, geöffnet in `src-tauri/src/lib.rs` |
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` (`ChangesView`, `ChangesToolbar`, `FileTree` virtualisiert, `buildFileRows`, `ChangesOverview`, `DiffView` virtualisierte Zeilen, `useFileDiff` Nachladen ohne Flackern, `useSessionChanges` Nachladen, `changesScope`), `src/stores/changes.ts` (Filter, Blickwinkel, geöffnete Datei je Session), Wrapper `src/lib/changes.ts` | `src-tauri/src/changes/` (`model.rs` Typen, `parse.rs` Git-Ausgaben lesen inkl. `parse::unified`, `mod.rs` drei Blickwinkel je Repository, ein Thread je Repository, `file_diff`), `src-tauri/src/commands/changes.rs` (`changes_load`, `changes_file_diff`), `SessionRegistry::repositories_of` |

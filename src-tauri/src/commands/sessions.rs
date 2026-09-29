@@ -1,21 +1,34 @@
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::error::CommandError;
 use crate::sessions::model::SessionSummary;
-use crate::sessions::registry::SessionRegistry;
+use crate::sessions::registry::{NewSession, SessionRegistry};
 
 // Die Commands sind `async`, damit der Prozessstart nicht auf dem Haupt-Thread läuft.
 
+// Die Parameter sind die Aufrufform der Oberfläche (`createSession`); zwei davon stellt Tauri selbst.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn session_create(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,
     task: String,
+    attachment_ids: Vec<String>,
     repository_ids: Vec<String>,
     model: ModelId,
     effort: Effort,
     mode: Mode,
 ) -> Result<SessionSummary, CommandError> {
-    registry.create(&app, &task, &repository_ids, model, effort, mode)
+    registry.create(
+        &app,
+        NewSession {
+            task: &task,
+            attachment_ids: &attachment_ids,
+            repository_ids: &repository_ids,
+            model,
+            effort,
+            mode,
+        },
+    )
 }
 
 #[tauri::command]

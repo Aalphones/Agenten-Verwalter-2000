@@ -28,6 +28,8 @@ pub enum CommandError {
     NotARepository(String),
     #[error("Repository nicht gefunden: {0}")]
     RepositoryMissing(String),
+    #[error("Anhänge gehen erst, wenn die Rückfrage beantwortet ist")]
+    AttachmentsWhileWaiting,
 }
 
 impl From<rusqlite::Error> for CommandError {

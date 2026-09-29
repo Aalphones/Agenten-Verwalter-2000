@@ -19,8 +19,9 @@ pub async fn chat_send(
     registry: tauri::State<'_, SessionRegistry>,
     session_id: String,
     text: String,
+    attachment_ids: Vec<String>,
 ) -> Result<(), CommandError> {
-    registry.send(&app, &session_id, &text)
+    registry.send(&app, &session_id, &text, &attachment_ids)
 }
 
 #[tauri::command]

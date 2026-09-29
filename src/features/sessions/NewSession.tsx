@@ -52,7 +52,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     }
     setIsStarting(true);
     setErrorMessage(null);
-    createSession(text.trim(), repositoryIds, model, effort, mode)
+    createSession(text.trim(), [], repositoryIds, model, effort, mode)
       .then((summary: SessionSummary) => {
         onCreated(summary);
       })
