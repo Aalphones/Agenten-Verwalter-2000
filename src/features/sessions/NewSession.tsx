@@ -200,7 +200,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
                   <PlusIcon />
                 </button>
                 {openMenu === 'plus' && (
-                  <AttachMenu onPick={pickFromPlusMenu} onClose={closeMenu} />
+                  <AttachMenu placement="below" onPick={pickFromPlusMenu} onClose={closeMenu} />
                 )}
               </div>
               <button
@@ -238,6 +238,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
                 session={null}
                 onEffortChange={setEffort}
                 isSkillsOnly
+                placement="below"
               />
             )}
           </div>

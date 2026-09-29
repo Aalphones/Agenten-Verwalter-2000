@@ -26,6 +26,8 @@ interface CommandMenuProps {
   onEffortChange: (effort: Effort) => void;
   /** Nur Skills im Menü: dann erklärt der leere Zustand, wo Skills liegen. */
   isSkillsOnly: boolean;
+  /** Wohin das Menü aufklappt; oben im Fenster (Neue Session) nach unten, damit nichts abgeschnitten wird. */
+  placement?: 'above' | 'below';
 }
 
 /** Das `/`-Menü: als Knopf-Menü mit Filterfeld, als Slash-Menü ohne (das Textfeld behält den Fokus). */
@@ -42,6 +44,7 @@ export function CommandMenu({
   session,
   onEffortChange,
   isSkillsOnly,
+  placement = 'above',
 }: CommandMenuProps): ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
   const highlightedKey: string | null = highlighted === null ? null : rowKey(highlighted);
@@ -97,7 +100,7 @@ export function CommandMenu({
   return (
     <Popover
       label="Befehle und Skills"
-      placement="above"
+      placement={placement}
       align="start"
       width="anchor"
       autoFocus={showFilter}

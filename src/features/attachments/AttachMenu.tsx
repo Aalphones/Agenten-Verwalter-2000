@@ -7,14 +7,19 @@ const ATTACH_MENU_WIDTH = 330;
 interface AttachMenuProps {
   onPick: () => void;
   onClose: () => void;
+  placement?: 'above' | 'below';
 }
 
 /** Das `+`-Menü der Eingabeleiste. */
-export function AttachMenu({ onPick, onClose }: AttachMenuProps): ReactElement {
+export function AttachMenu({
+  onPick,
+  onClose,
+  placement = 'above',
+}: AttachMenuProps): ReactElement {
   return (
     <Popover
       label="Hinzufügen"
-      placement="above"
+      placement={placement}
       align="start"
       width={ATTACH_MENU_WIDTH}
       onClose={onClose}
