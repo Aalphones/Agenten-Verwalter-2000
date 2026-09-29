@@ -11,7 +11,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 1 | Core: Anhänge | [phase-1-anhaenge-core.md](phase-1-anhaenge-core.md) | standard | complete |
 | 2 | Core: Skills und Befehle | [phase-2-skills-core.md](phase-2-skills-core.md) | standard | complete |
 | 3 | Core: Hintergrund und Scratchpad | [phase-3-hintergrund-core.md](phase-3-hintergrund-core.md) | heikel | complete |
-| 4 | Oberfläche: Eingabeleiste mit Anhängen und `/`-Menü | [phase-4-eingabeleiste.md](phase-4-eingabeleiste.md) | standard | pending |
+| 4 | Oberfläche: Eingabeleiste mit Anhängen und `/`-Menü | [phase-4-eingabeleiste.md](phase-4-eingabeleiste.md) | standard | complete |
 | 5 | Oberfläche: Hintergrund-Panel, Verlaufszeilen, Doku-Abschluss | [phase-5-hintergrund-panel.md](phase-5-hintergrund-panel.md) | standard | pending |
 
 Reihenfolge fest: 1 → 2 → 3 → 4 → 5 (Phase 4 braucht die Commands aus 1 und 2, Phase 5 die aus 3). Umsetzung direkt auf `main`, ein Commit pro Phase (Scopes: Phase 1 `attachments`, Phase 2 `skills`, Phase 3 `background`, Phase 4 `chat`, Phase 5 `background`). Vor jedem Commit muss `pnpm check` grün sein; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` ausführen und die erzeugten Dateien mit committen. Erkenntnisse während der Umsetzung gehören nach [FINDINGS.md](FINDINGS.md).

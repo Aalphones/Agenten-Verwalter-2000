@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { SidebarItem } from '@/app/SidebarItem';
 import { GROUP_LABEL, GROUP_ORDER, STATUS_GROUP } from '@/features/sessions/sessionStatus';
 import type { SessionGroup } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveSession, renameSession } from '@/lib/sessions';
+import { useSessionsStore } from '@/stores/sessions';
 import './Sidebar.css';
 
 interface SidebarProps {
@@ -22,7 +23,9 @@ export function Sidebar({
   onNew,
   onArchived,
 }: SidebarProps): ReactElement {
-  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const renamingId: string | null = useSessionsStore((state) => state.renamingId);
+  const startRename = useSessionsStore((state) => state.startRename);
+  const stopRename = useSessionsStore((state) => state.stopRename);
 
   // F2 startet das Umbenennen der aktiven Session — außer der Fokus liegt in einem Textfeld.
   useEffect(() => {
@@ -35,20 +38,20 @@ export function Sidebar({
         return;
       }
       if (activeSessionId !== null) {
-        setRenamingId(activeSessionId);
+        startRename(activeSessionId);
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return (): void => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, startRename]);
 
   function commitRename(sessionId: string, name: string): void {
     renameSession(sessionId, name).catch((reason: unknown) => {
       console.error('Session nicht umbenennbar', reason);
     });
-    setRenamingId(null);
+    stopRename();
   }
 
   function archive(sessionId: string): void {
@@ -84,13 +87,13 @@ export function Sidebar({
               onSelect(session.id);
             }}
             onStartRename={(): void => {
-              setRenamingId(session.id);
+              startRename(session.id);
             }}
             onCommitRename={(name: string): void => {
               commitRename(session.id, name);
             }}
             onCancelRename={(): void => {
-              setRenamingId(null);
+              stopRename();
             }}
             onArchive={(): void => {
               archive(session.id);

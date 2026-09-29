@@ -9,9 +9,12 @@ interface PopoverProps {
   label: string;
   placement: 'above' | 'below';
   align: 'start' | 'end';
-  /** Breite in px. */
-  width: number;
+  /** Breite in px oder `'anchor'` für die volle Breite des Elements, das das Menü trägt. */
+  width: number | 'anchor';
   onClose: () => void;
+  /** `false`: der Fokus bleibt, wo er ist (Menü, das ein Textfeld begleitet). Standard `true`. */
+  autoFocus?: boolean;
+  className?: string;
   children: ReactNode;
 }
 
@@ -24,15 +27,19 @@ export function Popover({
   align,
   width,
   onClose,
+  autoFocus = true,
+  className,
   children,
 }: PopoverProps): ReactElement {
   const rootRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef<() => void>(onClose);
+  const shouldTakeFocusRef = useRef<boolean>(autoFocus);
 
   // Der Listener-Effekt läuft nur einmal; über die Ref sieht er stets den aktuellen Callback,
   // ohne dass ein neuer Callback pro Render den Fokus erneut auf das erste Element setzt.
   useEffect(() => {
     onCloseRef.current = onClose;
+    shouldTakeFocusRef.current = autoFocus;
   });
 
   useEffect(() => {
@@ -41,7 +48,9 @@ export function Popover({
       return undefined;
     }
     const previouslyFocused: Element | null = document.activeElement;
-    root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+    if (shouldTakeFocusRef.current) {
+      root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+    }
 
     // Capture-Phase und preventDefault: der Esc-Listener des Chats prüft `defaultPrevented`
     // und pausiert die Session nicht zusätzlich, wenn ein Menü das Esc verbraucht hat.
@@ -51,7 +60,7 @@ export function Popover({
       }
       event.preventDefault();
       onCloseRef.current();
-      if (previouslyFocused instanceof HTMLElement) {
+      if (shouldTakeFocusRef.current && previouslyFocused instanceof HTMLElement) {
         previouslyFocused.focus();
       }
     }
@@ -72,13 +81,23 @@ export function Popover({
     };
   }, []);
 
+  const classNames: string = [
+    'popover',
+    `popover--${placement}`,
+    `popover--${align}`,
+    width === 'anchor' ? 'popover--anchor' : '',
+    className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div
       ref={rootRef}
-      className={`popover popover--${placement} popover--${align}`}
+      className={classNames}
       role="dialog"
       aria-label={label}
-      style={{ width: `${String(width)}px` }}
+      style={width === 'anchor' ? undefined : { width: `${String(width)}px` }}
     >
       {children}
     </div>

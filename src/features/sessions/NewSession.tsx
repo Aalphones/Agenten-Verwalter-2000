@@ -1,15 +1,25 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement, SubmitEvent } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
+import { AttachMenu } from '@/features/attachments/AttachMenu';
+import { AttachmentRow } from '@/features/attachments/AttachmentRow';
+import { useAttachmentInput } from '@/features/attachments/useAttachmentInput';
+import { CommandMenu } from '@/features/chat/CommandMenu';
+import { applySkillToDraft } from '@/features/chat/commandMenuRows';
+import type { CommandRow } from '@/features/chat/commandMenuRows';
+import { useCommandMenu } from '@/features/chat/useCommandMenu';
 import { RepositoryPicker } from '@/features/repositories/RepositoryPicker';
+import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { discardAttachment } from '@/lib/attachments';
 import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/labels';
 import { createSession } from '@/lib/sessions';
+import { NEW_SESSION_KEY, useAttachmentsStore } from '@/stores/attachments';
 import './NewSession.css';
 
 const CLAUDE_NOT_FOUND_MESSAGE =
@@ -18,7 +28,9 @@ const CLAUDE_NOT_FOUND_MESSAGE =
 const GIT_NOT_FOUND_MESSAGE =
   'Git nicht gefunden. Installiere Git für Windows und starte die App neu.';
 
-type OpenMenu = 'model' | 'mode' | null;
+const NO_ATTACHMENTS: Attachment[] = [];
+
+type OpenMenu = 'model' | 'mode' | 'plus' | 'command' | null;
 
 interface NewSessionProps {
   onCreated: (summary: SessionSummary) => void;
@@ -34,16 +46,59 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState<boolean>(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const pending: Attachment[] = useAttachmentsStore(
+    (state) => state.pending[NEW_SESSION_KEY] ?? NO_ATTACHMENTS,
+  );
+  const removeAttachment = useAttachmentsStore((state) => state.remove);
 
   const canStart: boolean = text.trim() !== '' && !isStarting;
   const currentMode = modeOption(mode);
+
+  const { openPicker, handlePaste, isDragging } = useAttachmentInput({
+    key: NEW_SESSION_KEY,
+    enabled: !isStarting,
+    onError: setErrorMessage,
+  });
+  const commandMenu = useCommandMenu({
+    draft: text,
+    isButtonOpen: openMenu === 'command',
+    isSuppressed: isStarting || openMenu !== null,
+    buttonScope: 'skills',
+    slashScope: 'skills',
+    skillSource: { repositoryIds },
+    session: null,
+  });
 
   function closeMenu(): void {
     setOpenMenu(null);
   }
 
-  function toggleMenu(menu: 'model' | 'mode'): void {
+  function toggleMenu(menu: 'model' | 'mode' | 'plus' | 'command'): void {
+    if (menu === 'command' && openMenu !== 'command') {
+      commandMenu.resetFilter();
+    }
     setOpenMenu(openMenu === menu ? null : menu);
+  }
+
+  function closeCommandMenu(): void {
+    if (openMenu === 'command') {
+      setOpenMenu(null);
+    }
+    commandMenu.dismissSlash();
+  }
+
+  function pickRow(row: CommandRow): void {
+    closeCommandMenu();
+    if (row.kind === 'skill') {
+      setText(applySkillToDraft(text, row.skill.name));
+      inputRef.current?.focus();
+    }
+  }
+
+  function pickFromPlusMenu(): void {
+    closeMenu();
+    openPicker();
   }
 
   function start(): void {
@@ -52,8 +107,11 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     }
     setIsStarting(true);
     setErrorMessage(null);
-    createSession(text.trim(), [], repositoryIds, model, effort, mode)
+    const attachmentIds: string[] = pending.map((attachment: Attachment) => attachment.id);
+    createSession(text.trim(), attachmentIds, repositoryIds, model, effort, mode)
       .then((summary: SessionSummary) => {
+        // Die Dateien liegen jetzt im Workspace der Session.
+        useAttachmentsStore.getState().clear(NEW_SESSION_KEY);
         onCreated(summary);
       })
       .catch((reason: unknown) => {
@@ -62,15 +120,31 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
       });
   }
 
+  function cancel(): void {
+    for (const attachment of pending) {
+      discardAttachment(attachment.id).catch(() => undefined);
+    }
+    useAttachmentsStore.getState().clear(NEW_SESSION_KEY);
+    onCancel();
+  }
+
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
     start();
   }
 
   function handleTextKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (commandMenu.handleSlashKeyDown(event, pickRow)) {
+      return;
+    }
     if (event.key === 'Enter' && event.ctrlKey) {
       event.preventDefault();
       start();
+      return;
+    }
+    if (event.key.toLowerCase() === 'u' && event.ctrlKey) {
+      event.preventDefault();
+      openPicker();
     }
   }
 
@@ -85,21 +159,91 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
             <span className="new-session__step">1</span>
             Was soll erledigt werden?
           </label>
-          <textarea
-            id="new-session-task"
-            className="new-session__task"
-            rows={4}
-            autoFocus
-            placeholder="z. B. OAuth Login für Backend und Frontend implementieren. Den bestehenden Session-Mechanismus weiterverwenden."
-            value={text}
-            onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
-              setText(event.target.value);
-            }}
-            onKeyDown={handleTextKeyDown}
-          />
+          <div className={`new-session__box${isDragging ? ' new-session__box--dragging' : ''}`}>
+            {pending.length > 0 && (
+              <AttachmentRow
+                attachments={pending}
+                size="input"
+                onRemove={(attachmentId: string): void => {
+                  removeAttachment(NEW_SESSION_KEY, attachmentId);
+                }}
+              />
+            )}
+            <textarea
+              id="new-session-task"
+              ref={inputRef}
+              className="new-session__task"
+              rows={4}
+              autoFocus
+              placeholder="z. B. OAuth Login für Backend und Frontend implementieren. Den bestehenden Session-Mechanismus weiterverwenden."
+              value={text}
+              onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+                setText(event.target.value);
+              }}
+              onKeyDown={handleTextKeyDown}
+              onPaste={handlePaste}
+            />
+            <div className="new-session__bar">
+              <div className="new-session__anchor">
+                <button
+                  type="button"
+                  className="new-session__icon-button"
+                  aria-haspopup="dialog"
+                  aria-expanded={openMenu === 'plus'}
+                  aria-label="Bilder und Dateien hinzufügen"
+                  title="Bilder und Dateien hinzufügen"
+                  disabled={isStarting}
+                  onClick={(): void => {
+                    toggleMenu('plus');
+                  }}
+                >
+                  <PlusIcon />
+                </button>
+                {openMenu === 'plus' && (
+                  <AttachMenu onPick={pickFromPlusMenu} onClose={closeMenu} />
+                )}
+              </div>
+              <button
+                type="button"
+                className="new-session__icon-button"
+                aria-haspopup="dialog"
+                aria-expanded={openMenu === 'command'}
+                aria-label="Befehle und Skills"
+                title="Befehle und Skills"
+                disabled={isStarting}
+                onClick={(): void => {
+                  toggleMenu('command');
+                }}
+              >
+                <SlashIcon />
+              </button>
+              <span className="new-session__hint">
+                Bilder und Dateien hineinziehen oder einfügen. Mit / startest du direkt mit einem
+                Skill.
+              </span>
+            </div>
+            {commandMenu.isOpen && (
+              <CommandMenu
+                sections={commandMenu.sections}
+                highlighted={commandMenu.highlighted}
+                onHighlight={commandMenu.setHighlighted}
+                onPick={pickRow}
+                showFilter={commandMenu.showFilter}
+                filter={commandMenu.filter}
+                onFilterChange={commandMenu.setFilter}
+                onNavigationKey={(event: KeyboardEvent<HTMLElement>): boolean =>
+                  commandMenu.handleNavigationKey(event, pickRow)
+                }
+                onClose={closeCommandMenu}
+                session={null}
+                onEffortChange={setEffort}
+                isSkillsOnly
+              />
+            )}
+          </div>
           <p className="new-session__note">
-            Der erste Satz wird zum Namen der Session, der ganze Text zur ersten Nachricht an den
-            Agenten.
+            Der erste Satz wird zum Namen der Session (später per Rechtsklick änderbar), der ganze
+            Text samt Anhängen zur ersten Nachricht an den Agenten.
           </p>
         </section>
         <RepositoryPicker selectedIds={repositoryIds} onChange={setRepositoryIds} />
@@ -164,7 +308,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
           <button type="submit" className="new-session__start" disabled={!canStart}>
             Session starten
           </button>
-          <button type="button" className="new-session__cancel" onClick={onCancel}>
+          <button type="button" className="new-session__cancel" onClick={cancel}>
             Abbrechen
           </button>
           <span className="new-session__summary">
@@ -206,4 +350,39 @@ function describeStartError(reason: unknown): string {
     return `Session konnte nicht starten: ${String(reason.message)}`;
   }
   return `Session konnte nicht starten: ${String(reason)}`;
+}
+
+function PlusIcon(): ReactElement {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M7 2v10M2 7h10" />
+    </svg>
+  );
+}
+
+function SlashIcon(): ReactElement {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <rect x="1.5" y="1.5" width="11" height="11" rx="2" />
+      <path d="M8.6 4 5.4 10" />
+    </svg>
+  );
 }

@@ -221,7 +221,9 @@ export function ChatTimeline({
   function renderEntry(key: string, entry: Exclude<ChatEntry, { kind: 'tool' }>): ReactElement {
     switch (entry.kind) {
       case 'user':
-        return <UserMessage text={entry.text} />;
+        return (
+          <UserMessage text={entry.text} attachments={entry.attachments} skill={entry.skill} />
+        );
       case 'text':
         return <TextBlock text={entry.text} />;
       case 'thinking':

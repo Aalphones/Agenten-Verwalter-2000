@@ -7,16 +7,21 @@ interface SessionsState {
   activeSessionId: string | null;
   activeView: SessionView;
   showNewSession: boolean;
+  /** Session, deren Name in der Sidebar gerade bearbeitet wird. */
+  renamingId: string | null;
   selectSession: (sessionId: string) => void;
   showView: (view: SessionView) => void;
   openNewSession: () => void;
   closeNewSession: () => void;
+  startRename: (sessionId: string) => void;
+  stopRename: () => void;
 }
 
 export const useSessionsStore = create<SessionsState>((set) => ({
   activeSessionId: null,
   activeView: 'chat',
   showNewSession: false,
+  renamingId: null,
   selectSession: (sessionId: string): void => {
     set({ activeSessionId: sessionId, showNewSession: false });
   },
@@ -28,5 +33,11 @@ export const useSessionsStore = create<SessionsState>((set) => ({
   },
   closeNewSession: (): void => {
     set({ showNewSession: false });
+  },
+  startRename: (sessionId: string): void => {
+    set({ renamingId: sessionId });
+  },
+  stopRename: (): void => {
+    set({ renamingId: null });
   },
 }));

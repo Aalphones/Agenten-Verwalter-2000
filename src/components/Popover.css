@@ -26,4 +26,9 @@
   &--end {
     right: 0;
   }
+
+  &--anchor {
+    right: 0;
+    left: 0;
+  }
 }
