@@ -1017,6 +1017,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         context_used: state.context_used,
         context_window: state.context_window,
         has_agent_history: state.has_agent_history,
+        workspace_dir: Some(session.workspace.to_string_lossy().into_owned()),
     }
 }
 

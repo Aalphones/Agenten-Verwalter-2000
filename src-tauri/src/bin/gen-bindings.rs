@@ -7,6 +7,7 @@ use verwalter_lib::{
     },
     commands::app::AppInfo,
     error::CommandError,
+    repositories::model::KnownRepository,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
 };
 
@@ -30,5 +31,6 @@ fn main() -> Result<(), ts_rs::ExportError> {
     SessionSummary::export_all(&cfg)?;
     ChatPage::export_all(&cfg)?;
     ChatEntryEvent::export_all(&cfg)?;
+    KnownRepository::export_all(&cfg)?;
     Ok(())
 }

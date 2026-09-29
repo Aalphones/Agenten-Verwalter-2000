@@ -20,6 +20,14 @@ pub enum CommandError {
     Io(String),
     #[error("Datenbank: {0}")]
     Database(String),
+    #[error("Git nicht gefunden")]
+    GitNotFound,
+    #[error("Git: {0}")]
+    Git(String),
+    #[error("Kein Git-Repository: {0}")]
+    NotARepository(String),
+    #[error("Repository nicht gefunden: {0}")]
+    RepositoryMissing(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

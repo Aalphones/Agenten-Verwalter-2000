@@ -7,9 +7,8 @@ use std::thread;
 use std::time::Duration;
 
 use crate::agents::event::{Effort, Mode, ModelId};
+use crate::processes::hide_console;
 
-#[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct SpawnOptions {
@@ -115,11 +114,7 @@ fn build_command(opts: &SpawnOptions) -> Command {
         command.arg("--session-id");
     }
     command.arg(&opts.session_id);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    hide_console(&mut command);
     command
 }
 

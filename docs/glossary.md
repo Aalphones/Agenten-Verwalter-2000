@@ -5,7 +5,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | Begriff | Bedeutung |
 |---|---|
 | **Session** | Eine Aufgabe (z.B. „OAuth Login implementieren“) mit ihrem Agenten, ihrem Chat, ihren Events und ihren Repositories. Die zentrale Einheit der App. |
-| **Repository** | Ein lokales Git-Repository, das in der App bekannt ist (Name, Pfad, Remote). Existiert unabhängig von Sessions. |
+| **Repository** | Ein lokales Git-Repository, das in der App bekannt ist (Name, Pfad, Remote). Existiert unabhängig von Sessions. Die App kennt es, sobald es einmal über „Repository hinzufügen“ gewählt wurde; gespeichert ist der Wurzelordner. |
 | **RepositoryWorkspace** | Die Verbindung eines Repositorys mit einer Session: eigener Worktree, eigener Branch, eigene Basis. |
 | **Worktree** | Ein zusätzliches Arbeitsverzeichnis eines Git-Repositorys mit eigenem ausgecheckten Branch (`git worktree`). Pro Session und Repository genau einer. |
 | **Workspace** | Der gemeinsame Ordner einer Session, in dem die Worktrees aller ihrer Repositories nebeneinander liegen. Arbeitsverzeichnis und Sicherheitsgrenze des Agenten. |

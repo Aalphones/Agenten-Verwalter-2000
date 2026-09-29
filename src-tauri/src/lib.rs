@@ -3,7 +3,11 @@ pub mod commands;
 pub mod db;
 pub mod error;
 pub mod filesystem;
+pub mod git;
+pub mod processes;
+pub mod repositories;
 pub mod sessions;
+pub mod worktrees;
 
 use std::sync::Arc;
 
@@ -47,6 +51,9 @@ pub fn run() {
             commands::chat::chat_history,
             commands::chat::chat_send,
             commands::chat::chat_answer,
+            commands::repositories::repository_list,
+            commands::repositories::repository_add,
+            commands::repositories::repository_remove,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten");
