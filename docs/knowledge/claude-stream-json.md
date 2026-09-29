@@ -50,10 +50,10 @@ Belegt am 2026-09-28 mit Claude Code 2.1.220. Der Agent startet im Session-Works
 
 | `type` / `subtype` | Bedeutung |
 |---|---|
-| `system` / `init` | Nach jedem Start und vor jeder Antwort. Felder u.a. `session_id`, `cwd`, `model`, `permissionMode`, `tools`, `slash_commands`, `skills`, `agents`, `claude_code_version`. |
+| `system` / `init` | Nach jedem Start und vor jeder Antwort. Felder u.a. `session_id`, `cwd`, `model`, `permissionMode`, `tools`, `slash_commands`, `skills`, `agents`, `claude_code_version`, `scratchpad_path` (siehe „Scratchpad“). |
 | `system` / `thinking_tokens` | Laufender Zähler, solange das Modell nachdenkt. Viele Zeilen, kein Inhalt. |
 | `system` / `status` | Z.B. nach Moduswechsel, Feld `permissionMode`. |
-| `system` / `background_tasks_changed`, `task_started`, `task_notification` | Hintergrundprozesse (`task_type: "local_bash"`, `task_id`, `description`, `tool_use_id`). |
+| `system` / `background_tasks_changed`, `task_started`, `task_progress`, `task_updated`, `task_notification` | Hintergrundprozesse (`task_type: "local_bash"`) und Subagenten (`task_type: "local_agent"`), Felder siehe „Hintergrundprozesse und Subagenten“. |
 | `rate_limit_event` | Kontingent-Information. |
 | `assistant` | Eine Zeile pro Inhaltsblock: `message.content` ist ein Array mit genau einem Block `thinking` (Feld `thinking`), `text` (Feld `text`) oder `tool_use` (`id`, `name`, `input`). `message.usage` trägt `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`. `parent_tool_use_id` ist bei Nachrichten eines Subagenten gesetzt, sonst `null`. |
 | `user` | Werkzeug-Ergebnisse: `message.content` = Array mit `tool_result` (`tool_use_id`, `content`, `is_error`). Oder Text-Inhalt als String (lokale Befehlsausgabe) bzw. `[{"type":"text","text":"[Request interrupted by user]"}]` nach einer Unterbrechung. |
@@ -76,3 +76,40 @@ Auf `can_use_tool` antwortet der Aufrufer mit derselben `request_id`:
 ## Unterbrechen
 
 `interrupt` wird mit `{"still_queued":[]}` bestätigt, danach kommen `user` mit `[Request interrupted by user]` und `result` mit `subtype: "error_during_execution"`, `is_error: true`, `terminal_reason: "aborted_streaming"`. Der Prozess bleibt offen und nimmt die nächste Nachricht an.
+
+## Anhänge
+
+Belegt am 2026-09-29 mit Claude Code 2.1.284 (Modell Haiku 4.5), per Probe-Skript.
+
+- Eine Nachricht darf statt eines Strings ein Array von Inhaltsblöcken tragen: `{"type":"user","message":{"role":"user","content":[{"type":"text","text":"…"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"…"}}]}}`. Geprüft: der Agent erkannte die Farbe eines 16×16-PNG.
+- PDFs gehen als `{"type":"document","source":{"type":"base64","media_type":"application/pdf","data":"…"}}`. Geprüft: der Agent las das Wort aus einem einseitigen PDF.
+- Nicht geprüft: Größengrenzen der Kommandozeile, sehr lange stdin-Zeilen (ein PDF mit mehreren MB), und ob Bilder im Verlauf nach `--resume` erhalten bleiben. Die API-Grenze für ein Bild liegt bei 5 MB.
+
+## Skills per Nachricht
+
+- Eine Nachricht, deren Text mit `/<skill-name>` beginnt, führt den Skill aus — als String-Inhalt und ebenso als erster Textblock eines Block-Arrays. Geprüft mit einem Skill aus `<repo>\.claude\skills` (per `--add-dir`): `/probe-skill APFEL` → Antwort nach Skill-Anweisung.
+- Die Kommandozeile meldet das Laden eines Skills nicht als eigenes Ereignis; es folgen nur Gedankengang und Antwort.
+- `system/init` → `skills` ist eine Liste von **Namen** ohne Herkunft und Beschreibung, gemischt aus Benutzer-, Repository-, Plugin- und eingebauten Skills (Plugin-Skills mit Präfix, z.B. `anthropic-skills:pdf`). `slash_commands` enthält zusätzlich die Befehle aus `~\.claude\commands` und eingebaute Befehle der Kommandozeile.
+
+## Befehle im Vordergrund (Bash)
+
+- Erfolgreicher Aufruf: `tool_result` mit der Ausgabe, `tool_use_result` = `{"stdout":…,"stderr":…,"interrupted":false,…}` an der `user`-Zeile.
+- Exit-Code ungleich 0: `tool_result.is_error` ist gesetzt, der Inhalt beginnt mit `Exit code <n>`, danach stdout und stderr (geprüft: `"Exit code 3\neins\nzwei"`); `tool_use_result` ist dann ein String `"Error: Exit code 3…"`.
+
+## Hintergrundprozesse und Subagenten
+
+- Bash mit `run_in_background: true`: nach der Freigabe kommen `background_tasks_changed` (Liste der laufenden: `task_id`, `task_type`, `description`) und `task_started` (`task_id`, `tool_use_id`, `description`, `is_backgrounded: true`, `task_type: "local_bash"`). Das `tool_result` kommt sofort („Command running in background with ID: … Output is being written to: <Datei>“).
+- Die Ausgabe schreibt die Kommandozeile laufend in `%TEMP%\claude\<cwd-slug>\<session-id>\tasks\<task_id>.output`; die Datei ist während des Laufs lesbar und endet nach dem Ende mit `[exited with code <n>]`. Geprüft: eine Zeile `Local: http://localhost:5173/` stand dort, während der Prozess lief.
+- Ende: `task_updated` (`patch.status`: `completed`, `failed`, `killed`) und `task_notification` (`task_id`, `tool_use_id`, `status`: `completed`, `failed`, `stopped`; `output_file`; `summary`, bei Bash mit Fehler z.B. `Background command "…" failed with exit code 4`).
+- Subagent (Werkzeug `Agent`): `task_started` mit `task_type: "local_agent"`, `subagent_type`, `prompt`, `is_backgrounded` (`true` bei asynchronem, `false` bei wartendem Aufruf). Das `tool_result` eines asynchronen Aufrufs kommt sofort; `tool_use_result` trägt `resolvedModel` (Modell-ID des Subagenten) und `agentId`. Laufend: `task_progress` mit `usage.tool_uses`, `usage.total_tokens`, `usage.duration_ms`, `last_tool_name`. Ende: `task_notification` wie oben, `summary` = Ergebnistext, dazu `usage`.
+- Nachrichten des Subagenten erscheinen auch **ohne** `--forward-subagent-text` als `assistant`- und `user`-Zeilen mit `parent_tool_use_id` = `tool_use_id` des `Agent`-Aufrufs: Gedankengang, Text, `tool_use` und `tool_result` seiner eigenen Werkzeuge. Die erste `user`-Zeile ist der Auftrag als Text.
+- **Selbstständiges Aufwachen:** Endet ein Hintergrundprozess oder ein asynchroner Subagent, nachdem die Antwort schon mit `result` abgeschlossen war, startet der Agent ohne neue Nachricht eine weitere Runde (`system/init`, Gedankengang, Text, `result`). Geprüft für beide Fälle.
+
+## Steueranfragen
+
+- `{"subtype":"stop_task","task_id":"<id>"}` beendet einen Hintergrundprozess **und** einen laufenden Subagenten (geprüft für beide, auch für einen wartenden Subagenten). Bestätigung `control_response` mit `subtype: "success"`, danach `task_updated` (`killed`) und `task_notification` (`stopped`). Ein wartender `Agent`-Aufruf endet mit dem `tool_result` `[Request interrupted by user for tool use]` (`is_error`).
+- Ein unbekannter Subtyp wird mit `{"subtype":"error","error":"Unsupported control request subtype: …"}` beantwortet; der Prozess läuft weiter.
+
+## Scratchpad
+
+- `system/init` meldet `scratchpad_path`, einen eigenen Ordner der Kommandozeile je Session: `%TEMP%\claude\<cwd-slug>\<session-id>\scratchpad`. Nach `--resume` derselben Session ist der Pfad unverändert (geprüft). Die Kommandozeile legt den Ordner selbst an: nach jedem Probe-Lauf existierte er, auch wenn der Agent dort nichts abgelegt hatte. Daneben liegen `tasks\` (Ausgabedateien) und bei Bild-Anhängen `images\`.
