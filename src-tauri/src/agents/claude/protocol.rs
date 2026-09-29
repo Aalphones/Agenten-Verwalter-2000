@@ -3,7 +3,8 @@
 //! unbekannte `type`-Werte werden ignoriert, weil das Protokoll nicht als stabil dokumentiert ist.
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer};
 use serde_json::{Value, json};
 
 #[derive(Debug, Deserialize)]
@@ -23,10 +24,48 @@ pub enum Incoming {
     Other,
 }
 
+/// Die Felder ab `scratchpad_path` gehören zu `init` bzw. den `task_*`-Subtypen. Sie werden
+/// nachsichtig gelesen: hat eines in einem anderen Subtyp einen anderen Typ, bleibt es leer, statt
+/// die ganze Zeile unlesbar zu machen — an `init` hängt, ob die Session je `--resume` bekommt.
 #[derive(Debug, Deserialize)]
 pub struct SystemLine {
     pub subtype: String,
     pub model: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub scratchpad_path: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub task_id: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub tool_use_id: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub task_type: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub description: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub subagent_type: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub status: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub summary: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub output_file: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub usage: Option<TaskUsage>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TaskUsage {
+    pub tool_uses: Option<u32>,
+}
+
+/// Ein Feld, dessen Wert nicht zum erwarteten Typ passt, wird `None`.
+fn lenient<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeOwned,
+{
+    let value = Value::deserialize(deserializer)?;
+    Ok(serde_json::from_value(value).ok())
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,6 +73,9 @@ pub struct MessageLine<M> {
     pub message: M,
     /// Gesetzt bei Nachrichten eines Subagenten.
     pub parent_tool_use_id: Option<String>,
+    /// An `user`-Zeilen mit Werkzeug-Ergebnis: Zusatzangaben der Kommandozeile, z.B. `resolvedModel`
+    /// beim Werkzeug `Agent`. Mal Objekt, mal String — deshalb roh.
+    pub tool_use_result: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,6 +113,8 @@ pub enum ContentBlock {
     ToolResult {
         tool_use_id: String,
         is_error: Option<bool>,
+        /// String oder Array von Inhaltsblöcken.
+        content: Option<Value>,
     },
     #[serde(other)]
     Other,
@@ -139,6 +183,11 @@ pub fn control_request(request_id: &str, request: Value) -> String {
         "request": request,
     })
     .to_string()
+}
+
+/// Beendet einen Hintergrundprozess oder Subagenten; der Agent selbst läuft weiter.
+pub fn stop_task(task_id: &str) -> Value {
+    json!({ "subtype": "stop_task", "task_id": task_id })
 }
 
 pub fn allow(request_id: &str, updated_input: Value) -> String {

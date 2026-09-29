@@ -6,7 +6,7 @@
 //! Agent blockiert auf einer vollen Ausgabe-Pipe, der Lese-Thread wartet auf die Sperre.
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -17,16 +17,27 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
 use crate::agents::claude::protocol::{
-    allow, control_request, deny, user_message, user_message_content,
+    allow, control_request, deny, stop_task, user_message, user_message_content,
 };
 use crate::agents::claude::translate::Translator;
 use crate::agents::event::{
     AgentEvent, Attachment, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
-    QuestionKind, TodoItem, ToolState, TurnEnd,
+    QuestionKind, TaskEnd, TaskKind, TodoItem, ToolState, TurnEnd,
 };
 use crate::attachments;
+use crate::background::model::{
+    BackgroundChangedEvent, BackgroundItem, BackgroundKind, BackgroundState, SessionBackground,
+    SubagentStep, TextPreview,
+};
+use crate::background::output::{
+    MAX_COMMAND_OUTPUT_BYTES, MAX_PREVIEW_BYTES, URL_SCAN_BYTES, exit_code_from_summary,
+    find_local_url, read_head, read_tail, tail_text,
+};
 use crate::db::sessions::{self as session_rows, SessionRow};
-use crate::db::{Database, chat_entries, repositories as repository_rows, session_repositories};
+use crate::db::{
+    Database, background as background_rows, chat_entries, repositories as repository_rows,
+    session_repositories,
+};
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
@@ -36,6 +47,8 @@ use crate::worktrees::{self, SessionRepository, WorktreeCheck};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
+const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
+const MAX_SUBAGENT_STEPS: usize = 200;
 const INITIAL_CONTEXT_WINDOW: u32 = 200_000;
 const KILL_GRACE: Duration = Duration::from_secs(5);
 /// Abstand zwischen dem Abschuss des Agenten und dem Aufräumen seiner Worktrees.
@@ -110,6 +123,9 @@ struct SessionState {
     pause_requested: bool,
     cancel_requested: bool,
     next_request: u32,
+    /// Befehle, Prozesse und Subagenten, nach `started_at` aufsteigend. Wird mit dem Verlauf geladen.
+    background: Vec<BackgroundItem>,
+    scratchpad_dir: Option<String>,
 }
 
 /// Alles, woraus `SessionRegistry::create` eine Session anlegt.
@@ -131,6 +147,13 @@ struct Outbox {
     lines: Vec<String>,
     process: Option<Arc<ClaudeProcess>>,
     retire: bool,
+    /// Geänderte Hintergrund-Einträge (Kopien).
+    background: Vec<BackgroundItem>,
+    /// Ausgaben von Befehlen als (id, Ausgabe, gekürzt).
+    outputs: Vec<(String, String, bool)>,
+    background_changed: bool,
+    /// Neu gemeldeter Scratchpad-Ordner, der für das Asset-Protokoll freigegeben wird.
+    scratchpad_dir: Option<String>,
 }
 
 impl SessionRegistry {
@@ -162,6 +185,10 @@ impl SessionRegistry {
         {
             let mut sessions = registry.lock_sessions();
             for (row, repositories) in loaded {
+                // Ohne Freigabe zeigt der Scratchpad-Reiter keine Bilder; alles andere geht trotzdem.
+                if let Some(dir) = &row.scratchpad_dir {
+                    let _ = app.asset_protocol_scope().allow_directory(dir, true);
+                }
                 let state = SessionState::restored(&row);
                 if state.needs_settling {
                     interrupted.push(SessionRow {
@@ -425,6 +452,7 @@ impl SessionRegistry {
                 state.abandon_pending(outbox, "Abgebrochen");
                 state.set_status(outbox, SessionStatus::Cancelled);
                 state.interrupt_running_tools(outbox);
+                state.interrupt_background(outbox);
                 outbox.retire(state);
                 Ok(())
             },
@@ -603,9 +631,103 @@ impl SessionRegistry {
         Ok(lines)
     }
 
-    /// Beendet den Agenten jeder Session, die seit mindestens `idle_ms` ruht (`completed`/`paused`)
-    /// und noch einen Prozess hat. Gibt rund 390 MB je Session frei; die nächste Nachricht startet
-    /// den Agenten mit `--resume` neu.
+    /// Alle Hintergrund-Einträge ohne Ausgaben. Laufende Prozesse ohne Adresse werden dabei nach
+    /// einer lokalen Adresse in ihrer Ausgabe durchsucht.
+    pub fn background(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+    ) -> Result<SessionBackground, CommandError> {
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.detect_urls(outbox);
+                Ok(SessionBackground {
+                    items: state.background.clone(),
+                    scratchpad_dir: state.scratchpad_dir.clone(),
+                })
+            },
+        )
+    }
+
+    /// Die Ausgabe eines Befehls (aus der Datenbank) oder eines Prozesses (Ende seiner Ausgabedatei).
+    /// Gelesen wird erst nach dem Freigeben der Session-Sperre.
+    pub fn background_output(
+        &self,
+        session_id: &str,
+        item_id: &str,
+    ) -> Result<TextPreview, CommandError> {
+        let session = self.get(session_id)?;
+        let found: Option<BackgroundItem> = session
+            .lock_loaded()?
+            .background
+            .iter()
+            .find(|item: &&BackgroundItem| item.id == item_id)
+            .cloned();
+        let item =
+            found.ok_or_else(|| CommandError::Internal("Eintrag nicht gefunden".to_owned()))?;
+        let missing = TextPreview {
+            missing: true,
+            ..TextPreview::default()
+        };
+        match item.kind {
+            BackgroundKind::Command => {
+                let stored = session.database.with(|connection| {
+                    background_rows::load_output(connection, &session.id, &item.id)
+                })?;
+                Ok(stored.map_or(missing, |(text, truncated)| TextPreview {
+                    text,
+                    truncated,
+                    missing: false,
+                    binary: false,
+                }))
+            }
+            BackgroundKind::Process => Ok(item.output_file.map_or(missing, |file: String| {
+                read_tail(Path::new(&file), MAX_PREVIEW_BYTES)
+            })),
+            BackgroundKind::Subagent => Err(CommandError::Internal(
+                "Subagenten haben keine Ausgabe".to_owned(),
+            )),
+        }
+    }
+
+    /// Bittet den Agenten, einen Prozess oder Subagenten zu beenden. Den Zustand ändert erst dessen
+    /// Meldung über das Ende.
+    pub fn stop_background(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        item_id: &str,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                let is_stoppable = state.background.iter().any(|item: &BackgroundItem| {
+                    item.id == item_id && item.kind != BackgroundKind::Command && item.is_running()
+                });
+                if !is_stoppable {
+                    return Err(CommandError::Internal("Eintrag läuft nicht".to_owned()));
+                }
+                state.send_control(outbox, stop_task(item_id))
+            },
+        )
+    }
+
+    /// Claudes Scratchpad-Ordner der Session; `None`, solange der Agent nie lief.
+    pub fn scratchpad_dir(&self, session_id: &str) -> Result<Option<PathBuf>, CommandError> {
+        let session = self.get(session_id)?;
+        let dir = session.lock().scratchpad_dir.clone();
+        Ok(dir.map(PathBuf::from))
+    }
+
+    /// Beendet den Agenten jeder Session, die seit mindestens `idle_ms` ruht (`completed`/`paused`),
+    /// noch einen Prozess hat und nichts mehr im Hintergrund laufen lässt — ein Dev-Server stürbe
+    /// sonst still mit. Gibt rund 390 MB je Session frei; die nächste Nachricht startet den Agenten
+    /// mit `--resume` neu.
     fn reap_idle(&self, app: &AppHandle, idle_ms: f64) {
         let sessions: Vec<Arc<Session>> = self.lock_sessions().values().cloned().collect();
         let now = now_ms();
@@ -616,6 +738,7 @@ impl SessionRegistry {
                     && state
                         .idle_since
                         .is_some_and(|since: f64| now - since >= idle_ms)
+                    && !state.has_running_background()
             };
             if !is_candidate {
                 continue;
@@ -631,12 +754,14 @@ impl SessionRegistry {
                         && state
                             .idle_since
                             .is_some_and(|since: f64| now - since >= idle_ms)
+                        && !state.has_running_background()
                     {
                         // Erhöht vor dem Beenden: das folgende `Exited` gilt dann als Ausgabe eines
                         // ersetzten Prozesses, nicht als Absturz.
                         state.generation += 1;
                         outbox.retire(state);
                         state.process = None;
+                        state.interrupt_background(outbox);
                         state.idle_since = None;
                     }
                     Ok(())
@@ -730,6 +855,8 @@ impl SessionState {
             pause_requested: false,
             cancel_requested: false,
             next_request: 0,
+            background: Vec::new(),
+            scratchpad_dir: None,
         }
     }
 
@@ -751,19 +878,26 @@ impl SessionState {
         state.context_used = row.context_used;
         state.context_window = row.context_window;
         state.has_agent_history = row.has_agent_history;
+        state.scratchpad_dir = row.scratchpad_dir.clone();
         state.idle_since = None;
         state.entries_loaded = false;
         state.needs_settling = was_active;
         state
     }
 
-    /// Lädt den Verlauf aus der Datenbank. Schlägt das fehl, bleibt `entries_loaded` falsch und der
-    /// nächste Zugriff versucht es erneut.
+    /// Lädt Verlauf und Hintergrund-Einträge aus der Datenbank. Schlägt das fehl, bleibt
+    /// `entries_loaded` falsch und der nächste Zugriff versucht es erneut.
     fn load_entries(&mut self, session: &Session) -> Result<(), CommandError> {
-        self.entries = session
-            .database
-            .with(|connection| chat_entries::load_all(connection, &session.id))?;
+        let (entries, background) = session.database.with(|connection| {
+            Ok((
+                chat_entries::load_all(connection, &session.id)?,
+                background_rows::load_items(connection, &session.id)?,
+            ))
+        })?;
+        self.entries = entries;
+        self.background = background;
         self.entries_loaded = true;
+        self.settle_background_after_restart(session);
         if self.needs_settling {
             let mut outbox = Outbox::default();
             self.settle_after_restart(&mut outbox);
@@ -793,6 +927,92 @@ impl SessionState {
                 _ => continue,
             }
             outbox.entries.push(entry.clone());
+        }
+    }
+
+    /// Ein Eintrag, der beim Laden noch läuft, stammt aus einem früheren App-Lauf: sein Agent ist
+    /// längst beendet. Wird sofort zurückgeschrieben, damit die Datenbank nicht weiter „läuft“ sagt.
+    fn settle_background_after_restart(&mut self, session: &Session) {
+        let now = now_ms();
+        let mut settled: Vec<BackgroundItem> = Vec::new();
+        for item in &mut self.background {
+            if item.is_running() {
+                item.state = BackgroundState::Interrupted;
+                item.ended_at = Some(now);
+                settled.push(item.clone());
+            }
+        }
+        if settled.is_empty() {
+            return;
+        }
+        let saved = session
+            .database
+            .with(|connection| background_rows::upsert_items(connection, &session.id, &settled));
+        if let Err(error) = saved {
+            self.push_log(format!("Speichern fehlgeschlagen: {error}"));
+        }
+    }
+
+    /// Jede Änderung eines Hintergrund-Eintrags geht hierüber: speichern und die Oberfläche benachrichtigen.
+    fn touch_background(&self, outbox: &mut Outbox, index: usize) {
+        if let Some(item) = self.background.get(index) {
+            outbox.background.push(item.clone());
+            outbox.background_changed = true;
+        }
+    }
+
+    fn has_running_background(&self) -> bool {
+        self.background.iter().any(BackgroundItem::is_running)
+    }
+
+    /// Der Agent-Prozess endet oder wird ersetzt: was noch läuft, ist unterbrochen. Es kann trotzdem
+    /// weiterlaufen (ein Dev-Server überlebt seinen Agenten womöglich) — deshalb nie „nicht ausgeführt“.
+    fn interrupt_background(&mut self, outbox: &mut Outbox) {
+        let now = now_ms();
+        for index in 0..self.background.len() {
+            if !self.background[index].is_running() {
+                continue;
+            }
+            self.background[index].state = BackgroundState::Interrupted;
+            self.background[index].ended_at = Some(now);
+            self.touch_background(outbox, index);
+        }
+    }
+
+    /// Unter der Sperre zulässig: liest je laufendem Prozess nur den Kopf seiner Ausgabedatei.
+    fn detect_urls(&mut self, outbox: &mut Outbox) {
+        for index in 0..self.background.len() {
+            let item = &self.background[index];
+            let needs_url =
+                item.kind == BackgroundKind::Process && item.is_running() && item.url.is_none();
+            let Some(file) = item.output_file.as_deref().filter(|_| needs_url) else {
+                continue;
+            };
+            let Some(url) = read_head(Path::new(file), URL_SCAN_BYTES)
+                .as_deref()
+                .and_then(find_local_url)
+            else {
+                continue;
+            };
+            self.background[index].url = Some(url);
+            self.touch_background(outbox, index);
+        }
+    }
+
+    fn background_index(&self, matches: impl Fn(&BackgroundItem) -> bool) -> Option<usize> {
+        self.background.iter().position(matches)
+    }
+
+    /// Arbeitet der Agent in `completed` oder `paused` von selbst weiter (nach dem Ende eines
+    /// Subagenten oder Hintergrundprozesses), läuft die Session wieder. Eine angeforderte Pause
+    /// oder ein Abbruch hat Vorrang.
+    fn wake_if_idle(&mut self, outbox: &mut Outbox) {
+        let is_idle = matches!(
+            self.status,
+            SessionStatus::Completed | SessionStatus::Paused
+        );
+        if is_idle && !self.pause_requested && !self.cancel_requested {
+            self.set_status(outbox, SessionStatus::Running);
         }
     }
 
@@ -949,9 +1169,11 @@ impl SessionState {
                 }
             }
             AgentEvent::Text(text) => {
+                self.wake_if_idle(outbox);
                 self.push_entry(outbox, |seq: u32| ChatEntry::Text { seq, text });
             }
             AgentEvent::Thinking { text, seconds } => {
+                self.wake_if_idle(outbox);
                 self.push_entry(outbox, |seq: u32| ChatEntry::Thinking {
                     seq,
                     text,
@@ -963,6 +1185,7 @@ impl SessionState {
                 tool,
                 target,
             } => {
+                self.wake_if_idle(outbox);
                 let entry_tool_use_id = tool_use_id.clone();
                 let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Tool {
                     seq,
@@ -977,7 +1200,10 @@ impl SessionState {
                 tool_use_id,
                 failed,
             } => self.finish_tool(outbox, &tool_use_id, failed),
-            AgentEvent::Todos(items) => self.update_todos(outbox, items),
+            AgentEvent::Todos(items) => {
+                self.wake_if_idle(outbox);
+                self.update_todos(outbox, items);
+            }
             AgentEvent::QuestionAsked {
                 request_id,
                 question_kind,
@@ -994,8 +1220,205 @@ impl SessionState {
                 end,
                 context_window,
             } => self.end_turn(outbox, end, context_window),
+            AgentEvent::ScratchpadDir(dir) => {
+                if self.scratchpad_dir.as_deref() != Some(dir.as_str()) {
+                    self.scratchpad_dir = Some(dir.clone());
+                    outbox.summary_dirty = true;
+                    outbox.scratchpad_dir = Some(dir);
+                }
+            }
+            AgentEvent::CommandStarted {
+                tool_use_id,
+                command,
+            } => self.start_background(
+                outbox,
+                tool_use_id.clone(),
+                tool_use_id,
+                BackgroundKind::Command,
+                command,
+                None,
+            ),
+            AgentEvent::CommandFinished {
+                tool_use_id,
+                output,
+                exit_code,
+            } => self.finish_command(outbox, &tool_use_id, &output, exit_code),
+            AgentEvent::TaskStarted {
+                task_id,
+                tool_use_id,
+                kind,
+                title,
+                subagent_type,
+            } => {
+                if self
+                    .background_index(|item: &BackgroundItem| item.id == task_id)
+                    .is_none()
+                {
+                    let kind = match kind {
+                        TaskKind::Process => BackgroundKind::Process,
+                        TaskKind::Subagent => BackgroundKind::Subagent,
+                    };
+                    self.start_background(outbox, task_id, tool_use_id, kind, title, subagent_type);
+                }
+            }
+            AgentEvent::TaskOutputFile { tool_use_id, path } => {
+                if let Some(index) = self.background_index(|item: &BackgroundItem| {
+                    item.kind == BackgroundKind::Process && item.tool_use_id == tool_use_id
+                }) {
+                    self.background[index].output_file = Some(path);
+                    self.touch_background(outbox, index);
+                }
+            }
+            AgentEvent::TaskProgress { task_id, tool_uses } => {
+                if let Some(index) =
+                    self.background_index(|item: &BackgroundItem| item.id == task_id)
+                {
+                    self.background[index].tool_uses = tool_uses;
+                    self.touch_background(outbox, index);
+                }
+            }
+            AgentEvent::TaskEnded {
+                task_id,
+                end,
+                summary,
+                output_file,
+            } => self.end_task(outbox, &task_id, end, summary, output_file),
+            AgentEvent::SubagentStep {
+                parent_tool_use_id,
+                tool,
+                target,
+            } => {
+                if let Some(index) = self.subagent_index(&parent_tool_use_id) {
+                    let steps = &mut self.background[index].steps;
+                    steps.push(SubagentStep { tool, target });
+                    if steps.len() > MAX_SUBAGENT_STEPS {
+                        steps.remove(0);
+                    }
+                    self.touch_background(outbox, index);
+                }
+            }
+            AgentEvent::SubagentText {
+                parent_tool_use_id,
+                text,
+            } => {
+                if let Some(index) = self.subagent_index(&parent_tool_use_id) {
+                    self.background[index].result = Some(text);
+                    self.touch_background(outbox, index);
+                }
+            }
+            AgentEvent::SubagentModel { tool_use_id, model } => {
+                if let Some(index) =
+                    self.background_index(|item: &BackgroundItem| item.tool_use_id == tool_use_id)
+                {
+                    self.background[index].model = Some(model);
+                    self.touch_background(outbox, index);
+                }
+            }
             AgentEvent::Unknown(line) => self.push_log(line),
         }
+    }
+
+    fn subagent_index(&self, tool_use_id: &str) -> Option<usize> {
+        self.background_index(|item: &BackgroundItem| {
+            item.kind == BackgroundKind::Subagent && item.tool_use_id == tool_use_id
+        })
+    }
+
+    fn start_background(
+        &mut self,
+        outbox: &mut Outbox,
+        id: String,
+        tool_use_id: String,
+        kind: BackgroundKind,
+        title: String,
+        subagent_type: Option<String>,
+    ) {
+        self.background.push(BackgroundItem {
+            id,
+            tool_use_id,
+            kind,
+            state: BackgroundState::Running,
+            title,
+            started_at: now_ms(),
+            ended_at: None,
+            exit_code: None,
+            url: None,
+            output_file: None,
+            subagent_type,
+            model: None,
+            tool_uses: 0,
+            steps: Vec::new(),
+            result: None,
+        });
+        self.touch_background(outbox, self.background.len() - 1);
+    }
+
+    fn finish_command(
+        &mut self,
+        outbox: &mut Outbox,
+        tool_use_id: &str,
+        output: &str,
+        exit_code: Option<i32>,
+    ) {
+        let Some(index) = self.background_index(|item: &BackgroundItem| {
+            item.kind == BackgroundKind::Command && item.id == tool_use_id
+        }) else {
+            return;
+        };
+        let item = &mut self.background[index];
+        item.state = if exit_code == Some(0) {
+            BackgroundState::Completed
+        } else {
+            BackgroundState::Failed
+        };
+        item.exit_code = exit_code;
+        item.ended_at = Some(now_ms());
+        let (tail, truncated) = tail_text(output, MAX_COMMAND_OUTPUT_BYTES);
+        outbox.outputs.push((item.id.clone(), tail, truncated));
+        self.touch_background(outbox, index);
+    }
+
+    /// Nur ein laufender Eintrag endet: ein unterbrochener bleibt unterbrochen, auch wenn der
+    /// Agent danach noch sein Ende meldet.
+    fn end_task(
+        &mut self,
+        outbox: &mut Outbox,
+        task_id: &str,
+        end: TaskEnd,
+        summary: Option<String>,
+        output_file: Option<String>,
+    ) {
+        let Some(index) =
+            self.background_index(|item: &BackgroundItem| item.id == task_id && item.is_running())
+        else {
+            return;
+        };
+        let item = &mut self.background[index];
+        item.state = match end {
+            TaskEnd::Completed => BackgroundState::Completed,
+            TaskEnd::Failed => BackgroundState::Failed,
+            TaskEnd::Stopped => BackgroundState::Stopped,
+        };
+        item.ended_at = Some(now_ms());
+        if output_file.is_some() {
+            item.output_file = output_file;
+        }
+        match item.kind {
+            BackgroundKind::Process => {
+                let exit_code = summary.as_deref().and_then(exit_code_from_summary);
+                item.exit_code = match (exit_code, end) {
+                    (None, TaskEnd::Completed) => Some(0),
+                    (code, _) => code,
+                };
+            }
+            BackgroundKind::Subagent => {
+                if item.result.is_none() && end == TaskEnd::Completed {
+                    item.result = summary;
+                }
+            }
+            BackgroundKind::Command => {}
+        }
+        self.touch_background(outbox, index);
     }
 
     fn ask(
@@ -1063,6 +1486,9 @@ impl SessionState {
 
     fn process_exited(&mut self, outbox: &mut Outbox, exit_code: Option<i32>) {
         self.process = None;
+        // Vor der frühen Rückkehr: auch nach einem Fehler vom Agenten stünden laufende Einträge
+        // sonst bis zum nächsten App-Start auf „läuft“.
+        self.interrupt_background(outbox);
         if self.cancel_requested || self.status == SessionStatus::Error {
             return;
         }
@@ -1111,6 +1537,20 @@ impl Outbox {
             && let Err(error) = app.emit(SESSION_CHANGED_EVENT, summary)
         {
             session.log_line(format!("Session-Ereignis nicht gesendet: {error}"));
+        }
+        if self.background_changed {
+            let event = BackgroundChangedEvent {
+                session_id: session.id.clone(),
+            };
+            if let Err(error) = app.emit(BACKGROUND_CHANGED_EVENT, event) {
+                session.log_line(format!("Hintergrund-Ereignis nicht gesendet: {error}"));
+            }
+        }
+        // Erst freigegeben kann die Oberfläche Bilder aus dem Scratchpad über das Asset-Protokoll zeigen.
+        if let Some(dir) = &self.scratchpad_dir
+            && let Err(error) = app.asset_protocol_scope().allow_directory(dir, true)
+        {
+            session.log_line(format!("Scratchpad nicht freigegeben: {error}"));
         }
     }
 
@@ -1181,6 +1621,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         context_window: state.context_window,
         has_agent_history: state.has_agent_history,
         workspace_dir: Some(session.workspace.to_string_lossy().into_owned()),
+        scratchpad_dir: state.scratchpad_dir.clone(),
     }
 }
 
@@ -1195,6 +1636,13 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
         }
         if !outbox.entries.is_empty() {
             chat_entries::upsert_all(connection, &session.id, &outbox.entries)?;
+        }
+        // Erst die Einträge, dann ihre Ausgaben: `set_output` aktualisiert nur bestehende Zeilen.
+        if !outbox.background.is_empty() {
+            background_rows::upsert_items(connection, &session.id, &outbox.background)?;
+        }
+        for (id, output, truncated) in &outbox.outputs {
+            background_rows::set_output(connection, &session.id, id, output, *truncated)?;
         }
         Ok(())
     });
@@ -1257,6 +1705,7 @@ fn start_process(
     }
     if let Some(previous) = state.process.take() {
         retire_process(previous);
+        state.interrupt_background(outbox);
     }
     state.generation += 1;
     let generation = state.generation;

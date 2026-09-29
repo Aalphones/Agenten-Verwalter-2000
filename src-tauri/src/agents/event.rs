@@ -228,6 +228,20 @@ pub enum TurnEnd {
     Failed(String),
 }
 
+/// Was im Hintergrund läuft: ein Prozess (Bash mit `run_in_background`) oder ein Subagent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskKind {
+    Process,
+    Subagent,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskEnd {
+    Completed,
+    Failed,
+    Stopped,
+}
+
 /// Was aus einer Zeile des Agenten folgt — anbieterneutral, ohne Session-Zustand.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -259,6 +273,54 @@ pub enum AgentEvent {
     TurnEnded {
         end: TurnEnd,
         context_window: Option<u32>,
+    },
+    /// Der eigene temporäre Ordner, den der Agent für diese Session benutzt.
+    ScratchpadDir(String),
+    /// Befehl des Hauptagenten im Vordergrund.
+    CommandStarted {
+        tool_use_id: String,
+        command: String,
+    },
+    CommandFinished {
+        tool_use_id: String,
+        output: String,
+        exit_code: Option<i32>,
+    },
+    TaskStarted {
+        task_id: String,
+        tool_use_id: String,
+        kind: TaskKind,
+        title: String,
+        subagent_type: Option<String>,
+    },
+    /// Die Datei, in die ein Hintergrundprozess seine Ausgabe schreibt.
+    TaskOutputFile {
+        tool_use_id: String,
+        path: String,
+    },
+    TaskProgress {
+        task_id: String,
+        tool_uses: u32,
+    },
+    TaskEnded {
+        task_id: String,
+        end: TaskEnd,
+        summary: Option<String>,
+        output_file: Option<String>,
+    },
+    /// Werkzeugaufruf eines Subagenten; `parent_tool_use_id` ist sein `Agent`-Aufruf.
+    SubagentStep {
+        parent_tool_use_id: String,
+        tool: String,
+        target: String,
+    },
+    SubagentText {
+        parent_tool_use_id: String,
+        text: String,
+    },
+    SubagentModel {
+        tool_use_id: String,
+        model: String,
     },
     Unknown(String),
 }

@@ -5,6 +5,10 @@ use verwalter_lib::{
         Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
         QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
     },
+    background::model::{
+        BackgroundChangedEvent, BackgroundItem, BackgroundKind, BackgroundState, ScratchpadEntry,
+        ScratchpadListing, SessionBackground, SubagentStep, TextPreview,
+    },
     changes::model::{
         ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
         RepositoryChanges, SessionChanges,
@@ -52,5 +56,14 @@ fn main() -> Result<(), ts_rs::ExportError> {
     DiffLineKind::export_all(&cfg)?;
     DiffLine::export_all(&cfg)?;
     FileDiff::export_all(&cfg)?;
+    BackgroundKind::export_all(&cfg)?;
+    BackgroundState::export_all(&cfg)?;
+    SubagentStep::export_all(&cfg)?;
+    BackgroundItem::export_all(&cfg)?;
+    SessionBackground::export_all(&cfg)?;
+    TextPreview::export_all(&cfg)?;
+    ScratchpadEntry::export_all(&cfg)?;
+    ScratchpadListing::export_all(&cfg)?;
+    BackgroundChangedEvent::export_all(&cfg)?;
     Ok(())
 }

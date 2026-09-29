@@ -1,5 +1,6 @@
 pub mod agents;
 pub mod attachments;
+pub mod background;
 pub mod changes;
 pub mod commands;
 pub mod db;
@@ -61,6 +62,11 @@ pub fn run() {
             commands::attachments::attachment_discard,
             commands::skills::skill_list_for_session,
             commands::skills::skill_list_for_repositories,
+            commands::background::background_load,
+            commands::background::background_output,
+            commands::background::background_stop,
+            commands::background::scratchpad_list,
+            commands::background::scratchpad_read,
             commands::repositories::repository_list,
             commands::repositories::repository_add,
             commands::repositories::repository_remove,

@@ -22,6 +22,8 @@ pub struct SessionRow {
     pub has_agent_history: bool,
     /// Arbeitsordner der Session; `None` bei Sessions von vor Meilenstein 3 (`workspaces\<id>`).
     pub workspace_dir: Option<String>,
+    /// Claudes Scratchpad-Ordner aus `system/init`; `None`, solange der Agent der Session nie lief.
+    pub scratchpad_dir: Option<String>,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -39,6 +41,7 @@ struct StoredRow {
     context_window: u32,
     has_agent_history: bool,
     workspace_dir: Option<String>,
+    scratchpad_dir: Option<String>,
 }
 
 impl StoredRow {
@@ -56,6 +59,7 @@ impl StoredRow {
             context_window: row.get(9)?,
             has_agent_history: row.get(10)?,
             workspace_dir: row.get(11)?,
+            scratchpad_dir: row.get(12)?,
         })
     }
 
@@ -73,17 +77,19 @@ impl StoredRow {
             context_window: self.context_window,
             has_agent_history: self.has_agent_history,
             workspace_dir: self.workspace_dir,
+            scratchpad_dir: self.scratchpad_dir,
         })
     }
 }
 
-/// Legt die Zeile an oder aktualisiert sie. `created_at`, `workspace_dir` und `archived_at`
+/// Legt die Zeile an oder aktualisiert sie; `scratchpad_dir` kommt mit dem ersten `init` dazu.
+/// `created_at`, `workspace_dir` und `archived_at`
 /// bleiben, wie sie sind: der Arbeitsordner einer Session ändert sich nie.
 pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandError> {
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
-             context_used, context_window, has_agent_history, workspace_dir) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) \
+             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) \
          ON CONFLICT(id) DO UPDATE SET \
              name = excluded.name, \
              status = excluded.status, \
@@ -93,7 +99,8 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
              running_ms = excluded.running_ms, \
              context_used = excluded.context_used, \
              context_window = excluded.context_window, \
-             has_agent_history = excluded.has_agent_history",
+             has_agent_history = excluded.has_agent_history, \
+             scratchpad_dir = excluded.scratchpad_dir",
         params![
             row.id,
             row.name,
@@ -107,6 +114,7 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
             row.context_window,
             row.has_agent_history,
             row.workspace_dir,
+            row.scratchpad_dir,
         ],
     )?;
     Ok(())
@@ -116,7 +124,7 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
 pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandError> {
     let mut statement = connection.prepare(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
-             context_used, context_window, has_agent_history, workspace_dir \
+             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement

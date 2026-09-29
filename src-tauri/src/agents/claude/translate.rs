@@ -1,4 +1,5 @@
 //! Übersetzt Zeilen der Claude-Kommandozeile in anbieterneutrale `AgentEvent`s.
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 use serde_json::{Map, Value};
@@ -8,13 +9,21 @@ use super::protocol::{
     ResultLine, SystemLine, Usage, UserContent, UserMessage,
 };
 use crate::agents::event::{
-    AgentEvent, Question, QuestionKind, QuestionOption, TodoItem, TodoState, TurnEnd,
+    AgentEvent, Question, QuestionKind, QuestionOption, TaskEnd, TaskKind, TodoItem, TodoState,
+    TurnEnd,
 };
 
 const ASK_USER_TOOL: &str = "AskUserQuestion";
 const TODO_TOOL: &str = "TodoWrite";
 const GREP_TOOL: &str = "Grep";
+const BASH_TOOL: &str = "Bash";
 const ABORTED_REASON: &str = "aborted_streaming";
+const TASK_TYPE_BASH: &str = "local_bash";
+const TASK_TYPE_AGENT: &str = "local_agent";
+const OUTPUT_FILE_MARKER: &str = "Output is being written to: ";
+const EXIT_CODE_PREFIX: &str = "Exit code ";
+const RESOLVED_MODEL_FIELD: &str = "resolvedModel";
+const TEXT_BLOCK_TYPE: &str = "text";
 
 const TARGET_MAX_CHARS: usize = 120;
 const TARGET_FIELDS: [&str; 9] = [
@@ -32,6 +41,21 @@ const TARGET_FIELDS: [&str; 9] = [
 #[derive(Debug, Default)]
 pub struct Translator {
     thinking_started: Option<Instant>,
+    /// Bash-Aufrufe des Hauptagenten nach `tool_use_id`, bis ihr Ergebnis (Vordergrund) bzw. ihr
+    /// `task_started` (Hintergrund) kommt.
+    bash_calls: HashMap<String, BashCall>,
+    /// `tool_use_id`s, deren `task_started` schon kam.
+    started_tasks: HashSet<String>,
+    /// Ereignisse aus einem Werkzeug-Ergebnis, das vor seinem `task_started` kam: die Reihenfolge
+    /// der beiden ist nicht belegt, ohne Eintrag gingen Ausgabedatei und Modell verloren.
+    /// `task_started` schickt sie noch einmal hinterher.
+    early_task_events: HashMap<String, Vec<AgentEvent>>,
+}
+
+#[derive(Debug)]
+struct BashCall {
+    command: String,
+    background: bool,
 }
 
 impl Translator {
@@ -42,7 +66,7 @@ impl Translator {
         match incoming {
             Incoming::System(system) => self.handle_system(system),
             Incoming::Assistant(assistant) => self.handle_assistant(assistant),
-            Incoming::User(user) => handle_user(user),
+            Incoming::User(user) => self.handle_user(user),
             Incoming::ControlRequest(request) => handle_control_request(request, line),
             Incoming::Result(result) => vec![turn_ended(result)],
             Incoming::Other => Vec::new(),
@@ -51,32 +75,192 @@ impl Translator {
 
     fn handle_system(&mut self, system: SystemLine) -> Vec<AgentEvent> {
         match system.subtype.as_str() {
-            "init" => vec![AgentEvent::Ready {
-                model: system.model.unwrap_or_default(),
-            }],
+            "init" => {
+                let mut events = vec![AgentEvent::Ready {
+                    model: system.model.unwrap_or_default(),
+                }];
+                if let Some(dir) = system.scratchpad_path {
+                    events.push(AgentEvent::ScratchpadDir(dir));
+                }
+                events
+            }
             "thinking_tokens" => {
                 self.thinking_started.get_or_insert_with(Instant::now);
                 Vec::new()
             }
+            "task_started" => self.task_started(system),
+            "task_progress" => task_progress(system).into_iter().collect(),
+            "task_notification" => task_ended(system).into_iter().collect(),
             _ => Vec::new(),
         }
     }
 
-    fn handle_assistant(&mut self, line: MessageLine<AssistantMessage>) -> Vec<AgentEvent> {
-        // Subagenten-Nachrichten zeigt erst Meilenstein 2b.
-        if line.parent_tool_use_id.is_some() {
+    fn task_started(&mut self, system: SystemLine) -> Vec<AgentEvent> {
+        let (Some(task_id), Some(tool_use_id)) = (system.task_id, system.tool_use_id) else {
             return Vec::new();
+        };
+        let kind = match system.task_type.as_deref() {
+            Some(TASK_TYPE_BASH) => TaskKind::Process,
+            Some(TASK_TYPE_AGENT) => TaskKind::Subagent,
+            _ => return Vec::new(),
+        };
+        let description = system.description.unwrap_or_default();
+        let title = match kind {
+            TaskKind::Process => self.process_title(&tool_use_id, description),
+            TaskKind::Subagent => description,
+        };
+        self.started_tasks.insert(tool_use_id.clone());
+        let mut events = vec![AgentEvent::TaskStarted {
+            task_id,
+            tool_use_id: tool_use_id.clone(),
+            kind,
+            title,
+            subagent_type: system.subagent_type,
+        }];
+        events.extend(
+            self.early_task_events
+                .remove(&tool_use_id)
+                .unwrap_or_default(),
+        );
+        events
+    }
+
+    /// Der Befehl des Bash-Aufrufs, sonst die `description` der Kommandozeile. Ein Aufruf aus dem
+    /// Vordergrund bleibt gemerkt: sein Ergebnis beendet noch den ausgeführten Befehl, auch wenn
+    /// die Kommandozeile ihn inzwischen in den Hintergrund geschoben hat.
+    fn process_title(&mut self, tool_use_id: &str, description: String) -> String {
+        let Some(call) = self.bash_calls.get(tool_use_id) else {
+            return description;
+        };
+        let command = call.command.clone();
+        if call.background {
+            self.bash_calls.remove(tool_use_id);
+        }
+        if command.is_empty() {
+            description
+        } else {
+            command
+        }
+    }
+
+    fn handle_assistant(&mut self, line: MessageLine<AssistantMessage>) -> Vec<AgentEvent> {
+        // Die `usage` eines Subagenten gilt seinem eigenen Kontext, nicht dem Balken der Session.
+        if let Some(parent) = line.parent_tool_use_id {
+            return subagent_events(&parent, line.message.content);
         }
         let mut events: Vec<AgentEvent> = Vec::new();
         if let Some(usage) = line.message.usage {
             events.push(AgentEvent::ContextUsed(context_used(&usage)));
         }
         for block in line.message.content {
-            if let Some(event) = self.translate_block(block) {
-                events.push(event);
+            let command_started = self.remember_bash(&block);
+            events.extend(self.translate_block(block));
+            events.extend(command_started);
+        }
+        events
+    }
+
+    /// Merkt sich einen Bash-Aufruf; im Vordergrund beginnt damit ein ausgeführter Befehl.
+    fn remember_bash(&mut self, block: &ContentBlock) -> Option<AgentEvent> {
+        let ContentBlock::ToolUse { id, name, input } = block else {
+            return None;
+        };
+        if name != BASH_TOOL {
+            return None;
+        }
+        let command = input
+            .get("command")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let background = input.get("run_in_background").and_then(Value::as_bool) == Some(true);
+        self.bash_calls.insert(
+            id.clone(),
+            BashCall {
+                command: command.clone(),
+                background,
+            },
+        );
+        if background {
+            return None;
+        }
+        Some(AgentEvent::CommandStarted {
+            tool_use_id: id.clone(),
+            command,
+        })
+    }
+
+    /// Werkzeug-Ergebnisse des Hauptagenten; die eines Subagenten zeigt nur dessen Schrittliste.
+    fn handle_user(&mut self, line: MessageLine<UserMessage>) -> Vec<AgentEvent> {
+        if line.parent_tool_use_id.is_some() {
+            return Vec::new();
+        }
+        let UserContent::Blocks(blocks) = line.message.content else {
+            return Vec::new();
+        };
+        let resolved_model: Option<String> = line
+            .tool_use_result
+            .as_ref()
+            .and_then(|result: &Value| result.get(RESOLVED_MODEL_FIELD))
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        let mut events: Vec<AgentEvent> = Vec::new();
+        for block in blocks {
+            let ContentBlock::ToolResult {
+                tool_use_id,
+                is_error,
+                content,
+            } = block
+            else {
+                continue;
+            };
+            let failed = is_error == Some(true);
+            events.push(AgentEvent::ToolFinished {
+                tool_use_id: tool_use_id.clone(),
+                failed,
+            });
+            let text = result_text(content.as_ref());
+            let is_background_bash = match self.bash_calls.get(&tool_use_id) {
+                Some(call) if !call.background => {
+                    self.bash_calls.remove(&tool_use_id);
+                    events.push(command_finished(tool_use_id.clone(), &text, failed));
+                    false
+                }
+                Some(_) => true,
+                None => false,
+            };
+            let is_task = is_background_bash || self.started_tasks.contains(&tool_use_id);
+            if is_task && let Some(path) = output_file_of(&text) {
+                let event = AgentEvent::TaskOutputFile {
+                    tool_use_id: tool_use_id.clone(),
+                    path,
+                };
+                self.push_task_detail(&tool_use_id, event, &mut events);
+            }
+            if let Some(model) = &resolved_model {
+                let event = AgentEvent::SubagentModel {
+                    tool_use_id: tool_use_id.clone(),
+                    model: model.clone(),
+                };
+                self.push_task_detail(&tool_use_id, event, &mut events);
             }
         }
         events
+    }
+
+    fn push_task_detail(
+        &mut self,
+        tool_use_id: &str,
+        event: AgentEvent,
+        events: &mut Vec<AgentEvent>,
+    ) {
+        if !self.started_tasks.contains(tool_use_id) {
+            self.early_task_events
+                .entry(tool_use_id.to_owned())
+                .or_default()
+                .push(event.clone());
+        }
+        events.push(event);
     }
 
     fn translate_block(&mut self, block: ContentBlock) -> Option<AgentEvent> {
@@ -153,26 +337,101 @@ fn todo_state(status: Option<&str>) -> TodoState {
     }
 }
 
-fn handle_user(line: MessageLine<UserMessage>) -> Vec<AgentEvent> {
-    if line.parent_tool_use_id.is_some() {
-        return Vec::new();
-    }
-    let UserContent::Blocks(blocks) = line.message.content else {
-        return Vec::new();
-    };
-    blocks
+/// Werkzeugaufrufe und Text eines Subagenten, zugeordnet über seinen `Agent`-Aufruf.
+fn subagent_events(parent: &str, content: Vec<ContentBlock>) -> Vec<AgentEvent> {
+    content
         .into_iter()
         .filter_map(|block: ContentBlock| match block {
-            ContentBlock::ToolResult {
-                tool_use_id,
-                is_error,
-            } => Some(AgentEvent::ToolFinished {
-                tool_use_id,
-                failed: is_error == Some(true),
+            ContentBlock::ToolUse { name, input, .. } => Some(AgentEvent::SubagentStep {
+                parent_tool_use_id: parent.to_owned(),
+                target: target_of(&name, &input),
+                tool: name,
             }),
+            ContentBlock::Text { text } if !text.trim().is_empty() => {
+                Some(AgentEvent::SubagentText {
+                    parent_tool_use_id: parent.to_owned(),
+                    text,
+                })
+            }
             _ => None,
         })
         .collect()
+}
+
+fn task_progress(system: SystemLine) -> Option<AgentEvent> {
+    Some(AgentEvent::TaskProgress {
+        task_id: system.task_id?,
+        tool_uses: system.usage?.tool_uses?,
+    })
+}
+
+fn task_ended(system: SystemLine) -> Option<AgentEvent> {
+    let end = match system.status.as_deref() {
+        Some("completed") => TaskEnd::Completed,
+        Some("stopped" | "killed") => TaskEnd::Stopped,
+        _ => TaskEnd::Failed,
+    };
+    Some(AgentEvent::TaskEnded {
+        task_id: system.task_id?,
+        end,
+        summary: system.summary,
+        output_file: system.output_file,
+    })
+}
+
+/// Der Text eines Werkzeug-Ergebnisses: ein String direkt, bei einem Array die `text`-Blöcke.
+fn result_text(content: Option<&Value>) -> String {
+    match content {
+        Some(Value::String(text)) => text.clone(),
+        Some(Value::Array(blocks)) => blocks
+            .iter()
+            .filter(|block: &&Value| {
+                block.get("type").and_then(Value::as_str) == Some(TEXT_BLOCK_TYPE)
+            })
+            .filter_map(|block: &Value| block.get("text").and_then(Value::as_str))
+            .collect::<Vec<&str>>()
+            .join("\n"),
+        _ => String::new(),
+    }
+}
+
+/// Ein fehlgeschlagener Befehl beginnt mit `Exit code <n>`; diese Zeile wird zum Exit-Code und
+/// verschwindet aus der Ausgabe. Ein Fehler ohne sie (z.B. abgelehnt) hat keinen Exit-Code.
+fn command_finished(tool_use_id: String, text: &str, failed: bool) -> AgentEvent {
+    if !failed {
+        return AgentEvent::CommandFinished {
+            tool_use_id,
+            output: text.to_owned(),
+            exit_code: Some(0),
+        };
+    }
+    let parsed = text.strip_prefix(EXIT_CODE_PREFIX).and_then(|rest: &str| {
+        let (first_line, output) = rest.split_once('\n').unwrap_or((rest, ""));
+        let code = first_line.trim().parse::<i32>().ok()?;
+        Some((code, output))
+    });
+    match parsed {
+        Some((code, output)) => AgentEvent::CommandFinished {
+            tool_use_id,
+            output: output.to_owned(),
+            exit_code: Some(code),
+        },
+        None => AgentEvent::CommandFinished {
+            tool_use_id,
+            output: text.to_owned(),
+            exit_code: None,
+        },
+    }
+}
+
+/// Aus „… Output is being written to: <Datei>“ im sofortigen Ergebnis eines Hintergrund-Aufrufs.
+fn output_file_of(text: &str) -> Option<String> {
+    let start = text.find(OUTPUT_FILE_MARKER)? + OUTPUT_FILE_MARKER.len();
+    let path = text[start..].lines().next().unwrap_or_default().trim();
+    if path.is_empty() {
+        return None;
+    }
+    Some(path.to_owned())
 }
 
 fn handle_control_request(request: ControlRequestLine, line: &str) -> Vec<AgentEvent> {
