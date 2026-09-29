@@ -9,7 +9,7 @@
 > | State | Zustand (nur flüchtiger UI-Zustand) |
 > | Listen | virtualisiert mit `@tanstack/react-virtual`, siehe [ADR 002](../decisions/002-typgenerierung-und-listen.md) |
 > | Markdown | `react-markdown` + `remark-gfm` + `rehype-highlight`, kein rohes HTML |
-> | Diff | Monaco Diff Editor, lazy |
+> | Diff | eigene Diff-Zeilen aus dem Core, virtualisiert ([ADR 006](../decisions/006-changes-und-diff.md)) |
 >
 > Projektentscheidungen in dieser Datei haben Vorrang vor allgemeinen Gewohnheiten.
 
@@ -71,7 +71,7 @@ function renderBody(): ReactElement | null {
 ## Performance
 
 - Chat-Timeline, Dateilisten und Session-Liste werden virtualisiert — nur Sichtbares wird gerendert
-- Monaco wird per `lazy()` erst beim Öffnen einer Datei geladen, genau eine Instanz
+- Der Diff kommt vom Core fertig zerlegt (Art, Nummern, Text) und wird wie jede lange Liste virtualisiert; höchstens 20 000 Zeilen je Datei
 - Lange Tool-Ausgaben sind standardmäßig eingeklappt und werden erst beim Aufklappen geladen
 
 ## TypeScript specifics

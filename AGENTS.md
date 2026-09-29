@@ -19,7 +19,7 @@ Lokale Desktop-Kommandozentrale für Coding-Agenten: eine Session = eine Aufgabe
 | Core | Rust |
 | Datenbank | SQLite (rusqlite) |
 | Git | native `git`-Kommandozeile aus dem Core |
-| Diff | Monaco Diff Editor (lazy) |
+| Diff | eigene Unified-Diff-Ansicht (virtualisiert) |
 | Paketmanager | pnpm |
 | Zielplattform | Windows zuerst |
 

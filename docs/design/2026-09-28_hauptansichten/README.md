@@ -21,7 +21,7 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | `Light.dc.html` | Chat im Hellmodus | M6 |
 | `Changes.dc.html` | Changes-Ansicht: Filter, Dateibaum pro Repository, Übersicht | M5 |
 | `Diff.dc.html` | Changes mit geöffneter Datei (Unified Diff) | M5 |
-| `Artifacts.dc.html` | Reiter „Artefakte“: Liste und Vorschau | M5 |
+| `Artifacts.dc.html` | Reiter „Artefakte“: Liste und Vorschau | offen (GAPS: Artefakte) |
 | `Attach.dc.html` | `+`-Menü und angehängte Dateien in der Eingabeleiste | M2 |
 | `Cmd.dc.html` | `/`-Knopf: Menü mit Kontext, Modell, Skills, Session | M2 |
 | `Slash.dc.html` | `/` ins Eingabefeld getippt: nur Skills und Befehle, filtert beim Tippen | M2 |
@@ -168,11 +168,11 @@ Syntaxfarben (Quelle: VS Code Dark+ / Light+):
 
 Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit der App ausgeliefert.
 
-## Abweichungen bis Meilenstein 3
+## Abweichungen vom Entwurf
 
-Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-README](../../planning/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“):
+Was die Oberfläche in Meilenstein 2a ([Plan-README](../../planning/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“) und Meilenstein 5 ([Plan-README](../../planning/2026-09-29_m5-changes-und-diff/README.md)) bewusst anders oder gar nicht baut:
 
-- **Fehlt ganz** (kein toter Knopf): Reiter „Changes“ und „Artefakte“ (M5), Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
+- **Fehlt ganz** (kein toter Knopf): Reiter „Artefakte“ (offen), Reiter „Changes“ bei Sessions ohne Repository, Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
 - **Repository-Liste:** Ein fehlendes Repository zeigt „nicht gefunden“ in Fehlerfarbe statt der Skill-Zahl, gesperrtes Häkchen und den Knopf „Entfernen“; ohne bekannte Repositories steht ein Satz statt der leeren Liste; ein Fehler beim Hinzufügen steht als Zeile unter der Liste. Während des Anlegens nennt die Fußzeile „Worktrees werden angelegt …“.
 - **Status „Abgebrochen“:** Haken-Symbol in gedämpfter Farbe, Sidebar-Gruppe „Abgeschlossen“.
 - **Status „Startet“:** dasselbe Symbol wie „Läuft“.
@@ -184,6 +184,10 @@ Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-
 - **Markdown und Code-Blöcke:** ohne Tafel, gebaut nach Plan M2a Phase 5 — Code-Block mit Kopfzeile (Sprache links, „Kopieren“ rechts) auf `bg-surface`, Syntaxfarben nach VS Code Dark+ / Light+; Links öffnen im Standardbrowser.
 - **Start:** Nach dem Start öffnet sich die neueste Session; der Leerzustand erscheint nur, wenn es keine Session gibt. Eine vorher aktive Session steht als „Pausiert“ da, offene Rückfragen tragen „Nicht beantwortet“.
 - **Eingabeleiste:** ohne die Knöpfe `+` und `/`, Platzhalter „Nachricht an Claude …“ ohne den Zusatz „(/ für Skills, @ für Dateien)“. Wartet der Agent auf eine Rückfrage, lautet er „Antwort an Claude …“; in den Status „Abgebrochen“ und „Fehler“ ist das Feld gesperrt und nennt den Grund. Umschalt+Tab wechselt den Modus reihum, Esc pausiert (ein offenes Menü schließt Esc zuerst).
+- **Basis-Angabe:** nennt `base_ref` (der beim Anlegen ausgecheckte Branch) statt `origin/main`; haben die Repositories verschiedene Basen, „gegen die Basis je Repository“ mit Liste beim Überfahren.
+- **Repository-Chips** erst ab zwei Repositories; ihre Zahlen folgen dem gewählten Commit-Stand.
+- **Vergleichs-Angabe im Diff-Kopf** je Commit-Stand (`Basis → Arbeitsverzeichnis`, `Basis → Branch`, `Branch → Arbeitsverzeichnis`) statt immer `Basis → Branch`.
+- **Binärdateien:** „binär“ statt +/− im Baum, im Diff „Kein Textvergleich …“. **Fehlerzeile** je Repository im Baum und in der Übersicht. **Sätze** für Laden, leeren Commit-Stand, leeren Diff und „Gekürzt“. Lange Diff-Zeilen scrollen horizontal.
 - **Menü einer Session:** ein `dialog`-Popover mit den zwei Einträgen „Umbenennen“ (F2) und „Archivieren“, unter der Zeile ausgerichtet statt mit 30-px-Einzug. Archivieren blendet aus und räumt Worktrees ohne offene Änderungen weg; es gibt keine Archiv-Ansicht.
 - **Fehler-Kasten:** „Protokoll anzeigen“ klappt die letzten Zeilen der Fehlerausgabe im Kasten auf (Schrift `font-mono` 12 px / 19 px auf `bg-base`, höchstens 240 px hoch); „Agent neu starten“ steht nur am letzten Fehler und nur im Status „Fehler“.
 

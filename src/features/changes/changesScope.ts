@@ -21,6 +21,25 @@ export function statOf(file: FileChange, scope: ChangeScope): LineStat | null {
   return file[scope];
 }
 
+/** Ändert sich der Stempel, hat sich die Datei im Blickwinkel geändert und ihr Diff ist veraltet. */
+export function statStamp(stat: LineStat | null): string {
+  if (stat === null) {
+    return 'none';
+  }
+  return `${stat.kind}:${String(stat.added)}:${String(stat.deleted)}`;
+}
+
+export function compareLabel(scope: ChangeScope, baseRef: string, branch: string): string {
+  switch (scope) {
+    case 'all':
+      return `${baseRef} → Arbeitsverzeichnis`;
+    case 'committed':
+      return `${baseRef} → ${branch}`;
+    case 'uncommitted':
+      return `${branch} → Arbeitsverzeichnis`;
+  }
+}
+
 /** Dateien, die unter „Alle“ geändert sind, über alle Repositories. */
 export function countChangedFiles(changes: SessionChanges): number {
   let total = 0;

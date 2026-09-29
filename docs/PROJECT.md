@@ -45,7 +45,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 | Datenbank | SQLite über rusqlite | Synchron, schlank, keine Datenbank beim Kompilieren nötig |
 | Gemeinsame Typen | aus Rust nach TypeScript generiert (`ts-rs`, siehe [ADR 002](decisions/002-typgenerierung-und-listen.md)) | Eine Quelle für Session-, Event- und Status-Typen |
 | Git | native Git-Kommandozeile, vom Rust-Kern aufgerufen | Deterministisch, unabhängig von der KI-Logik |
-| Diff | Monaco Diff Editor, lazy geladen | Nur die aktive Datei, keine Instanz pro Datei |
+| Diff | eigene Unified-Diff-Ansicht; der Core zerlegt den Diff, die Oberfläche zeigt nur sichtbare Zeilen ([ADR 006](decisions/006-changes-und-diff.md)) | Entwurf verlangt Nummern- und Vorzeichenspalten, die Monaco nicht abbildet; kein Editor-Paket von mehreren MB |
 | Agent | Claude-Kommandozeile im JSON-Stream-Modus, direkt vom Rust-Kern gestartet ([ADR 003](decisions/003-claude-anbindung.md)) | Das SDK startet intern dieselbe Kommandozeile; ein Node-Hilfsprozess pro Agent brächte nur eine Schicht mehr |
 | IPC | Tauri Commands + Events | |
 | Paketmanager | pnpm | |

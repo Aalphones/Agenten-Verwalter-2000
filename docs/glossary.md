@@ -24,7 +24,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Rechte-Abfrage** | Der Agent fragt vor einem Werkzeug-Aufruf um Erlaubnis; erscheint im Chat wie eine Rückfrage mit Erlauben/Ablehnen. |
 | **Tool-Aktivität** | Die Einzelschritte des Agenten (Datei lesen, Befehl ausführen …). Im Chat standardmäßig eingeklappt zusammengefasst. |
 | **Chat-Ansicht** | Hauptansicht einer Session: Gespräch mit dem Agenten, Status, Rückfragen. |
-| **Changes-Ansicht** | Prüfansicht einer Session: geänderte Repositories, Dateien und Diffs gegen die Basis. |
+| **Changes-Ansicht** | Prüfansicht einer Session: geänderte Repositories, Dateien und Diffs gegen die Basis, im gewählten Blickwinkel. |
 | **Anhang** | Bild oder Datei, die mit einer Nachricht an den Agenten geht (per Knopf, Hineinziehen oder Einfügen). |
 | **Skill** | Eine benannte, wiederverwendbare Arbeitsanweisung für den Agenten, aufgerufen mit `/name`. Herkunft: Benutzerordner oder `.claude/skills` eines Repositorys der Session. |
 | **Modus** | Wie selbstständig der Agent arbeitet: Manuell, Automatisch bearbeiten, Planen, Auto. Pro Session, jederzeit wechselbar. |
