@@ -116,25 +116,46 @@ Fehler: `SessionNotFound`, beim Umbenennen mit leerem Namen `Internal("Der Name 
 7. Nach dem Start ist die neueste Session geöffnet, nicht der Leerzustand.
 8. `pnpm check` grün; ADR 004, Code-Map, Konventionen, AGENTS.md, PROJECT.md, Glossar und Entwurfs-README beschreiben den tatsächlichen Stand.
 
-## Smoke-Checkliste (macht Sascha am Plan-Ende)
+## Smoke-Checkliste
 
-Wackelstellen zuerst:
+Sascha hat die Ausführung an mich delegiert (2026-09-28/29) — echte App über den WebView2-Debug-Port gesteuert, keine Simulation der Fachlogik. Alle Punkte belegt, zwei Funde dabei (siehe „Deviations from plan“):
 
-- [ ] **Neustart mitten in der Arbeit:** Aufgabe „Lies a.txt 30 Mal nacheinander, jedes Mal mit eigenem Read-Aufruf“, während der Agent arbeitet die App im Task-Manager beenden, neu starten → Session „Pausiert“, Verlauf bis dahin da, laufende Zeile „unterbrochen“; „Fortsetzen“ → Agent arbeitet weiter und weiß, wo er war.
-- [ ] **Rückfrage überlebt den Neustart nicht offen:** „Frag mich mit dem AskUserQuestion-Tool: Rot oder Blau?“, App beenden bevor du antwortest, neu starten → Rückfrage steht mit „Nicht beantwortet“, keine Knöpfe; danach normal weiterchatten.
-- [ ] **Frist der ruhenden Agenten:** App mit `$env:VERWALTER_IDLE_SECONDS = "60"` starten (`starten.cmd` erbt die Variable), Session abschließen lassen, 2 Minuten warten → `claude.exe` der Session ist im Task-Manager weg, Sidebar zeigt weiter „Abgeschlossen“; neue Nachricht → Agent startet, Antwort kennt den Verlauf.
-- [ ] Archivieren einer laufenden Session → verschwindet, der `claude.exe` ist beendet; nach Neustart weiter weg.
-- [ ] Umbenennen: Doppelklick, F2, Rechtsklick → Enter speichert, Esc bricht ab (und **pausiert dabei nicht** die laufende Session); leerer Name ändert nichts.
-- [ ] Zwei Sessions, eine abgeschlossen, eine pausiert, Neustart → beide mit richtigem Status in der richtigen Sidebar-Gruppe.
-- [ ] Erststart ohne Datenbank (Datei `%USERPROFILE%\.verwalter\verwalter.db` vorher umbenennen) → App startet, Leerzustand, Datei neu angelegt.
-- [ ] Die offene Smoke-Checkliste aus [Meilenstein 2a](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md) (Abschnitt „Smoke-Checkliste“) einmal durchspielen.
+- [x] **Neustart mitten in der Arbeit:** bestätigt — pausiert, Verlauf da, „Fortsetzen“ arbeitet weiter. Die laufende Zeile zeigte bei einem harten Absturz korrekt „unterbrochen“; bei Esc auf einen bereits laufenden (erlaubten) Aufruf zeigte sie stattdessen „fehlgeschlagen“ — Fund, siehe Deviations.
+- [x] **Rückfrage überlebt den Neustart nicht offen:** bestätigt, „Nicht beantwortet“, keine Knöpfe.
+- [x] **Frist der ruhenden Agenten:** bestätigt mit `VERWALTER_IDLE_SECONDS=60`, Prozess eindeutig per Session-ID identifiziert (nicht pauschal `claude.exe`, das träfe auch fremde Sessions).
+- [x] Archivieren einer laufenden Session: bestätigt, Prozess beendet, bleibt nach Neustart weg.
+- [x] Umbenennen: Doppelklick, F2 (echter Tastendruck), Rechtsklick alle bestätigt; Esc pausiert die Session nicht mit.
+- [x] Zwei Sessions nach Neustart, richtige Sidebar-Gruppe: bestätigt.
+- [x] Erststart ohne Datenbank: bestätigt, Leerzustand, Datei neu angelegt.
+- [x] Die Smoke-Checkliste aus [Meilenstein 2a](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md) durchgespielt — Ergebnis dort eingetragen.
 
 ## Summary
 
+Sessions und ihr Chat-Verlauf überleben einen App-Neustart: SQLite mit nummerierten Migrationen, eine Zeile pro Chat-Eintrag, Wiederherstellung mit `--resume` (bzw. `--session-id`, solange Claude die Session nie gesehen hat). Eine vorher aktive Session ist danach pausiert, offene Rückfragen tragen „Nicht beantwortet“. Sessions lassen sich umbenennen (Doppelklick, F2, Rechtsklick) und archivieren (blendet aus, Verlauf und Ordner bleiben). Ein Hintergrund-Thread beendet ruhende Agenten nach einer Frist (`VERWALTER_IDLE_SECONDS`, Standard 30 Minuten) und gibt ihren Speicher frei; die nächste Nachricht startet sie neu. Die komplette Smoke-Checkliste (M4 + die aus M2a nachgezogene) ist durchgespielt, zwei Funde dokumentiert (siehe unten).
+
 ## Files touched
+
+- Core: `src-tauri/src/db/` (neu: `mod.rs`, `migrations.rs` + `migrations/001_sessions_and_chat.sql`, `sessions.rs`, `chat_entries.rs`), `src-tauri/src/sessions/registry.rs` (Persistenz, Wiederherstellung, Umbenennen/Archivieren, Reaper), `src-tauri/src/sessions/mod.rs`, `src-tauri/src/commands/sessions.rs`, `src-tauri/src/filesystem/workspace.rs`, `src-tauri/src/error.rs`, `src-tauri/src/lib.rs`, `src-tauri/Cargo.toml`
+- Oberfläche: `src/app/{App.tsx,Sidebar.tsx,Sidebar.css}`, `src/app/SidebarItem.{tsx,css}` (neu), `src/features/sessions/useSessionSummaries.ts`, `src/lib/sessions.ts`, `src/lib/bindings/CommandError.ts` (generiert)
+- Doku: `AGENTS.md`, `docs/{PROJECT,code-map,glossary}.md`, `docs/conventions/rust.md`, `docs/decisions/{003-claude-anbindung,004-persistenz-und-wiederherstellung}.md`, `docs/design/2026-09-28_hauptansichten/README.md`
 
 ## Commits
 
+- Phase 1: `10a6029` feat(db): add sqlite foundation with migrations and session tables
+- Phase 2: `36ab5bd` feat(sessions): persist sessions and chat entries in sqlite
+- Phase 3: `99624db` feat(sessions): restore sessions and history after an app restart
+- Phase 4: `c1d248e` feat(sessions): add rename and archive to the sidebar
+- Phase 5: `df35a58` feat(sessions): stop idle agents and resume them on demand
+
 ## Deviations from plan
 
+- **Esc auf einen bereits laufenden (erlaubten) Werkzeug-Aufruf markiert die Zeile „fehlgeschlagen“, nicht „unterbrochen“** — abweichend vom Design. Ursache: Der Claude-Prozess meldet den abgewürgten Aufruf selbst als Fehlergebnis (`ToolFinished{failed:true}`), das trifft ein, bevor die App die Zeile beim Turn-Ende auf „Interrupted“ umstellen kann. Beim echten Absturz (Prozess von außen beendet, kein Ergebnis kommt je zurück) funktioniert es korrekt — gegengeprüft. Nicht behoben, da unklar ist, ob sich die Reihenfolge zuverlässig beeinflussen lässt, ohne das Claude-Protokoll genauer zu untersuchen.
+- **Der im Plan vorgesehene Lange-Verlauf-Test (80 Reads) erzeugt nur 86 Einträge** — unter der Seitengröße 200 (`chat_history`). Das Nachladen beim Hochscrollen (`hasMore`) wurde dadurch nicht ausgelöst; die Virtualisierung selbst (Bottom-Anchor, Gruppierung) wurde bestätigt, die Pagination-Schleife nicht.
+- Smoke-Test wurde nicht von Sascha, sondern von mir über den WebView2-Debug-Port durchgeführt (Delegation, siehe Chat) — echte Interaktionen (CDP `Input.dispatchMouseEvent`, echte Tastendrücke), keine reine API-Simulation.
+
 ## Follow-ups
+
+- Die beiden Deviations oben (Failed-statt-Interrupted-Label, Lange-Verlauf-Pagination ungetestet) — Kandidaten für einen eigenen kleinen Fix-Plan oder für M6.
+- Offen aus M1: `gen-bindings.exe` im Installer.
+- Bündelgröße ~614 kB (Warnung „> 500 kB“), aus M2a — Aufteilen erst bei spürbarer Startzeit.
+- `→ Vault`-Einträge aus den FINDINGS von M2a und M4 warten auf `session-review`.

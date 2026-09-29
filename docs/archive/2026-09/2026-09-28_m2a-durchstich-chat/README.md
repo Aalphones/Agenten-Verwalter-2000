@@ -137,21 +137,21 @@ Wrapper: `onSessionChanged(cb): Promise<UnlistenFn>` in `src/lib/sessions.ts`, `
 7. Sidebar gruppiert nach „Braucht dich“ / „Läuft“ / „Abgeschlossen“ mit den Statussymbolen des Entwurfs; mehrere Sessions laufen gleichzeitig.
 8. `pnpm check` grün; Code-Map, Glossar, Entwurfs-README, PROJECT.md und GAPS beschreiben den tatsächlichen Stand.
 
-## Smoke-Checkliste (macht Sascha, verschoben auf den ersten arbeitsfähigen Stand)
+## Smoke-Checkliste
 
-Wackelstellen zuerst:
+Nachgeholt während der M4-Abnahme (2026-09-29), delegiert an mich, echte App über den WebView2-Debug-Port:
 
-- [ ] **Langer Verlauf bleibt unten verankert und lädt Älteres nach:** Aufgabe „Lies die Datei a.txt 80 Mal nacheinander, jedes Mal mit einem eigenen Read-Aufruf. Lege sie vorher mit Inhalt hi an.“ — während der Arbeit bleibt die Ansicht am unteren Ende; nach oben scrollen lädt ältere Einträge ohne Sprung.
-- [ ] **Kein Konsolenfenster, schneller Start:** „Session starten“ → innerhalb von 10 s wechselt der Status von „Startet“ auf „Läuft“; kein schwarzes Fenster blitzt auf.
-- [ ] **Rechte-Abfrage in „Manuell“:** Modus Manuell, Aufgabe „Führe den Befehl `whoami` aus.“ — erscheint ein Kasten mit Erlauben/Ablehnen? Erscheint keiner, greift eine Freigabe-Regel aus deinen Claude-Einstellungen (dann Befehl nennen, der nicht freigegeben ist, und wiederholen).
-- [ ] **Code-Block kopieren:** „Zeig mir ein kurzes TypeScript-Beispiel und ein PowerShell-Beispiel als Code-Blöcke, dazu eine Tabelle und einen Link auf https://tauri.app.“ → beide Blöcke farbig mit Sprache; „Kopieren“ → in Notepad einfügen, Einrückung stimmt; Link öffnet den Browser, nicht das App-Fenster.
-- [ ] Rückfrage: „Frag mich mit dem AskUserQuestion-Tool: Rot oder Blau?“ → Kasten mit 1/2; Klick auf „Blau“ → Agent antwortet mit Blau. Nochmal, diesmal „Grün“ ins Eingabefeld tippen und senden.
-- [ ] Esc während der Arbeit → Status „Pausiert“, laufende Werkzeug-Zeile zeigt „unterbrochen“; „Fortsetzen“ → Agent macht weiter.
-- [ ] Modell auf Haiku 4.5 stellen, fragen „Welches Modell bist du?“ → Antwort nennt Haiku; Denkaufwand auf Niedrig, nächste Nachricht kommt an, Verlauf ist noch da.
-- [ ] Absturz: im Task-Manager `claude.exe` der Session beenden → Fehlerkasten „Agent beendet“, Status „Fehler“ in „Braucht dich“; „Protokoll anzeigen“ klappt Zeilen auf; „Agent neu starten“ → Status „Pausiert“, „Fortsetzen“ → Agent kennt den bisherigen Verlauf.
-- [ ] Abbrechen → Status „Abgebrochen“ unter „Abgeschlossen“, Eingabefeld gesperrt mit Hinweis.
-- [ ] Zwei Sessions gleichzeitig laufen lassen, zwischen ihnen wechseln — jeder Chat zeigt nur seine Einträge.
-- [ ] Kontext-Balken und Laufzeit in der Kopfzeile bewegen sich; Laufzeit steht still, solange die Session nicht läuft.
+- [x] **Langer Verlauf:** Bottom-Anchor und Gruppierung (79 Read-Aufrufe zu einer Zeile) bestätigt. Das Nachladen beim Hochscrollen selbst **nicht** ausgelöst — 80 Reads ergeben nur 86 Einträge, unter der Seitengröße 200. Kein Befund, nur eine Testlücke (vermerkt in M4 Deviations).
+- [x] **Kein Konsolenfenster, schneller Start:** in keinem der ~30 Sessions dieser Runde ein Konsolenfenster gesehen; Start bis „Läuft“ regelmäßig unter 15 s.
+- [x] **Rechte-Abfrage in „Manuell“:** `whoami` lief ohne Abfrage durch (Freigabe-Regel greift, wie im Text vermutet — offene Frage in GAPS.md damit beantwortet). Mit `rm nicht-vorhanden-datei.txt` erschien der Kasten korrekt mit Erlauben/Ablehnen.
+- [x] **Code-Block kopieren:** beide Blöcke farbig mit Sprachlabel, Tabelle korrekt, „Kopieren“ legt den Block mit erhaltener Einrückung in die Zwischenablage, Link öffnet den externen Standardbrowser (Chrome), nicht das App-Fenster.
+- [x] Rückfrage per Klick und per Texteingabe: beide Wege bestätigt.
+- [x] Esc während der Arbeit → „Pausiert“ bestätigt. Die laufende Werkzeug-Zeile zeigte **„fehlgeschlagen“ statt „unterbrochen“** — Fund, siehe [M4-Deviations](../2026-09-28_m4-persistenz-und-wiederherstellung/README.md#deviations-from-plan). „Fortsetzen“ funktioniert.
+- [x] Modellwechsel auf Haiku 4.5 bestätigt (Agent erkennt sich korrekt), Denkaufwand-Wechsel bestätigt, Verlauf blieb.
+- [x] Absturz: Fehlerkasten, Status „Fehler“ in „Braucht dich“, „Protokoll anzeigen“, „Agent neu starten“ → „Pausiert“ → „Fortsetzen“ mit vollem Verlauf — alles bestätigt.
+- [x] Abbrechen → „Abgebrochen“ unter „Abgeschlossen“, Eingabefeld gesperrt mit dem Hinweistext aus dem Design — bestätigt.
+- [x] Zwei Sessions gleichzeitig, sauber getrennte Verläufe — bestätigt (Datenebene und Rendering-Muster).
+- [x] Kontext-Balken/Laufzeit: Laufzeit tickte live (0:19 → 0:38 in 6 s Wandzeit), stand still während Pause.
 
 ## Summary
 
@@ -175,15 +175,13 @@ Die App startet Claude pro Session als eigenen Prozess im Stream-Modus, zeigt de
 
 ## Deviations from plan
 
-- **Smoke-Abnahme nicht in diesem Plan:** Sascha hat am Plan-Ende entschieden, dass sich auf dem Stand (Sessions weg nach Neustart, keine Repositories) nicht sauber abnehmen lässt. Die Smoke-Checkliste oben wandert unverändert in die Abnahme des ersten arbeitsfähigen Stands; bis dahin ist sie **nicht abgehakt**.
-- **Kein Versions-Tag:** Die Regel aus `docs/conventions/releases.md` taggt abgenommene Pläne. Weil die Abnahme aussteht, trägt M2a keinen Tag; die Version bleibt `0.1.0`.
+- **Smoke-Abnahme nicht in diesem Plan:** Sascha hat am Plan-Ende entschieden, dass sich auf dem Stand (Sessions weg nach Neustart, keine Repositories) nicht sauber abnehmen lässt. Die Checkliste ist am 2026-09-29 im Rahmen der M4-Abnahme nachgeholt worden (siehe oben) — der Tag für diesen Stand ist der von M4 (`v0.3.0`), nicht ein eigener für M2a.
 - **Platzhalter „Antwort an Claude …“** hängt am Status `waiting`, nicht an einer aus den Einträgen abgeleiteten offenen Rückfrage.
 - **Werkzeug-Gruppen** werden je Block virtualisiert, nicht je Zeile: 80 aufeinanderfolgende Read-Aufrufe ohne Text dazwischen stehen aufgeklappt alle im DOM.
 
 ## Follow-ups
 
-- Smoke-Checkliste (siehe oben) beim ersten arbeitsfähigen Stand durchspielen; besonders die Wackelstellen (langer Verlauf, Konsolenfenster, Rechte-Abfrage, Code-Block kopieren, Link im Browser).
 - Bündel ~614 kB (Warnung „> 500 kB“) durch den `common`-Sprachsatz von highlight.js und `react-markdown`; Aufteilen erst bei spürbarer Startzeit.
-- Im Fenster ungeprüft: Link öffnet Browser (`opener:default`), Kopieren in die Zwischenablage, Hell/Dunkel-Optik. Schlägt `openUrl` fehl → `opener:allow-open-url` eintragen.
+- Hell/Dunkel-Optik im Fenster weiterhin ungeprüft (Link-Öffnen und Kopieren sind seit 2026-09-29 bestätigt, `opener:default` reicht für `openUrl`, kein `opener:allow-open-url` nötig).
 - Offen aus M1: `gen-bindings.exe` im Installer (Entscheidung steht aus).
 - `→ Vault`-Einträge in `FINDINGS.md` (Rust-`match` und Sperren, BEM-Nesting im Build, `rehype-highlight` und Sprachen) warten auf `session-review`.
