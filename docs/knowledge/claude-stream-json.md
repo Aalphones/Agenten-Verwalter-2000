@@ -38,7 +38,7 @@ Belegt am 2026-09-28 mit Claude Code 2.1.220. Der Agent startet im Session-Works
 ```json
 {"type":"user","message":{"role":"user","content":"Text der Nachricht"}}
 {"type":"control_request","request_id":"app-1","request":{"subtype":"interrupt"}}
-{"type":"control_request","request_id":"app-2","request":{"subtype":"set_model","model":"claude-sonnet-5"}}
+{"type":"control_request","request_id":"app-2","request":{"subtype":"set_model","model":"claude-sonnet-5-5"}}
 {"type":"control_request","request_id":"app-3","request":{"subtype":"set_permission_mode","mode":"acceptEdits"}}
 ```
 
