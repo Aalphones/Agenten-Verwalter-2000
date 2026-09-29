@@ -1,6 +1,6 @@
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { modelName } from '@/lib/labels';
+import { modelName, repositoryCountLabel } from '@/lib/labels';
 
 export const GROUP_ORDER = ['needsYou', 'running', 'done'] as const;
 export type SessionGroup = (typeof GROUP_ORDER)[number];
@@ -39,14 +39,21 @@ export function metaLine(session: SessionSummary): string | null {
     case 'error':
       return 'Agent-Prozess beendet';
     case 'paused':
-      return `pausiert · ${modelName(session.model)}`;
+      return `pausiert · ${modelAndRepositories(session)}`;
     case 'completed':
     case 'cancelled':
       return null;
     case 'starting':
     case 'running':
-      return modelName(session.model);
+      return modelAndRepositories(session);
   }
+}
+
+function modelAndRepositories(session: SessionSummary): string {
+  if (session.repositoryCount === 0) {
+    return modelName(session.model);
+  }
+  return `${repositoryCountLabel(session.repositoryCount)} · ${modelName(session.model)}`;
 }
 
 /** Ob die Meta-Zeile in Statusfarbe statt gedämpft erscheint. */

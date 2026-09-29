@@ -2,17 +2,21 @@ import { useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement, SubmitEvent } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
+import { RepositoryPicker } from '@/features/repositories/RepositoryPicker';
 import type { CommandError } from '@/lib/bindings/CommandError';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { effortLabel, modeOption, modelName } from '@/lib/labels';
+import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/labels';
 import { createSession } from '@/lib/sessions';
 import './NewSession.css';
 
 const CLAUDE_NOT_FOUND_MESSAGE =
   'Claude-Kommandozeile nicht gefunden. Installiere Claude Code oder setze VERWALTER_CLAUDE_PATH auf den Pfad zu claude.exe.';
+
+const GIT_NOT_FOUND_MESSAGE =
+  'Git nicht gefunden. Installiere Git für Windows und starte die App neu.';
 
 type OpenMenu = 'model' | 'mode' | null;
 
@@ -26,6 +30,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   const [model, setModel] = useState<ModelId>('sonnet');
   const [effort, setEffort] = useState<Effort>('high');
   const [mode, setMode] = useState<Mode>('auto');
+  const [repositoryIds, setRepositoryIds] = useState<string[]>([]);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState<boolean>(false);
@@ -47,7 +52,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     }
     setIsStarting(true);
     setErrorMessage(null);
-    createSession(text.trim(), [], model, effort, mode)
+    createSession(text.trim(), repositoryIds, model, effort, mode)
       .then((summary: SessionSummary) => {
         onCreated(summary);
       })
@@ -97,9 +102,10 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
             Agenten.
           </p>
         </section>
+        <RepositoryPicker selectedIds={repositoryIds} onChange={setRepositoryIds} />
         <section className="new-session__section">
           <div className="new-session__heading">
-            <span className="new-session__step">2</span>
+            <span className="new-session__step">3</span>
             Agent
           </div>
           <div className="new-session__pickers">
@@ -162,7 +168,9 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
             Abbrechen
           </button>
           <span className="new-session__summary">
-            {modelName(model)} · {currentMode.label}
+            {isStarting && repositoryIds.length > 0
+              ? 'Worktrees werden angelegt …'
+              : `${repositoryCountLabel(repositoryIds.length)} · ${modelName(model)} · ${currentMode.label}`}
           </span>
         </div>
         {errorMessage !== null && (
@@ -180,8 +188,19 @@ function isCommandError(reason: unknown): reason is CommandError {
 }
 
 function describeStartError(reason: unknown): string {
-  if (isCommandError(reason) && reason.kind === 'claudeNotFound') {
-    return CLAUDE_NOT_FOUND_MESSAGE;
+  if (isCommandError(reason)) {
+    switch (reason.kind) {
+      case 'claudeNotFound':
+        return CLAUDE_NOT_FOUND_MESSAGE;
+      case 'gitNotFound':
+        return GIT_NOT_FOUND_MESSAGE;
+      case 'repositoryMissing':
+        return `Repository nicht gefunden: ${reason.message}. Entferne es aus der Liste oder stelle den Ordner wieder her.`;
+      case 'git':
+        return `Worktree konnte nicht angelegt werden — ${reason.message}`;
+      default:
+        break;
+    }
   }
   if (typeof reason === 'object' && reason !== null && 'message' in reason) {
     return `Session konnte nicht starten: ${String(reason.message)}`;

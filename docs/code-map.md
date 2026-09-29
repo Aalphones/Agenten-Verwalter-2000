@@ -25,7 +25,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` (`data_dir`, `new_session_workspace` für neue Sessions, `stored_session_workspace` für gespeicherte) |
 | Persistenz (SQLite) | — | `src-tauri/src/db/` (`mod.rs` Verbindung und Text-Helfer, `migrations.rs` + `migrations/*.sql`, `sessions.rs`, `chat_entries.rs`, `session_repositories.rs`; Migration 2 = Repositories und Worktrees), Datei `<Benutzerordner>\.verwalter\verwalter.db`, geöffnet in `src-tauri/src/lib.rs` |
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` | `src-tauri/src/commands/changes.rs`, `src-tauri/src/git/` |
-| Repositories (bekannte Repos verwalten) | `src/features/repositories/` (folgt in Phase 3), Wrapper `src/lib/repositories.ts` | `src-tauri/src/repositories/` (Liste, Hinzufügen, Skill-Zahl), `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
+| Repositories (bekannte Repos verwalten) | `src/features/repositories/` (`RepositoryPicker`, `useKnownRepositories`), Wrapper `src/lib/repositories.ts` | `src-tauri/src/repositories/` (Liste, Hinzufügen, Skill-Zahl), `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
 | Git-Aufrufe | — | `src-tauri/src/git/` (einziger Ort, der `git` startet) |
 | Prozesse ohne Konsolenfenster | — | `src-tauri/src/processes/` (`hide_console`) |
 | Settings | `src/features/settings/` | `src-tauri/src/commands/settings.rs`, `src-tauri/src/db/settings.rs` |

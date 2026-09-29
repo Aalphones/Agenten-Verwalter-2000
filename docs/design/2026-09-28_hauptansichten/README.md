@@ -33,7 +33,7 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | `Rename.dc.html` | Rechtsklick-Menü auf einer Session (Umbenennen, Archivieren) | M4 |
 | `BgProc.dc.html` | Hintergrund-Panel, Reiter „Prozesse“: laufende Dev-Server und ausgeführte Skripte mit Ausgabe | M2 |
 | `BgAgents.dc.html` | Hintergrund-Panel, Reiter „Subagenten“: Aufgabe, Status, Schritte, Ergebnis | M2 |
-| `BgScratch.dc.html` | Hintergrund-Panel, Reiter „Scratchpad“: Dateien im temporären Ordner der Session mit Vorschau | M3 |
+| `BgScratch.dc.html` | Hintergrund-Panel, Reiter „Scratchpad“: Dateien im temporären Ordner der Session mit Vorschau | M2b |
 
 Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwischenlösung. M6 schließt die restlichen Tafeln, den Hellmodus-Feinschliff und die Konsistenz über alle Ansichten ab.
 
@@ -172,13 +172,12 @@ Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit de
 
 Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-README](../../planning/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“):
 
-- **Fehlt ganz** (kein toter Knopf): Reiter „Changes“ und „Artefakte“ (M5), Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6), Schritt „Repositories“ in Neue Session (M3).
-- **Neue Session:** Der Agent-Abschnitt trägt die Nummer 2, solange „Repositories“ fehlt.
+- **Fehlt ganz** (kein toter Knopf): Reiter „Changes“ und „Artefakte“ (M5), Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
+- **Repository-Liste:** Ein fehlendes Repository zeigt „nicht gefunden“ in Fehlerfarbe statt der Skill-Zahl, gesperrtes Häkchen und den Knopf „Entfernen“; ohne bekannte Repositories steht ein Satz statt der leeren Liste; ein Fehler beim Hinzufügen steht als Zeile unter der Liste. Während des Anlegens nennt die Fußzeile „Worktrees werden angelegt …“.
 - **Status „Abgebrochen“:** Haken-Symbol in gedämpfter Farbe, Sidebar-Gruppe „Abgeschlossen“.
 - **Status „Startet“:** dasselbe Symbol wie „Läuft“.
 - **Status „Wartet“:** Anzeige „Wartet“ statt „Wartet auf dich“ (Sidebar-Zeile sagt weiter „wartet auf deine Antwort“).
 - **Denkaufwand-Punkte:** wie im Entwurf — die gewählte Stufe ist der große Punkt, nicht ein Füllstand.
-- **Leerzustand:** Erklärsatz ohne Worktrees („Er arbeitet in einem eigenen Ordner, damit parallele Agenten sich nicht in die Quere kommen.“).
 - **Werkzeug-Zeile „unterbrochen“:** Ein Aufruf, der bei Pause oder Abbruch noch lief, zeigt hinter dem Ziel „unterbrochen“ in gedämpfter Farbe — nie „nicht ausgeführt“, denn er kann trotzdem gelaufen sein. Ein fehlgeschlagener Aufruf zeigt den Werkzeugnamen in der Fehlerfarbe.
 - **Rückfrage mit Mehrfachauswahl:** Optionen schalten um (gewählt: Rahmen in Akzentfarbe), darunter der Knopf „Antworten“; ohne Mehrfachauswahl sendet der Klick sofort. Mehrere Fragen stehen nacheinander im selben Kasten, jede mit eigener Nummerierung.
 - **Beantwortete Rückfrage:** Der Kasten bleibt im Verlauf, die Knöpfe sind gesperrt, der Kopf lautet „Claude hat gefragt“ in gedämpfter Farbe mit neutralem Rahmen, die Fußzeile „Antwort: …“ nennt die Antwort bzw. wie die Frage erledigt wurde („Erlaubt“, „Pausiert“, „Nicht beantwortet“ …).
@@ -193,7 +192,7 @@ Was die Oberfläche in Meilenstein 2a bewusst anders oder gar nicht baut ([Plan-
 - Alle Inhalte sind Beispieldaten: Sessions, Nachrichten, Dateien, Diffs, Skill-Namen, Modellbeschreibungen.
 - Die Changes-Daten sind für jede Session dieselben; nur der Diff von `backend/src/auth/oauth.ts` ist ausgearbeitet.
 - Die Artefakt-Vorschauen sind skizzierte Stellvertreter; die App zeigt das echte Artefakt.
-- Hintergrund-Daten gibt es nur für die Session „OAuth Login“; der Pfad `…\workspaces\<session>\.scratch` ist ein Platzhalter — wo der Scratchpad-Ordner liegt, entscheidet Meilenstein 3 (Frage in GAPS).
+- Hintergrund-Daten gibt es nur für die Session „OAuth Login“; der Pfad `…\workspaces\<session>\.scratch` ist ein Platzhalter — wo der Scratchpad-Ordner liegt, entscheidet Meilenstein 2b (Frage in GAPS).
 - Die Auswahlfelder in „Neue Session“ und in den Einstellungen sind nur als geschlossene Knöpfe gezeichnet; „Archivieren“, „Zurückspulen“, „Verlauf exportieren“ und die Agent-Knöpfe haben im Prototyp keine Funktion.
 - Hover- und Tastaturfokus-Zustände sind nicht gezeichnet (die Zeichenfläche unterstützt sie in eingebetteten Tafeln nicht); Fokus in der Umsetzung: 2 px Ring `accent` mit 2 px Abstand.
 

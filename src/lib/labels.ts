@@ -76,6 +76,16 @@ export function effortLabel(id: Effort): string {
   return option === undefined ? id : option.label;
 }
 
+export function repositoryCountLabel(count: number): string {
+  if (count === 0) {
+    return 'Kein Repository';
+  }
+  if (count === 1) {
+    return '1 Repository';
+  }
+  return `${String(count)} Repositories`;
+}
+
 export function modeOption(id: Mode): ModeOption {
   const option: ModeOption | undefined = MODE_OPTIONS.find(
     (candidate: ModeOption) => candidate.id === id,

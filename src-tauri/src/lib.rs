@@ -23,6 +23,7 @@ const DATABASE_FILE: &str = "verwalter.db";
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Ohne Datenbank startet die App nicht: ein stiller Weiterlauf verlöre jede Session beim Beenden.
             let database = Arc::new(Database::open(
