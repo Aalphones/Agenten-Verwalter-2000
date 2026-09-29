@@ -13,6 +13,10 @@ const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 
+const BACKGROUND_LABEL = 'Hintergrund';
+const BACKGROUND_TITLE =
+  'Dev-Server, Subagenten, ausgeführte Skripte und Scratchpad dieser Session';
+
 const VIEW_LABEL: Record<SessionView, string> = { chat: 'Chat', changes: 'Changes' };
 
 interface SessionHeaderProps {
@@ -20,6 +24,10 @@ interface SessionHeaderProps {
   activeView: SessionView;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
+  /** Laufende Prozesse und Subagenten der Session. */
+  runningBackgroundCount: number;
+  isBackgroundOpen: boolean;
+  onToggleBackground: () => void;
   onShowView: (view: SessionView) => void;
 }
 
@@ -27,6 +35,9 @@ export function SessionHeader({
   session,
   activeView,
   changesCount,
+  runningBackgroundCount,
+  isBackgroundOpen,
+  onToggleBackground,
   onShowView,
 }: SessionHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
@@ -63,6 +74,11 @@ export function SessionHeader({
   const contextClass = `session-header__context-fill${
     contextPercent >= CONTEXT_WARNING_PERCENT ? ' session-header__context-fill--warning' : ''
   }`;
+
+  const backgroundLabel: string =
+    runningBackgroundCount > 0
+      ? `${String(runningBackgroundCount)} im Hintergrund`
+      : BACKGROUND_LABEL;
 
   function runAction(action: (sessionId: string) => Promise<void>): void {
     action(session.id).catch((reason: unknown) => {
@@ -155,6 +171,42 @@ export function SessionHeader({
         ))}
       </div>
       <div className="session-header__tools">
+        <button
+          type="button"
+          className={`session-header__background${isBackgroundOpen ? ' session-header__background--active' : ''}`}
+          aria-pressed={isBackgroundOpen}
+          aria-label={`Hintergrund: ${backgroundLabel}`}
+          title={BACKGROUND_TITLE}
+          onClick={onToggleBackground}
+        >
+          {runningBackgroundCount > 0 && (
+            <svg
+              className="session-header__background-dot"
+              width="10"
+              height="10"
+              viewBox="0 0 12 12"
+              aria-hidden="true"
+            >
+              <circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22" />
+              <circle cx="6" cy="6" r="3" fill="currentColor" />
+            </svg>
+          )}
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
+            <path d="M4 5.5 6 7 4 8.5M7.5 9h2.5" />
+          </svg>
+          <span className="session-header__background-label">{backgroundLabel}</span>
+        </button>
         <span
           className="session-header__context"
           title={`Kontext: ${String(usedThousands)}k von ${String(windowThousands)}k Tokens belegt`}

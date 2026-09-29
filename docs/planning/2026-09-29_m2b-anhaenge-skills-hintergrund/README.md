@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 2 | Core: Skills und Befehle | [phase-2-skills-core.md](phase-2-skills-core.md) | standard | complete |
 | 3 | Core: Hintergrund und Scratchpad | [phase-3-hintergrund-core.md](phase-3-hintergrund-core.md) | heikel | complete |
 | 4 | Oberfläche: Eingabeleiste mit Anhängen und `/`-Menü | [phase-4-eingabeleiste.md](phase-4-eingabeleiste.md) | standard | complete |
-| 5 | Oberfläche: Hintergrund-Panel, Verlaufszeilen, Doku-Abschluss | [phase-5-hintergrund-panel.md](phase-5-hintergrund-panel.md) | standard | pending |
+| 5 | Oberfläche: Hintergrund-Panel, Verlaufszeilen, Doku-Abschluss | [phase-5-hintergrund-panel.md](phase-5-hintergrund-panel.md) | standard | complete |
 
 Reihenfolge fest: 1 → 2 → 3 → 4 → 5 (Phase 4 braucht die Commands aus 1 und 2, Phase 5 die aus 3). Umsetzung direkt auf `main`, ein Commit pro Phase (Scopes: Phase 1 `attachments`, Phase 2 `skills`, Phase 3 `background`, Phase 4 `chat`, Phase 5 `background`). Vor jedem Commit muss `pnpm check` grün sein; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` ausführen und die erzeugten Dateien mit committen. Erkenntnisse während der Umsetzung gehören nach [FINDINGS.md](FINDINGS.md).
 
@@ -210,10 +210,23 @@ Führt Sascha am Plan-Ende durch. Wackelstellen zuerst:
 
 ## Summary
 
+Die Eingabeleiste nimmt Anhänge an und bietet Skills und Befehle über `/` an (Phase 1, 2, 4). Der Core liest Subagenten, Hintergrundprozesse und Befehle aus den Ereignissen der Kommandozeile, speichert sie in SQLite und gibt Claudes Scratchpad-Ordner frei (Phase 3). Die Oberfläche zeigt sie im Hintergrund-Panel (Knopf in der Kopfzeile, drei Reiter, Detail mit Ausgabe, Aktionen) und als eigene Zeilen im Verlauf (Phase 5).
+
 ## Files touched
+
+- Core: `src-tauri/src/attachments/`, `skills/`, `background/`, `commands/`, `db/` (Migration 3), `agents/claude/translate.rs`, `sessions/registry.rs`
+- Oberfläche: `src/features/attachments/`, `src/features/skills/`, `src/features/background/`, `src/features/chat/` (Eingabeleiste, `BackgroundLine`, `buildBlocks`), `src/app/` (`SessionHeader`, `App`), `src/stores/`, `src/lib/`
+- Doku: ADR 007, Code-Map, Glossar, PROJECT.md, AGENTS.md, Entwurfs-README
 
 ## Commits
 
+- Phase 1 `9b53516` (attachments) · Phase 2 `336587a` (skills) · Phase 3 `7881017` (background) · Phase 4 `0ed4bdf` (chat) · Phase 5 `feat(background)`: Hintergrund-Panel, Verlaufszeilen, Doku-Abschluss
+
 ## Deviations from plan
 
+- Phase 5: siehe „Report-Back“ in der Phasen-Datei (kein `isVisible`-Parameter, Doppel-Eintrag eines in den Hintergrund geschobenen Befehls ausgeblendet, „Ausgeführt“ neueste zuerst, keine Dateizahl am Scratchpad-Reiter).
+
 ## Follow-ups
+
+- Smoke-Checkliste oben durch Sascha; Ergebnisse zu verwaisten Hintergrundprozessen und stdin-Länge in GAPS eintragen.
+- Danach archivieren; Versions-Tag nur auf Ansage.

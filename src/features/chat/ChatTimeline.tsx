@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
@@ -18,6 +19,7 @@ import { TodoList } from '@/features/chat/TodoList';
 import { ToolGroup } from '@/features/chat/ToolGroup';
 import { UserMessage } from '@/features/chat/UserMessage';
 import { WorkingIndicator } from '@/features/chat/WorkingIndicator';
+import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -38,6 +40,8 @@ const DIGIT_KEYS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '
 interface ChatTimelineProps {
   session: SessionSummary;
   entries: readonly ChatEntry[];
+  /** Subagenten und Hintergrundprozesse nach `toolUseId`; ihre Werkzeug-Zeilen werden zu eigenen Zeilen. */
+  backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
   hasMore: boolean;
   loadingOlder: boolean;
   onLoadOlder: () => void;
@@ -51,6 +55,7 @@ interface LayoutMark {
 export function ChatTimeline({
   session,
   entries,
+  backgroundByToolUseId,
   hasMore,
   loadingOlder,
   onLoadOlder,
@@ -66,7 +71,10 @@ export function ChatTimeline({
   const stickToBottomRef = useRef<boolean>(true);
   const layoutMarkRef = useRef<LayoutMark>({ firstSeq: null, scrollHeight: 0 });
 
-  const blocks: ChatBlock[] = useMemo(() => buildBlocks(entries), [entries]);
+  const blocks: ChatBlock[] = useMemo(
+    () => buildBlocks(entries, backgroundByToolUseId),
+    [entries, backgroundByToolUseId],
+  );
   const isWorking: boolean = session.status === 'starting' || session.status === 'running';
   const count: number = blocks.length + (isWorking ? 1 : 0);
 
@@ -283,6 +291,9 @@ export function ChatTimeline({
           }}
         />
       );
+    }
+    if (block.kind === 'background') {
+      return <BackgroundLine sessionId={session.id} item={block.item} />;
     }
     return renderEntry(block.key, block.entry);
   }

@@ -35,4 +35,5 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Hintergrundprozess** | Ein vom Agenten mit `run_in_background` gestarteter Bash-Befehl, der weiterläuft, während der Agent arbeitet (z.B. ein Dev-Server). Seine Ausgabe schreibt die Kommandozeile in eine eigene Ausgabedatei; die App kann ihn anhalten. |
 | **Ausgeführter Befehl** | Ein Bash-Aufruf des Agenten im Vordergrund; steht im Hintergrund-Panel unter „Ausgeführt“ mit Exit-Code und Ausgabe. |
 | **Scratchpad** | Claudes eigener temporärer Ordner einer Session (`%TEMP%\claude\…\<session-id>\scratchpad`), gemeldet in `system/init`; liegt außerhalb des Workspace, die Kommandozeile erlaubt ihn dem Agenten selbst. |
+| **Hintergrund-Panel** | Seitenpanel einer Session (440 px) mit den Reitern Prozesse, Subagenten, Scratchpad; geöffnet über den Knopf „Hintergrund“ in der Kopfzeile oder eine Verlaufszeile. |
 | **Core** | Der Rust-Teil der App (`src-tauri/`): Prozesse, Git, Datenbank, Dateisystem. Die React-Oberfläche spricht nur über Tauri Commands und Events mit ihm. |

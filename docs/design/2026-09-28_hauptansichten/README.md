@@ -22,17 +22,17 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | `Changes.dc.html` | Changes-Ansicht: Filter, Dateibaum pro Repository, Übersicht | M5 |
 | `Diff.dc.html` | Changes mit geöffneter Datei (Unified Diff) | M5 |
 | `Artifacts.dc.html` | Reiter „Artefakte“: Liste und Vorschau | offen (GAPS: Artefakte) |
-| `Attach.dc.html` | `+`-Menü und angehängte Dateien in der Eingabeleiste | M2 |
-| `Cmd.dc.html` | `/`-Knopf: Menü mit Kontext, Modell, Skills, Session | M2 |
-| `Slash.dc.html` | `/` ins Eingabefeld getippt: nur Skills und Befehle, filtert beim Tippen | M2 |
+| `Attach.dc.html` | `+`-Menü und angehängte Dateien in der Eingabeleiste | M2b |
+| `Cmd.dc.html` | `/`-Knopf: Menü mit Kontext, Modell, Skills, Session | M2b |
+| `Slash.dc.html` | `/` ins Eingabefeld getippt: nur Skills und Befehle, filtert beim Tippen | M2b |
 | `Model.dc.html` | Modellwahl während der Session | M2a |
 | `Mode.dc.html` | Moduswahl (Manuell / Automatisch bearbeiten / Planen / Auto) und Denkaufwand | M2a |
 | `NewSession.dc.html` | Neue Session im Inhaltsbereich: Aufgabe mit Anhängen → Repositories → Agent | M2a (Aufgabe, Agent) · M3 (Repositories) · M2b (Anhänge, `/`) |
 | `Settings.dc.html` | Einstellungen | M6 |
 | `Empty.dc.html` | Erster Start ohne Sessions | M2a |
 | `Rename.dc.html` | Rechtsklick-Menü auf einer Session (Umbenennen, Archivieren) | M4 |
-| `BgProc.dc.html` | Hintergrund-Panel, Reiter „Prozesse“: laufende Dev-Server und ausgeführte Skripte mit Ausgabe | M2 |
-| `BgAgents.dc.html` | Hintergrund-Panel, Reiter „Subagenten“: Aufgabe, Status, Schritte, Ergebnis | M2 |
+| `BgProc.dc.html` | Hintergrund-Panel, Reiter „Prozesse“: laufende Dev-Server und ausgeführte Skripte mit Ausgabe | M2b |
+| `BgAgents.dc.html` | Hintergrund-Panel, Reiter „Subagenten“: Aufgabe, Status, Schritte, Ergebnis | M2b |
 | `BgScratch.dc.html` | Hintergrund-Panel, Reiter „Scratchpad“: Dateien im temporären Ordner der Session mit Vorschau | M2b |
 
 Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwischenlösung. M6 schließt die restlichen Tafeln, den Hellmodus-Feinschliff und die Konsistenz über alle Ansichten ab.
@@ -170,9 +170,9 @@ Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit de
 
 ## Abweichungen vom Entwurf
 
-Was die Oberfläche in Meilenstein 2a ([Plan-README](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“) und Meilenstein 5 ([Plan-README](../../archive/2026-09/2026-09-29_m5-changes-und-diff/README.md)) bewusst anders oder gar nicht baut:
+Was die Oberfläche in Meilenstein 2a ([Plan-README](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“) und Meilenstein 5 ([Plan-README](../../archive/2026-09/2026-09-29_m5-changes-und-diff/README.md)) sowie Meilenstein 2b (Plan „Anhänge, Skills, Hintergrund“, Abschnitt „Bewusst weggelassen“) bewusst anders oder gar nicht baut:
 
-- **Fehlt ganz** (kein toter Knopf): Reiter „Artefakte“ (offen), Reiter „Changes“ bei Sessions ohne Repository, Hintergrund-Knopf, `+` und `/` (M2b), ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
+- **Fehlt ganz** (kein toter Knopf): Reiter „Artefakte“ (offen), Reiter „Changes“ bei Sessions ohne Repository, ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
 - **Repository-Liste:** Ein fehlendes Repository zeigt „nicht gefunden“ in Fehlerfarbe statt der Skill-Zahl, gesperrtes Häkchen und den Knopf „Entfernen“; ohne bekannte Repositories steht ein Satz statt der leeren Liste; ein Fehler beim Hinzufügen steht als Zeile unter der Liste. Während des Anlegens nennt die Fußzeile „Worktrees werden angelegt …“.
 - **Status „Abgebrochen“:** Haken-Symbol in gedämpfter Farbe, Sidebar-Gruppe „Abgeschlossen“.
 - **Status „Startet“:** dasselbe Symbol wie „Läuft“.
@@ -183,23 +183,28 @@ Was die Oberfläche in Meilenstein 2a ([Plan-README](../../archive/2026-09/2026-
 - **Beantwortete Rückfrage:** Der Kasten bleibt im Verlauf, die Knöpfe sind gesperrt, der Kopf lautet „Claude hat gefragt“ in gedämpfter Farbe mit neutralem Rahmen, die Fußzeile „Antwort: …“ nennt die Antwort bzw. wie die Frage erledigt wurde („Erlaubt“, „Pausiert“, „Nicht beantwortet“ …).
 - **Markdown und Code-Blöcke:** ohne Tafel, gebaut nach Plan M2a Phase 5 — Code-Block mit Kopfzeile (Sprache links, „Kopieren“ rechts) auf `bg-surface`, Syntaxfarben nach VS Code Dark+ / Light+; Links öffnen im Standardbrowser.
 - **Start:** Nach dem Start öffnet sich die neueste Session; der Leerzustand erscheint nur, wenn es keine Session gibt. Eine vorher aktive Session steht als „Pausiert“ da, offene Rückfragen tragen „Nicht beantwortet“.
-- **Eingabeleiste:** ohne die Knöpfe `+` und `/`, Platzhalter „Nachricht an Claude …“ ohne den Zusatz „(/ für Skills, @ für Dateien)“. Wartet der Agent auf eine Rückfrage, lautet er „Antwort an Claude …“; in den Status „Abgebrochen“ und „Fehler“ ist das Feld gesperrt und nennt den Grund. Umschalt+Tab wechselt den Modus reihum, Esc pausiert (ein offenes Menü schließt Esc zuerst).
+- **Eingabeleiste:** Platzhalter „Nachricht an Claude … (/ für Skills)“ ohne den Zusatz „@ für Dateien“. Wartet der Agent auf eine Rückfrage, lautet er „Antwort an Claude …“; in den Status „Abgebrochen“ und „Fehler“ ist das Feld gesperrt und nennt den Grund. Umschalt+Tab wechselt den Modus reihum, Esc pausiert (ein offenes Menü schließt Esc zuerst).
 - **Basis-Angabe:** nennt `base_ref` (der beim Anlegen ausgecheckte Branch) statt `origin/main`; haben die Repositories verschiedene Basen, „gegen die Basis je Repository“ mit Liste beim Überfahren.
 - **Repository-Chips** erst ab zwei Repositories; ihre Zahlen folgen dem gewählten Commit-Stand.
 - **Vergleichs-Angabe im Diff-Kopf** je Commit-Stand (`Basis → Arbeitsverzeichnis`, `Basis → Branch`, `Branch → Arbeitsverzeichnis`) statt immer `Basis → Branch`.
 - **Binärdateien:** „binär“ statt +/− im Baum, im Diff „Kein Textvergleich …“. **Fehlerzeile** je Repository im Baum und in der Übersicht. **Sätze** für Laden, leeren Commit-Stand, leeren Diff und „Gekürzt“. Lange Diff-Zeilen scrollen horizontal.
 - **Menü einer Session:** ein `dialog`-Popover mit den zwei Einträgen „Umbenennen“ (F2) und „Archivieren“, unter der Zeile ausgerichtet statt mit 30-px-Einzug. Archivieren blendet aus und räumt Worktrees ohne offene Änderungen weg; es gibt keine Archiv-Ansicht.
 - **Fehler-Kasten:** „Protokoll anzeigen“ klappt die letzten Zeilen der Fehlerausgabe im Kasten auf (Schrift `font-mono` 12 px / 19 px auf `bg-base`, höchstens 240 px hoch); „Agent neu starten“ steht nur am letzten Fehler und nur im Status „Fehler“.
+- **`/`-Menü:** ohne „Denken ein/aus“, „Zurückspulen“, „Verlauf exportieren“, „Datei aus dem Workspace erwähnen …“ (`@`) und `/artefakte`. Plugin- und eingebaute Skills der Kommandozeile stehen nicht in der Liste; tippen geht trotzdem.
+- **`+`-Menü:** ohne „Screenshot aus der Zwischenablage“ (Strg+V bleibt), „Datei aus dem Workspace erwähnen …“ und „Artefakt dieser Session erwähnen …“.
+- **Hintergrund-Panel, Prozesse:** ohne „Neu starten“ und „Erneut ausführen“ (die Kommandozeile bietet es nicht, die App führt keine Befehle selbst aus) und ohne Repository in der Meta-Zeile (das Arbeitsverzeichnis eines Befehls ist nicht belegbar). „Ausgeführt“ heißt leer „Noch keine Befehle ausgeführt.“ und zeigt das Neueste zuoberst. Schiebt die Kommandozeile einen Vordergrund-Befehl selbst in den Hintergrund, steht er nur einmal (unter „Läuft“).
+- **Hintergrund-Panel, Scratchpad:** Der Pfad ist Claudes eigener Ordner unter `%TEMP%`. Der Reiter zeigt keine Dateizahl, solange er nicht offen ist.
+- **Status „angehalten“ und „unterbrochen“:** in Liste und Verlaufszeile mit Pause-Symbol in gedämpfter Farbe; „unterbrochen“ heißt nie „nicht ausgeführt“, denn der Prozess kann weitergelaufen sein.
 
 ## Platzhalter im Entwurf
 
 - Alle Inhalte sind Beispieldaten: Sessions, Nachrichten, Dateien, Diffs, Skill-Namen, Modellbeschreibungen.
 - Die Changes-Daten sind für jede Session dieselben; nur der Diff von `backend/src/auth/oauth.ts` ist ausgearbeitet.
 - Die Artefakt-Vorschauen sind skizzierte Stellvertreter; die App zeigt das echte Artefakt.
-- Hintergrund-Daten gibt es nur für die Session „OAuth Login“; der Pfad `…\workspaces\<session>\.scratch` ist ein Platzhalter — wo der Scratchpad-Ordner liegt, entscheidet Meilenstein 2b (Frage in GAPS).
+- Hintergrund-Daten gibt es nur für die Session „OAuth Login“; der Pfad `…\workspaces\<session>\.scratch` ist ein Platzhalter — der echte Scratchpad-Ordner ist Claudes eigener Ordner unter `%TEMP%` ([ADR 007](../../decisions/007-anhaenge-skills-hintergrund.md)).
 - Die Auswahlfelder in „Neue Session“ und in den Einstellungen sind nur als geschlossene Knöpfe gezeichnet; „Archivieren“, „Zurückspulen“, „Verlauf exportieren“ und die Agent-Knöpfe haben im Prototyp keine Funktion.
 - Hover- und Tastaturfokus-Zustände sind nicht gezeichnet (die Zeichenfläche unterstützt sie in eingebetteten Tafeln nicht); Fokus in der Umsetzung: 2 px Ring `accent` mit 2 px Abstand.
 
 ## Offene technische Fragen
 
-Ob Skills aus mehreren Repositories, Artefakte und Anhänge mit der Claude-Kommandozeile so funktionieren wie gezeichnet, klärt der Durchstich in Meilenstein 2 — Fragen in [../../knowledge/GAPS.md](../../knowledge/GAPS.md).
+Skills, Anhänge, Hintergrundprozesse, Subagenten und Scratchpad laufen mit der Claude-Kommandozeile wie gezeichnet (Belege in [../../knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md)). Offen sind Artefakte, die stdin-Länge bei großen Anhängen, das Verhalten von Hintergrundprozessen nach hartem Beenden des Agenten und die Rechte in „Manuell“ — Stand in [../../knowledge/GAPS.md](../../knowledge/GAPS.md).

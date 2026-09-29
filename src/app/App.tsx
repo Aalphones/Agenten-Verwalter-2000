@@ -1,7 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
+import { BackgroundPanel } from '@/features/background/BackgroundPanel';
+import { countRunning, indexByToolUseId } from '@/features/background/backgroundItems';
+import { useSessionBackground } from '@/features/background/useSessionBackground';
 import { ChatView } from '@/features/chat/ChatView';
 import { countChangedFiles } from '@/features/changes/changesScope';
 import { ChangesView } from '@/features/changes/ChangesView';
@@ -9,7 +12,9 @@ import { useSessionChanges } from '@/features/changes/useSessionChanges';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
+import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { useBackgroundStore } from '@/stores/background';
 import { useSessionsStore, type SessionView } from '@/stores/sessions';
 import './App.css';
 
@@ -22,6 +27,8 @@ export function App(): ReactElement {
   const selectSession = useSessionsStore((state) => state.selectSession);
   const openNewSession = useSessionsStore((state) => state.openNewSession);
   const closeNewSession = useSessionsStore((state) => state.closeNewSession);
+  const isBackgroundOpen: boolean = useBackgroundStore((state) => state.isOpen);
+  const toggleBackground = useBackgroundStore((state) => state.toggle);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
@@ -52,6 +59,20 @@ export function App(): ReactElement {
     isChangesView,
   );
 
+  // Kopfzeile (Zähler), Verlauf (Zeilen) und Panel brauchen dieselben Daten — einmal laden, nicht je Verbraucher.
+  const visibleSession: SessionSummary | null = showNewSession ? null : (currentSession ?? null);
+  const { background, error: backgroundError } = useSessionBackground(
+    visibleSession === null ? null : visibleSession.id,
+  );
+  const backgroundItems: readonly BackgroundItem[] = useMemo(
+    () => (background === null ? [] : background.items),
+    [background],
+  );
+  const backgroundByToolUseId: ReadonlyMap<string, BackgroundItem> = useMemo(
+    () => indexByToolUseId(backgroundItems),
+    [backgroundItems],
+  );
+
   // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createSession` muss selbst in die Liste.
   function handleCreated(summary: SessionSummary): void {
     upsertSession(summary);
@@ -69,6 +90,9 @@ export function App(): ReactElement {
             session={currentSession}
             activeView={isChangesView ? 'changes' : 'chat'}
             changesCount={changes === null ? null : countChangedFiles(changes)}
+            runningBackgroundCount={countRunning(backgroundItems)}
+            isBackgroundOpen={isBackgroundOpen}
+            onToggleBackground={toggleBackground}
             onShowView={showView}
           />
           {isChangesView ? (
@@ -79,7 +103,11 @@ export function App(): ReactElement {
               error={changesError}
             />
           ) : (
-            <ChatView key={currentSession.id} session={currentSession} />
+            <ChatView
+              key={currentSession.id}
+              session={currentSession}
+              backgroundByToolUseId={backgroundByToolUseId}
+            />
           )}
         </>
       );
@@ -97,6 +125,14 @@ export function App(): ReactElement {
         onArchived={removeSession}
       />
       <main className="app__main">{renderMain()}</main>
+      {isBackgroundOpen && visibleSession !== null && (
+        <BackgroundPanel
+          key={visibleSession.id}
+          session={visibleSession}
+          background={background}
+          error={backgroundError}
+        />
+      )}
     </div>
   );
 }

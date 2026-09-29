@@ -1,0 +1,24 @@
+.background-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  &__title {
+    overflow: hidden;
+    margin: 0;
+    padding: var(--space-2xs) var(--space-md) var(--space-xs);
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: var(--space-xs) var(--space-md);
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-xs);
+  }
+}
