@@ -26,7 +26,8 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Chat-Ansicht** | Hauptansicht einer Session: Gespräch mit dem Agenten, Status, Rückfragen. |
 | **Changes-Ansicht** | Prüfansicht einer Session: geänderte Repositories, Dateien und Diffs gegen die Basis, im gewählten Blickwinkel. |
 | **Anhang** | Bild oder Datei, die mit einer Nachricht an den Agenten geht (per Knopf, Hineinziehen oder Einfügen). Liegt nach dem Senden unter `<Workspace>\.anhaenge\`; Bilder bis 3,75 MiB und PDFs bis 10 MiB gehen als Inhalt an den Agenten, alles andere als Pfad. |
-| **Skill** | Eine benannte, wiederverwendbare Arbeitsanweisung für den Agenten, aufgerufen mit `/name`. Herkunft: Benutzerordner oder `.claude/skills` eines Repositorys der Session. |
+| **Skill** | Eine benannte, wiederverwendbare Arbeitsanweisung für den Agenten, aufgerufen als Nachricht, die mit `/name` beginnt. Das `/`-Menü zeigt Skills und Befehle aus `~\.claude\skills`, `~\.claude\commands` und denselben Ordnern der Repositories einer Session; Plugin- und eingebaute Skills der Kommandozeile nicht. |
+| **Befehl** (Command) | Eine Markdown-Datei in `.claude\commands`, aufgerufen wie ein Skill mit `/name`. |
 | **Modus** | Wie selbstständig der Agent arbeitet: Manuell, Automatisch bearbeiten, Planen, Auto. Pro Session, jederzeit wechselbar. |
 | **Denkaufwand** | Wie gründlich das Modell nachdenkt, fünf Stufen von Niedrig bis Max. Pro Session, jederzeit wechselbar. |
 | **Artefakt** | Etwas, das der Agent in einer Session zum Ansehen erstellt und veröffentlicht (Design, Diagramm, Seite). Im Reiter „Artefakte“ der Session. |

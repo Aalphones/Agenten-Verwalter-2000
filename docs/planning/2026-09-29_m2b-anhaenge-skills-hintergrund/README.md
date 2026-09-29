@@ -9,7 +9,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Core: Anhänge | [phase-1-anhaenge-core.md](phase-1-anhaenge-core.md) | standard | complete |
-| 2 | Core: Skills und Befehle | [phase-2-skills-core.md](phase-2-skills-core.md) | standard | pending |
+| 2 | Core: Skills und Befehle | [phase-2-skills-core.md](phase-2-skills-core.md) | standard | complete |
 | 3 | Core: Hintergrund und Scratchpad | [phase-3-hintergrund-core.md](phase-3-hintergrund-core.md) | heikel | pending |
 | 4 | Oberfläche: Eingabeleiste mit Anhängen und `/`-Menü | [phase-4-eingabeleiste.md](phase-4-eingabeleiste.md) | standard | pending |
 | 5 | Oberfläche: Hintergrund-Panel, Verlaufszeilen, Doku-Abschluss | [phase-5-hintergrund-panel.md](phase-5-hintergrund-panel.md) | standard | pending |

@@ -9,6 +9,7 @@ pub mod git;
 pub mod processes;
 pub mod repositories;
 pub mod sessions;
+pub mod skills;
 pub mod worktrees;
 
 use std::sync::Arc;
@@ -58,6 +59,8 @@ pub fn run() {
             commands::attachments::attachment_add_files,
             commands::attachments::attachment_add_bytes,
             commands::attachments::attachment_discard,
+            commands::skills::skill_list_for_session,
+            commands::skills::skill_list_for_repositories,
             commands::repositories::repository_list,
             commands::repositories::repository_add,
             commands::repositories::repository_remove,

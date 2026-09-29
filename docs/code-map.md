@@ -14,7 +14,7 @@ src-tauri/src/<feature>/          Fachlogik im Core
 src-tauri/src/db/<feature>.rs     SQLite-Zugriffe
 ```
 
-Features: `sessions`, `chat`, `attachments`, `changes`, `repositories`, `settings`. Querschnitt ohne Feature-Bezug: `agents` (Provider), `git`, `worktrees`, `processes`, `filesystem` — nur im Core.
+Features: `sessions`, `chat`, `attachments`, `skills`, `changes`, `repositories`, `settings`. Querschnitt ohne Feature-Bezug: `agents` (Provider), `git`, `worktrees`, `processes`, `filesystem` — nur im Core.
 
 ## Tabelle
 
@@ -26,6 +26,7 @@ Features: `sessions`, `chat`, `attachments`, `changes`, `repositories`, `setting
 | Session-Arbeitsordner | — | `src-tauri/src/filesystem/workspace.rs` (`data_dir`, `new_session_workspace` für neue Sessions, `stored_session_workspace` für gespeicherte) |
 | Persistenz (SQLite) | — | `src-tauri/src/db/` (`mod.rs` Verbindung und Text-Helfer, `migrations.rs` + `migrations/*.sql`, `sessions.rs`, `chat_entries.rs`, `session_repositories.rs`; Migration 2 = Repositories und Worktrees), Datei `<Benutzerordner>\.verwalter\verwalter.db`, geöffnet in `src-tauri/src/lib.rs` |
 | Changes (Repo-Filter, Dateien, Diff) | `src/features/changes/` (`ChangesView`, `ChangesToolbar`, `FileTree` virtualisiert, `buildFileRows`, `ChangesOverview`, `DiffView` virtualisierte Zeilen, `useFileDiff` Nachladen ohne Flackern, `useSessionChanges` Nachladen, `changesScope`), `src/stores/changes.ts` (Filter, Blickwinkel, geöffnete Datei je Session), Wrapper `src/lib/changes.ts` | `src-tauri/src/changes/` (`model.rs` Typen, `parse.rs` Git-Ausgaben lesen inkl. `parse::unified`, `mod.rs` drei Blickwinkel je Repository, ein Thread je Repository, `file_diff`), `src-tauri/src/commands/changes.rs` (`changes_load`, `changes_file_diff`), `SessionRegistry::repositories_of` |
+| Skills und Befehle (Liste fürs `/`-Menü, Skill-Marke an der Nachricht) | Wrapper `src/lib/skills.ts` | `src-tauri/src/skills/` (`frontmatter.rs`; `collect`, `match_invocation`), `src-tauri/src/commands/skills.rs`; `skill_roots` in `sessions/registry.rs` |
 | Repositories (bekannte Repos verwalten) | `src/features/repositories/` (`RepositoryPicker`, `useKnownRepositories`), Wrapper `src/lib/repositories.ts` | `src-tauri/src/repositories/` (Liste, Hinzufügen, Skill-Zahl), `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
 | Git-Aufrufe | — | `src-tauri/src/git/` (einziger Ort, der `git` startet; lesend nur Plumbing: `diff-index`, `diff-tree`, `ls-files`, `rev-list`) |
 | Prozesse ohne Konsolenfenster | — | `src-tauri/src/processes/` (`hide_console`) |

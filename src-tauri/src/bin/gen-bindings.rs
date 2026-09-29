@@ -13,6 +13,7 @@ use verwalter_lib::{
     error::CommandError,
     repositories::model::KnownRepository,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
+    skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
 };
 
 fn main() -> Result<(), ts_rs::ExportError> {
@@ -31,6 +32,10 @@ fn main() -> Result<(), ts_rs::ExportError> {
     QuestionKind::export_all(&cfg)?;
     AttachmentKind::export_all(&cfg)?;
     Attachment::export_all(&cfg)?;
+    SkillOrigin::export_all(&cfg)?;
+    SkillKind::export_all(&cfg)?;
+    SkillInfo::export_all(&cfg)?;
+    SkillRef::export_all(&cfg)?;
     ChatEntry::export_all(&cfg)?;
     QuestionAnswer::export_all(&cfg)?;
     SessionStatus::export_all(&cfg)?;

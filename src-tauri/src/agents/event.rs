@@ -2,6 +2,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::skills::model::SkillRef;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ModelId {
@@ -150,6 +152,9 @@ pub enum ChatEntry {
         /// Einträge aus der Zeit vor Anhängen haben das Feld nicht.
         #[serde(default)]
         attachments: Vec<Attachment>,
+        /// Der Skill, den die Nachricht mit `/name` aufruft.
+        #[serde(default)]
+        skill: Option<SkillRef>,
     },
     Text {
         seq: u32,

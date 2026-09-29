@@ -28,9 +28,10 @@ use crate::attachments;
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{Database, chat_entries, repositories as repository_rows, session_repositories};
 use crate::error::CommandError;
-use crate::filesystem::workspace::{new_session_workspace, stored_session_workspace};
+use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
+use crate::skills::{self, model::SkillRef};
 use crate::worktrees::{self, SessionRepository, WorktreeCheck};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
@@ -239,6 +240,16 @@ impl SessionRegistry {
                     return Err(error);
                 }
             };
+        // Im Haupt-Checkout suchen: der Worktree der neuen Session hat dieselben Dateien.
+        let repository_roots: Vec<(String, PathBuf)> = rows
+            .iter()
+            .map(|row: &repository_rows::RepositoryRow| {
+                (row.name.clone(), PathBuf::from(&row.path))
+            })
+            .collect();
+        let task_skill: Option<SkillRef> = home_dir(app).ok().and_then(|home: PathBuf| {
+            skills::match_invocation(task, &skills::collect(&home, &repository_roots))
+        });
         let session = Arc::new(Session {
             id: id.clone(),
             workspace,
@@ -266,7 +277,7 @@ impl SessionRegistry {
                 outbox.summary_dirty = true;
                 start_process(app, &session, state, outbox)?;
                 let line = message_line(task, &task_attachments)?;
-                state.push_user(outbox, task, task_attachments);
+                state.push_user(outbox, task, task_attachments, task_skill);
                 outbox.write(state, line)?;
                 Ok(summarize(&session, state))
             },
@@ -311,6 +322,11 @@ impl SessionRegistry {
         attachment_ids: &[String],
     ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
+        // Dateizugriffe gehören nicht unter die Session-Sperre.
+        let skill: Option<SkillRef> = skills::match_invocation(
+            text,
+            &skills::collect(&home_dir(app)?, &self.skill_roots(session_id)?),
+        );
         update(
             app,
             &session,
@@ -326,7 +342,7 @@ impl SessionRegistry {
                         return Err(CommandError::AttachmentsWhileWaiting);
                     }
                     answer_oldest_with_text(state, outbox, text)?;
-                    state.push_user(outbox, text, Vec::new());
+                    state.push_user(outbox, text, Vec::new(), skill);
                     return Ok(());
                 }
                 // Ohne Prozess (wiederhergestellte Session) startet der Agent hier, mit dem bisherigen Verlauf.
@@ -337,7 +353,7 @@ impl SessionRegistry {
                 let sent_attachments =
                     attachments::take_for_workspace(app, attachment_ids, &session.workspace)?;
                 let line = message_line(text, &sent_attachments)?;
-                state.push_user(outbox, text, sent_attachments);
+                state.push_user(outbox, text, sent_attachments, skill);
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
             },
@@ -568,6 +584,17 @@ impl SessionRegistry {
     ) -> Result<(PathBuf, Vec<SessionRepository>), CommandError> {
         let session = self.get(session_id)?;
         Ok((session.workspace.clone(), session.repositories.clone()))
+    }
+
+    /// Name und Worktree-Ordner jedes Repositories der Session — dort suchen Skills und Befehle.
+    pub fn skill_roots(&self, session_id: &str) -> Result<Vec<(String, PathBuf)>, CommandError> {
+        let (workspace, repositories) = self.repositories_of(session_id)?;
+        Ok(repositories
+            .iter()
+            .map(|repository: &SessionRepository| {
+                (repository.name.clone(), workspace.join(&repository.folder))
+            })
+            .collect())
     }
 
     pub fn log(&self, session_id: &str) -> Result<Vec<String>, CommandError> {
@@ -805,13 +832,20 @@ impl SessionState {
         seq
     }
 
-    fn push_user(&mut self, outbox: &mut Outbox, text: &str, attachments: Vec<Attachment>) {
+    fn push_user(
+        &mut self,
+        outbox: &mut Outbox,
+        text: &str,
+        attachments: Vec<Attachment>,
+        skill: Option<SkillRef>,
+    ) {
         let sent_at = now_ms();
         self.push_entry(outbox, |seq: u32| ChatEntry::User {
             seq,
             text: text.to_owned(),
             sent_at,
             attachments,
+            skill,
         });
     }
 

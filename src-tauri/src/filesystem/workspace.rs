@@ -12,13 +12,15 @@ use crate::error::CommandError;
 const WORKSPACES_DIR: &str = "workspaces";
 const SHORT_ID_CHARS: usize = 8;
 
+pub fn home_dir(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {
+    app.path()
+        .home_dir()
+        .map_err(|error| CommandError::Io(error.to_string()))
+}
+
 /// `<Benutzerordner>\.verwalter` — hier liegen Datenbank und Session-Arbeitsordner. Legt nichts an.
 pub fn data_dir(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {
-    let home = app
-        .path()
-        .home_dir()
-        .map_err(|error| CommandError::Io(error.to_string()))?;
-    Ok(home.join(".verwalter"))
+    Ok(home_dir(app)?.join(".verwalter"))
 }
 
 /// Legt den Arbeitsordner einer neuen Session an: `workspaces\<erste 8 Zeichen der ID>`, und
