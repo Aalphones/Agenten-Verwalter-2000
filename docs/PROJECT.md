@@ -77,4 +77,4 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 ## Offene Fragen
 
 - **Wie wird die Rechtegrenze pro Session auf Windows durchgesetzt?** Über die Rechte-Einstellungen des Agenten selbst, über das Arbeitsverzeichnis, oder mehr? Für das MVP reicht voraussichtlich die Agent-eigene Konfiguration.
-- **Windows-Pfadlänge:** Worktrees unter einem tiefen Basisordner plus `node_modules` stoßen an die 260-Zeichen-Grenze. Basisordner kurz halten (Vorschlag `~/.verwalter/workspaces/<session>/<repo>`) und `core.longpaths` prüfen.
+- **Windows-Pfadlänge:** Worktrees liegen unter `~\.verwalter\workspaces\<8 Zeichen>\<Repository>` ([ADR 005](decisions/005-repositories-und-worktrees.md)). Die App setzt `core.longpaths` nicht; tiefe Pfade in einem Repository können beim Anlegen scheitern — dann bleibt nichts zurück, und die Meldung nennt das Repository.

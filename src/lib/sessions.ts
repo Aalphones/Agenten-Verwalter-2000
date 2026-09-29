@@ -51,7 +51,7 @@ export async function renameSession(sessionId: string, name: string): Promise<vo
   await invoke('session_rename', { sessionId, name });
 }
 
-/** Beendet den Agenten der Session und nimmt sie aus der Liste; Verlauf und Arbeitsordner bleiben.
+/** Beendet den Agenten der Session und nimmt sie aus der Liste; der Verlauf bleibt, Worktrees ohne offene Änderungen räumt der Core danach weg, Branches bleiben.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
 export async function archiveSession(sessionId: string): Promise<void> {
   await invoke('session_archive', { sessionId });

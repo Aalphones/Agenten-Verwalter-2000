@@ -1,5 +1,6 @@
 //! Anlegen und Aufräumen der Worktrees einer Session.
 use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::db::repositories::RepositoryRow;
@@ -23,6 +24,14 @@ pub struct SessionRepository {
     pub branch: String,
     pub base_ref: String,
     pub base_commit: String,
+}
+
+/// Ergebnis von `ensure` für ein Repository der Session.
+pub enum WorktreeCheck {
+    /// Der Worktree-Ordner ist da (gegebenenfalls gerade neu angelegt).
+    Ready(PathBuf),
+    /// Der Agent startet ohne dieses Repository; `reason` ist ein ganzer Satz.
+    Missing { name: String, reason: String },
 }
 
 /// Der Teil des Branch-Namens nach `verwalter/`: „OAuth Login für Backend“ → `oauth-login-fuer-backend`.
@@ -104,6 +113,71 @@ pub fn create_all(
         }
     }
     Ok(planned)
+}
+
+/// Prüft vor einem Agent-Start die Worktrees einer Session. Ein fehlender Worktree-Ordner entsteht
+/// aus dem Session-Branch neu; ein vorhandener wird nie angefasst. Fehlt der Haupt-Checkout, ist
+/// das Repository `Missing` — auch wenn der Worktree-Ordner noch liegt, denn ohne Haupt-Checkout
+/// ist er kein funktionierender Worktree mehr.
+///
+/// Läuft unter der Session-Sperre: im Normalfall nur Dateisystem-Prüfungen, Git erst beim Reparieren.
+pub fn ensure(workspace: &Path, repositories: &[SessionRepository]) -> Vec<WorktreeCheck> {
+    repositories
+        .iter()
+        .map(|repository: &SessionRepository| ensure_one(workspace, repository))
+        .collect()
+}
+
+fn ensure_one(workspace: &Path, repository: &SessionRepository) -> WorktreeCheck {
+    let main_checkout = &repository.repository_path;
+    let path = workspace.join(&repository.folder);
+    if !main_checkout.join(".git").exists() {
+        return WorktreeCheck::Missing {
+            name: repository.name.clone(),
+            reason: format!("{} gibt es nicht mehr.", main_checkout.display()),
+        };
+    }
+    if path.exists() {
+        return WorktreeCheck::Ready(path);
+    }
+    // Ohne `prune` hielte Git den gelöschten Ordner noch für den Worktree des Branches und
+    // verweigerte ihn einem neuen.
+    let _ = git::worktree_prune(main_checkout);
+    let added = match git::branch_exists(main_checkout, &repository.branch) {
+        Ok(true) => git::worktree_add_existing(main_checkout, &path, &repository.branch),
+        Ok(false) => git::worktree_add_new(
+            main_checkout,
+            &path,
+            &repository.branch,
+            &repository.base_commit,
+        ),
+        Err(error) => Err(error),
+    };
+    match added {
+        Ok(()) => WorktreeCheck::Ready(path),
+        Err(error) => WorktreeCheck::Missing {
+            name: repository.name.clone(),
+            reason: format!("Worktree konnte nicht neu angelegt werden ({error})."),
+        },
+    }
+}
+
+/// Räumt die Worktrees einer archivierten Session weg und danach den Workspace-Ordner, wenn er leer
+/// ist. Ohne `--force`: Git verweigert das Entfernen bei geänderten oder neuen, nicht ignorierten
+/// Dateien — solche Worktrees bleiben mit ihren Änderungen liegen. Branches bleiben immer.
+///
+/// Arbeitet nur mit den übergebenen Pfaden: die Session ist zu diesem Zeitpunkt schon aus der
+/// Registry entfernt.
+pub fn remove_clean(workspace: &Path, repositories: &[SessionRepository]) {
+    for repository in repositories {
+        let path = workspace.join(&repository.folder);
+        if !path.exists() {
+            continue;
+        }
+        let _ = git::worktree_remove(&repository.repository_path, &path);
+        let _ = git::worktree_prune(&repository.repository_path);
+    }
+    let _ = fs::remove_dir(workspace);
 }
 
 /// Rückbau nach gescheitertem Anlegen: Worktrees mit Gewalt entfernen, Branches löschen. Fehler

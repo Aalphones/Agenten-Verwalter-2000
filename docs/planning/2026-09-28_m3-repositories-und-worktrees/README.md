@@ -11,7 +11,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 1 | Git-Modul, Schema und Repository-Liste | [phase-1-git-und-repositories.md](phase-1-git-und-repositories.md) | standard | complete |
 | 2 | Worktrees beim Session-Start anlegen | [phase-2-worktrees-anlegen.md](phase-2-worktrees-anlegen.md) | heikel | complete |
 | 3 | Oberfläche: Schritt „Repositories“ und Sidebar | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
-| 4 | Fehlerfälle und Aufräumen | [phase-4-fehlerfaelle-und-aufraeumen.md](phase-4-fehlerfaelle-und-aufraeumen.md) | heikel | pending |
+| 4 | Fehlerfälle und Aufräumen | [phase-4-fehlerfaelle-und-aufraeumen.md](phase-4-fehlerfaelle-und-aufraeumen.md) | heikel | complete |
 
 Umsetzung direkt auf `main`, ein Commit pro Phase, `pnpm check` vor jedem Commit grün (rustfmt und Clippy brauchen `cargo` im PATH: `$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings`. Erkenntnisse während der Umsetzung → [FINDINGS.md](FINDINGS.md).
 
@@ -161,6 +161,7 @@ Wackelstellen zuerst:
 - [ ] **Großes Repository mit tiefen Pfaden** (z. B. eins mit `node_modules`-artigen Strukturen im Repository): Session anlegen → klappt, oder Fehlermeldung nennt Repository und Grund und es bleibt nichts zurück.
 - [ ] Zwei Repositories wählen, starten → beide Worktrees da, Branch in beiden gleich, Haupt-Checkouts unverändert (`git status` dort sauber, alter Branch).
 - [ ] Zweite Session mit gleichem ersten Satz → Branch `…-2`.
+- [ ] **Anlegen scheitert im zweiten Repository:** dort `.git\hooks\post-checkout` mit dem Inhalt `exit 1` anlegen, Session mit beiden Repositories starten → Formular nennt Repository und Grund; kein Workspace-Ordner, in keinem der beiden Repositories ein neuer Branch oder Worktree (`git worktree list`, `git branch`), keine Session in der Liste. Hook danach wieder löschen.
 - [ ] Unterordner eines Repositorys über „Repository hinzufügen …“ wählen → das Repository selbst erscheint; einen Nicht-Repository-Ordner wählen → Meldung, nichts hinzugefügt; dasselbe Repository noch mal → keine Dopplung.
 - [ ] Repository-Ordner umbenennen, „Neue Session“ öffnen → „nicht gefunden“, nicht wählbar, „Entfernen“ entfernt es.
 - [ ] Worktree-Ordner einer Session im Explorer löschen, Nachricht senden → Ordner ist wieder da, Agent arbeitet.
@@ -176,6 +177,8 @@ Wackelstellen zuerst:
 ## Commits
 
 ## Deviations from plan
+
+- Phase 4, `worktrees::ensure`: Haupt-Checkout wird vor dem Worktree-Ordner geprüft (der Phasen-Pseudocode hatte die umgekehrte Reihenfolge und hätte AK 7 verfehlt). Details im Report-Back der Phase.
 
 ## Follow-ups
 

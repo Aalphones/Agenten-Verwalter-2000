@@ -1,6 +1,6 @@
 # Phase 4 — Fehlerfälle und Aufräumen
 
-**Status:** pending · **Rating:** heikel (Git-Aufrufe im Startpfad unter der Session-Sperre, Aufräumen nach dem Prozessende, Windows hält Dateien fest)
+**Status:** complete · **Rating:** heikel (Git-Aufrufe im Startpfad unter der Session-Sperre, Aufräumen nach dem Prozessende, Windows hält Dateien fest)
 
 ## Kontext
 
@@ -29,15 +29,15 @@ Lesen vor dem Start:
 
 ## Checkliste
 
-- [ ] `worktrees/mod.rs`:
+- [x] `worktrees/mod.rs`:
   - `pub enum WorktreeCheck { Ready(PathBuf), Missing { name: String, reason: String } }`.
   - `pub fn ensure(workspace: &Path, repositories: &[SessionRepository]) -> Vec<WorktreeCheck>`: je Eintrag `path = workspace.join(&folder)`; `path.exists()` → `Ready(path)` (ein vorhandener Ordner wird nie angefasst). Sonst: `repository_path.join(".git").exists()` nein → `Missing { reason: format!("{} gibt es nicht mehr.", repository_path.display()) }`. Ja → `let _ = git::worktree_prune(repo)`; `branch_exists` → `worktree_add_existing(repo, &path, &branch)`, sonst `worktree_add_new(repo, &path, &branch, &base_commit)`; Erfolg → `Ready(path)`, Fehler → `Missing { reason: format!("Worktree konnte nicht neu angelegt werden ({error}).") }`.
   - `pub fn remove_clean(workspace: &Path, repositories: &[SessionRepository])`: je Eintrag, wenn `workspace.join(&folder)` existiert: `git::worktree_remove(repo, &path)` — Fehler ignorieren (Worktree bleibt liegen, das ist gewollt); danach `let _ = git::worktree_prune(repo)`. Am Ende `let _ = fs::remove_dir(workspace)` (gelingt nur, wenn leer). Doc-Kommentar: „Ohne `--force`: Git verweigert das Entfernen bei geänderten oder neuen, nicht ignorierten Dateien — solche Worktrees bleiben mit ihren Änderungen liegen. Branches bleiben immer.“
-- [ ] `sessions/registry.rs`:
+- [x] `sessions/registry.rs`:
   - `start_process(app, session, state, outbox: &mut Outbox)`: vor dem Spawn `let checks = worktrees::ensure(&session.workspace, &session.repositories);` `add_dirs` = alle `Ready`-Pfade; für jedes `Missing { name, reason }` einen Eintrag `state.push_entry(outbox, |seq| ChatEntry::Error { seq, title: "Repository nicht gefunden".to_owned(), text: format!("{name}: {reason} Der Agent arbeitet ohne dieses Repository weiter.") })` — ohne Statuswechsel. Die drei Aufrufer reichen ihr `outbox` durch.
   - `archive`: nach dem bisherigen Ablauf (Abbrechen, Datenbank, aus der Map) die Session-Daten kopieren (`workspace.clone()`, `repositories.clone()`) und, wenn `repositories` nicht leer ist, einen Thread `worktree-cleanup` starten (`thread::Builder::new().name(...)`), der `KILL_GRACE + Duration::from_secs(1)` schläft und dann `worktrees::remove_clean` aufruft. Lässt sich der Thread nicht starten → nichts tun (Worktrees bleiben liegen, kein Fehler). Doc-Kommentar von `archive` anpassen: „… Verlauf bleibt; Worktrees ohne offene Änderungen werden nach dem Ende des Agenten entfernt, Branches bleiben.“
-- [ ] `src/app/SidebarItem.tsx`: `title` von „Archivieren“ → „Blendet die Session aus der Liste aus. Der Verlauf bleibt erhalten. Worktrees ohne offene Änderungen werden entfernt, die Branches bleiben in den Repositories.“
-- [ ] Doku (im selben Commit):
+- [x] `src/app/SidebarItem.tsx`: `title` von „Archivieren“ → „Blendet die Session aus der Liste aus. Der Verlauf bleibt erhalten. Worktrees ohne offene Änderungen werden entfernt, die Branches bleiben in den Repositories.“
+- [x] Doku (im selben Commit):
   - `docs/glossary.md`: „Archivieren“ → „Blendet eine Session aus der Liste aus (`archived_at` in der Datenbank gesetzt). Der Verlauf bleibt erhalten; Worktrees ohne offene Änderungen entfernt die App, Branches bleiben. Keine eigene Archiv-Ansicht.“
   - `docs/decisions/004-persistenz-und-wiederherstellung.md`, „Konsequenzen“, letzter Punkt „Wer eine Session archiviert, blendet sie aus; Daten und Arbeitsordner bleiben.“ → „Wer eine Session archiviert, blendet sie aus; die Daten bleiben, Worktrees ohne offene Änderungen räumt seit [ADR 005](005-repositories-und-worktrees.md) das Archivieren auf.“
   - `docs/PROJECT.md`: unter „Offene Fragen“ den Punkt „Windows-Pfadlänge“ ersetzen durch: „**Windows-Pfadlänge:** Worktrees liegen unter `~\.verwalter\workspaces\<8 Zeichen>\<Repository>` ([ADR 005](decisions/005-repositories-und-worktrees.md)). Die App setzt `core.longpaths` nicht; tiefe Pfade in einem Repository können beim Anlegen scheitern — dann bleibt nichts zurück, und die Meldung nennt das Repository.“
@@ -46,3 +46,7 @@ Lesen vor dem Start:
   - `docs/design/2026-09-28_hauptansichten/README.md`, Abweichung „Menü einer Session“: Satz „Archivieren blendet aus, es gibt in Meilenstein 4 keine Archiv-Ansicht.“ → „Archivieren blendet aus und räumt Worktrees ohne offene Änderungen weg; es gibt keine Archiv-Ansicht.“
 
 ## Report-Back
+
+- Umgesetzt wie beschrieben, mit einer Abweichung in `ensure`: der Haupt-Checkout wird **vor** dem Worktree-Ordner geprüft. Der Pseudocode oben hätte bei umbenanntem Haupt-Checkout `Ready` geliefert (der Worktree-Ordner liegt ja noch im Workspace) — AK 3 und die Entscheidung „fehlt der Haupt-Checkout, startet der Agent ohne dieses Repository“ verlangen `Missing`. Beide Prüfungen sind `Path::exists`, im Normalfall weiterhin kein Git-Aufruf. Ein liegengebliebener Worktree-Ordner wird dabei nicht angefasst.
+- Zusätzlich die Doc-Zeile von `archiveSession` in `src/lib/sessions.ts` nachgezogen (sagte noch „Arbeitsordner bleiben“).
+- Belegt nur per `pnpm check`; AK 2–5 prüft der Smoke am Plan-Ende.

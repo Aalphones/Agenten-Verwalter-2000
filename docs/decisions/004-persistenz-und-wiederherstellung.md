@@ -26,4 +26,4 @@ Bis Meilenstein 2a liegen Sessions und Verlauf im Speicher des Core; ein App-Neu
 - Nach einem harten Beenden der App fehlt höchstens der Eintrag, der in dem Augenblick geschrieben wurde; die Laufzeit-Summe einer gerade laufenden Antwort wird nicht nachgetragen.
 - Wird ein Eintrag nicht geschrieben (Datenbankfehler), landet die Meldung im Protokoll der Session, nicht im Chat. Beim Laden gilt der Verlauf bis zur ersten Lücke in `seq`.
 - Der Verlauf einer Session liegt nach dem ersten Zugriff vollständig im Speicher des Core (nicht der Oberfläche); die Oberfläche liest weiter seitenweise. Bei sehr langen Verläufen ist das die Stelle für eine spätere Umstellung auf Lesen direkt aus SQLite.
-- Wer eine Session archiviert, blendet sie aus; Daten und Arbeitsordner bleiben.
+- Wer eine Session archiviert, blendet sie aus; die Daten bleiben, Worktrees ohne offene Änderungen räumt seit [ADR 005](005-repositories-und-worktrees.md) das Archivieren auf.

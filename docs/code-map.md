@@ -30,7 +30,7 @@ Features: `sessions`, `chat`, `changes`, `repositories`, `settings`. Querschnitt
 | Prozesse ohne Konsolenfenster | — | `src-tauri/src/processes/` (`hide_console`) |
 | Settings | `src/features/settings/` | `src-tauri/src/commands/settings.rs`, `src-tauri/src/db/settings.rs` |
 | Agent-Provider | — | `src-tauri/src/agents/event.rs` (anbieterneutrale Typen: Chat-Einträge, Modell, Modus, Denkaufwand, Agent-Ereignisse), `src-tauri/src/agents/claude/` (Claude-Kommandozeile: Programm finden, Prozess mit `--add-dir` je Worktree, Zeilenformate, Übersetzung) — ein Modul pro Provider |
-| Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` (Branch-Name, Ordnernamen, Anlegen mit Rückbau) |
+| Worktrees anlegen/aufräumen | — | `src-tauri/src/worktrees/` (Branch-Name, Ordnernamen, Anlegen mit Rückbau, Prüfen und Neuanlegen vor jedem Agent-Start (`ensure`), Aufräumen nach dem Archivieren (`remove_clean`)) |
 | Agent-Prozesse, Wiederherstellung | — | `src-tauri/src/sessions/registry.rs` (Wiederherstellung nach Neustart, ruhende Agenten beenden) |
 | Generierte Typen Rust → TS | `src/lib/bindings/` (generiert, nicht von Hand ändern) | Quelle: Typen im Core; Export-Liste `src-tauri/src/bin/gen-bindings.rs` (`pnpm bindings`) |
 | Aufruf-Wrapper für Tauri Commands | `src/lib/<feature>.ts` | `src-tauri/src/commands/<feature>.rs`, registriert in `src-tauri/src/lib.rs` |

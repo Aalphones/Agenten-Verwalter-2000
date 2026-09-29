@@ -73,5 +73,5 @@ Nach Code-Änderungen: Code-Map, Glossar und betroffene Konventionen im selben C
 2. **Git-Zustand ist deterministisch** — Git läuft nur über `src-tauri/src/git/`; die UI zeigt den Zustand aus Git, nie aus Aussagen des Agenten.
 3. **Persistentes gehört in SQLite, nicht in den UI-State** — der Speicherbedarf der UI wächst mit dem Sichtbaren, nicht mit der Zahl der Sessions oder Events.
 4. **Sessions überleben die UI** — ein Fenster-Absturz verliert keine Session und keinen Worktree; der Agent wird mit der nächsten Nachricht wieder gestartet.
-5. **Der Session-Workspace ist die Sicherheitsgrenze** — Agenten bekommen nur ihre Worktrees, nicht das Benutzerverzeichnis.
+5. **Der Session-Workspace ist die Sicherheitsgrenze** — Agenten bekommen nur ihre Worktrees (Arbeitsverzeichnis = Workspace, je Worktree ein `--add-dir`), nicht das Benutzerverzeichnis.
 6. **Ein vollständig abgeschlossener Plan endet mit einem Versions-Tag** — beim Archivieren Version in den drei Dateien anheben, `chore(release)`-Commit, Tag `vX.Y.Z` setzen und pushen; der Tag baut das Release. Ablauf und Versionsregel: [docs/conventions/releases.md](docs/conventions/releases.md).

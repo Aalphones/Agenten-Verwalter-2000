@@ -28,12 +28,14 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{new_session_workspace, stored_session_workspace};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
-use crate::worktrees::{self, SessionRepository};
+use crate::worktrees::{self, SessionRepository, WorktreeCheck};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const INITIAL_CONTEXT_WINDOW: u32 = 200_000;
 const KILL_GRACE: Duration = Duration::from_secs(5);
+/// Abstand zwischen dem Abschuss des Agenten und dem Aufräumen seiner Worktrees.
+const CLEANUP_MARGIN: Duration = Duration::from_secs(1);
 const MAX_LOG_LINES: usize = 300;
 const MAX_LOG_LINE_CHARS: usize = 500;
 const MAX_HISTORY_PAGE: u32 = 500;
@@ -236,7 +238,7 @@ impl SessionRegistry {
             |state: &mut SessionState, outbox: &mut Outbox| {
                 // Ohne diese Zeile bekäme die neue Session nie ihre Datenbankzeile.
                 outbox.summary_dirty = true;
-                start_process(app, &session, state)?;
+                start_process(app, &session, state, outbox)?;
                 state.push_user(outbox, task);
                 outbox.write(state, user_message(task))?;
                 Ok(summarize(&session, state))
@@ -292,7 +294,7 @@ impl SessionRegistry {
                 }
                 // Ohne Prozess (wiederhergestellte Session) startet der Agent hier, mit dem bisherigen Verlauf.
                 if state.process.is_none() || state.effort != state.process_effort {
-                    start_process(app, &session, state)?;
+                    start_process(app, &session, state, outbox)?;
                 }
                 state.push_user(outbox, text);
                 state.set_status(outbox, SessionStatus::Running);
@@ -402,7 +404,8 @@ impl SessionRegistry {
     }
 
     /// Blendet die Session aus: der Agent wird beendet, die Zeile als archiviert markiert, die Session
-    /// verlässt die Liste. Verlauf und Arbeitsordner bleiben.
+    /// verlässt die Liste. Der Verlauf bleibt; Worktrees ohne offene Änderungen werden nach dem Ende
+    /// des Agenten entfernt, Branches bleiben.
     pub fn archive(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
         self.cancel(app, session_id)?;
         let session = self.get(session_id)?;
@@ -410,6 +413,9 @@ impl SessionRegistry {
             .database
             .with(|connection| session_rows::archive(connection, session_id, now_ms()))?;
         self.lock_sessions().remove(session_id);
+        if !session.repositories.is_empty() {
+            schedule_worktree_cleanup(session.workspace.clone(), session.repositories.clone());
+        }
         Ok(())
     }
 
@@ -422,7 +428,7 @@ impl SessionRegistry {
                 if state.status != SessionStatus::Error {
                     return Ok(());
                 }
-                start_process(app, &session, state)?;
+                start_process(app, &session, state, outbox)?;
                 state.pause_requested = false;
                 state.set_status(outbox, SessionStatus::Paused);
                 Ok(())
@@ -1126,13 +1132,32 @@ fn now_ms() -> f64 {
 /// Startet den Agenten neu und ersetzt einen noch laufenden Prozess. Kennt Claude die Session
 /// schon (`has_agent_history`), setzt der Start sie mit ihrem Verlauf fort (`--resume`), sonst
 /// legt er sie unter der Session-ID an (`--session-id`).
+///
+/// Vorher prüft `worktrees::ensure` die Worktrees: fehlende Ordner entstehen neu, ein Repository
+/// ohne Haupt-Checkout bleibt draußen und bekommt einen Fehler-Eintrag im Chat.
 fn start_process(
     app: &AppHandle,
     session: &Arc<Session>,
     state: &mut SessionState,
+    outbox: &mut Outbox,
 ) -> Result<(), CommandError> {
     let resume = state.has_agent_history;
     let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
+    let mut add_dirs: Vec<PathBuf> = Vec::with_capacity(session.repositories.len());
+    for check in worktrees::ensure(&session.workspace, &session.repositories) {
+        match check {
+            WorktreeCheck::Ready(path) => add_dirs.push(path),
+            WorktreeCheck::Missing { name, reason } => {
+                state.push_entry(outbox, |seq: u32| ChatEntry::Error {
+                    seq,
+                    title: "Repository nicht gefunden".to_owned(),
+                    text: format!(
+                        "{name}: {reason} Der Agent arbeitet ohne dieses Repository weiter."
+                    ),
+                });
+            }
+        }
+    }
     if let Some(previous) = state.process.take() {
         retire_process(previous);
     }
@@ -1149,11 +1174,7 @@ fn start_process(
             model: state.model,
             effort: state.effort,
             mode: state.mode,
-            add_dirs: session
-                .repositories
-                .iter()
-                .map(|repository: &SessionRepository| session.workspace.join(&repository.folder))
-                .collect(),
+            add_dirs,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -1179,6 +1200,18 @@ fn retire_process(process: Arc<ClaudeProcess>) {
     if spawned.is_err() {
         process.kill();
     }
+}
+
+/// Räumt die Worktrees erst auf, wenn der Agent sicher beendet ist (`retire_process`): Windows
+/// verweigert das Löschen von Dateien, die ein laufender Prozess offen hält. Startet der Thread
+/// nicht, bleiben die Worktrees liegen — für den Nutzer kein Fehler.
+fn schedule_worktree_cleanup(workspace: PathBuf, repositories: Vec<SessionRepository>) {
+    let _ = thread::Builder::new()
+        .name("worktree-cleanup".to_owned())
+        .spawn(move || {
+            thread::sleep(KILL_GRACE + CLEANUP_MARGIN);
+            worktrees::remove_clean(&workspace, &repositories);
+        });
 }
 
 fn handle_output(app: &AppHandle, session: &Arc<Session>, generation: u32, output: ProcessOutput) {
