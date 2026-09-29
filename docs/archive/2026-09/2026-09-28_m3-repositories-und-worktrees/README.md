@@ -152,9 +152,9 @@ Die generierte `src/lib/bindings/CommandError.ts` erhält `gitNotFound`, `git`, 
 10. Die Sidebar-Meta-Zeile laufender und pausierter Sessions nennt „n Repositories · Modell“ (bei 0 Repositories nur das Modell).
 11. `pnpm check` grün; ADR 005, Code-Map, Glossar, PROJECT.md, AGENTS.md, GAPS und Entwurfs-README beschreiben den tatsächlichen Stand.
 
-## Smoke-Checkliste (macht Sascha am Plan-Ende)
+## Smoke-Checkliste (nicht durchgeführt)
 
-Wackelstellen zuerst:
+Sascha hat den Plan am 2026-09-29 ohne Smoke abgeschlossen. Belegt ist nur `pnpm check` nach jeder Phase; kein Punkt unten wurde in der laufenden App geprüft. Die Liste bleibt als offener Abnahme-Rückstand stehen (siehe „Follow-ups“). Wackelstellen zuerst:
 
 - [ ] **Skills und CLAUDE.md nach Neustart:** Session mit einem Repository starten, das Skills und eine `CLAUDE.md` hat. Fragen „Welche Skills aus dem Repository kennst du, und was steht in der CLAUDE.md?“ → nennt beides. App schließen, neu starten, dieselbe Frage erneut senden → wieder beides (prüft `--add-dir` auf dem `--resume`-Weg; geprobt ist nur ein frischer Start).
 - [ ] **Archivieren mit laufendem Dev-Server:** Agent einen Dev-Server im Worktree starten lassen, Session archivieren, 15 s warten → Worktree ist weg oder liegt vollständig samt Dateien da (nie halb gelöscht); `git -C <repo> worktree list` zeigt keinen kaputten Eintrag (`prunable` ist in Ordnung). Windows hält Dateien offener Prozesse fest — hier bricht es, wenn überhaupt.
@@ -168,18 +168,36 @@ Wackelstellen zuerst:
 - [ ] Session mit einer Datei-Änderung im Worktree archivieren → Worktree mit Änderung bleibt; Session ohne Änderung archivieren → Worktree weg, Branch da.
 - [ ] Alte Session (vor M3 angelegt) öffnen und eine Nachricht senden → Agent kennt den Verlauf.
 - [ ] Session ohne Repository starten → funktioniert wie bisher (leerer Ordner).
-- [ ] Die offenen Smoke-Checklisten aus [Meilenstein 4](../2026-09-28_m4-persistenz-und-wiederherstellung/README.md) und [Meilenstein 2a](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md), falls noch nicht abgenommen.
+
+Die Smoke-Listen aus Meilenstein 4 und 2a sind mit dem M4-Archiv abgenommen, der frühere Verweis darauf entfällt.
 
 ## Summary
 
+Eine Session umfasst jetzt null bis n Git-Repositories. „Neue Session“ hat den Schritt „2 Repositories“ mit der Liste bekannter Repositories (Skill-Zahl, „nicht gefunden“ mit „Entfernen“) und „Repository hinzufügen …“ über den Ordner-Dialog. Beim Start legt der Core pro Repository einen Worktree mit dem Branch `verwalter/<slug>` (bei Kollision `-2` …) unter `~\.verwalter\workspaces\<8 Zeichen>\` an, alles oder nichts; der Agent bekommt jeden Worktree per `--add-dir` samt `CLAUDE.md`-Laden. Vor jedem Agent-Start werden fehlende Worktree-Ordner neu angelegt, ein fehlender Haupt-Checkout bleibt mit Fehler-Eintrag im Chat draußen. Archivieren räumt saubere Worktrees nach dem Ende des Agenten weg, Branches bleiben. Sessions von vor M3 behalten ihren Arbeitsordner.
+
 ## Files touched
+
+- Core neu: `src-tauri/src/git/mod.rs`, `src-tauri/src/worktrees/mod.rs`, `src-tauri/src/repositories/{mod.rs,model.rs}`, `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/{repositories.rs,session_repositories.rs}`, `src-tauri/src/db/migrations/002_repositories_and_worktrees.sql`
+- Core geändert: `src-tauri/src/sessions/registry.rs` (Anlegen mit Worktrees, `ensure` vor jedem Start, Aufräumen beim Archivieren), `src-tauri/src/agents/claude/process.rs` (`--add-dir`, Umgebungsvariable), `src-tauri/src/filesystem/workspace.rs`, `src-tauri/src/processes/mod.rs` (`hide_console`), `src-tauri/src/db/{migrations.rs,sessions.rs,mod.rs}`, `src-tauri/src/error.rs`, `src-tauri/src/sessions/model.rs`, `src-tauri/src/commands/{mod.rs,sessions.rs}`, `src-tauri/src/lib.rs`, `src-tauri/src/bin/gen-bindings.rs`, `src-tauri/Cargo.toml`, `src-tauri/capabilities/default.json`
+- Oberfläche: `src/features/repositories/` (neu: `RepositoryPicker.{tsx,css}`, `useKnownRepositories.ts`), `src/features/sessions/{NewSession.tsx,EmptyState.tsx,sessionStatus.ts}`, `src/app/SidebarItem.tsx`, `src/lib/{repositories.ts,sessions.ts,labels.ts}`, `src/lib/bindings/` (generiert)
+- Doku: ADR 005 (neu), ADR 004, Code-Map, Glossar, PROJECT.md, AGENTS.md, Entwurfs-README
 
 ## Commits
 
+- Plan: `c882427` docs(planning): plan milestone 3 repositories and worktrees
+- Phase 1: `fb34917` feat(repositories): add git module, schema and known-repository list
+- Phase 2: `443206a` feat(worktrees): create a worktree per repository on session start
+- Phase 3: `9294352` feat(repositories): pick repositories in the new-session form
+- Phase 4: `48b85d9` feat(worktrees): repair missing worktrees and clean up on archive
+
 ## Deviations from plan
+
+- **Kein Smoke:** Abschluss auf Saschas Wunsch ohne Abnahme in der laufenden App; AK 1–10 sind nur per Code und `pnpm check` belegt, nicht beobachtet.
 
 - Phase 4, `worktrees::ensure`: Haupt-Checkout wird vor dem Worktree-Ordner geprüft (der Phasen-Pseudocode hatte die umgekehrte Reihenfolge und hätte AK 7 verfehlt). Details im Report-Back der Phase.
 
 ## Follow-ups
+
+- **Smoke-Rückstand:** die Checkliste oben, Wackelstellen zuerst (Archivieren mit laufendem Dev-Server, Skills/CLAUDE.md nach Neustart, tiefe Pfade). Bietet sich an, mit dem Smoke von M5 zusammen abzuarbeiten — M5 misst Changes gegen genau diese Worktrees.
 
 - Backlog (beim Planen aufgefallen, nicht beauftragt): git-ignorierte Dateien wie `.env` fehlen im Worktree, Dev-Server starten dort deshalb oft nicht. Kopieren berührt die Sicherheitsgrenze (der Agent sähe dann Zugangsdaten) — eigene Entscheidung nötig.
