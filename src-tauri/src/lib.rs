@@ -12,6 +12,7 @@ pub mod processes;
 pub mod repositories;
 pub mod sessions;
 pub mod skills;
+pub mod usage;
 pub mod worktrees;
 
 use std::sync::Arc;
@@ -21,6 +22,7 @@ use tauri::Manager;
 use db::Database;
 use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
+use usage::UsageService;
 
 const DATABASE_FILE: &str = "verwalter.db";
 
@@ -38,6 +40,7 @@ pub fn run() {
             let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
             app.manage(registry);
             app.manage(database);
+            app.manage(UsageService::new());
             SessionRegistry::start_reaper(app.handle().clone());
             Ok(())
         })
@@ -60,6 +63,8 @@ pub fn run() {
             commands::chat::chat_answer,
             commands::context::context_load,
             commands::context::context_refresh,
+            commands::usage::usage_load,
+            commands::usage::usage_refresh,
             commands::attachments::attachment_add_files,
             commands::attachments::attachment_add_bytes,
             commands::attachments::attachment_discard,

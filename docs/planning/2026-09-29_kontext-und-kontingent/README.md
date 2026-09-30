@@ -9,7 +9,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [ADR 003](../../de
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Core: Kontext-Aufschlüsselung je Session | [phase-1-kontext-core.md](phase-1-kontext-core.md) | standard | complete |
-| 2 | Core: Kontingent über einen Hilfsprozess | [phase-2-kontingent-core.md](phase-2-kontingent-core.md) | heikel | pending |
+| 2 | Core: Kontingent über einen Hilfsprozess | [phase-2-kontingent-core.md](phase-2-kontingent-core.md) | heikel | complete |
 | 3 | Oberfläche: zwei Fenster in der Kopfzeile, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
 Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase (Scopes: Phase 1 `context`, Phase 2 `usage`, Phase 3 `ui`; die Scopes `context` und `usage` trägt Phase 1 bzw. 2 in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).

@@ -61,7 +61,7 @@ pub struct TaskUsage {
 }
 
 /// Ein Feld, dessen Wert nicht zum erwarteten Typ passt, wird `None`.
-fn lenient<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+pub(crate) fn lenient<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: DeserializeOwned,
@@ -210,6 +210,12 @@ pub fn stop_task(task_id: &str) -> Value {
 /// Fragt die Aufschlüsselung des Kontexts ab; die Antwort kommt als `control_response`.
 pub fn get_context_usage() -> Value {
     json!({ "subtype": "get_context_usage" })
+}
+
+/// Fragt das Kontingent des Abos ab; die Antwort kommt als `control_response`. Im SDK als
+/// experimentell markiert — das Format kann sich mit jeder Version ändern.
+pub fn get_usage() -> Value {
+    json!({ "subtype": "get_usage" })
 }
 
 pub fn allow(request_id: &str, updated_input: Value) -> String {

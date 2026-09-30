@@ -25,34 +25,41 @@ Rating: heikel (Prozess-Lebensdauer, Zeitlimit, Threads) · Commit-Scope: `usage
 
 ### Typen
 
-- [ ] Neues Modul `src-tauri/src/usage/` mit `mod.rs` und `model.rs`; `pub mod usage;` in `lib.rs`. `model.rs`: die sechs Typen aus dem README-Kontrakt, `derive(Debug, Clone, Serialize, TS)`, `camelCase`. In `gen-bindings.rs` eintragen.
+- [x] Neues Modul `src-tauri/src/usage/` mit `mod.rs` und `model.rs`; `pub mod usage;` in `lib.rs`. `model.rs`: die sechs Typen aus dem README-Kontrakt, `derive(Debug, Clone, Serialize, TS)`, `camelCase`. In `gen-bindings.rs` eintragen.
 
 ### Einmal-Anfrage an einen Hilfsprozess
 
-- [ ] Neue Datei `src-tauri/src/agents/claude/helper.rs` (in `agents/claude/mod.rs` eintragen): `pub fn ask_once(exe: &Path, cwd: &Path, request: Value, timeout: Duration) -> Result<Value, String>`.
+- [x] Neue Datei `src-tauri/src/agents/claude/helper.rs` (in `agents/claude/mod.rs` eintragen): `pub fn ask_once(exe: &Path, cwd: &Path, request: Value, timeout: Duration) -> Result<Value, String>`.
   - `Command::new(exe)`, `current_dir(cwd)`, `stdin`/`stdout` `piped`, `stderr` `null`, Schalter `-p --input-format stream-json --output-format stream-json --verbose --strict-mcp-config --no-session-persistence`, `hide_console(&mut command)`. Start scheitert → `Err("Claude-Kommandozeile startet nicht: {error}")`.
   - `control_request(REQUEST_ID, request)` + `\n` auf stdin schreiben und flushen; stdin **offen lassen** (in der Probe blieb es offen). Konstante `REQUEST_ID: &str = "verwalter-usage"`.
   - Lese-Thread über `BufReader::new(stdout).lines()`: jede Zeile als `serde_json::Value`; bei `type == "control_response"` und `response.request_id == REQUEST_ID` → bei `response.subtype == "success"` `Ok(response.response)` (fehlt → `Value::Null`), sonst `Err("Claude lehnt die Abfrage ab: {response.error}")`; Ergebnis über `std::sync::mpsc::channel` senden und den Thread beenden. EOF ohne Treffer → `Err("Claude beendete sich ohne Antwort")`.
   - Hauptfaden: `receiver.recv_timeout(timeout)`; Zeitlimit → `Err("Claude antwortete nicht innerhalb von 20 s")`. Danach **immer** `child.kill()` (Fehler ignorieren) und `child.wait()` — auch auf dem Fehlerweg. Kommentar: ohne `wait` bliebe ein Prozess-Handle offen; der Lese-Thread endet mit dem EOF nach `kill`.
-- [ ] `protocol.rs`: `pub fn get_usage() -> Value { json!({ "subtype": "get_usage" }) }` mit Doc-Kommentar (experimentell im SDK).
-- [ ] `stats.rs`: `pub fn usage_snapshot(body: &Value) -> Option<UsageSnapshot>` nach AK 5, private `Deserialize`-Structs in `snake_case` mit `Option`-Feldern; `None` nur, wenn `body` kein Objekt ist. `percent`/`pct` sind Zahlen (auch mit Nachkommastellen denkbar) → als `f64` lesen, `round()`, auf `0..=100` begrenzen, `as u32`. `fetched_at: 0.0`.
+- [x] `protocol.rs`: `pub fn get_usage() -> Value { json!({ "subtype": "get_usage" }) }` mit Doc-Kommentar (experimentell im SDK).
+- [x] `stats.rs`: `pub fn usage_snapshot(body: &Value) -> Option<UsageSnapshot>` nach AK 5, private `Deserialize`-Structs in `snake_case` mit `Option`-Feldern; `None` nur, wenn `body` kein Objekt ist. `percent`/`pct` sind Zahlen (auch mit Nachkommastellen denkbar) → als `f64` lesen, `round()`, auf `0..=100` begrenzen, `as u32`. `fetched_at: 0.0`.
 
 ### Zwischenspeicher und Abruf
 
-- [ ] `usage/mod.rs`: `pub struct UsageService { cache: Mutex<UsageCache> }`, privat `struct UsageCache { snapshot: Option<UsageSnapshot>, error: Option<String>, is_loading: bool, last_started: Option<Instant> }`. Konstanten `MIN_REFRESH_INTERVAL = Duration::from_secs(30)`, `HELPER_TIMEOUT = Duration::from_secs(20)`, `USAGE_CHANGED_EVENT = "usage://changed"`.
+- [x] `usage/mod.rs`: `pub struct UsageService { cache: Mutex<UsageCache> }`, privat `struct UsageCache { snapshot: Option<UsageSnapshot>, error: Option<String>, is_loading: bool, last_started: Option<Instant> }`. Konstanten `MIN_REFRESH_INTERVAL = Duration::from_secs(30)`, `HELPER_TIMEOUT = Duration::from_secs(20)`, `USAGE_CHANGED_EVENT = "usage://changed"`.
   - `pub fn new() -> UsageService`; `pub fn status(&self) -> UsageStatus` (Kopie).
   - `pub fn refresh(&self, app: &AppHandle, force: bool)`: unter der Sperre prüfen (AK 1), dann `is_loading = true`, `last_started = Some(Instant::now())`; Sperre freigeben; `app.emit(USAGE_CHANGED_EVENT, ())`; `thread::spawn` mit geklontem `AppHandle`: `find_claude()` (`None` → Fehler „Claude-Kommandozeile nicht gefunden“), `data_dir(&app)` (Fehler → Text), `helper::ask_once(&exe, &dir, get_usage(), HELPER_TIMEOUT)`, dann `stats::usage_snapshot` (`None` → „Antwort von Claude unlesbar“). Ergebnis über `app.state::<UsageService>()` eintragen (`fetched_at` = Millisekunden seit 1970 wie `now_ms` im Registry — kleine eigene Funktion, nicht aus `sessions` importieren), `is_loading = false`, `usage://changed` senden. Fehler beim Senden eines Ereignisses nur mit `eprintln!` melden.
   - Kommentar am Typ: warum Hilfsprozess statt Session-Agent (ADR 008).
-- [ ] `lib.rs`: `app.manage(UsageService::new())` im `setup` neben `registry`/`database`.
+- [x] `lib.rs`: `app.manage(UsageService::new())` im `setup` neben `registry`/`database`.
 
 ### Commands
 
-- [ ] Neue Datei `src-tauri/src/commands/usage.rs` (in `commands/mod.rs`): `usage_load(service: State<UsageService>) -> UsageStatus` und `usage_refresh(app, service, force: bool)`, beide `async`, Rückgabe `Result<…, CommandError>` wie die übrigen Commands. In `generate_handler!`.
-- [ ] `pnpm bindings`, `pnpm check`.
+- [x] Neue Datei `src-tauri/src/commands/usage.rs` (in `commands/mod.rs`): `usage_load(service: State<UsageService>) -> UsageStatus` und `usage_refresh(app, service, force: bool)`, beide `async`, Rückgabe `Result<…, CommandError>` wie die übrigen Commands. In `generate_handler!`.
+- [x] `pnpm bindings`, `pnpm check`.
 
 ### Doku
 
-- [ ] `docs/conventions/commits.md`: Scope `usage`.
-- [ ] `docs/code-map.md`: Zeile „Kontingent (Usage des Abos)“ mit Core `src-tauri/src/usage/` (Zwischenspeicher, Abruf), `src-tauri/src/agents/claude/helper.rs` (Hilfsprozess), `stats.rs` (Lesen), `src-tauri/src/commands/usage.rs`; Oberfläche „folgt (Phase 3)“. `usage` in die Feature-Liste.
+- [x] `docs/conventions/commits.md`: Scope `usage`.
+- [x] `docs/code-map.md`: Zeile „Kontingent (Usage des Abos)“ mit Core `src-tauri/src/usage/` (Zwischenspeicher, Abruf), `src-tauri/src/agents/claude/helper.rs` (Hilfsprozess), `stats.rs` (Lesen), `src-tauri/src/commands/usage.rs`; Oberfläche „folgt (Phase 3)“. `usage` in die Feature-Liste.
 
 ## Report-Back
+
+Status: complete. `pnpm bindings` und `pnpm check` grün (rustfmt, Clippy `-D warnings`).
+
+- Abweichung: Der Kontrakt nennt fünf Usage-Typen, nicht sechs (`UsageLimit`, `UsageShare`, `UsageBreakdown`, `UsageSnapshot`, `UsageStatus`); `usage://changed` hat keine Nutzlast und damit keinen eigenen Typ. Erzeugt sind die fünf.
+- `protocol::lenient` ist jetzt `pub(crate)`, damit `stats::usage_snapshot` jedes Feld einzeln nachsichtig liest; ein Feld mit falschem Typ bleibt leer, statt die ganze Antwort zu verwerfen.
+- Der Lese-Thread des Hilfsprozesses parst jede Zeile als `protocol::Incoming` und wertet nur die `control_response` mit `request_id` `verwalter-usage` aus; Dateiende ohne Treffer zeigt sich dem Hauptfaden als getrennter Kanal („Claude beendete sich ohne Antwort“).
+- Nicht gegen einen echten `claude.exe` ausgeführt — Smoke-Punkte 1, 5 und 8 der README decken das am Plan-Ende ab.

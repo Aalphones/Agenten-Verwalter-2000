@@ -1,13 +1,18 @@
-//! Liest die Antworten der Kommandozeile auf `get_context_usage`. Das Format ist nicht als stabil
-//! dokumentiert: jedes Feld ist optional, ein unlesbares Feld macht die Antwort unbrauchbar (`None`),
-//! nie zu einem Fehler.
+//! Liest die Antworten der Kommandozeile auf `get_context_usage` und `get_usage`. Das Format ist
+//! nicht als stabil dokumentiert: jedes Feld ist optional. Bei `get_context_usage` macht ein
+//! unlesbares Feld die Antwort unbrauchbar (`None`); bei `get_usage` (im SDK experimentell) bleibt
+//! nur das betroffene Feld leer — nie ein Fehler.
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::agents::claude::protocol::lenient;
 use crate::context::model::{ContextBreakdown, ContextCategory, ContextFile};
+use crate::usage::model::{UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot};
 
 const KIND_USED: &str = "used";
 const KIND_FREE: &str = "free";
+const DEFAULT_SEVERITY: &str = "normal";
+const MAX_PERCENT: f64 = 100.0;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -81,4 +86,143 @@ fn memory_file(raw: RawFile) -> Option<ContextFile> {
 
 fn saturating_u32(value: u64) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
+}
+
+#[derive(Debug, Deserialize)]
+struct RawUsage {
+    #[serde(default, deserialize_with = "lenient")]
+    subscription_type: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    rate_limits_available: Option<bool>,
+    #[serde(default, deserialize_with = "lenient")]
+    rate_limits: Option<RawRateLimits>,
+    #[serde(default, deserialize_with = "lenient")]
+    behaviors: Option<RawPeriods>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawRateLimits {
+    #[serde(default, deserialize_with = "lenient")]
+    limits: Option<Vec<RawLimit>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawLimit {
+    #[serde(default, deserialize_with = "lenient")]
+    kind: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    percent: Option<f64>,
+    #[serde(default, deserialize_with = "lenient")]
+    severity: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    resets_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawPeriods {
+    #[serde(default, deserialize_with = "lenient")]
+    day: Option<RawPeriod>,
+    #[serde(default, deserialize_with = "lenient")]
+    week: Option<RawPeriod>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawPeriod {
+    #[serde(default, deserialize_with = "lenient")]
+    request_count: Option<u64>,
+    #[serde(default, deserialize_with = "lenient")]
+    session_count: Option<u64>,
+    #[serde(default, deserialize_with = "lenient")]
+    behaviors: Option<Vec<RawBehavior>>,
+    #[serde(default, deserialize_with = "lenient")]
+    skills: Option<Vec<RawSkill>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawBehavior {
+    #[serde(default, deserialize_with = "lenient")]
+    key: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pct: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawSkill {
+    #[serde(default, deserialize_with = "lenient")]
+    name: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pct: Option<f64>,
+}
+
+/// `None` nur, wenn `body` kein Objekt ist. Fehlen die Kontingente oder meldet die Kommandozeile
+/// `rate_limits_available: false`, ist `limits` leer.
+pub fn usage_snapshot(body: &Value) -> Option<UsageSnapshot> {
+    if !body.is_object() {
+        return None;
+    }
+    let raw: RawUsage = serde_json::from_value(body.clone()).ok()?;
+    let limits = if raw.rate_limits_available == Some(false) {
+        Vec::new()
+    } else {
+        raw.rate_limits
+            .and_then(|rate_limits: RawRateLimits| rate_limits.limits)
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(limit)
+            .collect()
+    };
+    let (day, week) = match raw.behaviors {
+        Some(periods) => (periods.day.map(period), periods.week.map(period)),
+        None => (None, None),
+    };
+    Some(UsageSnapshot {
+        plan: raw.subscription_type,
+        limits,
+        day,
+        week,
+        fetched_at: 0.0,
+    })
+}
+
+/// Ein Eintrag ohne `kind` oder `percent` fällt weg.
+fn limit(raw: RawLimit) -> Option<UsageLimit> {
+    Some(UsageLimit {
+        kind: raw.kind?,
+        percent: clamped_percent(raw.percent?),
+        severity: raw.severity.unwrap_or_else(|| DEFAULT_SEVERITY.to_owned()),
+        resets_at: raw.resets_at,
+    })
+}
+
+fn period(raw: RawPeriod) -> UsageBreakdown {
+    UsageBreakdown {
+        request_count: saturating_u32(raw.request_count.unwrap_or(0)),
+        session_count: saturating_u32(raw.session_count.unwrap_or(0)),
+        behaviors: raw
+            .behaviors
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|behavior: RawBehavior| share(behavior.key, behavior.pct))
+            .collect(),
+        skills: raw
+            .skills
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|skill: RawSkill| share(skill.name, skill.pct))
+            .collect(),
+    }
+}
+
+/// Ein Anteil ohne Schlüssel oder Prozentwert fällt weg.
+fn share(key: Option<String>, pct: Option<f64>) -> Option<UsageShare> {
+    Some(UsageShare {
+        key: key?,
+        percent: clamped_percent(pct?),
+    })
+}
+
+/// Die Kommandozeile liefert Zahlen, womöglich mit Nachkommastellen; gezeigt werden ganze Prozent.
+fn clamped_percent(value: f64) -> u32 {
+    // Nach `clamp` liegt der Wert in 0..=100 und passt verlustfrei in `u32`.
+    value.round().clamp(0.0, MAX_PERCENT) as u32
 }

@@ -14,7 +14,7 @@ src-tauri/src/<feature>/          Fachlogik im Core
 src-tauri/src/db/<feature>.rs     SQLite-Zugriffe
 ```
 
-Features: `sessions`, `chat`, `attachments`, `skills`, `background`, `context`, `changes`, `repositories`, `settings`. Querschnitt ohne Feature-Bezug: `agents` (Provider), `git`, `worktrees`, `processes`, `filesystem` — nur im Core.
+Features: `sessions`, `chat`, `attachments`, `skills`, `background`, `context`, `usage`, `changes`, `repositories`, `settings`. Querschnitt ohne Feature-Bezug: `agents` (Provider), `git`, `worktrees`, `processes`, `filesystem` — nur im Core.
 
 ## Tabelle
 
@@ -29,6 +29,7 @@ Features: `sessions`, `chat`, `attachments`, `skills`, `background`, `context`, 
 | Skills und Befehle (Liste fürs `/`-Menü, Skill-Marke an der Nachricht) | `src/features/skills/useSkills.ts`, Wrapper `src/lib/skills.ts` | `src-tauri/src/skills/` (`frontmatter.rs`; `collect`, `match_invocation`), `src-tauri/src/commands/skills.rs`; `skill_roots` in `sessions/registry.rs` |
 | Hintergrund (Prozesse, Subagenten, Scratchpad) | Wrapper `src/lib/background.ts` (inkl. Abo auf `background://changed`), `src/features/background/` (`BackgroundPanel` mit den Reitern `ProcessesTab`/`SubagentsTab`/`ScratchpadTab`, Bausteine `BackgroundRow`/`BackgroundGroup`/`DetailHead`/`OutputPane`/`PanelLayout`, Hooks `useSessionBackground` Abo + Nachladen, `useItemOutput`, `useScratchpad`, `useScratchpadFile`, `mention.ts` „Im Chat besprechen“), Verlaufszeile `src/features/chat/BackgroundLine.tsx`, `src/stores/background.ts` (offen, Reiter, Auswahl) | `src-tauri/src/background/` (`model.rs` Typen, `output.rs` Ausgaben kürzen/lesen, Adresse und Exit-Code, `scratchpad.rs` Liste und Lesen mit Pfadprüfung), `src-tauri/src/commands/background.rs`, `src-tauri/src/db/background.rs`; Ereignisse aus `agents/claude/translate.rs`, Zustand in `sessions/registry.rs` |
 | Kontext (Aufschlüsselung je Session) | folgt (Phase 3) | `src-tauri/src/context/` (`model.rs` Typen, `with_home_shortened`), `src-tauri/src/agents/claude/stats.rs` (Antwort auf `get_context_usage` lesen), `src-tauri/src/commands/context.rs` (`context_load`, `context_refresh`); Zustand und Ereignis `context://changed` in `sessions/registry.rs` ([ADR 008](decisions/008-kontext-und-kontingent.md)) |
+| Kontingent (Usage des Abos) | folgt (Phase 3) | `src-tauri/src/usage/` (`model.rs` Typen, `mod.rs` `UsageService` Zwischenspeicher, Abruf-Regeln und Ereignis `usage://changed`), `src-tauri/src/agents/claude/helper.rs` (Hilfsprozess für eine Steueranfrage), `src-tauri/src/agents/claude/stats.rs` (Antwort auf `get_usage` lesen), `src-tauri/src/commands/usage.rs` (`usage_load`, `usage_refresh`) ([ADR 008](decisions/008-kontext-und-kontingent.md)) |
 | Repositories (bekannte Repos verwalten) | `src/features/repositories/` (`RepositoryPicker`, `useKnownRepositories`), Wrapper `src/lib/repositories.ts` | `src-tauri/src/repositories/` (Liste, Hinzufügen, Skill-Zahl), `src-tauri/src/commands/repositories.rs`, `src-tauri/src/db/repositories.rs` |
 | Git-Aufrufe | — | `src-tauri/src/git/` (einziger Ort, der `git` startet; lesend nur Befehle ohne Index-Sperre: `diff-index`, `diff-tree`, `ls-files`, `rev-list`, `merge-base`, `worktree list`, `symbolic-ref`, `show-ref`) |
 | Prozesse ohne Konsolenfenster | — | `src-tauri/src/processes/` (`hide_console`) |
