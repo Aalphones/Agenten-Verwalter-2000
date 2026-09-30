@@ -190,24 +190,6 @@
     }
   }
 
-  &__context-bar {
-    overflow: hidden;
-    width: 48px;
-    height: 4px;
-    border-radius: var(--radius-full);
-    background: var(--color-bg-hover);
-  }
-
-  &__context-fill {
-    display: block;
-    height: 4px;
-    background: var(--severity-color);
-  }
-
-  &__context-label {
-    color: var(--severity-color);
-  }
-
   &__mono {
     font-family: var(--font-mono);
     font-size: 11.5px;

@@ -1,0 +1,12 @@
+.context-donut {
+  flex-shrink: 0;
+
+  &__track {
+    stroke: var(--color-border);
+  }
+
+  &__fill {
+    stroke: var(--severity-color);
+    stroke-linecap: butt;
+  }
+}

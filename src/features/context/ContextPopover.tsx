@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
-import { SeverityIcon } from '@/components/SeverityIcon';
 import { categoryLabel } from '@/features/context/categoryLabels';
+import { ContextDonut } from '@/features/context/ContextDonut';
+import { contextSeverity } from '@/features/context/contextSeverity';
 import {
   formatClock,
   formatPercent,
@@ -13,9 +14,10 @@ import type { ContextBreakdown } from '@/lib/bindings/ContextBreakdown';
 import type { ContextCategory } from '@/lib/bindings/ContextCategory';
 import type { ContextFile } from '@/lib/bindings/ContextFile';
 import type { SessionContext } from '@/lib/bindings/SessionContext';
+import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { sendMessage } from '@/lib/chat';
 import { refreshContext } from '@/lib/context';
-import { severityOf } from '@/lib/severity';
 import type { Severity } from '@/lib/severity';
 import './ContextPopover.css';
 
@@ -23,8 +25,16 @@ const CONTEXT_POPOVER_WIDTH = 360;
 const CHART_COLOR_COUNT = 7;
 const PATH_MAX_LENGTH = 48;
 const PERCENT_FACTOR = 100;
+const DONUT_SIZE = 44;
 
 const COMPACT_TITLE = 'Ab hier fasst Claude den bisherigen Verlauf zusammen, um Platz zu schaffen.';
+const COMPACT_COMMAND = '/compact';
+const COMPACT_BUTTON_TITLE =
+  'Fasst den bisherigen Verlauf jetzt zusammen, um Platz im Kontext zu schaffen.';
+const COMPACT_BLOCKED_TITLE =
+  'Compact geht nur, wenn der Agent gerade nicht arbeitet und nichts von dir wartet.';
+/** Nur hier ist der Agent untätig und wartet nicht auf eine Antwort — sonst würde „/compact“ eine Rückfrage beantworten. */
+const COMPACTABLE_STATUSES: readonly SessionStatus[] = ['completed', 'paused'];
 
 interface ContextPopoverProps {
   session: SessionSummary;
@@ -47,11 +57,19 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
     });
   }
 
+  function compact(): void {
+    // Wie eine getippte Nachricht: die Kommandozeile fasst zusammen, der Chat zeigt den Verlauf.
+    sendMessage(session.id, COMPACT_COMMAND, []).catch((reason: unknown) => {
+      console.error('Compact nicht sendbar', reason);
+    });
+    onClose();
+  }
+
   function renderBody(): ReactElement {
     if (context === null || context.breakdown === null) {
       return renderWithoutBreakdown(context);
     }
-    return renderBreakdown(context.breakdown, context.isAgentRunning, refresh);
+    return renderBreakdown(context.breakdown);
   }
 
   function renderWithoutBreakdown(loaded: SessionContext | null): ReactElement {
@@ -59,14 +77,44 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
       loaded === null || loaded.isAgentRunning
         ? 'Aufschlüsselung wird geladen …'
         : 'Die Aufschlüsselung kommt mit der nächsten Antwort des Agenten.';
+    const usedPercent: number = shareOfWindow(session.contextUsed, session.contextWindow);
     return (
       <>
-        <p className="context-popover__summary">
-          {formatThousands(session.contextUsed)} von {formatThousands(session.contextWindow)} Tokens
-          belegt
-        </p>
+        {renderGauge(
+          usedPercent,
+          `${formatThousands(session.contextUsed)} von ${formatThousands(session.contextWindow)} Tokens belegt`,
+        )}
         <p className="context-popover__hint">{hint}</p>
       </>
+    );
+  }
+
+  function renderFoot(fetchedAt: number | null): ReactElement {
+    const isRunning: boolean = context?.isAgentRunning ?? false;
+    const canCompact: boolean = COMPACTABLE_STATUSES.includes(session.status);
+    return (
+      <div className="context-popover__foot">
+        <span>
+          {fetchedAt !== null && `Stand ${formatClock(fetchedAt)}`}
+          {fetchedAt !== null && !isRunning && ' · Agent ruht'}
+        </span>
+        <span className="context-popover__actions">
+          {isRunning && (
+            <button type="button" className="context-popover__button" onClick={refresh}>
+              Aktualisieren
+            </button>
+          )}
+          <button
+            type="button"
+            className="context-popover__button context-popover__button--primary"
+            disabled={!canCompact}
+            title={canCompact ? COMPACT_BUTTON_TITLE : COMPACT_BLOCKED_TITLE}
+            onClick={compact}
+          >
+            Compact
+          </button>
+        </span>
+      </div>
     );
   }
 
@@ -81,30 +129,37 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
       <div className="context-popover">
         <h2 className="context-popover__title">Kontext</h2>
         {renderBody()}
+        {renderFoot(context?.breakdown?.fetchedAt ?? null)}
       </div>
     </Popover>
   );
 }
 
-function renderBreakdown(
-  breakdown: ContextBreakdown,
-  isAgentRunning: boolean,
-  onRefresh: () => void,
-): ReactElement {
+/** Donut links, rechts die Zahlen und die Zeile darunter (Modell); Text in der Farbe des Donuts. */
+function renderGauge(usedPercent: number, summary: string, model?: string): ReactElement {
+  const severity: Severity = contextSeverity(usedPercent);
+  return (
+    <div className={`context-popover__gauge severity severity--${severity}`}>
+      <ContextDonut percent={usedPercent} size={DONUT_SIZE} />
+      <div className="context-popover__gauge-text">
+        <p className="context-popover__summary">{summary}</p>
+        {model !== undefined && <p className="context-popover__model">{model}</p>}
+      </div>
+    </div>
+  );
+}
+
+function renderBreakdown(breakdown: ContextBreakdown): ReactElement {
   const rows: CategoryRow[] = buildRows(breakdown.categories);
   const usedPercent: number = shareOfWindow(breakdown.totalTokens, breakdown.maxTokens);
-  const severity: Severity = severityOf(usedPercent);
 
   return (
     <>
-      <p className="context-popover__model">{breakdown.model}</p>
-      <p
-        className={`context-popover__summary context-popover__summary--severity severity severity--${severity}`}
-      >
-        <SeverityIcon severity={severity} />
-        {formatTokens(breakdown.totalTokens)} / {formatTokens(breakdown.maxTokens)} Tokens (
-        {formatPercent(usedPercent, 0)})
-      </p>
+      {renderGauge(
+        usedPercent,
+        `${formatTokens(breakdown.totalTokens)} / ${formatTokens(breakdown.maxTokens)} Tokens (${formatPercent(usedPercent, 0)})`,
+        breakdown.model,
+      )}
       {renderStack(breakdown, rows)}
       {renderTable(breakdown, rows)}
       {breakdown.autoCompactThreshold !== null && (
@@ -114,7 +169,6 @@ function renderBreakdown(
         </p>
       )}
       {breakdown.memoryFiles.length > 0 && renderMemoryFiles(breakdown.memoryFiles)}
-      {renderFoot(breakdown, isAgentRunning, onRefresh)}
     </>
   );
 }
@@ -203,26 +257,6 @@ function renderMemoryFiles(files: readonly ContextFile[]): ReactElement {
         ))}
       </ul>
     </section>
-  );
-}
-
-function renderFoot(
-  breakdown: ContextBreakdown,
-  isAgentRunning: boolean,
-  onRefresh: () => void,
-): ReactElement {
-  return (
-    <div className="context-popover__foot">
-      <span>
-        Stand {formatClock(breakdown.fetchedAt)}
-        {!isAgentRunning && ' · Agent ruht'}
-      </span>
-      {isAgentRunning && (
-        <button type="button" className="context-popover__refresh" onClick={onRefresh}>
-          Aktualisieren
-        </button>
-      )}
-    </div>
   );
 }
 

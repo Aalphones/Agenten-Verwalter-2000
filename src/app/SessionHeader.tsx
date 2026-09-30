@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { SeverityIcon } from '@/components/SeverityIcon';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
+import { ContextDonut } from '@/features/context/ContextDonut';
 import { ContextPopover } from '@/features/context/ContextPopover';
 import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
 import { UsageButton } from '@/features/usage/UsageButton';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { severityOf } from '@/lib/severity';
-import type { Severity } from '@/lib/severity';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
 import './SessionHeader.css';
@@ -73,14 +71,9 @@ export function SessionHeader({
       ? session.runningMs
       : session.runningMs + Math.max(0, now - session.runningSince);
   const contextPercent: number =
-    session.contextWindow === 0
-      ? 0
-      : Math.round((session.contextUsed / session.contextWindow) * 100);
+    session.contextWindow === 0 ? 0 : (session.contextUsed / session.contextWindow) * 100;
   // „Changes“ gibt es nur mit mindestens einem Repository.
   const views: readonly SessionView[] = session.repositoryCount > 0 ? SESSION_VIEWS : ['chat'];
-  const usedThousands: number = Math.round(session.contextUsed / 1000);
-  const windowThousands: number = Math.round(session.contextWindow / 1000);
-  const contextSeverity: Severity = severityOf(contextPercent);
 
   const backgroundLabel: string =
     runningBackgroundCount > 0
@@ -225,23 +218,15 @@ export function SessionHeader({
         <div className="session-header__anchor">
           <button
             type="button"
-            className={`session-header__context severity severity--${contextSeverity}`}
+            className="session-header__context"
             aria-expanded={openPanel === 'context'}
+            aria-label="Kontext"
             title={CONTEXT_TITLE}
             onClick={(): void => {
               togglePanel('context');
             }}
           >
-            <SeverityIcon severity={contextSeverity} />
-            <span className="session-header__context-bar">
-              <span
-                className="session-header__context-fill"
-                style={{ width: `${String(Math.min(contextPercent, 100))}%` }}
-              />
-            </span>
-            <span className="session-header__mono session-header__context-label">
-              {String(usedThousands)}k / {String(windowThousands)}k
-            </span>
+            <ContextDonut percent={contextPercent} />
           </button>
           {openPanel === 'context' && <ContextPopover session={session} onClose={closePanel} />}
         </div>
