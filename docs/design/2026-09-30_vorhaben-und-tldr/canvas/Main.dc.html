@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Vorhaben und TL;DR – Prototyp</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="{{themeVars}} width: 1440px; height: 900px; display: flex; overflow: hidden; background: var(--color-bg-base); color: var(--color-fg-primary); font-family: var(--font-sans); font-size: 13px; line-height: 1.45;">
+
+<nav aria-label="Vorhaben" style="width: 256px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--color-bg-sidebar); border-right: 1px solid var(--color-border-subtle);">
+  <div style="height: 48px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+    <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="7" height="7" rx="2"></rect><rect x="5.5" y="5.5" width="7" height="7" rx="2"></rect></svg>
+    <span style="font-weight: 600; font-size: 13px;">Agenten Verwalter 2000</span>
+  </div>
+  <div style="padding: 2px 10px 10px; flex-shrink: 0;">
+    <button type="button" style="width: 100%; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M7 2.5v9M2.5 7h9"></path></svg>
+      <span style="flex-grow: 1; text-align: left;">Neues Vorhaben</span>
+      <kbd style="font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">Ctrl N</kbd>
+    </button>
+  </div>
+  <div style="flex-grow: 1; min-height: 0; overflow: hidden; padding: 2px 10px; display: flex; flex-direction: column; gap: 14px;">
+    <sc-for list="{{groups}}" as="group" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 1px;">
+        <h2 style="margin: 0; padding: 4px 8px; display: flex; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-fg-muted);"><span>{{group.label}}</span><span style="font-weight: 400;">{{group.count}}</span></h2>
+        <sc-for list="{{group.items}}" as="v" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <div style="display: flex; align-items: flex-start; border-radius: 6px; background: {{v.bg}};">
+              <button type="button" onClick="{{v.toggle}}" aria-label="{{v.toggleLabel}}" aria-expanded="{{v.expandedStr}}" style="flex-shrink: 0; width: 20px; height: 31px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--color-fg-muted); cursor: pointer;">
+                <sc-if value="{{v.expanded}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 7 9l3.5-3.5"></path></svg></sc-if>
+                <sc-if value="{{v.collapsed}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5 9 7l-3.5 3.5"></path></svg></sc-if>
+              </button>
+              <button type="button" onClick="{{v.open}}" aria-current="{{v.ariaCurrent}}" style="flex-grow: 1; min-width: 0; display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px 6px 2px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                <span style="flex-shrink: 0; width: 14px; height: 19px; display: flex; align-items: center; justify-content: center; color: {{v.color}};">
+                  <sc-if value="{{v.isRunning}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+                  <sc-if value="{{v.isWaiting}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.8"></circle><circle cx="6" cy="6" r="1.6" fill="currentColor"></circle></svg></sc-if>
+                  <sc-if value="{{v.isPaused}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect><rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect></svg></sc-if>
+                  <sc-if value="{{v.isCompleted}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                </span>
+                <span style="display: flex; flex-direction: column; min-width: 0; gap: 1px;">
+                  <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.name}}</span>
+                  <sc-if value="{{v.showMeta}}" hint-placeholder-val="{{true}}">
+                    <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{v.metaColor}};">{{v.meta}}</span>
+                  </sc-if>
+                </span>
+              </button>
+            </div>
+            <sc-if value="{{v.expanded}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 1px; margin: 0 0 4px 26px; padding-left: 6px; border-left: 1px solid var(--color-border-subtle);">
+                <sc-for list="{{v.sessions}}" as="s" hint-placeholder-count="3">
+                  <button type="button" onClick="{{s.open}}" aria-current="{{s.ariaCurrent}}" style="height: 26px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: 5px; background: {{s.bg}}; color: {{s.fg}}; font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;">
+                    <span style="flex-shrink: 0; width: 12px; display: flex; align-items: center; justify-content: center; color: {{s.color}};">
+                      <sc-if value="{{s.isRunning}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+                      <sc-if value="{{s.isWaiting}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.8"></circle><circle cx="6" cy="6" r="1.6" fill="currentColor"></circle></svg></sc-if>
+                      <sc-if value="{{s.isPaused}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect><rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect></svg></sc-if>
+                      <sc-if value="{{s.isCompleted}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                      <sc-if value="{{s.isNew}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6"></circle></svg></sc-if>
+                    </span>
+                    <span style="flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; color: var(--color-fg-muted);">#{{s.num}}</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.name}}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </section>
+    </sc-for>
+  </div>
+  <div style="padding: 8px 10px; border-top: 1px solid var(--color-border-subtle); flex-shrink: 0;">
+    <button type="button" style="width: 100%; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"></path><circle cx="9" cy="4" r="1.5"></circle><circle cx="5" cy="10" r="1.5"></circle></svg>
+      <span>Einstellungen</span>
+    </button>
+  </div>
+</nav>
+
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+
+  <sc-if value="{{isSession}}" hint-placeholder-val="{{true}}">
+    <header style="height: 48px; flex-shrink: 0; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 0 14px 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+      <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+        <button type="button" onClick="{{goVorhaben}}" title="Übersicht des Vorhabens öffnen" style="flex-shrink: 1; min-width: 0; height: 26px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-muted); font: inherit; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">{{vname}}</button>
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--color-fg-muted);"><path d="M5.5 3.5 9 7l-3.5 3.5"></path></svg>
+        <span style="flex-shrink: 0; font-family: var(--font-mono); font-size: 11.5px; color: var(--color-fg-muted);">#{{cur.num}}</span>
+        <h1 style="margin: 0; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{cur.name}}</h1>
+        <span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--color-border-subtle); color: {{cur.color}}; font-size: 12px; font-weight: 500;">
+          <sc-if value="{{cur.isRunning}}" hint-placeholder-val="{{true}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+          <sc-if value="{{cur.isCompleted}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+          <sc-if value="{{cur.isNew}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6"></circle></svg></sc-if>
+          <span>{{cur.statusLabel}}</span>
+        </span>
+      </div>
+      <div role="tablist" aria-label="Ansicht" style="display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+        <button type="button" role="tab" aria-selected="true" style="height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; border-radius: 6px; background: var(--color-bg-selected); color: var(--color-fg-primary); font: inherit; font-weight: 500; cursor: pointer;">Chat</button>
+        <button type="button" role="tab" aria-selected="false" title="Änderungen des ganzen Vorhabens" style="height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-weight: 500; cursor: pointer;">Changes<span style="min-width: 18px; padding: 0 5px; box-sizing: border-box; height: 18px; border-radius: 9px; background: var(--color-bg-hover); font-size: 11px; line-height: 18px; color: var(--color-fg-secondary);">14</span></button>
+        <button type="button" role="tab" aria-selected="false" style="height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-weight: 500; cursor: pointer;">Artefakte</button>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; font-size: 12px; color: var(--color-fg-muted);">
+        <span title="Kontext dieser Session" style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+          <span style="width: 48px; height: 4px; border-radius: 2px; background: var(--color-bg-hover); overflow: hidden;"><span style="display: block; height: 4px; width: {{cur.ctxPct}}; background: var(--color-fg-secondary);"></span></span>
+          <span style="font-family: var(--font-mono); font-size: 11.5px;">{{cur.ctxLabel}}</span>
+        </span>
+        <span title="Laufzeit der Session" style="display: flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11.5px;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5.5"></circle><path d="M7 4v3.2l2 1.3"></path></svg>{{cur.runtime}}</span>
+        <sc-if value="{{cur.isRunning}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; gap: 6px;">
+            <button type="button" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect><rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor"></rect></svg>Pause</button>
+            <button type="button" style="height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" rx="1.2" fill="currentColor"></rect></svg>Abbrechen</button>
+          </div>
+        </sc-if>
+      </div>
+    </header>
+
+    <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+      <sc-if value="{{hasTldr}}" hint-placeholder-val="{{true}}">
+        <div style="flex-shrink: 0; width: 100%; max-width: 780px; margin: 0 auto; padding: 14px 32px 0; box-sizing: border-box;">
+          <sc-if value="{{t.isNone}}" hint-placeholder-val="{{false}}">
+            <section aria-label="TL;DR dieser Session" style="min-height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 5px 5px 5px 12px; border: 1px dashed var(--color-border); border-radius: 8px;">
+              <span style="flex-shrink: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--color-fg-muted);">TL;DR</span>
+              <span style="flex-grow: 1; min-width: 0; font-size: 12.5px; color: var(--color-fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Noch keins für diese Session. Fasst den bisherigen Verlauf in drei, vier Zeilen zusammen.</span>
+              <span style="flex-shrink: 0; font-size: 12px; color: var(--color-fg-muted);">Haiku · im Hintergrund</span>
+              <button type="button" onClick="{{t.refresh}}" style="flex-shrink: 0; height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 3.5h9M2 7h5.5M2 10.5h3.5"></path><path d="M10.5 8v5M8 10.5h5"></path></svg>TL;DR erstellen</button>
+            </section>
+          </sc-if>
+          <sc-if value="{{t.exists}}" hint-placeholder-val="{{true}}">
+          <section aria-label="TL;DR dieser Session" style="border: 1px solid var(--color-border-subtle); border-radius: 8px; background: var(--color-bg-surface); display: flex; flex-direction: column;">
+            <div style="height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 5px 0 12px;">
+              <span style="flex-shrink: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--color-fg-muted);">TL;DR</span>
+              <sc-if value="{{t.closed}}" hint-placeholder-val="{{false}}">
+                <span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; color: var(--color-fg-secondary);">{{t.one}}</span>
+              </sc-if>
+              <sc-if value="{{t.open}}" hint-placeholder-val="{{true}}"><span style="flex-grow: 1;"></span></sc-if>
+              <span style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-fg-muted);">
+                <sc-if value="{{t.isStale}}" hint-placeholder-val="{{false}}"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-status-waiting);"></span></sc-if>
+                <sc-if value="{{t.isLoading}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style="color: var(--color-status-running);"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+                <span>{{t.stamp}}</span>
+              </span>
+              <sc-if value="{{t.showRefreshText}}" hint-placeholder-val="{{false}}">
+                <button type="button" onClick="{{t.refresh}}" style="flex-shrink: 0; height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 7.4A4.6 4.6 0 1 1 10.3 3.6"></path><path d="M11 1.6v2.8H8.2"></path></svg>Aktualisieren</button>
+              </sc-if>
+              <sc-if value="{{t.showRefreshIcon}}" hint-placeholder-val="{{true}}">
+                <button type="button" onClick="{{t.refresh}}" aria-label="TL;DR neu erstellen" title="TL;DR neu erstellen" style="flex-shrink: 0; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-muted); cursor: pointer;"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 7.4A4.6 4.6 0 1 1 10.3 3.6"></path><path d="M11 1.6v2.8H8.2"></path></svg></button>
+              </sc-if>
+              <button type="button" onClick="{{t.toggle}}" aria-label="{{t.toggleLabel}}" aria-expanded="{{t.openStr}}" style="flex-shrink: 0; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-muted); cursor: pointer;">
+                <sc-if value="{{t.open}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 7 5l3.5 3.5"></path></svg></sc-if>
+                <sc-if value="{{t.closed}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5 7 9l3.5-3.5"></path></svg></sc-if>
+              </button>
+            </div>
+            <sc-if value="{{t.open}}" hint-placeholder-val="{{true}}">
+              <div style="padding: 0 14px 12px 12px; display: flex; flex-direction: column; gap: 5px;">
+                <sc-if value="{{t.notLoading}}" hint-placeholder-val="{{true}}">
+                  <sc-for list="{{t.lines}}" as="ln" hint-placeholder-count="4">
+                    <div style="display: flex; gap: 12px; font-size: 12.5px; line-height: 1.55;">
+                      <span style="flex-shrink: 0; width: 64px; color: var(--color-fg-muted);">{{ln.k}}</span>
+                      <span style="min-width: 0; color: {{ln.fg}};">{{ln.v}}</span>
+                    </div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{t.isLoading}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; flex-direction: column; gap: 9px; padding: 4px 0 2px;">
+                    <span style="display: block; width: 92%; height: 9px; border-radius: 5px; background: var(--color-bg-hover);"></span>
+                    <span style="display: block; width: 78%; height: 9px; border-radius: 5px; background: var(--color-bg-hover);"></span>
+                    <span style="display: block; width: 64%; height: 9px; border-radius: 5px; background: var(--color-bg-hover);"></span>
+                    <span style="font-size: 12px; color: var(--color-fg-muted);">Haiku liest den Verlauf in einer eigenen Session im Hintergrund. Du kannst hier weiterarbeiten.</span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </section>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <div style="flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;">
+        <div style="width: 100%; max-width: 780px; margin: 0 auto; padding: 20px 32px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
+          <sc-if value="{{isEmpty}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 13.5px; font-weight: 600;">Neue Session im Vorhaben „{{vname}}“</span>
+                <span style="font-size: 12.5px; color: var(--color-fg-secondary);">Startet mit leerem Kontext, ohne den Verlauf von #1 bis #3. Modell, Modus und Denkaufwand sind aus #3 übernommen und lassen sich unten vor der ersten Nachricht ändern.</span>
+              </div>
+              <label style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--color-border-subtle); border-radius: 8px; background: var(--color-bg-surface); cursor: pointer;">
+                <input type="checkbox" checked="{{withCtx}}" onChange="{{toggleCtx}}" style="margin: 2px 0 0; width: 14px; height: 14px; flex-shrink: 0; accent-color: var(--color-accent);">
+                <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                  <span style="font-weight: 500;">TL;DR des Vorhabens mit der ersten Nachricht schicken</span>
+                  <span style="font-size: 12.5px; line-height: 1.55; color: var(--color-fg-secondary);">{{vt.text}}</span>
+                </span>
+              </label>
+            </div>
+          </sc-if>
+          <sc-for list="{{chat}}" as="b" hint-placeholder-count="4">
+            <sc-if value="{{b.isUser}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg-surface);">
+                <p style="margin: 0; font-size: 13.5px; line-height: 1.6;"><sc-if value="{{b.hasSkill}}" hint-placeholder-val="{{false}}"><span style="display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; background: var(--color-accent-subtle); color: var(--color-accent-text); font-family: var(--font-mono); font-size: 12.5px;">{{b.skill}}</span></sc-if>{{b.text}}</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{b.isText}}" hint-placeholder-val="{{true}}">
+              <p style="margin: 0; font-size: 13.5px; line-height: 1.65;">{{b.text}}</p>
+            </sc-if>
+            <sc-if value="{{b.isTools}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px; color: var(--color-fg-secondary);">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-status-completed);"></span>
+                <span style="font-weight: 600; color: var(--color-fg-primary);">{{b.title}}</span>
+                <span>{{b.summary}}</span>
+                <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5 9 7l-3.5 3.5"></path></svg>
+              </div>
+            </sc-if>
+          </sc-for>
+          <sc-if value="{{cur.isRunning}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--color-fg-muted);">
+              <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style="color: var(--color-status-running);"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg>
+              <span>Claude arbeitet · Esc unterbricht</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="flex-shrink: 0; width: 100%; max-width: 780px; margin: 0 auto; padding: 0 32px 18px; box-sizing: border-box;">
+        <div style="border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-surface); display: flex; flex-direction: column;">
+          <textarea aria-label="Nachricht an Claude" rows="2" placeholder="{{placeholder}}" style="border: 0; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13.5px; line-height: 1.55; padding: 10px 14px 4px; resize: none; outline: none;"></textarea>
+          <div style="display: flex; align-items: center; gap: 4px; padding: 4px 6px 6px;">
+            <button type="button" aria-label="Bilder und Dateien hinzufügen" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M7 2v10M2 7h10"></path></svg></button>
+            <button type="button" aria-label="Befehle und Skills" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); cursor: pointer;"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="11" rx="2"></rect><path d="M8.6 4 5.4 10"></path></svg></button>
+            <button type="button" aria-label="Modell: Sonnet 5, Denkaufwand Hoch" style="height: 26px; display: flex; align-items: center; gap: 6px; margin-left: 4px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 13px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12.5px; cursor: pointer;">Claude · Sonnet 5 <span style="color: var(--color-fg-muted);">Hoch</span></button>
+            <span style="flex-grow: 1;"></span>
+            <button type="button" aria-label="Modus: Auto" style="height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-size: 12.5px; cursor: pointer;"><span style="font-family: var(--font-mono);">ϟ</span>Auto</button>
+            <button type="button" aria-label="Senden" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); cursor: pointer;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11.5v-9M3 6.5l4-4 4 4"></path></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isVorhaben}}" hint-placeholder-val="{{false}}">
+    <header style="height: 48px; flex-shrink: 0; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 0 14px 0 20px; border-bottom: 1px solid var(--color-border-subtle);">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+        <h1 style="margin: 0; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{vname}}</h1>
+        <span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--color-border-subtle); color: var(--color-status-running); font-size: 12px; font-weight: 500;"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg><span>Läuft</span></span>
+      </div>
+      <div role="tablist" aria-label="Ansicht" style="display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+        <button type="button" role="tab" aria-selected="true" style="height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; border-radius: 6px; background: var(--color-bg-selected); color: var(--color-fg-primary); font: inherit; font-weight: 500; cursor: pointer;">Übersicht</button>
+        <button type="button" role="tab" aria-selected="false" style="height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-secondary); font: inherit; font-weight: 500; cursor: pointer;">Changes<span style="min-width: 18px; padding: 0 5px; box-sizing: border-box; height: 18px; border-radius: 9px; background: var(--color-bg-hover); font-size: 11px; line-height: 18px; color: var(--color-fg-secondary);">14</span></button>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 14px; font-size: 12px; color: var(--color-fg-muted);">
+        <span style="font-family: var(--font-mono); font-size: 11.5px;">{{vTotals}}</span>
+      </div>
+    </header>
+
+    <div style="flex-grow: 1; min-height: 0; overflow: hidden;">
+      <div style="width: 100%; max-width: 780px; margin: 0 auto; padding: 24px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px;">
+
+        <section aria-label="TL;DR des Vorhabens" style="border: 1px solid var(--color-border-subtle); border-radius: 8px; background: var(--color-bg-surface); display: flex; flex-direction: column;">
+          <div style="height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 5px 0 14px;">
+            <span style="flex-shrink: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--color-fg-muted);">TL;DR</span>
+            <span style="flex-grow: 1;"></span>
+            <span style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-fg-muted);">
+              <sc-if value="{{vt.isLoading}}" hint-placeholder-val="{{false}}"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style="color: var(--color-status-running);"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+              <span>{{vt.stamp}}</span>
+            </span>
+            <sc-if value="{{vt.notLoading}}" hint-placeholder-val="{{true}}">
+              <button type="button" onClick="{{vt.refresh}}" aria-label="TL;DR des Vorhabens neu erstellen" title="Fasst die TL;DRs aller Sessions neu zusammen" style="flex-shrink: 0; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--color-fg-muted); cursor: pointer;"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 7.4A4.6 4.6 0 1 1 10.3 3.6"></path><path d="M11 1.6v2.8H8.2"></path></svg></button>
+            </sc-if>
+          </div>
+          <div style="padding: 0 16px 14px 14px; display: flex; flex-direction: column; gap: 10px;">
+            <sc-if value="{{vt.notLoading}}" hint-placeholder-val="{{true}}">
+              <p style="margin: 0; font-size: 13.5px; line-height: 1.6;">{{vt.text}}</p>
+              <div style="display: flex; flex-direction: column; gap: 5px;">
+                <sc-for list="{{vt.lines}}" as="ln" hint-placeholder-count="3">
+                  <div style="display: flex; gap: 12px; font-size: 12.5px; line-height: 1.55;">
+                    <span style="flex-shrink: 0; width: 84px; color: var(--color-fg-muted);">{{ln.k}}</span>
+                    <span style="min-width: 0; color: {{ln.fg}};">{{ln.v}}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{vt.isLoading}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; flex-direction: column; gap: 9px; padding: 4px 0 2px;">
+                <span style="display: block; width: 96%; height: 10px; border-radius: 5px; background: var(--color-bg-hover);"></span>
+                <span style="display: block; width: 88%; height: 10px; border-radius: 5px; background: var(--color-bg-hover);"></span>
+                <span style="display: block; width: 58%; height: 10px; border-radius: 5px; background: var(--color-bg-hover);"></span>
+                <span style="font-size: 12px; color: var(--color-fg-muted);">Liest nur die TL;DRs der Sessions, nicht deren ganze Verläufe. Fehlende Session-TL;DRs werden dabei mit erstellt.</span>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--color-fg-muted);">
+          <span>Repositories</span>
+          <span style="height: 22px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 5px; background: var(--color-bg-hover); color: var(--color-fg-secondary); font-weight: 500;">backend</span>
+          <span style="height: 22px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 5px; background: var(--color-bg-hover); color: var(--color-fg-secondary); font-weight: 500;">frontend</span>
+          <span style="margin-left: 6px;">Changes gegen main: 14 Dateien</span>
+          <span style="font-family: var(--font-mono); color: var(--color-diff-add-fg);">+420</span>
+          <span style="font-family: var(--font-mono); color: var(--color-diff-del-fg);">−88</span>
+        </div>
+
+        <section aria-label="Sessions des Vorhabens" style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: flex-end; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+              <h2 style="margin: 0; font-size: 13.5px; font-weight: 600;">Sessions <span style="font-weight: 400; color: var(--color-fg-muted);">{{vCount}}</span></h2>
+              <span style="font-size: 12px; color: var(--color-fg-muted);">Jede Session ist ein eigener Claude-Verlauf mit frischem Kontext.</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 12px; color: var(--color-fg-muted); white-space: nowrap;">übernimmt Sonnet 5 · Hoch · Auto aus #3</span>
+            <button type="button" onClick="{{newSession}}" style="flex-shrink: 0; height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--color-accent); color: var(--color-fg-on-accent); font: inherit; font-weight: 600; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 2.5v9M2.5 7h9"></path></svg>Neue Session</button>
+          </div>
+          <sc-for list="{{vCards}}" as="c" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--color-border-subtle); border-radius: 8px;">
+              <button type="button" onClick="{{c.open}}" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--color-fg-primary); font: inherit; text-align: left; cursor: pointer;">
+                <span style="flex-shrink: 0; width: 14px; display: flex; align-items: center; justify-content: center; color: {{c.color}};">
+                  <sc-if value="{{c.isRunning}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg></sc-if>
+                  <sc-if value="{{c.isCompleted}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.3 4.9 8.7 9.6 3.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                  <sc-if value="{{c.isNew}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6"></circle></svg></sc-if>
+                </span>
+                <span style="flex-shrink: 0; font-family: var(--font-mono); font-size: 11.5px; color: var(--color-fg-muted);">#{{c.num}}</span>
+                <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{c.name}}</span>
+                <span style="flex-grow: 1;"></span>
+                <span style="flex-shrink: 0; font-size: 12px; color: var(--color-fg-muted); white-space: nowrap;">{{c.meta}}</span>
+              </button>
+              <sc-if value="{{c.hasOne}}" hint-placeholder-val="{{true}}">
+                <span style="padding-left: 24px; font-size: 12.5px; line-height: 1.55; color: var(--color-fg-secondary);">{{c.one}}</span>
+              </sc-if>
+              <sc-if value="{{c.isLoading}}" hint-placeholder-val="{{false}}">
+                <span style="padding-left: 24px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--color-fg-muted);"><svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style="color: var(--color-status-running);"><circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22"></circle><circle cx="6" cy="6" r="3" fill="currentColor"></circle></svg>TL;DR wird erstellt …</span>
+              </sc-if>
+              <sc-if value="{{c.noTldr}}" hint-placeholder-val="{{false}}">
+                <div style="padding-left: 24px; display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 12.5px; color: var(--color-fg-muted);">Noch kein TL;DR.</span>
+                  <button type="button" onClick="{{c.create}}" style="height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 6px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 12px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 3.5h9M2 7h5.5M2 10.5h3.5"></path><path d="M10.5 8v5M8 10.5h5"></path></svg>TL;DR erstellen</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"start":{"editor":"enum","options":["session","vorhaben","neu"],"default":"session"},"tldr":{"editor":"enum","options":["offen","eingeklappt","veraltet","laeuft","keins"],"default":"offen"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var P = this.props || {};
+    var st = this.state || {};
+    var theme = P.theme === 'light' ? 'light' : 'dark';
+    var start = P.start || 'session';
+    var tldrProp = P.tldr || 'offen';
+    var initPhase = tldrProp === 'veraltet' ? 'stale' : (tldrProp === 'laeuft' ? 'loading' : (tldrProp === 'keins' ? 'none' : 'fresh'));
+
+    var hasS4 = st.hasS4 !== undefined ? st.hasS4 : start === 'neu';
+    var view = st.view || (start === 'vorhaben' ? 'vorhaben' : 'session');
+    var sel = st.sel || (start === 'neu' ? 's4' : 's3');
+    var tOpen = st.tOpen !== undefined ? st.tOpen : tldrProp !== 'eingeklappt';
+    var phases = st.phases || { s3: initPhase };
+    var stamps = st.stamps || {};
+    var expanded = st.expanded || { v1: true };
+    var withCtx = st.withCtx !== undefined ? st.withCtx : true;
+    var vPh = st.vPhase || 'fresh';
+
+    function assign(a, b) { for (var k in b) { a[k] = b[k]; } return a; }
+
+    var THEMES = {
+      dark: {
+        '--color-bg-base': '#1f1f1f', '--color-bg-sidebar': '#181818', '--color-bg-surface': '#252526',
+        '--color-bg-popover': '#252526', '--color-bg-hover': '#2e2e30', '--color-bg-selected': '#37373d',
+        '--color-border-subtle': '#2b2b2b', '--color-border': '#3c3c3c',
+        '--color-fg-primary': '#d4d4d4', '--color-fg-secondary': '#b0b0b0', '--color-fg-muted': '#8f8f8f',
+        '--color-accent': '#e0825c', '--color-fg-on-accent': '#1d130e', '--color-accent-subtle': 'rgba(224, 130, 92, 0.16)', '--color-accent-text': '#eea283',
+        '--color-status-running': '#5b9dff', '--color-status-waiting': '#f2b33d', '--color-status-error': '#f47067',
+        '--color-status-paused': '#8f8f8f', '--color-status-completed': '#4cc38a',
+        '--color-diff-add-fg': '#4cc38a', '--color-diff-del-fg': '#f47067',
+        '--shadow-popover': '0 10px 30px rgba(0, 0, 0, 0.45)'
+      },
+      light: {
+        '--color-bg-base': '#ffffff', '--color-bg-sidebar': '#f8f8f8', '--color-bg-surface': '#ffffff',
+        '--color-bg-popover': '#ffffff', '--color-bg-hover': '#f0f0f0', '--color-bg-selected': '#e4e6f1',
+        '--color-border-subtle': '#e5e5e5', '--color-border': '#cecece',
+        '--color-fg-primary': '#3c3c3c', '--color-fg-secondary': '#555555', '--color-fg-muted': '#6e6e6e',
+        '--color-accent': '#c4572f', '--color-fg-on-accent': '#ffffff', '--color-accent-subtle': 'rgba(196, 87, 47, 0.10)', '--color-accent-text': '#a8461f',
+        '--color-status-running': '#2563eb', '--color-status-waiting': '#a86a00', '--color-status-error': '#d23b33',
+        '--color-status-paused': '#6e6e6e', '--color-status-completed': '#16803c',
+        '--color-diff-add-fg': '#16803c', '--color-diff-del-fg': '#d23b33',
+        '--shadow-popover': '0 10px 30px rgba(0, 0, 0, 0.14)'
+      }
+    };
+    var tv = assign({}, THEMES[theme]);
+    tv['--font-sans'] = "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif";
+    tv['--font-mono'] = "'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace";
+    var themeVars = Object.keys(tv).map(function (k) { return k + ': ' + tv[k] + ';'; }).join(' ');
+
+    var STATUS = {
+      running: { label: 'Läuft', color: 'var(--color-status-running)' },
+      waiting: { label: 'Wartet', color: 'var(--color-status-waiting)' },
+      paused: { label: 'Pausiert', color: 'var(--color-status-paused)' },
+      completed: { label: 'Abgeschlossen', color: 'var(--color-status-completed)' },
+      neu: { label: 'Neu', color: 'var(--color-fg-muted)' }
+    };
+    function flags(status) {
+      return {
+        isRunning: status === 'running', isWaiting: status === 'waiting', isPaused: status === 'paused',
+        isCompleted: status === 'completed', isNew: status === 'neu',
+        color: STATUS[status].color, statusLabel: STATUS[status].label
+      };
+    }
+    function lines(list) {
+      return list.map(function (l) { return { k: l[0], v: l[1], fg: l[2] ? 'var(--color-status-waiting)' : 'var(--color-fg-primary)' }; });
+    }
+
+    var S = [
+      {
+        id: 's1', num: 1, name: 'Phase 1 · Datenmodell', status: 'completed', model: 'Sonnet 5', runtime: '42 min', ctx: 61, stamp: 'Stand 11:05',
+        one: 'Tabellen users und oauth_accounts angelegt, Upsert nach E-Mail im Repository.',
+        lines: lines([
+          ['Ziel', 'Datenmodell für den Google-Login (Phase 1 von 4).'],
+          ['Erledigt', 'Migration 7 legt users und oauth_accounts an; Repository mit Upsert nach E-Mail; committet.'],
+          ['Offen', 'Nichts – Phase abgeschlossen.']
+        ]),
+        chat: [
+          { kind: 'user', skill: '/implement', text: 'Phase 1 aus docs/planning/oauth-login umsetzen.' },
+          { kind: 'tools', title: 'Edit', summary: '3 Dateien · migrations/007_oauth.sql, repo/users.rs, repo/mod.rs' },
+          { kind: 'text', text: 'Phase 1 ist fertig: Migration 7, Repository mit Upsert nach E-Mail, Prüfkette grün. Commit: feat(auth): Datenmodell für Google-Login.' }
+        ]
+      },
+      {
+        id: 's2', num: 2, name: 'Phase 2 · Callback-Route', status: 'completed', model: 'Sonnet 5', runtime: '1 h 05 min', ctx: 74, stamp: 'Stand 12:31',
+        one: 'Callback tauscht den Code gegen Tokens, setzt das Session-Cookie und prüft state gegen CSRF.',
+        lines: lines([
+          ['Ziel', 'Den Google-Callback annehmen und anmelden (Phase 2 von 4).'],
+          ['Erledigt', 'Route /auth/google/callback, Token-Tausch, Session-Cookie, state-Prüfung gegen CSRF; committet.'],
+          ['Offen', 'Das Refresh-Token wird noch verworfen – Thema von Phase 3.']
+        ]),
+        chat: [
+          { kind: 'user', skill: '/implement', text: 'Weiter mit Phase 2.' },
+          { kind: 'tools', title: 'Edit', summary: '4 Dateien · routes/auth.rs, oauth/google.rs, …' },
+          { kind: 'text', text: 'Phase 2 steht. Der Callback meldet an und setzt das Cookie. Das Refresh-Token verwerfe ich bewusst noch, das kommt in Phase 3.' }
+        ]
+      },
+      {
+        id: 's3', num: 3, name: 'Phase 3 · Token-Refresh', status: 'running', model: 'Sonnet 5', runtime: '18 min', ctx: 38, stamp: 'Stand 14:32',
+        one: 'Refresh-Token wird gespeichert und 5 Minuten vor Ablauf erneuert; Fehlerpfad in Arbeit.',
+        lines: lines([
+          ['Ziel', 'Abgelaufene Google-Tokens automatisch erneuern (Phase 3 von 4).'],
+          ['Erledigt', 'Refresh-Token wird verschlüsselt gespeichert; Erneuerung 5 Minuten vor Ablauf.'],
+          ['Läuft', 'Fehlerpfad: ein widerrufenes Refresh-Token meldet den Nutzer ab.'],
+          ['Offen', 'Deine Entscheidung: per Hintergrund-Timer erneuern oder erst beim nächsten Request?', true]
+        ]),
+        chat: [
+          { kind: 'user', skill: '/implement', text: 'Phase 3 aus docs/planning/oauth-login umsetzen.' },
+          { kind: 'tools', title: 'Read', summary: '4 Dateien · Plan, token_store.rs, oauth/google.rs, config.rs' },
+          { kind: 'text', text: 'Phase 3 hat drei Schritte: Refresh-Token speichern, rechtzeitig erneuern, Fehlerpfad bei widerrufenem Token. Die ersten beiden stehen, zwei Tests sind grün.' },
+          { kind: 'tools', title: 'Edit', summary: 'oauth/refresh.rs · 3 Änderungen' },
+          { kind: 'text', text: 'Eine Frage an dich, bevor ich weitermache: Soll ein Hintergrund-Timer erneuern oder erst der nächste Request? Beides geht. Ich tendiere zum Request, das hat weniger bewegliche Teile.' }
+        ]
+      }
+    ];
+    if (hasS4) {
+      S.push({ id: 's4', num: 4, name: 'Session 4', status: 'neu', model: 'Sonnet 5', runtime: '0 min', ctx: 0, stamp: '', one: 'Noch kein Verlauf.', lines: [], chat: [] });
+    }
+
+    var sid = view === 'session' ? sel : '';
+    var v1Sessions = S.map(function (s) {
+      var on = s.id === sid;
+      return assign(flags(s.status), {
+        num: s.num, name: s.name,
+        bg: on ? 'var(--color-bg-selected)' : 'transparent',
+        fg: on ? 'var(--color-fg-primary)' : 'var(--color-fg-secondary)',
+        ariaCurrent: on ? 'page' : 'false',
+        open: function () { self.setState({ view: 'session', sel: s.id }); }
+      });
+    });
+
+    var V = [
+      { id: 'v2', group: 'need', name: 'Diff-Ansicht flackert beim Nachladen', status: 'waiting', meta: 'wartet auf deine Antwort', metaColor: 'var(--color-status-waiting)',
+        sessions: [{ num: 1, name: 'Ursache suchen', status: 'waiting' }] },
+      { id: 'v1', group: 'run', name: 'OAuth Login umsetzen', status: 'running', meta: S.length + ' Sessions · #3 läuft', sessions: null },
+      { id: 'v3', group: 'run', name: 'Sprachdiktat planen', status: 'paused', meta: '2 Sessions · pausiert',
+        sessions: [{ num: 1, name: 'Recherche Spracherkennung', status: 'completed' }, { num: 2, name: 'Plan schreiben', status: 'paused' }] },
+      { id: 'v4', group: 'done', name: 'Release 0.6 vorbereiten', status: 'completed', meta: '',
+        sessions: [{ num: 1, name: 'Changelog und Tag', status: 'completed' }] }
+    ];
+    var GROUPS = [{ key: 'need', label: 'Braucht dich' }, { key: 'run', label: 'Läuft' }, { key: 'done', label: 'Abgeschlossen' }];
+    var groups = GROUPS.map(function (g) {
+      var items = V.filter(function (v) { return v.group === g.key; }).map(function (v) {
+        var isExp = !!expanded[v.id];
+        var active = v.id === 'v1' && view === 'vorhaben';
+        var sess = v.id === 'v1' ? v1Sessions : v.sessions.map(function (s) {
+          return assign(flags(s.status), { num: s.num, name: s.name, bg: 'transparent', fg: 'var(--color-fg-secondary)', ariaCurrent: 'false', open: function () {} });
+        });
+        return assign(flags(v.status), {
+          name: v.name, meta: v.meta, showMeta: v.meta !== '', metaColor: v.metaColor || 'var(--color-fg-muted)',
+          bg: active ? 'var(--color-bg-selected)' : 'transparent', ariaCurrent: active ? 'page' : 'false',
+          expanded: isExp, collapsed: !isExp, expandedStr: isExp ? 'true' : 'false',
+          toggleLabel: 'Sessions von ' + v.name + (isExp ? ' einklappen' : ' aufklappen'),
+          sessions: sess,
+          toggle: function () { var e = assign({}, expanded); e[v.id] = !isExp; self.setState({ expanded: e }); },
+          open: function () {
+            var e = assign({}, expanded); e[v.id] = true;
+            if (v.id === 'v1') { self.setState({ expanded: e, view: 'vorhaben' }); } else { self.setState({ expanded: e }); }
+          }
+        });
+      });
+      return { label: g.label, count: items.length, items: items };
+    }).filter(function (g) { return g.items.length > 0; });
+
+    var cur = S.filter(function (s) { return s.id === sel; })[0] || S[2];
+    var ph = phases[cur.id] || 'fresh';
+    var baseStamp = stamps[cur.id] || cur.stamp;
+    var tStamp = ph === 'loading' ? 'Wird erstellt …' : (ph === 'stale' ? baseStamp + ' · 23 neue Einträge seitdem' : baseStamp + ' · aktuell');
+    function refreshSession() { createFor(cur.id); }
+    function createFor(id) {
+      var p = assign({}, phases); p[id] = 'loading';
+      self.setState({ phases: p });
+      setTimeout(function () {
+        var now = self.state || {};
+        var p2 = assign({}, now.phases || {}); p2[id] = 'fresh';
+        var s2 = assign({}, now.stamps || {}); s2[id] = 'Stand 14:51';
+        self.setState({ phases: p2, stamps: s2 });
+      }, 1800);
+    }
+    var t = {
+      open: tOpen, closed: !tOpen, openStr: tOpen ? 'true' : 'false',
+      toggleLabel: tOpen ? 'TL;DR einklappen' : 'TL;DR aufklappen',
+      isLoading: ph === 'loading', notLoading: ph !== 'loading', isStale: ph === 'stale',
+      exists: ph !== 'none', isNone: ph === 'none',
+      showRefreshText: ph === 'stale', showRefreshIcon: ph === 'fresh',
+      stamp: tStamp, one: cur.one, lines: cur.lines,
+      toggle: function () { self.setState({ tOpen: !tOpen }); },
+      refresh: refreshSession
+    };
+
+    var curF = assign(flags(cur.status), {
+      num: cur.num, name: cur.name, runtime: cur.runtime,
+      ctxPct: cur.ctx + '%', ctxLabel: cur.ctx + ' %'
+    });
+    var chat = cur.chat.map(function (b) {
+      return { isUser: b.kind === 'user', isText: b.kind === 'text', isTools: b.kind === 'tools', hasSkill: !!b.skill, skill: b.skill || '', text: b.text || '', title: b.title || '', summary: b.summary || '' };
+    });
+
+    var s3none = (phases.s3 || 'fresh') === 'none' && !st.vStamp;
+    var vt = {
+      isLoading: vPh === 'loading', notLoading: vPh !== 'loading',
+      stamp: vPh === 'loading' ? 'Fasst die Sessions zusammen …' : (s3none ? 'aus 2 von 3 Session-TL;DRs · Stand 14:40' : 'aus 3 Session-TL;DRs · Stand ' + (st.vStamp || '14:40')),
+      text: s3none
+        ? 'Google-Login für die Web-App, Plan in 4 Phasen. Datenmodell und Callback-Route stehen. Zur laufenden #3 gibt es noch kein TL;DR, deshalb fehlt ihr Stand hier.'
+        : 'Google-Login für die Web-App, Plan in 4 Phasen. Datenmodell und Callback-Route stehen, der Token-Refresh läuft, Abmelden und Doku fehlen noch.',
+      lines: s3none
+        ? lines([
+          ['Stand', '2 von 4 Phasen fertig; #3 läuft, noch ohne TL;DR.'],
+          ['Hinweis', 'Aktualisieren erstellt das fehlende TL;DR von #3 gleich mit.', true],
+          ['Als Nächstes', 'Phase 4: Abmelden, Doku, Versions-Tag.']
+        ])
+        : lines([
+          ['Stand', '2 von 4 Phasen fertig; #3 arbeitet an Phase 3.'],
+          ['Offen', 'Per Timer erneuern oder beim nächsten Request? Frage aus #3.', true],
+          ['Als Nächstes', 'Phase 4: Abmelden, Doku, Versions-Tag.']
+        ]),
+      refresh: function () {
+        var missing = (phases.s3 || 'fresh') === 'none';
+        var p = assign({}, phases);
+        if (missing) { p.s3 = 'loading'; }
+        self.setState({ vPhase: 'loading', phases: p });
+        setTimeout(function () {
+          var now = self.state || {};
+          var p2 = assign({}, now.phases || {});
+          var s2 = assign({}, now.stamps || {});
+          if (missing) { p2.s3 = 'fresh'; s2.s3 = 'Stand 14:52'; }
+          self.setState({ vPhase: 'fresh', vStamp: '14:52', phases: p2, stamps: s2 });
+        }, 2000);
+      }
+    };
+    var vCards = S.map(function (s) {
+      var sp = s.status === 'neu' ? 'fresh' : (phases[s.id] || 'fresh');
+      return assign(flags(s.status), {
+        num: s.num, name: s.name, one: s.one,
+        hasOne: sp === 'fresh' || sp === 'stale', isLoading: sp === 'loading', noTldr: sp === 'none',
+        create: function () { createFor(s.id); },
+        meta: s.status === 'neu' ? 'Sonnet 5 · noch nicht gestartet' : s.model + ' · ' + s.runtime + ' · Kontext ' + s.ctx + ' %',
+        open: function () { self.setState({ view: 'session', sel: s.id }); }
+      });
+    });
+
+    return {
+      themeVars: themeVars,
+      groups: groups,
+      isSession: view === 'session', isVorhaben: view === 'vorhaben',
+      vname: 'OAuth Login umsetzen',
+      vTotals: S.length + ' Sessions · 2 h 05 min',
+      vCount: S.length,
+      cur: curF,
+      goVorhaben: function () { self.setState({ view: 'vorhaben' }); },
+      hasTldr: cur.status !== 'neu',
+      isEmpty: cur.status === 'neu',
+      t: t,
+      chat: chat,
+      placeholder: cur.status === 'neu' ? 'Erste Nachricht an Claude … (/ für Skills)' : 'Nachricht an Claude … (/ für Skills)',
+      withCtx: withCtx,
+      toggleCtx: function () { self.setState({ withCtx: !withCtx }); },
+      vt: vt,
+      vCards: vCards,
+      newSession: function () {
+        var e = assign({}, expanded); e.v1 = true;
+        self.setState({ hasS4: true, view: 'session', sel: 's4', expanded: e });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
