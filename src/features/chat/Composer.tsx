@@ -187,7 +187,8 @@ export function Composer({ session }: ComposerProps): ReactElement {
     if (commandMenu.handleSlashKeyDown(event, pickRow)) {
       return;
     }
-    if (event.key === 'Enter' && event.ctrlKey) {
+    // Enter sendet, Umschalt+Enter bleibt der Zeilenumbruch des Textfelds; Enter während einer IME-Eingabe gehört der IME.
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       send();
       return;
@@ -318,8 +319,8 @@ export function Composer({ session }: ComposerProps): ReactElement {
           <button
             type="button"
             className="composer__send"
-            aria-label="Senden (Ctrl+Enter)"
-            title="Senden (Ctrl+Enter)"
+            aria-label="Senden (Enter)"
+            title="Senden (Enter) – Umschalt+Enter für einen Zeilenumbruch"
             disabled={!canSend}
             onClick={send}
           >
