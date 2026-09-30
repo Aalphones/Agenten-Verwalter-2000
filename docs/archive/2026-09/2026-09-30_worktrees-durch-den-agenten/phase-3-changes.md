@@ -8,8 +8,8 @@ Nach dieser Phase zeigen die Changes jeder Session ihre Ticket-Worktrees als eig
 
 - [README.md](README.md) dieses Plans, Abschnitt „Kontrakt" (`key` statt `position`)
 - [phase-2-zuordnung.md](phase-2-zuordnung.md), Report-Back: `ticket_worktrees_of`
-- [docs/decisions/006-changes-und-diff.md](../../decisions/006-changes-und-diff.md): nur Befehle, die keine Sperre nehmen
-- [docs/conventions/rust.md](../../conventions/rust.md), [docs/conventions/react.md](../../conventions/react.md), [docs/conventions/typescript.md](../../conventions/typescript.md)
+- [docs/decisions/006-changes-und-diff.md](../../../decisions/006-changes-und-diff.md): nur Befehle, die keine Sperre nehmen
+- [docs/conventions/rust.md](../../../conventions/rust.md), [docs/conventions/react.md](../../../conventions/react.md), [docs/conventions/typescript.md](../../../conventions/typescript.md)
 - `src-tauri/src/git/mod.rs` (Muster `run`, `run_allowing_failure`, `head_branch`, `branch_exists`)
 - `src-tauri/src/changes/mod.rs`, `src-tauri/src/changes/model.rs`, `src-tauri/src/commands/changes.rs`
 - Oberfläche: `src/lib/changes.ts`, `src/stores/changes.ts`, `src/features/changes/` (`buildFileRows.ts`, `ChangesOverview.tsx`, `ChangesToolbar.tsx`, `ChangesView.tsx`, `DiffView.tsx`, `FileTree.tsx`, `useFileDiff.ts`)

@@ -77,10 +77,26 @@ Danach:
 
 ## Summary
 
+Die App legt beim Anlegen einer Session keine Worktrees und Branches mehr an. Der Agent bekommt die Haupt-Checkouts der Repositories und entscheidet nach seinen Anweisungen, ob er dort oder in einem Ticket-Worktree `<repo>-wt-<Name>` arbeitet; die App gibt ihm Lese- und Schreibfreigabe für diese Nachbarordner. Welche Ticket-Worktrees der Agent einer Session benutzt hat, merkt sich die Session in der Datenbank (auch nach App-Neustart). Die Changes zeigen sie als eigene Einträge gegen den Standard-Branch. Sessions von vor der Änderung behalten ihre App-Worktrees. Oberflächentexte und Doku beschreiben das neue Modell ([ADR 010](../../../decisions/010-worktrees-durch-den-agenten.md)).
+
 ## Files touched
+
+- Core: `src-tauri/src/worktrees/`, `src-tauri/src/changes/` (`model.rs`, `mod.rs`), `src-tauri/src/commands/changes.rs`, `src-tauri/src/git/mod.rs`, `src-tauri/src/sessions/registry.rs`, `src-tauri/src/agents/`, `src-tauri/src/db/` (Migration 004, `session_repositories.rs`, `session_ticket_worktrees.rs`)
+- Oberfläche: `src/features/changes/`, `src/stores/changes.ts`, `src/lib/changes.ts`, `src/lib/sessions.ts`, Texte in `EmptyState`, `NewSession`, `RepositoryPicker`, `SidebarItem`
+- Doku: ADR 010 (ADR 005 verweist darauf), PROJECT.md, AGENTS.md, Code-Map, Glossar
 
 ## Commits
 
+- Phase 1: `6ae671c` feat(worktrees): Agent arbeitet im Haupt-Checkout statt im App-Worktree
+- Phase 2: `b6e9e2a` feat(worktrees): Session merkt sich benutzte Ticket-Worktrees
+- Phase 3: `4a1f790` feat(changes): Ticket-Worktrees gegen den Standard-Branch zeigen
+- Phase 4: `0d84cf9` docs(worktrees): Texte und Doku auf das Modell „Agent entscheidet“ ziehen
+
 ## Deviations from plan
 
+- Der Smoke-Test steht aus: archiviert auf Saschas Anweisung, er probiert es bei einer echten Umsetzung aus. Die Checkliste oben bleibt gültig (Wackelstellen zuerst).
+- Phase 4 zusätzlich: Titel „Basis“ und „Committed“ in `ChangesToolbar.tsx` (Finding aus Phase 3).
+
 ## Follow-ups
+
+- **Smoke-Checkliste oben** — offen.

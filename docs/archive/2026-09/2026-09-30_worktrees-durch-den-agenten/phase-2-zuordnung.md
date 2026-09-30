@@ -8,7 +8,7 @@ Nach dieser Phase merkt sich jede Session die Ticket-Worktrees, die ihr Agent od
 
 - [README.md](README.md) dieses Plans, Abschnitt „Kontrakt"
 - [phase-1-core-haupt-checkout.md](phase-1-core-haupt-checkout.md), Report-Back: `RepositoryCheckout`, `TICKET_WORKTREE_INFIX`, Tabelle `session_ticket_worktrees`
-- [docs/conventions/rust.md](../../conventions/rust.md)
+- [docs/conventions/rust.md](../../../conventions/rust.md)
 - `src-tauri/src/agents/event.rs`: `AgentEvent::ToolStarted`, `AgentEvent::SubagentStep`
 - `src-tauri/src/agents/claude/translate.rs`: `translate_tool_use`, `subagent_events`, `target_of`, `TARGET_FIELDS`
 - `src-tauri/src/sessions/registry.rs`: `SessionState` (Felder, `new`, `restored`), `apply_event`, `Outbox`, `persist`, `restore`, `create`

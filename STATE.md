@@ -1,5 +1,5 @@
 # STATE
 
-**Aktiver Plan:** [docs/planning/2026-09-30_worktrees-durch-den-agenten/](docs/planning/2026-09-30_worktrees-durch-den-agenten/README.md)
-**Phase:** 4/4 — Texte in der Oberfläche und Doku (complete)
-**Nächster Schritt:** Plan-Ende: Sascha arbeitet die Smoke-Checkliste aus der README ab. Danach Plan archivieren (`git mv` nach `docs/archive/2026-09/`, Bottom-Sektionen füllen), Version in den drei Dateien anheben, `chore(release)`-Commit, Tag setzen und pushen ([releases.md](docs/conventions/releases.md)). Hinweis: `cargo` liegt in `%USERPROFILE%\.cargo\bin` und muss für `pnpm check` im PATH stehen. Weitere geparkte Pläne: [kontext-und-kontingent](docs/planning/2026-09-29_kontext-und-kontingent/README.md), [m6-ui-zielbild-und-altlasten](docs/planning/2026-09-29_m6-ui-zielbild-und-altlasten/README.md), [sprachdiktat](docs/planning/2026-09-29_sprachdiktat/README.md). Versions-Tag für M2b steht aus (nur auf Saschas Ansage). Offen außerhalb: M5-Smoke bei Sascha (Checkliste im M5-Archiv).
+**Aktiver Plan:** (kein aktiver Plan)
+**Phase:** —
+**Nächster Schritt:** Nächsten Plan wählen. Geparkte Pläne: [kontext-und-kontingent](docs/planning/2026-09-29_kontext-und-kontingent/README.md), [m6-ui-zielbild-und-altlasten](docs/planning/2026-09-29_m6-ui-zielbild-und-altlasten/README.md), [sprachdiktat](docs/planning/2026-09-29_sprachdiktat/README.md). Offen außerhalb: Smoke bei Sascha für M5 (Checkliste im M5-Archiv) und für den Worktree-Plan (Checkliste in dessen Archiv-README).

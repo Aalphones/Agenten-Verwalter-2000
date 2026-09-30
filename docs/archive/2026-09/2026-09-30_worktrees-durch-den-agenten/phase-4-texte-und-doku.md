@@ -4,8 +4,8 @@ Rating: **mechanisch** (Wortlaute stehen hier fest).
 
 ## Kontext — vorher lesen
 
-- [README.md](README.md) dieses Plans, [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (aus Phase 1)
-- [docs/glossary.md](../../glossary.md), [docs/code-map.md](../../code-map.md), [docs/PROJECT.md](../../PROJECT.md), [AGENTS.md](../../../AGENTS.md)
+- [README.md](README.md) dieses Plans, [ADR 010](../../../decisions/010-worktrees-durch-den-agenten.md) (aus Phase 1)
+- [docs/glossary.md](../../../glossary.md), [docs/code-map.md](../../../code-map.md), [docs/PROJECT.md](../../../PROJECT.md), [AGENTS.md](../../../../AGENTS.md)
 - Fehlerklassen: keine einschlägig (nur Text).
 
 ## Abnahmekriterien

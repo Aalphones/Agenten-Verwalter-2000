@@ -7,8 +7,8 @@ Nach dieser Phase legt eine neue Session keine Worktrees mehr an. Der Agent arbe
 ## Kontext — vorher lesen
 
 - [README.md](README.md) dieses Plans, Abschnitt „Kontrakt"
-- [docs/decisions/005-repositories-und-worktrees.md](../../decisions/005-repositories-und-worktrees.md): das bisherige Modell, das hier für neue Sessions abgelöst wird
-- [docs/conventions/rust.md](../../conventions/rust.md): Fehlerbehandlung, Git nur über `git/`
+- [docs/decisions/005-repositories-und-worktrees.md](../../../decisions/005-repositories-und-worktrees.md): das bisherige Modell, das hier für neue Sessions abgelöst wird
+- [docs/conventions/rust.md](../../../conventions/rust.md): Fehlerbehandlung, Git nur über `git/`
 - `src-tauri/src/worktrees/mod.rs` (ganz)
 - `src-tauri/src/db/session_repositories.rs`, `src-tauri/src/db/migrations.rs`, `src-tauri/src/db/migrations/002_repositories_and_worktrees.sql`
 - `src-tauri/src/sessions/registry.rs`: `create`, `discard_created`, `archive`, `skill_roots`, `start_process`, `schedule_worktree_cleanup`
