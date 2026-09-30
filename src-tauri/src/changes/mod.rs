@@ -14,7 +14,7 @@ use crate::changes::model::{
 };
 use crate::error::CommandError;
 use crate::git;
-use crate::worktrees::SessionRepository;
+use crate::worktrees::{RepositoryCheckout, SessionRepository};
 
 /// Größere untracked Dateien gelten als binär: ihre Zeilen zu zählen hieße, sie ganz zu lesen.
 const MAX_UNTRACKED_BYTES: u64 = 8 * 1024 * 1024;
@@ -24,6 +24,7 @@ const WORKTREE_MISSING: &str =
     "Worktree fehlt — die nächste Nachricht an den Agenten legt ihn neu an.";
 const THREAD_FAILED: &str = "interner Fehler beim Lesen der Changes";
 const HEAD: &str = "HEAD";
+const SHORT_COMMIT_CHARS: usize = 7;
 
 /// Liest alle Repositories der Session nebeneinander, je eines in einem eigenen Thread. Scheitert
 /// eines, trägt nur sein Eintrag den Fehler.
@@ -63,15 +64,15 @@ fn load_one(workspace: &Path, position: u32, repository: &SessionRepository) -> 
             CommandError::RepositoryMissing(repository.repository_path.display().to_string());
         return failed(position, repository, missing.to_string());
     }
-    let worktree = workspace.join(&repository.folder);
-    if !worktree.exists() {
+    let worktree = repository.working_dir(workspace);
+    if is_app_worktree_missing(repository, &worktree) {
         return failed(position, repository, WORKTREE_MISSING.to_owned());
     }
     match read_changes(&worktree, &repository.base_commit) {
         Ok((files, commit_count)) => RepositoryChanges {
             position,
             name: repository.name.clone(),
-            branch: repository.branch.clone(),
+            branch: branch_label(repository),
             base_ref: repository.base_ref.clone(),
             commit_count,
             files,
@@ -133,8 +134,8 @@ pub fn file_diff(
             repository.repository_path.display().to_string(),
         ));
     }
-    let worktree = workspace.join(&repository.folder);
-    if !worktree.exists() {
+    let worktree = repository.working_dir(workspace);
+    if is_app_worktree_missing(repository, &worktree) {
         return Err(CommandError::Io(WORKTREE_MISSING.to_owned()));
     }
     let base = repository.base_commit.as_str();
@@ -246,11 +247,32 @@ fn untracked_stat(path: &Path) -> LineStat {
     }
 }
 
+/// Nur ein App-Worktree kann fehlen, während sein Haupt-Checkout noch da ist.
+fn is_app_worktree_missing(repository: &SessionRepository, worktree: &Path) -> bool {
+    matches!(repository.checkout, RepositoryCheckout::AppWorktree { .. }) && !worktree.exists()
+}
+
+/// Der Branch, den die Changes über dem Repository nennen. Im Haupt-Checkout ist das, was gerade
+/// ausgecheckt ist — nicht zwingend der Standard-Branch; bei losgelöstem HEAD die kurze Commit-ID.
+fn branch_label(repository: &SessionRepository) -> String {
+    if let RepositoryCheckout::AppWorktree { branch, .. } = &repository.checkout {
+        return branch.clone();
+    }
+    let path = &repository.repository_path;
+    if let Ok(Some(branch)) = git::head_branch(path) {
+        return branch;
+    }
+    match git::head_commit(path) {
+        Ok(commit) => commit.chars().take(SHORT_COMMIT_CHARS).collect(),
+        Err(_) => HEAD.to_owned(),
+    }
+}
+
 fn failed(position: u32, repository: &SessionRepository, error: String) -> RepositoryChanges {
     RepositoryChanges {
         position,
         name: repository.name.clone(),
-        branch: repository.branch.clone(),
+        branch: branch_label(repository),
         base_ref: repository.base_ref.clone(),
         commit_count: 0,
         files: Vec::new(),

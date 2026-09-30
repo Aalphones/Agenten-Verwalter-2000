@@ -1,6 +1,6 @@
 # 005 — Repositories und Worktrees: Kopie in der Session, Basis = ausgechecktes HEAD, ein Branch-Name für alle
 
-**Status:** angenommen · **Datum:** 2026-09-28
+**Status:** für neue Sessions abgelöst durch [ADR 010](010-worktrees-durch-den-agenten.md) · **Datum:** 2026-09-28
 
 ## Kontext
 

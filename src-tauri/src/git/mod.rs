@@ -72,24 +72,8 @@ pub fn worktree_remove(repo: &Path, path: &Path) -> Result<(), CommandError> {
     run(repo, &arguments).map(|_| ())
 }
 
-/// Nur für den Rückbau eines gescheiterten Anlegens.
-pub fn worktree_remove_force(repo: &Path, path: &Path) -> Result<(), CommandError> {
-    let arguments: Vec<&OsStr> = vec![
-        "worktree".as_ref(),
-        "remove".as_ref(),
-        "--force".as_ref(),
-        path.as_os_str(),
-    ];
-    run(repo, &arguments).map(|_| ())
-}
-
 pub fn worktree_prune(repo: &Path) -> Result<(), CommandError> {
     run(repo, &args(&["worktree", "prune"])).map(|_| ())
-}
-
-/// Nur für den Rückbau eines gescheiterten Anlegens.
-pub fn branch_delete_force(repo: &Path, branch: &str) -> Result<(), CommandError> {
-    run(repo, &args(&["branch", "-D", branch])).map(|_| ())
 }
 
 /// `git diff-tree -r --no-renames --name-status -z <from> <to>`

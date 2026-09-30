@@ -64,9 +64,6 @@ const IDLE_SECONDS_VARIABLE: &str = "VERWALTER_IDLE_SECONDS";
 pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
     database: Arc<Database>,
-    /// Hält das Anlegen von Sessions nacheinander: zwei gleichzeitige würden sonst denselben
-    /// freien Branch-Namen wählen.
-    create_lock: Mutex<()>,
 }
 
 pub struct Session {
@@ -160,7 +157,6 @@ impl SessionRegistry {
         SessionRegistry {
             sessions: Mutex::new(HashMap::new()),
             database,
-            create_lock: Mutex::new(()),
         }
     }
 
@@ -220,9 +216,9 @@ impl SessionRegistry {
         Ok(registry)
     }
 
-    /// Legt Workspace und Worktrees an, speichert die Session und startet ihren Agenten. Alles
-    /// oder nichts: scheitert ein Schritt, bleibt weder ein Worktree noch ein Branch noch der
-    /// Workspace-Ordner noch eine Datenbankzeile zurück.
+    /// Legt den Workspace an, liest die Basis jedes Repositorys, speichert die Session und startet
+    /// ihren Agenten. Alles oder nichts: scheitert ein Schritt, bleibt weder der Workspace-Ordner
+    /// noch eine Datenbankzeile zurück. Worktrees und Branches legt die App nicht an (ADR 010).
     pub fn create(
         &self,
         app: &AppHandle,
@@ -236,37 +232,23 @@ impl SessionRegistry {
             effort,
             mode,
         } = request;
-        let _creating = self
-            .create_lock
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-        // Vor jedem Git-Aufruf: ohne Agent wären angelegte Worktrees umsonst.
         find_claude().ok_or(CommandError::ClaudeNotFound)?;
         let rows = self
             .database
             .with(|connection| repository_rows::get_many(connection, repository_ids))?;
+        let repositories = worktrees::main_checkouts(&rows)?;
         let id = uuid::Uuid::new_v4().to_string();
         let name = name_from_task(task);
-        // Die Worktrees entstehen ohne Session-Sperre: `worktree add` kann bei großen
-        // Repositories Sekunden dauern.
         let workspace = new_session_workspace(app, &id)?;
-        let repositories = match worktrees::create_all(&workspace, &name, &rows) {
-            Ok(repositories) => repositories,
-            Err(error) => {
-                let _ = fs::remove_dir_all(&workspace);
-                return Err(error);
-            }
-        };
         let task_attachments =
             match attachments::take_for_workspace(app, attachment_ids, &workspace) {
                 Ok(taken) => taken,
                 Err(error) => {
-                    worktrees::rollback(&workspace, &repositories);
                     let _ = fs::remove_dir_all(&workspace);
                     return Err(error);
                 }
             };
-        // Im Haupt-Checkout suchen: der Worktree der neuen Session hat dieselben Dateien.
+        // Skills liegen im Haupt-Checkout.
         let repository_roots: Vec<(String, PathBuf)> = rows
             .iter()
             .map(|row: &repository_rows::RepositoryRow| {
@@ -323,7 +305,6 @@ impl SessionRegistry {
         let _ = self
             .database
             .with(|connection| session_rows::delete(connection, &session.id));
-        worktrees::rollback(&session.workspace, &session.repositories);
         let _ = fs::remove_dir_all(&session.workspace);
     }
 
@@ -488,8 +469,8 @@ impl SessionRegistry {
     }
 
     /// Blendet die Session aus: der Agent wird beendet, die Zeile als archiviert markiert, die Session
-    /// verlässt die Liste. Der Verlauf bleibt; Worktrees ohne offene Änderungen werden nach dem Ende
-    /// des Agenten entfernt, Branches bleiben.
+    /// verlässt die Liste. Der Verlauf bleibt; App-Worktrees ohne offene Änderungen werden nach dem
+    /// Ende des Agenten entfernt, Branches, Haupt-Checkouts und Ticket-Worktrees bleiben.
     pub fn archive(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
         self.cancel(app, session_id)?;
         let session = self.get(session_id)?;
@@ -614,13 +595,13 @@ impl SessionRegistry {
         Ok((session.workspace.clone(), session.repositories.clone()))
     }
 
-    /// Name und Worktree-Ordner jedes Repositories der Session — dort suchen Skills und Befehle.
+    /// Name und Arbeitsordner jedes Repositorys der Session — dort suchen Skills und Befehle.
     pub fn skill_roots(&self, session_id: &str) -> Result<Vec<(String, PathBuf)>, CommandError> {
         let (workspace, repositories) = self.repositories_of(session_id)?;
         Ok(repositories
             .iter()
             .map(|repository: &SessionRepository| {
-                (repository.name.clone(), workspace.join(&repository.folder))
+                (repository.name.clone(), repository.working_dir(&workspace))
             })
             .collect())
     }
@@ -1678,8 +1659,8 @@ fn now_ms() -> f64 {
 /// schon (`has_agent_history`), setzt der Start sie mit ihrem Verlauf fort (`--resume`), sonst
 /// legt er sie unter der Session-ID an (`--session-id`).
 ///
-/// Vorher prüft `worktrees::ensure` die Worktrees: fehlende Ordner entstehen neu, ein Repository
-/// ohne Haupt-Checkout bleibt draußen und bekommt einen Fehler-Eintrag im Chat.
+/// Vorher prüft `worktrees::ensure` die Arbeitsordner: fehlende App-Worktrees entstehen neu, ein
+/// Repository ohne Haupt-Checkout bleibt draußen und bekommt einen Fehler-Eintrag im Chat.
 fn start_process(
     app: &AppHandle,
     session: &Arc<Session>,
@@ -1721,6 +1702,7 @@ fn start_process(
             effort: state.effort,
             mode: state.mode,
             add_dirs,
+            allowed_rules: worktrees::permission_rules(&session.repositories),
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
