@@ -32,6 +32,9 @@ pub struct SessionSummary {
     pub context_used: u32,
     pub context_window: u32,
     pub repository_count: u32,
+    pub project_id: String,
+    /// Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.
+    pub number: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

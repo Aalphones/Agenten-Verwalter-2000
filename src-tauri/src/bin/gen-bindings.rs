@@ -18,6 +18,7 @@ use verwalter_lib::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
     },
     error::CommandError,
+    projects::model::{ProjectCreated, ProjectSummary},
     repositories::model::KnownRepository,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
@@ -50,6 +51,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     SessionSummary::export_all(&cfg)?;
     ChatPage::export_all(&cfg)?;
     ChatEntryEvent::export_all(&cfg)?;
+    ProjectSummary::export_all(&cfg)?;
+    ProjectCreated::export_all(&cfg)?;
     KnownRepository::export_all(&cfg)?;
     ChangeKind::export_all(&cfg)?;
     ChangeScope::export_all(&cfg)?;

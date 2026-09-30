@@ -14,12 +14,12 @@ pub async fn changes_load(
     session_id: String,
 ) -> Result<SessionChanges, CommandError> {
     let (workspace, repositories) = registry.repositories_of(&session_id)?;
-    let ticket_folders = registry.ticket_worktrees_of(&session_id)?;
+    let ticket_folders = registry.project_ticket_worktrees(&session_id)?;
     Ok(changes::load(&workspace, &repositories, &ticket_folders))
 }
 
 /// `key` wie in `RepositoryChanges`: `"<Position>"` oder `"<Position>/<Ordner>"`. Der Ordner kommt
-/// aus der Oberfläche und wird zu einem Pfad — er muss der Session gehören und ein Worktree sein,
+/// aus der Oberfläche und wird zu einem Pfad — er muss dem Vorhaben gehören und ein Worktree sein,
 /// bevor irgendetwas ihn benutzt.
 #[tauri::command]
 pub async fn changes_file_diff(
@@ -50,14 +50,14 @@ pub async fn changes_file_diff(
     validate_folder(folder)?;
     let position = u32::try_from(index)
         .map_err(|_| CommandError::Internal(format!("Ungültiger Schlüssel {key}")))?;
-    let is_assigned = registry.ticket_worktrees_of(&session_id)?.iter().any(
+    let is_assigned = registry.project_ticket_worktrees(&session_id)?.iter().any(
         |(assigned_position, assigned_folder): &(u32, String)| {
             *assigned_position == position && assigned_folder.eq_ignore_ascii_case(folder)
         },
     );
     if !is_assigned {
         return Err(CommandError::Io(
-            "Dieser Worktree gehört nicht zur Session.".to_owned(),
+            "Dieser Worktree gehört nicht zum Vorhaben.".to_owned(),
         ));
     }
     let found: Vec<TicketWorktree> =

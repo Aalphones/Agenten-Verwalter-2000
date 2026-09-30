@@ -4,7 +4,8 @@ import { SidebarItem } from '@/app/SidebarItem';
 import { GROUP_LABEL, GROUP_ORDER, STATUS_GROUP } from '@/features/sessions/sessionStatus';
 import type { SessionGroup } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { archiveSession, renameSession } from '@/lib/sessions';
+import { archiveProject } from '@/lib/projects';
+import { renameSession } from '@/lib/sessions';
 import { useSessionsStore } from '@/stores/sessions';
 import './Sidebar.css';
 
@@ -54,13 +55,25 @@ export function Sidebar({
     stopRename();
   }
 
+  // Archivieren gibt es nur für das ganze Vorhaben — alle seine Sessions verlassen die Liste.
   function archive(sessionId: string): void {
-    archiveSession(sessionId)
+    const archived: SessionSummary | undefined = sessions.find(
+      (session: SessionSummary) => session.id === sessionId,
+    );
+    if (archived === undefined) {
+      return;
+    }
+    const projectId: string = archived.projectId;
+    archiveProject(projectId)
       .then(() => {
-        onArchived(sessionId);
+        for (const session of sessions) {
+          if (session.projectId === projectId) {
+            onArchived(session.id);
+          }
+        }
       })
       .catch((reason: unknown) => {
-        console.error('Session nicht archivierbar', reason);
+        console.error('Vorhaben nicht archivierbar', reason);
       });
   }
 

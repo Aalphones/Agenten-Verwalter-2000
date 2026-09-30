@@ -15,10 +15,11 @@ import type { CommandError } from '@/lib/bindings/CommandError';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
+import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { discardAttachment } from '@/lib/attachments';
 import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/labels';
-import { createSession } from '@/lib/sessions';
+import { createProject } from '@/lib/projects';
 import { NEW_SESSION_KEY, useAttachmentsStore } from '@/stores/attachments';
 import './NewSession.css';
 
@@ -108,11 +109,11 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     setIsStarting(true);
     setErrorMessage(null);
     const attachmentIds: string[] = pending.map((attachment: Attachment) => attachment.id);
-    createSession(text.trim(), attachmentIds, repositoryIds, model, effort, mode)
-      .then((summary: SessionSummary) => {
-        // Die Dateien liegen jetzt im Workspace der Session.
+    createProject(text.trim(), attachmentIds, repositoryIds, model, effort, mode)
+      .then((created: ProjectCreated) => {
+        // Die Dateien liegen jetzt im Workspace des Vorhabens.
         useAttachmentsStore.getState().clear(NEW_SESSION_KEY);
-        onCreated(summary);
+        onCreated(created.session);
       })
       .catch((reason: unknown) => {
         setErrorMessage(describeStartError(reason));

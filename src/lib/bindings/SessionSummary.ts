@@ -8,4 +8,8 @@ export type SessionSummary = { id: string, name: string, status: SessionStatus, 
 /**
  * Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
  */
-runningMs: number, runningSince: number | null, contextUsed: number, contextWindow: number, repositoryCount: number, };
+runningMs: number, runningSince: number | null, contextUsed: number, contextWindow: number, repositoryCount: number, projectId: string, 
+/**
+ * Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.
+ */
+number: number, };

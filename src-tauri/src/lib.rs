@@ -9,6 +9,7 @@ pub mod error;
 pub mod filesystem;
 pub mod git;
 pub mod processes;
+pub mod projects;
 pub mod repositories;
 pub mod sessions;
 pub mod skills;
@@ -46,13 +47,15 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_info,
-            commands::sessions::session_create,
+            commands::projects::project_list,
+            commands::projects::project_create,
+            commands::projects::project_rename,
+            commands::projects::project_archive,
             commands::sessions::session_list,
             commands::sessions::session_pause,
             commands::sessions::session_resume,
             commands::sessions::session_cancel,
             commands::sessions::session_rename,
-            commands::sessions::session_archive,
             commands::sessions::session_restart,
             commands::sessions::session_set_model,
             commands::sessions::session_set_mode,

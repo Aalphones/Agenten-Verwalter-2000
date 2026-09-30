@@ -7,28 +7,6 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 
 const SESSION_CHANGED_EVENT = 'session://changed';
 
-/** Legt eine Session an — liest die Basis jedes Repositorys, legt keine Worktrees an —, startet den Agenten
- *  und schickt die Aufgabe samt Anhängen als erste Nachricht. Scheitert ein Schritt, bleibt nichts zurück.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `claudeNotFound`, `io`,
- *    `repositoryMissing`, `git`, `gitNotFound` */
-export function createSession(
-  task: string,
-  attachmentIds: string[],
-  repositoryIds: string[],
-  model: ModelId,
-  effort: Effort,
-  mode: Mode,
-): Promise<SessionSummary> {
-  return invoke<SessionSummary>('session_create', {
-    task,
-    attachmentIds,
-    repositoryIds,
-    model,
-    effort,
-    mode,
-  });
-}
-
 /** Alle Sessions, neueste zuerst.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} wenn der Core ablehnt */
 export function listSessions(): Promise<SessionSummary[]> {
@@ -57,12 +35,6 @@ export async function cancelSession(sessionId: string): Promise<void> {
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (leerer Name) */
 export async function renameSession(sessionId: string, name: string): Promise<void> {
   await invoke('session_rename', { sessionId, name });
-}
-
-/** Beendet den Agenten der Session und nimmt sie aus der Liste; der Verlauf bleibt, Repositories und Worktrees bleiben unberührt (bei Sessions vor ADR 010 räumt der Core saubere App-Worktrees weg).
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
-export async function archiveSession(sessionId: string): Promise<void> {
-  await invoke('session_archive', { sessionId });
 }
 
 /** Startet den Agenten einer Session im Status „Fehler“ mit vollem Verlauf neu; danach „Pausiert“.

@@ -73,7 +73,7 @@ export function App(): ReactElement {
     [backgroundItems],
   );
 
-  // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createSession` muss selbst in die Liste.
+  // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createProject` muss selbst in die Liste.
   function handleCreated(summary: SessionSummary): void {
     upsertSession(summary);
     selectSession(summary.id);

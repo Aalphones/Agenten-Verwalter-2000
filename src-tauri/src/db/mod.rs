@@ -6,6 +6,7 @@
 pub mod background;
 pub mod chat_entries;
 pub mod migrations;
+pub mod projects;
 pub mod repositories;
 pub mod session_repositories;
 pub mod session_ticket_worktrees;

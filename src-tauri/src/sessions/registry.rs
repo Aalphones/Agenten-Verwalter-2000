@@ -34,6 +34,7 @@ use crate::background::output::{
     find_local_url, read_head, read_tail, tail_text,
 };
 use crate::context::model::{ContextBreakdown, ContextChangedEvent, SessionContext};
+use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
@@ -41,12 +42,14 @@ use crate::db::{
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
+use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
 use crate::skills::{self, model::SkillRef};
 use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
+const PROJECT_CHANGED_EVENT: &str = "project://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
 const CONTEXT_CHANGED_EVENT: &str = "context://changed";
@@ -63,13 +66,26 @@ const DEFAULT_IDLE_SECONDS: u64 = 1800;
 const IDLE_CHECK_INTERVAL: Duration = Duration::from_secs(15);
 const IDLE_SECONDS_VARIABLE: &str = "VERWALTER_IDLE_SECONDS";
 
+/// Sperr-Regel: `projects` und die Sperre einer Session (`Session::lock`) werden nie gleichzeitig
+/// gehalten. `projects` zusammen mit `sessions` (nur die Map) ist erlaubt.
 pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
+    /// Schlüssel = Vorhaben-ID.
+    projects: Mutex<HashMap<String, ProjectState>>,
     database: Arc<Database>,
+}
+
+/// Was ein Vorhaben selbst trägt; Workspace und Repositories liegen gleich an jeder seiner Sessions.
+struct ProjectState {
+    name: String,
+    created_at: f64,
 }
 
 pub struct Session {
     pub id: String,
+    /// Nach dem Anlegen unveränderlich, wie `number`.
+    project_id: String,
+    number: u32,
     workspace: PathBuf,
     /// Nach dem Anlegen unveränderlich.
     repositories: Vec<SessionRepository>,
@@ -139,7 +155,7 @@ struct StoredSession {
     ticket_worktrees: Vec<(u32, String)>,
 }
 
-/// Alles, woraus `SessionRegistry::create` eine Session anlegt.
+/// Alles, woraus `SessionRegistry::create_project` ein Vorhaben mit seiner ersten Session anlegt.
 pub struct NewSession<'a> {
     pub task: &'a str,
     pub attachment_ids: &'a [String],
@@ -174,31 +190,58 @@ impl SessionRegistry {
     pub fn new(database: Arc<Database>) -> SessionRegistry {
         SessionRegistry {
             sessions: Mutex::new(HashMap::new()),
+            projects: Mutex::new(HashMap::new()),
             database,
         }
     }
 
-    /// Lädt alle nicht archivierten Sessions aus der Datenbank, ohne ihren Verlauf und ohne Agenten.
-    /// Eine vorher aktive Session ist danach pausiert (auch in der Datenbank).
+    /// Lädt alle nicht archivierten Vorhaben und Sessions aus der Datenbank, ohne Verlauf und ohne
+    /// Agenten. Eine vorher aktive Session ist danach pausiert (auch in der Datenbank).
     pub fn restore(
         app: &AppHandle,
         database: Arc<Database>,
     ) -> Result<SessionRegistry, CommandError> {
-        let loaded: Vec<StoredSession> = database.with(|connection| {
-            let rows = session_rows::load_active(connection)?;
-            rows.into_iter()
-                .map(|row: SessionRow| {
-                    let repositories = session_repositories::load(connection, &row.id)?;
-                    let ticket_worktrees = session_ticket_worktrees::load(connection, &row.id)?;
-                    Ok(StoredSession {
-                        row,
-                        repositories,
-                        ticket_worktrees,
+        let (project_list, loaded): (Vec<ProjectRow>, Vec<StoredSession>) =
+            database.with(|connection| {
+                let project_list = project_rows::load_active(connection)?;
+                let rows = session_rows::load_active(connection)?;
+                let loaded = rows
+                    .into_iter()
+                    .map(|row: SessionRow| {
+                        let repositories = session_repositories::load(connection, &row.id)?;
+                        let ticket_worktrees = session_ticket_worktrees::load(connection, &row.id)?;
+                        Ok(StoredSession {
+                            row,
+                            repositories,
+                            ticket_worktrees,
+                        })
                     })
-                })
-                .collect()
-        })?;
+                    .collect::<Result<Vec<StoredSession>, CommandError>>()?;
+                Ok((project_list, loaded))
+            })?;
         let registry = SessionRegistry::new(Arc::clone(&database));
+        {
+            let mut projects = registry.lock_projects();
+            for project in project_list {
+                projects.insert(
+                    project.id,
+                    ProjectState {
+                        name: project.name,
+                        created_at: project.created_at,
+                    },
+                );
+            }
+            // Eine Session, deren Vorhaben fehlt, bekommt eins im Speicher — sonst verschwände sie
+            // aus der Liste, obwohl ihre Zeile noch aktiv ist.
+            for stored in &loaded {
+                projects
+                    .entry(stored.row.project_id.clone())
+                    .or_insert_with(|| ProjectState {
+                        name: stored.row.name.clone(),
+                        created_at: stored.row.created_at,
+                    });
+            }
+        }
         let mut interrupted: Vec<SessionRow> = Vec::new();
         {
             let mut sessions = registry.lock_sessions();
@@ -227,6 +270,8 @@ impl SessionRegistry {
                     row.id.clone(),
                     Arc::new(Session {
                         id: row.id,
+                        project_id: row.project_id,
+                        number: row.number,
                         workspace,
                         repositories,
                         database: Arc::clone(&database),
@@ -246,14 +291,15 @@ impl SessionRegistry {
         Ok(registry)
     }
 
-    /// Legt den Workspace an, liest die Basis jedes Repositorys, speichert die Session und startet
-    /// ihren Agenten. Alles oder nichts: scheitert ein Schritt, bleibt weder der Workspace-Ordner
-    /// noch eine Datenbankzeile zurück. Worktrees und Branches legt die App nicht an (ADR 010).
-    pub fn create(
+    /// Legt ein Vorhaben mit seiner Session `#1` an: Workspace, Basis jedes Repositorys, beide
+    /// Datenbankzeilen, dann der Agent mit der Aufgabe. Alles oder nichts: scheitert ein Schritt,
+    /// bleibt weder der Workspace-Ordner noch eine Datenbankzeile zurück. Worktrees und Branches
+    /// legt die App nicht an (ADR 010).
+    pub fn create_project(
         &self,
         app: &AppHandle,
         request: NewSession<'_>,
-    ) -> Result<SessionSummary, CommandError> {
+    ) -> Result<ProjectCreated, CommandError> {
         let NewSession {
             task,
             attachment_ids,
@@ -267,9 +313,10 @@ impl SessionRegistry {
             .database
             .with(|connection| repository_rows::get_many(connection, repository_ids))?;
         let repositories = worktrees::main_checkouts(&rows)?;
+        let project_id = uuid::Uuid::new_v4().to_string();
         let id = uuid::Uuid::new_v4().to_string();
         let name = name_from_task(task);
-        let workspace = new_session_workspace(app, &id)?;
+        let workspace = new_session_workspace(app, &project_id)?;
         let task_attachments =
             match attachments::take_for_workspace(app, attachment_ids, &workspace) {
                 Ok(taken) => taken,
@@ -288,18 +335,30 @@ impl SessionRegistry {
         let task_skill: Option<SkillRef> = home_dir(app).ok().and_then(|home: PathBuf| {
             skills::match_invocation(task, &skills::collect(&home, &repository_roots))
         });
-        let mut state = SessionState::new(name, model, effort, mode);
+        let mut state = SessionState::new(name.clone(), model, effort, mode);
         state.ticket_roots = worktrees::ticket_roots(&repositories);
+        let project = ProjectState {
+            name,
+            created_at: state.created_at,
+        };
         let session = Arc::new(Session {
             id: id.clone(),
+            project_id: project_id.clone(),
+            number: 1,
             workspace,
             repositories,
             database: Arc::clone(&self.database),
             state: Mutex::new(state),
         });
-        // Die Session-Zeile muss vor `session_repositories` stehen, die darauf verweisen.
+        // Reihenfolge der Verweise: Vorhaben ← Session ← `session_repositories`.
         let row = row_of(&session, &session.lock());
+        let project_row = ProjectRow {
+            id: project_id.clone(),
+            name: project.name.clone(),
+            created_at: project.created_at,
+        };
         let saved = self.database.with(|connection| {
+            project_rows::insert(connection, &project_row)?;
             session_rows::upsert(connection, &row)?;
             session_repositories::insert_all(connection, &id, &session.repositories)
         });
@@ -307,6 +366,7 @@ impl SessionRegistry {
             self.discard_created(&session);
             return Err(error);
         }
+        self.lock_projects().insert(project_id.clone(), project);
         self.lock_sessions()
             .insert(id.clone(), Arc::clone(&session));
         let created = update(
@@ -322,22 +382,137 @@ impl SessionRegistry {
                 Ok(summarize(&session, state))
             },
         );
-        if created.is_err() {
-            self.lock_sessions().remove(&id);
-            self.discard_created(&session);
-        }
-        created
+        let session_summary = match created {
+            Ok(summary) => summary,
+            Err(error) => {
+                self.lock_sessions().remove(&id);
+                self.lock_projects().remove(&project_id);
+                self.discard_created(&session);
+                return Err(error);
+            }
+        };
+        Ok(ProjectCreated {
+            project: self.project_summary(&project_id)?,
+            session: session_summary,
+        })
     }
 
-    /// Rückbau einer Session, deren Anlegen gescheitert ist. Die Zeile einer nie gestarteten
-    /// Session käme sonst beim nächsten Start als Geister-Session wieder. Hält Windows den
+    /// Rückbau eines Vorhabens, dessen Anlegen gescheitert ist. Die Zeilen einer nie gestarteten
+    /// Session kämen sonst beim nächsten Start als Geister-Vorhaben wieder. Hält Windows den
     /// Workspace-Ordner noch fest, bleibt er liegen — für den Nutzer kein Fehler.
     fn discard_created(&self, session: &Session) {
-        // Löscht über `ON DELETE CASCADE` auch Chat-Einträge und `session_repositories`.
-        let _ = self
-            .database
-            .with(|connection| session_rows::delete(connection, &session.id));
+        // Erst die Session (löscht über `ON DELETE CASCADE` auch Chat-Einträge und
+        // `session_repositories`), dann das Vorhaben, auf das sie verweist.
+        let _ = self.database.with(|connection| {
+            session_rows::delete(connection, &session.id)?;
+            project_rows::delete(connection, &session.project_id)
+        });
         let _ = fs::remove_dir_all(&session.workspace);
+    }
+
+    /// Unbekanntes Vorhaben → Fehler.
+    pub fn project_summary(&self, project_id: &str) -> Result<ProjectSummary, CommandError> {
+        let (name, created_at) = {
+            let projects = self.lock_projects();
+            let project = projects
+                .get(project_id)
+                .ok_or_else(|| project_not_found(project_id))?;
+            (project.name.clone(), project.created_at)
+        };
+        Ok(ProjectSummary {
+            id: project_id.to_owned(),
+            name,
+            created_at,
+            repository_names: self.project_repository_names(project_id),
+        })
+    }
+
+    /// Die Repositories der Session mit der kleinsten Nummer — alle Sessions teilen dieselben.
+    /// Ohne Session-Sperre: `repositories` ist nach dem Anlegen unveränderlich.
+    fn project_repository_names(&self, project_id: &str) -> Vec<String> {
+        let sessions = self.lock_sessions();
+        sessions
+            .values()
+            .filter(|session: &&Arc<Session>| session.project_id == project_id)
+            .min_by_key(|session: &&Arc<Session>| session.number)
+            .map(|session: &Arc<Session>| {
+                session
+                    .repositories
+                    .iter()
+                    .map(|repository: &SessionRepository| repository.name.clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Neueste zuerst.
+    pub fn list_projects(&self) -> Vec<ProjectSummary> {
+        let ids: Vec<String> = self.lock_projects().keys().cloned().collect();
+        let mut summaries: Vec<ProjectSummary> = ids
+            .iter()
+            .filter_map(|id: &String| self.project_summary(id).ok())
+            .collect();
+        summaries.sort_by(|left: &ProjectSummary, right: &ProjectSummary| {
+            right.created_at.total_cmp(&left.created_at)
+        });
+        summaries
+    }
+
+    pub fn rename_project(
+        &self,
+        app: &AppHandle,
+        project_id: &str,
+        name: &str,
+    ) -> Result<(), CommandError> {
+        let name = trimmed_name(name)?;
+        if !self.lock_projects().contains_key(project_id) {
+            return Err(project_not_found(project_id));
+        }
+        self.database
+            .with(|connection| project_rows::rename(connection, project_id, &name))?;
+        if let Some(project) = self.lock_projects().get_mut(project_id) {
+            project.name = name;
+        }
+        // Wie die übrigen Ereignisse ohne Session-Protokoll: ein Sendefehler ändert nichts am Namen.
+        let _ = app.emit(PROJECT_CHANGED_EVENT, self.project_summary(project_id)?);
+        Ok(())
+    }
+
+    /// Blendet das Vorhaben aus: jeder Agent seiner Sessions wird beendet, Vorhaben und Sessions
+    /// werden als archiviert markiert und verlassen die Liste. Der Verlauf bleibt; App-Worktrees ohne
+    /// offene Änderungen werden nach dem Ende der Agenten entfernt, Branches, Haupt-Checkouts und
+    /// Ticket-Worktrees bleiben.
+    pub fn archive_project(&self, app: &AppHandle, project_id: &str) -> Result<(), CommandError> {
+        let mut members: Vec<Arc<Session>> = self
+            .lock_sessions()
+            .values()
+            .filter(|session: &&Arc<Session>| session.project_id == project_id)
+            .cloned()
+            .collect();
+        let is_known = self.lock_projects().contains_key(project_id);
+        if members.is_empty() && !is_known {
+            return Err(project_not_found(project_id));
+        }
+        members.sort_by_key(|session: &Arc<Session>| session.number);
+        for session in &members {
+            self.cancel(app, &session.id)?;
+        }
+        self.database
+            .with(|connection| project_rows::archive(connection, project_id, now_ms()))?;
+        {
+            let mut sessions = self.lock_sessions();
+            for session in &members {
+                sessions.remove(&session.id);
+            }
+        }
+        self.lock_projects().remove(project_id);
+        // Alle Sessions teilen Workspace und Repositories — einmal aufräumen reicht.
+        if let Some(first) = members.first()
+            && !first.repositories.is_empty()
+        {
+            schedule_worktree_cleanup(first.workspace.clone(), first.repositories.clone());
+        }
+        Ok(())
     }
 
     /// Neueste zuerst.
@@ -482,12 +657,7 @@ impl SessionRegistry {
         session_id: &str,
         name: &str,
     ) -> Result<(), CommandError> {
-        let name: String = name.trim().chars().take(MAX_NAME_CHARS).collect();
-        if name.is_empty() {
-            return Err(CommandError::Internal(
-                "Der Name darf nicht leer sein.".to_owned(),
-            ));
-        }
+        let name = trimmed_name(name)?;
         let session = self.get(session_id)?;
         update(
             app,
@@ -498,22 +668,6 @@ impl SessionRegistry {
                 Ok(())
             },
         )
-    }
-
-    /// Blendet die Session aus: der Agent wird beendet, die Zeile als archiviert markiert, die Session
-    /// verlässt die Liste. Der Verlauf bleibt; App-Worktrees ohne offene Änderungen werden nach dem
-    /// Ende des Agenten entfernt, Branches, Haupt-Checkouts und Ticket-Worktrees bleiben.
-    pub fn archive(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
-        self.cancel(app, session_id)?;
-        let session = self.get(session_id)?;
-        session
-            .database
-            .with(|connection| session_rows::archive(connection, session_id, now_ms()))?;
-        self.lock_sessions().remove(session_id);
-        if !session.repositories.is_empty() {
-            schedule_worktree_cleanup(session.workspace.clone(), session.repositories.clone());
-        }
-        Ok(())
     }
 
     pub fn restart(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
@@ -627,14 +781,37 @@ impl SessionRegistry {
         Ok((session.workspace.clone(), session.repositories.clone()))
     }
 
-    /// Ticket-Worktrees, die der Agent der Session benutzt hat — ob es sie noch gibt, prüft der
-    /// Aufrufer über Git.
-    pub fn ticket_worktrees_of(
+    /// Ticket-Worktrees, die ein Agent irgendeiner Session des Vorhabens benutzt hat — die Changes
+    /// gehören dem Vorhaben. Ob es sie noch gibt, prüft der Aufrufer über Git.
+    pub fn project_ticket_worktrees(
         &self,
         session_id: &str,
     ) -> Result<Vec<(u32, String)>, CommandError> {
-        let session = self.get(session_id)?;
-        let worktrees = session.lock().ticket_worktrees.clone();
+        let project_id = self.get(session_id)?.project_id.clone();
+        let mut members: Vec<Arc<Session>> = self
+            .lock_sessions()
+            .values()
+            .filter(|session: &&Arc<Session>| session.project_id == project_id)
+            .cloned()
+            .collect();
+        members.sort_by_key(|session: &Arc<Session>| session.number);
+        // Eine Session nach der anderen sperren — nie zwei zugleich und nie unter der Map-Sperre.
+        let mut worktrees: Vec<(u32, String)> = Vec::new();
+        for session in &members {
+            let session_worktrees = session.lock().ticket_worktrees.clone();
+            for (position, folder) in session_worktrees {
+                let is_known =
+                    worktrees
+                        .iter()
+                        .any(|(known_position, known_folder): &(u32, String)| {
+                            *known_position == position
+                                && known_folder.eq_ignore_ascii_case(&folder)
+                        });
+                if !is_known {
+                    worktrees.push((position, folder));
+                }
+            }
+        }
         Ok(worktrees)
     }
 
@@ -854,6 +1031,25 @@ impl SessionRegistry {
     fn lock_sessions(&self) -> MutexGuard<'_, HashMap<String, Arc<Session>>> {
         self.sessions.lock().unwrap_or_else(PoisonError::into_inner)
     }
+
+    fn lock_projects(&self) -> MutexGuard<'_, HashMap<String, ProjectState>> {
+        self.projects.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// Getrimmt und auf die Höchstlänge gekürzt; leer ist ein Fehler.
+fn trimmed_name(name: &str) -> Result<String, CommandError> {
+    let name: String = name.trim().chars().take(MAX_NAME_CHARS).collect();
+    if name.is_empty() {
+        return Err(CommandError::Internal(
+            "Der Name darf nicht leer sein.".to_owned(),
+        ));
+    }
+    Ok(name)
+}
+
+fn project_not_found(project_id: &str) -> CommandError {
+    CommandError::Internal(format!("Vorhaben nicht gefunden: {project_id}"))
 }
 
 impl Session {
@@ -1723,6 +1919,8 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         has_agent_history: state.has_agent_history,
         workspace_dir: Some(session.workspace.to_string_lossy().into_owned()),
         scratchpad_dir: state.scratchpad_dir.clone(),
+        project_id: session.project_id.clone(),
+        number: session.number,
     }
 }
 
@@ -1773,6 +1971,8 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         context_used: state.context_used,
         context_window: state.context_window,
         repository_count: u32::try_from(session.repositories.len()).unwrap_or(u32::MAX),
+        project_id: session.project_id.clone(),
+        number: session.number,
     }
 }
 

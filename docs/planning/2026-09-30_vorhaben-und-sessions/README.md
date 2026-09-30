@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Vorhaben als Datenmodell | [phase-1-vorhaben-core.md](phase-1-vorhaben-core.md) | heikel | pending |
+| 1 | Core: Vorhaben als Datenmodell | [phase-1-vorhaben-core.md](phase-1-vorhaben-core.md) | heikel | complete |
 | 2 | Core: neue Session im Vorhaben, Status „Neu“ | [phase-2-neue-session-core.md](phase-2-neue-session-core.md) | standard | pending |
 | 3 | Oberfläche: Sidebar als Baum, Pfad in der Kopfzeile, „Neues Vorhaben“ | [phase-3-sidebar-und-kopfzeile.md](phase-3-sidebar-und-kopfzeile.md) | standard | pending |
 | 4 | Oberfläche: Übersicht des Vorhabens, „Neue Session“ | [phase-4-vorhaben-uebersicht.md](phase-4-vorhaben-uebersicht.md) | standard | pending |

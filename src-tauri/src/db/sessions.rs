@@ -24,6 +24,9 @@ pub struct SessionRow {
     pub workspace_dir: Option<String>,
     /// Claudes Scratchpad-Ordner aus `system/init`; `None`, solange der Agent der Session nie lief.
     pub scratchpad_dir: Option<String>,
+    pub project_id: String,
+    /// Laufende Nummer im Vorhaben, ab 1.
+    pub number: u32,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -42,6 +45,8 @@ struct StoredRow {
     has_agent_history: bool,
     workspace_dir: Option<String>,
     scratchpad_dir: Option<String>,
+    project_id: String,
+    number: u32,
 }
 
 impl StoredRow {
@@ -60,6 +65,8 @@ impl StoredRow {
             has_agent_history: row.get(10)?,
             workspace_dir: row.get(11)?,
             scratchpad_dir: row.get(12)?,
+            project_id: row.get(13)?,
+            number: row.get(14)?,
         })
     }
 
@@ -78,18 +85,21 @@ impl StoredRow {
             has_agent_history: self.has_agent_history,
             workspace_dir: self.workspace_dir,
             scratchpad_dir: self.scratchpad_dir,
+            project_id: self.project_id,
+            number: self.number,
         })
     }
 }
 
 /// Legt die Zeile an oder aktualisiert sie; `scratchpad_dir` kommt mit dem ersten `init` dazu.
-/// `created_at`, `workspace_dir` und `archived_at`
-/// bleiben, wie sie sind: der Arbeitsordner einer Session ändert sich nie.
+/// `created_at`, `workspace_dir`, `project_id`, `number` und `archived_at` bleiben, wie sie sind:
+/// der Arbeitsordner einer Session ändert sich nie, ihr Vorhaben und ihre Nummer auch nicht.
 pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandError> {
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
-             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) \
+             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
+             project_id, number) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15) \
          ON CONFLICT(id) DO UPDATE SET \
              name = excluded.name, \
              status = excluded.status, \
@@ -115,30 +125,26 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
             row.has_agent_history,
             row.workspace_dir,
             row.scratchpad_dir,
+            row.project_id,
+            row.number,
         ],
     )?;
     Ok(())
 }
 
-/// Alle nicht archivierten Sessions, neueste zuerst.
+/// Alle nicht archivierten Sessions, neueste zuerst. `COALESCE` fängt eine Zeile ohne Vorhaben ab:
+/// die Session ist dann ihr eigenes Vorhaben, wie die Migration es für alle Altbestände festlegt.
 pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandError> {
     let mut statement = connection.prepare(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
-             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir \
+             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
+             COALESCE(project_id, id), number \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
         .query_map([], StoredRow::read)?
         .collect::<rusqlite::Result<_>>()?;
     stored.into_iter().map(StoredRow::into_row).collect()
-}
-
-pub fn archive(connection: &Connection, id: &str, archived_at: f64) -> Result<(), CommandError> {
-    connection.execute(
-        "UPDATE sessions SET archived_at = ?2 WHERE id = ?1",
-        params![id, archived_at],
-    )?;
-    Ok(())
 }
 
 /// Löscht die Zeile samt ihrer Chat-Einträge (`ON DELETE CASCADE`).
