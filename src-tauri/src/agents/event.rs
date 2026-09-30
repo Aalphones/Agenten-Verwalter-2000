@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::context::model::ContextBreakdown;
 use crate::skills::model::SkillRef;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -285,6 +286,8 @@ pub enum AgentEvent {
         end: TurnEnd,
         context_window: Option<u32>,
     },
+    /// Antwort auf `get_context_usage`.
+    ContextBreakdown(ContextBreakdown),
     /// Der eigene temporäre Ordner, den der Agent für diese Session benutzt.
     ScratchpadDir(String),
     /// Befehl des Hauptagenten im Vordergrund.

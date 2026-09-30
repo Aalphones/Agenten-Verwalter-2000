@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [ADR 003](../../de
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Kontext-Aufschlüsselung je Session | [phase-1-kontext-core.md](phase-1-kontext-core.md) | standard | pending |
+| 1 | Core: Kontext-Aufschlüsselung je Session | [phase-1-kontext-core.md](phase-1-kontext-core.md) | standard | complete |
 | 2 | Core: Kontingent über einen Hilfsprozess | [phase-2-kontingent-core.md](phase-2-kontingent-core.md) | heikel | pending |
 | 3 | Oberfläche: zwei Fenster in der Kopfzeile, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 

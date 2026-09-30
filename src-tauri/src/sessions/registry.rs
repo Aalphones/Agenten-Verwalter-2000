@@ -17,7 +17,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
 use crate::agents::claude::protocol::{
-    allow, control_request, deny, stop_task, user_message, user_message_content,
+    allow, control_request, deny, get_context_usage, stop_task, user_message, user_message_content,
 };
 use crate::agents::claude::translate::Translator;
 use crate::agents::event::{
@@ -33,6 +33,7 @@ use crate::background::output::{
     MAX_COMMAND_OUTPUT_BYTES, MAX_PREVIEW_BYTES, URL_SCAN_BYTES, exit_code_from_summary,
     find_local_url, read_head, read_tail, tail_text,
 };
+use crate::context::model::{ContextBreakdown, ContextChangedEvent, SessionContext};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
@@ -48,6 +49,7 @@ use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
+const CONTEXT_CHANGED_EVENT: &str = "context://changed";
 const MAX_SUBAGENT_STEPS: usize = 200;
 const KILL_GRACE: Duration = Duration::from_secs(5);
 /// Abstand zwischen dem Abschuss des Agenten und dem Aufräumen seiner Worktrees.
@@ -99,6 +101,8 @@ struct SessionState {
     running_since: Option<f64>,
     context_used: u32,
     context_window: u32,
+    /// Letzte Aufschlüsselung des Kontexts; nur im Speicher, nach einem App-Neustart leer (ADR 008).
+    context_breakdown: Option<ContextBreakdown>,
     /// Seit wann die Session ruht (`completed`/`paused`) — Grundlage für `reap_idle`.
     idle_since: Option<f64>,
     /// Eine wiederhergestellte Session lädt ihren Verlauf erst beim ersten Zugriff (`Session::lock_loaded`).
@@ -159,6 +163,7 @@ struct Outbox {
     /// Ausgaben von Befehlen als (id, Ausgabe, gekürzt).
     outputs: Vec<(String, String, bool)>,
     background_changed: bool,
+    context_changed: bool,
     /// Neu gemeldeter Scratchpad-Ordner, der für das Asset-Protokoll freigegeben wird.
     scratchpad_dir: Option<String>,
     /// Neu zugeordnete Ticket-Worktrees als (Position, Ordnername).
@@ -736,6 +741,32 @@ impl SessionRegistry {
         )
     }
 
+    /// Die letzte Aufschlüsselung des Kontexts und ob der Agent gerade zuhört.
+    pub fn context(&self, session_id: &str) -> Result<SessionContext, CommandError> {
+        let session = self.get(session_id)?;
+        let state = session.lock();
+        Ok(SessionContext {
+            breakdown: state.context_breakdown.clone(),
+            is_agent_running: state.is_listening(),
+        })
+    }
+
+    /// Fragt den Agenten nach einer frischen Aufschlüsselung; `false`, wenn er nicht zuhört.
+    pub fn refresh_context(&self, app: &AppHandle, session_id: &str) -> Result<bool, CommandError> {
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                if !state.is_listening() {
+                    return Ok(false);
+                }
+                state.send_control(outbox, get_context_usage())?;
+                Ok(true)
+            },
+        )
+    }
+
     /// Claudes Scratchpad-Ordner der Session; `None`, solange der Agent nie lief.
     pub fn scratchpad_dir(&self, session_id: &str) -> Result<Option<PathBuf>, CommandError> {
         let session = self.get(session_id)?;
@@ -860,6 +891,7 @@ impl SessionState {
             running_since: None,
             context_used: 0,
             context_window: model.initial_context_window(),
+            context_breakdown: None,
             idle_since: None,
             entries_loaded: true,
             needs_settling: false,
@@ -1167,11 +1199,15 @@ impl SessionState {
         format!("app-{}", self.next_request)
     }
 
+    /// Es gibt einen Prozess, und er ist weder abgebrochen noch fehlgeschlagen.
+    fn is_listening(&self) -> bool {
+        self.process.is_some()
+            && !matches!(self.status, SessionStatus::Cancelled | SessionStatus::Error)
+    }
+
     /// Schickt eine Steueranfrage — an einen Prozess, der nicht mehr zuhört, nur nicht.
     fn send_control(&mut self, outbox: &mut Outbox, request: Value) -> Result<(), CommandError> {
-        let is_listening = self.process.is_some()
-            && !matches!(self.status, SessionStatus::Cancelled | SessionStatus::Error);
-        if !is_listening {
+        if !self.is_listening() {
             return Ok(());
         }
         let request_id = self.next_request_id();
@@ -1243,6 +1279,12 @@ impl SessionState {
                 end,
                 context_window,
             } => self.end_turn(outbox, end, context_window),
+            // Ohne `wake_if_idle`: die Antwort auf eine Abfrage ist keine Arbeit des Agenten.
+            AgentEvent::ContextBreakdown(mut breakdown) => {
+                breakdown.fetched_at = now_ms();
+                self.context_breakdown = Some(breakdown);
+                outbox.context_changed = true;
+            }
             AgentEvent::ScratchpadDir(dir) => {
                 if self.scratchpad_dir.as_deref() != Some(dir.as_str()) {
                     self.scratchpad_dir = Some(dir.clone());
@@ -1510,6 +1552,8 @@ impl SessionState {
         if self.cancel_requested {
             return;
         }
+        // Die Aufschlüsselung ist Beiwerk: ein Fehler beim Einreihen darf das Ende der Antwort nicht stören.
+        let _ = self.send_control(outbox, get_context_usage());
         match end {
             TurnEnd::Aborted => self.pause_after_interrupt(outbox),
             _ if self.pause_requested => self.pause_after_interrupt(outbox),
@@ -1593,6 +1637,14 @@ impl Outbox {
             };
             if let Err(error) = app.emit(BACKGROUND_CHANGED_EVENT, event) {
                 session.log_line(format!("Hintergrund-Ereignis nicht gesendet: {error}"));
+            }
+        }
+        if self.context_changed {
+            let event = ContextChangedEvent {
+                session_id: session.id.clone(),
+            };
+            if let Err(error) = app.emit(CONTEXT_CHANGED_EVENT, event) {
+                session.log_line(format!("Kontext-Ereignis nicht gesendet: {error}"));
             }
         }
         // Erst freigegeben kann die Oberfläche Bilder aus dem Scratchpad über das Asset-Protokoll zeigen.

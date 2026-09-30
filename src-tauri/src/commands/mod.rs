@@ -3,6 +3,7 @@ pub mod attachments;
 pub mod background;
 pub mod changes;
 pub mod chat;
+pub mod context;
 pub mod repositories;
 pub mod sessions;
 pub mod skills;

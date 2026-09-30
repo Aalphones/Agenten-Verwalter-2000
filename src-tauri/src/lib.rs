@@ -3,6 +3,7 @@ pub mod attachments;
 pub mod background;
 pub mod changes;
 pub mod commands;
+pub mod context;
 pub mod db;
 pub mod error;
 pub mod filesystem;
@@ -57,6 +58,8 @@ pub fn run() {
             commands::chat::chat_history,
             commands::chat::chat_send,
             commands::chat::chat_answer,
+            commands::context::context_load,
+            commands::context::context_refresh,
             commands::attachments::attachment_add_files,
             commands::attachments::attachment_add_bytes,
             commands::attachments::attachment_discard,

@@ -14,6 +14,9 @@ use verwalter_lib::{
         RepositoryChanges, SessionChanges,
     },
     commands::app::AppInfo,
+    context::model::{
+        ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
+    },
     error::CommandError,
     repositories::model::KnownRepository,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
@@ -65,5 +68,10 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ScratchpadEntry::export_all(&cfg)?;
     ScratchpadListing::export_all(&cfg)?;
     BackgroundChangedEvent::export_all(&cfg)?;
+    ContextCategory::export_all(&cfg)?;
+    ContextFile::export_all(&cfg)?;
+    ContextBreakdown::export_all(&cfg)?;
+    SessionContext::export_all(&cfg)?;
+    ContextChangedEvent::export_all(&cfg)?;
     Ok(())
 }

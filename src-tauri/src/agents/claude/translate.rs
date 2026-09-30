@@ -5,9 +5,10 @@ use std::time::Instant;
 use serde_json::{Map, Value};
 
 use super::protocol::{
-    AssistantMessage, ContentBlock, ControlRequestLine, Incoming, MessageLine, ModelUsage,
-    ResultLine, SystemLine, Usage, UserContent, UserMessage,
+    AssistantMessage, ContentBlock, ControlRequestLine, ControlResponseLine, Incoming, MessageLine,
+    ModelUsage, ResultLine, SystemLine, Usage, UserContent, UserMessage,
 };
+use super::stats;
 use crate::agents::event::{
     AgentEvent, Question, QuestionKind, QuestionOption, TaskEnd, TaskKind, TodoItem, TodoState,
     TurnEnd,
@@ -71,6 +72,7 @@ impl Translator {
             Incoming::User(user) => self.handle_user(user),
             Incoming::ControlRequest(request) => handle_control_request(request, line),
             Incoming::Result(result) => vec![turn_ended(result)],
+            Incoming::ControlResponse(line) => control_answered(line),
             Incoming::Other => Vec::new(),
         }
     }
@@ -462,6 +464,22 @@ fn handle_control_request(request: ControlRequestLine, line: &str) -> Vec<AgentE
         questions,
         input,
     }]
+}
+
+/// Erkennung am Inhalt statt an der Request-ID: nur die Antwort auf `get_context_usage` trägt
+/// `categories` und `maxTokens`. Die Bestätigung von `stop_task` und Fehlerantworten sind ohne Folge.
+fn control_answered(line: ControlResponseLine) -> Vec<AgentEvent> {
+    let body = line.response;
+    if body.subtype != "success" {
+        return Vec::new();
+    }
+    let Some(response) = body.response else {
+        return Vec::new();
+    };
+    stats::context_breakdown(&response)
+        .map(AgentEvent::ContextBreakdown)
+        .into_iter()
+        .collect()
 }
 
 fn ask_user_questions(input: &Value) -> Vec<Question> {

@@ -2,4 +2,5 @@
 pub mod locate;
 pub mod process;
 pub mod protocol;
+pub mod stats;
 pub mod translate;

@@ -20,6 +20,8 @@ pub enum Incoming {
     ControlRequest(ControlRequestLine),
     #[serde(rename = "result")]
     Result(ResultLine),
+    #[serde(rename = "control_response")]
+    ControlResponse(ControlResponseLine),
     #[serde(other)]
     Other,
 }
@@ -140,6 +142,21 @@ pub struct ControlRequestBody {
     pub input: Option<Value>,
 }
 
+/// Antwort der Kommandozeile auf eine eigene Steueranfrage.
+#[derive(Debug, Deserialize)]
+pub struct ControlResponseLine {
+    pub response: ControlResponseBody,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ControlResponseBody {
+    pub subtype: String,
+    pub request_id: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub response: Option<Value>,
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ResultLine {
     pub subtype: String,
@@ -188,6 +205,11 @@ pub fn control_request(request_id: &str, request: Value) -> String {
 /// Beendet einen Hintergrundprozess oder Subagenten; der Agent selbst läuft weiter.
 pub fn stop_task(task_id: &str) -> Value {
     json!({ "subtype": "stop_task", "task_id": task_id })
+}
+
+/// Fragt die Aufschlüsselung des Kontexts ab; die Antwort kommt als `control_response`.
+pub fn get_context_usage() -> Value {
+    json!({ "subtype": "get_context_usage" })
 }
 
 pub fn allow(request_id: &str, updated_input: Value) -> String {
