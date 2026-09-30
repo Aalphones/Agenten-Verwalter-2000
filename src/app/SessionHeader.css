@@ -162,11 +162,32 @@
     white-space: nowrap;
   }
 
+  &__anchor {
+    position: relative;
+    flex-shrink: 0;
+  }
+
   &__context {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: inherit;
+    font: inherit;
     white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
   }
 
   &__context-bar {

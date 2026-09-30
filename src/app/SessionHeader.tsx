@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
+import { ContextPopover } from '@/features/context/ContextPopover';
 import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
+import { UsageButton } from '@/features/usage/UsageButton';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
@@ -17,7 +19,11 @@ const BACKGROUND_LABEL = 'Hintergrund';
 const BACKGROUND_TITLE =
   'Dev-Server, Subagenten, ausgeführte Skripte und Scratchpad dieser Session';
 
+const CONTEXT_TITLE = 'Kontext dieser Session — Klick zeigt, was ihn belegt';
+
 const VIEW_LABEL: Record<SessionView, string> = { chat: 'Chat', changes: 'Changes' };
+
+type OpenPanel = 'context' | 'usage';
 
 interface SessionHeaderProps {
   session: SessionSummary;
@@ -41,6 +47,7 @@ export function SessionHeader({
   onShowView,
 }: SessionHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
+  const [openPanel, setOpenPanel] = useState<OpenPanel | null>(null);
   const isTicking: boolean = session.runningSince !== null;
 
   useEffect(() => {
@@ -79,6 +86,14 @@ export function SessionHeader({
     runningBackgroundCount > 0
       ? `${String(runningBackgroundCount)} im Hintergrund`
       : BACKGROUND_LABEL;
+
+  function togglePanel(panel: OpenPanel): void {
+    setOpenPanel((current: OpenPanel | null) => (current === panel ? null : panel));
+  }
+
+  function closePanel(): void {
+    setOpenPanel(null);
+  }
 
   function runAction(action: (sessionId: string) => Promise<void>): void {
     action(session.id).catch((reason: unknown) => {
@@ -207,20 +222,35 @@ export function SessionHeader({
           </svg>
           <span className="session-header__background-label">{backgroundLabel}</span>
         </button>
-        <span
-          className="session-header__context"
-          title={`Kontext: ${String(usedThousands)}k von ${String(windowThousands)}k Tokens belegt`}
-        >
-          <span className="session-header__context-bar">
-            <span
-              className={contextClass}
-              style={{ width: `${String(Math.min(contextPercent, 100))}%` }}
-            />
-          </span>
-          <span className="session-header__mono">
-            {String(usedThousands)}k / {String(windowThousands)}k
-          </span>
-        </span>
+        <div className="session-header__anchor">
+          <button
+            type="button"
+            className="session-header__context"
+            aria-expanded={openPanel === 'context'}
+            title={CONTEXT_TITLE}
+            onClick={(): void => {
+              togglePanel('context');
+            }}
+          >
+            <span className="session-header__context-bar">
+              <span
+                className={contextClass}
+                style={{ width: `${String(Math.min(contextPercent, 100))}%` }}
+              />
+            </span>
+            <span className="session-header__mono">
+              {String(usedThousands)}k / {String(windowThousands)}k
+            </span>
+          </button>
+          {openPanel === 'context' && <ContextPopover session={session} onClose={closePanel} />}
+        </div>
+        <UsageButton
+          isOpen={openPanel === 'usage'}
+          onToggle={(): void => {
+            togglePanel('usage');
+          }}
+          onClose={closePanel}
+        />
         <span className="session-header__runtime session-header__mono" title="Laufzeit der Session">
           <svg
             width="12"

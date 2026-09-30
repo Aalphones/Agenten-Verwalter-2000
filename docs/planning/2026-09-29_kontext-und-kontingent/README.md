@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [ADR 003](../../de
 |---|---|---|---|---|
 | 1 | Core: Kontext-Aufschlüsselung je Session | [phase-1-kontext-core.md](phase-1-kontext-core.md) | standard | complete |
 | 2 | Core: Kontingent über einen Hilfsprozess | [phase-2-kontingent-core.md](phase-2-kontingent-core.md) | heikel | complete |
-| 3 | Oberfläche: zwei Fenster in der Kopfzeile, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
+| 3 | Oberfläche: zwei Fenster in der Kopfzeile, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
 
 Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase (Scopes: Phase 1 `context`, Phase 2 `usage`, Phase 3 `ui`; die Scopes `context` und `usage` trägt Phase 1 bzw. 2 in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 
@@ -110,9 +110,19 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Die Kopfzeile hat zwei neue Fenster: Klick auf den Kontext-Balken zeigt die Aufschlüsselung (Kategorien, Schwelle fürs Zusammenfassen, Memory-Dateien), die neue Anzeige „5h NN %“ öffnet das Kontingent mit Reset-Zeiten und „Was treibt den Verbrauch?“. Der Core liefert beides über Steueranfragen der Claude-Kommandozeile.
+
 ## Files touched
 
+- Core: `src-tauri/src/context/`, `src-tauri/src/usage/`, `src-tauri/src/agents/claude/` (`stats.rs`, `helper.rs`), `src-tauri/src/commands/` (`context.rs`, `usage.rs`), `sessions/registry.rs`
+- Oberfläche: `src/features/context/`, `src/features/usage/`, `src/lib/context.ts`, `src/lib/usage.ts`, `src/app/SessionHeader.*`, `src/app/App.tsx`, `src/styles/theme.css`
+- Doku: ADR 008, `docs/code-map.md`, `docs/glossary.md`, `docs/conventions/commits.md`
+
 ## Commits
+
+- Phase 1: `61557e8` feat(context)
+- Phase 2: `815ed93` feat(usage)
+- Phase 3: feat(ui) — Kontext- und Kontingent-Fenster in der Kopfzeile
 
 ## Deviations from plan
 

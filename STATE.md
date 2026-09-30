@@ -1,5 +1,5 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-09-29_kontext-und-kontingent/`
-**Phase:** 3/3 — Oberfläche: zwei Fenster in der Kopfzeile, Doku-Abschluss (pending; Phasen 1 und 2 fertig und committet)
-**Nächster Schritt:** Phase 3 nach `phase-3-oberflaeche.md` abarbeiten (standard → `/model sonnet`), FINDINGS-Einträge „→ Phase 3“ einarbeiten, `pnpm check`, Commit (Scope `ui`).
+**Phase:** 3/3 — Oberfläche (complete, committet); Plan-Ende
+**Nächster Schritt:** Sascha arbeitet die Smoke-Checkliste aus der Plan-README ab; danach Plan nach `docs/archive/2026-09/` verschieben, Version anheben, `chore(release)`-Commit, Tag setzen und pushen ([releases.md](docs/conventions/releases.md)).

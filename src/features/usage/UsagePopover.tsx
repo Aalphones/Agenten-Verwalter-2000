@@ -1,0 +1,213 @@
+import { useState } from 'react';
+import type { ReactElement } from 'react';
+import { Popover } from '@/components/Popover';
+import { formatClock, formatPercent } from '@/features/context/formatTokens';
+import {
+  USAGE_WARNING_PERCENT,
+  behaviorText,
+  formatResetIn,
+  limitLabel,
+} from '@/features/usage/usageTexts';
+import type { UsageBreakdown } from '@/lib/bindings/UsageBreakdown';
+import type { UsageLimit } from '@/lib/bindings/UsageLimit';
+import type { UsageShare } from '@/lib/bindings/UsageShare';
+import type { UsageSnapshot } from '@/lib/bindings/UsageSnapshot';
+import type { UsageStatus } from '@/lib/bindings/UsageStatus';
+import { refreshUsage } from '@/lib/usage';
+import './UsagePopover.css';
+
+const USAGE_POPOVER_WIDTH = 380;
+const FULL_PERCENT = 100;
+
+const NUMBER_FORMAT = new Intl.NumberFormat('de-DE');
+
+const PERIODS = ['day', 'week'] as const;
+type Period = (typeof PERIODS)[number];
+const PERIOD_LABEL: Readonly<Record<Period, string>> = { day: 'Tag', week: 'Woche' };
+
+const SKILL_EXPLANATION =
+  'Aufwendige Skills lassen sich eingrenzen oder per Frontmatter auf ein günstigeres Modell legen.';
+const NO_LIMITS_TEXT =
+  'Für dieses Konto meldet Claude kein Kontingent (zum Beispiel bei Anmeldung per API-Schlüssel).';
+
+interface UsagePopoverProps {
+  status: UsageStatus | null;
+  onClose: () => void;
+}
+
+export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactElement {
+  const [period, setPeriod] = useState<Period>('day');
+  // Das Fenster wird bei jedem Öffnen neu eingehängt; so bleibt „in 2 Std.“ beim Rendern stabil.
+  const [now] = useState<number>(() => Date.now());
+  const snapshot: UsageSnapshot | null = status?.snapshot ?? null;
+  const hasBreakdown: boolean =
+    snapshot !== null && (snapshot.day !== null || snapshot.week !== null);
+
+  function refresh(): void {
+    refreshUsage(true).catch((reason: unknown) => {
+      console.error('Kontingent nicht abrufbar', reason);
+    });
+  }
+
+  function renderLimits(loaded: UsageSnapshot): ReactElement {
+    if (loaded.limits.length === 0) {
+      return <p className="usage-popover__hint">{NO_LIMITS_TEXT}</p>;
+    }
+    return (
+      <ul className="usage-popover__limits">
+        {loaded.limits.map((limit: UsageLimit) => renderLimit(limit, now))}
+      </ul>
+    );
+  }
+
+  function renderBody(): ReactElement | null {
+    if (snapshot === null) {
+      return null;
+    }
+    return (
+      <>
+        {renderLimits(snapshot)}
+        {hasBreakdown && (
+          <section className="usage-popover__drivers">
+            <div className="usage-popover__drivers-head">
+              <h3 className="usage-popover__subtitle">Was treibt den Verbrauch?</h3>
+              <div className="usage-popover__periods">
+                {PERIODS.map((candidate: Period) => (
+                  <button
+                    key={candidate}
+                    type="button"
+                    className="usage-popover__period"
+                    aria-pressed={candidate === period}
+                    onClick={(): void => {
+                      setPeriod(candidate);
+                    }}
+                  >
+                    {PERIOD_LABEL[candidate]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="usage-popover__note">
+              Näherung aus den Sessions auf diesem Rechner — ohne andere Geräte und claude.ai
+            </p>
+            {renderDrivers(snapshot[period])}
+          </section>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <Popover
+      label="Kontingent"
+      placement="below"
+      align="end"
+      width={USAGE_POPOVER_WIDTH}
+      onClose={onClose}
+    >
+      <div className="usage-popover">
+        <div className="usage-popover__head">
+          <h2 className="usage-popover__title">Kontingent</h2>
+          {snapshot?.plan != null && (
+            <span className="usage-popover__plan">Abo: {capitalize(snapshot.plan)}</span>
+          )}
+        </div>
+        {renderBody()}
+        {status?.error != null && (
+          <p className="usage-popover__error">Kontingent nicht abrufbar: {status.error}</p>
+        )}
+        <div className="usage-popover__foot">
+          <span>{snapshot !== null && `Stand ${formatClock(snapshot.fetchedAt)}`}</span>
+          <button
+            type="button"
+            className="usage-popover__refresh"
+            disabled={status?.isLoading === true}
+            onClick={refresh}
+          >
+            {status?.isLoading === true ? 'Lädt …' : 'Aktualisieren'}
+          </button>
+        </div>
+      </div>
+    </Popover>
+  );
+}
+
+function renderLimit(limit: UsageLimit, now: number): ReactElement {
+  const resetIn: string | null =
+    limit.resetsAt === null ? null : formatResetIn(limit.resetsAt, now);
+  return (
+    <li key={limit.kind} className="usage-popover__limit">
+      <div className="usage-popover__limit-head">
+        <span>{limitLabel(limit.kind)}</span>
+        <span className="usage-popover__percent">{formatPercent(limit.percent, 0)}</span>
+      </div>
+      <div className="usage-popover__bar">
+        <span
+          className={`usage-popover__fill${
+            limit.percent >= USAGE_WARNING_PERCENT ? ' usage-popover__fill--warning' : ''
+          }`}
+          style={{ width: `${String(Math.min(limit.percent, FULL_PERCENT))}%` }}
+        />
+      </div>
+      {resetIn !== null && <span className="usage-popover__reset">Zurückgesetzt {resetIn}</span>}
+    </li>
+  );
+}
+
+function renderDrivers(breakdown: UsageBreakdown | null): ReactElement {
+  if (breakdown === null) {
+    return <p className="usage-popover__hint">Dafür liegen keine Daten vor.</p>;
+  }
+  const topSkill: UsageShare | undefined = breakdown.skills[0];
+  return (
+    <>
+      {breakdown.behaviors.map((behavior: UsageShare) => {
+        const text = behaviorText(behavior.key, behavior.percent);
+        return (
+          <div key={behavior.key} className="usage-popover__driver">
+            <strong>{text.headline}</strong>
+            {text.explanation !== null && (
+              <span className="usage-popover__explanation">{text.explanation}</span>
+            )}
+          </div>
+        );
+      })}
+      {topSkill !== undefined && (
+        <>
+          <div className="usage-popover__driver">
+            <strong>
+              {formatPercent(topSkill.percent, 0)} kam aus /{topSkill.key}
+            </strong>
+            <span className="usage-popover__explanation">{SKILL_EXPLANATION}</span>
+          </div>
+          <table className="usage-popover__skills">
+            <thead>
+              <tr>
+                <th scope="col">Skills</th>
+                <th scope="col" className="usage-popover__percent">
+                  Anteil
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {breakdown.skills.map((skill: UsageShare) => (
+                <tr key={skill.key}>
+                  <td>/{skill.key}</td>
+                  <td className="usage-popover__percent">{formatPercent(skill.percent, 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      <p className="usage-popover__note">
+        {NUMBER_FORMAT.format(breakdown.requestCount)} Anfragen ·{' '}
+        {NUMBER_FORMAT.format(breakdown.sessionCount)} Sessions
+      </p>
+    </>
+  );
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

@@ -87,6 +87,7 @@ export function App(): ReactElement {
       return (
         <>
           <SessionHeader
+            key={currentSession.id}
             session={currentSession}
             activeView={isChangesView ? 'changes' : 'chat'}
             changesCount={changes === null ? null : countChangedFiles(changes)}

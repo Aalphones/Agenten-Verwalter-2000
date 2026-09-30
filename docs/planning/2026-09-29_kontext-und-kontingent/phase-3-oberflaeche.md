@@ -43,29 +43,29 @@ Rating: standard · Commit-Scope: `ui`
 
 ### Wrapper und Tokens
 
-- [ ] `src/lib/context.ts`: `loadContext(sessionId)` (`context_load`), `refreshContext(sessionId): Promise<boolean>` (`context_refresh`), `onContextChanged(callback)` (`context://changed`, Nutzlast `ContextChangedEvent`) — JSDoc mit `@throws` wie in `src/lib/background.ts`.
-- [ ] `src/lib/usage.ts`: `loadUsage()` (`usage_load`), `refreshUsage(force: boolean)` (`usage_refresh`), `onUsageChanged(callback)` (`usage://changed`, ohne Nutzlast).
-- [ ] `src/styles/theme.css`: semantische Tokens `--color-chart-1` … `--color-chart-7` in **allen drei** Blöcken. Hell: `blue-600`, `orange-600`, `green-700`, `amber-700`, `syntax-teal-700`, `red-600`, `neutral-500`. Dunkel (beide Blöcke gleich): `blue-400`, `orange-400`, `green-400`, `amber-400`, `syntax-teal-400`, `red-400`, `neutral-400`. Jeweils als `var(--color-…)` auf die vorhandenen Rohwerte.
+- [x] `src/lib/context.ts`: `loadContext(sessionId)` (`context_load`), `refreshContext(sessionId): Promise<boolean>` (`context_refresh`), `onContextChanged(callback)` (`context://changed`, Nutzlast `ContextChangedEvent`) — JSDoc mit `@throws` wie in `src/lib/background.ts`.
+- [x] `src/lib/usage.ts`: `loadUsage()` (`usage_load`), `refreshUsage(force: boolean)` (`usage_refresh`), `onUsageChanged(callback)` (`usage://changed`, ohne Nutzlast).
+- [x] `src/styles/theme.css`: semantische Tokens `--color-chart-1` … `--color-chart-7` in **allen drei** Blöcken. Hell: `blue-600`, `orange-600`, `green-700`, `amber-700`, `syntax-teal-700`, `red-600`, `neutral-500`. Dunkel (beide Blöcke gleich): `blue-400`, `orange-400`, `green-400`, `amber-400`, `syntax-teal-400`, `red-400`, `neutral-400`. Jeweils als `var(--color-…)` auf die vorhandenen Rohwerte.
 
 ### Kontext
 
-- [ ] `src/features/context/formatTokens.ts`: `formatTokens(tokens: number): string` und `formatPercent(value: number, digits: 0 | 1): string` nach AK 7; dazu `formatClock(ms: number): string` (`HH:MM`, `toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })`). Wird auch von `usage` importiert.
-- [ ] `src/features/context/categoryLabels.ts`: Übersetzungstabelle aus AK 2 + `categoryLabel(name)`.
-- [ ] `src/features/context/useSessionContext.ts`: `useSessionContext(sessionId: string, isOpen: boolean): SessionContext | null` nach AK 6; Fehler mit `console.error` wie in `SessionHeader.runAction`.
-- [ ] `src/features/context/ContextPopover.tsx` + `ContextPopover.css` (BEM-Block `context-popover`): Props `session: SessionSummary`, `onClose`. Rendert `Popover` mit Inhalt nach AK 2/3.
-- [ ] `SessionHeader.tsx`: `const [openPanel, setOpenPanel] = useState<'context' | 'usage' | null>(null)`; Kontext-Anzeige in `<div className="session-header__anchor">` (`position: relative`) mit `<button className="session-header__context" …>` und bei `openPanel === 'context'` `<ContextPopover …/>`. Beim Session-Wechsel schließt ein offenes Fenster: in `App.tsx` bekommt `<SessionHeader>` `key={currentSession.id}` (hat bisher keinen `key`), damit der Zustand mit der Session neu beginnt.
+- [x] `src/features/context/formatTokens.ts`: `formatTokens(tokens: number): string` und `formatPercent(value: number, digits: 0 | 1): string` nach AK 7; dazu `formatClock(ms: number): string` (`HH:MM`, `toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })`). Wird auch von `usage` importiert.
+- [x] `src/features/context/categoryLabels.ts`: Übersetzungstabelle aus AK 2 + `categoryLabel(name)`.
+- [x] `src/features/context/useSessionContext.ts`: `useSessionContext(sessionId: string, isOpen: boolean): SessionContext | null` nach AK 6; Fehler mit `console.error` wie in `SessionHeader.runAction`.
+- [x] `src/features/context/ContextPopover.tsx` + `ContextPopover.css` (BEM-Block `context-popover`): Props `session: SessionSummary`, `onClose`. Rendert `Popover` mit Inhalt nach AK 2/3.
+- [x] `SessionHeader.tsx`: `const [openPanel, setOpenPanel] = useState<'context' | 'usage' | null>(null)`; Kontext-Anzeige in `<div className="session-header__anchor">` (`position: relative`) mit `<button className="session-header__context" …>` und bei `openPanel === 'context'` `<ContextPopover …/>`. Beim Session-Wechsel schließt ein offenes Fenster: in `App.tsx` bekommt `<SessionHeader>` `key={currentSession.id}` (hat bisher keinen `key`), damit der Zustand mit der Session neu beginnt.
 
 ### Kontingent
 
-- [ ] `src/features/usage/usageTexts.ts`: Bezeichnungen der `kind`s, Texte der `behaviors` samt Erklärungen (AK 5), `formatResetIn(resetsAt: string, now: number): string | null`.
-- [ ] `src/features/usage/useUsage.ts`: `useUsage(isOpen: boolean): UsageStatus | null` nach AK 6.
-- [ ] `src/features/usage/UsagePopover.tsx` + `.css` (Block `usage-popover`): Props `status: UsageStatus | null`, `onClose`. Umschalter Tag/Woche als lokaler `useState<'day' | 'week'>('day')`.
-- [ ] `src/features/usage/UsageButton.tsx` + `.css` (Block `usage-button`): Props `isOpen`, `onToggle`, `onClose`; ruft `useUsage(isOpen)`, rendert Anker `position: relative` mit Knopf nach AK 4 und bei `isOpen` `UsagePopover`. In `SessionHeader` zwischen Kontext und Laufzeit, gesteuert über `openPanel === 'usage'`.
+- [x] `src/features/usage/usageTexts.ts`: Bezeichnungen der `kind`s, Texte der `behaviors` samt Erklärungen (AK 5), `formatResetIn(resetsAt: string, now: number): string | null`.
+- [x] `src/features/usage/useUsage.ts`: `useUsage(isOpen: boolean): UsageStatus | null` nach AK 6.
+- [x] `src/features/usage/UsagePopover.tsx` + `.css` (Block `usage-popover`): Props `status: UsageStatus | null`, `onClose`. Umschalter Tag/Woche als lokaler `useState<'day' | 'week'>('day')`.
+- [x] `src/features/usage/UsageButton.tsx` + `.css` (Block `usage-button`): Props `isOpen`, `onToggle`, `onClose`; ruft `useUsage(isOpen)`, rendert Anker `position: relative` mit Knopf nach AK 4 und bei `isOpen` `UsagePopover`. In `SessionHeader` zwischen Kontext und Laufzeit, gesteuert über `openPanel === 'usage'`.
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Oberflächen-Spalte der Zeilen „Kontext“ (`src/features/context/`, Wrapper `src/lib/context.ts`, Auslöser in `src/app/SessionHeader.tsx`) und „Kontingent“ (`src/features/usage/`, Wrapper `src/lib/usage.ts`) füllen; `SessionHeader.tsx` in der Zeile „App-Rahmen“ um „Kontext-Fenster, Kontingent-Anzeige“ ergänzen; Chart-Tokens in der Zeile „Design-Tokens“ erwähnen.
-- [ ] `docs/glossary.md`: „Kontext-Aufschlüsselung“ (was den Kontext der Session belegt, von der Claude-Kommandozeile gemeldet, letzter Stand im Speicher des Core), „Kontingent“ (Nutzungsgrenzen des Claude-Abos: 5-Stunden-Fenster und Woche; englisch „Usage“), „Hilfsprozess“ (kurz gestarteter `claude.exe` nur für eine Abfrage, ohne Session).
-- [ ] README dieses Plans: Status aller Phasen, Summary/Files/Commits füllen; STATE.md auf die Smoke-Checkliste zeigen lassen.
+- [x] `docs/code-map.md`: Oberflächen-Spalte der Zeilen „Kontext“ (`src/features/context/`, Wrapper `src/lib/context.ts`, Auslöser in `src/app/SessionHeader.tsx`) und „Kontingent“ (`src/features/usage/`, Wrapper `src/lib/usage.ts`) füllen; `SessionHeader.tsx` in der Zeile „App-Rahmen“ um „Kontext-Fenster, Kontingent-Anzeige“ ergänzen; Chart-Tokens in der Zeile „Design-Tokens“ erwähnen.
+- [x] `docs/glossary.md`: „Kontext-Aufschlüsselung“ (was den Kontext der Session belegt, von der Claude-Kommandozeile gemeldet, letzter Stand im Speicher des Core), „Kontingent“ (Nutzungsgrenzen des Claude-Abos: 5-Stunden-Fenster und Woche; englisch „Usage“), „Hilfsprozess“ (kurz gestarteter `claude.exe` nur für eine Abfrage, ohne Session).
+- [x] README dieses Plans: Status aller Phasen, Summary/Files/Commits füllen; STATE.md auf die Smoke-Checkliste zeigen lassen.
 
 ## Report-Back
