@@ -12,6 +12,20 @@ pub const TICKET_WORKTREE_INFIX: &str = "-wt-";
 
 /// Zeichen, hinter denen im Text ein Ordnername beginnen kann (außer Leerraum).
 const NAME_BOUNDARIES: [char; 6] = ['\\', '/', '"', '\'', '=', ':'];
+const HEAD: &str = "HEAD";
+
+/// Ein Ticket-Worktree, den der Agent der Session benutzt hat und den es laut Git noch gibt.
+#[derive(Debug, Clone)]
+pub struct TicketWorktree {
+    /// Position des Repositorys in der Session.
+    pub position: u32,
+    /// Ordnername in der Schreibweise, in der die Session ihn sich gemerkt hat.
+    pub folder: String,
+    pub path: PathBuf,
+    pub head: String,
+    /// `None` bei losgelöstem HEAD.
+    pub branch: Option<String>,
+}
 
 /// Woran ein Ticket-Worktree eines Session-Repositorys im Text zu erkennen ist.
 #[derive(Debug, Clone)]
@@ -238,6 +252,79 @@ pub fn mentioned_ticket_worktrees(roots: &[TicketRoot], text: &str) -> Vec<(u32,
         }
     }
     found
+}
+
+/// Die zugeordneten Ticket-Worktrees eines Repositorys, die Git noch als Worktree des Haupt-Checkouts
+/// führt, nach Ordner sortiert. Was nicht (mehr) dazugehört, fällt still weg — auch alles, wenn
+/// `git worktree list` scheitert: der Eintrag des Repositorys selbst soll davon nicht abhängen.
+pub fn ticket_worktrees(
+    repository: &SessionRepository,
+    position: u32,
+    folders: &[String],
+) -> Vec<TicketWorktree> {
+    if matches!(repository.checkout, RepositoryCheckout::AppWorktree { .. }) || folders.is_empty() {
+        return Vec::new();
+    }
+    let Some(parent) = repository.repository_path.parent() else {
+        return Vec::new();
+    };
+    let Ok(entries) = git::worktree_list(&repository.repository_path) else {
+        return Vec::new();
+    };
+    let mut worktrees: Vec<TicketWorktree> = folders
+        .iter()
+        .filter_map(|folder: &String| {
+            let expected = parent.join(folder);
+            let entry = entries
+                .iter()
+                .find(|entry: &&git::WorktreeEntry| same_dir(&entry.path, &expected))?;
+            // Ein von Hand gelöschter Ordner steht bis zum nächsten `prune` noch in der Liste.
+            if !entry.path.exists() {
+                return None;
+            }
+            Some(TicketWorktree {
+                position,
+                folder: folder.clone(),
+                path: entry.path.clone(),
+                head: entry.head.clone(),
+                branch: entry.branch.clone(),
+            })
+        })
+        .collect();
+    worktrees.sort_by(|first: &TicketWorktree, second: &TicketWorktree| {
+        first.folder.cmp(&second.folder)
+    });
+    worktrees
+}
+
+/// `(base_commit, base_ref)` eines Ticket-Worktrees: die Abzweigung vom Standard-Branch, damit die
+/// Changes den ganzen Branch zeigen, egal welche Session daran gearbeitet hat. Ohne Standard-Branch
+/// gilt ersatzweise der ausgecheckte Stand des Haupt-Checkouts.
+pub fn ticket_base(
+    repository: &SessionRepository,
+    worktree: &TicketWorktree,
+) -> Result<(String, String), CommandError> {
+    if let Some(branch) = git::default_branch(&repository.repository_path)? {
+        let reference = format!("refs/heads/{branch}");
+        let commit = git::merge_base(&worktree.path, HEAD, &reference)?;
+        return Ok((commit, branch));
+    }
+    let (reference, main_commit) = read_base(&repository.repository_path)?;
+    let commit = git::merge_base(&worktree.path, HEAD, &main_commit)?;
+    Ok((commit, reference))
+}
+
+/// Gleicher Ordner ohne Rücksicht auf Groß/Klein, Schrägstrich-Richtung und abschließenden Trenner:
+/// Git nennt unter Windows `C:/Users/...`, die Session kennt `C:\Users\...`.
+fn same_dir(first: &Path, second: &Path) -> bool {
+    normalized_dir(first) == normalized_dir(second)
+}
+
+fn normalized_dir(path: &Path) -> String {
+    path.to_string_lossy()
+        .replace('/', "\\")
+        .trim_end_matches('\\')
+        .to_lowercase()
 }
 
 fn is_folder_character(character: char) -> bool {

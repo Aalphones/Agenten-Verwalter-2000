@@ -3,9 +3,10 @@ import type { FileChange } from "./FileChange";
 
 export type RepositoryChanges = { 
 /**
- * Wie `session_repositories.position`.
+ * Kennung für Filter und Diff: `"<Position>"` für ein Session-Repository,
+ * `"<Position>/<Ordner>"` für einen Ticket-Worktree.
  */
-position: number, name: string, branch: string, baseRef: string, 
+key: string, name: string, branch: string, baseRef: string, 
 /**
  * Commits von der Basis bis `HEAD`.
  */

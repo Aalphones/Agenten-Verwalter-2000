@@ -3,6 +3,6 @@ import type { RepositoryChanges } from "./RepositoryChanges";
 
 export type SessionChanges = { 
 /**
- * In der Reihenfolge von `session_repositories`.
+ * Je Session-Repository erst sein Eintrag, dann seine Ticket-Worktrees.
  */
 repositories: Array<RepositoryChanges>, };

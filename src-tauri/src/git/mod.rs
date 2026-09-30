@@ -8,6 +8,18 @@ use crate::error::CommandError;
 use crate::processes::hide_console;
 
 const MAX_ERROR_CHARS: usize = 500;
+const LOCAL_BRANCH_PREFIX: &str = "refs/heads/";
+/// Wird geprüft, wenn `origin/HEAD` keinen Standard-Branch nennt — in dieser Reihenfolge.
+const FALLBACK_DEFAULT_BRANCHES: [&str; 2] = ["main", "master"];
+
+/// Ein Eintrag aus `git worktree list --porcelain`; `path` mit Backslashes, `branch` ohne
+/// `refs/heads/`, `None` bei losgelöstem HEAD.
+#[derive(Debug, Clone)]
+pub struct WorktreeEntry {
+    pub path: PathBuf,
+    pub head: String,
+    pub branch: Option<String>,
+}
 
 /// Wurzelordner des Repositorys, in dem `dir` liegt (Backslashes unter Windows).
 pub fn toplevel(dir: &Path) -> Result<PathBuf, CommandError> {
@@ -32,7 +44,7 @@ pub fn head_branch(repo: &Path) -> Result<Option<String>, CommandError> {
 }
 
 pub fn branch_exists(repo: &Path, branch: &str) -> Result<bool, CommandError> {
-    let reference = format!("refs/heads/{branch}");
+    let reference = format!("{LOCAL_BRANCH_PREFIX}{branch}");
     exit_means_yes_or_no(
         repo,
         &args(&["show-ref", "--verify", "--quiet", &reference]),
@@ -74,6 +86,76 @@ pub fn worktree_remove(repo: &Path, path: &Path) -> Result<(), CommandError> {
 
 pub fn worktree_prune(repo: &Path) -> Result<(), CommandError> {
     run(repo, &args(&["worktree", "prune"])).map(|_| ())
+}
+
+/// Alle Worktrees des Repositorys, der Haupt-Checkout eingeschlossen. Liest nur und nimmt keine
+/// Index-Sperre (ADR 006).
+pub fn worktree_list(repo: &Path) -> Result<Vec<WorktreeEntry>, CommandError> {
+    let output = run(repo, &args(&["worktree", "list", "--porcelain"]))?;
+    let entries = output
+        .split("\n\n")
+        .filter_map(parse_worktree_block)
+        .collect();
+    Ok(entries)
+}
+
+/// Ein Block aus `worktree list --porcelain`; ohne `worktree`-Zeile kein Eintrag.
+fn parse_worktree_block(block: &str) -> Option<WorktreeEntry> {
+    let mut path: Option<PathBuf> = None;
+    let mut head = String::new();
+    let mut branch: Option<String> = None;
+    for line in block.lines() {
+        let line = line.trim_end_matches('\r');
+        if let Some(value) = line.strip_prefix("worktree ") {
+            path = Some(PathBuf::from(value.replace('/', "\\")));
+        } else if let Some(value) = line.strip_prefix("HEAD ") {
+            value.clone_into(&mut head);
+        } else if let Some(value) = line.strip_prefix("branch ") {
+            branch = Some(
+                value
+                    .strip_prefix(LOCAL_BRANCH_PREFIX)
+                    .unwrap_or(value)
+                    .to_owned(),
+            );
+        }
+    }
+    Some(WorktreeEntry {
+        path: path?,
+        head,
+        branch,
+    })
+}
+
+pub fn merge_base(dir: &Path, first: &str, second: &str) -> Result<String, CommandError> {
+    run(dir, &args(&["merge-base", first, second]))
+}
+
+/// Der Standard-Branch, nicht der ausgecheckte: erst das, worauf `origin/HEAD` zeigt, dann `main`,
+/// dann `master` — jeweils nur, wenn es den lokalen Branch gibt.
+pub fn default_branch(repo: &Path) -> Result<Option<String>, CommandError> {
+    let output = run_allowing_failure(
+        repo,
+        &args(&[
+            "symbolic-ref",
+            "--quiet",
+            "--short",
+            "refs/remotes/origin/HEAD",
+        ]),
+    )?;
+    if output.status.success() {
+        let remote_head = stdout_text(&output);
+        if let Some((_, branch)) = remote_head.split_once('/')
+            && branch_exists(repo, branch)?
+        {
+            return Ok(Some(branch.to_owned()));
+        }
+    }
+    for branch in FALLBACK_DEFAULT_BRANCHES {
+        if branch_exists(repo, branch)? {
+            return Ok(Some(branch.to_owned()));
+        }
+    }
+    Ok(None)
 }
 
 /// `git diff-tree -r --no-renames --name-status -z <from> <to>`

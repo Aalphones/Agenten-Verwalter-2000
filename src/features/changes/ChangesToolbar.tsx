@@ -27,7 +27,7 @@ const SCOPE_OPTIONS: readonly { scope: ChangeScope; label: string; title: string
 interface ChangesToolbarProps {
   changes: SessionChanges;
   selection: ChangesSelection;
-  onRepositoryFilter: (position: number | null) => void;
+  onRepositoryFilter: (key: string | null) => void;
   onScope: (scope: ChangeScope) => void;
 }
 
@@ -40,7 +40,7 @@ export function ChangesToolbar({
   const { repositoryFilter, scope } = selection;
   const visible: RepositoryChanges[] = changes.repositories.filter(
     (repository: RepositoryChanges) =>
-      repositoryFilter === null || repository.position === repositoryFilter,
+      repositoryFilter === null || repository.key === repositoryFilter,
   );
   let fileCount = 0;
   let added = 0;
@@ -68,12 +68,12 @@ export function ChangesToolbar({
         />
         {changes.repositories.map((repository: RepositoryChanges) => (
           <Chip
-            key={repository.position}
+            key={repository.key}
             label={repository.name}
             count={countFilesInScope(repository, scope)}
-            isPressed={repositoryFilter === repository.position}
+            isPressed={repositoryFilter === repository.key}
             onPick={(): void => {
-              onRepositoryFilter(repository.position);
+              onRepositoryFilter(repository.key);
             }}
           />
         ))}

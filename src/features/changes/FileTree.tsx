@@ -94,7 +94,7 @@ export function FileTree({ rows, scope, openFile, onOpen }: FileTreeProps): Reac
 
   function renderFile(row: Extract<FileRow, { kind: 'file' }>): ReactElement {
     const isOpen: boolean =
-      openFile !== null && openFile.position === row.position && openFile.path === row.path;
+      openFile !== null && openFile.key === row.entryKey && openFile.path === row.path;
     const { letter, title } = KIND_LETTER[row.stat.kind];
     return (
       <button
@@ -102,7 +102,7 @@ export function FileTree({ rows, scope, openFile, onOpen }: FileTreeProps): Reac
         className={`file-tree__file${isOpen ? ' file-tree__file--selected' : ''}`}
         style={{ paddingLeft: `${String(FILE_INDENT_BASE + row.depth * FILE_INDENT_STEP)}px` }}
         onClick={(): void => {
-          onOpen({ position: row.position, path: row.path });
+          onOpen({ key: row.entryKey, path: row.path });
         }}
       >
         <span className={`file-tree__letter file-tree__letter--${row.stat.kind}`} title={title}>

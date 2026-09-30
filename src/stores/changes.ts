@@ -2,13 +2,14 @@ import { create } from 'zustand';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 
 export interface OpenFile {
-  position: number;
+  /** `key` des Eintrags, zu dem die Datei gehört. */
+  key: string;
   path: string;
 }
 
 export interface ChangesSelection {
-  /** `position` des gewählten Repositorys; `null` zeigt alle. */
-  repositoryFilter: number | null;
+  /** `key` des gewählten Eintrags; `null` zeigt alle. */
+  repositoryFilter: string | null;
   scope: ChangeScope;
   openFile: OpenFile | null;
 }
@@ -21,7 +22,7 @@ export const DEFAULT_SELECTION: ChangesSelection = {
 
 interface ChangesState {
   selections: Record<string, ChangesSelection>;
-  setRepositoryFilter: (sessionId: string, position: number | null) => void;
+  setRepositoryFilter: (sessionId: string, key: string | null) => void;
   setScope: (sessionId: string, scope: ChangeScope) => void;
   openFile: (sessionId: string, file: OpenFile) => void;
   closeFile: (sessionId: string) => void;
@@ -40,9 +41,9 @@ function withSelection(
 
 export const useChangesStore = create<ChangesState>((set) => ({
   selections: {},
-  setRepositoryFilter: (sessionId: string, position: number | null): void => {
+  setRepositoryFilter: (sessionId: string, key: string | null): void => {
     set((state: ChangesState) => ({
-      selections: withSelection(state.selections, sessionId, { repositoryFilter: position }),
+      selections: withSelection(state.selections, sessionId, { repositoryFilter: key }),
     }));
   },
   setScope: (sessionId: string, scope: ChangeScope): void => {

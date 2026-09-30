@@ -22,7 +22,7 @@ export function ChangesOverview({
       <h2 className="changes-overview__title">Übersicht</h2>
       <div className="changes-overview__box">
         {changes.repositories.map((repository: RepositoryChanges) => (
-          <div key={repository.position} className="changes-overview__row">
+          <div key={repository.key} className="changes-overview__row">
             <span className="changes-overview__name">{repository.name}</span>
             <span className="changes-overview__branch">
               {repository.branch} ← {repository.baseRef}

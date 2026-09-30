@@ -41,7 +41,7 @@ function findOpenTarget(
     return null;
   }
   const repository: RepositoryChanges | undefined = changes.repositories.find(
-    (candidate: RepositoryChanges) => candidate.position === openFile.position,
+    (candidate: RepositoryChanges) => candidate.key === openFile.key,
   );
   const file: FileChange | undefined = repository?.files.find(
     (candidate: FileChange) => candidate.path === openFile.path,
@@ -82,8 +82,8 @@ export function ChangesView({ session, changes, error }: ChangesViewProps): Reac
       <ChangesToolbar
         changes={changes}
         selection={selection}
-        onRepositoryFilter={(position: number | null): void => {
-          setRepositoryFilter(sessionId, position);
+        onRepositoryFilter={(key: string | null): void => {
+          setRepositoryFilter(sessionId, key);
         }}
         onScope={(scope: ChangeScope): void => {
           setScope(sessionId, scope);
@@ -108,7 +108,7 @@ export function ChangesView({ session, changes, error }: ChangesViewProps): Reac
           ) : (
             <DiffView
               key={fileDiffKey(
-                { position: openTarget.repository.position, path: openTarget.file.path },
+                { key: openTarget.repository.key, path: openTarget.file.path },
                 selection.scope,
               )}
               sessionId={sessionId}

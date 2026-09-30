@@ -10,13 +10,14 @@ pub enum ChangeKind {
     Deleted,
 }
 
-/// Blickwinkel auf die Änderungen, alle gegen `base_commit` der Session (ADR 006).
+/// Blickwinkel auf die Änderungen, alle gegen die Basis des Eintrags (ADR 006): `base_commit` der
+/// Session, bei einem Ticket-Worktree seine Abzweigung vom Standard-Branch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ChangeScope {
     /// Basis → Arbeitsverzeichnis, dazu die untracked Dateien.
     All,
-    /// Basis → `HEAD` des Session-Branches.
+    /// Basis → `HEAD` des Arbeitsordners.
     Committed,
     /// `HEAD` → Arbeitsverzeichnis, dazu die untracked Dateien.
     Uncommitted,
@@ -46,8 +47,9 @@ pub struct FileChange {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RepositoryChanges {
-    /// Wie `session_repositories.position`.
-    pub position: u32,
+    /// Kennung für Filter und Diff: `"<Position>"` für ein Session-Repository,
+    /// `"<Position>/<Ordner>"` für einen Ticket-Worktree.
+    pub key: String,
     pub name: String,
     pub branch: String,
     pub base_ref: String,
@@ -62,7 +64,7 @@ pub struct RepositoryChanges {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionChanges {
-    /// In der Reihenfolge von `session_repositories`.
+    /// Je Session-Repository erst sein Eintrag, dann seine Ticket-Worktrees.
     pub repositories: Vec<RepositoryChanges>,
 }
 

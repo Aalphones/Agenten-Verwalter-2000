@@ -49,7 +49,7 @@ export function DiffView({
   const stat: LineStat | null = statOf(file, scope);
   const { diff, error, isLoading } = useFileDiff(
     sessionId,
-    { position: repository.position, path: file.path },
+    { key: repository.key, path: file.path },
     scope,
     statStamp(stat),
   );

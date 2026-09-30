@@ -1,11 +1,12 @@
-//! Was der Agent in den Worktrees einer Session gegenüber der Basis geändert hat — in drei
-//! Blickwinkeln, gelesen nur mit Plumbing-Befehlen, die im Worktree keine Sperre nehmen (ADR 006).
+//! Was in den Repositories einer Session und in ihren Ticket-Worktrees gegenüber der Basis geändert
+//! ist — in drei Blickwinkeln, gelesen nur mit Plumbing-Befehlen, die im Worktree keine Sperre
+//! nehmen (ADR 006).
 pub mod model;
 pub mod parse;
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::thread::{self, ScopedJoinHandle};
 
 use crate::changes::model::{
@@ -14,7 +15,7 @@ use crate::changes::model::{
 };
 use crate::error::CommandError;
 use crate::git;
-use crate::worktrees::{RepositoryCheckout, SessionRepository};
+use crate::worktrees::{self, RepositoryCheckout, SessionRepository, TicketWorktree};
 
 /// Größere untracked Dateien gelten als binär: ihre Zeilen zu zählen hieße, sie ganz zu lesen.
 const MAX_UNTRACKED_BYTES: u64 = 8 * 1024 * 1024;
@@ -25,52 +26,95 @@ const WORKTREE_MISSING: &str =
 const THREAD_FAILED: &str = "interner Fehler beim Lesen der Changes";
 const HEAD: &str = "HEAD";
 const SHORT_COMMIT_CHARS: usize = 7;
+/// Basis eines Ticket-Worktrees, wenn sie sich nicht bestimmen ließ; der Eintrag trägt dann den Fehler.
+const UNKNOWN_BASE: &str = "unbekannt";
 
-/// Liest alle Repositories der Session nebeneinander, je eines in einem eigenen Thread. Scheitert
-/// eines, trägt nur sein Eintrag den Fehler.
-pub fn load(workspace: &Path, repositories: &[SessionRepository]) -> SessionChanges {
+/// Liest alle Repositories der Session nebeneinander, je eines samt seiner Ticket-Worktrees in einem
+/// eigenen Thread. Scheitert eines, trägt nur sein Eintrag den Fehler.
+///
+/// `ticket_folders`: die Ticket-Worktrees, die der Agent der Session benutzt hat, als
+/// `(Position, Ordner)`.
+pub fn load(
+    workspace: &Path,
+    repositories: &[SessionRepository],
+    ticket_folders: &[(u32, String)],
+) -> SessionChanges {
     let repositories = thread::scope(|scope| {
         let handles: Vec<(
             u32,
             &SessionRepository,
-            ScopedJoinHandle<'_, RepositoryChanges>,
+            ScopedJoinHandle<'_, Vec<RepositoryChanges>>,
         )> = repositories
             .iter()
             .enumerate()
             .map(|(index, repository): (usize, &SessionRepository)| {
                 let position = u32::try_from(index).unwrap_or(u32::MAX);
-                let handle = scope.spawn(move || load_one(workspace, position, repository));
+                let folders = folders_of(ticket_folders, position);
+                let handle =
+                    scope.spawn(move || load_one(workspace, position, repository, folders));
                 (position, repository, handle)
             })
             .collect();
         handles
             .into_iter()
-            .map(|(position, repository, handle)| {
+            .flat_map(|(position, repository, handle)| {
                 // Ein panischer Thread trifft nur sein Repository, nicht die ganze Ansicht.
-                handle
-                    .join()
-                    .unwrap_or_else(|_| failed(position, repository, THREAD_FAILED.to_owned()))
+                handle.join().unwrap_or_else(|_| {
+                    vec![failed_repository(
+                        position,
+                        repository,
+                        THREAD_FAILED.to_owned(),
+                    )]
+                })
             })
             .collect()
     });
     SessionChanges { repositories }
 }
 
+fn folders_of(ticket_folders: &[(u32, String)], position: u32) -> Vec<String> {
+    ticket_folders
+        .iter()
+        .filter(|(ticket_position, _): &&(u32, String)| *ticket_position == position)
+        .map(|(_, folder): &(u32, String)| folder.clone())
+        .collect()
+}
+
+/// Erst der Eintrag des Repositorys, dann einer je Ticket-Worktree, den es noch gibt.
+fn load_one(
+    workspace: &Path,
+    position: u32,
+    repository: &SessionRepository,
+    folders: Vec<String>,
+) -> Vec<RepositoryChanges> {
+    let mut entries = vec![load_repository(workspace, position, repository)];
+    entries.extend(
+        worktrees::ticket_worktrees(repository, position, &folders)
+            .iter()
+            .map(|worktree: &TicketWorktree| load_ticket(repository, worktree)),
+    );
+    entries
+}
+
 /// Nur lesen: ein fehlender Worktree wird gemeldet, nicht angelegt — das bleibt bei
 /// `worktrees::ensure` vor dem Agent-Start.
-fn load_one(workspace: &Path, position: u32, repository: &SessionRepository) -> RepositoryChanges {
+fn load_repository(
+    workspace: &Path,
+    position: u32,
+    repository: &SessionRepository,
+) -> RepositoryChanges {
     if !repository.repository_path.join(".git").exists() {
         let missing =
             CommandError::RepositoryMissing(repository.repository_path.display().to_string());
-        return failed(position, repository, missing.to_string());
+        return failed_repository(position, repository, missing.to_string());
     }
     let worktree = repository.working_dir(workspace);
     if is_app_worktree_missing(repository, &worktree) {
-        return failed(position, repository, WORKTREE_MISSING.to_owned());
+        return failed_repository(position, repository, WORKTREE_MISSING.to_owned());
     }
     match read_changes(&worktree, &repository.base_commit) {
         Ok((files, commit_count)) => RepositoryChanges {
-            position,
+            key: position.to_string(),
             name: repository.name.clone(),
             branch: branch_label(repository),
             base_ref: repository.base_ref.clone(),
@@ -78,7 +122,46 @@ fn load_one(workspace: &Path, position: u32, repository: &SessionRepository) -> 
             files,
             error: None,
         },
-        Err(error) => failed(position, repository, error.to_string()),
+        Err(error) => failed_repository(position, repository, error.to_string()),
+    }
+}
+
+/// Ein Ticket-Worktree gegen seine Abzweigung vom Standard-Branch: alles, was auf dem Branch liegt,
+/// egal welche Session es gemacht hat.
+fn load_ticket(repository: &SessionRepository, worktree: &TicketWorktree) -> RepositoryChanges {
+    let key = format!("{}/{}", worktree.position, worktree.folder);
+    let name = format!("{} · {}", repository.name, worktree.folder);
+    let branch = ticket_branch_label(worktree);
+    let (base_commit, base_ref) = match worktrees::ticket_base(repository, worktree) {
+        Ok(base) => base,
+        Err(error) => {
+            return failed(
+                key,
+                name,
+                branch,
+                UNKNOWN_BASE.to_owned(),
+                error.to_string(),
+            );
+        }
+    };
+    match read_changes(&worktree.path, &base_commit) {
+        Ok((files, commit_count)) => RepositoryChanges {
+            key,
+            name,
+            branch,
+            base_ref,
+            commit_count,
+            files,
+            error: None,
+        },
+        Err(error) => failed(key, name, branch, base_ref, error.to_string()),
+    }
+}
+
+fn ticket_branch_label(worktree: &TicketWorktree) -> String {
+    match &worktree.branch {
+        Some(branch) => branch.clone(),
+        None => worktree.head.chars().take(SHORT_COMMIT_CHARS).collect(),
     }
 }
 
@@ -120,11 +203,13 @@ fn read_changes(worktree: &Path, base: &str) -> Result<(Vec<FileChange>, u32), C
     Ok((files.into_values().collect(), commit_count))
 }
 
-/// Der Diff einer Datei im gewählten Blickwinkel. Prüft den Pfad, bevor er an Git oder ins
-/// Dateisystem geht; legt nichts an.
+/// Der Diff einer Datei im gewählten Blickwinkel — im Arbeitsordner des Repositorys oder, mit
+/// `ticket`, in diesem Ticket-Worktree. Prüft den Pfad, bevor er an Git oder ins Dateisystem geht;
+/// legt nichts an.
 pub fn file_diff(
     workspace: &Path,
     repository: &SessionRepository,
+    ticket: Option<&TicketWorktree>,
     path: &str,
     scope: ChangeScope,
 ) -> Result<FileDiff, CommandError> {
@@ -134,11 +219,20 @@ pub fn file_diff(
             repository.repository_path.display().to_string(),
         ));
     }
-    let worktree = repository.working_dir(workspace);
-    if is_app_worktree_missing(repository, &worktree) {
-        return Err(CommandError::Io(WORKTREE_MISSING.to_owned()));
-    }
-    let base = repository.base_commit.as_str();
+    let (worktree, base): (PathBuf, String) = match ticket {
+        Some(ticket) => {
+            let (base_commit, _) = worktrees::ticket_base(repository, ticket)?;
+            (ticket.path.clone(), base_commit)
+        }
+        None => {
+            let worktree = repository.working_dir(workspace);
+            if is_app_worktree_missing(repository, &worktree) {
+                return Err(CommandError::Io(WORKTREE_MISSING.to_owned()));
+            }
+            (worktree, repository.base_commit.clone())
+        }
+    };
+    let base = base.as_str();
     let raw = match scope {
         ChangeScope::Committed => git::diff_tree_patch(&worktree, base, HEAD, path)?,
         ChangeScope::All => git::diff_index_patch(&worktree, base, path)?,
@@ -268,12 +362,32 @@ fn branch_label(repository: &SessionRepository) -> String {
     }
 }
 
-fn failed(position: u32, repository: &SessionRepository, error: String) -> RepositoryChanges {
+fn failed_repository(
+    position: u32,
+    repository: &SessionRepository,
+    error: String,
+) -> RepositoryChanges {
+    failed(
+        position.to_string(),
+        repository.name.clone(),
+        branch_label(repository),
+        repository.base_ref.clone(),
+        error,
+    )
+}
+
+fn failed(
+    key: String,
+    name: String,
+    branch: String,
+    base_ref: String,
+    error: String,
+) -> RepositoryChanges {
     RepositoryChanges {
-        position,
-        name: repository.name.clone(),
-        branch: branch_label(repository),
-        base_ref: repository.base_ref.clone(),
+        key,
+        name,
+        branch,
+        base_ref,
         commit_count: 0,
         files: Vec::new(),
         error: Some(error),

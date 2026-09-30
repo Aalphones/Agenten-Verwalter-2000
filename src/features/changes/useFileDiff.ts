@@ -18,7 +18,7 @@ interface LoadedDiff {
 }
 
 export function fileDiffKey(file: OpenFile, scope: ChangeScope): string {
-  return `${String(file.position)}:${file.path}:${scope}`;
+  return `${file.key}:${file.path}:${scope}`;
 }
 
 /** Lädt den Diff der geöffneten Datei. `stamp` fasst die Zahlen der Datei zusammen: ändern sie sich, lädt der Diff
@@ -31,20 +31,20 @@ export function useFileDiff(
   stamp: string,
 ): FileDiffState {
   const [state, setState] = useState<LoadedDiff | null>(null);
-  const key: string = fileDiffKey(file, scope);
-  const { position, path } = file;
+  const diffKey: string = fileDiffKey(file, scope);
+  const { key, path } = file;
 
   useEffect(() => {
     const controller = new AbortController();
-    loadFileDiff(sessionId, position, path, scope)
+    loadFileDiff(sessionId, key, path, scope)
       .then((diff: FileDiff) => {
         if (!controller.signal.aborted) {
-          setState({ key, diff, error: null });
+          setState({ key: diffKey, diff, error: null });
         }
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) {
-          setState({ key, diff: null, error: commandErrorText(reason) });
+          setState({ key: diffKey, diff: null, error: commandErrorText(reason) });
         }
       });
     return (): void => {
@@ -52,9 +52,9 @@ export function useFileDiff(
     };
     // `stamp` löst das Nachladen aus, ohne im Effekt gelesen zu werden.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, key, stamp]);
+  }, [sessionId, diffKey, stamp]);
 
-  if (state === null || state.key !== key) {
+  if (state === null || state.key !== diffKey) {
     return { diff: null, error: null, isLoading: true };
   }
   return { diff: state.diff, error: state.error, isLoading: false };

@@ -5,11 +5,12 @@ import type { LineStat } from '@/lib/bindings/LineStat';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 
+/** `key` ist der React-Schlüssel der Zeile, `entryKey` der `key` des Eintrags aus `RepositoryChanges`. */
 export type FileRow =
   | {
       kind: 'repository';
       key: string;
-      position: number;
+      entryKey: string;
       name: string;
       added: number;
       deleted: number;
@@ -21,7 +22,7 @@ export type FileRow =
   | {
       kind: 'file';
       key: string;
-      position: number;
+      entryKey: string;
       path: string;
       label: string;
       depth: number;
@@ -32,12 +33,12 @@ export type FileRow =
 /** Die Zeilen des Dateibaums: je Repository Kopf, Branch und der Baum der Dateien im Blickwinkel. */
 export function buildFileRows(
   changes: SessionChanges,
-  repositoryFilter: number | null,
+  repositoryFilter: string | null,
   scope: ChangeScope,
 ): FileRow[] {
   const rows: FileRow[] = [];
   for (const repository of changes.repositories) {
-    if (repositoryFilter !== null && repository.position !== repositoryFilter) {
+    if (repositoryFilter !== null && repository.key !== repositoryFilter) {
       continue;
     }
     appendRepository(rows, repository, scope);
@@ -50,11 +51,11 @@ function appendRepository(
   repository: RepositoryChanges,
   scope: ChangeScope,
 ): void {
-  const { position } = repository;
+  const { key } = repository;
   if (repository.error !== null) {
     rows.push(repositoryRow(rows, repository, { added: 0, deleted: 0 }));
-    rows.push({ kind: 'branch', key: `${String(position)}:branch`, branch: repository.branch });
-    rows.push({ kind: 'error', key: `${String(position)}:error`, message: repository.error });
+    rows.push({ kind: 'branch', key: `${key}:branch`, branch: repository.branch });
+    rows.push({ kind: 'error', key: `${key}:error`, message: repository.error });
     return;
   }
   const visible: FileChange[] = repository.files.filter(
@@ -64,7 +65,7 @@ function appendRepository(
     return;
   }
   rows.push(repositoryRow(rows, repository, sumLines(repository, scope)));
-  rows.push({ kind: 'branch', key: `${String(position)}:branch`, branch: repository.branch });
+  rows.push({ kind: 'branch', key: `${key}:branch`, branch: repository.branch });
   // Der Core liefert die Dateien nach Pfad sortiert; ein Ordner steht damit zusammenhängend und
   // bekommt seine Zeile beim ersten Treffer.
   const seenFolders = new Set<string>();
@@ -80,7 +81,7 @@ function appendRepository(
         seenFolders.add(folderPath);
         rows.push({
           kind: 'folder',
-          key: `${String(position)}:folder:${folderPath}`,
+          key: `${key}:folder:${folderPath}`,
           label: `${parts[depth] ?? ''}/`,
           depth,
         });
@@ -88,8 +89,8 @@ function appendRepository(
     }
     rows.push({
       kind: 'file',
-      key: `${String(position)}:file:${file.path}`,
-      position,
+      key: `${key}:file:${file.path}`,
+      entryKey: key,
       path: file.path,
       label: parts[parts.length - 1] ?? file.path,
       depth: parts.length - 1,
@@ -106,8 +107,8 @@ function repositoryRow(
 ): FileRow {
   return {
     kind: 'repository',
-    key: `${String(repository.position)}:repository`,
-    position: repository.position,
+    key: `${repository.key}:repository`,
+    entryKey: repository.key,
     name: repository.name,
     added: sums.added,
     deleted: sums.deleted,
