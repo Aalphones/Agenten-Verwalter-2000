@@ -13,7 +13,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 3 | Oberfläche: Sidebar als Baum, Pfad in der Kopfzeile, „Neues Vorhaben“ | [phase-3-sidebar-und-kopfzeile.md](phase-3-sidebar-und-kopfzeile.md) | standard | complete |
 | 4 | Oberfläche: Übersicht des Vorhabens, „Neue Session“ | [phase-4-vorhaben-uebersicht.md](phase-4-vorhaben-uebersicht.md) | standard | complete |
 | 5 | Core: TL;DR erzeugen | [phase-5-tldr-core.md](phase-5-tldr-core.md) | heikel | complete |
-| 6 | Oberfläche: TL;DR-Karten, Doku-Abschluss | [phase-6-tldr-oberflaeche.md](phase-6-tldr-oberflaeche.md) | standard | pending |
+| 6 | Oberfläche: TL;DR-Karten, Doku-Abschluss | [phase-6-tldr-oberflaeche.md](phase-6-tldr-oberflaeche.md) | standard | complete |
 | 7 | Repository nachträglich an ein Vorhaben hängen (**läuft nach Phase 4, vor Phase 5**) | [phase-7-repository-anhaengen.md](phase-7-repository-anhaengen.md) | heikel | complete |
 
 **Reihenfolge der drei offenen Pläne: dieser Plan → „Meilenstein 6 — UI auf Zielbild, plus Altlasten“ → „Sprachdiktat“.** M6 (Phase 3 bis 5) und Sprachdiktat sind gegen den Stand nach diesem Plan geschrieben. Dieser Plan belegt Migration 005 und ADR 011; M6 nimmt danach Migration 006 und ADR 012, Sprachdiktat ADR 009.
@@ -227,8 +227,18 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Das Vorhaben ist die zentrale Einheit: bestehende Sessions wurden zu Vorhaben migriert, die Sidebar zeigt einen Vorhaben-Baum, jedes Vorhaben hat eine Übersicht mit „Neue Session“ und „+ Repository“, neue Sessions starten im Status „Neu“ mit frischem Kontext. Dazu das TL;DR: per Knopf von Haiku im Hintergrund erstellt, als Karte über dem Chat, in der Übersicht und als Haken in der Einstiegsansicht einer neuen Session.
+
 ## Files touched
+
+Core: `src-tauri/src/projects/`, `tldr/`, `sessions/registry*`, `db/` (Migration 005), `commands/projects.rs`, `commands/tldr.rs`, `agents/claude/print.rs`. Oberfläche: `src/features/projects/`, `src/features/tldr/`, `src/app/` (Sidebar, Kopfzeile), `src/stores/sessions.ts`, `src/stores/tldr.ts`, `src/lib/{projects,tldr}.ts`. Doku: ADR 011, Code-Map, Glossar, AGENTS.md, PROJECT.md, Entwurfs-READMEs.
 
 ## Commits
 
+`df0c561` Vorhaben im Core · `5d258bf` neue Session „Neu“ · `8c9ac1b` Sidebar-Baum · `734b61a` Übersicht · `6ceb310` Repository anhängen · `9120259` TL;DR im Core · Phase 6: TL;DR-Oberfläche und Doku-Abschluss.
+
 ## Deviations from plan
+
+- Phase 7 lief vor Phase 5 (wie geplant in der Reihenfolge festgelegt).
+- Die Kostenangabe „unter 1 Cent“ hielt nicht (gemessen 1,2 bis 33 Cent je Lauf, ADR 011).
+- Weitere Abweichungen der Oberfläche vom Entwurf: [Abweichungen vom Entwurf](../../design/2026-09-30_vorhaben-und-tldr/README.md).

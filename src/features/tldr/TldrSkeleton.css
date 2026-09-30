@@ -1,0 +1,52 @@
+.tldr-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  &__bar {
+    display: block;
+    height: 9px;
+    border-radius: 5px;
+    background: var(--color-bg-hover);
+  }
+
+  &__text {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+}
+
+.tldr-skeleton--session .tldr-skeleton__bar {
+  &:nth-child(1) {
+    width: 92%;
+  }
+
+  &:nth-child(2) {
+    width: 78%;
+  }
+
+  &:nth-child(3) {
+    width: 64%;
+  }
+}
+
+.tldr-skeleton--project {
+  gap: 9px;
+
+  .tldr-skeleton__bar {
+    height: 10px;
+  }
+
+  .tldr-skeleton__bar:nth-child(1) {
+    width: 96%;
+  }
+
+  .tldr-skeleton__bar:nth-child(2) {
+    width: 88%;
+  }
+
+  .tldr-skeleton__bar:nth-child(3) {
+    width: 58%;
+  }
+}

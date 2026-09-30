@@ -4,7 +4,7 @@ Ausführliches Produkt- und Technikkonzept: [konzept.md](konzept.md). Diese Date
 
 ## Ziel & Vision
 
-Agenten Verwalter 2000 ist eine minimalistische lokale Desktop-Kommandozentrale für Coding-Agenten. Eine Session steht für eine Aufgabe und kann beliebig viele Git-Repositories umfassen, wahlweise direkt im Haupt-Checkout oder in einem Ticket-Worktree, den der Agent nach seinen Anweisungen anlegt. Der Chat mit dem Agenten ist die Hauptarbeitsfläche, die Changes-Ansicht (Dateien, Diffs) die Prüfebene. Zielgruppe sind Entwickler, die mehrere Agenten parallel über mehrere Repositories laufen lassen und dabei den Überblick verlieren — der Engpass ist der Mensch, nicht die Rechenleistung.
+Agenten Verwalter 2000 ist eine minimalistische lokale Desktop-Kommandozentrale für Coding-Agenten. Ein Vorhaben steht für eine Aufgabe und kann beliebig viele Git-Repositories umfassen, wahlweise direkt im Haupt-Checkout oder in einem Ticket-Worktree, den der Agent nach seinen Anweisungen anlegt. Darin läuft nacheinander eine oder mehrere Sessions; jede ist eine eigene Claude-Session mit frischem Kontext, alle teilen Workspace, Repositories und Changes. Der Chat mit dem Agenten ist die Hauptarbeitsfläche, die Changes-Ansicht (Dateien, Diffs) die Prüfebene. Zielgruppe sind Entwickler, die mehrere Agenten parallel über mehrere Repositories laufen lassen und dabei den Überblick verlieren — der Engpass ist der Mensch, nicht die Rechenleistung.
 
 Leitsatz: **Chat first. Changes second.** Was nicht aktiv beim Agent-Workflow hilft, gehört nicht dauerhaft auf den Bildschirm.
 
@@ -16,7 +16,8 @@ Die Bedienung orientiert sich an der Claude-Erweiterung für VS Code, damit sich
 
 MVP (Version 1):
 
-- **Navigation:** Session-Liste (gruppiert nach „Braucht dich“ / „Läuft“ / „Abgeschlossen“), neue Session (drei Schritte: Aufgabe mit Anhängen → Repositories → Agent), Session umbenennen und archivieren
+- **Navigation:** Vorhaben-Baum in der Sidebar (gruppiert nach „Braucht dich“ / „Läuft“ / „Abgeschlossen“, darunter aufklappbar die Sessions), neues Vorhaben (drei Schritte: Aufgabe mit Anhängen → Repositories → Agent), neue Session im Vorhaben, Übersicht je Vorhaben, Vorhaben und Sessions umbenennen, Vorhaben archivieren
+- **TL;DR:** Kurzfassung von drei, vier Zeilen an jeder Session und jedem Vorhaben, nur per Knopf von Haiku im Hintergrund erstellt; zeigt, wie viele Einträge seither dazukamen, und geht auf Wunsch mit der ersten Nachricht einer neuen Session mit
 - **Chat:** Nachrichten von User und Agent, Antworten als Markdown mit Code-Blöcken (Syntaxfarben, Kopieren-Knopf), eingeklappte Tool-Aktivität und Gedankengang, Aufgabenliste, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
 - **Eingabe:** Bilder und Dateien anhängen (Knopf, Hineinziehen, Einfügen); Skills und Befehle über `/`-Knopf und `/` im Eingabefeld; Modell und Denkaufwand während der Session wechseln; Modus (Manuell, Automatisch bearbeiten, Planen, Auto)
 - **Artefakte:** von Claude in einer Session erstellte Artefakte als Karte im Chat und im Reiter „Artefakte“ der Session
@@ -72,6 +73,7 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 4. **Persistenz & Wiederherstellung** (vor 3, siehe [ADR 004](decisions/004-persistenz-und-wiederherstellung.md)): Sessions und Chat-Einträge in SQLite, Wiederherstellung mit `--resume` nach einem Neustart, Umbenennen, Archivieren, ruhende Agenten beenden.
 3. **Worktree-Orchestrierung** (auf der Datenbank aus Meilenstein 4): mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 5. **Changes & Diff:** Diffs über mehrere Repositories zusammenfassen, committed/uncommitted, lazy Diff-Ansicht.
+3b. **Vorhaben und Sessions, mit TL;DR:** das Vorhaben als zentrale Einheit, mehrere Sessions darin, Übersicht, Repository nachträglich anhängen, TL;DR von Sessions und Vorhaben ([ADR 011](decisions/011-vorhaben-und-sessions.md)) — gebaut am 2026-09-30.
 6. **UI auf Zielbild:** restliche Tafeln des Entwurfs (Einstellungen, Hellmodus), virtuelle Listen, Zustände konsistent über alle Ansichten → MVP.
 
 ## Offene Fragen

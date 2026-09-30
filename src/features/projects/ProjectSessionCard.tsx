@@ -2,19 +2,31 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { formatRuntime } from '@/app/SessionHeader';
 import { StatusIcon } from '@/components/StatusIcon';
+import { TldrButton } from '@/features/tldr/TldrButton';
+import { TldrIcon } from '@/features/tldr/TldrIcon';
+import type { ProjectSessionTldr } from '@/lib/bindings/ProjectSessionTldr';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { commandErrorText } from '@/lib/errors';
 import { modelName } from '@/lib/labels';
+import { createSessionTldr } from '@/lib/tldr';
 import './ProjectSessionCard.css';
 
 const MS_PER_SECOND = 1000;
 
 interface ProjectSessionCardProps {
   session: SessionSummary;
+  /** Kurzfassung und Laufzustand aus der Sicht des Vorhabens; `null`, solange die nicht geladen ist. */
+  tldr: ProjectSessionTldr | null;
   onOpen: (sessionId: string) => void;
 }
 
-export function ProjectSessionCard({ session, onOpen }: ProjectSessionCardProps): ReactElement {
+export function ProjectSessionCard({
+  session,
+  tldr,
+  onOpen,
+}: ProjectSessionCardProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isTicking: boolean = session.runningSince !== null;
 
   useEffect(() => {
@@ -31,6 +43,40 @@ export function ProjectSessionCard({ session, onOpen }: ProjectSessionCardProps)
       window.clearInterval(timer);
     };
   }, [isTicking]);
+
+  function create(): void {
+    setErrorMessage(null);
+    createSessionTldr(session.id).catch((reason: unknown) => {
+      setErrorMessage(commandErrorText(reason));
+    });
+  }
+
+  function renderTldr(): ReactElement {
+    if (session.status === 'new') {
+      return <span className="project-session-card__hint">Noch kein Verlauf.</span>;
+    }
+    if (tldr?.isRunning === true) {
+      return (
+        <span className="project-session-card__hint">
+          <StatusIcon status="running" size={10} />
+          TL;DR wird erstellt …
+        </span>
+      );
+    }
+    const short: string | null = tldr?.short ?? null;
+    if (short !== null) {
+      return <span className="project-session-card__short">{short}</span>;
+    }
+    return (
+      <>
+        <span className="project-session-card__hint">Noch kein TL;DR.</span>
+        <TldrButton variant="compact" onClick={create}>
+          <TldrIcon name="listPlus" size={12} />
+          TL;DR erstellen
+        </TldrButton>
+      </>
+    );
+  }
 
   return (
     <div className="project-session-card">
@@ -49,6 +95,10 @@ export function ProjectSessionCard({ session, onOpen }: ProjectSessionCardProps)
         <span className="project-session-card__spacer" />
         <span className="project-session-card__meta">{metaText(session, now)}</span>
       </button>
+      <div className="project-session-card__tldr">{renderTldr()}</div>
+      {errorMessage !== null && (
+        <p className="project-session-card__error">TL;DR nicht erstellt: {errorMessage}</p>
+      )}
     </div>
   );
 }

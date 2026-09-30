@@ -48,9 +48,9 @@ Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwisch
 
 | Element | Maß |
 |---|---|
-| Sidebar | 256 px breit, Kopf 48 px, Session-Zeile mit Statussymbol 14 px + Name + eine Meta-Zeile (abgeschlossene Sessions ohne Meta-Zeile) |
-| Sidebar-Gruppen | „Braucht dich“ (wartet + Fehler), „Läuft“ (läuft + pausiert), „Abgeschlossen“ — in dieser Reihenfolge, leere Gruppen entfallen |
-| Session-Kopfzeile | 48 px, dreispaltig: links Titel + Status-Pille + ⋯-Menü, Mitte Reiter „Chat · Changes · Artefakte“ (mit Zählern), rechts Hintergrund-Knopf, Kontext-Balken 48 × 4 px, Laufzeit, Pause/Abbrechen bzw. Fortsetzen |
+| Sidebar | 256 px breit, Kopf 48 px, Session-Zeile mit Statussymbol 14 px + Name + eine Meta-Zeile (abgeschlossene Sessions ohne Meta-Zeile). Seit Plan Vorhaben und Sessions: siehe 2026-09-30_vorhaben-und-tldr. |
+| Sidebar-Gruppen | „Braucht dich“ (wartet + Fehler), „Läuft“ (läuft + pausiert), „Abgeschlossen“ — in dieser Reihenfolge, leere Gruppen entfallen. Seit Plan Vorhaben und Sessions: siehe 2026-09-30_vorhaben-und-tldr. |
+| Session-Kopfzeile | 48 px, dreispaltig: links Titel + Status-Pille + ⋯-Menü, Mitte Reiter „Chat · Changes · Artefakte“ (mit Zählern), rechts Hintergrund-Knopf, Kontext-Balken 48 × 4 px, Laufzeit, Pause/Abbrechen bzw. Fortsetzen. Seit Plan Vorhaben und Sessions: siehe 2026-09-30_vorhaben-und-tldr. |
 | Hintergrund-Panel | rechts neben der jeweiligen Session-Ansicht, 440 px breit, Hintergrund `bg-sidebar`; Kopf 44 px mit Reitern „Prozesse · Subagenten · Scratchpad“ und Schließen; Liste oben (höchstens 330 px, scrollt), Detail darunter: Titel, Meta-Zeile, Aktionen, Ausgabe in `font-mono` 12 px / 19 px auf `bg-base` |
 | Chat-Spalte | höchstens 780 px breit, zentriert, 32 px Seitenrand, Verlauf unten verankert |
 | Eingabeleiste | gleiche Breite wie die Chat-Spalte; Radius 10 px; Rahmen 1 px `border`, **nur bei Fokus** `accent` plus 3 px Ring `accent-subtle`; Anhänge als Zeile über dem Textfeld; unten links `+` und `/` (30 × 30 px) und die Modell-Pille (26 px hoch, Radius 13 px), rechts Modus-Knopf und Senden (30 × 30 px, `accent`) |

@@ -1,0 +1,34 @@
+.tldr-empty-bar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-height: 40px;
+  padding: 5px 5px 5px var(--space-xl);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+
+  &__label {
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--color-fg-muted);
+  }
+
+  &__text {
+    flex-grow: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__hint {
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+}

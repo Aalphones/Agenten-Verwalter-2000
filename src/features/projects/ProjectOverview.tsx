@@ -9,6 +9,9 @@ import {
 } from '@/features/changes/changesScope';
 import { AddRepositoryMenu } from '@/features/projects/AddRepositoryMenu';
 import { ProjectSessionCard } from '@/features/projects/ProjectSessionCard';
+import { ProjectTldrCard } from '@/features/tldr/ProjectTldrCard';
+import { useProjectTldr } from '@/features/tldr/useProjectTldr';
+import type { ProjectSessionTldr } from '@/lib/bindings/ProjectSessionTldr';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
@@ -46,6 +49,13 @@ export function ProjectOverview({
 }: ProjectOverviewProps): ReactElement {
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { view: tldrView, error: tldrError } = useProjectTldr(project.id);
+
+  function tldrOfSession(sessionId: string): ProjectSessionTldr | null {
+    return (
+      tldrView?.sessions.find((entry: ProjectSessionTldr) => entry.sessionId === sessionId) ?? null
+    );
+  }
 
   function createSession(): void {
     setIsCreating(true);
@@ -116,6 +126,12 @@ export function ProjectOverview({
   return (
     <div className="project-overview">
       <div className="project-overview__column">
+        <ProjectTldrCard
+          projectId={project.id}
+          view={tldrView}
+          loadError={tldrError}
+          sessionsWithHistory={sessions.filter(hasHistory).length}
+        />
         {renderRepositories()}
         <section className="project-overview__sessions">
           <div className="project-overview__sessions-head">
@@ -153,13 +169,23 @@ export function ProjectOverview({
           {errorMessage !== null && <p className="project-overview__error">{errorMessage}</p>}
           <div className="project-overview__cards">
             {sessions.map((session: SessionSummary) => (
-              <ProjectSessionCard key={session.id} session={session} onOpen={onOpenSession} />
+              <ProjectSessionCard
+                key={session.id}
+                session={session}
+                tldr={tldrOfSession(session.id)}
+                onOpen={onOpenSession}
+              />
             ))}
           </div>
         </section>
       </div>
     </div>
   );
+}
+
+/** Eine Session im Status „Neu“ hat keinen Verlauf und damit nichts, das ein TL;DR zusammenfassen könnte. */
+function hasHistory(session: SessionSummary): boolean {
+  return session.status !== 'new';
 }
 
 /** Was die nächste neue Session übernimmt; gibt es die noch nicht gestartete schon, steht das da. */

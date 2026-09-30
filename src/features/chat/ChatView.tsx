@@ -4,7 +4,9 @@ import { ChatTimeline } from '@/features/chat/ChatTimeline';
 import { Composer } from '@/features/chat/Composer';
 import { useChatEntries } from '@/features/chat/useChatEntries';
 import { NewSessionIntro } from '@/features/projects/NewSessionIntro';
+import { SessionTldrCard } from '@/features/tldr/SessionTldrCard';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
+import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { pauseSession } from '@/lib/sessions';
@@ -16,6 +18,15 @@ interface ChatViewProps {
   session: SessionSummary;
   projectName: string;
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
+}
+
+/** Die Einträge einer Session sind ab 0 durchnummeriert; der letzte geladene trägt die höchste `seq`. */
+function entryCount(entries: readonly ChatEntry[]): number {
+  const last: ChatEntry | undefined = entries[entries.length - 1];
+  if (last === undefined) {
+    return 0;
+  }
+  return last.seq + 1;
 }
 
 export function ChatView({
@@ -51,7 +62,14 @@ export function ChatView({
 
   function renderTimeline(): ReactElement {
     if (session.status === 'new') {
-      return <NewSessionIntro projectName={projectName} number={session.number} />;
+      return (
+        <NewSessionIntro
+          sessionId={session.id}
+          projectId={session.projectId}
+          projectName={projectName}
+          number={session.number}
+        />
+      );
     }
     return (
       <ChatTimeline
@@ -67,6 +85,7 @@ export function ChatView({
 
   return (
     <div className="chat-view">
+      <SessionTldrCard session={session} entryCount={entryCount(entries)} />
       {renderTimeline()}
       <div className="chat-view__composer">
         <Composer session={session} />

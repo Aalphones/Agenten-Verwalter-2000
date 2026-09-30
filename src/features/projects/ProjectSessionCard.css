@@ -58,4 +58,31 @@
     font-size: var(--font-size-xs);
     color: var(--color-fg-muted);
   }
+
+  &__tldr {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding-left: 24px;
+    font-size: var(--font-size-sm);
+    line-height: 1.55;
+  }
+
+  &__short {
+    color: var(--color-fg-secondary);
+  }
+
+  &__hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    margin: 0;
+    padding-left: 24px;
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
 }

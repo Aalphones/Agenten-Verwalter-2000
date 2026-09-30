@@ -31,28 +31,28 @@ Rating: standard · Commit-Scope: `tldr`
 
 ### Wrapper, Zustand, Hooks
 
-- [ ] `src/lib/tldr.ts`: `loadSessionTldr`, `createSessionTldr`, `loadProjectTldr`, `createProjectTldr`, `setCarryProjectTldr`, `onTldrChanged(callback)` (`tldr://changed`, Nutzlast `TldrChangedEvent`) — JSDoc mit `@throws` nach dem Muster von `src/lib/background.ts`.
-- [ ] `src/stores/tldr.ts` nach dem Kontrakt.
-- [ ] `src/features/tldr/useSessionTldr.ts`: `useSessionTldr(sessionId: string): { view: SessionTldrView | null; error: string | null }` nach AK 6 (Muster `useSessionBackground`: erst abonnieren, dann laden; Lade-Fehler über `commandErrorText`).
-- [ ] `src/features/tldr/useProjectTldr.ts`: dasselbe für `projectId` → `ProjectTldrView`.
-- [ ] `src/features/tldr/tldrTexts.ts`: `stampText(view, entryCount: number): string` nach AK 1 (mit `formatClock`), `projectStampText(view, sessionsWithHistory: number): string` nach AK 3.
+- [x] `src/lib/tldr.ts`: `loadSessionTldr`, `createSessionTldr`, `loadProjectTldr`, `createProjectTldr`, `setCarryProjectTldr`, `onTldrChanged(callback)` (`tldr://changed`, Nutzlast `TldrChangedEvent`) — JSDoc mit `@throws` nach dem Muster von `src/lib/background.ts`.
+- [x] `src/stores/tldr.ts` nach dem Kontrakt.
+- [x] `src/features/tldr/useSessionTldr.ts`: `useSessionTldr(sessionId: string): { view: SessionTldrView | null; error: string | null }` nach AK 6 (Muster `useSessionBackground`: erst abonnieren, dann laden; Lade-Fehler über `commandErrorText`).
+- [x] `src/features/tldr/useProjectTldr.ts`: dasselbe für `projectId` → `ProjectTldrView`.
+- [x] `src/features/tldr/tldrTexts.ts`: `stampText(view, entryCount: number): string` nach AK 1 (mit `formatClock`), `projectStampText(view, sessionsWithHistory: number): string` nach AK 3.
 
 ### Komponenten
 
-- [ ] `src/features/tldr/SessionTldrCard.tsx` + `.css` (Block `session-tldr`): Props `session: SessionSummary`, `entryCount: number`. Zustände nach AK 1; Aktionen `createSessionTldr(session.id)` (Fehler des Aufrufs selbst als Fehlerzeile).
-- [ ] `src/features/tldr/ProjectTldrCard.tsx` + `.css` (Block `project-tldr`): Props `projectId`, `view: ProjectTldrView | null`, `sessionsWithHistory: number`. Zustände nach AK 3.
-- [ ] `ChatView.tsx`: `SessionTldrCard` über `ChatTimeline`, außer bei Status „Neu“; `entryCount` = höchste `seq` in `entries` + 1 (0 ohne Einträge).
-- [ ] `ProjectOverview.tsx`: `useProjectTldr(project.id)` einmal aufrufen; `ProjectTldrCard` als ersten Block; an jede `ProjectSessionCard` den passenden Eintrag aus `view.sessions` geben.
-- [ ] `ProjectSessionCard.tsx`: Prop `tldr: ProjectSessionTldr | null`; zweite Zeile nach AK 4 (`createSessionTldr`).
-- [ ] `NewSessionIntro.tsx`: Props `sessionId`, `projectId`; `useSessionTldr(sessionId)` für `carriesProjectTldr`, `useProjectTldr(projectId)` für `summary`; Kasten nach AK 5. `ChatView` reicht die IDs durch.
+- [x] `src/features/tldr/SessionTldrCard.tsx` + `.css` (Block `session-tldr`): Props `session: SessionSummary`, `entryCount: number`. Zustände nach AK 1; Aktionen `createSessionTldr(session.id)` (Fehler des Aufrufs selbst als Fehlerzeile).
+- [x] `src/features/tldr/ProjectTldrCard.tsx` + `.css` (Block `project-tldr`): Props `projectId`, `view: ProjectTldrView | null`, `sessionsWithHistory: number`. Zustände nach AK 3.
+- [x] `ChatView.tsx`: `SessionTldrCard` über `ChatTimeline`, außer bei Status „Neu“; `entryCount` = höchste `seq` in `entries` + 1 (0 ohne Einträge).
+- [x] `ProjectOverview.tsx`: `useProjectTldr(project.id)` einmal aufrufen; `ProjectTldrCard` als ersten Block; an jede `ProjectSessionCard` den passenden Eintrag aus `view.sessions` geben.
+- [x] `ProjectSessionCard.tsx`: Prop `tldr: ProjectSessionTldr | null`; zweite Zeile nach AK 4 (`createSessionTldr`).
+- [x] `NewSessionIntro.tsx`: Props `sessionId`, `projectId`; `useSessionTldr(sessionId)` für `carriesProjectTldr`, `useProjectTldr(projectId)` für `summary`; Kasten nach AK 5. `ChatView` reicht die IDs durch.
 
 ### Doku-Abschluss
 
-- [ ] Entwurfs-README [docs/design/2026-09-30_vorhaben-und-tldr/README.md](../../design/2026-09-30_vorhaben-und-tldr/README.md): Status „umgesetzt“, Tafel-Zuordnung mit „Gebaut in Phase N“, Abschnitt „Abweichungen vom Entwurf“ mit allem, was anders gebaut wurde (mindestens: Name einer neuen Session „Session N“ bis zur ersten Nachricht; Kopfzeile der Übersicht ohne Pause/Abbrechen). Im Entwurf [Hauptansichten](../../design/2026-09-28_hauptansichten/README.md) unter „Layout-Maße“ bei Sidebar, Sidebar-Gruppen und Session-Kopfzeile je ein Satz „Seit Plan Vorhaben und Sessions: siehe 2026-09-30_vorhaben-und-tldr.“
-- [ ] `AGENTS.md`: Einleitung „eine Session = eine Aufgabe“ → „ein Vorhaben = eine Aufgabe über mehrere Git-Repositories; darin nacheinander eine oder mehrere Sessions mit frischem Kontext“; Critical Rules 4 und 5 auf Vorhaben/Session prüfen (Workspace gehört dem Vorhaben).
-- [ ] `docs/PROJECT.md`: Scope und Meilensteine um Vorhaben und TL;DR ergänzen, offene Fragen abgleichen.
-- [ ] `docs/code-map.md`: Zeile „TL;DR“ Oberfläche (`src/features/tldr/`, `src/stores/tldr.ts`, Wrapper `src/lib/tldr.ts`); Stand-Satz am Kopf der Datei aktualisieren.
-- [ ] `docs/glossary.md`: Einträge Vorhaben, Session, TL;DR, Übersicht gegen den gebauten Stand prüfen.
-- [ ] README dieses Plans: alle Phasen `complete`, Summary / Files touched / Commits / Deviations füllen; STATE.md auf die Smoke-Checkliste zeigen lassen.
+- [x] Entwurfs-README [docs/design/2026-09-30_vorhaben-und-tldr/README.md](../../design/2026-09-30_vorhaben-und-tldr/README.md): Status „umgesetzt“, Tafel-Zuordnung mit „Gebaut in Phase N“, Abschnitt „Abweichungen vom Entwurf“ mit allem, was anders gebaut wurde (mindestens: Name einer neuen Session „Session N“ bis zur ersten Nachricht; Kopfzeile der Übersicht ohne Pause/Abbrechen). Im Entwurf [Hauptansichten](../../design/2026-09-28_hauptansichten/README.md) unter „Layout-Maße“ bei Sidebar, Sidebar-Gruppen und Session-Kopfzeile je ein Satz „Seit Plan Vorhaben und Sessions: siehe 2026-09-30_vorhaben-und-tldr.“
+- [x] `AGENTS.md`: Einleitung „eine Session = eine Aufgabe“ → „ein Vorhaben = eine Aufgabe über mehrere Git-Repositories; darin nacheinander eine oder mehrere Sessions mit frischem Kontext“; Critical Rules 4 und 5 auf Vorhaben/Session prüfen (Workspace gehört dem Vorhaben).
+- [x] `docs/PROJECT.md`: Scope und Meilensteine um Vorhaben und TL;DR ergänzen, offene Fragen abgleichen.
+- [x] `docs/code-map.md`: Zeile „TL;DR“ Oberfläche (`src/features/tldr/`, `src/stores/tldr.ts`, Wrapper `src/lib/tldr.ts`); Stand-Satz am Kopf der Datei aktualisieren.
+- [x] `docs/glossary.md`: Einträge Vorhaben, Session, TL;DR, Übersicht gegen den gebauten Stand prüfen.
+- [x] README dieses Plans: alle Phasen `complete`, Summary / Files touched / Commits / Deviations füllen; STATE.md auf die Smoke-Checkliste zeigen lassen.
 
 ## Report-Back

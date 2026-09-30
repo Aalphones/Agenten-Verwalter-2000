@@ -2,7 +2,7 @@
 
 🚧 Aktive Arbeit → [STATE.md](STATE.md)
 
-Lokale Desktop-Kommandozentrale für Coding-Agenten: eine Session = eine Aufgabe über mehrere Git-Repositories; ob der Agent im Haupt-Checkout oder in einem Ticket-Worktree arbeitet, bestimmen seine Anweisungen; der Chat ist die Hauptarbeitsfläche, Changes/Diffs die Prüfebene. Kontext, Scope, Meilensteine und offene Fragen: **[docs/PROJECT.md](docs/PROJECT.md)**. Ausführliches Ursprungskonzept: [docs/konzept.md](docs/konzept.md).
+Lokale Desktop-Kommandozentrale für Coding-Agenten: ein Vorhaben = eine Aufgabe über mehrere Git-Repositories; darin nacheinander eine oder mehrere Sessions mit frischem Kontext; ob der Agent im Haupt-Checkout oder in einem Ticket-Worktree arbeitet, bestimmen seine Anweisungen; der Chat ist die Hauptarbeitsfläche, Changes/Diffs die Prüfebene. Kontext, Scope, Meilensteine und offene Fragen: **[docs/PROJECT.md](docs/PROJECT.md)**. Ausführliches Ursprungskonzept: [docs/konzept.md](docs/konzept.md).
 
 ## Code finden — erst hier, dann suchen
 
@@ -73,5 +73,5 @@ Nach Code-Änderungen: Code-Map, Glossar und betroffene Konventionen im selben C
 2. **Git-Zustand ist deterministisch** — Git läuft nur über `src-tauri/src/git/`; die UI zeigt den Zustand aus Git, nie aus Aussagen des Agenten.
 3. **Persistentes gehört in SQLite, nicht in den UI-State** — der Speicherbedarf der UI wächst mit dem Sichtbaren, nicht mit der Zahl der Sessions oder Events.
 4. **Sessions überleben die UI** — ein Fenster-Absturz verliert keine Session und keinen Worktree; der Agent wird mit der nächsten Nachricht wieder gestartet.
-5. **Der Session-Workspace ist die Sicherheitsgrenze** — Agenten bekommen den Session-Ordner als Arbeitsverzeichnis, je Repository den Haupt-Checkout per `--add-dir` und Lese-/Schreibfreigabe für dessen Ticket-Worktrees `<repo>-wt-*` (Sessions vor ADR 010: ihre App-Worktrees), nicht das Benutzerverzeichnis.
+5. **Der Workspace des Vorhabens ist die Sicherheitsgrenze** — Agenten bekommen den Ordner des Vorhabens (alle seine Sessions teilen ihn) als Arbeitsverzeichnis, je Repository den Haupt-Checkout per `--add-dir` und Lese-/Schreibfreigabe für dessen Ticket-Worktrees `<repo>-wt-*` (Sessions vor ADR 010: ihre App-Worktrees), nicht das Benutzerverzeichnis.
 6. **Ein vollständig abgeschlossener Plan endet mit einem Versions-Tag** — beim Archivieren Version in den drei Dateien anheben, `chore(release)`-Commit, Tag `vX.Y.Z` setzen und pushen; der Tag baut das Release. Ablauf und Versionsregel: [docs/conventions/releases.md](docs/conventions/releases.md).

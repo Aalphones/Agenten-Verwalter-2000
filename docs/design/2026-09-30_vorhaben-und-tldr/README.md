@@ -1,6 +1,6 @@
 # Design-Entwurf: Vorhaben und TL;DR
 
-**Status:** abgenommen am 2026-09-30 als Grundlage des Plans [Vorhaben und Sessions](../../planning/2026-09-30_vorhaben-und-sessions/README.md). Für Sidebar, Session-Kopfzeile, Übersicht eines Vorhabens, Einstieg einer neuen Session und die TL;DR-Karten ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md), dessen Tokens, Schriften und Statussymbole er übernimmt. Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
+**Status:** umgesetzt am 2026-09-30 (Plan [Vorhaben und Sessions](../../planning/2026-09-30_vorhaben-und-sessions/README.md)); abgenommen am 2026-09-30 als Grundlage des Plans [Vorhaben und Sessions](../../planning/2026-09-30_vorhaben-und-sessions/README.md). Für Sidebar, Session-Kopfzeile, Übersicht eines Vorhabens, Einstieg einer neuen Session und die TL;DR-Karten ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md), dessen Tokens, Schriften und Statussymbole er übernimmt. Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
 
 ## Ansehen
 
@@ -11,7 +11,7 @@
 
 ## Tafeln
 
-| Datei | Zeigt | Phase im Plan |
+| Datei | Zeigt | Gebaut in Phase |
 |---|---|---|
 | `Main.dc.html` | Klickbarer Prototyp, Start: Session `#3` mit aktuellem TL;DR | 3, 6 |
 | `NoTldr.dc.html` | Session ohne TL;DR: gestrichelte Leiste mit „TL;DR erstellen“ | 6 |
@@ -38,4 +38,10 @@
 
 ## Abweichungen vom Entwurf
 
-Trägt Phase 6 des Plans nach dem Bau ein.
+- **Name einer neuen Session:** Bis zur ersten Nachricht heißt sie „Session N“; danach trägt sie den Namen aus dem ersten Satz der Nachricht.
+- **Kopfzeile der Übersicht:** ohne Pause und Abbrechen, ohne Hintergrund-Knopf; nur Reiter Übersicht/Changes.
+- **TL;DR-Stand-Text der Session:** „N neue Einträge seitdem“ rechnet die Oberfläche aus den geladenen Chat-Einträgen; erst wenn der Verlauf geladen ist, erscheint die Zahl.
+- **Haken „TL;DR mitschicken“:** Beginnt die erste Nachricht mit `/` (etwa `/implement`), hängt der Core den Stand des Vorhabens hinter die Nachricht statt davor, damit die Kommandozeile den Befehl erkennt. Der Chat zeigt die Nachricht so, wie sie an den Agenten ging.
+- **Knopf „TL;DR erstellen“ am Vorhaben:** gesperrt, solange keine Session des Vorhabens einen Verlauf hat.
+- **Kosten:** Der Entwurf nennt keine; gemessen sind 1,2 Cent bis 33 Cent je Lauf (ADR 011).
+- **Geteilte Bausteine:** Knopf, leere Leiste und Platzhalterbalken der Karten sind eigene Komponenten in `src/features/tldr/` und für Session- und Vorhaben-Karte gleich gebaut.
