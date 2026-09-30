@@ -265,6 +265,9 @@ pub enum AgentEvent {
         tool_use_id: String,
         tool: String,
         target: String,
+        /// Ungekürzte Werte von `file_path`, `notebook_path`, `path` und `command` aus der Eingabe
+        /// des Werkzeugs; daraus ordnet die Session Ticket-Worktrees zu.
+        used_paths: Vec<String>,
     },
     ToolFinished {
         tool_use_id: String,
@@ -321,6 +324,9 @@ pub enum AgentEvent {
         parent_tool_use_id: String,
         tool: String,
         target: String,
+        /// Ungekürzte Werte von `file_path`, `notebook_path`, `path` und `command` aus der Eingabe
+        /// des Werkzeugs; daraus ordnet die Session Ticket-Worktrees zu.
+        used_paths: Vec<String>,
     },
     SubagentText {
         parent_tool_use_id: String,

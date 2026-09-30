@@ -8,6 +8,7 @@ pub mod chat_entries;
 pub mod migrations;
 pub mod repositories;
 pub mod session_repositories;
+pub mod session_ticket_worktrees;
 pub mod sessions;
 
 use std::fs;

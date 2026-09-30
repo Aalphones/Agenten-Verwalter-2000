@@ -36,14 +36,14 @@ use crate::background::output::{
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
-    session_repositories,
+    session_repositories, session_ticket_worktrees,
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
 use crate::skills::{self, model::SkillRef};
-use crate::worktrees::{self, SessionRepository, WorktreeCheck};
+use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
@@ -122,6 +122,17 @@ struct SessionState {
     /// Befehle, Prozesse und Subagenten, nach `started_at` aufsteigend. Wird mit dem Verlauf geladen.
     background: Vec<BackgroundItem>,
     scratchpad_dir: Option<String>,
+    /// Fest ab Anlegen: woran die Ticket-Worktrees der Repositories im Haupt-Checkout zu erkennen sind.
+    ticket_roots: Vec<TicketRoot>,
+    /// Ticket-Worktrees, die der Agent oder ein Subagent benutzt hat, als (Position, Ordnername).
+    ticket_worktrees: Vec<(u32, String)>,
+}
+
+/// Eine Session, wie `SessionRegistry::restore` sie aus der Datenbank liest.
+struct StoredSession {
+    row: SessionRow,
+    repositories: Vec<SessionRepository>,
+    ticket_worktrees: Vec<(u32, String)>,
 }
 
 /// Alles, woraus `SessionRegistry::create` eine Session anlegt.
@@ -150,6 +161,8 @@ struct Outbox {
     background_changed: bool,
     /// Neu gemeldeter Scratchpad-Ordner, der für das Asset-Protokoll freigegeben wird.
     scratchpad_dir: Option<String>,
+    /// Neu zugeordnete Ticket-Worktrees als (Position, Ordnername).
+    ticket_worktrees: Vec<(u32, String)>,
 }
 
 impl SessionRegistry {
@@ -166,12 +179,17 @@ impl SessionRegistry {
         app: &AppHandle,
         database: Arc<Database>,
     ) -> Result<SessionRegistry, CommandError> {
-        let loaded: Vec<(SessionRow, Vec<SessionRepository>)> = database.with(|connection| {
+        let loaded: Vec<StoredSession> = database.with(|connection| {
             let rows = session_rows::load_active(connection)?;
             rows.into_iter()
                 .map(|row: SessionRow| {
                     let repositories = session_repositories::load(connection, &row.id)?;
-                    Ok((row, repositories))
+                    let ticket_worktrees = session_ticket_worktrees::load(connection, &row.id)?;
+                    Ok(StoredSession {
+                        row,
+                        repositories,
+                        ticket_worktrees,
+                    })
                 })
                 .collect()
         })?;
@@ -179,12 +197,19 @@ impl SessionRegistry {
         let mut interrupted: Vec<SessionRow> = Vec::new();
         {
             let mut sessions = registry.lock_sessions();
-            for (row, repositories) in loaded {
+            for StoredSession {
+                row,
+                repositories,
+                ticket_worktrees,
+            } in loaded
+            {
                 // Ohne Freigabe zeigt der Scratchpad-Reiter keine Bilder; alles andere geht trotzdem.
                 if let Some(dir) = &row.scratchpad_dir {
                     let _ = app.asset_protocol_scope().allow_directory(dir, true);
                 }
-                let state = SessionState::restored(&row);
+                let mut state = SessionState::restored(&row);
+                state.ticket_roots = worktrees::ticket_roots(&repositories);
+                state.ticket_worktrees = ticket_worktrees;
                 if state.needs_settling {
                     interrupted.push(SessionRow {
                         status: SessionStatus::Paused,
@@ -258,12 +283,14 @@ impl SessionRegistry {
         let task_skill: Option<SkillRef> = home_dir(app).ok().and_then(|home: PathBuf| {
             skills::match_invocation(task, &skills::collect(&home, &repository_roots))
         });
+        let mut state = SessionState::new(name, model, effort, mode);
+        state.ticket_roots = worktrees::ticket_roots(&repositories);
         let session = Arc::new(Session {
             id: id.clone(),
             workspace,
             repositories,
             database: Arc::clone(&self.database),
-            state: Mutex::new(SessionState::new(name, model, effort, mode)),
+            state: Mutex::new(state),
         });
         // Die Session-Zeile muss vor `session_repositories` stehen, die darauf verweisen.
         let row = row_of(&session, &session.lock());
@@ -595,6 +622,17 @@ impl SessionRegistry {
         Ok((session.workspace.clone(), session.repositories.clone()))
     }
 
+    /// Ticket-Worktrees, die der Agent der Session benutzt hat — ob es sie noch gibt, prüft der
+    /// Aufrufer über Git.
+    pub fn ticket_worktrees_of(
+        &self,
+        session_id: &str,
+    ) -> Result<Vec<(u32, String)>, CommandError> {
+        let session = self.get(session_id)?;
+        let worktrees = session.lock().ticket_worktrees.clone();
+        Ok(worktrees)
+    }
+
     /// Name und Arbeitsordner jedes Repositorys der Session — dort suchen Skills und Befehle.
     pub fn skill_roots(&self, session_id: &str) -> Result<Vec<(String, PathBuf)>, CommandError> {
         let (workspace, repositories) = self.repositories_of(session_id)?;
@@ -838,6 +876,8 @@ impl SessionState {
             next_request: 0,
             background: Vec::new(),
             scratchpad_dir: None,
+            ticket_roots: Vec::new(),
+            ticket_worktrees: Vec::new(),
         }
     }
 
@@ -1165,8 +1205,10 @@ impl SessionState {
                 tool_use_id,
                 tool,
                 target,
+                used_paths,
             } => {
                 self.wake_if_idle(outbox);
+                self.note_ticket_worktrees(outbox, &used_paths);
                 let entry_tool_use_id = tool_use_id.clone();
                 let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Tool {
                     seq,
@@ -1268,7 +1310,9 @@ impl SessionState {
                 parent_tool_use_id,
                 tool,
                 target,
+                used_paths,
             } => {
+                self.note_ticket_worktrees(outbox, &used_paths);
                 if let Some(index) = self.subagent_index(&parent_tool_use_id) {
                     let steps = &mut self.background[index].steps;
                     steps.push(SubagentStep { tool, target });
@@ -1296,6 +1340,30 @@ impl SessionState {
                 }
             }
             AgentEvent::Unknown(line) => self.push_log(line),
+        }
+    }
+
+    /// Merkt sich die Ticket-Worktrees, die ein Werkzeug-Aufruf nennt. Liest nur Text — unter der
+    /// Session-Sperre kein Git und kein Dateisystem.
+    fn note_ticket_worktrees(&mut self, outbox: &mut Outbox, used_paths: &[String]) {
+        if self.ticket_roots.is_empty() {
+            return;
+        }
+        for text in used_paths {
+            for (position, folder) in
+                worktrees::mentioned_ticket_worktrees(&self.ticket_roots, text)
+            {
+                let is_known = self.ticket_worktrees.iter().any(
+                    |(known_position, known_folder): &(u32, String)| {
+                        *known_position == position && known_folder.eq_ignore_ascii_case(&folder)
+                    },
+                );
+                if is_known {
+                    continue;
+                }
+                self.ticket_worktrees.push((position, folder.clone()));
+                outbox.ticket_worktrees.push((position, folder));
+            }
         }
     }
 
@@ -1624,6 +1692,13 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
         }
         for (id, output, truncated) in &outbox.outputs {
             background_rows::set_output(connection, &session.id, id, output, *truncated)?;
+        }
+        if !outbox.ticket_worktrees.is_empty() {
+            session_ticket_worktrees::insert_all(
+                connection,
+                &session.id,
+                &outbox.ticket_worktrees,
+            )?;
         }
         Ok(())
     });

@@ -25,6 +25,8 @@ const EXIT_CODE_PREFIX: &str = "Exit code ";
 const RESOLVED_MODEL_FIELD: &str = "resolvedModel";
 const TEXT_BLOCK_TYPE: &str = "text";
 
+const USED_PATH_FIELDS: [&str; 4] = ["file_path", "notebook_path", "path", "command"];
+
 const TARGET_MAX_CHARS: usize = 120;
 const TARGET_FIELDS: [&str; 9] = [
     "file_path",
@@ -308,6 +310,7 @@ fn translate_tool_use(id: String, name: String, input: &Value) -> Option<AgentEv
                 tool_use_id: id,
                 tool: name,
                 target,
+                used_paths: used_paths(input),
             })
         }
     }
@@ -345,6 +348,7 @@ fn subagent_events(parent: &str, content: Vec<ContentBlock>) -> Vec<AgentEvent> 
             ContentBlock::ToolUse { name, input, .. } => Some(AgentEvent::SubagentStep {
                 parent_tool_use_id: parent.to_owned(),
                 target: target_of(&name, &input),
+                used_paths: used_paths(&input),
                 tool: name,
             }),
             ContentBlock::Text { text } if !text.trim().is_empty() => {
@@ -555,6 +559,14 @@ fn target_of(tool: &str, input: &Value) -> String {
         .or_else(|| first_string_field(input))
         .unwrap_or_default();
     shorten_to_line(&full_target)
+}
+
+fn used_paths(input: &Value) -> Vec<String> {
+    USED_PATH_FIELDS
+        .iter()
+        .filter_map(|field: &&str| input.get(*field).and_then(Value::as_str))
+        .map(str::to_owned)
+        .collect()
 }
 
 fn grep_target(input: &Value) -> Option<String> {

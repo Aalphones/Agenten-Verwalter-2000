@@ -10,6 +10,18 @@ use crate::git;
 /// Namensregel eines Ticket-Worktrees: Nachbarordner `<Ordner des Repositorys>-wt-<Name>`.
 pub const TICKET_WORKTREE_INFIX: &str = "-wt-";
 
+/// Zeichen, hinter denen im Text ein Ordnername beginnen kann (außer Leerraum).
+const NAME_BOUNDARIES: [char; 6] = ['\\', '/', '"', '\'', '=', ':'];
+
+/// Woran ein Ticket-Worktree eines Session-Repositorys im Text zu erkennen ist.
+#[derive(Debug, Clone)]
+pub struct TicketRoot {
+    /// Position des Repositorys in der Session.
+    pub position: u32,
+    /// `<Ordner des Repositorys>-wt-` in ASCII-Kleinbuchstaben.
+    pub prefix: String,
+}
+
 /// Wo der Agent ein Repository der Session vorfindet.
 #[derive(Debug, Clone)]
 pub enum RepositoryCheckout {
@@ -166,6 +178,70 @@ pub fn permission_rules(repositories: &[SessionRepository]) -> Vec<String> {
         rules.push(format!("Read({pattern})"));
     }
     rules
+}
+
+/// Je Repository im Haupt-Checkout das Präfix seiner Ticket-Worktrees. App-Worktrees bekommen
+/// keins: dort legt der Agent keine Ticket-Worktrees an.
+pub fn ticket_roots(repositories: &[SessionRepository]) -> Vec<TicketRoot> {
+    repositories
+        .iter()
+        .enumerate()
+        .filter_map(|(index, repository): (usize, &SessionRepository)| {
+            if !matches!(repository.checkout, RepositoryCheckout::Main) {
+                return None;
+            }
+            let folder_name = repository.repository_path.file_name()?;
+            let prefix = format!("{}{TICKET_WORKTREE_INFIX}", folder_name.to_string_lossy());
+            Some(TicketRoot {
+                position: u32::try_from(index).ok()?,
+                prefix: prefix.to_ascii_lowercase(),
+            })
+        })
+        .collect()
+}
+
+/// Die Ticket-Worktrees, die `text` nennt — als absoluten Pfad, `../<Ordner>` oder nackten
+/// Ordnernamen —, als `(Position, Ordnername)` in der Schreibweise aus `text`, ohne Doppelte.
+/// Liest nur Text, kein Dateisystem, kein Git: ob der Ordner ein Worktree ist, prüft der Aufrufer.
+pub fn mentioned_ticket_worktrees(roots: &[TicketRoot], text: &str) -> Vec<(u32, String)> {
+    // Nur ASCII-Kleinschreibung: sie ändert keine Byte-Länge, jede Position in `lower` gilt auch in `text`.
+    let lower = text.to_ascii_lowercase();
+    let mut found: Vec<(u32, String)> = Vec::new();
+    for root in roots {
+        for (start, _) in lower.match_indices(root.prefix.as_str()) {
+            let is_name_start = lower[..start]
+                .chars()
+                .next_back()
+                .is_none_or(|previous: char| {
+                    previous.is_whitespace() || NAME_BOUNDARIES.contains(&previous)
+                });
+            if !is_name_start {
+                continue;
+            }
+            let name_start = start + root.prefix.len();
+            let rest = &text[name_start..];
+            let name_length = rest
+                .find(|character: char| !is_folder_character(character))
+                .unwrap_or(rest.len());
+            // Ein Punkt am Ende ist das Satzende, nicht Teil des Namens.
+            let name = rest[..name_length].trim_end_matches('.');
+            if name.is_empty() {
+                continue;
+            }
+            let folder = &text[start..name_start + name.len()];
+            let is_known = found.iter().any(|(position, known): &(u32, String)| {
+                *position == root.position && known.eq_ignore_ascii_case(folder)
+            });
+            if !is_known {
+                found.push((root.position, folder.to_owned()));
+            }
+        }
+    }
+    found
+}
+
+fn is_folder_character(character: char) -> bool {
+    character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
 }
 
 /// `C:\Users\x\develop` → `//c/Users/x/develop`, die Pfadschreibweise der Claude-Freigaben.

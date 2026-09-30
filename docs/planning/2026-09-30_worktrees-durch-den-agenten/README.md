@@ -9,7 +9,7 @@ Entscheidung und Begründung: ADR 010 (entsteht in Phase 1, `docs/decisions/010-
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Core: Haupt-Checkout statt App-Worktree, Freigabe der Ticket-Worktree-Ordner | [phase-1-core-haupt-checkout.md](phase-1-core-haupt-checkout.md) | heikel | complete |
-| 2 | Zuordnung: welche Ticket-Worktrees der Agent einer Session benutzt hat | [phase-2-zuordnung.md](phase-2-zuordnung.md) | heikel | pending |
+| 2 | Zuordnung: welche Ticket-Worktrees der Agent einer Session benutzt hat | [phase-2-zuordnung.md](phase-2-zuordnung.md) | heikel | complete |
 | 3 | Changes: Ticket-Worktrees gegen den Standard-Branch | [phase-3-changes.md](phase-3-changes.md) | heikel | pending |
 | 4 | Texte in der Oberfläche und Doku | [phase-4-texte-und-doku.md](phase-4-texte-und-doku.md) | mechanisch | pending |
 
