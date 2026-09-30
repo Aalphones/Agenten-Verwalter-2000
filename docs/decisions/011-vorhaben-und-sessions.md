@@ -46,4 +46,21 @@ Bisher war die Session die zentrale Einheit: eine Aufgabe, ein Agent, ein Chat, 
 
 ## TL;DR
 
-Kommt mit Phase 5 dieses Plans.
+**Kontext:** Wer zwischen Sessions und Vorhaben wechselt, muss sofort sehen, woran dort gearbeitet wird — ohne den Verlauf zu lesen.
+
+**Betrachtete Optionen:** (a) die Session selbst fortsetzen und nach einer Zusammenfassung fragen; (b) ein abgespeckter Einmal-Aufruf der Kommandozeile mit dem Gesprächstext als Eingabe; (c) automatisch nach jeder Antwort zusammenfassen.
+
+**Entscheidung:** (b), nur per Knopf.
+
+- **Nur per Knopf**, nie automatisch: jedes TL;DR kostet einen Aufruf, und ein automatisches würde bei jeder Antwort veralten. Die Karte zeigt, wie viele Einträge seither dazugekommen sind.
+- **Haiku, Einmal-Aufruf statt Fortsetzen:** Fortsetzen lädt 110 k bis 650 k Tokens Kontext und passt ab 200 k nicht in Haiku. Der Einmal-Aufruf läuft ohne Werkzeuge, MCP-Server und Transkript im Druckmodus und liefert eine Antwort nach festem Schema (Kommando und Messung: [claude-stream-json.md](../knowledge/claude-stream-json.md), „Einmal-Aufruf im Druckmodus“). Zeitlimit 90 s.
+- **Eingabe für eine Session:** nur der Gesprächstext — Nachrichten, Antworten, Rückfragen samt Antwort, Fehler, letzte Aufgabenliste; keine Werkzeug-Aufrufe, kein Gedankengang. Obergrenze 300 000 Zeichen; darüber bleiben die erste Nachricht (bis 20 000 Zeichen) und das Ende, die Mitte fällt weg und wird markiert.
+- **Vorhaben aus Session-TL;DRs:** das TL;DR des Vorhabens entsteht nur aus den TL;DRs seiner Sessions. Fehlende erstellt derselbe Klick vorher mit, veraltete nimmt er, wie sie sind.
+- **Gespeichert** als JSON in `sessions.tldr*` bzw. `projects.tldr*`; ein laufender Lauf und sein Fehler liegen nur im Speicher.
+- **Stand des Vorhabens für die neue Session:** die erste Nachricht einer Session im Status „Neu“ nimmt das TL;DR des Vorhabens mit, solange der Haken der Einstiegsansicht gesetzt ist. Der Stand steht vor der Nachricht; beginnt sie mit einem `/`-Befehl, steht er dahinter, weil die Kommandozeile einen Befehl nur am Anfang erkennt. Der Name der Session entsteht aus dem getippten Text.
+
+**Konsequenzen:**
+
+- Kosten je Session-TL;DR (API-Preise; beim Abo aus dem Kontingent): gemessen 1,2 Cent für den Verlauf mit den meisten Einträgen, bis 33 Cent für ein Transkript an der Obergrenze — Haiku denkt mit, und die Kommandozeile schreibt die Eingabe in den teureren 1-Stunden-Cache.
+- Ein Lauf blockiert weder den Chat noch den Agenten der Session; Beginn und Ende meldet `tldr://changed`. Kein Lauf hinterlässt einen Prozess: der Einmal-Aufruf wird nach Antwort, Fehler oder Zeitlimit immer beendet.
+- Zustand und Läufe liegen in `sessions/registry/tldr.rs` (Kindmodul der Registry, damit es an die Zustände kommt, ohne `registry.rs` weiter zu vergrößern).

@@ -13,6 +13,7 @@ pub mod projects;
 pub mod repositories;
 pub mod sessions;
 pub mod skills;
+pub mod tldr;
 pub mod usage;
 pub mod worktrees;
 
@@ -85,6 +86,11 @@ pub fn run() {
             commands::repositories::repository_remove,
             commands::changes::changes_load,
             commands::changes::changes_file_diff,
+            commands::tldr::tldr_session_load,
+            commands::tldr::tldr_session_create,
+            commands::tldr::tldr_project_load,
+            commands::tldr::tldr_project_create,
+            commands::tldr::tldr_set_carry,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten");

@@ -22,6 +22,10 @@ use verwalter_lib::{
     repositories::model::KnownRepository,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
+    tldr::model::{
+        ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
+        TldrChangedEvent,
+    },
     usage::model::{UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot, UsageStatus},
 };
 
@@ -82,5 +86,11 @@ fn main() -> Result<(), ts_rs::ExportError> {
     UsageBreakdown::export_all(&cfg)?;
     UsageSnapshot::export_all(&cfg)?;
     UsageStatus::export_all(&cfg)?;
+    SessionTldr::export_all(&cfg)?;
+    ProjectTldr::export_all(&cfg)?;
+    SessionTldrView::export_all(&cfg)?;
+    ProjectSessionTldr::export_all(&cfg)?;
+    ProjectTldrView::export_all(&cfg)?;
+    TldrChangedEvent::export_all(&cfg)?;
     Ok(())
 }

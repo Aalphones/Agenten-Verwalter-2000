@@ -125,3 +125,17 @@ Geprüft am 2026-09-29 mit Claude Code 2.1.284; beide Anfragen stammen aus dem A
   - `behaviors.day` und `behaviors.week`: `request_count`, `session_count`, `behaviors` (je `key`, `pct`, `count`; beobachtet `long_context`, `cron`, `high_parallel`), `skills` (je `name`, `pct`), `agents`, `plugins`, `mcp_servers`. Die VS-Code-Erweiterung zeigt `long_context` als „usage at >150k context“, `cron` als „sessions active for 8+ hours“, `high_parallel` als „while 4+ sessions ran in parallel“ und nennt das Ganze eine Näherung aus den lokalen Sessions dieses Rechners.
   - Der Name im SDK sagt ausdrücklich, dass sich das Format ändern kann — jedes Feld ist optional zu lesen.
 - **Hilfsprozess nur für das Kontingent:** `claude.exe -p --input-format stream-json --output-format stream-json --verbose --strict-mcp-config --no-session-persistence` mit Arbeitsverzeichnis `<Benutzerordner>\.verwalter`, dann sofort `get_usage` senden: Antwort nach rund 1,4 s, danach Prozess beenden. `--strict-mcp-config` ohne `--mcp-config` startet keine MCP-Server. Es entsteht kein Transkript; die Kommandozeile legt nur einmalig einen leeren Ordner `~\.claude\projects\C--Users-<name>--verwalter\memory` an. `--bare` ist ungeeignet (meldet sich nur mit API-Schlüssel an, nicht mit dem Abo).
+
+## Einmal-Aufruf im Druckmodus (TL;DR)
+
+Für das TL;DR läuft ein eigener, kurzlebiger `claude.exe` ohne Stream-Protokoll, unabhängig vom Agenten der Session (`src-tauri/src/agents/claude/print.rs`):
+
+```text
+claude.exe -p --model claude-haiku-4-5-20251001 --tools "" --safe-mode --strict-mcp-config --no-session-persistence --system-prompt <Anweisung> --json-schema <Schema> --output-format json
+```
+
+- Eingabe über die Standardeingabe, danach wird sie geschlossen; Arbeitsordner `<Benutzerordner>\.verwalter`. `--tools` nimmt mehrere Werte: der leere Wert schaltet alle Werkzeuge ab, das folgende `--safe-mode` beendet die Liste.
+- Ausgabe: **ein** JSON-Objekt. Die Antwort nach dem Schema steht in `structured_output`, dazu `is_error`, `result` (Text, bei Fehlern die Meldung), `duration_ms`, `usage`, `total_cost_usd`.
+- Läuft mit der Abo-Anmeldung (`--bare` nicht, siehe oben).
+- **Gemessen am 2026-09-30 mit Claude Code 2.1.284** (Planung): kurze Eingabe, 1 455 Eingabe-Tokens Grundlast samt Eingabe, 268 Ausgabe-Tokens, 0,38 Cent.
+- **Gemessen am 2026-09-30 mit Claude Code 2.1.284** (Umsetzung; der erste Lauf über `run_print` mit der echten Anweisung, die übrigen mit demselben Schema und einer gekürzten Anweisung, weil nur sie `usage` zeigen): der Verlauf mit den meisten Chat-Einträgen (235 Einträge, als Transkript 5 844 Zeichen) → 29,6 s beim ersten Lauf, 14,1 s beim zweiten; 3 495 Eingabe-Tokens, 1 164 Ausgabe-Tokens (davon 616 Denk-Tokens — Haiku denkt im Druckmodus mit), 1,2 Cent. Ein künstliches Transkript an der Obergrenze (292 298 Zeichen) → 18,7 s und 17,0 s; 107 169 Eingabe-Tokens, die die Kommandozeile in den 1-Stunden-Cache schreibt (doppelter Eingabepreis), 1 340 Ausgabe-Tokens, 33 Cent. `structured_output` kam in allen Läufen. Daraus das Zeitlimit: 30 s × 3 = 90 s.

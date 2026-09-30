@@ -46,7 +46,11 @@ use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
 use crate::skills::{self, model::SkillRef};
+use crate::tldr::model::{ProjectTldr, SessionTldr};
+use crate::tldr::transcript::with_project_tldr;
 use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
+
+mod tldr;
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const PROJECT_CHANGED_EVENT: &str = "project://changed";
@@ -80,6 +84,41 @@ pub struct SessionRegistry {
 struct ProjectState {
     name: String,
     created_at: f64,
+    tldr: Option<ProjectTldr>,
+    tldr_at: Option<f64>,
+    /// Aus wie vielen Session-TL;DRs `tldr` entstand.
+    tldr_sources: u32,
+    /// Laufzustand und Fehler eines TL;DR-Laufs gibt es nur im Speicher.
+    tldr_running: bool,
+    tldr_error: Option<String>,
+}
+
+impl ProjectState {
+    fn new(name: String, created_at: f64) -> Self {
+        ProjectState {
+            name,
+            created_at,
+            tldr: None,
+            tldr_at: None,
+            tldr_sources: 0,
+            tldr_running: false,
+            tldr_error: None,
+        }
+    }
+
+    /// Ein gespeichertes TL;DR, das sich nicht mehr lesen lässt, gilt als nicht vorhanden.
+    fn restored(row: &ProjectRow) -> Self {
+        let mut state = ProjectState::new(row.name.clone(), row.created_at);
+        state.tldr = row
+            .tldr
+            .as_deref()
+            .and_then(|json: &str| serde_json::from_str::<ProjectTldr>(json).ok());
+        if state.tldr.is_some() {
+            state.tldr_at = row.tldr_at;
+            state.tldr_sources = row.tldr_sources.unwrap_or(0);
+        }
+        state
+    }
 }
 
 pub struct Session {
@@ -152,6 +191,15 @@ struct SessionState {
     ticket_roots: Vec<TicketRoot>,
     /// Ticket-Worktrees, die der Agent oder ein Subagent benutzt hat, als (Position, Ordnername).
     ticket_worktrees: Vec<(u32, String)>,
+    tldr: Option<SessionTldr>,
+    tldr_at: Option<f64>,
+    /// Anzahl Chat-Einträge, die `tldr` kannte; 0 ohne TL;DR.
+    tldr_seq: u32,
+    /// Laufzustand und Fehler eines TL;DR-Laufs gibt es nur im Speicher.
+    tldr_running: bool,
+    tldr_error: Option<String>,
+    /// Haken der Einstiegsansicht einer neuen Session; nur im Speicher, Standard gesetzt.
+    carries_project_tldr: bool,
 }
 
 /// Eine Session, wie `SessionRegistry::restore` sie aus der Datenbank liest.
@@ -229,22 +277,15 @@ impl SessionRegistry {
         {
             let mut projects = registry.lock_projects();
             for project in project_list {
-                projects.insert(
-                    project.id,
-                    ProjectState {
-                        name: project.name,
-                        created_at: project.created_at,
-                    },
-                );
+                projects.insert(project.id.clone(), ProjectState::restored(&project));
             }
             // Eine Session, deren Vorhaben fehlt, bekommt eins im Speicher — sonst verschwände sie
             // aus der Liste, obwohl ihre Zeile noch aktiv ist.
             for stored in &loaded {
                 projects
                     .entry(stored.row.project_id.clone())
-                    .or_insert_with(|| ProjectState {
-                        name: stored.row.name.clone(),
-                        created_at: stored.row.created_at,
+                    .or_insert_with(|| {
+                        ProjectState::new(stored.row.name.clone(), stored.row.created_at)
                     });
             }
         }
@@ -343,10 +384,7 @@ impl SessionRegistry {
         });
         let mut state = SessionState::new(name.clone(), model, effort, mode);
         state.ticket_roots = worktrees::ticket_roots(&repositories);
-        let project = ProjectState {
-            name,
-            created_at: state.created_at,
-        };
+        let project = ProjectState::new(name, state.created_at);
         let session = Arc::new(Session {
             id: id.clone(),
             project_id: project_id.clone(),
@@ -362,6 +400,9 @@ impl SessionRegistry {
             id: project_id.clone(),
             name: project.name.clone(),
             created_at: project.created_at,
+            tldr: None,
+            tldr_at: None,
+            tldr_sources: None,
         };
         let saved = self.database.with(|connection| {
             project_rows::insert(connection, &project_row)?;
@@ -700,6 +741,12 @@ impl SessionRegistry {
             text,
             &skills::collect(&home_dir(app)?, &self.skill_roots(session_id)?),
         );
+        // Vor `update` gelesen: Vorhaben- und Session-Sperre nie zugleich.
+        let carried: Option<String> = self
+            .lock_projects()
+            .get(&session.project_id)
+            .and_then(|project: &ProjectState| project.tldr.as_ref())
+            .map(|tldr: &ProjectTldr| with_project_tldr(text, tldr));
         update(
             app,
             &session,
@@ -732,15 +779,25 @@ impl SessionRegistry {
                 // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
                 let sent_attachments =
                     attachments::take_for_workspace(app, attachment_ids, &session.workspace)?;
-                let line = message_line(text, &sent_attachments)?;
-                // Erst nach allen Schritten, die scheitern können: ein Fehlstart lässt den Namen stehen.
+                // Der Chat zeigt die Nachricht so, wie sie an den Agenten geht.
+                let sent_text: &str = match &carried {
+                    Some(with_tldr)
+                        if state.status == SessionStatus::New && state.carries_project_tldr =>
+                    {
+                        with_tldr
+                    }
+                    _ => text,
+                };
+                let line = message_line(sent_text, &sent_attachments)?;
+                // Erst nach allen Schritten, die scheitern können: ein Fehlstart lässt den Namen
+                // stehen. Der Name kommt aus dem getippten Text, nicht aus dem Stand des Vorhabens.
                 if state.status == SessionStatus::New
                     && state.name == format!("Session {}", session.number)
                 {
                     state.name = name_from_task(text);
                     outbox.summary_dirty = true;
                 }
-                state.push_user(outbox, text, sent_attachments, skill);
+                state.push_user(outbox, sent_text, sent_attachments, skill);
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
             },
@@ -1289,6 +1346,12 @@ impl SessionState {
             scratchpad_dir: None,
             ticket_roots: Vec::new(),
             ticket_worktrees: Vec::new(),
+            tldr: None,
+            tldr_at: None,
+            tldr_seq: 0,
+            tldr_running: false,
+            tldr_error: None,
+            carries_project_tldr: true,
         }
     }
 
@@ -1314,6 +1377,15 @@ impl SessionState {
         state.idle_since = None;
         state.entries_loaded = false;
         state.needs_settling = was_active;
+        // Ein gespeichertes TL;DR, das sich nicht mehr lesen lässt, gilt als nicht vorhanden.
+        state.tldr = row
+            .tldr
+            .as_deref()
+            .and_then(|json: &str| serde_json::from_str::<SessionTldr>(json).ok());
+        if state.tldr.is_some() {
+            state.tldr_at = row.tldr_at;
+            state.tldr_seq = row.tldr_seq.unwrap_or(0);
+        }
         state
     }
 
@@ -2112,6 +2184,10 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         scratchpad_dir: state.scratchpad_dir.clone(),
         project_id: session.project_id.clone(),
         number: session.number,
+        // `upsert` schreibt die TL;DR-Spalten nicht; das tut `db::tldr`.
+        tldr: None,
+        tldr_at: None,
+        tldr_seq: None,
     }
 }
 

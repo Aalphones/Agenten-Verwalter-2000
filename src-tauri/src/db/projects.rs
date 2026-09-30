@@ -8,6 +8,10 @@ pub struct ProjectRow {
     pub id: String,
     pub name: String,
     pub created_at: f64,
+    /// TL;DR als JSON; nur gelesen — geschrieben wird es über `db::tldr`, `insert` lässt es leer.
+    pub tldr: Option<String>,
+    pub tldr_at: Option<f64>,
+    pub tldr_sources: Option<u32>,
 }
 
 pub fn insert(connection: &Connection, row: &ProjectRow) -> Result<(), CommandError> {
@@ -21,7 +25,7 @@ pub fn insert(connection: &Connection, row: &ProjectRow) -> Result<(), CommandEr
 /// Alle nicht archivierten Vorhaben, neueste zuerst.
 pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandError> {
     let mut statement = connection.prepare(
-        "SELECT id, name, created_at FROM projects \
+        "SELECT id, name, created_at, tldr, tldr_at, tldr_sources FROM projects \
          WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let rows = statement
@@ -30,6 +34,9 @@ pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandEr
                 id: row.get(0)?,
                 name: row.get(1)?,
                 created_at: row.get(2)?,
+                tldr: row.get(3)?,
+                tldr_at: row.get(4)?,
+                tldr_sources: row.get(5)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<ProjectRow>>>()?;

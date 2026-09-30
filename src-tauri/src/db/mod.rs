@@ -11,6 +11,7 @@ pub mod repositories;
 pub mod session_repositories;
 pub mod session_ticket_worktrees;
 pub mod sessions;
+pub mod tldr;
 
 use std::fs;
 use std::path::Path;

@@ -27,6 +27,10 @@ pub struct SessionRow {
     pub project_id: String,
     /// Laufende Nummer im Vorhaben, ab 1.
     pub number: u32,
+    /// TL;DR als JSON; nur gelesen — geschrieben wird es über `db::tldr`, `upsert` lässt es stehen.
+    pub tldr: Option<String>,
+    pub tldr_at: Option<f64>,
+    pub tldr_seq: Option<u32>,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -47,6 +51,9 @@ struct StoredRow {
     scratchpad_dir: Option<String>,
     project_id: String,
     number: u32,
+    tldr: Option<String>,
+    tldr_at: Option<f64>,
+    tldr_seq: Option<u32>,
 }
 
 impl StoredRow {
@@ -67,6 +74,9 @@ impl StoredRow {
             scratchpad_dir: row.get(12)?,
             project_id: row.get(13)?,
             number: row.get(14)?,
+            tldr: row.get(15)?,
+            tldr_at: row.get(16)?,
+            tldr_seq: row.get(17)?,
         })
     }
 
@@ -87,13 +97,17 @@ impl StoredRow {
             scratchpad_dir: self.scratchpad_dir,
             project_id: self.project_id,
             number: self.number,
+            tldr: self.tldr,
+            tldr_at: self.tldr_at,
+            tldr_seq: self.tldr_seq,
         })
     }
 }
 
 /// Legt die Zeile an oder aktualisiert sie; `scratchpad_dir` kommt mit dem ersten `init` dazu.
 /// `created_at`, `workspace_dir`, `project_id`, `number` und `archived_at` bleiben, wie sie sind:
-/// der Arbeitsordner einer Session ändert sich nie, ihr Vorhaben und ihre Nummer auch nicht.
+/// der Arbeitsordner einer Session ändert sich nie, ihr Vorhaben und ihre Nummer auch nicht. Die
+/// TL;DR-Spalten schreibt nur `db::tldr`.
 pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandError> {
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
@@ -138,7 +152,7 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
     let mut statement = connection.prepare(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
-             COALESCE(project_id, id), number \
+             COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
