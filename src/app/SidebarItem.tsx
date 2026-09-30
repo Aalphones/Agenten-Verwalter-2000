@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent, ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
-import { isMetaHighlighted, metaLine } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import './SidebarItem.css';
 
@@ -14,9 +13,9 @@ interface SidebarItemProps {
   onStartRename: () => void;
   onCommitRename: (name: string) => void;
   onCancelRename: () => void;
-  onArchive: () => void;
 }
 
+/** Eine Session im aufgeklappten Baum eines Vorhabens. */
 export function SidebarItem({
   session,
   isActive,
@@ -25,27 +24,21 @@ export function SidebarItem({
   onStartRename,
   onCommitRename,
   onCancelRename,
-  onArchive,
 }: SidebarItemProps): ReactElement {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
 
   if (isRenaming) {
     return (
       <div className="sidebar-item">
-        <RenameField session={session} onCommit={onCommitRename} onCancel={onCancelRename} />
+        <RenameField
+          name={session.name}
+          label="Neuer Name der Session"
+          onCommit={onCommitRename}
+          onCancel={onCancelRename}
+        />
       </div>
     );
   }
-
-  const meta: string | null = metaLine(session);
-  const nameClass = `sidebar-item__name${
-    session.status === 'completed' || session.status === 'cancelled'
-      ? ' sidebar-item__name--done'
-      : ''
-  }`;
-  const metaClass = `sidebar-item__meta${
-    isMetaHighlighted(session.status) ? ` sidebar-item__meta--${session.status}` : ''
-  }`;
 
   return (
     <div className="sidebar-item">
@@ -61,12 +54,10 @@ export function SidebarItem({
         }}
       >
         <span className="sidebar-item__status">
-          <StatusIcon status={session.status} size={12} />
+          <StatusIcon status={session.status} size={10} />
         </span>
-        <span className="sidebar-item__text">
-          <span className={nameClass}>{session.name}</span>
-          {meta !== null && <span className={metaClass}>{meta}</span>}
-        </span>
+        <span className="sidebar-item__number">#{session.number}</span>
+        <span className="sidebar-item__name">{session.name}</span>
       </button>
       {isMenuOpen && (
         <Popover
@@ -90,18 +81,6 @@ export function SidebarItem({
             <span>Umbenennen</span>
             <kbd className="sidebar-item__menu-key">F2</kbd>
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="sidebar-item__menu-item"
-            title="Blendet die Session aus der Liste aus. Der Verlauf bleibt erhalten. Repositories und Worktrees bleiben, wie sie sind."
-            onClick={(): void => {
-              setIsMenuOpen(false);
-              onArchive();
-            }}
-          >
-            Archivieren
-          </button>
         </Popover>
       )}
     </div>
@@ -109,13 +88,16 @@ export function SidebarItem({
 }
 
 interface RenameFieldProps {
-  session: SessionSummary;
+  name: string;
+  /** Beschriftung für Screenreader. */
+  label: string;
   onCommit: (name: string) => void;
   onCancel: () => void;
 }
 
-function RenameField({ session, onCommit, onCancel }: RenameFieldProps): ReactElement {
-  const [text, setText] = useState<string>(session.name);
+/** Namensfeld an der Stelle einer Sidebar-Zeile; Enter speichert, Esc und Verlassen des Felds ohne Änderung brechen ab. */
+export function RenameField({ name, label, onCommit, onCancel }: RenameFieldProps): ReactElement {
+  const [text, setText] = useState<string>(name);
   // Enter und das folgende Blur würden sonst beide committen.
   const isDoneRef = useRef<boolean>(false);
 
@@ -125,7 +107,7 @@ function RenameField({ session, onCommit, onCancel }: RenameFieldProps): ReactEl
     }
     isDoneRef.current = true;
     const trimmed: string = text.trim();
-    if (trimmed === '' || trimmed === session.name) {
+    if (trimmed === '' || trimmed === name) {
       onCancel();
       return;
     }
@@ -155,7 +137,7 @@ function RenameField({ session, onCommit, onCancel }: RenameFieldProps): ReactEl
     <div className="sidebar-item__rename">
       <input
         type="text"
-        aria-label="Neuer Name der Session"
+        aria-label={label}
         maxLength={60}
         autoFocus
         value={text}

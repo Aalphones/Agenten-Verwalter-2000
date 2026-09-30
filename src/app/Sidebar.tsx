@@ -1,34 +1,47 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
-import { SidebarItem } from '@/app/SidebarItem';
-import { GROUP_LABEL, GROUP_ORDER, STATUS_GROUP } from '@/features/sessions/sessionStatus';
+import { SidebarProject } from '@/app/SidebarProject';
+import { projectGroup, sessionsOf } from '@/features/projects/projectStatus';
+import { GROUP_LABEL, GROUP_ORDER } from '@/features/sessions/sessionStatus';
 import type { SessionGroup } from '@/features/sessions/sessionStatus';
+import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { archiveProject } from '@/lib/projects';
+import { archiveProject, renameProject } from '@/lib/projects';
 import { renameSession } from '@/lib/sessions';
 import { useSessionsStore } from '@/stores/sessions';
+import type { RenameKind, RenameTarget } from '@/stores/sessions';
 import './Sidebar.css';
 
 interface SidebarProps {
+  projects: readonly ProjectSummary[];
   sessions: readonly SessionSummary[];
   activeSessionId: string | null;
-  onSelect: (sessionId: string) => void;
+  activeProjectId: string | null;
+  showProjectOverview: boolean;
+  onSelectSession: (sessionId: string) => void;
+  onSelectProject: (projectId: string) => void;
   onNew: () => void;
-  onArchived: (sessionId: string) => void;
+  onArchived: (projectId: string) => void;
 }
 
 export function Sidebar({
+  projects,
   sessions,
   activeSessionId,
-  onSelect,
+  activeProjectId,
+  showProjectOverview,
+  onSelectSession,
+  onSelectProject,
   onNew,
   onArchived,
 }: SidebarProps): ReactElement {
-  const renamingId: string | null = useSessionsStore((state) => state.renamingId);
+  const renaming: RenameTarget | null = useSessionsStore((state) => state.renaming);
+  const expanded: Record<string, boolean> = useSessionsStore((state) => state.expanded);
   const startRename = useSessionsStore((state) => state.startRename);
   const stopRename = useSessionsStore((state) => state.stopRename);
+  const setExpanded = useSessionsStore((state) => state.setExpanded);
 
-  // F2 startet das Umbenennen der aktiven Session — außer der Fokus liegt in einem Textfeld.
+  // F2 benennt das Vorhaben um, dessen Übersicht offen ist, sonst die aktive Session — außer der Fokus liegt in einem Textfeld.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key !== 'F2' || event.defaultPrevented) {
@@ -38,49 +51,54 @@ export function Sidebar({
       if (target instanceof HTMLElement && target.closest('input, textarea')) {
         return;
       }
-      if (activeSessionId !== null) {
-        startRename(activeSessionId);
+      if (showProjectOverview && activeProjectId !== null) {
+        startRename('project', activeProjectId);
+      } else if (activeSessionId !== null) {
+        startRename('session', activeSessionId);
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return (): void => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeSessionId, startRename]);
+  }, [activeSessionId, activeProjectId, showProjectOverview, startRename]);
 
-  function commitRename(sessionId: string, name: string): void {
-    renameSession(sessionId, name).catch((reason: unknown) => {
-      console.error('Session nicht umbenennbar', reason);
+  function commitRename(kind: RenameKind, id: string, name: string): void {
+    const rename: Promise<void> =
+      kind === 'project' ? renameProject(id, name) : renameSession(id, name);
+    rename.catch((reason: unknown) => {
+      console.error('Nicht umbenennbar', reason);
     });
     stopRename();
   }
 
   // Archivieren gibt es nur für das ganze Vorhaben — alle seine Sessions verlassen die Liste.
-  function archive(sessionId: string): void {
-    const archived: SessionSummary | undefined = sessions.find(
-      (session: SessionSummary) => session.id === sessionId,
-    );
-    if (archived === undefined) {
-      return;
-    }
-    const projectId: string = archived.projectId;
+  function archive(projectId: string): void {
     archiveProject(projectId)
       .then(() => {
-        for (const session of sessions) {
-          if (session.projectId === projectId) {
-            onArchived(session.id);
-          }
-        }
+        onArchived(projectId);
       })
       .catch((reason: unknown) => {
         console.error('Vorhaben nicht archivierbar', reason);
       });
   }
 
+  function open(project: ProjectSummary, projectSessions: readonly SessionSummary[]): void {
+    const [only] = projectSessions;
+    if (projectSessions.length === 1 && only !== undefined) {
+      onSelectSession(only.id);
+      return;
+    }
+    onSelectProject(project.id);
+  }
+
   function renderGroup(group: SessionGroup): ReactElement | null {
-    const members: SessionSummary[] = sessions.filter(
-      (session: SessionSummary) => STATUS_GROUP[session.status] === group,
-    );
+    const members = projects
+      .map((project: ProjectSummary) => ({
+        project,
+        projectSessions: sessionsOf(project.id, sessions),
+      }))
+      .filter(({ projectSessions }) => projectGroup(projectSessions) === group);
     if (members.length === 0) {
       return null;
     }
@@ -90,35 +108,44 @@ export function Sidebar({
           <span>{GROUP_LABEL[group]}</span>
           <span className="sidebar__group-count">{members.length}</span>
         </h2>
-        {members.map((session: SessionSummary) => (
-          <SidebarItem
-            key={session.id}
-            session={session}
-            isActive={session.id === activeSessionId}
-            isRenaming={session.id === renamingId}
-            onSelect={(): void => {
-              onSelect(session.id);
-            }}
-            onStartRename={(): void => {
-              startRename(session.id);
-            }}
-            onCommitRename={(name: string): void => {
-              commitRename(session.id, name);
-            }}
-            onCancelRename={(): void => {
-              stopRename();
-            }}
-            onArchive={(): void => {
-              archive(session.id);
-            }}
-          />
-        ))}
+        {members.map(({ project, projectSessions }) => {
+          const isOverviewActive: boolean = showProjectOverview && activeProjectId === project.id;
+          const containsActiveSession: boolean = projectSessions.some(
+            (session: SessionSummary) => session.id === activeSessionId,
+          );
+          const isExpanded: boolean =
+            expanded[project.id] ?? (containsActiveSession || isOverviewActive);
+          return (
+            <SidebarProject
+              key={project.id}
+              project={project}
+              sessions={projectSessions}
+              activeSessionId={activeSessionId}
+              isOverviewActive={isOverviewActive}
+              isExpanded={isExpanded}
+              renaming={renaming}
+              onToggle={(): void => {
+                setExpanded(project.id, !isExpanded);
+              }}
+              onOpen={(): void => {
+                open(project, projectSessions);
+              }}
+              onSelectSession={onSelectSession}
+              onStartRename={startRename}
+              onCommitRename={commitRename}
+              onCancelRename={stopRename}
+              onArchive={(): void => {
+                archive(project.id);
+              }}
+            />
+          );
+        })}
       </section>
     );
   }
 
   return (
-    <nav className="sidebar" aria-label="Sessions">
+    <nav className="sidebar" aria-label="Vorhaben">
       <div className="sidebar__brand">
         <svg
           width="16"
@@ -150,12 +177,12 @@ export function Sidebar({
           >
             <path d="M7 2.5v9M2.5 7h9" />
           </svg>
-          <span className="sidebar__new-label">Neue Session</span>
+          <span className="sidebar__new-label">Neues Vorhaben</span>
           <kbd className="sidebar__new-key">Ctrl N</kbd>
         </button>
       </div>
       <div className="sidebar__list">
-        {sessions.length === 0 && <p className="sidebar__empty">Noch keine Sessions.</p>}
+        {projects.length === 0 && <p className="sidebar__empty">Noch keine Vorhaben.</p>}
         {GROUP_ORDER.map((group: SessionGroup) => renderGroup(group))}
       </div>
     </nav>

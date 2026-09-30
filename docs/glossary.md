@@ -5,6 +5,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | Begriff | Bedeutung |
 |---|---|
 | **Vorhaben** | Eine Aufgabe (z. B. „Plan XYZ umsetzen“) mit ihren Repositories, ihrem Workspace und ihren Sessions. Die zentrale Einheit der App. Im Code `project` ([ADR 011](decisions/011-vorhaben-und-sessions.md)). |
+| **Übersicht (Vorhaben)** | Hauptansicht eines Vorhabens: TL;DR, Repositories, Sessions, „Neue Session“; Reiter „Übersicht · Changes“. |
 | **Session** | Eine Claude-Session innerhalb eines Vorhabens, mit eigenem Agenten, Chat, Kontext und Events; im Vorhaben durchnummeriert (#1, #2 …). Ihre ID ist die Session-ID der Claude-Kommandozeile. |
 | **Repository** | Ein lokales Git-Repository, das in der App bekannt ist (Name, Pfad, Remote). Existiert unabhängig von Sessions. Die App kennt es, sobald es einmal über „Repository hinzufügen“ gewählt wurde; gespeichert ist der Wurzelordner. |
 | **RepositoryWorkspace** | Die Verbindung eines Repositorys mit einem Vorhaben: Haupt-Checkout und Basis, für alle Sessions des Vorhabens gleich; bei Sessions vor ADR 010 ein eigener App-Worktree mit Branch. |

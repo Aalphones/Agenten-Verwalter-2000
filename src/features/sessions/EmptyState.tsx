@@ -23,14 +23,15 @@ export function EmptyState({ onCreate }: EmptyStateProps): ReactElement {
           <rect x="1.5" y="1.5" width="7" height="7" rx="2" />
           <rect x="5.5" y="5.5" width="7" height="7" rx="2" />
         </svg>
-        <h1 className="empty-state__title">Noch keine Session</h1>
+        <h1 className="empty-state__title">Noch kein Vorhaben</h1>
         <p className="empty-state__text">
-          Eine Session ist eine Aufgabe für einen Agenten, über ein oder mehrere Repositories. Ob
-          der Agent direkt im Repository arbeitet oder einen Worktree für sein Ticket anlegt,
-          bestimmen seine Anweisungen.
+          Ein Vorhaben ist eine Aufgabe über ein oder mehrere Repositories. Darin arbeiten
+          nacheinander eine oder mehrere Sessions, jede mit frischem Kontext. Ob ein Agent direkt im
+          Repository arbeitet oder einen Worktree für sein Ticket anlegt, bestimmen seine
+          Anweisungen.
         </p>
         <button type="button" className="empty-state__button" onClick={onCreate}>
-          Erste Session anlegen
+          Erstes Vorhaben anlegen
         </button>
       </div>
     </div>

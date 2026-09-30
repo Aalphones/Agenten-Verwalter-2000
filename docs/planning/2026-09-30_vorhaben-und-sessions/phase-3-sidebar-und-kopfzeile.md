@@ -29,33 +29,35 @@ Rating: standard · Commit-Scope: `ui`
 
 ### Daten und Zustand
 
-- [ ] `src/features/projects/useProjectSummaries.ts`: `useProjectSummaries(): { projects: ProjectSummary[]; upsertProject(summary); removeProject(projectId) }` — Kopie des Musters von `useSessionSummaries` (erst `onProjectChanged` abonnieren, dann `listProjects`, sortiert nach `createdAt` absteigend).
-- [ ] `src/features/projects/projectStatus.ts`:
+- [x] `src/features/projects/useProjectSummaries.ts`: `useProjectSummaries(): { projects: ProjectSummary[]; upsertProject(summary); removeProject(projectId) }` — Kopie des Musters von `useSessionSummaries` (erst `onProjectChanged` abonnieren, dann `listProjects`, sortiert nach `createdAt` absteigend).
+- [x] `src/features/projects/projectStatus.ts`:
   - `URGENCY: readonly SessionStatus[] = ['waiting', 'error', 'running', 'starting', 'paused', 'new', 'completed', 'cancelled']`.
   - `sessionsOf(projectId, sessions): SessionSummary[]` (aufsteigend nach `number`).
   - `mostUrgent(sessions: readonly SessionSummary[]): SessionSummary | null` (kleinster Index in `URGENCY`, bei Gleichstand die höhere Nummer).
   - `projectGroup(sessions): SessionGroup` (über `STATUS_GROUP` des dringendsten; ohne Sessions `'done'`).
   - `projectMetaLine(sessions): string | null` nach AK 3, Wörter in einer Tabelle `SHORT_STATUS: Record<SessionStatus, string>`.
-- [ ] `src/stores/sessions.ts` nach README „Kontrakt / Oberfläche (Zustand)“: `renamingId` ersetzt durch `renaming`; neu `activeProjectId`, `showProjectOverview`, `projectView`, `expanded`, `selectProject`, `showProjectView`, `setExpanded`; `selectSession` setzt zusätzlich `showProjectOverview: false`; `openNewSession` setzt `showProjectOverview: false`. `startRename(kind, id)`, `stopRename()`.
-- [ ] Alle Nutzer von `renamingId`/`startRename(sessionId)` nachziehen: `Composer.tsx` (`startRename('session', session.id)`), `Sidebar.tsx`.
+- [x] `src/stores/sessions.ts` nach README „Kontrakt / Oberfläche (Zustand)“: `renamingId` ersetzt durch `renaming`; neu `activeProjectId`, `showProjectOverview`, `projectView`, `expanded`, `selectProject`, `showProjectView`, `setExpanded`; `selectSession` setzt zusätzlich `showProjectOverview: false`; `openNewSession` setzt `showProjectOverview: false`. `startRename(kind, id)`, `stopRename()`.
+- [x] Alle Nutzer von `renamingId`/`startRename(sessionId)` nachziehen: `Composer.tsx` (`startRename('session', session.id)`), `Sidebar.tsx`.
 
 ### Sidebar
 
-- [ ] `SidebarItem.tsx`: `RenameField` exportieren und auf Props `name: string`, `label: string` (für `aria-label`), `onCommit`, `onCancel` umstellen. `SidebarItem` wird zur **Session-Zeile im Baum**: Props `session`, `isActive`, `isRenaming`, `onSelect`, `onStartRename`, `onCommitRename`, `onCancelRename` (kein `onArchive`); Darstellung nach AK 4 (neue BEM-Modifikatoren in `SidebarItem.css`, keine Meta-Zeile, `#N` vor dem Namen); Kontextmenü nur „Umbenennen“.
-- [ ] Neue Datei `src/app/SidebarProject.tsx` + `SidebarProject.css` (Block `sidebar-project`): Props `project: ProjectSummary`, `sessions: readonly SessionSummary[]` (dieses Vorhabens, nach Nummer), `activeSessionId`, `isOverviewActive: boolean`, `isExpanded: boolean`, `renaming`, Callbacks `onToggle`, `onOpen`, `onSelectSession(id)`, `onStartRename(kind, id)`, `onCommitRename(kind, id, name)`, `onCancelRename`, `onArchive`. Rendert Zeile nach AK 3 (bzw. `RenameField` mit `label` „Neuer Name des Vorhabens“, wenn `renaming` dieses Vorhaben meint), Kontextmenü nach AK 8 (Muster `SidebarItem`), und aufgeklappt die `SidebarItem`s nach AK 4.
-- [ ] `Sidebar.tsx`: Props `projects`, `sessions`, `activeSessionId`, `activeProjectId`, `showProjectOverview`, `onSelectSession`, `onSelectProject`, `onNew`, `onArchived(projectId)`. Gruppen über `projectGroup`; je Vorhaben `SidebarProject`. `isExpanded = expanded[id] ?? (enthält aktive Session || Übersicht offen)`. `onOpen`: eine Session → `onSelectSession`, sonst `onSelectProject`. F2 nach AK 7. `archive(projectId)` → `archiveProject`, dann `onArchived(projectId)`. Texte nach AK 1.
+- [x] `SidebarItem.tsx`: `RenameField` exportieren und auf Props `name: string`, `label: string` (für `aria-label`), `onCommit`, `onCancel` umstellen. `SidebarItem` wird zur **Session-Zeile im Baum**: Props `session`, `isActive`, `isRenaming`, `onSelect`, `onStartRename`, `onCommitRename`, `onCancelRename` (kein `onArchive`); Darstellung nach AK 4 (neue BEM-Modifikatoren in `SidebarItem.css`, keine Meta-Zeile, `#N` vor dem Namen); Kontextmenü nur „Umbenennen“.
+- [x] Neue Datei `src/app/SidebarProject.tsx` + `SidebarProject.css` (Block `sidebar-project`): Props `project: ProjectSummary`, `sessions: readonly SessionSummary[]` (dieses Vorhabens, nach Nummer), `activeSessionId`, `isOverviewActive: boolean`, `isExpanded: boolean`, `renaming`, Callbacks `onToggle`, `onOpen`, `onSelectSession(id)`, `onStartRename(kind, id)`, `onCommitRename(kind, id, name)`, `onCancelRename`, `onArchive`. Rendert Zeile nach AK 3 (bzw. `RenameField` mit `label` „Neuer Name des Vorhabens“, wenn `renaming` dieses Vorhaben meint), Kontextmenü nach AK 8 (Muster `SidebarItem`), und aufgeklappt die `SidebarItem`s nach AK 4.
+- [x] `Sidebar.tsx`: Props `projects`, `sessions`, `activeSessionId`, `activeProjectId`, `showProjectOverview`, `onSelectSession`, `onSelectProject`, `onNew`, `onArchived(projectId)`. Gruppen über `projectGroup`; je Vorhaben `SidebarProject`. `isExpanded = expanded[id] ?? (enthält aktive Session || Übersicht offen)`. `onOpen`: eine Session → `onSelectSession`, sonst `onSelectProject`. F2 nach AK 7. `archive(projectId)` → `archiveProject`, dann `onArchived(projectId)`. Texte nach AK 1.
 
 ### Kopfzeile und Rahmen
 
-- [ ] `SessionHeader.tsx`: neue Props `projectName: string`, `onOpenProject: () => void`; linke Spalte nach AK 9 (neue Klassen `session-header__project`, `session-header__crumb`, `session-header__number` in `SessionHeader.css`).
-- [ ] `App.tsx`: `useProjectSummaries()` einbinden; `Sidebar` mit den neuen Props; `onArchived(projectId)`: `removeProject(projectId)` und `removeSession` für jede Session mit dieser `projectId`. `handleCreated` bleibt für die Session; zusätzlich `upsertProject` mit dem Vorhaben — dafür bekommt `NewSession` `onCreated: (created: ProjectCreated) => void` und reicht das ganze `ProjectCreated` weiter. `SessionHeader` bekommt `projectName` (Name des Vorhabens der Session, Fallback Session-Name) und `onOpenProject` (`selectProject(session.projectId)`).
-- [ ] `App.tsx`, Übergang bis Phase 4: Ist `showProjectOverview` gesetzt, rendert `renderMain` vorerst die Session mit der höchsten Nummer dieses Vorhabens (so bleibt die App bedienbar); Phase 4 ersetzt das durch die Übersicht.
-- [ ] `NewSession.tsx` und `EmptyState.tsx`: Texte nach AK 10 und 11.
+- [x] `SessionHeader.tsx`: neue Props `projectName: string`, `onOpenProject: () => void`; linke Spalte nach AK 9 (neue Klassen `session-header__project`, `session-header__crumb`, `session-header__number` in `SessionHeader.css`).
+- [x] `App.tsx`: `useProjectSummaries()` einbinden; `Sidebar` mit den neuen Props; `onArchived(projectId)`: `removeProject(projectId)` und `removeSession` für jede Session mit dieser `projectId`. `handleCreated` bleibt für die Session; zusätzlich `upsertProject` mit dem Vorhaben — dafür bekommt `NewSession` `onCreated: (created: ProjectCreated) => void` und reicht das ganze `ProjectCreated` weiter. `SessionHeader` bekommt `projectName` (Name des Vorhabens der Session, Fallback Session-Name) und `onOpenProject` (`selectProject(session.projectId)`).
+- [x] `App.tsx`, Übergang bis Phase 4: Ist `showProjectOverview` gesetzt, rendert `renderMain` vorerst die Session mit der höchsten Nummer dieses Vorhabens (so bleibt die App bedienbar); Phase 4 ersetzt das durch die Übersicht.
+- [x] `NewSession.tsx` und `EmptyState.tsx`: Texte nach AK 10 und 11.
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Zeile „Vorhaben“ Oberfläche ergänzen (`src/features/projects/` `useProjectSummaries`, `projectStatus`; `src/app/SidebarProject.tsx`); Zeilen „Sessions“, „App-Rahmen“, „Sidebar-Zeile“ auf den Baum und den Pfad in der Kopfzeile bringen; `src/stores/sessions.ts` mit den neuen Feldern.
-- [ ] `docs/glossary.md`: „Chat-Ansicht“ unverändert; neuer Eintrag **Übersicht (Vorhaben)**: „Hauptansicht eines Vorhabens: TL;DR, Repositories, Sessions, ‚Neue Session‘; Reiter ‚Übersicht · Changes‘.“
-- [ ] README dieses Plans: Phase 3 auf `complete`.
+- [x] `docs/code-map.md`: Zeile „Vorhaben“ Oberfläche ergänzen (`src/features/projects/` `useProjectSummaries`, `projectStatus`; `src/app/SidebarProject.tsx`); Zeilen „Sessions“, „App-Rahmen“, „Sidebar-Zeile“ auf den Baum und den Pfad in der Kopfzeile bringen; `src/stores/sessions.ts` mit den neuen Feldern.
+- [x] `docs/glossary.md`: „Chat-Ansicht“ unverändert; neuer Eintrag **Übersicht (Vorhaben)**: „Hauptansicht eines Vorhabens: TL;DR, Repositories, Sessions, ‚Neue Session‘; Reiter ‚Übersicht · Changes‘.“
+- [x] README dieses Plans: Phase 3 auf `complete`.
 
 ## Report-Back
+
+Sidebar ist ein Baum aus Vorhaben (Chevron, eingerückte Sessions, dringendste Session bestimmt Gruppe/Symbol/Meta), Kopfzeile zeigt „Vorhaben › #N Name“, „Neues Vorhaben“-Texte und Leerzustand umgestellt. Die Übersicht selbst folgt in Phase 4; bis dahin zeigt `App.tsx` dort die Session mit der höchsten Nummer. `pnpm check` grün.

@@ -151,7 +151,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
 
   function runSessionCommand(command: SessionCommand): void {
     if (command === 'rename') {
-      startRename(session.id);
+      startRename('session', session.id);
     } else if (command === 'changes') {
       showView('changes');
     } else {

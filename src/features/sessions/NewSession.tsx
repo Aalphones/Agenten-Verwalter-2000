@@ -16,7 +16,6 @@ import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
-import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { discardAttachment } from '@/lib/attachments';
 import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/labels';
 import { createProject } from '@/lib/projects';
@@ -34,7 +33,7 @@ const NO_ATTACHMENTS: Attachment[] = [];
 type OpenMenu = 'model' | 'mode' | 'plus' | 'command' | null;
 
 interface NewSessionProps {
-  onCreated: (summary: SessionSummary) => void;
+  onCreated: (created: ProjectCreated) => void;
   onCancel: () => void;
 }
 
@@ -113,7 +112,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
       .then((created: ProjectCreated) => {
         // Die Dateien liegen jetzt im Workspace des Vorhabens.
         useAttachmentsStore.getState().clear(NEW_SESSION_KEY);
-        onCreated(created.session);
+        onCreated(created);
       })
       .catch((reason: unknown) => {
         setErrorMessage(describeStartError(reason));
@@ -152,7 +151,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   return (
     <div className="new-session">
       <header className="new-session__header">
-        <h1 className="new-session__title">Neue Session</h1>
+        <h1 className="new-session__title">Neues Vorhaben</h1>
       </header>
       <form className="new-session__form" onSubmit={handleSubmit}>
         <section className="new-session__section">
@@ -244,8 +243,8 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
             )}
           </div>
           <p className="new-session__note">
-            Der erste Satz wird zum Namen der Session (später per Rechtsklick änderbar), der ganze
-            Text samt Anhängen zur ersten Nachricht an den Agenten.
+            Der erste Satz wird zum Namen des Vorhabens und seiner ersten Session (später per
+            Rechtsklick änderbar), der ganze Text samt Anhängen zur ersten Nachricht an den Agenten.
           </p>
         </section>
         <RepositoryPicker selectedIds={repositoryIds} onChange={setRepositoryIds} />
@@ -308,7 +307,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
         </section>
         <div className="new-session__footer">
           <button type="submit" className="new-session__start" disabled={!canStart}>
-            Session starten
+            Vorhaben starten
           </button>
           <button type="button" className="new-session__cancel" onClick={cancel}>
             Abbrechen

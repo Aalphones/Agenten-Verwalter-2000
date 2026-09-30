@@ -16,6 +16,45 @@
     min-width: 0;
   }
 
+  &__project {
+    flex: 0 1 auto;
+    box-sizing: border-box;
+    max-width: 45%;
+    height: 26px;
+    padding: 0 var(--space-sm);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-fg-muted);
+    font: inherit;
+    font-size: var(--font-size-md);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  &__crumb {
+    flex-shrink: 0;
+    color: var(--color-fg-muted);
+  }
+
+  &__number {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--color-fg-muted);
+  }
+
   &__name {
     overflow: hidden;
     margin: 0;

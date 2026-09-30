@@ -27,6 +27,7 @@ type OpenPanel = 'context' | 'usage';
 
 interface SessionHeaderProps {
   session: SessionSummary;
+  projectName: string;
   activeView: SessionView;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
@@ -35,16 +36,19 @@ interface SessionHeaderProps {
   isBackgroundOpen: boolean;
   onToggleBackground: () => void;
   onShowView: (view: SessionView) => void;
+  onOpenProject: () => void;
 }
 
 export function SessionHeader({
   session,
+  projectName,
   activeView,
   changesCount,
   runningBackgroundCount,
   isBackgroundOpen,
   onToggleBackground,
   onShowView,
+  onOpenProject,
 }: SessionHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
   const [openPanel, setOpenPanel] = useState<OpenPanel | null>(null);
@@ -154,6 +158,29 @@ export function SessionHeader({
   return (
     <header className="session-header">
       <div className="session-header__title">
+        <button
+          type="button"
+          className="session-header__project"
+          title="Übersicht des Vorhabens öffnen"
+          onClick={onOpenProject}
+        >
+          {projectName}
+        </button>
+        <svg
+          className="session-header__crumb"
+          width="11"
+          height="11"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4.5 2.5 8 6l-3.5 3.5" />
+        </svg>
+        <span className="session-header__number">#{session.number}</span>
         <h1 className="session-header__name">{session.name}</h1>
         <span className={`session-header__status session-header__status--${session.status}`}>
           <StatusIcon status={session.status} size={10} />
