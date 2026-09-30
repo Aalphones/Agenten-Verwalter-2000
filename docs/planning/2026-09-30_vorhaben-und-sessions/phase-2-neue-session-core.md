@@ -23,12 +23,12 @@ Rating: standard · Commit-Scope: `sessions`
 
 ### Core
 
-- [ ] `sessions/model.rs`: Variante `New` am Ende von `SessionStatus` mit Doc-Kommentar „Angelegt, Agent nie gestartet (neue Session in einem Vorhaben).“ `pnpm bindings`.
-- [ ] `registry.rs`, alle `match`/`matches!` auf `SessionStatus` durchgehen (rund 30 Stellen) und `New` so behandeln wie `Completed`, außer:
+- [x] `sessions/model.rs`: Variante `New` am Ende von `SessionStatus` mit Doc-Kommentar „Angelegt, Agent nie gestartet (neue Session in einem Vorhaben).“ `pnpm bindings`.
+- [x] `registry.rs`, alle `match`/`matches!` auf `SessionStatus` durchgehen (rund 30 Stellen) und `New` so behandeln wie `Completed`, außer:
   - `send`: kein Sonderfall bei den Ablehnungen; der bestehende Weg startet den Prozess, weil `state.process` leer ist. **Vor** `state.push_user(…)`: `if state.status == SessionStatus::New && state.name == format!("Session {}", session.number) { state.name = name_from_task(text); outbox.summary_dirty = true; }`.
   - `restored`: `New` bleibt `New` (gehört nicht zu `was_active`).
   - `reap_idle`/`idle_since`: `New` zählt nie als ruhend (es gibt keinen Prozess).
-- [ ] Neue Methode `pub fn create_in_project(&self, project_id: &str) -> Result<SessionSummary, CommandError>`:
+- [x] Neue Methode `pub fn create_in_project(&self, project_id: &str) -> Result<SessionSummary, CommandError>`:
   - Sessions des Vorhabens aus der Map kopieren (Map danach freigeben); keine → Fehler `Internal("Vorhaben nicht gefunden: …")` wie in Phase 1.
   - Gibt es eine mit Status `New` (je Session einzeln `lock()`), deren `summarize` zurückgeben.
   - `latest` = Session mit der höchsten `number`; aus `latest.lock()` Modell, Denkaufwand, Modus lesen und die Sperre freigeben.
@@ -36,20 +36,20 @@ Rating: standard · Commit-Scope: `sessions`
   - `Session { id, project_id, number, workspace: latest.workspace.clone(), repositories: latest.repositories.clone(), database, state }`.
   - Speichern in **einem** `database.with`: `session_rows::upsert(row_of(…))`, `session_repositories::insert_all(connection, &id, &session.repositories)`. Fehler → `session_rows::delete` (entfernt per `ON DELETE CASCADE` auch die Repository-Zeilen), Fehler zurückgeben. Der Workspace-Ordner gehört dem Vorhaben und wird **nie** gelöscht.
   - In die Sessions-Map eintragen, `summarize` zurückgeben. Kein Ereignis (die Oberfläche übernimmt die Rückgabe wie bei `project_create`).
-- [ ] `commands/sessions.rs`: `session_create_in_project(registry, project_id: String) -> Result<SessionSummary, CommandError>`; in `lib.rs` registrieren.
+- [x] `commands/sessions.rs`: `session_create_in_project(registry, project_id: String) -> Result<SessionSummary, CommandError>`; in `lib.rs` registrieren.
 
 ### Oberfläche (nur Status-Anbindung)
 
-- [ ] `src/lib/sessions.ts`: `createSessionInProject(projectId: string): Promise<SessionSummary>` mit JSDoc („Legt im Vorhaben eine Session im Status „Neu“ an, ohne Agent; gibt es schon eine, kommt diese zurück.“, `@throws` `internal`, `database`).
-- [ ] `sessionStatus.ts`: `STATUS_LABEL.new = 'Neu'`, `STATUS_GROUP.new = 'running'`, `metaLine` Fall `'new'` → `'noch nicht gestartet'`.
-- [ ] `StatusIcon.tsx`: Fall `'new'` → `<circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2 1.6" />`; `StatusIcon.css`: `.status-icon--new { color: var(--color-fg-muted); }` nach dem Muster der übrigen `status-icon--*`-Regeln.
-- [ ] `SessionHeader.tsx` `renderControls`: `case 'new':` zu den Fällen mit `return null`; `SessionHeader.css`: `session-header__status--new` mit `color: var(--color-fg-muted)` nach dem Muster der übrigen Status-Klassen.
+- [x] `src/lib/sessions.ts`: `createSessionInProject(projectId: string): Promise<SessionSummary>` mit JSDoc („Legt im Vorhaben eine Session im Status „Neu“ an, ohne Agent; gibt es schon eine, kommt diese zurück.“, `@throws` `internal`, `database`).
+- [x] `sessionStatus.ts`: `STATUS_LABEL.new = 'Neu'`, `STATUS_GROUP.new = 'running'`, `metaLine` Fall `'new'` → `'noch nicht gestartet'`.
+- [x] `StatusIcon.tsx`: Fall `'new'` → `<circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2 1.6" />`; `StatusIcon.css`: `.status-icon--new { color: var(--color-fg-muted); }` nach dem Muster der übrigen `status-icon--*`-Regeln.
+- [x] `SessionHeader.tsx` `renderControls`: `case 'new':` zu den Fällen mit `return null`; `SessionHeader.css`: `session-header__status--new` mit `color: var(--color-fg-muted)` nach dem Muster der übrigen Status-Klassen.
 
 ### Doku
 
-- [ ] `docs/glossary.md` „Session-Status“: acht Werte, `new` = „Neu (Session im Vorhaben angelegt, Agent nie gestartet; startet mit der ersten Nachricht)“; nach einem Neustart bleibt „Neu“ „Neu“.
-- [ ] `docs/code-map.md` Zeile „Sessions“: `create_in_project` erwähnen.
-- [ ] ADR 011 Abschnitt „Entscheidung“: Satz zum Status „Neu“ und zur Regel „höchstens eine nicht gestartete Session je Vorhaben“ ergänzen, falls in Phase 1 noch nicht enthalten.
-- [ ] README dieses Plans: Phase 2 auf `complete`.
+- [x] `docs/glossary.md` „Session-Status“: acht Werte, `new` = „Neu (Session im Vorhaben angelegt, Agent nie gestartet; startet mit der ersten Nachricht)“; nach einem Neustart bleibt „Neu“ „Neu“.
+- [x] `docs/code-map.md` Zeile „Sessions“: `create_in_project` erwähnen.
+- [x] ADR 011 Abschnitt „Entscheidung“: Satz zum Status „Neu“ und zur Regel „höchstens eine nicht gestartete Session je Vorhaben“ ergänzen, falls in Phase 1 noch nicht enthalten.
+- [x] README dieses Plans: Phase 2 auf `complete`.
 
 ## Report-Back

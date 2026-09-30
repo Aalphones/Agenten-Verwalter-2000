@@ -19,6 +19,7 @@ export const STATUS_LABEL: Record<SessionStatus, string> = {
   completed: 'Abgeschlossen',
   cancelled: 'Abgebrochen',
   error: 'Fehler',
+  new: 'Neu',
 };
 
 export const STATUS_GROUP: Record<SessionStatus, SessionGroup> = {
@@ -29,6 +30,7 @@ export const STATUS_GROUP: Record<SessionStatus, SessionGroup> = {
   completed: 'done',
   cancelled: 'done',
   error: 'needsYou',
+  new: 'running',
 };
 
 /** Zweite Zeile eines Sidebar-Eintrags; `null`, wenn es nichts Nützliches zu sagen gibt. */
@@ -40,6 +42,8 @@ export function metaLine(session: SessionSummary): string | null {
       return 'Agent-Prozess beendet';
     case 'paused':
       return `pausiert · ${modelAndRepositories(session)}`;
+    case 'new':
+      return 'noch nicht gestartet';
     case 'completed':
     case 'cancelled':
       return null;

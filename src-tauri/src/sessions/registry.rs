@@ -397,6 +397,61 @@ impl SessionRegistry {
         })
     }
 
+    /// Legt im Vorhaben eine Session im Status „Neu“ an: kein Agent, kein Verlauf. Modell,
+    /// Denkaufwand, Modus, Workspace und Repositories kommen von der Session mit der höchsten
+    /// Nummer. Gibt es schon eine nicht gestartete Session, kommt diese zurück.
+    pub fn create_in_project(&self, project_id: &str) -> Result<SessionSummary, CommandError> {
+        let mut members: Vec<Arc<Session>> = self
+            .lock_sessions()
+            .values()
+            .filter(|session: &&Arc<Session>| session.project_id == project_id)
+            .cloned()
+            .collect();
+        members.sort_by_key(|session: &Arc<Session>| session.number);
+        let Some(latest) = members.last().cloned() else {
+            return Err(project_not_found(project_id));
+        };
+        for member in &members {
+            let state = member.lock();
+            if state.status == SessionStatus::New {
+                return Ok(summarize(member, &state));
+            }
+        }
+        let (model, effort, mode) = {
+            let state = latest.lock();
+            (state.model, state.effort, state.mode)
+        };
+        let number = latest.number + 1;
+        let id = uuid::Uuid::new_v4().to_string();
+        let mut state = SessionState::new(format!("Session {number}"), model, effort, mode);
+        state.status = SessionStatus::New;
+        state.ticket_roots = worktrees::ticket_roots(&latest.repositories);
+        let session = Arc::new(Session {
+            id: id.clone(),
+            project_id: project_id.to_owned(),
+            number,
+            workspace: latest.workspace.clone(),
+            repositories: latest.repositories.clone(),
+            database: Arc::clone(&self.database),
+            state: Mutex::new(state),
+        });
+        let row = row_of(&session, &session.lock());
+        let saved = self.database.with(|connection| {
+            session_rows::upsert(connection, &row)?;
+            session_repositories::insert_all(connection, &id, &session.repositories)
+        });
+        if let Err(error) = saved {
+            // Der Workspace gehört dem Vorhaben und bleibt liegen.
+            let _ = self
+                .database
+                .with(|connection| session_rows::delete(connection, &id));
+            return Err(error);
+        }
+        self.lock_sessions().insert(id, Arc::clone(&session));
+        let summary = summarize(&session, &session.lock());
+        Ok(summary)
+    }
+
     /// Rückbau eines Vorhabens, dessen Anlegen gescheitert ist. Die Zeilen einer nie gestarteten
     /// Session kämen sonst beim nächsten Start als Geister-Vorhaben wieder. Hält Windows den
     /// Workspace-Ordner noch fest, bleibt er liegen — für den Nutzer kein Fehler.
@@ -559,7 +614,7 @@ impl SessionRegistry {
                     state.push_user(outbox, text, Vec::new(), skill);
                     return Ok(());
                 }
-                // Ohne Prozess (wiederhergestellte Session) startet der Agent hier, mit dem bisherigen Verlauf.
+                // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem bisherigen Verlauf.
                 if state.process.is_none() || state.effort != state.process_effort {
                     start_process(app, &session, state, outbox)?;
                 }
@@ -567,6 +622,13 @@ impl SessionRegistry {
                 let sent_attachments =
                     attachments::take_for_workspace(app, attachment_ids, &session.workspace)?;
                 let line = message_line(text, &sent_attachments)?;
+                // Erst nach allen Schritten, die scheitern können: ein Fehlstart lässt den Namen stehen.
+                if state.status == SessionStatus::New
+                    && state.name == format!("Session {}", session.number)
+                {
+                    state.name = name_from_task(text);
+                    outbox.summary_dirty = true;
+                }
                 state.push_user(outbox, text, sent_attachments, skill);
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)

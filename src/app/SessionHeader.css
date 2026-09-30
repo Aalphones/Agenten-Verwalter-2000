@@ -58,7 +58,8 @@
       color: var(--color-status-completed);
     }
 
-    &--cancelled {
+    &--cancelled,
+    &--new {
       color: var(--color-fg-muted);
     }
   }

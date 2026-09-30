@@ -52,6 +52,7 @@ pub fn run() {
             commands::projects::project_rename,
             commands::projects::project_archive,
             commands::sessions::session_list,
+            commands::sessions::session_create_in_project,
             commands::sessions::session_pause,
             commands::sessions::session_resume,
             commands::sessions::session_cancel,

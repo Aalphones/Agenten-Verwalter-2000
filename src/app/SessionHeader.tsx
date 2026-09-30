@@ -146,6 +146,7 @@ export function SessionHeader({
       case 'completed':
       case 'cancelled':
       case 'error':
+      case 'new':
         return null;
     }
   }

@@ -59,6 +59,18 @@ function renderShape(status: SessionStatus): ReactElement {
           <rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor" />
         </>
       );
+    case 'new':
+      return (
+        <circle
+          cx="6"
+          cy="6"
+          r="4.4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeDasharray="2 1.6"
+        />
+      );
     case 'completed':
     case 'cancelled':
       return (

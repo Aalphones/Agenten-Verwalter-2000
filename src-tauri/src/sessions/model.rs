@@ -14,6 +14,8 @@ pub enum SessionStatus {
     Completed,
     Cancelled,
     Error,
+    /// Angelegt, Agent nie gestartet (neue Session in einem Vorhaben).
+    New,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

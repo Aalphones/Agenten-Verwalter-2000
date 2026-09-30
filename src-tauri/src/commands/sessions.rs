@@ -13,6 +13,14 @@ pub async fn session_list(
 }
 
 #[tauri::command]
+pub async fn session_create_in_project(
+    registry: tauri::State<'_, SessionRegistry>,
+    project_id: String,
+) -> Result<SessionSummary, CommandError> {
+    registry.create_in_project(&project_id)
+}
+
+#[tauri::command]
 pub async fn session_pause(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,
