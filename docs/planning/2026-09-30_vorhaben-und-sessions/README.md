@@ -14,14 +14,15 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 4 | Oberfläche: Übersicht des Vorhabens, „Neue Session“ | [phase-4-vorhaben-uebersicht.md](phase-4-vorhaben-uebersicht.md) | standard | pending |
 | 5 | Core: TL;DR erzeugen | [phase-5-tldr-core.md](phase-5-tldr-core.md) | heikel | pending |
 | 6 | Oberfläche: TL;DR-Karten, Doku-Abschluss | [phase-6-tldr-oberflaeche.md](phase-6-tldr-oberflaeche.md) | standard | pending |
+| 7 | Repository nachträglich an ein Vorhaben hängen (**läuft nach Phase 4, vor Phase 5**) | [phase-7-repository-anhaengen.md](phase-7-repository-anhaengen.md) | heikel | pending |
 
 **Reihenfolge der drei offenen Pläne: dieser Plan → „Meilenstein 6 — UI auf Zielbild, plus Altlasten“ → „Sprachdiktat“.** M6 (Phase 3 bis 5) und Sprachdiktat sind gegen den Stand nach diesem Plan geschrieben. Dieser Plan belegt Migration 005 und ADR 011; M6 nimmt danach Migration 006 und ADR 012, Sprachdiktat ADR 009.
 
-**Start erst, wenn der Plan „Kontext und Kontingent“ archiviert ist (erledigt)** — beide Pläne ändern `src/app/SessionHeader.tsx`, und Phase 6 benutzt `formatClock` aus dessen Phase 3 (`src/features/context/formatTokens.ts`). Reihenfolge fest: 1 → 2 → 3 → 4 → 5 → 6 (jede Phase baut auf den Typen der vorigen auf). Umsetzung direkt auf `main`, ein Commit pro Phase (Scopes: Phase 1 `projects`, Phase 2 `sessions`, Phase 3 `ui`, Phase 4 `projects`, Phase 5 `tldr`, Phase 6 `tldr`; die Scopes `projects` und `tldr` trägt Phase 1 bzw. 5 in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Die Liste der exportierten Typen steht in `src-tauri/src/bin/gen-bindings.rs` (M6 Phase 1 zieht die Datei erst nach diesem Plan nach `src-tauri/examples/` um). Das Projekt hat keine automatisierten Tests und bekommt keine. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
+**Start erst, wenn der Plan „Kontext und Kontingent“ archiviert ist (erledigt)** — beide Pläne ändern `src/app/SessionHeader.tsx`, und Phase 6 benutzt `formatClock` aus dessen Phase 3 (`src/features/context/formatTokens.ts`). Reihenfolge fest: 1 → 2 → 3 → 4 → **7** → 5 → 6 (jede Phase baut auf den Typen der vorigen auf; Phase 7 trägt die Nummer 7, damit die Verweise auf Phase 5 und 6 gültig bleiben, und setzt die Übersicht aus Phase 4 voraus). Umsetzung direkt auf `main`, ein Commit pro Phase (Scopes: Phase 1 `projects`, Phase 2 `sessions`, Phase 3 `ui`, Phase 4 `projects`, Phase 5 `tldr`, Phase 6 `tldr`, Phase 7 `projects`; die Scopes `projects` und `tldr` trägt Phase 1 bzw. 5 in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Die Liste der exportierten Typen steht in `src-tauri/src/bin/gen-bindings.rs` (M6 Phase 1 zieht die Datei erst nach diesem Plan nach `src-tauri/examples/` um). Das Projekt hat keine automatisierten Tests und bekommt keine. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus ADR 011 „Vorhaben und Sessions“, Phase 5 ergänzt den Abschnitt TL;DR (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). ADR 009 ist vom geparkten Plan „Sprachdiktat“ reserviert, ADR 012 vom Plan M6.
+Phase 1 schreibt daraus ADR 011 „Vorhaben und Sessions“, Phase 5 ergänzt den Abschnitt TL;DR, Phase 7 den Abschnitt „Repository nachträglich anhängen“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). ADR 009 ist vom geparkten Plan „Sprachdiktat“ reserviert, ADR 012 vom Plan M6.
 
 ### Begriffe und Namen
 
@@ -149,6 +150,7 @@ In TypeScript heißt der neue Status `'new'`.
 | `project_rename` | `projectId`, `name` | — | `renameProject(projectId, name)` | 1 |
 | `project_archive` | `projectId` | — | `archiveProject(projectId)` | 1 (ersetzt `session_archive`) |
 | `session_create_in_project` | `projectId` | `SessionSummary` | `createSessionInProject(projectId)` in `src/lib/sessions.ts` | 2 |
+| `project_add_repository` | `projectId`, `repositoryId` | `ProjectSummary` | `addRepositoryToProject(projectId, repositoryId)` in `src/lib/projects.ts` | 7 |
 | `tldr_session_load` | `sessionId` | `SessionTldrView` | `loadSessionTldr(sessionId)` in `src/lib/tldr.ts` | 5 |
 | `tldr_session_create` | `sessionId` | — (startet im Hintergrund) | `createSessionTldr(sessionId)` | 5 |
 | `tldr_project_load` | `projectId` | `ProjectTldrView` | `loadProjectTldr(projectId)` | 5 |
@@ -199,7 +201,8 @@ toggleCollapsed(sessionId): void;
 10. Die Übersicht zeigt das TL;DR des Vorhabens und an jeder Session-Karte deren Kurzfassung oder „TL;DR erstellen“; der Knopf am Vorhaben erstellt fehlende Session-TL;DRs mit.
 11. In einer neuen Session schickt die erste Nachricht das TL;DR des Vorhabens mit, solange der Haken gesetzt ist.
 12. Kein TL;DR-Lauf hinterlässt einen laufenden `claude.exe`; keiner öffnet ein Konsolenfenster; ein Fehler steht als Satz an der Karte.
-13. `pnpm check` grün; ADR 011, Code-Map, Glossar, AGENTS.md, PROJECT.md, `commits.md`, claude-stream-json.md und die Entwurfs-README beschreiben den Stand.
+13. Ein Vorhaben ohne Repository bekommt über „+ Repository“ in der Übersicht ein Repository angehängt: der Reiter „Changes“ erscheint in Übersicht und Session, die Changes zeigen alles seit dem Anlegen des Vorhabens (Phase 7).
+14. `pnpm check` grün; ADR 011, Code-Map, Glossar, AGENTS.md, PROJECT.md, `commits.md`, claude-stream-json.md und die Entwurfs-README beschreiben den Stand.
 
 ## Smoke-Checkliste (macht Sascha am Plan-Ende)
 
@@ -215,7 +218,8 @@ Wackelstellen zuerst:
 8. TL;DR veraltet: nach dem TL;DR noch zwei Nachrichten schicken → „Stand HH:MM · N neue Einträge seitdem“ mit Knopf „Aktualisieren“. Karte einklappen → eine Zeile mit der Kurzfassung.
 9. Netzwerk trennen, „TL;DR erstellen“ → Fehlersatz an der Karte, die App bleibt bedienbar.
 10. Changes: in `#1` einen Ticket-Worktree benutzen lassen, dann `#2` öffnen → Reiter „Changes“ zeigt den Ticket-Worktree auch dort.
-11. Hell- und Dunkelmodus: Sidebar-Baum, Übersicht, TL;DR-Karten lesbar; mit den Tafeln im Entwurf vergleichen.
+11. **Repository nachträglich anhängen (Phase 7), Wackelstelle Basis:** Vorhaben ohne Repository anlegen, den Agenten in einem Repository eine Datei ändern und committen lassen, dann in der Übersicht „+ Repository“ → das Repository wählen → Reiter „Changes“ erscheint und zeigt den Commit und die Datei. Danach in einer ruhenden Session (Status „Abgeschlossen“) eine Nachricht schicken → der Agent kennt das Repository (nachfragen: „In welchen Ordnern darfst du arbeiten?“).
+12. Hell- und Dunkelmodus: Sidebar-Baum, Übersicht, TL;DR-Karten lesbar; mit den Tafeln im Entwurf vergleichen.
 
 ## Follow-ups
 
