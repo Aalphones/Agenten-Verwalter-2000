@@ -19,12 +19,16 @@ Rating: standard. Jede Fehlerstelle hat unten ihren Zielort und ihren Text.
 
 ## Fehlerstellen
 
+Die Zeilennummern sind der Stand vor dem Plan „Vorhaben und Sessions“ und dienen nur zum Wiederfinden: jede Stelle über das `console.error` in der genannten Datei suchen. Die TL;DR-Fehler (Sätze an den Karten) und `project_create` in `NewSession.tsx` zeigt der andere Plan schon selbst an; sie stehen hier nicht.
+
 | Datei (Zeile heute) | Fehler | Ort in der Oberfläche | Text |
 |---|---|---|---|
-| `useSessionSummaries.ts` (74) | Sessions laden | Sidebar statt „Noch keine Sessions.“ | Sessions nicht ladbar: <Grund> |
+| `useSessionSummaries.ts` (74) | Sessions laden | Sidebar statt „Noch keine Vorhaben.“ | Sessions nicht ladbar: <Grund> |
 | `useSessionSummaries.ts` (52) | Abo auf Session-Änderungen | Sidebar, Zeile über der Liste | Sessions werden nicht mehr aktualisiert: <Grund> |
-| `Sidebar.tsx` (52) | Umbenennen | Sidebar, Zeile über dem Fuß, bis zur nächsten Sidebar-Aktion | Umbenennen fehlgeschlagen: <Grund> |
-| `Sidebar.tsx` (63) | Archivieren | wie oben | Archivieren fehlgeschlagen: <Grund> |
+| `useProjectSummaries.ts` (Plan „Vorhaben und Sessions“, Phase 3: Kopie des Musters von `useSessionSummaries`) | Vorhaben laden bzw. Abo auf `project://changed` | wie die beiden Zeilen darüber; ein Ladefehler beider Hooks zeigt nur einen Satz (Vorhaben zuerst) | Vorhaben nicht ladbar: <Grund> bzw. Vorhaben werden nicht mehr aktualisiert: <Grund> |
+| `Sidebar.tsx` (Umbenennen von Vorhaben und Sessions, `renameProject`/`renameSession`) | Umbenennen | Sidebar, Zeile über dem Fuß, bis zur nächsten Sidebar-Aktion | Umbenennen fehlgeschlagen: <Grund> |
+| `Sidebar.tsx` (Archivieren, `archiveProject`) | Vorhaben archivieren | wie oben | Archivieren fehlgeschlagen: <Grund> |
+| `ProjectOverview.tsx` (Plan „Vorhaben und Sessions“, Phase 4) | Neue Session anlegen | schon dort als Satz unter dem Sessions-Kopf umgesetzt — hier nichts zu tun, nur prüfen, dass die Stelle nicht doppelt gemeldet wird | — |
 | `SessionHeader.tsx` (85) | Pause, Abbrechen, Fortsetzen | `SessionActionError` | Aktion fehlgeschlagen: <Grund> |
 | `ChatView.tsx` (29) | Pause per Esc | `SessionActionError` | Pausieren fehlgeschlagen: <Grund> |
 | `ChatTimeline.tsx` (199) | Rückfrage beantworten | `SessionActionError` | Antwort nicht gesendet: <Grund> |
@@ -50,7 +54,7 @@ Rating: standard. Jede Fehlerstelle hat unten ihren Zielort und ihren Text.
 
 ### Übrige Stellen
 
-- [ ] `useSessionSummaries`: Rückgabe um `error: string | null` erweitern (Ladefehler gewinnt über Abo-Fehler); `App.tsx` reicht ihn an `Sidebar` (Prop `loadError`), die ihn nach Tabelle zeigt (Klasse `sidebar__error`, 12 px Fehlerfarbe, Rand wie `sidebar__empty`).
+- [ ] `useSessionSummaries` und `useProjectSummaries`: Rückgabe je um `error: string | null` erweitern (Ladefehler gewinnt über Abo-Fehler); `App.tsx` reicht den ersten gesetzten (Vorhaben vor Sessions) an `Sidebar` (Prop `loadError`), die ihn nach Tabelle zeigt (Klasse `sidebar__error`, 12 px Fehlerfarbe, Rand wie `sidebar__empty`).
 - [ ] `Sidebar.tsx`: `useActionError` aus `src/features/background/` nach `src/lib/useActionError.ts` verschieben (Import in `ProcessesTab`, `SubagentsTab`, `ScratchpadTab` anpassen) und für Umbenennen und Archivieren nutzen (`scopeKey` = `'sidebar'`); Zeile über dem Fuß, Klasse `sidebar__error`. Die Texte der Tabelle als Präfix: `run` bekommt dafür einen zweiten Parameter `prefix: string` und setzt `message` auf `${prefix}: ${commandErrorText(reason)}`; die bestehenden Aufrufer im Hintergrund-Panel übergeben `''` und behalten den Text ohne Präfix (bei leerem Präfix kein Doppelpunkt).
 - [ ] `ErrorBlock.tsx`: Zustand `logError: string | null`; `renderLog` zeigt ihn an Stelle des Protokolls.
 - [ ] `useChatEntries`: Rückgabe um `loadError: string | null` und `olderError: string | null` erweitern (`olderError` wird beim nächsten `loadOlder` zurückgesetzt); `ChatView` zeigt `loadError` an Stelle der `ChatTimeline`, `ChatTimeline` bekommt `olderError` als Prop und rendert ihn als erste Zeile (außerhalb der virtualisierten Zeilen, oberhalb des Zeilen-Containers).

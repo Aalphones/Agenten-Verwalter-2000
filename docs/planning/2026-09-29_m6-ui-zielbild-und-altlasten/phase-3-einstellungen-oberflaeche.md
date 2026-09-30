@@ -15,12 +15,12 @@ Rating: standard. Struktur und Texte stehen unten; Maße aus dem Entwurfs-README
 
 ## Abnahmekriterien
 
-1. Sidebar: unter der Session-Liste ein Fuß (`padding: 8px 10px`, `border-top: 1px solid var(--color-border-subtle)`) mit dem Knopf „Einstellungen“ (volle Breite, 30 px, Radius 6 px, Symbol 14 px aus dem Prototyp Zeile 73, Farbe `fg-secondary`, Hintergrund `bg-selected`, solange die Seite offen ist, sonst transparent mit `bg-hover` beim Überfahren, `aria-current="page"` wenn offen).
-2. Klick öffnet die Einstellungsseite im Inhaltsbereich statt Session bzw. „Neue Session“; die Sidebar markiert dann keine Session, das Hintergrund-Panel ist zu. Klick auf eine Session, „Neue Session“ oder Ctrl+N verlässt die Seite.
+1. Sidebar: unter der Vorhaben-Liste ein Fuß (`padding: 8px 10px`, `border-top: 1px solid var(--color-border-subtle)`) mit dem Knopf „Einstellungen“ (volle Breite, 30 px, Radius 6 px, Symbol 14 px aus dem Prototyp Zeile 73, Farbe `fg-secondary`, Hintergrund `bg-selected`, solange die Seite offen ist, sonst transparent mit `bg-hover` beim Überfahren, `aria-current="page"` wenn offen).
+2. Klick öffnet die Einstellungsseite im Inhaltsbereich statt Session bzw. „Neue Session“; die Sidebar markiert dann keine Session, das Hintergrund-Panel ist zu. Klick auf eine Session, ein Vorhaben, „Neues Vorhaben“ oder Ctrl+N verlässt die Seite.
 3. Seite nach Prototyp: Kopf 48 px mit `<h1>` „Einstellungen“ (13,5 px, 600), `border-bottom` `border-subtle`, 20 px Seitenrand; Inhalt höchstens 780 px, zentriert, Rand 20 px / 32 px, scrollt senkrecht, Abstand 22 px zwischen Abschnitten; Abschnitts-Überschrift 11 px, 600, Großbuchstaben, `letter-spacing: 0.05em`, `fg-muted`, 6 px Abstand darunter; jede Zeile ein Raster `230px minmax(0, 1fr)`, 16 px Spaltenabstand, 8 px oben/unten, `border-top` `border-subtle`; in der Beschriftung neben dem Text ein ⓘ-Knopf 18 × 18 px (Symbol aus Prototyp Zeile 640, `fg-muted`, `cursor: help`, `title` = Erklärung, `aria-label` = „Erklärung zu <Beschriftung>: <Erklärung>“).
 4. Die acht Zeilen und ihre Bedienelemente wie unter „Zeilen“ unten; Texte wörtlich.
 5. Farbschema wirkt beim Klick sofort (Klasse an `<html>`, Titelleiste), wird gespeichert und in `localStorage` gespiegelt; beim nächsten Start setzt `main.tsx` die Klasse vor dem ersten Rendern. Scheitert das Speichern, springt das Segment auf den gespeicherten Wert zurück und die Seite zeigt den Fehler (AK 9).
-6. „Neue Session“ startet mit Standardmodell, Standard-Modus und Standard-Denkaufwand aus den Einstellungen; sind die Einstellungen noch nicht geladen, mit `sonnet` / `auto` / `high`.
+6. „Neues Vorhaben“ startet mit Standardmodell, Standard-Modus und Standard-Denkaufwand aus den Einstellungen; sind die Einstellungen noch nicht geladen, mit `sonnet` / `auto` / `high`.
 7. Der Erklärtext der Repository-Auswahl nennt den eingestellten Präfix statt fest `verwalter/`.
 8. Branch-Präfix: Enter oder Verlassen des Felds speichert, wenn sich der Wert geändert hat; Esc setzt das Feld auf den gespeicherten Wert zurück. Ein Fehler steht als Satz in Fehlerfarbe (12 px) in der zweiten Rasterspalte unter dem Feld, bis der nächste Speicherversuch gelingt.
 9. Scheitert `loadSettings` oder ein Speichern (außer Branch-Präfix, AK 8), steht unter dem Seitenkopf ein Satz in Fehlerfarbe: „Einstellungen nicht ladbar: <Grund>“ bzw. „Nicht gespeichert: <Grund>“ (`commandErrorText`).
@@ -31,11 +31,11 @@ Rating: standard. Struktur und Texte stehen unten; Maße aus dem Entwurfs-README
 | Abschnitt | Beschriftung | Bedienelement | ⓘ-Erklärung (wörtlich) |
 |---|---|---|---|
 | Darstellung | Farbschema | Segment (`role="group"`, `aria-label="Farbschema"`) Dunkel · Hell · System; Rahmen 1 px `border-subtle`, Radius 8 px, 2 px Innenabstand, 2 px Lücke; Knöpfe 26 px hoch, 14 px seitlich, Radius 6 px, 12,5 px, 500; gewählt `bg-selected` + `fg-primary`, sonst transparent + `fg-secondary`; `aria-pressed` | System folgt der Windows-Einstellung für hell oder dunkel. |
-| Agent | Standardmodell | Auswahlknopf (s. u.) mit Modellname aus `MODEL_OPTIONS`; öffnet `ModelMenu` unterhalb, `title="Modell für neue Sessions"`, `note="Gilt ab der nächsten neuen Session."` | Mit diesem Modell startet eine neue Session. In der Session jederzeit über die Eingabeleiste änderbar. |
-| Agent | Standard-Modus | Auswahlknopf mit „<Modus-Label> · Denkaufwand <Effort-Label>“; öffnet `ModeMenu` unterhalb mit `align="start"` | Wie selbstständig Claude arbeitet und wie gründlich es nachdenkt. Gilt für neue Sessions; in der Session mit Umschalt + Tab bzw. über die Eingabeleiste wechselbar. |
+| Agent | Standardmodell | Auswahlknopf (s. u.) mit Modellname aus `MODEL_OPTIONS`; öffnet `ModelMenu` unterhalb, `title="Modell für neue Vorhaben"`, `note="Gilt ab dem nächsten neuen Vorhaben."` | Mit diesem Modell startet die erste Session eines neuen Vorhabens; weitere Sessions im Vorhaben übernehmen den Stand der letzten. In der Session jederzeit über die Eingabeleiste änderbar. |
+| Agent | Standard-Modus | Auswahlknopf mit „<Modus-Label> · Denkaufwand <Effort-Label>“; öffnet `ModeMenu` unterhalb mit `align="start"` | Wie selbstständig Claude arbeitet und wie gründlich es nachdenkt. Gilt für neue Vorhaben; in der Session mit Umschalt + Tab bzw. über die Eingabeleiste wechselbar. |
 | Skills | Benutzer-Skills | Text: Pfad (`font-mono` 12 px `fg-secondary`, abgeschnitten mit …), daneben „<n> Skills“ (12 px `fg-muted`; bei 1 „1 Skill“); Knopf „Im Explorer zeigen“ | Skills aus deinem Benutzerordner stehen in jeder Session zur Verfügung. |
 | Skills | Projekt-Skills | Text: „<Name> <n>“ je bekanntem, nicht fehlendem Repository mit `skillCount > 0`, getrennt mit „ · “, daneben „je Repository“; keines → „Keine Repository-Skills“ ohne Zusatz; während des Ladens „…“ | Skills aus den .claude\skills-Ordnern der Repositories einer Session. Welche gelten, hängt davon ab, welche Repositories die Session umfasst. |
-| Git | Branch-Präfix | Textfeld 300 × 30 px, `font-mono` 12,5 px, Rahmen 1 px `border`, Radius 6 px, `bg-surface`, `aria-label="Branch-Präfix"` | Jede Session legt pro Repository einen Branch mit diesem Präfix und ihrem Namen an. Gilt für neue Sessions. |
+| Git | Branch-Präfix | Textfeld 300 × 30 px, `font-mono` 12,5 px, Rahmen 1 px `border`, Radius 6 px, `bg-surface`, `aria-label="Branch-Präfix"` | Jedes neue Vorhaben legt pro Repository einen Branch mit diesem Präfix und seinem Namen an. Gilt für neue Vorhaben. |
 | Git | Ordner für Worktrees | Text: Pfad wie bei Benutzer-Skills, ohne Zusatz; Knopf „Im Explorer zeigen“ | Hier legt die App die Arbeitsordner der Sessions an. Ein kurzer Pfad vermeidet die Windows-Grenze von 260 Zeichen. |
 | Rechte | Dateizugriff | Text „Nur Session-Workspace“ (13 px `fg-secondary`, keine Monoschrift) | Ein Agent sieht nur die Worktrees seiner eigenen Session, nicht dein Benutzerverzeichnis. |
 
@@ -54,9 +54,9 @@ Auswahlknopf: 300 × 30 px, 10 px seitlich, Rahmen 1 px `border`, Radius 6 px, `
 
 ### Navigation
 
-- [ ] `src/stores/sessions.ts`: `showSettings`, `openSettings`, `closeSettings` nach Kontrakt; `selectSession` und `openNewSession` setzen zusätzlich `showSettings: false`.
+- [ ] `src/stores/sessions.ts`: `showSettings`, `openSettings`, `closeSettings` nach Kontrakt; `selectSession`, `selectProject` und `openNewSession` setzen zusätzlich `showSettings: false`; `openSettings` setzt zusätzlich `showProjectOverview: false` (Felder aus dem Plan „Vorhaben und Sessions“).
 - [ ] `src/app/Sidebar.tsx` + `.css`: neue Props `isSettingsOpen: boolean`, `onOpenSettings: () => void`; Fuß `sidebar__footer` mit Knopf `sidebar__settings` (`--active` bei offen) nach AK 1, nach `sidebar__list`.
-- [ ] `src/app/App.tsx`: `showSettings` lesen; `renderMain` zeigt bei `showSettings` die Seite (vor der Prüfung auf `showNewSession`); `visibleSession` ist `null`, wenn `showSettings` oder `showNewSession`; `activeSessionId` an die Sidebar `null`, wenn eines davon offen ist. `useSessionChanges` bekommt dann `null` wie bei „Neue Session“.
+- [ ] `src/app/App.tsx`: `showSettings` lesen; `renderMain` zeigt bei `showSettings` die Seite (vor der Prüfung auf `showNewSession`); `visibleSession` ist `null`, wenn `showSettings` oder `showNewSession`; `activeSessionId` an die Sidebar `null`, wenn eines davon offen ist; ebenso ist bei offenen Einstellungen keine Vorhaben-Übersicht hervorgehoben (`isOverviewActive` false) und `renderMain` prüft `showSettings` vor `showProjectOverview`. `useSessionChanges` bekommt dann `null` wie bei „Neue Session“.
 
 ### Seite
 
@@ -71,7 +71,7 @@ Auswahlknopf: 300 × 30 px, 10 px seitlich, Rahmen 1 px `border`, Radius 6 px, `
 
 ### Standardwerte und Präfix-Text
 
-- [ ] `NewSession.tsx`: `useState<ModelId>(() => useSettingsStore.getState().settings?.defaultModel ?? 'sonnet')`, ebenso Modus (`'auto'`) und Denkaufwand (`'high'`).
+- [ ] `NewSession.tsx` (seit dem Plan „Vorhaben und Sessions“ die Seite „Neues Vorhaben“; „Neue Session“ im Vorhaben übernimmt Modell, Modus und Denkaufwand der letzten Session und liest die Einstellungen nicht): `useState<ModelId>(() => useSettingsStore.getState().settings?.defaultModel ?? 'sonnet')`, ebenso Modus (`'auto'`) und Denkaufwand (`'high'`).
 - [ ] `RepositoryPicker.tsx`: der Erklärtext wird eine Funktion `pickerHint(prefix: string): string`; Präfix aus `useSettingsStore((state) => state.settings?.branchPrefix ?? 'verwalter/')`.
 
 ### Doku

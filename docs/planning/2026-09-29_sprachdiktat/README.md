@@ -12,11 +12,11 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 2 | Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme | [phase-2-aufnahme-erkennung.md](phase-2-aufnahme-erkennung.md) | heikel | pending |
 | 3 | Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
-Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `voice` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`), ab Phase 1 zusätzlich CMake (siehe Phase 1). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
+**Dieser Plan kommt zuletzt: erst „Vorhaben und Sessions“, dann „Meilenstein 6“, dann dieser.** Damit steht die Oberfläche fest, in die der Mikrofon-Knopf eingebaut wird (Sidebar-Baum, Status „Neu“, Farbschema-Mechanik, `gen-bindings.rs` unter `src-tauri/examples/`). Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `voice` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`), ab Phase 1 zusätzlich CMake (siehe Phase 1). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus ADR 009 „Sprachdiktat lokal mit Whisper“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). ADR 008 ist vom geparkten Plan „Kontext und Kontingent“ reserviert.
+Phase 1 schreibt daraus ADR 009 „Sprachdiktat lokal mit Whisper“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind ADR 008 (Kontext und Kontingent), 010 (Worktrees durch den Agenten), 011 (Plan „Vorhaben und Sessions“) und 012 (Plan M6); dieser Plan schreibt 009.
 
 - **Erkennung lokal mit whisper.cpp über die Crate `whisper-rs` (0.16).** Betrachtet und verworfen: (a) Claudes eigene Diktierfunktion — sie existiert nur in der interaktiven Terminal-Oberfläche und der VS-Code-Erweiterung, Verwalter startet Claude ohne diese Oberfläche; der interne Dienst dahinter (`/api/ws/speech_to_text/voice_stream` in `claude.exe`) ist nicht dokumentiert, bräuchte die claude.ai-Anmeldung aus Claudes Anmeldedatei und bricht bei jedem Update still. (b) Web-Spracherkennung (`webkitSpeechRecognition`) — in WebView2 nicht verfügbar. (c) Windows-Spracheingabe (Win+H) per Knopf auslösen — Cloud, fremde Leiste über der App, Fehler für Verwalter unsichtbar.
 - **Sprachmodell:** `ggml-large-v3-turbo-q5_0.bin`, 574 041 195 Bytes, SHA-256 `394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2`, geladen von `https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin` (Adresse auf einen festen Stand gepinnt; Größe und Prüfsumme am 2026-09-29 per HEAD-Abfrage gemessen). Abgelegt unter `<Benutzerordner>\.verwalter\models\ggml-large-v3-turbo-q5_0.bin`. Nicht im Installer. Der Download startet nur auf Klick („Einrichten“), nie von selbst.
@@ -32,7 +32,7 @@ Phase 1 schreibt daraus ADR 009 „Sprachdiktat lokal mit Whisper“ (Kontext / 
 
 ## Kontrakt
 
-### Typen (Rust, `derive(Debug, Clone, Serialize, TS)`, `serde(rename_all = "camelCase")`, in `gen-bindings.rs` eintragen)
+### Typen (Rust, `derive(Debug, Clone, Serialize, TS)`, `serde(rename_all = "camelCase")`, in `src-tauri/examples/gen-bindings.rs` eintragen — seit M6 Phase 1 liegt sie dort, nicht mehr unter `src/bin/`)
 
 `src-tauri/src/voice/model.rs`:
 

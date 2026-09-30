@@ -7,7 +7,7 @@ Rating: standard. Kontrakt und Speicherformat stehen im README; hier nur Umsetzu
 - [README dieses Plans](README.md): „Festgelegte Entscheidungen“ → „Einstellungen“, „Kontrakt“ → „Typen im Core“, „Tauri Commands“
 - Muster für ein Feature im Core: `src-tauri/src/repositories/` (`mod.rs` Fachlogik, `model.rs` Typen), `src-tauri/src/commands/repositories.rs` (Commands mit `tauri::State<'_, Arc<Database>>`), `src-tauri/src/commands/skills.rs` (Commands mit `AppHandle` und `home_dir`)
 - `src-tauri/src/db/mod.rs` (`Database::with`, `enum_to_text`, `enum_from_text`), `src-tauri/src/db/migrations.rs` + `migrations/003_background.sql` (Form einer Migration), `src-tauri/src/db/sessions.rs` (wie Enums gespeichert werden)
-- `src-tauri/src/git/mod.rs` (`run_allowing_failure`, `git_error`, einziger Ort für `git`), `src-tauri/src/worktrees/mod.rs` (`BRANCH_PREFIX`, `create_all`, `free_branch`), `src-tauri/src/sessions/registry.rs` (`SessionRegistry::create` ruft `worktrees::create_all`)
+- `src-tauri/src/git/mod.rs` (`run_allowing_failure`, `git_error`, einziger Ort für `git`), `src-tauri/src/worktrees/mod.rs` (`BRANCH_PREFIX`, `create_all`, `free_branch`), `src-tauri/src/sessions/registry.rs` (`SessionRegistry::create_project` ruft `worktrees::create_all` (vor dem Plan „Vorhaben und Sessions“ hieß sie `create`))
 - `src-tauri/src/skills/mod.rs` (`collect`), `src-tauri/src/filesystem/workspace.rs` (`home_dir`, `data_dir`, Konstante `WORKSPACES_DIR`)
 - `src-tauri/src/agents/event.rs` (`ModelId`, `Effort`, `Mode`), `src-tauri/src/error.rs`, `src-tauri/src/lib.rs` (Command-Registrierung), `src-tauri/examples/gen-bindings.rs` (seit Phase 1)
 - [ADR 004](../../decisions/004-persistenz-und-wiederherstellung.md) (Migrationen werden nie geändert, nur angehängt), [ADR 005](../../decisions/005-repositories-und-worktrees.md) (Session-Branch), [rust.md](../../conventions/rust.md)
@@ -15,20 +15,20 @@ Rating: standard. Kontrakt und Speicherformat stehen im README; hier nur Umsetzu
 
 ## Abnahmekriterien
 
-1. Migration 4 legt `settings` an; eine bestehende Datenbank mit `user_version = 3` wird beim Start ohne Datenverlust auf 4 gebracht, eine frische durchläuft 1–4.
+1. Migration 006 legt `settings` an; eine bestehende Datenbank mit `user_version = 5` wird beim Start ohne Datenverlust auf 6 gebracht, eine frische durchläuft 1–6. (Die Nummern gelten, weil der Plan „Vorhaben und Sessions“ vorher 005 belegt; ist die letzte vorhandene Migration beim Start der Phase eine andere, gilt die nächste freie Nummer und `user_version` entsprechend.)
 2. `settings_load` auf einer leeren Tabelle liefert die Standardwerte (`system`, `sonnet`, `high`, `auto`, `verwalter/`), `user_skills_dir` = `<Benutzerordner>\.claude\skills`, `user_skill_count` = Anzahl der Einträge aus `skills::collect(home, &[])` mit `kind == SkillKind::Skill` (Befehle zählen nicht), `workspaces_dir` = `<Benutzerordner>\.verwalter\workspaces`.
 3. `settings_update` speichert genau den geänderten Schlüssel (bzw. bei `DefaultMode` die zwei Schlüssel `default_mode` und `default_effort`) und gibt den vollständigen neuen `Settings`-Stand zurück.
 4. `BranchPrefix` mit leerem Wert, mehr als 40 Zeichen oder einem Wert, für den `git check-ref-format --branch <Wert>probe` scheitert → `CommandError::InvalidBranchPrefix`, nichts gespeichert. Die Meldung ist die erste Zeile von Gits Fehlerausgabe ohne `fatal: ` bzw. „darf nicht leer sein“ / „höchstens 40 Zeichen“.
-5. Eine neue Session mit Repository bekommt den Branch `<gespeicherter Präfix><slug>` (Suffixe `-2` … wie bisher). Die Konstante `worktrees::BRANCH_PREFIX` gibt es nicht mehr.
-6. ADR 008 liegt unter `docs/decisions/008-einstellungen-farbschema-und-listen.md`.
+5. Ein neues Vorhaben mit Repository bekommt den Branch `<gespeicherter Präfix><slug>` (Suffixe `-2` … wie bisher). Die Konstante `worktrees::BRANCH_PREFIX` gibt es nicht mehr.
+6. ADR 012 liegt unter `docs/decisions/012-einstellungen-farbschema-und-listen.md`.
 7. `pnpm bindings` erzeugt `ColorScheme.ts`, `Settings.ts`, `SettingsOverview.ts`, `SettingsChange.ts`; `pnpm check` grün.
 
 ## Checkliste
 
 ### Datenbank
 
-- [ ] `src-tauri/src/db/migrations/004_settings.sql`: `CREATE TABLE settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);`
-- [ ] `migrations.rs`: `MIGRATIONS: [&str; 4]`, vierte Zeile `include_str!("migrations/004_settings.sql")`.
+- [ ] `src-tauri/src/db/migrations/006_settings.sql`: `CREATE TABLE settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);`
+- [ ] `migrations.rs`: `MIGRATIONS: [&str; 6]`, sechste Zeile `include_str!("migrations/006_settings.sql")`.
 - [ ] `src-tauri/src/db/settings.rs` (in `db/mod.rs` als `pub mod settings;`): `pub fn read_all(connection: &Connection) -> Result<HashMap<String, String>, CommandError>` (alle Zeilen) und `pub fn write(connection: &Connection, key: &str, value: &str) -> Result<(), CommandError>` (`INSERT INTO settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value`).
 
 ### Fachlogik
@@ -45,7 +45,7 @@ Rating: standard. Kontrakt und Speicherformat stehen im README; hier nur Umsetzu
 ### Branch-Präfix beim Anlegen
 
 - [ ] `worktrees/mod.rs`: `BRANCH_PREFIX` löschen; `create_all` bekommt den Parameter `branch_prefix: &str` nach `session_name`; `free_branch(repositories, branch_prefix, slug)` baut `format!("{branch_prefix}{slug}")` bzw. `…-{suffix}`. Doku-Kommentare, die `verwalter/` nennen, auf „`<Präfix><slug>`“ ändern.
-- [ ] `sessions/registry.rs`, `SessionRegistry::create`: vor `worktrees::create_all` `let settings = settings::load(&self.database)?;` und `&settings.branch_prefix` übergeben. Die Datenbank-Sperre ist dabei nicht gehalten, während Git läuft (`load` gibt sie nach dem Lesen frei) — Sperr-Reihenfolge aus `db/mod.rs` bleibt gewahrt, weil hier keine Session-Sperre gehalten ist.
+- [ ] `sessions/registry.rs`, `SessionRegistry::create_project` (einzige Stelle, die Branches anlegt; `create_in_project` kopiert die Repositories samt Branch der letzten Session und braucht den Präfix nicht): vor `worktrees::create_all` `let settings = settings::load(&self.database)?;` und `&settings.branch_prefix` übergeben. Die Datenbank-Sperre ist dabei nicht gehalten, während Git läuft (`load` gibt sie nach dem Lesen frei) — Sperr-Reihenfolge aus `db/mod.rs` bleibt gewahrt, weil hier keine Session-Sperre gehalten ist.
 
 ### Commands
 
@@ -55,9 +55,9 @@ Rating: standard. Kontrakt und Speicherformat stehen im README; hier nur Umsetzu
 
 ### Doku
 
-- [ ] ADR 008 `docs/decisions/008-einstellungen-farbschema-und-listen.md` aus den README-Abschnitten „Einstellungen“, „Farbschema“, „Virtuelle Listen“, „Sichtbare Fehler“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen; die verworfenen Optionen aus dem README nennen).
-- [ ] Code-Map: Zeile „Settings“ auf den Stand bringen (`src-tauri/src/settings/` `model.rs` + `mod.rs`, `commands/settings.rs`, `db/settings.rs`, Migration 4, Wrapper `src/lib/settings.ts`); Zeile „Persistenz“ um Migration 4 = Einstellungen ergänzen; Zeile „Worktrees“: Präfix aus den Einstellungen.
-- [ ] Glossar: **Session-Branch** → „Der Branch `<Präfix><Name>`, … Präfix aus den Einstellungen, Standard `verwalter/`; ein geänderter Präfix gilt nur für neue Sessions.“ Neuer Eintrag **Einstellungen**: „Werte, die für die ganze App gelten (Farbschema, Standardwerte neuer Sessions, Branch-Präfix); gespeichert in der Tabelle `settings`.“
-- [ ] ADR 005, Stelle zum Branch-Namen: Verweis „Präfix seit M6 einstellbar, ADR 008“.
+- [ ] ADR 012 `docs/decisions/012-einstellungen-farbschema-und-listen.md` aus den README-Abschnitten „Einstellungen“, „Farbschema“, „Virtuelle Listen“, „Sichtbare Fehler“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen; die verworfenen Optionen aus dem README nennen).
+- [ ] Code-Map: Zeile „Settings“ auf den Stand bringen (`src-tauri/src/settings/` `model.rs` + `mod.rs`, `commands/settings.rs`, `db/settings.rs`, Migration 006, Wrapper `src/lib/settings.ts`); Zeile „Persistenz“ um Migration 006 = Einstellungen ergänzen; Zeile „Worktrees“: Präfix aus den Einstellungen.
+- [ ] Glossar: **Session-Branch** → „Der Branch `<Präfix><Name>`, … Präfix aus den Einstellungen, Standard `verwalter/`; ein geänderter Präfix gilt nur für neue Vorhaben (Sessions eines bestehenden Vorhabens behalten den Branch ihres Vorhabens).“ Neuer Eintrag **Einstellungen**: „Werte, die für die ganze App gelten (Farbschema, Standardwerte neuer Vorhaben, Branch-Präfix); gespeichert in der Tabelle `settings`.“
+- [ ] ADR 005, Stelle zum Branch-Namen: Verweis „Präfix seit M6 einstellbar, ADR 012“.
 
 ## Report-Back

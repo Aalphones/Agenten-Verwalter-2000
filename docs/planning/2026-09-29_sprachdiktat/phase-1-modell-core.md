@@ -6,7 +6,7 @@ Rating: standard · Commit-Scope: `voice`
 
 - [README.md](README.md) dieses Plans: „Festgelegte Entscheidungen“ und „Kontrakt“ (Typen, Fehler, Commands, Ereignisse) — verbindlich.
 - [docs/conventions/rust.md](../../conventions/rust.md), [docs/conventions/linting.md](../../conventions/linting.md), [docs/conventions/commits.md](../../conventions/commits.md), [docs/decisions/](../../decisions/) (Format der ADRs, z.B. 007).
-- Code: `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs` (Module, `app.manage`, `generate_handler!`), `src-tauri/src/error.rs` (`CommandError`, Serialisierung `tag = "kind", content = "message"`), `src-tauri/src/filesystem/workspace.rs` (`data_dir`), `src-tauri/src/background/model.rs` (Muster für Typen mit `derive(TS)` und Ereignis-Typen), `src-tauri/src/commands/background.rs` (Muster Commands mit `tauri::State`), `src-tauri/src/sessions/registry.rs` (Muster `app.emit(...)` samt Fehlerbehandlung), `src-tauri/src/bin/gen-bindings.rs`, `package.json` (Skripte `rust:clippy`, `bindings` laufen vom Repo-Wurzelordner mit `--manifest-path`), `.github/workflows/check.yml`.
+- Code: `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs` (Module, `app.manage`, `generate_handler!`), `src-tauri/src/error.rs` (`CommandError`, Serialisierung `tag = "kind", content = "message"`), `src-tauri/src/filesystem/workspace.rs` (`data_dir`), `src-tauri/src/background/model.rs` (Muster für Typen mit `derive(TS)` und Ereignis-Typen), `src-tauri/src/commands/background.rs` (Muster Commands mit `tauri::State`), `src-tauri/src/sessions/registry.rs` (Muster `app.emit(...)` samt Fehlerbehandlung), `src-tauri/examples/gen-bindings.rs` (seit M6 Phase 1), `package.json` (Skripte `rust:clippy`, `bindings` laufen vom Repo-Wurzelordner mit `--manifest-path`), `.github/workflows/check.yml`.
 - Crate-Dokumentation der gepinnten Versionen auf docs.rs: `ureq` 3 (`get`, `call`, `Body::as_reader`/`into_reader`, Verhalten bei HTTP-Fehlerstatus), `sha2` 0.11.
 - Vault-Fehlerklassen: geprüft (React, TypeScript) — übertragbar ist nur „HTTP-Fehlerstatus ist kein Netzfehler“, siehe Checkliste Download; sonst keine einschlägig.
 
@@ -40,7 +40,7 @@ Rating: standard · Commit-Scope: `voice`
 
 - [ ] Neues Modul `src-tauri/src/voice/` mit `mod.rs`, `model.rs`, `model_file.rs`. `pub mod voice;` in `src-tauri/src/lib.rs` (alphabetisch).
 - [ ] `voice/model.rs`: `VoiceModelState`, `VoiceModelEvent`, `VoiceLevelEvent`, `VoicePartialEvent` wie im README-Kontrakt; Derives wie `background/model.rs`. `VoiceModelState` zusätzlich `PartialEq`.
-- [ ] Alle vier Typen in `src-tauri/src/bin/gen-bindings.rs` eintragen, `pnpm bindings`.
+- [ ] Alle vier Typen in `src-tauri/examples/gen-bindings.rs` eintragen (die Datei liegt seit M6 Phase 1 dort; liegt sie noch unter `src-tauri/src/bin/`, ist M6 nicht umgesetzt — dann zuerst dessen Phase 1), `pnpm bindings`.
 - [ ] `src-tauri/src/error.rs`: die sieben Varianten aus der README-Tabelle, Texte wörtlich.
 
 ### Modelldatei und Download (`voice/model_file.rs`)
