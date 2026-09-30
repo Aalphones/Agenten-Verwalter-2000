@@ -25,14 +25,16 @@ Rating: standard · Commit-Scope: `projects`
 
 ## Checkliste
 
-- [ ] `src/app/SessionHeader.tsx`: `formatRuntime` exportieren.
-- [ ] Neue Datei `src/app/ProjectHeader.tsx` (importiert `SessionHeader.css`, kein eigenes CSS): Props `project: ProjectSummary`, `sessions: readonly SessionSummary[]`, `activeView: 'overview' | 'changes'`, `changesCount: number | null`, `onShowView`. Inhalt nach AK 1; Laufzeit tickt wie in `SessionHeader`, solange eine Session `runningSince` hat.
-- [ ] Neue Datei `src/features/projects/ProjectOverview.tsx` + `ProjectOverview.css` (Block `project-overview`): Props `project`, `sessions` (nach Nummer), `changes: SessionChanges | null`, `onOpenSession(id)`, `onSessionCreated(summary)`. Inhalt nach AK 3 und 4; Fehlerzustand lokal mit `useState`, Text über `commandErrorText` aus `src/lib/errors.ts`.
-- [ ] Neue Datei `src/features/projects/ProjectSessionCard.tsx` + `.css` (Block `project-session-card`): Props `session`, `onOpen`; Aufbau nach AK 3 (Karte als `div`, Kopf als `button` — Phase 6 hängt darunter eine zweite Zeile mit eigenem Knopf an).
-- [ ] Neue Datei `src/features/projects/NewSessionIntro.tsx` + `.css` (Block `new-session-intro`): Props `projectName`, `number`; Text nach AK 5.
-- [ ] `ChatView.tsx`: neue Props `projectName: string`; bei `session.status === 'new'` statt `ChatTimeline` die `NewSessionIntro` (unten verankert in derselben Fläche); Composer unverändert darunter.
-- [ ] `Composer.tsx` `placeholderFor`: Fall `'new'` nach AK 5.
-- [ ] `App.tsx`: Übergang aus Phase 3 ersetzen — bei `showProjectOverview` und bekanntem `activeProjectId`: `ProjectHeader` + je nach `projectView` `ProjectOverview` oder `ChangesView` (Session höchster Nummer). Die Changes für Zähler und Übersicht einmal laden: `useSessionChanges(<Session höchster Nummer>, true)`, solange die Übersicht offen ist. `onSessionCreated`: `upsertSession` + `selectSession`. `ChatView` bekommt `projectName`. Existiert das aktive Vorhaben nicht mehr (archiviert), fällt `App` auf die bisherige Auswahl zurück (neueste Session).
-- [ ] Doku: `docs/code-map.md` Zeile „Vorhaben“ um `ProjectHeader`, `ProjectOverview`, `ProjectSessionCard`, `NewSessionIntro` ergänzen; README dieses Plans: Phase 4 auf `complete`.
+- [x] `src/app/SessionHeader.tsx`: `formatRuntime` exportieren.
+- [x] Neue Datei `src/app/ProjectHeader.tsx` (importiert `SessionHeader.css`, kein eigenes CSS): Props `project: ProjectSummary`, `sessions: readonly SessionSummary[]`, `activeView: 'overview' | 'changes'`, `changesCount: number | null`, `onShowView`. Inhalt nach AK 1; Laufzeit tickt wie in `SessionHeader`, solange eine Session `runningSince` hat.
+- [x] Neue Datei `src/features/projects/ProjectOverview.tsx` + `ProjectOverview.css` (Block `project-overview`): Props `project`, `sessions` (nach Nummer), `changes: SessionChanges | null`, `onOpenSession(id)`, `onSessionCreated(summary)`. Inhalt nach AK 3 und 4; Fehlerzustand lokal mit `useState`, Text über `commandErrorText` aus `src/lib/errors.ts`.
+- [x] Neue Datei `src/features/projects/ProjectSessionCard.tsx` + `.css` (Block `project-session-card`): Props `session`, `onOpen`; Aufbau nach AK 3 (Karte als `div`, Kopf als `button` — Phase 6 hängt darunter eine zweite Zeile mit eigenem Knopf an).
+- [x] Neue Datei `src/features/projects/NewSessionIntro.tsx` + `.css` (Block `new-session-intro`): Props `projectName`, `number`; Text nach AK 5.
+- [x] `ChatView.tsx`: neue Props `projectName: string`; bei `session.status === 'new'` statt `ChatTimeline` die `NewSessionIntro` (unten verankert in derselben Fläche); Composer unverändert darunter.
+- [x] `Composer.tsx` `placeholderFor`: Fall `'new'` nach AK 5.
+- [x] `App.tsx`: Übergang aus Phase 3 ersetzen — bei `showProjectOverview` und bekanntem `activeProjectId`: `ProjectHeader` + je nach `projectView` `ProjectOverview` oder `ChangesView` (Session höchster Nummer). Die Changes für Zähler und Übersicht einmal laden: `useSessionChanges(<Session höchster Nummer>, true)`, solange die Übersicht offen ist. `onSessionCreated`: `upsertSession` + `selectSession`. `ChatView` bekommt `projectName`. Existiert das aktive Vorhaben nicht mehr (archiviert), fällt `App` auf die bisherige Auswahl zurück (neueste Session).
+- [x] Doku: `docs/code-map.md` Zeile „Vorhaben“ um `ProjectHeader`, `ProjectOverview`, `ProjectSessionCard`, `NewSessionIntro` ergänzen; README dieses Plans: Phase 4 auf `complete`.
 
 ## Report-Back
+
+Umgesetzt wie geplant. Abweichung: Die Übersicht zeigt kein Hintergrund-Panel (ihre Kopfzeile hat keinen Knopf dafür); Esc und Changes der Sessions unverändert.

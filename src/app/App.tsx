@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
+import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
@@ -9,6 +10,7 @@ import { ChatView } from '@/features/chat/ChatView';
 import { countChangedFiles } from '@/features/changes/changesScope';
 import { ChangesView } from '@/features/changes/ChangesView';
 import { useSessionChanges } from '@/features/changes/useSessionChanges';
+import { ProjectOverview } from '@/features/projects/ProjectOverview';
 import { sessionsOf } from '@/features/projects/projectStatus';
 import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
 import { EmptyState } from '@/features/sessions/EmptyState';
@@ -19,7 +21,7 @@ import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { useBackgroundStore } from '@/stores/background';
-import { useSessionsStore, type SessionView } from '@/stores/sessions';
+import { useSessionsStore, type ProjectView, type SessionView } from '@/stores/sessions';
 import './App.css';
 
 export function App(): ReactElement {
@@ -30,7 +32,9 @@ export function App(): ReactElement {
   const showProjectOverview: boolean = useSessionsStore((state) => state.showProjectOverview);
   const showNewSession: boolean = useSessionsStore((state) => state.showNewSession);
   const activeView: SessionView = useSessionsStore((state) => state.activeView);
+  const projectView: ProjectView = useSessionsStore((state) => state.projectView);
   const showView = useSessionsStore((state) => state.showView);
+  const showProjectView = useSessionsStore((state) => state.showProjectView);
   const selectSession = useSessionsStore((state) => state.selectSession);
   const selectProject = useSessionsStore((state) => state.selectProject);
   const openNewSession = useSessionsStore((state) => state.openNewSession);
@@ -53,27 +57,35 @@ export function App(): ReactElement {
 
   // Ohne gewählte Session öffnet sich die neueste (Sessions kommen neueste zuerst) — nach einem Neustart
   // steht sonst der Leerzustand vor einer vollen Sidebar.
-  // Die Übersicht eines Vorhabens zeigt vorerst dessen Session mit der höchsten Nummer.
+  // Die Übersicht eines Vorhabens gilt nur, solange das Vorhaben da ist (archiviert → bisherige Auswahl); ihre
+  // Changes und Zähler liest der Core über die Session mit der höchsten Nummer.
+  const overviewProject: ProjectSummary | undefined =
+    showProjectOverview && !showNewSession && activeProjectId !== null
+      ? projects.find((project: ProjectSummary) => project.id === activeProjectId)
+      : undefined;
   const overviewSessions: SessionSummary[] =
-    showProjectOverview && activeProjectId !== null ? sessionsOf(activeProjectId, sessions) : [];
-  const currentSession: SessionSummary | undefined =
-    overviewSessions[overviewSessions.length - 1] ??
-    sessions.find((session: SessionSummary) => session.id === activeSessionId) ??
-    sessions[0];
+    overviewProject === undefined ? [] : sessionsOf(overviewProject.id, sessions);
+  const isOverview: boolean = overviewProject !== undefined && overviewSessions.length > 0;
+  const currentSession: SessionSummary | undefined = isOverview
+    ? overviewSessions[overviewSessions.length - 1]
+    : (sessions.find((session: SessionSummary) => session.id === activeSessionId) ?? sessions[0]);
 
-  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; eine Session ohne Repository zeigt den Chat.
-  const isChangesView: boolean =
-    !showNewSession &&
-    activeView === 'changes' &&
-    currentSession !== undefined &&
-    currentSession.repositoryCount > 0;
+  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; ohne Repository gibt es keine Changes.
+  const isChangesView: boolean = isOverview
+    ? projectView === 'changes' && (overviewProject?.repositoryNames.length ?? 0) > 0
+    : !showNewSession &&
+      activeView === 'changes' &&
+      currentSession !== undefined &&
+      currentSession.repositoryCount > 0;
   const { changes, error: changesError } = useSessionChanges(
     showNewSession ? null : (currentSession ?? null),
-    isChangesView,
+    isChangesView || isOverview,
   );
 
   // Kopfzeile (Zähler), Verlauf (Zeilen) und Panel brauchen dieselben Daten — einmal laden, nicht je Verbraucher.
-  const visibleSession: SessionSummary | null = showNewSession ? null : (currentSession ?? null);
+  // Die Übersicht hat keinen Knopf für das Panel und zeigt deshalb keins.
+  const visibleSession: SessionSummary | null =
+    showNewSession || isOverview ? null : (currentSession ?? null);
   const { background, error: backgroundError } = useSessionBackground(
     visibleSession === null ? null : visibleSession.id,
   );
@@ -109,9 +121,50 @@ export function App(): ReactElement {
     return project === undefined ? session.name : project.name;
   }
 
+  // Der Core sendet für den Anfangsstatus keine Änderung — die Rückgabe von `createSessionInProject` muss selbst in die Liste.
+  function handleSessionCreated(created: SessionSummary): void {
+    upsertSession(created);
+    selectSession(created.id);
+  }
+
+  function renderOverview(project: ProjectSummary, latestSession: SessionSummary): ReactElement {
+    return (
+      <>
+        <ProjectHeader
+          key={project.id}
+          project={project}
+          sessions={overviewSessions}
+          activeView={isChangesView ? 'changes' : 'overview'}
+          changesCount={changes === null ? null : countChangedFiles(changes)}
+          onShowView={showProjectView}
+        />
+        {isChangesView ? (
+          <ChangesView
+            key={latestSession.id}
+            session={latestSession}
+            changes={changes}
+            error={changesError}
+          />
+        ) : (
+          <ProjectOverview
+            key={project.id}
+            project={project}
+            sessions={overviewSessions}
+            changes={changes}
+            onOpenSession={selectSession}
+            onSessionCreated={handleSessionCreated}
+          />
+        )}
+      </>
+    );
+  }
+
   function renderMain(): ReactElement {
     if (showNewSession) {
       return <NewSession onCreated={handleCreated} onCancel={closeNewSession} />;
+    }
+    if (overviewProject !== undefined && isOverview && currentSession !== undefined) {
+      return renderOverview(overviewProject, currentSession);
     }
     if (currentSession !== undefined) {
       return (
@@ -141,6 +194,7 @@ export function App(): ReactElement {
             <ChatView
               key={currentSession.id}
               session={currentSession}
+              projectName={projectNameOf(currentSession)}
               backgroundByToolUseId={backgroundByToolUseId}
             />
           )}
@@ -155,11 +209,9 @@ export function App(): ReactElement {
       <Sidebar
         projects={projects}
         sessions={sessions}
-        activeSessionId={
-          showNewSession || showProjectOverview ? null : (currentSession?.id ?? null)
-        }
+        activeSessionId={showNewSession || isOverview ? null : (currentSession?.id ?? null)}
         activeProjectId={activeProjectId}
-        showProjectOverview={showProjectOverview && !showNewSession}
+        showProjectOverview={isOverview}
         onSelectSession={selectSession}
         onSelectProject={selectProject}
         onNew={openNewSession}

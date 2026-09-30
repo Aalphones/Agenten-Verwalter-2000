@@ -359,6 +359,9 @@ function placeholderFor(status: SessionStatus): string {
   if (status === 'waiting') {
     return 'Antwort an Claude …';
   }
+  if (status === 'new') {
+    return 'Erste Nachricht an Claude … (/ für Skills)';
+  }
   if (status === 'cancelled') {
     return 'Session abgebrochen – leg eine neue Session an.';
   }

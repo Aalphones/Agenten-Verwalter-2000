@@ -1,0 +1,27 @@
+.new-session-intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex-grow: 1;
+  min-height: 0;
+
+  &__column {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 var(--space-5xl) var(--space-2xl);
+  }
+
+  &__title {
+    margin: 0 0 var(--space-xs);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+  }
+
+  &__text {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-secondary);
+  }
+}

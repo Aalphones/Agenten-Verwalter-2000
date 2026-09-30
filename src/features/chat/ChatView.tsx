@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { ChatTimeline } from '@/features/chat/ChatTimeline';
 import { Composer } from '@/features/chat/Composer';
 import { useChatEntries } from '@/features/chat/useChatEntries';
+import { NewSessionIntro } from '@/features/projects/NewSessionIntro';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -13,10 +14,15 @@ const INTERRUPTIBLE_STATUSES: readonly SessionStatus[] = ['starting', 'running',
 
 interface ChatViewProps {
   session: SessionSummary;
+  projectName: string;
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
 }
 
-export function ChatView({ session, backgroundByToolUseId }: ChatViewProps): ReactElement {
+export function ChatView({
+  session,
+  projectName,
+  backgroundByToolUseId,
+}: ChatViewProps): ReactElement {
   const { entries, hasMore, loadingOlder, loadOlder } = useChatEntries(session.id);
   const canInterrupt: boolean = INTERRUPTIBLE_STATUSES.includes(session.status);
 
@@ -43,8 +49,11 @@ export function ChatView({ session, backgroundByToolUseId }: ChatViewProps): Rea
     };
   }, [canInterrupt]);
 
-  return (
-    <div className="chat-view">
+  function renderTimeline(): ReactElement {
+    if (session.status === 'new') {
+      return <NewSessionIntro projectName={projectName} number={session.number} />;
+    }
+    return (
       <ChatTimeline
         session={session}
         entries={entries}
@@ -53,6 +62,12 @@ export function ChatView({ session, backgroundByToolUseId }: ChatViewProps): Rea
         loadingOlder={loadingOlder}
         onLoadOlder={loadOlder}
       />
+    );
+  }
+
+  return (
+    <div className="chat-view">
+      {renderTimeline()}
       <div className="chat-view__composer">
         <Composer session={session} />
       </div>
