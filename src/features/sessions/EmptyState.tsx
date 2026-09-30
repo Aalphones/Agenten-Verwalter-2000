@@ -25,8 +25,9 @@ export function EmptyState({ onCreate }: EmptyStateProps): ReactElement {
         </svg>
         <h1 className="empty-state__title">Noch keine Session</h1>
         <p className="empty-state__text">
-          Eine Session ist eine Aufgabe für einen Agenten, über ein oder mehrere Repositories. Jedes
-          bekommt einen eigenen Worktree, damit parallele Agenten sich nicht in die Quere kommen.
+          Eine Session ist eine Aufgabe für einen Agenten, über ein oder mehrere Repositories. Ob
+          der Agent direkt im Repository arbeitet oder einen Worktree für sein Ticket anlegt,
+          bestimmen seine Anweisungen.
         </p>
         <button type="button" className="empty-state__button" onClick={onCreate}>
           Erste Session anlegen

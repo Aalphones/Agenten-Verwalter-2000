@@ -12,7 +12,8 @@ import type { ChangesSelection } from '@/stores/changes';
 import './ChangesToolbar.css';
 
 const MIN_REPOSITORIES_FOR_CHIPS = 2;
-const BASE_TITLE = 'Basis: gegen diesen Stand werden alle Änderungen der Session gemessen';
+const BASE_TITLE =
+  'Basis: gegen diesen Stand werden die Änderungen gemessen (Ticket-Worktrees gegen den Standard-Branch, mit den Änderungen aller Sessions daran)';
 
 const SCOPE_OPTIONS: readonly { scope: ChangeScope; label: string; title: string }[] = [
   { scope: 'all', label: 'Alle', title: 'Alles seit der Basis, committed und uncommitted' },
@@ -21,7 +22,11 @@ const SCOPE_OPTIONS: readonly { scope: ChangeScope; label: string; title: string
     label: 'Uncommitted',
     title: 'Nur im Arbeitsverzeichnis, noch nicht committed',
   },
-  { scope: 'committed', label: 'Committed', title: 'Schon als Commit im Session-Branch' },
+  {
+    scope: 'committed',
+    label: 'Committed',
+    title: 'Schon als Commit auf dem ausgecheckten Branch',
+  },
 ];
 
 interface ChangesToolbarProps {

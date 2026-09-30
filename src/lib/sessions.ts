@@ -7,7 +7,7 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 
 const SESSION_CHANGED_EVENT = 'session://changed';
 
-/** Legt eine Session an — pro Repository einen Worktree mit Session-Branch —, startet den Agenten
+/** Legt eine Session an — liest die Basis jedes Repositorys, legt keine Worktrees an —, startet den Agenten
  *  und schickt die Aufgabe samt Anhängen als erste Nachricht. Scheitert ein Schritt, bleibt nichts zurück.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `claudeNotFound`, `io`,
  *    `repositoryMissing`, `git`, `gitNotFound` */
@@ -59,7 +59,7 @@ export async function renameSession(sessionId: string, name: string): Promise<vo
   await invoke('session_rename', { sessionId, name });
 }
 
-/** Beendet den Agenten der Session und nimmt sie aus der Liste; der Verlauf bleibt, Worktrees ohne offene Änderungen räumt der Core danach weg, Branches bleiben.
+/** Beendet den Agenten der Session und nimmt sie aus der Liste; der Verlauf bleibt, Repositories und Worktrees bleiben unberührt (bei Sessions vor ADR 010 räumt der Core saubere App-Worktrees weg).
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
 export async function archiveSession(sessionId: string): Promise<void> {
   await invoke('session_archive', { sessionId });

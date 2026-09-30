@@ -4,7 +4,7 @@ Ausführliches Produkt- und Technikkonzept: [konzept.md](konzept.md). Diese Date
 
 ## Ziel & Vision
 
-Agenten Verwalter 2000 ist eine minimalistische lokale Desktop-Kommandozentrale für Coding-Agenten. Eine Session steht für eine Aufgabe und kann beliebig viele Git-Repositories umfassen, jedes in einem eigenen Worktree. Der Chat mit dem Agenten ist die Hauptarbeitsfläche, die Changes-Ansicht (Dateien, Diffs) die Prüfebene. Zielgruppe sind Entwickler, die mehrere Agenten parallel über mehrere Repositories laufen lassen und dabei den Überblick verlieren — der Engpass ist der Mensch, nicht die Rechenleistung.
+Agenten Verwalter 2000 ist eine minimalistische lokale Desktop-Kommandozentrale für Coding-Agenten. Eine Session steht für eine Aufgabe und kann beliebig viele Git-Repositories umfassen, wahlweise direkt im Haupt-Checkout oder in einem Ticket-Worktree, den der Agent nach seinen Anweisungen anlegt. Der Chat mit dem Agenten ist die Hauptarbeitsfläche, die Changes-Ansicht (Dateien, Diffs) die Prüfebene. Zielgruppe sind Entwickler, die mehrere Agenten parallel über mehrere Repositories laufen lassen und dabei den Überblick verlieren — der Engpass ist der Mensch, nicht die Rechenleistung.
 
 Leitsatz: **Chat first. Changes second.** Was nicht aktiv beim Agent-Workflow hilft, gehört nicht dauerhaft auf den Bildschirm.
 
@@ -21,7 +21,7 @@ MVP (Version 1):
 - **Eingabe:** Bilder und Dateien anhängen (Knopf, Hineinziehen, Einfügen); Skills und Befehle über `/`-Knopf und `/` im Eingabefeld; Modell und Denkaufwand während der Session wechseln; Modus (Manuell, Automatisch bearbeiten, Planen, Auto)
 - **Artefakte:** von Claude in einer Session erstellte Artefakte als Karte im Chat und im Reiter „Artefakte“ der Session
 - **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind in einem Seitenpanel der Session sichtbar und einsehbar
-- **Workspace:** mehrere Repositories pro Session, automatisch angelegte Worktrees und Branches; Skills der beteiligten Repositories stehen in der Session zur Verfügung
+- **Workspace:** mehrere Repositories pro Session; der Agent arbeitet im Haupt-Checkout oder in Ticket-Worktrees daneben, die App zeigt beides in den Changes, Ticket-Worktrees gegen den Standard-Branch ([ADR 010](decisions/010-worktrees-durch-den-agenten.md)); Skills der beteiligten Repositories stehen in der Session zur Verfügung
 - **Changes:** Repository-Filter, geänderte Dateien, Unified Diff, Trennung committed/uncommitted gegen eine konfigurierbare Basis
 - **Agent:** Claude als einziger Provider
 - **Persistenz:** SQLite, Session-Wiederherstellung nach App-Neustart

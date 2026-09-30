@@ -135,7 +135,7 @@ export function RepositoryPicker({ selectedIds, onChange }: RepositoryPickerProp
             <path d="M7 6.4v3.4" />
             <circle cx="7" cy="4.3" r="0.5" fill="currentColor" />
           </svg>
-          Jedes Repository bekommt einen eigenen Worktree. Seine Skills stehen in der Session zur
+          Der Agent arbeitet in den gewählten Repositories. Ihre Skills stehen in der Session zur
           Verfügung.
         </span>
       </div>

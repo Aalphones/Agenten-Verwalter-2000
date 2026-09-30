@@ -94,7 +94,7 @@ export function SidebarItem({
             type="button"
             role="menuitem"
             className="sidebar-item__menu-item"
-            title="Blendet die Session aus der Liste aus. Der Verlauf bleibt erhalten. Worktrees ohne offene Änderungen werden entfernt, die Branches bleiben in den Repositories."
+            title="Blendet die Session aus der Liste aus. Der Verlauf bleibt erhalten. Repositories und Worktrees bleiben, wie sie sind."
             onClick={(): void => {
               setIsMenuOpen(false);
               onArchive();

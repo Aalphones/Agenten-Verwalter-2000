@@ -314,7 +314,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
           </button>
           <span className="new-session__summary">
             {isStarting && repositoryIds.length > 0
-              ? 'Worktrees werden angelegt …'
+              ? 'Session wird angelegt …'
               : `${repositoryCountLabel(repositoryIds.length)} · ${modelName(model)} · ${currentMode.label}`}
           </span>
         </div>
@@ -342,7 +342,7 @@ function describeStartError(reason: unknown): string {
       case 'repositoryMissing':
         return `Repository nicht gefunden: ${reason.message}. Entferne es aus der Liste oder stelle den Ordner wieder her.`;
       case 'git':
-        return `Worktree konnte nicht angelegt werden — ${reason.message}`;
+        return `Repository konnte nicht gelesen werden — ${reason.message}`;
       default:
         break;
     }
