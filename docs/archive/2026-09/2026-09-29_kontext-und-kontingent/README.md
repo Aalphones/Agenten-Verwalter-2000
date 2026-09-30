@@ -126,4 +126,8 @@ Die Kopfzeile hat zwei neue Fenster: Klick auf den Kontext-Balken zeigt die Aufs
 
 ## Deviations from plan
 
+Keine inhaltlichen. Die Smoke-Checkliste wurde vom User nicht abgearbeitet, sondern der Plan auf seine Anweisung direkt archiviert.
+
 ## Follow-ups
+
+- Smoke-Punkte 1–3 (Hilfsprozess räumt auf, Kontext während laufender Antwort, schmale Kopfzeile) sind ungeprüft und bei der nächsten Gelegenheit im laufenden Fenster anzusehen.
