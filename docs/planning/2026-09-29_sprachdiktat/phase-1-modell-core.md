@@ -39,8 +39,8 @@ Rating: standard · Commit-Scope: `voice`
 ### Typen und Fehler
 
 - [ ] Neues Modul `src-tauri/src/voice/` mit `mod.rs`, `model.rs`, `model_file.rs`. `pub mod voice;` in `src-tauri/src/lib.rs` (alphabetisch).
-- [ ] `voice/model.rs`: `VoiceModelState`, `VoiceModelEvent`, `VoiceLevelEvent` wie im README-Kontrakt; Derives wie `background/model.rs`. `VoiceModelState` zusätzlich `PartialEq`.
-- [ ] Alle drei Typen in `src-tauri/src/bin/gen-bindings.rs` eintragen, `pnpm bindings`.
+- [ ] `voice/model.rs`: `VoiceModelState`, `VoiceModelEvent`, `VoiceLevelEvent`, `VoicePartialEvent` wie im README-Kontrakt; Derives wie `background/model.rs`. `VoiceModelState` zusätzlich `PartialEq`.
+- [ ] Alle vier Typen in `src-tauri/src/bin/gen-bindings.rs` eintragen, `pnpm bindings`.
 - [ ] `src-tauri/src/error.rs`: die sieben Varianten aus der README-Tabelle, Texte wörtlich.
 
 ### Modelldatei und Download (`voice/model_file.rs`)
@@ -59,7 +59,7 @@ Rating: standard · Commit-Scope: `voice`
 
 ### Dienst und Zustand (`voice/mod.rs`)
 
-- [ ] Konstanten `VOICE_MODEL_EVENT = "voice://model"`, `VOICE_LEVEL_EVENT = "voice://level"` (letztere erst Phase 2 genutzt).
+- [ ] Konstanten `VOICE_MODEL_EVENT = "voice://model"`, `VOICE_LEVEL_EVENT = "voice://level"`, `VOICE_PARTIAL_EVENT = "voice://partial"` (die letzten beiden erst Phase 2 genutzt; bis dahin `#[allow(dead_code)]` mit Kommentar „genutzt ab Phase 2“, falls Clippy anschlägt).
 - [ ] `pub struct VoiceService { inner: Mutex<VoiceInner> }` mit `VoiceInner { download: Option<DownloadHandle> }`, `DownloadHandle { cancel: Arc<AtomicBool>, received: u64, total: u64 }`. `VoiceService::new()`. In `lib.rs` `app.manage(VoiceService::new())` neben den anderen `manage`-Aufrufen. Phase 2 erweitert `VoiceInner` — Struktur so anlegen, dass Felder dazukommen können.
 - [ ] `pub fn model_state(&self, app) -> Result<VoiceModelState, CommandError>`: läuft ein Download → `Downloading` mit den Werten aus dem Handle; sonst `is_model_ready` → `Ready`/`Missing`.
 - [ ] `pub fn start_download(&self, app: AppHandle) -> Result<(), CommandError>`: läuft schon einer → `Ok(())`. Sonst Handle eintragen, `downloading 0/MODEL_BYTES` senden, Thread starten (`std::thread::spawn`, Muster wie in `changes/mod.rs`), der `download` ruft; Fortschritt aktualisiert das Handle unter dem Mutex und sendet `voice://model` höchstens alle 250 ms (`Instant`). Ende: Handle entfernen, dann `ready` bzw. `missing` senden — `error` nur setzen, wenn **nicht** abgebrochen wurde. Sendefehler wie in `registry.rs` nur loggen (`eprintln!`).
@@ -73,7 +73,7 @@ Rating: standard · Commit-Scope: `voice`
 
 ### Doku
 
-- [ ] `docs/decisions/009-sprachdiktat-lokal.md` aus „Festgelegte Entscheidungen“ (Kontext / betrachtete Optionen a–c + gewählt / Entscheidung / Konsequenzen: CMake als Bau-Voraussetzung, 574 MB Download, ~0,8 GB RAM, nur CPU).
+- [ ] `docs/decisions/009-sprachdiktat-lokal.md` aus „Festgelegte Entscheidungen“ (Kontext / betrachtete Optionen a–c + gewählt / Entscheidung / Konsequenzen: CMake als Bau-Voraussetzung, 574 MB Download, ~0,8 GB RAM, nur CPU). Eigener Absatz „Text während des Sprechens“ mit dem Schnitt an Sprechpausen und den beiden verworfenen Wegen (gleitendes Fenster, erst nach dem Stopp) samt Begründung aus dem README.
 - [ ] `docs/conventions/commits.md`: Scope `voice` ergänzen.
 - [ ] `docs/code-map.md`: Zeile „Diktieren (Sprachmodell, Aufnahme, Erkennung)“ mit Core `src-tauri/src/voice/` (`model_file.rs`), `commands/voice.rs`, Wrapper `src/lib/voice.ts`; `voice` in die Feature-Liste unter „Namensschema“.
 - [ ] `docs/glossary.md`: „Diktieren“ (Sprache per Mikrofon aufnehmen und lokal in Text für den Entwurf umwandeln; sendet nie selbst) und „Sprachmodell“ (die lokal gespeicherte Whisper-Datei unter `<Benutzerordner>\.verwalter\models\`, einmal auf Klick geladen).
