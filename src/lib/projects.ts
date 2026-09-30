@@ -43,6 +43,17 @@ export async function renameProject(projectId: string, name: string): Promise<vo
   await invoke('project_rename', { projectId, name });
 }
 
+/** Hängt ein bekanntes Repository an alle Sessions des Vorhabens (Haupt-Checkout, Basis = letzter Commit vor dem
+ *  Anlegen des Vorhabens); ein ruhender Agent startet mit der nächsten Nachricht neu und kennt es dann.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `repositoryMissing`, `git`, `gitNotFound`,
+ *    `internal` (unbekanntes Vorhaben oder Repository, Repository schon im Vorhaben) */
+export function addRepositoryToProject(
+  projectId: string,
+  repositoryId: string,
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('project_add_repository', { projectId, repositoryId });
+}
+
 /** Beendet die Agenten aller Sessions des Vorhabens und nimmt es samt Sessions aus der Liste; der Verlauf bleibt,
  *  Repositories und Worktrees bleiben unberührt (bei Sessions vor ADR 010 räumt der Core saubere App-Worktrees weg).
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `internal` (unbekanntes Vorhaben) */
@@ -50,7 +61,7 @@ export async function archiveProject(projectId: string): Promise<void> {
   await invoke('project_archive', { projectId });
 }
 
-/** Meldet jede Umbenennung eines Vorhabens. */
+/** Meldet jede Umbenennung eines Vorhabens und jedes angehängte Repository. */
 export function onProjectChanged(callback: (summary: ProjectSummary) => void): Promise<UnlistenFn> {
   return listen<ProjectSummary>(PROJECT_CHANGED_EVENT, (event: Event<ProjectSummary>) => {
     callback(event.payload);

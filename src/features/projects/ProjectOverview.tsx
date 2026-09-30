@@ -7,14 +7,19 @@ import {
   sumLines,
   type LineSums,
 } from '@/features/changes/changesScope';
+import { AddRepositoryMenu } from '@/features/projects/AddRepositoryMenu';
 import { ProjectSessionCard } from '@/features/projects/ProjectSessionCard';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
+import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
 import { effortLabel, modeOption, modelName } from '@/lib/labels';
 import { createSessionInProject } from '@/lib/sessions';
 import './ProjectOverview.css';
+
+/** Ein Agent in diesen Zuständen kennt ein angehängtes Repository erst nach seinem nächsten Start. */
+const RUNNING_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiting'];
 
 const NEW_SESSION_TITLE =
   'Startet eine frische Claude-Session in diesem Vorhaben: gleiche Repositories und gleicher Arbeitsordner, aber ohne den bisherigen Verlauf.';
@@ -27,6 +32,8 @@ interface ProjectOverviewProps {
   changes: SessionChanges | null;
   onOpenSession: (sessionId: string) => void;
   onSessionCreated: (summary: SessionSummary) => void;
+  /** Rückgabe des Core nach einer Änderung am Vorhaben — schneller als dessen Ereignis. */
+  onProjectChanged: (summary: ProjectSummary) => void;
 }
 
 export function ProjectOverview({
@@ -35,6 +42,7 @@ export function ProjectOverview({
   changes,
   onOpenSession,
   onSessionCreated,
+  onProjectChanged,
 }: ProjectOverviewProps): ReactElement {
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,10 +82,20 @@ export function ProjectOverview({
   }
 
   function renderRepositories(): ReactElement {
+    const addMenu: ReactElement = (
+      <AddRepositoryMenu
+        project={project}
+        hasRunningSession={sessions.some((session: SessionSummary) =>
+          RUNNING_STATUSES.includes(session.status),
+        )}
+        onAdded={onProjectChanged}
+      />
+    );
     if (project.repositoryNames.length === 0) {
       return (
         <div className="project-overview__repositories">
           <span>Keine Repositories</span>
+          {addMenu}
         </div>
       );
     }
@@ -89,6 +107,7 @@ export function ProjectOverview({
             {name}
           </span>
         ))}
+        {addMenu}
         {renderChangesSummary()}
       </div>
     );

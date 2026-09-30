@@ -162,7 +162,8 @@ function skillLabel(count: number): string {
   return count === 1 ? '1 Skill' : `${String(count)} Skills`;
 }
 
-function describeAddError(reason: unknown): string {
+/** Fehlertext für das Aufnehmen eines Ordners in die bekannten Repositories. */
+export function describeAddError(reason: unknown): string {
   if (typeof reason === 'object' && reason !== null && 'kind' in reason) {
     if (reason.kind === 'gitNotFound') {
       return 'Git nicht gefunden. Installiere Git für Windows und starte die App neu.';

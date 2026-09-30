@@ -7,7 +7,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -67,7 +67,8 @@ const IDLE_CHECK_INTERVAL: Duration = Duration::from_secs(15);
 const IDLE_SECONDS_VARIABLE: &str = "VERWALTER_IDLE_SECONDS";
 
 /// Sperr-Regel: `projects` und die Sperre einer Session (`Session::lock`) werden nie gleichzeitig
-/// gehalten. `projects` zusammen mit `sessions` (nur die Map) ist erlaubt.
+/// gehalten — außer der einer neuen Session, die noch in keiner Map steht (`create_in_project`).
+/// `projects` zusammen mit `sessions` (nur die Map) ist erlaubt.
 pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
     /// Schlüssel = Vorhaben-ID.
@@ -87,8 +88,10 @@ pub struct Session {
     project_id: String,
     number: u32,
     workspace: PathBuf,
-    /// Nach dem Anlegen unveränderlich.
-    repositories: Vec<SessionRepository>,
+    /// Wächst nur durch `add_repository`; die Sperre ist ein Blatt — nie zusammen mit der
+    /// Sessions-Map, der Vorhaben-Sperre oder der Session-Sperre über einen Aufruf hinweg halten,
+    /// nur kurz lesen oder schreiben (`repositories`, `push_repository`).
+    repositories: RwLock<Vec<SessionRepository>>,
     database: Arc<Database>,
     state: Mutex<SessionState>,
 }
@@ -108,6 +111,9 @@ struct SessionState {
     effort: Effort,
     /// Denkaufwand, mit dem der laufende Prozess gestartet wurde — der lässt sich nur beim Start setzen.
     process_effort: Effort,
+    /// Anzahl Repositories, mit denen der laufende Prozess gestartet wurde — `--add-dir` gibt es
+    /// nur beim Start, ein angehängtes Repository braucht einen neuen Prozess.
+    process_repository_count: usize,
     /// `system/init` wurde mindestens einmal gesehen. Erst dann kennt Claude die Session und
     /// erlaubt `--resume`; davor bricht es mit „No conversation found“ ab.
     has_agent_history: bool,
@@ -273,7 +279,7 @@ impl SessionRegistry {
                         project_id: row.project_id,
                         number: row.number,
                         workspace,
-                        repositories,
+                        repositories: RwLock::new(repositories),
                         database: Arc::clone(&database),
                         state: Mutex::new(state),
                     }),
@@ -346,7 +352,7 @@ impl SessionRegistry {
             project_id: project_id.clone(),
             number: 1,
             workspace,
-            repositories,
+            repositories: RwLock::new(repositories),
             database: Arc::clone(&self.database),
             state: Mutex::new(state),
         });
@@ -360,7 +366,7 @@ impl SessionRegistry {
         let saved = self.database.with(|connection| {
             project_rows::insert(connection, &project_row)?;
             session_rows::upsert(connection, &row)?;
-            session_repositories::insert_all(connection, &id, &session.repositories)
+            session_repositories::insert_all(connection, &id, &session.repositories())
         });
         if let Err(error) = saved {
             self.discard_created(&session);
@@ -425,20 +431,26 @@ impl SessionRegistry {
         let id = uuid::Uuid::new_v4().to_string();
         let mut state = SessionState::new(format!("Session {number}"), model, effort, mode);
         state.status = SessionStatus::New;
-        state.ticket_roots = worktrees::ticket_roots(&latest.repositories);
+        // Die Vorhaben-Sperre hält ein gleichzeitiges `add_repository` an, bis die neue Session in
+        // der Map steht — sonst verpasste sie das angehängte Repository. Die Sperre der neuen
+        // Session (`row_of`) darunter kann sich nicht verklemmen: solange sie in keiner Map steht,
+        // kennt sie niemand sonst.
+        let projects = self.lock_projects();
+        let repositories = latest.repositories();
+        state.ticket_roots = worktrees::ticket_roots(&repositories);
         let session = Arc::new(Session {
             id: id.clone(),
             project_id: project_id.to_owned(),
             number,
             workspace: latest.workspace.clone(),
-            repositories: latest.repositories.clone(),
+            repositories: RwLock::new(repositories.clone()),
             database: Arc::clone(&self.database),
             state: Mutex::new(state),
         });
         let row = row_of(&session, &session.lock());
         let saved = self.database.with(|connection| {
             session_rows::upsert(connection, &row)?;
-            session_repositories::insert_all(connection, &id, &session.repositories)
+            session_repositories::insert_all(connection, &id, &repositories)
         });
         if let Err(error) = saved {
             // Der Workspace gehört dem Vorhaben und bleibt liegen.
@@ -448,6 +460,7 @@ impl SessionRegistry {
             return Err(error);
         }
         self.lock_sessions().insert(id, Arc::clone(&session));
+        drop(projects);
         let summary = summarize(&session, &session.lock());
         Ok(summary)
     }
@@ -483,18 +496,20 @@ impl SessionRegistry {
     }
 
     /// Die Repositories der Session mit der kleinsten Nummer — alle Sessions teilen dieselben.
-    /// Ohne Session-Sperre: `repositories` ist nach dem Anlegen unveränderlich.
+    /// Ohne Session-Sperre; die Repositories werden erst nach dem Freigeben der Map gelesen.
     fn project_repository_names(&self, project_id: &str) -> Vec<String> {
-        let sessions = self.lock_sessions();
-        sessions
+        let first: Option<Arc<Session>> = self
+            .lock_sessions()
             .values()
             .filter(|session: &&Arc<Session>| session.project_id == project_id)
             .min_by_key(|session: &&Arc<Session>| session.number)
-            .map(|session: &Arc<Session>| {
+            .cloned();
+        first
+            .map(|session: Arc<Session>| {
                 session
-                    .repositories
-                    .iter()
-                    .map(|repository: &SessionRepository| repository.name.clone())
+                    .repositories()
+                    .into_iter()
+                    .map(|repository: SessionRepository| repository.name)
                     .collect()
             })
             .unwrap_or_default()
@@ -562,12 +577,101 @@ impl SessionRegistry {
         }
         self.lock_projects().remove(project_id);
         // Alle Sessions teilen Workspace und Repositories — einmal aufräumen reicht.
-        if let Some(first) = members.first()
-            && !first.repositories.is_empty()
-        {
-            schedule_worktree_cleanup(first.workspace.clone(), first.repositories.clone());
+        if let Some(first) = members.first() {
+            let repositories = first.repositories();
+            if !repositories.is_empty() {
+                schedule_worktree_cleanup(first.workspace.clone(), repositories);
+            }
         }
         Ok(())
+    }
+
+    /// Hängt ein bekanntes Repository an jede Session des Vorhabens, mit dem Haupt-Checkout und der
+    /// Basis vor dem Anlegen des Vorhabens. Erst die Datenbank, dann der Speicher. Ein ruhender
+    /// Agent wird beendet, damit sein nächster Start das Repository kennt; ein arbeitender läuft
+    /// ungestört weiter und kennt es nach seinem nächsten Start.
+    pub fn add_repository(
+        &self,
+        app: &AppHandle,
+        project_id: &str,
+        repository_id: &str,
+    ) -> Result<ProjectSummary, CommandError> {
+        let members: Vec<Arc<Session>> = {
+            // Bis die Repositories im Speicher stehen gehalten: zwei gleichzeitige Aufrufe und ein
+            // gleichzeitiges `create_in_project` warten aufeinander. Darunter keine Session-Sperre.
+            let projects = self.lock_projects();
+            let created_at = projects
+                .get(project_id)
+                .ok_or_else(|| project_not_found(project_id))?
+                .created_at;
+            let mut members: Vec<Arc<Session>> = self
+                .lock_sessions()
+                .values()
+                .filter(|session: &&Arc<Session>| session.project_id == project_id)
+                .cloned()
+                .collect();
+            members.sort_by_key(|session: &Arc<Session>| session.number);
+            let Some(first) = members.first() else {
+                return Err(project_not_found(project_id));
+            };
+            // `get_many` meldet eine unbekannte ID selbst; eine leere Liste gibt es danach nicht.
+            let Some(row) = self
+                .database
+                .with(|connection| {
+                    repository_rows::get_many(connection, &[repository_id.to_owned()])
+                })?
+                .pop()
+            else {
+                return Err(CommandError::Internal(format!(
+                    "Unbekanntes Repository: {repository_id}"
+                )));
+            };
+            let present = first.repositories();
+            let is_present = present.iter().any(|repository: &SessionRepository| {
+                worktrees::same_repository(&repository.repository_path, Path::new(&row.path))
+            });
+            if is_present {
+                return Err(CommandError::Internal(format!(
+                    "„{}“ gehört schon zu diesem Vorhaben.",
+                    row.name
+                )));
+            }
+            let repository = worktrees::main_checkout_since(&row, created_at)?;
+            let position = u32::try_from(present.len())
+                .map_err(|error| CommandError::Internal(error.to_string()))?;
+            let ids: Vec<String> = members
+                .iter()
+                .map(|session: &Arc<Session>| session.id.clone())
+                .collect();
+            self.database.with(|connection| {
+                session_repositories::append(connection, &ids, position, &repository)
+            })?;
+            for session in &members {
+                session.push_repository(repository.clone());
+            }
+            drop(projects);
+            members
+        };
+        for session in &members {
+            // Ein Fehler hier betrifft nur Anzeige und Ruhezustand einer Session; das Repository
+            // hängt schon in Datenbank und Speicher.
+            let _ = update(
+                app,
+                session,
+                |state: &mut SessionState, outbox: &mut Outbox| {
+                    state.ticket_roots = worktrees::ticket_roots(&session.repositories());
+                    outbox.summary_dirty = true;
+                    if state.process.is_some() && state.is_resting() {
+                        retire_idle_process(state, outbox);
+                    }
+                    Ok(())
+                },
+            );
+        }
+        let summary = self.project_summary(project_id)?;
+        // Wie die übrigen Ereignisse ohne Session-Protokoll: ein Sendefehler ändert nichts am Vorhaben.
+        let _ = app.emit(PROJECT_CHANGED_EVENT, &summary);
+        Ok(summary)
     }
 
     /// Neueste zuerst.
@@ -614,8 +718,15 @@ impl SessionRegistry {
                     state.push_user(outbox, text, Vec::new(), skill);
                     return Ok(());
                 }
-                // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem bisherigen Verlauf.
-                if state.process.is_none() || state.effort != state.process_effort {
+                // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem
+                // bisherigen Verlauf. Ein angehängtes Repository startet ihn nur neu, wenn er ruht —
+                // ein arbeitender Agent wird nie unterbrochen.
+                let has_new_repository =
+                    session.repositories().len() != state.process_repository_count;
+                if state.process.is_none()
+                    || state.effort != state.process_effort
+                    || (has_new_repository && state.is_resting())
+                {
                     start_process(app, &session, state, outbox)?;
                 }
                 // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
@@ -833,14 +944,14 @@ impl SessionRegistry {
         })
     }
 
-    /// Workspace und Repositories der Session, als Kopie. Ohne Session-Sperre: beide sind nach dem
-    /// Anlegen unveränderlich.
+    /// Workspace und Repositories der Session, als Kopie. Ohne Session-Sperre: der Workspace ist
+    /// unveränderlich, die Repositories haben ihre eigene.
     pub fn repositories_of(
         &self,
         session_id: &str,
     ) -> Result<(PathBuf, Vec<SessionRepository>), CommandError> {
         let session = self.get(session_id)?;
-        Ok((session.workspace.clone(), session.repositories.clone()))
+        Ok((session.workspace.clone(), session.repositories()))
     }
 
     /// Ticket-Worktrees, die ein Agent irgendeiner Session des Vorhabens benutzt hat — die Changes
@@ -1045,13 +1156,7 @@ impl SessionRegistry {
                             .is_some_and(|since: f64| now - since >= idle_ms)
                         && !state.has_running_background()
                     {
-                        // Erhöht vor dem Beenden: das folgende `Exited` gilt dann als Ausgabe eines
-                        // ersetzten Prozesses, nicht als Absturz.
-                        state.generation += 1;
-                        outbox.retire(state);
-                        state.process = None;
-                        state.interrupt_background(outbox);
-                        state.idle_since = None;
+                        retire_idle_process(state, outbox);
                     }
                     Ok(())
                 },
@@ -1132,6 +1237,21 @@ impl Session {
     fn log_line(&self, line: String) {
         self.lock().push_log(line);
     }
+
+    /// Die Repositories als Kopie; die Sperre ist danach wieder frei.
+    fn repositories(&self) -> Vec<SessionRepository> {
+        self.repositories
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    fn push_repository(&self, repository: SessionRepository) {
+        self.repositories
+            .write()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(repository);
+    }
 }
 
 impl SessionState {
@@ -1142,6 +1262,7 @@ impl SessionState {
             model,
             effort,
             process_effort: effort,
+            process_repository_count: 0,
             has_agent_history: false,
             mode,
             created_at: now_ms(),
@@ -1274,6 +1395,14 @@ impl SessionState {
 
     fn has_running_background(&self) -> bool {
         self.background.iter().any(BackgroundItem::is_running)
+    }
+
+    /// Weder der Agent noch etwas im Hintergrund arbeitet: ein Neustart des Prozesses unterbricht nichts.
+    fn is_resting(&self) -> bool {
+        !matches!(
+            self.status,
+            SessionStatus::Starting | SessionStatus::Running | SessionStatus::Waiting
+        ) && !self.has_running_background()
     }
 
     /// Der Agent-Prozess endet oder wird ersetzt: was noch läuft, ist unterbrochen. Es kann trotzdem
@@ -2032,7 +2161,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         running_since: state.running_since,
         context_used: state.context_used,
         context_window: state.context_window,
-        repository_count: u32::try_from(session.repositories.len()).unwrap_or(u32::MAX),
+        repository_count: u32::try_from(session.repositories().len()).unwrap_or(u32::MAX),
         project_id: session.project_id.clone(),
         number: session.number,
     }
@@ -2058,8 +2187,9 @@ fn start_process(
 ) -> Result<(), CommandError> {
     let resume = state.has_agent_history;
     let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
-    let mut add_dirs: Vec<PathBuf> = Vec::with_capacity(session.repositories.len());
-    for check in worktrees::ensure(&session.workspace, &session.repositories) {
+    let repositories = session.repositories();
+    let mut add_dirs: Vec<PathBuf> = Vec::with_capacity(repositories.len());
+    for check in worktrees::ensure(&session.workspace, &repositories) {
         match check {
             WorktreeCheck::Ready(path) => add_dirs.push(path),
             WorktreeCheck::Missing { name, reason } => {
@@ -2091,7 +2221,7 @@ fn start_process(
             effort: state.effort,
             mode: state.mode,
             add_dirs,
-            allowed_rules: worktrees::permission_rules(&session.repositories),
+            allowed_rules: worktrees::permission_rules(&repositories),
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -2099,8 +2229,20 @@ fn start_process(
     )?;
     state.process = Some(Arc::new(process));
     state.process_effort = state.effort;
+    state.process_repository_count = repositories.len();
     state.translator = Translator::default();
     Ok(())
+}
+
+/// Beendet den Prozess einer ruhenden Session; die nächste Nachricht startet ihn mit `--resume` neu.
+fn retire_idle_process(state: &mut SessionState, outbox: &mut Outbox) {
+    // Erhöht vor dem Beenden: das folgende `Exited` gilt dann als Ausgabe eines ersetzten
+    // Prozesses, nicht als Absturz.
+    state.generation += 1;
+    outbox.retire(state);
+    state.process = None;
+    state.interrupt_background(outbox);
+    state.idle_since = None;
 }
 
 /// Ohne Standardeingabe beendet sich ein ruhender Agent selbst; der Abschuss nach der Frist

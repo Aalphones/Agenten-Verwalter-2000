@@ -14,7 +14,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 4 | Oberfläche: Übersicht des Vorhabens, „Neue Session“ | [phase-4-vorhaben-uebersicht.md](phase-4-vorhaben-uebersicht.md) | standard | complete |
 | 5 | Core: TL;DR erzeugen | [phase-5-tldr-core.md](phase-5-tldr-core.md) | heikel | pending |
 | 6 | Oberfläche: TL;DR-Karten, Doku-Abschluss | [phase-6-tldr-oberflaeche.md](phase-6-tldr-oberflaeche.md) | standard | pending |
-| 7 | Repository nachträglich an ein Vorhaben hängen (**läuft nach Phase 4, vor Phase 5**) | [phase-7-repository-anhaengen.md](phase-7-repository-anhaengen.md) | heikel | pending |
+| 7 | Repository nachträglich an ein Vorhaben hängen (**läuft nach Phase 4, vor Phase 5**) | [phase-7-repository-anhaengen.md](phase-7-repository-anhaengen.md) | heikel | complete |
 
 **Reihenfolge der drei offenen Pläne: dieser Plan → „Meilenstein 6 — UI auf Zielbild, plus Altlasten“ → „Sprachdiktat“.** M6 (Phase 3 bis 5) und Sprachdiktat sind gegen den Stand nach diesem Plan geschrieben. Dieser Plan belegt Migration 005 und ADR 011; M6 nimmt danach Migration 006 und ADR 012, Sprachdiktat ADR 009.
 

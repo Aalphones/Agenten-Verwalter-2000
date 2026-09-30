@@ -100,6 +100,40 @@ pub fn main_checkouts(
         .collect()
 }
 
+/// Ein Repository, das nachträglich an ein Vorhaben kommt, mit seinem Haupt-Checkout. Die Basis ist
+/// der letzte Commit vor `since_ms` (Anlegen des Vorhabens, ms seit 1970), damit die Changes alles
+/// seit Beginn des Vorhabens zeigen; gibt es davor keinen, der ausgecheckte Stand.
+pub fn main_checkout_since(
+    row: &RepositoryRow,
+    since_ms: f64,
+) -> Result<SessionRepository, CommandError> {
+    let repository_path = PathBuf::from(&row.path);
+    if !repository_path.join(".git").exists() {
+        return Err(CommandError::RepositoryMissing(row.path.clone()));
+    }
+    let since_seconds = (since_ms / 1000.0) as i64;
+    let base = || -> Result<(String, String), CommandError> {
+        let Some(commit) = git::commit_before(&repository_path, since_seconds)? else {
+            return read_base(&repository_path);
+        };
+        let reference = git::head_branch(&repository_path)?.unwrap_or_else(|| commit.clone());
+        Ok((reference, commit))
+    };
+    let (base_ref, base_commit) = base().map_err(|error| prefixed(&row.name, error))?;
+    Ok(SessionRepository {
+        name: row.name.clone(),
+        repository_path,
+        base_ref,
+        base_commit,
+        checkout: RepositoryCheckout::Main,
+    })
+}
+
+/// Derselbe Ordner, ohne Rücksicht auf Groß/Klein, Schrägstrich-Richtung und abschließenden Trenner.
+pub fn same_repository(first: &Path, second: &Path) -> bool {
+    same_dir(first, second)
+}
+
 /// Prüft vor einem Agent-Start die Arbeitsordner einer Session. Ein fehlender App-Worktree entsteht
 /// aus dem Session-Branch neu; ein vorhandener wird nie angefasst. Fehlt der Haupt-Checkout, ist
 /// das Repository `Missing` — auch wenn der Worktree-Ordner noch liegt, denn ohne Haupt-Checkout

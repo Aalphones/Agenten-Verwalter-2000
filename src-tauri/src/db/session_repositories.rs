@@ -8,6 +8,9 @@ use crate::worktrees::{RepositoryCheckout, SessionRepository};
 
 const CHECKOUT_APP_WORKTREE: &str = "app_worktree";
 const CHECKOUT_MAIN: &str = "main";
+const INSERT_SQL: &str = "INSERT INTO session_repositories \
+         (session_id, position, name, repository_path, checkout, folder, branch, base_ref, base_commit) \
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
 
 /// Schreibt alle Repositories einer Session in einer Transaktion; `position` ist der Index.
 pub fn insert_all(
@@ -17,20 +20,11 @@ pub fn insert_all(
 ) -> Result<(), CommandError> {
     let transaction = connection.transaction()?;
     {
-        let mut statement = transaction.prepare(
-            "INSERT INTO session_repositories \
-                 (session_id, position, name, repository_path, checkout, folder, branch, base_ref, base_commit) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        )?;
+        let mut statement = transaction.prepare(INSERT_SQL)?;
         for (index, repository) in repositories.iter().enumerate() {
             let position =
                 i64::try_from(index).map_err(|error| CommandError::Internal(error.to_string()))?;
-            let (checkout, folder, branch) = match &repository.checkout {
-                RepositoryCheckout::AppWorktree { folder, branch } => {
-                    (CHECKOUT_APP_WORKTREE, folder.as_str(), branch.as_str())
-                }
-                RepositoryCheckout::Main => (CHECKOUT_MAIN, "", ""),
-            };
+            let (checkout, folder, branch) = checkout_columns(&repository.checkout);
             statement.execute(params![
                 session_id,
                 position,
@@ -46,6 +40,45 @@ pub fn insert_all(
     }
     transaction.commit()?;
     Ok(())
+}
+
+/// Hängt ein Repository an mehrere Sessions an, in einer Transaktion und überall an `position`.
+pub fn append(
+    connection: &mut Connection,
+    session_ids: &[String],
+    position: u32,
+    repository: &SessionRepository,
+) -> Result<(), CommandError> {
+    let (checkout, folder, branch) = checkout_columns(&repository.checkout);
+    let transaction = connection.transaction()?;
+    {
+        let mut statement = transaction.prepare(INSERT_SQL)?;
+        for session_id in session_ids {
+            statement.execute(params![
+                session_id,
+                position,
+                repository.name,
+                repository.repository_path.to_string_lossy(),
+                checkout,
+                folder,
+                branch,
+                repository.base_ref,
+                repository.base_commit,
+            ])?;
+        }
+    }
+    transaction.commit()?;
+    Ok(())
+}
+
+/// `(checkout, folder, branch)` — die Spalten, in denen die Checkout-Art steht.
+fn checkout_columns(checkout: &RepositoryCheckout) -> (&'static str, &str, &str) {
+    match checkout {
+        RepositoryCheckout::AppWorktree { folder, branch } => {
+            (CHECKOUT_APP_WORKTREE, folder.as_str(), branch.as_str())
+        }
+        RepositoryCheckout::Main => (CHECKOUT_MAIN, "", ""),
+    }
 }
 
 pub fn load(

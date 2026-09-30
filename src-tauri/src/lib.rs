@@ -50,6 +50,7 @@ pub fn run() {
             commands::projects::project_list,
             commands::projects::project_create,
             commands::projects::project_rename,
+            commands::projects::project_add_repository,
             commands::projects::project_archive,
             commands::sessions::session_list,
             commands::sessions::session_create_in_project,

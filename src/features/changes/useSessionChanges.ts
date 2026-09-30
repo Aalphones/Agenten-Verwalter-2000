@@ -34,6 +34,8 @@ export function useSessionChanges(
   // Ohne Repository gibt es nichts zu lesen.
   const sessionId: string | null =
     session !== null && session.repositoryCount > 0 ? session.id : null;
+  // Ein angehängtes Repository ändert die Changes, ohne dass sich Session oder Status ändern.
+  const repositoryCount: number = session === null ? 0 : session.repositoryCount;
   const status: SessionStatus | null = session === null ? null : session.status;
   const isAgentActive: boolean = status !== null && ACTIVE_STATUSES.includes(status);
 
@@ -76,7 +78,7 @@ export function useSessionChanges(
 
   useEffect(() => {
     load();
-  }, [load, status, isVisible]);
+  }, [load, status, isVisible, repositoryCount]);
 
   useEffect(() => {
     window.addEventListener('focus', load);

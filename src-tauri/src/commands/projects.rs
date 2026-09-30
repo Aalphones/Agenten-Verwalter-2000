@@ -49,6 +49,16 @@ pub async fn project_rename(
 }
 
 #[tauri::command]
+pub async fn project_add_repository(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    project_id: String,
+    repository_id: String,
+) -> Result<ProjectSummary, CommandError> {
+    registry.add_repository(&app, &project_id, &repository_id)
+}
+
+#[tauri::command]
 pub async fn project_archive(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,

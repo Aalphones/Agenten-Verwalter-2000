@@ -21,7 +21,7 @@ Bisher war die Session die zentrale Einheit: eine Aufgabe, ein Agent, ein Chat, 
 - **Gemeinsam im Vorhaben:** derselbe Workspace-Ordner (benannt nach der Vorhaben-ID) und dieselben Repositories samt Basis. Die Changes gehören dem Vorhaben: Ticket-Worktrees aller seiner Sessions erscheinen in den Changes jeder seiner Sessions.
 - **Archivieren** nur für das ganze Vorhaben; **Umbenennen** für Vorhaben und Sessions getrennt.
 - **Neue Session im Vorhaben:** neuer Status „Neu“ (angelegt, Agent nie gestartet); höchstens eine solche Session je Vorhaben; die erste Nachricht startet den Agenten mit frischem Kontext. Alte Sessions bleiben frei fortsetzbar, auch während eine neuere läuft.
-- **Sperren im Core:** Die Sperre der Vorhaben (`SessionRegistry.projects`) und die Sperre einer Session werden nie gleichzeitig gehalten.
+- **Sperren im Core:** Die Sperre der Vorhaben (`SessionRegistry.projects`) und die Sperre einer Session werden nie gleichzeitig gehalten (einzige Ausnahme: eine neue, noch unveröffentlichte Session, siehe „Repository nachträglich anhängen“).
 
 ## Konsequenzen
 
@@ -29,6 +29,20 @@ Bisher war die Session die zentrale Einheit: eine Aufgabe, ein Agent, ein Chat, 
 - Die Oberfläche fragt die Changes weiter über eine Session-ID; der Core löst sie zum Vorhaben auf.
 - Einzelne Sessions lassen sich nicht archivieren; ein Vorhaben verschwindet nur als Ganzes.
 - Im Code heißt die Einheit `project`, in der Oberfläche „Vorhaben“ — wer zwischen beiden übersetzt, benutzt das Glossar.
+
+## Repository nachträglich anhängen
+
+**Kontext:** Changes und Diff gibt es nur für Repositories, die beim Anlegen gewählt wurden. Wer ohne Repository startet und den Agenten trotzdem in einem Repository arbeiten lässt, sieht nie einen Diff.
+
+**Betrachtete Optionen:** (a) Repositories nur beim Anlegen wählen, wie bisher; (b) pro Session anhängen; (c) pro Vorhaben anhängen.
+
+**Entscheidung:** (c). „+ Repository“ in der Übersicht hängt ein bekanntes Repository an jede Session des Vorhabens (`project_add_repository`), mit Haupt-Checkout (ADR 010) und derselben Position in allen Sessions; neue Sessions erben es. Die Basis ist der letzte Commit auf dem ersten-Eltern-Pfad von HEAD vor dem Anlegen des Vorhabens (`git rev-list -1 --first-parent --before=<Sekunden> HEAD`, ohne Treffer der ausgecheckte Stand), damit die Changes alles seit Beginn des Vorhabens zeigen. Ein arbeitender Agent wird nie unterbrochen: er kennt das Repository erst nach seinem nächsten Start. Ein ruhender Agent wird beendet; die nächste Nachricht startet ihn mit `--resume` und dem neuen `--add-dir`. Ruht ein Agent, der beim Anhängen noch arbeitete, erst später, startet ihn die nächste Nachricht ebenfalls neu. Kein Entfernen: die Positionen der Ticket-Worktrees hängen an der Reihenfolge der Repositories; wer sich vertan hat, archiviert das Vorhaben.
+
+**Konsequenzen:**
+
+- `Session.repositories` ist veränderlich, hinter einer eigenen `RwLock`, die nur kurz und nie über einen Aufruf hinweg gehalten wird.
+- `add_repository` hält die Vorhaben-Sperre, bis das Repository in Datenbank und Speicher steht; `create_in_project` hält sie vom Lesen der Repositories bis zum Eintrag der neuen Session. So verpasst keine gleichzeitig angelegte Session das Repository. Unter der Vorhaben-Sperre wird dabei nur die Sperre der neuen, noch unveröffentlichten Session genommen — die kennt niemand sonst.
+- Uncommittete Änderungen, die schon vor dem Start des Vorhabens im Ordner lagen, erscheinen als Änderungen des Vorhabens; der Tooltip des Knopfs sagt das.
 
 ## TL;DR
 

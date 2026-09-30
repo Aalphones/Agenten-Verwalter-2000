@@ -31,6 +31,21 @@ pub fn head_commit(repo: &Path) -> Result<String, CommandError> {
     run(repo, &args(&["rev-parse", "--verify", "HEAD"]))
 }
 
+/// Der letzte Commit auf dem ersten-Eltern-Pfad von HEAD vor `before_seconds` (Sekunden seit 1970),
+/// `None`, wenn es davor keinen gibt. Liest nur und nimmt keine Index-Sperre (ADR 006).
+pub fn commit_before(repo: &Path, before_seconds: i64) -> Result<Option<String>, CommandError> {
+    let before = format!("--before={before_seconds}");
+    let output = run(
+        repo,
+        &args(&["rev-list", "-1", "--first-parent", &before, "HEAD"]),
+    )?;
+    let commit = output.trim();
+    if commit.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(commit.to_owned()))
+}
+
 /// Der ausgecheckte Branch, `None` bei losgelöstem HEAD.
 pub fn head_branch(repo: &Path) -> Result<Option<String>, CommandError> {
     let output = run_allowing_failure(repo, &args(&["symbolic-ref", "--short", "-q", "HEAD"]))?;

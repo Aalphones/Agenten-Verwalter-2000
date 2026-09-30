@@ -1,5 +1,5 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-09-30_vorhaben-und-sessions/`
-**Phase:** 7/7 — Repository nachträglich anhängen (pending; Phase 4 complete)
-**Nächster Schritt:** `phase-7-repository-anhaengen.md` lesen und umsetzen (Reihenfolge: 7 → 5 → 6).
+**Phase:** 5/7 — Core: TL;DR erzeugen (pending; Phase 7 complete, Reihenfolge 7 → 5 → 6)
+**Nächster Schritt:** `phase-5-tldr-core.md` lesen und umsetzen.

@@ -153,6 +153,7 @@ export function App(): ReactElement {
             changes={changes}
             onOpenSession={selectSession}
             onSessionCreated={handleSessionCreated}
+            onProjectChanged={upsertProject}
           />
         )}
       </>
