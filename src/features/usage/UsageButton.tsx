@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import type { ReactElement } from 'react';
+import { SeverityIcon } from '@/components/SeverityIcon';
 import { UsagePopover } from '@/features/usage/UsagePopover';
 import { useUsage } from '@/features/usage/useUsage';
-import { USAGE_WARNING_PERCENT } from '@/features/usage/usageTexts';
+import { formatResetAt } from '@/features/usage/usageTexts';
 import type { UsageLimit } from '@/lib/bindings/UsageLimit';
 import type { UsageStatus } from '@/lib/bindings/UsageStatus';
+import { severityOf } from '@/lib/severity';
+import type { Severity } from '@/lib/severity';
 import './UsageButton.css';
 
 const SESSION_LIMIT_KIND = 'session';
@@ -18,11 +22,16 @@ interface UsageButtonProps {
 
 export function UsageButton({ isOpen, onToggle, onClose }: UsageButtonProps): ReactElement {
   const status: UsageStatus | null = useUsage(isOpen);
+  // Beim Einhängen festgehalten; der Reset-Zeitpunkt im Tooltip braucht keine Sekundengenauigkeit.
+  const [now] = useState<number>(() => Date.now());
   const sessionLimit: UsageLimit | undefined = status?.snapshot?.limits.find(
     (limit: UsageLimit) => limit.kind === SESSION_LIMIT_KIND,
   );
-  const isWarning: boolean =
-    sessionLimit !== undefined && sessionLimit.percent >= USAGE_WARNING_PERCENT;
+  const severity: Severity = severityOf(sessionLimit?.percent ?? 0);
+  const resetAt: string | null =
+    sessionLimit?.resetsAt == null ? null : formatResetAt(sessionLimit.resetsAt, now);
+  const title: string =
+    resetAt === null ? BUTTON_TITLE : `${BUTTON_TITLE}\nZurückgesetzt ${resetAt}`;
 
   function renderLabel(): string {
     if (status?.snapshot == null) {
@@ -38,11 +47,12 @@ export function UsageButton({ isOpen, onToggle, onClose }: UsageButtonProps): Re
     <div className="usage-button">
       <button
         type="button"
-        className={`usage-button__trigger${isWarning ? ' usage-button__trigger--warning' : ''}`}
+        className={`usage-button__trigger severity severity--${sessionLimit === undefined ? 'none' : severity}`}
         aria-expanded={isOpen}
-        title={BUTTON_TITLE}
+        title={title}
         onClick={onToggle}
       >
+        {sessionLimit !== undefined && <SeverityIcon severity={severity} />}
         <span className="usage-button__bar">
           <span
             className="usage-button__fill"

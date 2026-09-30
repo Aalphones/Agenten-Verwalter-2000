@@ -1,0 +1,19 @@
+/* Setzt `--severity-color`; Kontext und Kontingent färben Text, Icon und Balken damit. */
+.severity {
+  &--ok {
+    --severity-color: var(--color-status-completed);
+  }
+
+  &--caution {
+    --severity-color: var(--color-status-waiting);
+  }
+
+  &--critical {
+    --severity-color: var(--color-status-error);
+  }
+}
+
+.severity-icon {
+  flex-shrink: 0;
+  color: var(--severity-color);
+}

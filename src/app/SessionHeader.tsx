@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
+import { SeverityIcon } from '@/components/SeverityIcon';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import { ContextPopover } from '@/features/context/ContextPopover';
 import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
 import { UsageButton } from '@/features/usage/UsageButton';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { severityOf } from '@/lib/severity';
+import type { Severity } from '@/lib/severity';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
 import './SessionHeader.css';
 
-const CONTEXT_WARNING_PERCENT = 90;
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
@@ -78,9 +80,7 @@ export function SessionHeader({
   const views: readonly SessionView[] = session.repositoryCount > 0 ? SESSION_VIEWS : ['chat'];
   const usedThousands: number = Math.round(session.contextUsed / 1000);
   const windowThousands: number = Math.round(session.contextWindow / 1000);
-  const contextClass = `session-header__context-fill${
-    contextPercent >= CONTEXT_WARNING_PERCENT ? ' session-header__context-fill--warning' : ''
-  }`;
+  const contextSeverity: Severity = severityOf(contextPercent);
 
   const backgroundLabel: string =
     runningBackgroundCount > 0
@@ -225,20 +225,21 @@ export function SessionHeader({
         <div className="session-header__anchor">
           <button
             type="button"
-            className="session-header__context"
+            className={`session-header__context severity severity--${contextSeverity}`}
             aria-expanded={openPanel === 'context'}
             title={CONTEXT_TITLE}
             onClick={(): void => {
               togglePanel('context');
             }}
           >
+            <SeverityIcon severity={contextSeverity} />
             <span className="session-header__context-bar">
               <span
-                className={contextClass}
+                className="session-header__context-fill"
                 style={{ width: `${String(Math.min(contextPercent, 100))}%` }}
               />
             </span>
-            <span className="session-header__mono">
+            <span className="session-header__mono session-header__context-label">
               {String(usedThousands)}k / {String(windowThousands)}k
             </span>
           </button>

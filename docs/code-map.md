@@ -43,7 +43,7 @@ Features: `sessions`, `chat`, `attachments`, `skills`, `background`, `context`, 
 | Fehlertexte aus dem Core | `src/lib/errors.ts` (`isCommandError`, `commandErrorText`) | — |
 | App-Info (Name, Version) | `src/lib/app.ts` | `src-tauri/src/commands/app.rs` |
 | Design-Tokens (roh + semantisch, Hell/Dunkel; Diagrammfarben `--color-chart-1` … `-7`) | `src/styles/theme.css`; BEM-Verschachtelung (`&__x`) löst `postcss-nested` in `vite.config.ts` auf | — |
-| App-Rahmen (Layout, Sidebar, Session-Kopfzeile) | `src/app/` (`App.tsx`, `Sidebar.tsx`, `SessionHeader.tsx` mit den Reitern Chat/Changes, dem Knopf „Hintergrund“, dem Kontext-Fenster und der Kontingent-Anzeige; `App.tsx` setzt daneben das Hintergrund-Panel) | `src-tauri/src/main.rs`, `src-tauri/src/lib.rs` |
+| App-Rahmen (Layout, Sidebar, Session-Kopfzeile) | `src/app/` (`App.tsx`, `Sidebar.tsx`, `SessionHeader.tsx` mit den Reitern Chat/Changes, dem Knopf „Hintergrund“, dem Kontext-Fenster und der Kontingent-Anzeige, beide gefärbt nach Schweregrad: grün, ab 60 % gelb, ab 80 % rot, siehe `src/lib/severity.ts` und `src/components/SeverityIcon.tsx`; `App.tsx` setzt daneben das Hintergrund-Panel) | `src-tauri/src/main.rs`, `src-tauri/src/lib.rs` |
 | Geteilte UI-Bausteine | `src/components/` (`StatusIcon`, `Popover` (`autoFocus`, Breite `anchor`), `ModelMenu`, `ModeMenu`, `EffortDots`, `Markdown`, `CodeBlock`, `ExternalLink`) | — |
 | Sidebar-Zeile (Umbenennen, Archivieren) | `src/app/SidebarItem.tsx` | — |
 | Anzeige-Texte für Modell, Modus, Denkaufwand | `src/lib/labels.ts` | — |

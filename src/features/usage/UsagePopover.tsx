@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
+import { SeverityIcon } from '@/components/SeverityIcon';
 import { formatClock, formatPercent } from '@/features/context/formatTokens';
-import {
-  USAGE_WARNING_PERCENT,
-  behaviorText,
-  formatResetIn,
-  limitLabel,
-} from '@/features/usage/usageTexts';
+import { behaviorText, formatResetAt, limitLabel } from '@/features/usage/usageTexts';
 import type { UsageBreakdown } from '@/lib/bindings/UsageBreakdown';
 import type { UsageLimit } from '@/lib/bindings/UsageLimit';
 import type { UsageShare } from '@/lib/bindings/UsageShare';
 import type { UsageSnapshot } from '@/lib/bindings/UsageSnapshot';
 import type { UsageStatus } from '@/lib/bindings/UsageStatus';
+import { severityOf } from '@/lib/severity';
+import type { Severity } from '@/lib/severity';
 import { refreshUsage } from '@/lib/usage';
 import './UsagePopover.css';
 
@@ -37,7 +35,7 @@ interface UsagePopoverProps {
 
 export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactElement {
   const [period, setPeriod] = useState<Period>('day');
-  // Das Fenster wird bei jedem Öffnen neu eingehängt; so bleibt „in 2 Std.“ beim Rendern stabil.
+  // Das Fenster wird bei jedem Öffnen neu eingehängt; so bleibt der Reset-Zeitpunkt beim Rendern stabil.
   const [now] = useState<number>(() => Date.now());
   const snapshot: UsageSnapshot | null = status?.snapshot ?? null;
   const hasBreakdown: boolean =
@@ -133,23 +131,25 @@ export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactEleme
 }
 
 function renderLimit(limit: UsageLimit, now: number): ReactElement {
-  const resetIn: string | null =
-    limit.resetsAt === null ? null : formatResetIn(limit.resetsAt, now);
+  const resetAt: string | null =
+    limit.resetsAt === null ? null : formatResetAt(limit.resetsAt, now);
+  const severity: Severity = severityOf(limit.percent);
   return (
-    <li key={limit.kind} className="usage-popover__limit">
+    <li key={limit.kind} className={`usage-popover__limit severity severity--${severity}`}>
       <div className="usage-popover__limit-head">
-        <span>{limitLabel(limit.kind)}</span>
+        <span className="usage-popover__limit-name">
+          <SeverityIcon severity={severity} />
+          {limitLabel(limit.kind)}
+        </span>
         <span className="usage-popover__percent">{formatPercent(limit.percent, 0)}</span>
       </div>
       <div className="usage-popover__bar">
         <span
-          className={`usage-popover__fill${
-            limit.percent >= USAGE_WARNING_PERCENT ? ' usage-popover__fill--warning' : ''
-          }`}
+          className="usage-popover__fill"
           style={{ width: `${String(Math.min(limit.percent, FULL_PERCENT))}%` }}
         />
       </div>
-      {resetIn !== null && <span className="usage-popover__reset">Zurückgesetzt {resetIn}</span>}
+      {resetAt !== null && <span className="usage-popover__reset">Zurückgesetzt {resetAt}</span>}
     </li>
   );
 }

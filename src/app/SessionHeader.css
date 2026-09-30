@@ -201,11 +201,11 @@
   &__context-fill {
     display: block;
     height: 4px;
-    background: var(--color-fg-secondary);
+    background: var(--severity-color);
+  }
 
-    &--warning {
-      background: var(--color-status-waiting);
-    }
+  &__context-label {
+    color: var(--severity-color);
   }
 
   &__mono {

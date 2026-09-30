@@ -1,12 +1,6 @@
-import { formatPercent } from '@/features/context/formatTokens';
+import { formatClock, formatPercent } from '@/features/context/formatTokens';
 
-/** Ab diesem Prozentwert färbt die Oberfläche ein Kontingent als Warnung. */
-export const USAGE_WARNING_PERCENT = 90;
-
-const MS_PER_MINUTE = 60_000;
-const MINUTES_PER_HOUR = 60;
-const HOURS_PER_TWO_DAYS = 48;
-const HOURS_PER_DAY = 24;
+const MS_PER_DAY = 86_400_000;
 
 const LIMIT_LABEL: Readonly<Record<string, string>> = {
   session: 'Session (5 Std.)',
@@ -52,19 +46,32 @@ export function behaviorText(key: string, percent: number): BehaviorText {
   }
 }
 
-/** „in 12 Min.“, „in 3 Std.“, „in 5 Tagen“; `null`, wenn der Zeitpunkt unlesbar ist oder nicht mehr in der Zukunft liegt. */
-export function formatResetIn(resetsAt: string, now: number): string | null {
+/** Wochentag ohne Datum: „Fr.“, „Mo.“. */
+const WEEKDAY_FORMAT = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
+
+/**
+ * Konkreter Reset-Zeitpunkt: „um 15:30 Uhr“, „morgen um 15:30 Uhr“, „Fr. um 15:30 Uhr“.
+ * `null`, wenn der Zeitpunkt unlesbar ist oder nicht mehr in der Zukunft liegt.
+ */
+export function formatResetAt(resetsAt: string, now: number): string | null {
   const resetMs: number = Date.parse(resetsAt);
   if (Number.isNaN(resetMs) || resetMs <= now) {
     return null;
   }
-  const minutes: number = Math.max(1, Math.round((resetMs - now) / MS_PER_MINUTE));
-  if (minutes < MINUTES_PER_HOUR) {
-    return `in ${String(minutes)} Min.`;
+  const reset = new Date(resetMs);
+  const clock = `um ${formatClock(resetMs)} Uhr`;
+  const dayDifference: number = Math.round(
+    (startOfDay(reset) - startOfDay(new Date(now))) / MS_PER_DAY,
+  );
+  if (dayDifference <= 0) {
+    return clock;
   }
-  const hours: number = Math.round(minutes / MINUTES_PER_HOUR);
-  if (hours < HOURS_PER_TWO_DAYS) {
-    return `in ${String(hours)} Std.`;
+  if (dayDifference === 1) {
+    return `morgen ${clock}`;
   }
-  return `in ${String(Math.round(hours / HOURS_PER_DAY))} Tagen`;
+  return `${WEEKDAY_FORMAT.format(reset)} ${clock}`;
+}
+
+function startOfDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }

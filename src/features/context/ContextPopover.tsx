@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
+import { SeverityIcon } from '@/components/SeverityIcon';
 import { categoryLabel } from '@/features/context/categoryLabels';
 import {
   formatClock,
@@ -14,6 +15,8 @@ import type { ContextFile } from '@/lib/bindings/ContextFile';
 import type { SessionContext } from '@/lib/bindings/SessionContext';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { refreshContext } from '@/lib/context';
+import { severityOf } from '@/lib/severity';
+import type { Severity } from '@/lib/severity';
 import './ContextPopover.css';
 
 const CONTEXT_POPOVER_WIDTH = 360;
@@ -90,11 +93,15 @@ function renderBreakdown(
 ): ReactElement {
   const rows: CategoryRow[] = buildRows(breakdown.categories);
   const usedPercent: number = shareOfWindow(breakdown.totalTokens, breakdown.maxTokens);
+  const severity: Severity = severityOf(usedPercent);
 
   return (
     <>
       <p className="context-popover__model">{breakdown.model}</p>
-      <p className="context-popover__summary">
+      <p
+        className={`context-popover__summary context-popover__summary--severity severity severity--${severity}`}
+      >
+        <SeverityIcon severity={severity} />
         {formatTokens(breakdown.totalTokens)} / {formatTokens(breakdown.maxTokens)} Tokens (
         {formatPercent(usedPercent, 0)})
       </p>
