@@ -5,4 +5,9 @@ export type SessionChanges = {
 /**
  * Je Session-Repository erst sein Eintrag, dann seine Ticket-Worktrees.
  */
-repositories: Array<RepositoryChanges>, };
+repositories: Array<RepositoryChanges>, 
+/**
+ * Namen der Session-Repositories ohne Git, in der Reihenfolge der Session; für sie gibt es
+ * keine Changes (ADR 018).
+ */
+plainFolders: Array<string>, };

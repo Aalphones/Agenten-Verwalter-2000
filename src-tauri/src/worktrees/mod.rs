@@ -1,5 +1,5 @@
-//! Arbeitsordner der Session-Repositories: Haupt-Checkouts, Freigaben für Ticket-Worktrees und die
-//! App-Worktrees von Sessions vor ADR 010.
+//! Arbeitsordner der Session-Repositories: Haupt-Checkouts, Freigaben für Ticket-Worktrees, die
+//! App-Worktrees von Sessions vor ADR 010 und Ordner ohne Git.
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -43,6 +43,8 @@ pub enum RepositoryCheckout {
     AppWorktree { folder: String, branch: String },
     /// Der Agent arbeitet im Haupt-Checkout (`repository_path`).
     Main,
+    /// Ordner ohne Git: der Agent arbeitet direkt in `repository_path`; keine Basis, keine Changes (ADR 018).
+    Folder,
 }
 
 /// Ein Repository einer Session, als Kopie: die Session bleibt gültig, auch wenn das
@@ -62,7 +64,7 @@ impl SessionRepository {
     pub fn working_dir(&self, workspace: &Path) -> PathBuf {
         match &self.checkout {
             RepositoryCheckout::AppWorktree { folder, .. } => workspace.join(folder),
-            RepositoryCheckout::Main => self.repository_path.clone(),
+            RepositoryCheckout::Main | RepositoryCheckout::Folder => self.repository_path.clone(),
         }
     }
 }
@@ -84,8 +86,11 @@ pub fn main_checkouts(
         .iter()
         .map(|row: &RepositoryRow| {
             let repository_path = PathBuf::from(&row.path);
-            if !repository_path.join(".git").exists() {
+            if !repository_path.is_dir() {
                 return Err(CommandError::RepositoryMissing(row.path.clone()));
+            }
+            if !repository_path.join(".git").exists() {
+                return Ok(folder_checkout(row));
             }
             let (base_ref, base_commit) =
                 read_base(&repository_path).map_err(|error| prefixed(&row.name, error))?;
@@ -108,8 +113,11 @@ pub fn main_checkout_since(
     since_ms: f64,
 ) -> Result<SessionRepository, CommandError> {
     let repository_path = PathBuf::from(&row.path);
-    if !repository_path.join(".git").exists() {
+    if !repository_path.is_dir() {
         return Err(CommandError::RepositoryMissing(row.path.clone()));
+    }
+    if !repository_path.join(".git").exists() {
+        return Ok(folder_checkout(row));
     }
     let since_seconds = (since_ms / 1000.0) as i64;
     let base = || -> Result<(String, String), CommandError> {
@@ -127,6 +135,17 @@ pub fn main_checkout_since(
         base_commit,
         checkout: RepositoryCheckout::Main,
     })
+}
+
+/// Ein Ordner ohne Git als Repository der Session: leere Basis, denn es gibt nichts zu vergleichen.
+fn folder_checkout(row: &RepositoryRow) -> SessionRepository {
+    SessionRepository {
+        name: row.name.clone(),
+        repository_path: PathBuf::from(&row.path),
+        base_ref: String::new(),
+        base_commit: String::new(),
+        checkout: RepositoryCheckout::Folder,
+    }
 }
 
 /// Derselbe Ordner, ohne Rücksicht auf Groß/Klein, Schrägstrich-Richtung und abschließenden Trenner.
@@ -149,14 +168,23 @@ pub fn ensure(workspace: &Path, repositories: &[SessionRepository]) -> Vec<Workt
 
 fn ensure_one(workspace: &Path, repository: &SessionRepository) -> WorktreeCheck {
     let main_checkout = &repository.repository_path;
-    if !main_checkout.join(".git").exists() {
+    // Ein Ordner ohne Git hat kein `.git`, das fehlen könnte: für ihn zählt nur, dass er da ist.
+    let is_main_checkout_there = match repository.checkout {
+        RepositoryCheckout::Folder => main_checkout.is_dir(),
+        RepositoryCheckout::Main | RepositoryCheckout::AppWorktree { .. } => {
+            main_checkout.join(".git").exists()
+        }
+    };
+    if !is_main_checkout_there {
         return WorktreeCheck::Missing {
             name: repository.name.clone(),
             reason: format!("{} gibt es nicht mehr.", main_checkout.display()),
         };
     }
     let (folder, branch) = match &repository.checkout {
-        RepositoryCheckout::Main => return WorktreeCheck::Ready(main_checkout.clone()),
+        RepositoryCheckout::Main | RepositoryCheckout::Folder => {
+            return WorktreeCheck::Ready(main_checkout.clone());
+        }
         RepositoryCheckout::AppWorktree { folder, branch } => (folder, branch),
     };
     let path = workspace.join(folder);
@@ -296,7 +324,8 @@ pub fn ticket_worktrees(
     position: u32,
     folders: &[String],
 ) -> Vec<TicketWorktree> {
-    if matches!(repository.checkout, RepositoryCheckout::AppWorktree { .. }) || folders.is_empty() {
+    let has_ticket_worktrees = matches!(repository.checkout, RepositoryCheckout::Main);
+    if !has_ticket_worktrees || folders.is_empty() {
         return Vec::new();
     }
     let Some(parent) = repository.repository_path.parent() else {
@@ -354,7 +383,7 @@ fn same_dir(first: &Path, second: &Path) -> bool {
     normalized_dir(first) == normalized_dir(second)
 }
 
-fn normalized_dir(path: &Path) -> String {
+pub fn normalized_dir(path: &Path) -> String {
     path.to_string_lossy()
         .replace('/', "\\")
         .trim_end_matches('\\')

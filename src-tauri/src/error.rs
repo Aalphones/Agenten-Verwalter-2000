@@ -24,10 +24,10 @@ pub enum CommandError {
     GitNotFound,
     #[error("Git: {0}")]
     Git(String),
-    #[error("Kein Git-Repository: {0}")]
-    NotARepository(String),
     #[error("Repository nicht gefunden: {0}")]
     RepositoryMissing(String),
+    #[error("Ordner nicht erlaubt: {0}")]
+    FolderNotAllowed(String),
     #[error("Anhänge gehen erst, wenn die Rückfrage beantwortet ist")]
     AttachmentsWhileWaiting,
     #[error("Sprachmodell fehlt")]

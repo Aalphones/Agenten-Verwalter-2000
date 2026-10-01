@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](..
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | Core: Ordner aufnehmen, Checkout-Art `folder`, Agent-Start, Changes, ADR 018 | standard | pending |
+| 1 | Core: Ordner aufnehmen, Checkout-Art `folder`, Agent-Start, Changes, ADR 018 | standard | complete |
 | 2 | Oberfläche: Auswahl, Menü, Changes-Übersicht, Texte, Doku, Release | standard | pending |
 
 **Reihenfolge:** vor allen geparkten Plänen (STATE.md). Phasen strikt 1 → 2. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `repositories`. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach Phase 1 `pnpm bindings` und die erzeugten Dateien mitcommitten. Die neuen Bindings brechen in der Oberfläche genau eine Stelle (`describeAddError` prüft `notARepository`); Phase 1 ersetzt sie, damit auch ihr Commit `pnpm check` grün hat.
@@ -69,17 +69,17 @@ pub struct KnownRepository {
 
 **Checkliste:**
 
-- [ ] `error.rs`: Variante `NotARepository` löschen, `FolderNotAllowed(String)` mit `#[error("Ordner nicht erlaubt: {0}")]` hinter `RepositoryMissing` einfügen.
-- [ ] `repositories/model.rs`: `RepositoryKind` und das Feld `kind` nach Kontrakt; Doku-Kommentar von `is_missing` auf „Der Ordner fehlt.“
-- [ ] `repositories/mod.rs`, `add(database, path, home: &Path)`:
+- [x] `error.rs`: Variante `NotARepository` löschen, `FolderNotAllowed(String)` mit `#[error("Ordner nicht erlaubt: {0}")]` hinter `RepositoryMissing` einfügen.
+- [x] `repositories/model.rs`: `RepositoryKind` und das Feld `kind` nach Kontrakt; Doku-Kommentar von `is_missing` auf „Der Ordner fehlt.“
+- [x] `repositories/mod.rs`, `add(database, path, home: &Path)`:
   - Pfad normalisieren: `path.trim_end_matches(['\\', '/'])`, außer das Ergebnis endet auf `:` (dann `\` wieder anhängen, damit `C:\` als Wurzel erkennbar bleibt).
   - `has_git_above(path)` (neue private Funktion): `Path::new(path).ancestors().any(|dir| dir.join(".git").exists())`.
   - `true` → bisheriger Weg über `git::toplevel`, aber Fehler **unverändert** weiterreichen (kein Umwandeln von `CommandError::Git`).
   - `false` → `check_folder_allowed(Path::new(&normalized), home)?` (neue private Funktion, s. u.), dann `root = PathBuf::from(normalized)`; Name und Doppelten-Prüfung wie bisher.
   - `check_folder_allowed(dir, home)`: Vergleich über `normalized` = `to_string_lossy()`, `/` → `\`, ohne abschließendes `\`, `to_lowercase()`. Gesperrt, wenn `dir.parent().is_none()` (Laufwerkswurzel), wenn `home_n == dir_n` oder `home_n.starts_with(&format!("{dir_n}\\"))` (Benutzerordner oder darüber), oder wenn `dir_n == data_n` oder `dir_n.starts_with(&format!("{data_n}\\"))` mit `data_n` aus `home.join(".verwalter")`. Gesperrt → `Err(CommandError::FolderNotAllowed(<Pfad wie gewählt>))`. Den Ordnernamen `.verwalter` nicht neu hart kodieren, wenn `filesystem::workspace` eine Konstante dafür hat — sonst dort eine `pub const DATA_DIR_NAME: &str = ".verwalter";` anlegen und in `data_dir` mitbenutzen.
-- [ ] `repositories/mod.rs`, `describe`: `is_missing = !root.is_dir()`; `kind = if root.join(".git").exists() { Git } else { Folder }`; `skill_count` wie bisher nur, wenn nicht fehlend.
-- [ ] `commands/repositories.rs`, `repository_add`: Parameter `app: tauri::AppHandle` ergänzen, `let home = crate::filesystem::workspace::home_dir(&app)?;`, `repositories::add(&database, &path, &home)`.
-- [ ] `worktrees/mod.rs`:
+- [x] `repositories/mod.rs`, `describe`: `is_missing = !root.is_dir()`; `kind = if root.join(".git").exists() { Git } else { Folder }`; `skill_count` wie bisher nur, wenn nicht fehlend.
+- [x] `commands/repositories.rs`, `repository_add`: Parameter `app: tauri::AppHandle` ergänzen, `let home = crate::filesystem::workspace::home_dir(&app)?;`, `repositories::add(&database, &path, &home)`.
+- [x] `worktrees/mod.rs`:
   - `RepositoryCheckout::Folder` mit Doku-Kommentar „Ordner ohne Git: der Agent arbeitet direkt in `repository_path`; keine Basis, keine Changes (ADR 018).“
   - `working_dir`: `Folder => self.repository_path.clone()`.
   - Neue private Funktion `folder_checkout(row: &RepositoryRow) -> SessionRepository` mit `base_ref`/`base_commit` = `String::new()`, `checkout: Folder`.
@@ -87,17 +87,17 @@ pub struct KnownRepository {
   - `ensure_one`: als Erstes `if let RepositoryCheckout::Folder = repository.checkout { return if main_checkout.is_dir() { Ready(main_checkout.clone()) } else { Missing { name, reason: format!("{} gibt es nicht mehr.", …) } }; }` — vor der `.git`-Prüfung.
   - `ticket_worktrees`: Frühausstieg auch für `Folder` (`matches!(…, AppWorktree { .. } | Folder)`), damit kein `git worktree list` läuft. `permission_rules`, `ticket_roots`, `remove_clean` filtern schon auf `Main` bzw. `AppWorktree` — nur prüfen, nicht ändern.
   - Modul-Doku (Zeile 1–2) um „und Ordner ohne Git“ ergänzen.
-- [ ] `db/session_repositories.rs`: `const CHECKOUT_FOLDER: &str = "folder";`, in `checkout_columns` `Folder => (CHECKOUT_FOLDER, "", "")`, in `into_session` `CHECKOUT_FOLDER => RepositoryCheckout::Folder`; Modul-Doku unverändert.
-- [ ] `changes/model.rs`: `SessionChanges.plain_folders` nach Kontrakt, Doku-Kommentar von `repositories` bleibt.
-- [ ] `changes/mod.rs`:
+- [x] `db/session_repositories.rs`: `const CHECKOUT_FOLDER: &str = "folder";`, in `checkout_columns` `Folder => (CHECKOUT_FOLDER, "", "")`, in `into_session` `CHECKOUT_FOLDER => RepositoryCheckout::Folder`; Modul-Doku unverändert.
+- [x] `changes/model.rs`: `SessionChanges.plain_folders` nach Kontrakt, Doku-Kommentar von `repositories` bleibt.
+- [x] `changes/mod.rs`:
   - `load`: vor dem Spawnen die Repositories mit `Folder` herausnehmen — Namen in `plain_folders` sammeln, für sie keinen Thread starten; die Position (`index`) der übrigen bleibt der Index in der vollen Liste.
   - `file_diff`: direkt nach `validate_path` `if matches!(repository.checkout, RepositoryCheckout::Folder) { return Err(CommandError::Internal("Ordner ohne Git hat keinen Diff".to_owned())); }`.
   - Rückgabe `SessionChanges { repositories, plain_folders }`.
-- [ ] `sessions/registry.rs`: Doku-Kommentar von `start_process` um „Ordner ohne Git gehen wie Haupt-Checkouts per `--add-dir` an den Agenten“ ergänzen; Code bleibt.
-- [ ] `src-tauri/examples/gen-bindings.rs`: `RepositoryKind` eintragen; `pnpm bindings`.
-- [ ] `src/features/repositories/RepositoryPicker.tsx`, `describeAddError`: Zweig `notARepository` ersetzen durch `folderNotAllowed` mit dem Text „Diesen Ordner bekommt der Agent nicht: <Pfad>. Gesperrt sind Laufwerke, der Benutzerordner und alles darüber sowie der Datenordner der App — wähle einen Unterordner.“ (`${String(reason.message)}` als Pfad). `src/lib/repositories.ts`: `@throws`-Kommentar `notARepository` → `folderNotAllowed`. Danach `pnpm check` grün.
-- [ ] ADR `docs/decisions/018-ordner-ohne-git.md` aus „Festgelegte Entscheidungen“ (Format wie ADR 010, Status angenommen, Datum des Commits). ADR 005 und 010 bekommen keinen Status-Wechsel, nur ADR 010 unter Konsequenzen den Satz „Ordner ohne Git (ADR 018) haben weder Ticket-Worktrees noch Freigaben.“
-- [ ] Commit `feat(repositories): Ordner ohne Git im Core zulassen`.
+- [x] `sessions/registry.rs`: Doku-Kommentar von `start_process` um „Ordner ohne Git gehen wie Haupt-Checkouts per `--add-dir` an den Agenten“ ergänzen; Code bleibt.
+- [x] `src-tauri/examples/gen-bindings.rs`: `RepositoryKind` eintragen; `pnpm bindings`.
+- [x] `src/features/repositories/RepositoryPicker.tsx`, `describeAddError`: Zweig `notARepository` ersetzen durch `folderNotAllowed` mit dem Text „Diesen Ordner bekommt der Agent nicht: <Pfad>. Gesperrt sind Laufwerke, der Benutzerordner und alles darüber sowie der Datenordner der App — wähle einen Unterordner.“ (`${String(reason.message)}` als Pfad). `src/lib/repositories.ts`: `@throws`-Kommentar `notARepository` → `folderNotAllowed`. Danach `pnpm check` grün.
+- [x] ADR `docs/decisions/018-ordner-ohne-git.md` aus „Festgelegte Entscheidungen“ (Format wie ADR 010, Status angenommen, Datum des Commits). ADR 005 und 010 bekommen keinen Status-Wechsel, nur ADR 010 unter Konsequenzen den Satz „Ordner ohne Git (ADR 018) haben weder Ticket-Worktrees noch Freigaben.“
+- [x] Commit `feat(repositories): Ordner ohne Git im Core zulassen`.
 
 ## Phase 2 — Oberfläche, Doku, Release
 

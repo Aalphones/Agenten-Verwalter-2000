@@ -2257,7 +2257,8 @@ fn now_ms() -> f64 {
 /// legt er sie unter der Session-ID an (`--session-id`).
 ///
 /// Vorher prüft `worktrees::ensure` die Arbeitsordner: fehlende App-Worktrees entstehen neu, ein
-/// Repository ohne Haupt-Checkout bleibt draußen und bekommt einen Fehler-Eintrag im Chat.
+/// Repository ohne Haupt-Checkout bleibt draußen und bekommt einen Fehler-Eintrag im Chat. Ordner
+/// ohne Git gehen wie Haupt-Checkouts per `--add-dir` an den Agenten.
 fn start_process(
     app: &AppHandle,
     session: &Arc<Session>,

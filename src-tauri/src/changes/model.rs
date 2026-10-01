@@ -66,6 +66,9 @@ pub struct RepositoryChanges {
 pub struct SessionChanges {
     /// Je Session-Repository erst sein Eintrag, dann seine Ticket-Worktrees.
     pub repositories: Vec<RepositoryChanges>,
+    /// Namen der Session-Repositories ohne Git, in der Reihenfolge der Session; für sie gibt es
+    /// keine Changes (ADR 018).
+    pub plain_folders: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

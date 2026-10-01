@@ -8,6 +8,7 @@ use crate::worktrees::{RepositoryCheckout, SessionRepository};
 
 const CHECKOUT_APP_WORKTREE: &str = "app_worktree";
 const CHECKOUT_MAIN: &str = "main";
+const CHECKOUT_FOLDER: &str = "folder";
 const INSERT_SQL: &str = "INSERT INTO session_repositories \
          (session_id, position, name, repository_path, checkout, folder, branch, base_ref, base_commit) \
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)";
@@ -78,6 +79,7 @@ fn checkout_columns(checkout: &RepositoryCheckout) -> (&'static str, &str, &str)
             (CHECKOUT_APP_WORKTREE, folder.as_str(), branch.as_str())
         }
         RepositoryCheckout::Main => (CHECKOUT_MAIN, "", ""),
+        RepositoryCheckout::Folder => (CHECKOUT_FOLDER, "", ""),
     }
 }
 
@@ -126,6 +128,7 @@ impl StoredRepository {
                 branch: self.branch,
             },
             CHECKOUT_MAIN => RepositoryCheckout::Main,
+            CHECKOUT_FOLDER => RepositoryCheckout::Folder,
             other => {
                 return Err(CommandError::Internal(format!(
                     "Unbekannte Checkout-Art {other}"

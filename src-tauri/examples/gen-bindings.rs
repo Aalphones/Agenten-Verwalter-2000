@@ -19,7 +19,7 @@ use verwalter_lib::{
     },
     error::CommandError,
     projects::model::{ProjectCreated, ProjectSummary},
-    repositories::model::KnownRepository,
+    repositories::model::{KnownRepository, RepositoryKind},
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     settings::model::{ColorScheme, Settings, SettingsChange, SettingsOverview},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
@@ -59,6 +59,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ChatEntryEvent::export_all(&cfg)?;
     ProjectSummary::export_all(&cfg)?;
     ProjectCreated::export_all(&cfg)?;
+    RepositoryKind::export_all(&cfg)?;
     KnownRepository::export_all(&cfg)?;
     ChangeKind::export_all(&cfg)?;
     ChangeScope::export_all(&cfg)?;

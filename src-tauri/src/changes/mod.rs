@@ -30,7 +30,8 @@ const SHORT_COMMIT_CHARS: usize = 7;
 const UNKNOWN_BASE: &str = "unbekannt";
 
 /// Liest alle Repositories der Session nebeneinander, je eines samt seiner Ticket-Worktrees in einem
-/// eigenen Thread. Scheitert eines, trägt nur sein Eintrag den Fehler.
+/// eigenen Thread. Scheitert eines, trägt nur sein Eintrag den Fehler. Ordner ohne Git bekommen
+/// keinen Thread und keinen Eintrag, nur ihr Name steht in `plain_folders` (ADR 018).
 ///
 /// `ticket_folders`: die Ticket-Worktrees, die der Agent der Session benutzt hat, als
 /// `(Position, Ordner)`.
@@ -39,6 +40,11 @@ pub fn load(
     repositories: &[SessionRepository],
     ticket_folders: &[(u32, String)],
 ) -> SessionChanges {
+    let plain_folders: Vec<String> = repositories
+        .iter()
+        .filter(|repository: &&SessionRepository| is_plain_folder(repository))
+        .map(|repository: &SessionRepository| repository.name.clone())
+        .collect();
     let repositories = thread::scope(|scope| {
         let handles: Vec<(
             u32,
@@ -47,6 +53,7 @@ pub fn load(
         )> = repositories
             .iter()
             .enumerate()
+            .filter(|(_, repository): &(usize, &SessionRepository)| !is_plain_folder(repository))
             .map(|(index, repository): (usize, &SessionRepository)| {
                 let position = u32::try_from(index).unwrap_or(u32::MAX);
                 let folders = folders_of(ticket_folders, position);
@@ -69,7 +76,14 @@ pub fn load(
             })
             .collect()
     });
-    SessionChanges { repositories }
+    SessionChanges {
+        repositories,
+        plain_folders,
+    }
+}
+
+fn is_plain_folder(repository: &SessionRepository) -> bool {
+    matches!(repository.checkout, RepositoryCheckout::Folder)
 }
 
 fn folders_of(ticket_folders: &[(u32, String)], position: u32) -> Vec<String> {
@@ -214,6 +228,11 @@ pub fn file_diff(
     scope: ChangeScope,
 ) -> Result<FileDiff, CommandError> {
     validate_path(path)?;
+    if is_plain_folder(repository) {
+        return Err(CommandError::Internal(
+            "Ordner ohne Git hat keinen Diff".to_owned(),
+        ));
+    }
     if !repository.repository_path.join(".git").exists() {
         return Err(CommandError::RepositoryMissing(
             repository.repository_path.display().to_string(),

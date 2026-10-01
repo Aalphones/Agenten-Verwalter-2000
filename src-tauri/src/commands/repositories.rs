@@ -15,10 +15,12 @@ pub async fn repository_list(
 
 #[tauri::command]
 pub async fn repository_add(
+    app: tauri::AppHandle,
     database: tauri::State<'_, Arc<Database>>,
     path: String,
 ) -> Result<KnownRepository, CommandError> {
-    repositories::add(&database, &path)
+    let home = crate::filesystem::workspace::home_dir(&app)?;
+    repositories::add(&database, &path, &home)
 }
 
 #[tauri::command]

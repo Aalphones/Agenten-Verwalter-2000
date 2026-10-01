@@ -175,8 +175,8 @@ export function describeAddError(reason: unknown): string {
     if (reason.kind === 'gitNotFound') {
       return 'Git nicht gefunden. Installiere Git für Windows und starte die App neu.';
     }
-    if (reason.kind === 'notARepository' && 'message' in reason) {
-      return `Der Ordner ist kein Git-Repository: ${String(reason.message)}`;
+    if (reason.kind === 'folderNotAllowed' && 'message' in reason) {
+      return `Diesen Ordner bekommt der Agent nicht: ${String(reason.message)}. Gesperrt sind Laufwerke, der Benutzerordner und alles darüber sowie der Datenordner der App — wähle einen Unterordner.`;
     }
   }
   if (typeof reason === 'object' && reason !== null && 'message' in reason) {

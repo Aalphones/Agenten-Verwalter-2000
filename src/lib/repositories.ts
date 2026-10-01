@@ -8,7 +8,7 @@ export function listRepositories(): Promise<KnownRepository[]> {
 }
 
 /** Merkt sich das Repository, in dem der Ordner liegt; ein bekanntes wird zurückgegeben.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `notARepository`, `gitNotFound` */
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `folderNotAllowed`, `gitNotFound` */
 export function addRepository(path: string): Promise<KnownRepository> {
   return invoke<KnownRepository>('repository_add', { path });
 }

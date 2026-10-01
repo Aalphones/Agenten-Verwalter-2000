@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** Plan „Sprachdiktat“ ist archiviert (`docs/archive/2026-10/`) und als v0.6.0 getaggt. Offen: Smoke-Checkliste des Plans samt Messwerten (Erkennungsdauer, Arbeitsspeicher) — Ergebnisse in die README des archivierten Plans nachtragen. Danach den ersten Plan der Reihenfolge unten starten.
+**Aktiver Plan:** `docs/planning/2026-10-01_ordner-ohne-git.md`
+**Phase:** 2/2 — Oberfläche, Doku, Release (pending; Phase 1 committet)
+**Nächster Schritt:** Phase 2 nach Checkliste im Plan abarbeiten, `pnpm check`, Commit `feat(repositories): Ordner ohne Git in Auswahl und Changes`, dann archivieren und Release (Minor, Tag). Offen aus dem Vorplan: Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) — Ergebnisse in die README des archivierten Plans nachtragen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

@@ -9,6 +9,7 @@ use tauri::Manager;
 
 use crate::error::CommandError;
 
+pub const DATA_DIR_NAME: &str = ".verwalter";
 pub const WORKSPACES_DIR: &str = "workspaces";
 const SHORT_ID_CHARS: usize = 8;
 
@@ -20,7 +21,7 @@ pub fn home_dir(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {
 
 /// `<Benutzerordner>\.verwalter` — hier liegen Datenbank und Session-Arbeitsordner. Legt nichts an.
 pub fn data_dir(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {
-    Ok(home_dir(app)?.join(".verwalter"))
+    Ok(home_dir(app)?.join(DATA_DIR_NAME))
 }
 
 /// Legt den Arbeitsordner einer neuen Session an: `workspaces\<erste 8 Zeichen der ID>`, und

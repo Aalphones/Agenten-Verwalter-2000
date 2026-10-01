@@ -27,3 +27,4 @@ Bisher legte die App pro Session und Repository einen Worktree mit Branch `verwa
 - Die App räumt Ticket-Worktrees nie auf.
 - Enthält ein Pfad Glob-Zeichen (`*`, `?`, `[`), greift die Freigabe nicht zuverlässig.
 - ADR 005 gilt nur noch für Sessions vor dieser Entscheidung.
+- Ordner ohne Git ([ADR 018](018-ordner-ohne-git.md)) haben weder Ticket-Worktrees noch Freigaben.
