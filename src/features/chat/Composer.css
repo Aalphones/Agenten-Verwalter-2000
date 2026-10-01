@@ -27,7 +27,14 @@
     white-space: nowrap;
   }
 
+  &__input-row {
+    display: flex;
+    align-items: flex-start;
+  }
+
   &__input {
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     min-height: 52px;
     padding: 11px 14px var(--space-xs);

@@ -10,6 +10,7 @@ import { applySkillToDraft } from '@/features/chat/commandMenuRows';
 import type { CommandRow } from '@/features/chat/commandMenuRows';
 import { useCommandMenu } from '@/features/chat/useCommandMenu';
 import { RepositoryPicker } from '@/features/repositories/RepositoryPicker';
+import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
 import type { Effort } from '@/lib/bindings/Effort';
@@ -21,6 +22,7 @@ import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/
 import { createProject } from '@/lib/projects';
 import { NEW_SESSION_KEY, useAttachmentsStore } from '@/stores/attachments';
 import { useSettingsStore } from '@/stores/settings';
+import { NEW_SESSION_OWNER, useVoiceStore } from '@/stores/voice';
 import './NewSession.css';
 
 const CLAUDE_NOT_FOUND_MESSAGE =
@@ -60,7 +62,11 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   );
   const removeAttachment = useAttachmentsStore((state) => state.remove);
 
-  const canStart: boolean = text.trim() !== '' && !isStarting;
+  // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Starten würden sie verschieben.
+  const isDictating: boolean = useVoiceStore(
+    (state) => state.owner === NEW_SESSION_OWNER && state.phase !== 'idle',
+  );
+  const canStart: boolean = text.trim() !== '' && !isStarting && !isDictating;
   const currentMode = modeOption(mode);
 
   const { openPicker, handlePaste, isDragging } = useAttachmentInput({
@@ -177,20 +183,33 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
                 }}
               />
             )}
-            <textarea
-              id="new-session-task"
-              ref={inputRef}
-              className="new-session__task"
-              rows={4}
-              autoFocus
-              placeholder="z. B. OAuth Login für Backend und Frontend implementieren. Den bestehenden Session-Mechanismus weiterverwenden."
-              value={text}
-              onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
-                setText(event.target.value);
-              }}
-              onKeyDown={handleTextKeyDown}
-              onPaste={handlePaste}
-            />
+            <div className="new-session__input-row">
+              <textarea
+                id="new-session-task"
+                ref={inputRef}
+                className="new-session__task"
+                rows={4}
+                autoFocus
+                readOnly={isDictating}
+                placeholder="z. B. OAuth Login für Backend und Frontend implementieren. Den bestehenden Session-Mechanismus weiterverwenden."
+                value={text}
+                onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+                  setText(event.target.value);
+                }}
+                onKeyDown={handleTextKeyDown}
+                onPaste={handlePaste}
+              />
+              <VoiceButton
+                owner={NEW_SESSION_OWNER}
+                sessionId={null}
+                inputRef={inputRef}
+                getValue={(): string => text}
+                setValue={setText}
+                onError={setErrorMessage}
+                setupPlacement="below"
+                disabled={isStarting}
+              />
+            </div>
             <div className="new-session__bar">
               <div className="new-session__anchor">
                 <button

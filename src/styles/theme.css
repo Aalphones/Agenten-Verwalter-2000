@@ -124,6 +124,8 @@
   --color-toggle-off: var(--color-neutral-225);
   --color-fg-on-toggle: var(--color-neutral-0);
   --color-status-running: var(--color-blue-600);
+  --color-voice: var(--color-blue-600);
+  --color-voice-subtle: color-mix(in srgb, var(--color-blue-600) 16%, transparent);
   --color-status-waiting: var(--color-amber-700);
   --color-status-error: var(--color-red-600);
   --color-status-paused: var(--color-neutral-500);
@@ -174,6 +176,8 @@
     --color-toggle-off: var(--color-neutral-650);
     --color-fg-on-toggle: var(--color-neutral-75);
     --color-status-running: var(--color-blue-400);
+    --color-voice: var(--color-blue-400);
+    --color-voice-subtle: color-mix(in srgb, var(--color-blue-400) 16%, transparent);
     --color-status-waiting: var(--color-amber-400);
     --color-status-error: var(--color-red-400);
     --color-status-paused: var(--color-neutral-400);
@@ -222,6 +226,8 @@
   --color-toggle-off: var(--color-neutral-650);
   --color-fg-on-toggle: var(--color-neutral-75);
   --color-status-running: var(--color-blue-400);
+  --color-voice: var(--color-blue-400);
+  --color-voice-subtle: color-mix(in srgb, var(--color-blue-400) 16%, transparent);
   --color-status-waiting: var(--color-amber-400);
   --color-status-error: var(--color-red-400);
   --color-status-paused: var(--color-neutral-400);

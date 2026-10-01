@@ -19,6 +19,16 @@ export function commandErrorText(reason: unknown): string {
       return 'Session nicht gefunden.';
     case 'attachmentsWhileWaiting':
       return 'Anhänge gehen erst, wenn die Rückfrage beantwortet ist.';
+    case 'voiceModelMissing':
+      return 'Sprachmodell fehlt.';
+    case 'voiceBusy':
+      return 'Es läuft schon ein Diktat.';
+    case 'microphone':
+      return `Mikrofon nicht verfügbar: ${reason.message.replace(/\.$/, '')}. Prüfe in Windows unter Einstellungen → Datenschutz und Sicherheit → Mikrofon, ob Desktop-Apps zugreifen dürfen.`;
+    case 'noAudio':
+      return 'Kein Ton vom Mikrofon — ist das richtige Eingabegerät in Windows eingestellt?';
+    case 'noSpeech':
+      return 'Keine Sprache erkannt.';
     default:
       return 'message' in reason ? reason.message : reason.kind;
   }

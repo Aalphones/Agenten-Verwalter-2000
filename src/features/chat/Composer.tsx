@@ -9,6 +9,7 @@ import { CommandMenu } from '@/features/chat/CommandMenu';
 import { applySkillToDraft } from '@/features/chat/commandMenuRows';
 import type { CommandRow, SessionCommand } from '@/features/chat/commandMenuRows';
 import { useCommandMenu } from '@/features/chat/useCommandMenu';
+import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
 import type { Effort } from '@/lib/bindings/Effort';
@@ -23,6 +24,7 @@ import { pauseSession, setSessionEffort, setSessionMode, setSessionModel } from 
 import { useAttachmentsStore } from '@/stores/attachments';
 import { useChatStore } from '@/stores/chat';
 import { useSessionsStore } from '@/stores/sessions';
+import { useVoiceStore } from '@/stores/voice';
 import './Composer.css';
 
 const NOTE_WHILE_ACTIVE =
@@ -55,9 +57,15 @@ export function Composer({ session }: ComposerProps): ReactElement {
   const showView = useSessionsStore((state) => state.showView);
   const startRename = useSessionsStore((state) => state.startRename);
 
+  // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Senden würden sie verschieben.
+  const isDictating: boolean = useVoiceStore(
+    (state) => state.owner === session.id && state.phase !== 'idle',
+  );
+
   const isLocked: boolean = session.status === 'cancelled' || session.status === 'error';
   const isWaiting: boolean = session.status === 'waiting';
-  const canSend: boolean = (draft.trim() !== '' || pending.length > 0) && !isSending && !isLocked;
+  const canSend: boolean =
+    (draft.trim() !== '' || pending.length > 0) && !isSending && !isLocked && !isDictating;
   const currentMode = modeOption(session.mode);
   const modelNote: string = ACTIVE_STATUSES.includes(session.status)
     ? NOTE_WHILE_ACTIVE
@@ -221,20 +229,35 @@ export function Composer({ session }: ComposerProps): ReactElement {
         <label className="composer__label" htmlFor="composer-input">
           Nachricht an den Agenten
         </label>
-        <textarea
-          id="composer-input"
-          ref={inputRef}
-          className="composer__input"
-          rows={2}
-          disabled={isLocked}
-          placeholder={placeholderFor(session.status)}
-          value={draft}
-          onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
-            setDraft(session.id, event.target.value);
-          }}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-        />
+        <div className="composer__input-row">
+          <textarea
+            id="composer-input"
+            ref={inputRef}
+            className="composer__input"
+            rows={2}
+            disabled={isLocked}
+            readOnly={isDictating}
+            placeholder={placeholderFor(session.status)}
+            value={draft}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+              setDraft(session.id, event.target.value);
+            }}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+          />
+          <VoiceButton
+            owner={session.id}
+            sessionId={session.id}
+            inputRef={inputRef}
+            getValue={(): string => useChatStore.getState().drafts[session.id] ?? ''}
+            setValue={(next: string): void => {
+              setDraft(session.id, next);
+            }}
+            onError={setErrorMessage}
+            setupPlacement="above"
+            disabled={isLocked}
+          />
+        </div>
         <div className="composer__bar">
           <div className="composer__anchor">
             <button

@@ -19,6 +19,7 @@ import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
+import { useVoiceModel } from '@/features/voice/useVoiceModel';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
@@ -51,6 +52,7 @@ export function App(): ReactElement {
     error: settingsError,
     reload: reloadSettings,
   } = useSettings();
+  useVoiceModel();
   // „Neues Vorhaben“ und die Einstellungen ersetzen den Inhalt; Session und Übersicht sind dann nicht sichtbar.
   const isMainReplaced: boolean = showNewSession || showSettings;
 

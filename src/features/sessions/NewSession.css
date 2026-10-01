@@ -70,7 +70,14 @@
     }
   }
 
+  &__input-row {
+    display: flex;
+    align-items: flex-start;
+  }
+
   &__task {
+    flex: 1;
+    min-width: 0;
     padding: var(--space-lg) 14px;
     border: 0;
     outline: none;

@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Core: Bau-Grundlage für whisper.cpp, Sprachmodell laden und prüfen | [phase-1-modell-core.md](phase-1-modell-core.md) | standard | complete |
 | 2 | Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme | [phase-2-aufnahme-erkennung.md](phase-2-aufnahme-erkennung.md) | heikel | complete |
-| 3 | Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
+| 3 | Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
 
 **Dieser Plan kommt zuletzt: erst „Vorhaben und Sessions“, dann „Meilenstein 6“, dann dieser.** Damit steht die Oberfläche fest, in die der Mikrofon-Knopf eingebaut wird (Sidebar-Baum, Status „Neu“, Farbschema-Mechanik, `gen-bindings.rs` unter `src-tauri/examples/`). Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `voice` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`), ab Phase 1 zusätzlich CMake (siehe Phase 1). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 
@@ -120,10 +120,27 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Das Mikrofon sitzt in der Textzeile der Eingabeleiste (Session und „Neues Vorhaben“). Klick oder `Strg+M` startet ein Diktat, derselbe Weg beendet es; der Core nimmt über cpal auf, schneidet an Sprechpausen und erkennt jeden Abschnitt lokal mit whisper.cpp (`large-v3-turbo` q5_0, nur CPU). Der erkannte Text erscheint satzweise an der Cursorstelle, Feld und Senden sind bis zum Ende gesperrt, Esc verwirft das ganze Diktat ohne die Session zu pausieren. Fehlt das Sprachmodell (574 MB), bietet ein Menü am Mikrofon den einmaligen Download mit Fortschritt an. Die Messwerte (Erkennungsdauer, Arbeitsspeicher) stehen noch aus — sie kommen aus dem Smoke.
+
 ## Files touched
+
+- Core (Phase 1 und 2): `src-tauri/src/voice/` (Modelldatei und Download, Aufnahme, Segmentierung, Erkennung), `src-tauri/src/commands/voice.rs`, `src-tauri/src/error.rs`, `src-tauri/Cargo.toml`.
+- Oberfläche (Phase 3): `src/features/voice/` (`VoiceButton`, `VoiceSetup`, `useDictation`, `useVoiceModel`, `insertDictation`, `downloadProgress`), `src/stores/voice.ts`, `src/lib/voice.ts`, `src/lib/errors.ts`, Einbau in `Composer` und `NewSession`, Tokens `--color-voice`/`--color-voice-subtle` in `theme.css`.
+- Doku: ADR 009, `code-map.md`, `glossary.md`, `linting.md`, `PROJECT.md`, Design-Entwurf (Abschnitt „Abweichungen“).
 
 ## Commits
 
+- `2f108e5` feat(voice): Sprachmodell laden und prüfen, Bau mit whisper.cpp
+- `ddfb48c` feat(voice): Sprache aufnehmen und satzweise lokal erkennen
+- Phase 3: `feat(voice): Mikrofon in der Eingabeleiste`
+
 ## Deviations from plan
 
+- Der Bau braucht LLVM (libclang) statt `WHISPER_DONT_GENERATE_BINDINGS` (Phase 1, FINDINGS).
+- `VoiceBusy` für „Download während einer Aufnahme“ ist nicht umgesetzt: der Fall ist nicht erreichbar (Phase 2).
+- „Neues Vorhaben“ liest den Text direkt aus `text` statt über einen Spiegel-Ref; `VoiceButton` bekam die Prop `setupPlacement`; nach Esc bleibt das Mikrofon gesperrt, bis der Core fertig ist (Phase 3).
+
 ## Follow-ups
+
+- Smoke-Checkliste (oben) durchführen; Erkennungsdauer, Anzeige nach jeder Pause und Arbeitsspeicher des Modells eintragen. Über den Grenzwerten (4 s bzw. 5 s) → Folgeplan Vulkan.
+- Offene Vault-Einträge in `FINDINGS.md` (whisper-rs, cpal) überführt `session-review`.
