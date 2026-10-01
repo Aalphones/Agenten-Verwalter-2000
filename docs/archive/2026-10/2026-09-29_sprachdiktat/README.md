@@ -2,7 +2,7 @@
 
 Ziel: Ein Mikrofon-Knopf in der Eingabeleiste (Chat und „Neue Session“) nimmt Sprache auf und schreibt den erkannten Text an die Cursorposition in den Entwurf — schon während des Sprechens, Satz für Satz nach jeder Sprechpause; gesendet wird nie automatisch. Die Erkennung läuft vollständig lokal mit Whisper (whisper.cpp) im Core; Netz braucht nur der einmalige Download des Sprachmodells. Vorbild für das Aussehen ist die Eingabeleiste der Claude-Code-Desktop-App (Screenshots von Sascha im Planungsgespräch, nicht im Repo — der Aufbau ist unten und in Phase 3 vollständig beschrieben; wer sie ablegen will, legt sie unter `artifacts/` ab).
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 009](../../decisions/009-sprachdiktat-lokal.md) (entsteht in Phase 1 aus „Festgelegte Entscheidungen“).
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [docs/code-map.md](../../../code-map.md), die Konventionen unter [docs/conventions/](../../../conventions/), [ADR 009](../../../decisions/009-sprachdiktat-lokal.md) (entsteht in Phase 1 aus „Festgelegte Entscheidungen“).
 
 ## Phasen
 
@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 2 | Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme | [phase-2-aufnahme-erkennung.md](phase-2-aufnahme-erkennung.md) | heikel | complete |
 | 3 | Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
 
-**Dieser Plan kommt zuletzt: erst „Vorhaben und Sessions“, dann „Meilenstein 6“, dann dieser.** Damit steht die Oberfläche fest, in die der Mikrofon-Knopf eingebaut wird (Sidebar-Baum, Status „Neu“, Farbschema-Mechanik, `gen-bindings.rs` unter `src-tauri/examples/`). Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `voice` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`), ab Phase 1 zusätzlich CMake (siehe Phase 1). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
+**Dieser Plan kommt zuletzt: erst „Vorhaben und Sessions“, dann „Meilenstein 6“, dann dieser.** Damit steht die Oberfläche fest, in die der Mikrofon-Knopf eingebaut wird (Sidebar-Baum, Status „Neu“, Farbschema-Mechanik, `gen-bindings.rs` unter `src-tauri/examples/`). Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `voice` (Phase 1 trägt ihn in [commits.md](../../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`), ab Phase 1 zusätzlich CMake (siehe Phase 1). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 
 ## Festgelegte Entscheidungen
 
@@ -142,5 +142,5 @@ Das Mikrofon sitzt in der Textzeile der Eingabeleiste (Session und „Neues Vorh
 
 ## Follow-ups
 
-- Smoke-Checkliste (oben) durchführen; Erkennungsdauer, Anzeige nach jeder Pause und Arbeitsspeicher des Modells eintragen. Über den Grenzwerten (4 s bzw. 5 s) → Folgeplan Vulkan.
+- Archiviert und getaggt, ohne dass ein Smoke-Ergebnis festgehalten ist (Entscheidung des Users). Die Smoke-Checkliste (oben) bleibt offen: Erkennungsdauer, Anzeige nach jeder Pause und Arbeitsspeicher des Modells nachtragen. Über den Grenzwerten (4 s bzw. 5 s) → Folgeplan Vulkan.
 - Offene Vault-Einträge in `FINDINGS.md` (whisper-rs, cpal) überführt `session-review`.

@@ -5,7 +5,7 @@ Rating: standard · Commit-Scope: `voice`
 ## Kontext (vor dem Start lesen)
 
 - [README.md](README.md) dieses Plans: „Festgelegte Entscheidungen“ und „Kontrakt“ (Typen, Fehler, Commands, Ereignisse) — verbindlich.
-- [docs/conventions/rust.md](../../conventions/rust.md), [docs/conventions/linting.md](../../conventions/linting.md), [docs/conventions/commits.md](../../conventions/commits.md), [docs/decisions/](../../decisions/) (Format der ADRs, z.B. 007).
+- [docs/conventions/rust.md](../../../conventions/rust.md), [docs/conventions/linting.md](../../../conventions/linting.md), [docs/conventions/commits.md](../../../conventions/commits.md), [docs/decisions/](../../../decisions/) (Format der ADRs, z.B. 007).
 - Code: `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs` (Module, `app.manage`, `generate_handler!`), `src-tauri/src/error.rs` (`CommandError`, Serialisierung `tag = "kind", content = "message"`), `src-tauri/src/filesystem/workspace.rs` (`data_dir`), `src-tauri/src/background/model.rs` (Muster für Typen mit `derive(TS)` und Ereignis-Typen), `src-tauri/src/commands/background.rs` (Muster Commands mit `tauri::State`), `src-tauri/src/sessions/registry.rs` (Muster `app.emit(...)` samt Fehlerbehandlung), `src-tauri/examples/gen-bindings.rs` (seit M6 Phase 1), `package.json` (Skripte `rust:clippy`, `bindings` laufen vom Repo-Wurzelordner mit `--manifest-path`), `.github/workflows/check.yml`.
 - Crate-Dokumentation der gepinnten Versionen auf docs.rs: `ureq` 3 (`get`, `call`, `Body::as_reader`/`into_reader`, Verhalten bei HTTP-Fehlerstatus), `sha2` 0.11.
 - Vault-Fehlerklassen: geprüft (React, TypeScript) — übertragbar ist nur „HTTP-Fehlerstatus ist kein Netzfehler“, siehe Checkliste Download; sonst keine einschlägig.
