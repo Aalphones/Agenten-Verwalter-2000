@@ -148,6 +148,7 @@
   --color-chart-6: var(--color-red-600);
   --color-chart-7: var(--color-neutral-500);
   --shadow-popover: var(--shadow-popover-light);
+  color-scheme: light;
 }
 
 /* Dunkel steht zweimal: einmal für die Systemeinstellung, einmal für die in den
@@ -197,6 +198,7 @@
     --color-chart-6: var(--color-red-400);
     --color-chart-7: var(--color-neutral-400);
     --shadow-popover: var(--shadow-popover-dark);
+    color-scheme: dark;
   }
 }
 
@@ -244,6 +246,12 @@
   --color-chart-6: var(--color-red-400);
   --color-chart-7: var(--color-neutral-400);
   --shadow-popover: var(--shadow-popover-dark);
+  color-scheme: dark;
+}
+
+/* Scrollbalken überall in Token-Farben statt Systemweiß. */
+* {
+  scrollbar-color: var(--color-border) transparent;
 }
 
 body {
