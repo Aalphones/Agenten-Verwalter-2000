@@ -47,9 +47,14 @@ pub fn match_invocation(text: &str, skills: &[SkillInfo]) -> Option<SkillRef> {
         })
 }
 
+/// `<root>\.claude\skills` — für den Benutzerordner wie für ein Repository.
+pub fn skills_dir(root: &Path) -> PathBuf {
+    root.join(CLAUDE_DIR).join(SKILLS_DIR)
+}
+
 /// Jeder Unterordner von `<root>\.claude\skills` mit einer `SKILL.md`, nach Name sortiert.
 fn skills_in(root: &Path, origin: &SkillOrigin) -> Vec<SkillInfo> {
-    let Ok(entries) = fs::read_dir(root.join(CLAUDE_DIR).join(SKILLS_DIR)) else {
+    let Ok(entries) = fs::read_dir(skills_dir(root)) else {
         return Vec::new();
     };
     let mut found: Vec<SkillInfo> = Vec::new();

@@ -9,7 +9,7 @@ use tauri::Manager;
 
 use crate::error::CommandError;
 
-const WORKSPACES_DIR: &str = "workspaces";
+pub const WORKSPACES_DIR: &str = "workspaces";
 const SHORT_ID_CHARS: usize = 8;
 
 pub fn home_dir(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {

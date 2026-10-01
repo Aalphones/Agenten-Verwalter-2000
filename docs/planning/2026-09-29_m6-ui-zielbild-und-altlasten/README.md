@@ -1,15 +1,15 @@
 # Meilenstein 6 — UI auf Zielbild, plus Altlasten
 
-Ziel: Die App erreicht das MVP. Die Sidebar bekommt unten den Knopf „Einstellungen“; er öffnet die Einstellungsseite nach Tafel `Settings` mit Farbschema (Dunkel · Hell · System), Standardmodell, Standard-Modus mit Denkaufwand, Skill-Übersicht, Branch-Präfix, Worktree-Ordner und Dateizugriff. Das Farbschema wirkt sofort und überlebt den Neustart ohne Aufblitzen des falschen Schemas. Neue Sessions starten mit den eingestellten Standardwerten und dem eingestellten Branch-Präfix. Die Sidebar, die Listen im Hintergrund-Panel und der Scratchpad-Baum rendern nur, was sichtbar ist. Jeder Lade- und Aktionsfehler, der heute nur in der Entwicklerkonsole landet, erscheint als Satz in der Oberfläche. Dazu drei Altlasten aus M1 und M4: Esc auf einen laufenden Werkzeug-Aufruf zeigt „unterbrochen“ statt „fehlgeschlagen“, das Hilfsprogramm für die Typ-Erzeugung liegt nicht mehr im Installer, und das Nachladen langer Verläufe lässt sich im Entwicklungsmodus mit kleiner Seitengröße prüfen.
+Ziel: Die App erreicht das MVP. Die Sidebar bekommt unten den Knopf „Einstellungen“; er öffnet die Einstellungsseite nach Tafel `Settings` mit Farbschema (Dunkel · Hell · System), Standardmodell, Standard-Modus mit Denkaufwand, Skill-Übersicht, Ordner der Workspaces und Dateizugriff. Das Farbschema wirkt sofort und überlebt den Neustart ohne Aufblitzen des falschen Schemas. Neue Vorhaben starten mit den eingestellten Standardwerten. Die Sidebar, die Listen im Hintergrund-Panel und der Scratchpad-Baum rendern nur, was sichtbar ist. Jeder Lade- und Aktionsfehler, der heute nur in der Entwicklerkonsole landet, erscheint als Satz in der Oberfläche. Dazu drei Altlasten aus M1 und M4: Esc auf einen laufenden Werkzeug-Aufruf zeigt „unterbrochen“ statt „fehlgeschlagen“, das Hilfsprogramm für die Typ-Erzeugung liegt nicht mehr im Installer, und das Nachladen langer Verläufe lässt sich im Entwicklungsmodus mit kleiner Seitengröße prüfen.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../../PROJECT.md), [code-map.md](../../code-map.md), [glossary.md](../../glossary.md), [ADR 002](../../decisions/002-typgenerierung-und-listen.md) (Typ-Erzeugung, virtuelle Listen), [ADR 003](../../decisions/003-claude-anbindung.md) (Pause/Esc), [ADR 004](../../decisions/004-persistenz-und-wiederherstellung.md) (Datenbank, Migrationen), [ADR 005](../../decisions/005-repositories-und-worktrees.md) (Workspace, Session-Branch), ADR 012 (entsteht in Phase 2 aus „Festgelegte Entscheidungen“ unten), [Design-Entwurf](../../design/2026-09-28_hauptansichten/README.md) (Tafeln `Settings`, `Light`; Abschnitte „Layout-Maße“, „Tokens“, „Abweichungen vom Entwurf“), die Konventionen unter [docs/conventions/](../../conventions/).
+Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../../PROJECT.md), [code-map.md](../../code-map.md), [glossary.md](../../glossary.md), [ADR 002](../../decisions/002-typgenerierung-und-listen.md) (Typ-Erzeugung, virtuelle Listen), [ADR 003](../../decisions/003-claude-anbindung.md) (Pause/Esc), [ADR 004](../../decisions/004-persistenz-und-wiederherstellung.md) (Datenbank, Migrationen), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (Haupt-Checkout, Ticket-Worktrees; die App legt keine Branches an), ADR 012 (entsteht in Phase 2 aus „Festgelegte Entscheidungen“ unten), [Design-Entwurf](../../design/2026-09-28_hauptansichten/README.md) (Tafeln `Settings`, `Light`; Abschnitte „Layout-Maße“, „Tokens“, „Abweichungen vom Entwurf“), die Konventionen unter [docs/conventions/](../../conventions/).
 
 ## Phasen
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Altlasten: Esc-Zustand, Typ-Erzeugung raus aus dem Installer, Seitengröße des Verlaufs | [phase-1-altlasten.md](phase-1-altlasten.md) | mechanisch | complete |
-| 2 | Core: Einstellungen speichern, Branch-Präfix beim Anlegen | [phase-2-einstellungen-core.md](phase-2-einstellungen-core.md) | standard | pending |
+| 2 | Core: Einstellungen speichern | [phase-2-einstellungen-core.md](phase-2-einstellungen-core.md) | standard | complete |
 | 3 | Oberfläche: Einstellungsseite, Farbschema, Standardwerte in „Neue Session“ | [phase-3-einstellungen-oberflaeche.md](phase-3-einstellungen-oberflaeche.md) | standard | pending |
 | 4 | Virtuelle Listen: Sidebar, Hintergrund-Panel, Scratchpad | [phase-4-virtuelle-listen.md](phase-4-virtuelle-listen.md) | standard | pending |
 | 5 | Sichtbare Fehler statt Konsole, Doku-Abschluss | [phase-5-fehler-und-doku.md](phase-5-fehler-und-doku.md) | standard | pending |
@@ -23,17 +23,16 @@ Phase 2 schreibt daraus ADR 012 „Einstellungen, Farbschema und virtuelle Liste
 ### Einstellungen
 
 - **Speicherort:** Tabelle `settings` (`key TEXT PRIMARY KEY`, `value TEXT NOT NULL`), Migration 006 (nach dem Plan „Vorhaben und Sessions“, der 005 nimmt). Enums liegen als ihr serde-Text (`db::enum_to_text` / `enum_from_text`, wie Modell und Modus in `sessions`), der Präfix wörtlich. Fehlt ein Schlüssel oder lässt sich sein Wert nicht lesen, gilt der Standardwert; ein unlesbarer Wert wird nicht überschrieben, bis der Benutzer ihn ändert.
-- **Schlüssel und Standardwerte:** `color_scheme` = `system`, `default_model` = `sonnet`, `default_effort` = `high`, `default_mode` = `auto`, `branch_prefix` = `verwalter/`. Die Standardwerte sind die bisher fest eingebauten (M2a: Sonnet 5, Denkaufwand Hoch, Modus Auto; M3: `verwalter/`) — wer nichts einstellt, merkt keinen Unterschied.
+- **Schlüssel und Standardwerte:** `color_scheme` = `system`, `default_model` = `sonnet`, `default_effort` = `high`, `default_mode` = `auto`. Die Standardwerte sind die bisher fest eingebauten (M2a: Sonnet 5, Denkaufwand Hoch, Modus Auto) — wer nichts einstellt, merkt keinen Unterschied.
 - **Zeilen der Seite** (Reihenfolge und Abschnitte nach Tafel `Settings`; ⓘ-Texte wörtlich in Phase 3):
   - Darstellung → **Farbschema**: Segment Dunkel · Hell · System, wirkt sofort.
   - Agent → **Standardmodell**: Auswahlknopf, öffnet das bestehende Modell-Menü. → **Standard-Modus**: Auswahlknopf mit Wert „<Modus> · Denkaufwand <Stufe>“, öffnet das bestehende Modus-Menü samt Denkaufwand-Punkten. Abweichung vom Entwurf: Dort steht der Denkaufwand in der Modell-Zeile; in der App gehört er seit M2a zum Modus-Menü, die Einstellungsseite folgt der App.
   - Skills → **Benutzer-Skills**: Pfad `~\.claude\skills` (als absoluter Pfad), Anzahl der Skills dort, Knopf „Im Explorer zeigen“. → **Projekt-Skills**: Text „<Repository> <n> · …“ für alle bekannten Repositories mit mindestens einem Skill, Zusatz „je Repository“.
-  - Git → **Branch-Präfix**: Textfeld, speichert bei Enter und beim Verlassen des Felds; gilt nur für neue Vorhaben. → **Ordner für Worktrees**: nur Anzeige des Pfads plus Knopf „Im Explorer zeigen“ (Entscheidung Sascha, 2026-09-29: nicht änderbar — die Asset-Freigabe `$HOME/.verwalter/**` und die Sicherheitsgrenze bleiben unberührt).
-  - Rechte → **Dateizugriff**: nur Anzeige „Nur Session-Workspace“. Es gibt keine zweite Möglichkeit, ein Auswahlknopf mit einer Option wäre ein toter Knopf.
+  - Ordner → **Workspaces**: nur Anzeige des Pfads plus Knopf „Im Explorer zeigen“ (Entscheidung Sascha, 2026-09-29: nicht änderbar — die Asset-Freigabe `$HOME/.verwalter/**` und die Sicherheitsgrenze bleiben unberührt). Im Entwurf hieß der Abschnitt „Git“ und die Zeile „Ordner für Worktrees“; seit ADR 010 liegen dort die Workspaces der Vorhaben, App-Worktrees nur noch bei Sessions davor.
+  - Rechte → **Dateizugriff**: nur Anzeige „Workspace und Repositories des Vorhabens“. Es gibt keine zweite Möglichkeit, ein Auswahlknopf mit einer Option wäre ein toter Knopf.
 - **Weggelassen:** Zeile „Basis für Changes“ (Entscheidung Sascha, 2026-09-29). Changes vergleicht weiter gegen den Base ref je Repository (ADR 006); ein globales Feld widerspräche dem.
+- **Weggelassen:** Zeile „Branch-Präfix“ (Entscheidung Sascha, 2026-10-01). Seit ADR 010 legt die App bei neuen Vorhaben keine Branches an; Branch-Namen bestimmt das Regelwerk des Agenten. Ein Präfix-Feld hätte keine Wirkung.
 - **„Im Explorer zeigen“ statt „Ordner öffnen“ / „Ändern …“:** beide Knöpfe nutzen `revealItemInDir` aus `@tauri-apps/plugin-opener`, das `opener:default` schon erlaubt; `openPath` bräuchte eine eigene Freigabe mit Pfad-Scope.
-- **Branch-Präfix prüfen:** Der Core prüft `<Präfix>probe` mit `git check-ref-format --branch` (läuft auch außerhalb eines Repositorys, geprüft am 2026-09-29: `verwalter/probe` → Exit 0, `ver..walter/probe` und `a b/probe` → Exit 128). Zusätzlich 1–40 Zeichen, nicht leer. Ungültig → Fehler `invalidBranchPrefix`, der gespeicherte Wert bleibt.
-- **Bestehende Sessions** behalten ihren Branch: er steht in `session_repositories`, `worktrees::ensure` liest ihn von dort und rechnet ihn nie aus dem Präfix neu aus.
 
 ### Farbschema
 
@@ -72,7 +71,6 @@ pub struct Settings {
     pub default_model: ModelId,
     pub default_effort: Effort,
     pub default_mode: Mode,
-    pub branch_prefix: String,
 }
 pub struct SettingsOverview {
     pub settings: Settings,
@@ -84,14 +82,10 @@ pub enum SettingsChange {                                        // tag = "kind"
     ColorScheme { value: ColorScheme },
     DefaultModel { value: ModelId },
     DefaultMode { mode: Mode, effort: Effort },
-    BranchPrefix { value: String },
 }
-
-// src-tauri/src/error.rs (Phase 2): neue Variante
-InvalidBranchPrefix(String)   // #[error("Branch-Präfix ungültig: {0}")] — {0} = Meldung von git bzw. Längenregel
 ```
 
-In TypeScript heißen die Werte `'dark' | 'light' | 'system'` und `{ kind: 'colorScheme', value } | { kind: 'defaultModel', value } | { kind: 'defaultMode', mode, effort } | { kind: 'branchPrefix', value }`.
+In TypeScript heißen die Werte `'dark' | 'light' | 'system'` und `{ kind: 'colorScheme', value } | { kind: 'defaultModel', value } | { kind: 'defaultMode', mode, effort }`.
 
 ### Tauri Commands (registriert in `src-tauri/src/lib.rs`)
 
@@ -117,11 +111,11 @@ In TypeScript heißen die Werte `'dark' | 'light' | 'system'` und `{ kind: 'colo
 
 ## Finale Abnahmekriterien
 
-1. Die Sidebar zeigt unten den Knopf „Einstellungen“ (30 px hoch, Symbol wie im Entwurf); er öffnet die Einstellungsseite im Inhaltsbereich (Kopf 48 px „Einstellungen“, Inhalt höchstens 780 px zentriert, Beschriftungsspalte 230 px, Abschnitte Darstellung · Agent · Skills · Git · Rechte) und ist dann hervorgehoben. Jede Zeile hat ein ⓘ mit Erklärung.
+1. Die Sidebar zeigt unten den Knopf „Einstellungen“ (30 px hoch, Symbol wie im Entwurf); er öffnet die Einstellungsseite im Inhaltsbereich (Kopf 48 px „Einstellungen“, Inhalt höchstens 780 px zentriert, Beschriftungsspalte 230 px, Abschnitte Darstellung · Agent · Skills · Ordner · Rechte) und ist dann hervorgehoben. Jede Zeile hat ein ⓘ mit Erklärung.
 2. Farbschema Dunkel/Hell/System wirkt sofort auf Inhalt und Windows-Titelleiste, überlebt einen Neustart und blitzt beim Start nicht im anderen Schema auf. „System“ folgt einem Wechsel der Windows-Einstellung ohne Neustart.
 3. Standardmodell und Standard-Modus samt Denkaufwand gelten für das nächste „Neues Vorhaben“ (dessen erste Session); bestehende Sessions und weitere Sessions in einem Vorhaben ändern sich nicht — die übernehmen den Stand der letzten Session (Plan „Vorhaben und Sessions“).
-4. Ein gültiger Branch-Präfix gilt für das nächste Vorhaben mit Repository (Branch `<Präfix><Name>`); ein ungültiger wird mit Grund unter dem Feld abgelehnt und nicht gespeichert. Der Erklärtext der Repository-Auswahl nennt den eingestellten Präfix.
-5. Benutzer-Skills zeigen Pfad und Anzahl, Projekt-Skills die Repositories mit Skills; „Im Explorer zeigen“ öffnet den Explorer an Skill-Ordner bzw. Worktree-Ordner.
+4. Der Erklärtext der Repository-Auswahl beschreibt den Stand nach ADR 010: der Agent arbeitet im Haupt-Checkout, die App legt keinen Branch und keinen Worktree an.
+5. Benutzer-Skills zeigen Pfad und Anzahl, Projekt-Skills die Repositories mit Skills; „Im Explorer zeigen“ öffnet den Explorer am Skill-Ordner bzw. am Ordner der Workspaces.
 6. Sidebar, Prozesse-, Subagenten- und Scratchpad-Liste bleiben bei 300 Vorhaben (dazu aufgeklappt über 600 Session-Zeilen), 500 ausgeführten Befehlen bzw. 2000 Scratchpad-Einträgen flüssig; Umbenennen, ⋯-Menü, Auswahl und Tastaturbedienung funktionieren wie vorher.
 7. Keine der in Phase 5 gelisteten Fehlerstellen endet nur in der Konsole.
 8. Esc auf einen laufenden, erlaubten Werkzeug-Aufruf → Zeile „unterbrochen“.
@@ -139,8 +133,8 @@ Führt Sascha am Plan-Ende durch. Wackelstellen zuerst:
 - [ ] **Esc-Zustand:** Agent einen Befehl mit Wartezeit ausführen lassen (`Start-Sleep 30` bzw. `sleep 30`), währenddessen Esc → die Zeile zeigt „unterbrochen“.
 - [ ] Hellmodus: jede Ansicht einmal ansehen (Leerzustand, Neue Session, Chat mit Rückfrage, Fehlerkasten, Changes mit Diff, Hintergrund-Panel alle Reiter, `/`-, `+`-, Modell- und Modus-Menü, Einstellungen) → nichts unlesbar, keine dunklen Reste; mit Tafel `Light` vergleichen.
 - [ ] Standardmodell auf Opus, Standard-Modus auf Planen mit Denkaufwand Max → „Neues Vorhaben“ startet mit diesen Werten; eine bestehende Session behält ihre, und „Neue Session“ in einem Vorhaben übernimmt die der letzten Session.
-- [ ] Branch-Präfix `sascha/` speichern, Vorhaben mit Repository anlegen → Branch `sascha/<name>` (`git -C <repo> branch --list "sascha/*"`); `a b` eingeben → Fehlerzeile, Wert bleibt `sascha/`. Wieder `verwalter/` setzen.
-- [ ] „Im Explorer zeigen“ bei Benutzer-Skills und Worktree-Ordner → Explorer öffnet mit markiertem Ordner.
+- [ ] „Neues Vorhaben“ mit Repository: der Erklärtext der Repository-Auswahl nennt keinen Branch `verwalter/…` mehr.
+- [ ] „Im Explorer zeigen“ bei Benutzer-Skills und Workspaces → Explorer öffnet mit markiertem Ordner.
 - [ ] Sichtbare Fehler: App starten, während `verwalter.db` von einem anderen Programm gesperrt ist (z. B. in „DB Browser for SQLite“ mit offener Schreib-Transaktion) → die Sidebar nennt den Fehler statt „Noch keine Sessions.“
 - [ ] Installer: `pnpm tauri build`, installieren → im Installationsordner nur `verwalter.exe` (plus Deinstaller), kein `gen-bindings.exe`.
 - [ ] Mit Tastatur: Tab erreicht Einstellungen-Knopf, alle Bedienelemente der Seite, ⓘ-Knöpfe; Fokus sichtbar (2 px Ring in Akzentfarbe).

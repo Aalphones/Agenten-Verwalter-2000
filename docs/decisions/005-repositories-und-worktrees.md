@@ -31,5 +31,5 @@ Meilenstein 3 macht aus der Session ein Arbeitsumfeld über ein oder mehrere Git
 - Branches `verwalter/…` sammeln sich in den Repositories; das Aufräumen bleibt Handarbeit.
 - Ein Haupt-Checkout ohne Commit kann nicht Teil einer Session werden (kein HEAD als Basis).
 - Git-ignorierte Dateien wie `.env` fehlen im Worktree, Dev-Server starten dort deshalb oft nicht. Sie zu kopieren berührt die Sicherheitsgrenze und ist eine eigene Entscheidung.
-- Präfix, Basis-Regel und Workspace-Wurzel sind feste Werte im Code; Einstellungen folgen in Meilenstein 6.
+- Präfix, Basis-Regel und Workspace-Wurzel sind feste Werte im Code. Seit ADR 010 legt die App keine Branches mehr an; die Einstellungen aus Meilenstein 6 ([ADR 012](012-einstellungen-farbschema-und-listen.md)) haben deshalb keinen Branch-Präfix.
 - Die Bedeutung von „Archivieren“ aus Meilenstein 4 („Arbeitsordner bleiben erhalten“) ändert sich: saubere Worktrees verschwinden.

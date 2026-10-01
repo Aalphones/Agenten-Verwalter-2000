@@ -21,6 +21,7 @@ use verwalter_lib::{
     projects::model::{ProjectCreated, ProjectSummary},
     repositories::model::KnownRepository,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
+    settings::model::{ColorScheme, Settings, SettingsChange, SettingsOverview},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
     tldr::model::{
         ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
@@ -92,5 +93,9 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ProjectSessionTldr::export_all(&cfg)?;
     ProjectTldrView::export_all(&cfg)?;
     TldrChangedEvent::export_all(&cfg)?;
+    ColorScheme::export_all(&cfg)?;
+    Settings::export_all(&cfg)?;
+    SettingsOverview::export_all(&cfg)?;
+    SettingsChange::export_all(&cfg)?;
     Ok(())
 }

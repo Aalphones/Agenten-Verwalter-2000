@@ -64,7 +64,7 @@ Die Zeilennummern sind der Stand vor dem Plan „Vorhaben und Sessions“ und di
 
 ### Doku-Abschluss
 
-- [ ] PROJECT.md, Meilenstein 6: „— gebaut am <Datum>“ nach dem Muster von 2b; Satz zu Einstellungen (Farbschema, Standardwerte, Branch-Präfix) und zu den virtualisierten Listen.
+- [ ] PROJECT.md, Meilenstein 6: „— gebaut am <Datum>“ nach dem Muster von 2b; Satz zu Einstellungen (Farbschema, Standardwerte) und zu den virtualisierten Listen.
 - [ ] Code-Map: Kopfsatz „Stand: Meilenstein 6 …“; Zeilen für `SessionActionError`, `src/stores/sessionErrors.ts`, `src/lib/useActionError.ts`.
 - [ ] Entwurfs-README, „Abweichungen vom Entwurf“: neuer Punkt „Fehlersätze“ — Zeile unter der Session-Kopfzeile, Sätze an Stelle von Liste/Verlauf/Ausgabe, keine Toasts; Maße aus AK 2.
 - [ ] Glossar: nichts Neues, außer ein Begriff aus dieser Phase ist im Code als Name sichtbar geworden (dann eintragen).
