@@ -82,6 +82,11 @@
     width: 100%;
   }
 
+  /* Das transform der Zeile ist ein eigener Stapelkontext: ein Menü darin liegt sonst unter den Folgezeilen und bekommt keine Klicks. Das Menü nimmt beim Öffnen den Fokus. */
+  &__row:focus-within {
+    z-index: 1;
+  }
+
   /* Ein eingeklapptes Vorhaben lässt 1 px bis zur nächsten Zeile; ein aufgeklapptes geht ohne Lücke in seine Sessions über. */
   &__project--collapsed {
     padding-bottom: 1px;
