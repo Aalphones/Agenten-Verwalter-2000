@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
-    "bindings": "cargo run --manifest-path src-tauri/Cargo.toml --bin gen-bindings",
+    "bindings": "cargo run --manifest-path src-tauri/Cargo.toml --example gen-bindings",
     "rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
     "rust:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm build && pnpm rust:fmt && pnpm rust:clippy",

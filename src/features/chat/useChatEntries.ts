@@ -5,7 +5,10 @@ import type { ChatEntryEvent } from '@/lib/bindings/ChatEntryEvent';
 import type { ChatPage } from '@/lib/bindings/ChatPage';
 import { getChatHistory, onChatEntry } from '@/lib/chat';
 
-const PAGE_SIZE = 200;
+const DEFAULT_PAGE_SIZE = 200;
+// Entspricht MAX_HISTORY_PAGE im Core.
+const MAX_PAGE_SIZE = 500;
+const PAGE_SIZE: number = pageSizeFromEnv();
 
 export interface ChatEntries {
   entries: readonly ChatEntry[];
@@ -198,4 +201,16 @@ function createChatLoader(
   }
 
   return { receive, loadLatest, loadOlder };
+}
+
+// Nur im Entwicklungsmodus einstellbar: eine kleine Seitengröße löst das Nachladen schon bei kurzen Verläufen aus.
+function pageSizeFromEnv(): number {
+  if (!import.meta.env.DEV) {
+    return DEFAULT_PAGE_SIZE;
+  }
+  const pageSize: number = Number.parseInt(import.meta.env.VITE_VERWALTER_CHAT_PAGE_SIZE ?? '', 10);
+  if (Number.isInteger(pageSize) && pageSize >= 1 && pageSize <= MAX_PAGE_SIZE) {
+    return pageSize;
+  }
+  return DEFAULT_PAGE_SIZE;
 }

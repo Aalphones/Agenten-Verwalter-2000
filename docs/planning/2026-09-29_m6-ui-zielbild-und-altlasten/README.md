@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Altlasten: Esc-Zustand, Typ-Erzeugung raus aus dem Installer, Seitengröße des Verlaufs | [phase-1-altlasten.md](phase-1-altlasten.md) | mechanisch | pending |
+| 1 | Altlasten: Esc-Zustand, Typ-Erzeugung raus aus dem Installer, Seitengröße des Verlaufs | [phase-1-altlasten.md](phase-1-altlasten.md) | mechanisch | complete |
 | 2 | Core: Einstellungen speichern, Branch-Präfix beim Anlegen | [phase-2-einstellungen-core.md](phase-2-einstellungen-core.md) | standard | pending |
 | 3 | Oberfläche: Einstellungsseite, Farbschema, Standardwerte in „Neue Session“ | [phase-3-einstellungen-oberflaeche.md](phase-3-einstellungen-oberflaeche.md) | standard | pending |
 | 4 | Virtuelle Listen: Sidebar, Hintergrund-Panel, Scratchpad | [phase-4-virtuelle-listen.md](phase-4-virtuelle-listen.md) | standard | pending |

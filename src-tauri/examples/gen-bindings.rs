@@ -1,4 +1,4 @@
-//! Erzeugt die TypeScript-Typen in src/lib/bindings/. Aufruf: `pnpm bindings`.
+//! Erzeugt die TypeScript-Typen in src/lib/bindings/. Aufruf: `pnpm bindings` (`cargo run --example gen-bindings`).
 use ts_rs::{Config, TS};
 use verwalter_lib::{
     agents::event::{
