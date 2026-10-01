@@ -9,7 +9,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](..
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Ordner aufnehmen, Checkout-Art `folder`, Agent-Start, Changes, ADR 018 | standard | complete |
-| 2 | Oberfläche: Auswahl, Menü, Changes-Übersicht, Texte, Doku, Release | standard | pending |
+| 2 | Oberfläche: Auswahl, Menü, Changes-Übersicht, Texte, Doku, Release | standard | complete |
 
 **Reihenfolge:** vor allen geparkten Plänen (STATE.md). Phasen strikt 1 → 2. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `repositories`. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach Phase 1 `pnpm bindings` und die erzeugten Dateien mitcommitten. Die neuen Bindings brechen in der Oberfläche genau eine Stelle (`describeAddError` prüft `notARepository`); Phase 1 ersetzt sie, damit auch ihr Commit `pnpm check` grün hat.
 
@@ -114,23 +114,23 @@ pub struct KnownRepository {
 
 **Checkliste:**
 
-- [ ] `RepositoryPicker.tsx`:
+- [x] `RepositoryPicker.tsx`:
   - `INFO_TEXT` → `'Der Agent arbeitet direkt im Ordner jedes gewählten Repositorys, auf dem gerade ausgecheckten Stand. Ob er dafür einen eigenen Branch oder Worktree anlegt, bestimmen seine Anweisungen; die App legt keinen an. Ein Ordner ohne Git geht genauso, aber ohne Changes: die App sieht dort nicht, was der Agent ändert, und Git kann nichts zurückholen.'`
   - Dialog-Titel `'Repository oder Ordner wählen'`, Knopftext `Repository oder Ordner hinzufügen …`.
   - `renderTrailing`: bei `repository.kind === 'folder'` und nicht fehlend vor der Skill-Angabe `<span className="repository-picker__kind">ohne Git</span>` (Fragment um beide Spans).
   - `describeAddError` hat Phase 1 schon umgestellt; Leerzustand-Text bleibt.
-- [ ] `RepositoryPicker.css`: `&__kind { margin-right: var(--space-md); font-size: var(--font-size-xs); color: var(--color-fg-muted); }` — Token-Namen vorher in `src/styles/theme.css` belegen, bei Abweichung die vorhandenen nehmen, die `&__skills` benutzt.
-- [ ] `AddRepositoryMenu.tsx`: Dialog-Titel wie oben; Knopftext `Anderes Repository oder Ordner wählen …`; in `renderCandidate` hinter dem Namen bei `kind === 'folder'` `<span className="add-repository-menu__kind">ohne Git</span>`; `TRIGGER_TITLE` um den Satz „Ein Ordner ohne Git geht auch, erscheint aber nicht in den Changes.“ ergänzen. CSS-Klasse `&__kind` in `AddRepositoryMenu.css` analog zu `&__missing`, aber Farbe `--color-fg-muted`.
-- [ ] `ChangesOverview.tsx`: nach den Repository-Zeilen `changes.plainFolders.map((name) => <div key={`folder:${name}`} className="changes-overview__row"><span className="changes-overview__name">{name}</span><span className="changes-overview__note">Ordner ohne Git — die App sieht hier keine Änderungen.</span></div>)`. Doppelte Namen sind möglich (zwei Ordner gleichen Namens) → Schlüssel `folder:${String(index)}`.
-- [ ] `ChangesOverview.css`: `&__note { grid-column: 2 / 5; font-size: var(--font-size-xs); color: var(--color-fg-muted); }`.
-- [ ] `src/lib/errors.ts`: `commandErrorText` prüfen — fällt `folderNotAllowed` in einen generischen Zweig mit brauchbarem Text, nichts ändern; sonst Fall mit dem Text aus AK 2 ergänzen.
-- [ ] `SettingsView.tsx`: Filter `!isMissing && skillCount > 0` gilt unverändert auch für Ordner ohne Git — nur lesen, nicht ändern.
-- [ ] Doku im selben Commit:
+- [x] `RepositoryPicker.css`: `&__kind { margin-right: var(--space-md); font-size: var(--font-size-xs); color: var(--color-fg-muted); }` — Token-Namen vorher in `src/styles/theme.css` belegen, bei Abweichung die vorhandenen nehmen, die `&__skills` benutzt.
+- [x] `AddRepositoryMenu.tsx`: Dialog-Titel wie oben; Knopftext `Anderes Repository oder Ordner wählen …`; in `renderCandidate` hinter dem Namen bei `kind === 'folder'` `<span className="add-repository-menu__kind">ohne Git</span>`; `TRIGGER_TITLE` um den Satz „Ein Ordner ohne Git geht auch, erscheint aber nicht in den Changes.“ ergänzen. CSS-Klasse `&__kind` in `AddRepositoryMenu.css` analog zu `&__missing`, aber Farbe `--color-fg-muted`.
+- [x] `ChangesOverview.tsx`: nach den Repository-Zeilen `changes.plainFolders.map((name) => <div key={`folder:${name}`} className="changes-overview__row"><span className="changes-overview__name">{name}</span><span className="changes-overview__note">Ordner ohne Git — die App sieht hier keine Änderungen.</span></div>)`. Doppelte Namen sind möglich (zwei Ordner gleichen Namens) → Schlüssel `folder:${String(index)}`.
+- [x] `ChangesOverview.css`: `&__note { grid-column: 2 / 5; font-size: var(--font-size-xs); color: var(--color-fg-muted); }`.
+- [x] `src/lib/errors.ts`: `commandErrorText` prüfen — fällt `folderNotAllowed` in einen generischen Zweig mit brauchbarem Text, nichts ändern; sonst Fall mit dem Text aus AK 2 ergänzen.
+- [x] `SettingsView.tsx`: Filter `!isMissing && skillCount > 0` gilt unverändert auch für Ordner ohne Git — nur lesen, nicht ändern.
+- [x] Doku im selben Commit:
   - `AGENTS.md` Regel 5: „je Repository den Haupt-Checkout per `--add-dir`“ → „je Repository den Haupt-Checkout bzw. den Ordner ohne Git per `--add-dir`“.
   - `docs/PROJECT.md`, Zeile „Workspace“ im MVP: „mehrere Repositories pro Session, auch Ordner ohne Git (ohne Changes, [ADR 018](decisions/018-ordner-ohne-git.md));“.
   - `docs/glossary.md`: Zeile **Repository** um „Auch ein Ordner ohne Git (→ Ordner ohne Git).“ ergänzen; neue Zeile **Ordner ohne Git** hinter **Haupt-Checkout**: „Ein bekannter Ordner ohne `.git`. Der Agent arbeitet darin wie im Haupt-Checkout; die App hat dort keine Basis, zeigt keine Changes und kann nichts zurückholen. Laufwerke, der Benutzerordner und alles darüber sowie der Datenordner der App sind gesperrt. Im Code `RepositoryKind::Folder` / `RepositoryCheckout::Folder` ([ADR 018](decisions/018-ordner-ohne-git.md)).“
   - `docs/code-map.md`: Zeile „Repositories“ Core um „Art Git/Ordner ohne Git, Sperrliste für Ordner“; Zeile „Repositories einer Session, Worktrees“ `RepositoryCheckout` „Haupt-Checkout, App-Worktree oder Ordner ohne Git“; Zeile „Changes“ um „`plain_folders` Ordner ohne Git“.
-- [ ] Commit `feat(repositories): Ordner ohne Git in Auswahl und Changes`.
+- [x] Commit `feat(repositories): Ordner ohne Git in Auswahl und Changes`.
 - [ ] Plan archivieren und Release nach `docs/conventions/releases.md`: Minor-Version (neue Funktion), `chore(release)`-Commit, Tag `vX.Y.0`, pushen.
 
 ## Finale Abnahmekriterien

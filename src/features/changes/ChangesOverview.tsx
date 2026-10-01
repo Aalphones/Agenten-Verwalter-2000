@@ -30,6 +30,14 @@ export function ChangesOverview({
             {renderStatus(repository)}
           </div>
         ))}
+        {changes.plainFolders.map((name: string, index: number) => (
+          <div key={`folder:${String(index)}`} className="changes-overview__row">
+            <span className="changes-overview__name">{name}</span>
+            <span className="changes-overview__note">
+              Ordner ohne Git — die App sieht hier keine Änderungen.
+            </span>
+          </div>
+        ))}
       </div>
       <p className="changes-overview__hint">
         {hasVisibleFiles

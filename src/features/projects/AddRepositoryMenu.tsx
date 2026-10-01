@@ -11,7 +11,7 @@ import { addRepositoryToProject } from '@/lib/projects';
 import './AddRepositoryMenu.css';
 
 const TRIGGER_TITLE =
-  'Hängt ein Repository an das ganze Vorhaben: Changes und Skills gelten für alle Sessions, der Agent bekommt es beim nächsten Start. Die Änderungen zählen ab dem Anlegen des Vorhabens; was vorher schon unbestätigt im Ordner lag, erscheint mit.';
+  'Hängt ein Repository an das ganze Vorhaben: Changes und Skills gelten für alle Sessions, der Agent bekommt es beim nächsten Start. Die Änderungen zählen ab dem Anlegen des Vorhabens; was vorher schon unbestätigt im Ordner lag, erscheint mit. Ein Ordner ohne Git geht auch, erscheint aber nicht in den Changes.';
 const RUNNING_NOTE = 'Der laufende Agent kennt das Repository erst nach seinem nächsten Start.';
 const MENU_WIDTH = 320;
 
@@ -89,7 +89,7 @@ export function AddRepositoryMenu({
       const path: string | null = await open({
         directory: true,
         multiple: false,
-        title: 'Repository wählen',
+        title: 'Repository oder Ordner wählen',
       });
       if (path === null) {
         return;
@@ -118,6 +118,9 @@ export function AddRepositoryMenu({
         >
           <span className="add-repository-menu__name">
             {repository.name}
+            {repository.kind === 'folder' && !repository.isMissing && (
+              <span className="add-repository-menu__kind">ohne Git</span>
+            )}
             {repository.isMissing && (
               <span className="add-repository-menu__missing">nicht gefunden</span>
             )}
@@ -168,7 +171,7 @@ export function AddRepositoryMenu({
             disabled={isBusy}
             onClick={chooseFolder}
           >
-            Anderes Repository wählen …
+            Anderes Repository oder Ordner wählen …
           </button>
           {showsRunningNote && <p className="add-repository-menu__note">{RUNNING_NOTE}</p>}
           {errorMessage !== null && (

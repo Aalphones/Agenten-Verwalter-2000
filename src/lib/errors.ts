@@ -15,6 +15,8 @@ export function commandErrorText(reason: unknown): string {
       return 'Git nicht gefunden.';
     case 'repositoryMissing':
       return `Repository nicht gefunden: ${reason.message}`;
+    case 'folderNotAllowed':
+      return `Diesen Ordner bekommt der Agent nicht: ${reason.message}. Gesperrt sind Laufwerke, der Benutzerordner und alles darüber sowie der Datenordner der App — wähle einen Unterordner.`;
     case 'sessionNotFound':
       return 'Session nicht gefunden.';
     case 'attachmentsWhileWaiting':

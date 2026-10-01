@@ -57,6 +57,12 @@
     color: var(--color-status-error);
   }
 
+  &__note {
+    grid-column: 2 / 5;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
   &__hint {
     margin: 0;
     font-size: var(--font-size-sm);

@@ -83,10 +83,16 @@
     white-space: nowrap;
   }
 
+  &__kind,
   &__skills,
   &__missing {
     flex-shrink: 0;
     font-size: var(--font-size-xs);
+  }
+
+  &__kind {
+    margin-right: var(--space-md);
+    color: var(--color-fg-muted);
   }
 
   &__skills {

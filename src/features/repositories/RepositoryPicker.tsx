@@ -3,10 +3,11 @@ import { useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import type { KnownRepository } from '@/lib/bindings/KnownRepository';
+import { commandErrorText } from '@/lib/errors';
 import './RepositoryPicker.css';
 
 const INFO_TEXT =
-  'Der Agent arbeitet direkt im Ordner jedes gewählten Repositorys, auf dem gerade ausgecheckten Stand. Ob er dafür einen eigenen Branch oder Worktree anlegt, bestimmen seine Anweisungen; die App legt keinen an.';
+  'Der Agent arbeitet direkt im Ordner jedes gewählten Repositorys, auf dem gerade ausgecheckten Stand. Ob er dafür einen eigenen Branch oder Worktree anlegt, bestimmen seine Anweisungen; die App legt keinen an. Ein Ordner ohne Git geht genauso, aber ohne Changes: die App sieht dort nicht, was der Agent ändert, und Git kann nichts zurückholen.';
 
 interface RepositoryPickerProps {
   selectedIds: string[];
@@ -27,7 +28,7 @@ export function RepositoryPicker({ selectedIds, onChange }: RepositoryPickerProp
 
   function handleAdd(): void {
     setErrorMessage(null);
-    open({ directory: true, multiple: false, title: 'Repository wählen' })
+    open({ directory: true, multiple: false, title: 'Repository oder Ordner wählen' })
       .then(async (path: string | null): Promise<void> => {
         if (path === null) {
           return;
@@ -125,7 +126,7 @@ export function RepositoryPicker({ selectedIds, onChange }: RepositoryPickerProp
           >
             <path d="M7 2.5v9M2.5 7h9" />
           </svg>
-          Repository hinzufügen …
+          Repository oder Ordner hinzufügen …
         </button>
         <span className="repository-picker__info" title={INFO_TEXT}>
           <svg
@@ -159,7 +160,18 @@ function renderTrailing(repository: KnownRepository): ReactElement {
   if (repository.isMissing) {
     return <span className="repository-picker__missing">nicht gefunden</span>;
   }
-  return <span className="repository-picker__skills">{skillLabel(repository.skillCount)}</span>;
+  const skills: ReactElement = (
+    <span className="repository-picker__skills">{skillLabel(repository.skillCount)}</span>
+  );
+  if (repository.kind === 'folder') {
+    return (
+      <>
+        <span className="repository-picker__kind">ohne Git</span>
+        {skills}
+      </>
+    );
+  }
+  return skills;
 }
 
 function skillLabel(count: number): string {
@@ -175,8 +187,8 @@ export function describeAddError(reason: unknown): string {
     if (reason.kind === 'gitNotFound') {
       return 'Git nicht gefunden. Installiere Git für Windows und starte die App neu.';
     }
-    if (reason.kind === 'folderNotAllowed' && 'message' in reason) {
-      return `Diesen Ordner bekommt der Agent nicht: ${String(reason.message)}. Gesperrt sind Laufwerke, der Benutzerordner und alles darüber sowie der Datenordner der App — wähle einen Unterordner.`;
+    if (reason.kind === 'folderNotAllowed') {
+      return commandErrorText(reason);
     }
   }
   if (typeof reason === 'object' && reason !== null && 'message' in reason) {
