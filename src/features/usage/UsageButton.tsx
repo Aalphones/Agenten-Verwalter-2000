@@ -35,12 +35,12 @@ export function UsageButton({ isOpen, onToggle, onClose }: UsageButtonProps): Re
 
   function renderLabel(): string {
     if (status?.snapshot == null) {
-      return '5h –';
+      return '';
     }
     if (sessionLimit === undefined) {
       return 'Kontingent';
     }
-    return `5h ${String(sessionLimit.percent)} %`;
+    return `${String(sessionLimit.percent)} %`;
   }
 
   return (

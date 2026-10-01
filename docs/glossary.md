@@ -45,7 +45,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Scratchpad** | Claudes eigener temporärer Ordner einer Session (`%TEMP%\claude\…\<session-id>\scratchpad`), gemeldet in `system/init`; liegt außerhalb des Workspace, die Kommandozeile erlaubt ihn dem Agenten selbst. |
 | **Hintergrund-Panel** | Seitenpanel einer Session (440 px) mit den Reitern Prozesse, Subagenten, Scratchpad; geöffnet über den Knopf „Hintergrund“ in der Kopfzeile oder eine Verlaufszeile. |
 | **Kontext-Aufschlüsselung** | Die Liste, was den Kontext einer Session belegt (Systemprompt, Werkzeuge, Memory-Dateien, Skills, Nachrichten, freier Platz). Kommt von der Claude-Kommandozeile; der letzte Stand liegt nur im Speicher des Core. Angezeigt im Kontext-Fenster der Kopfzeile. |
-| **Kontingent** | Die Nutzungsgrenzen des Claude-Abos: 5-Stunden-Fenster und Woche, je mit Prozentwert und Zeitpunkt des Zurücksetzens (englisch „Usage“). Angezeigt als „5h NN %“ in der Kopfzeile. |
+| **Kontingent** | Die Nutzungsgrenzen des Claude-Abos: 5-Stunden-Fenster und Woche, je mit Prozentwert und Zeitpunkt des Zurücksetzens (englisch „Usage“). Angezeigt als „NN %“ in der Kopfzeile. |
 | **Hilfsprozess** | Ein kurz gestarteter `claude.exe`, der nur eine einzige Abfrage beantwortet (das Kontingent) und sich danach beendet; gehört zu keiner Session. |
 | **Diktieren** | Sprache per Mikrofon aufnehmen und lokal in Text für den Entwurf umwandeln; sendet nie selbst. Im Code `voice` ([ADR 009](decisions/009-sprachdiktat-lokal.md)). |
 | **Sprachmodell** | Die lokal gespeicherte Whisper-Datei unter `<Benutzerordner>\.verwalter\models\`, die das Diktieren braucht; wird einmal auf Klick geladen (574 MB), danach läuft die Erkennung ohne Internet. |

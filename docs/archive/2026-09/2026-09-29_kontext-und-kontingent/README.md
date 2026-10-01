@@ -1,6 +1,6 @@
 # Kontext und Kontingent in der Kopfzeile
 
-Ziel: In der Session-Kopfzeile öffnet ein Klick auf den Kontext-Balken eine Aufschlüsselung, was den Kontext der Session belegt (Systemprompt, Werkzeuge, Memory-Dateien, Skills, Nachrichten, freier Platz, Memory-Dateien einzeln). Daneben zeigt eine neue kleine Anzeige „5h 80 %“ das Kontingent des Claude-Abos; ein Klick öffnet 5-Stunden- und Wochen-Kontingent mit Reset-Zeit und „Was treibt den Verbrauch?“ (Tag/Woche). Vorbild sind die Fenster „Context usage“ und „Account & Usage“ der VS-Code-Erweiterung; die Screenshots dazu liegen nicht im Repo, der Aufbau ist unten und in Phase 3 vollständig beschrieben.
+Ziel: In der Session-Kopfzeile öffnet ein Klick auf den Kontext-Balken eine Aufschlüsselung, was den Kontext der Session belegt (Systemprompt, Werkzeuge, Memory-Dateien, Skills, Nachrichten, freier Platz, Memory-Dateien einzeln). Daneben zeigt eine neue kleine Anzeige „80 %“ das Kontingent des Claude-Abos; ein Klick öffnet 5-Stunden- und Wochen-Kontingent mit Reset-Zeit und „Was treibt den Verbrauch?“ (Tag/Woche). Vorbild sind die Fenster „Context usage“ und „Account & Usage“ der VS-Code-Erweiterung; die Screenshots dazu liegen nicht im Repo, der Aufbau ist unten und in Phase 3 vollständig beschrieben.
 
 Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [ADR 003](../../decisions/003-claude-anbindung.md) (Anbindung), [claude-stream-json.md](../../knowledge/claude-stream-json.md) — **alle Protokoll-Fakten dieses Plans stehen dort im Abschnitt „Kontext und Kontingent abfragen“** (gemessen am 2026-09-29 mit Claude Code 2.1.284), die Konventionen unter [docs/conventions/](../../conventions/).
 
@@ -87,7 +87,7 @@ pub struct UsageStatus { pub snapshot: Option<UsageSnapshot>, pub error: Option<
 
 1. Klick auf den Kontext-Balken öffnet ein Fenster mit Modell, „belegt / Fenster Tokens (Prozent)“, einem gestapelten Balken, einer Tabelle je Kategorie (Tokens, Prozent) samt „Freier Platz“, der Schwelle fürs automatische Zusammenfassen und der Liste der Memory-Dateien mit Tokens.
 2. Nach jeder Antwort des Agenten ist die Aufschlüsselung ohne weiteres Zutun aktuell; bei ruhendem Agenten zeigt das Fenster „Stand HH:MM · Agent ruht“; nach App-Neustart ohne Antwort den Hinweis, dass die Aufschlüsselung mit der nächsten Antwort kommt.
-3. Die Kopfzeile zeigt „5h NN %“ für das 5-Stunden-Kontingent; ab 90 % in Warnfarbe.
+3. Die Kopfzeile zeigt „NN %“ für das 5-Stunden-Kontingent; ab 90 % in Warnfarbe.
 4. Klick darauf öffnet ein Fenster mit Abo, je Kontingent Balken, Prozent und „Zurückgesetzt in …“, darunter „Was treibt den Verbrauch?“ mit Umschalter Tag/Woche (Anteile lange Kontexte, lange aktive Sessions, parallele Sessions, Skills nach Anteil) und „Stand HH:MM“ mit „Aktualisieren“.
 5. Ein fehlgeschlagener Abruf zeigt den Fehlertext im Fenster, lässt den letzten Stand stehen und bietet „Aktualisieren“ an; die App bleibt bedienbar.
 6. Kein Abruf hinterlässt einen laufenden `claude.exe`-Prozess; der Hilfsprozess öffnet kein Konsolenfenster.
@@ -110,7 +110,7 @@ Wackelstellen zuerst:
 
 ## Summary
 
-Die Kopfzeile hat zwei neue Fenster: Klick auf den Kontext-Balken zeigt die Aufschlüsselung (Kategorien, Schwelle fürs Zusammenfassen, Memory-Dateien), die neue Anzeige „5h NN %“ öffnet das Kontingent mit Reset-Zeiten und „Was treibt den Verbrauch?“. Der Core liefert beides über Steueranfragen der Claude-Kommandozeile.
+Die Kopfzeile hat zwei neue Fenster: Klick auf den Kontext-Balken zeigt die Aufschlüsselung (Kategorien, Schwelle fürs Zusammenfassen, Memory-Dateien), die neue Anzeige „NN %“ öffnet das Kontingent mit Reset-Zeiten und „Was treibt den Verbrauch?“. Der Core liefert beides über Steueranfragen der Claude-Kommandozeile.
 
 ## Files touched
 
