@@ -28,6 +28,7 @@ use verwalter_lib::{
         TldrChangedEvent,
     },
     usage::model::{UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot, UsageStatus},
+    voice::model::{VoiceLevelEvent, VoiceModelEvent, VoiceModelState, VoicePartialEvent},
 };
 
 fn main() -> Result<(), ts_rs::ExportError> {
@@ -97,5 +98,9 @@ fn main() -> Result<(), ts_rs::ExportError> {
     Settings::export_all(&cfg)?;
     SettingsOverview::export_all(&cfg)?;
     SettingsChange::export_all(&cfg)?;
+    VoiceModelState::export_all(&cfg)?;
+    VoiceModelEvent::export_all(&cfg)?;
+    VoiceLevelEvent::export_all(&cfg)?;
+    VoicePartialEvent::export_all(&cfg)?;
     Ok(())
 }

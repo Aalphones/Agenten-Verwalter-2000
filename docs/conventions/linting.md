@@ -27,6 +27,13 @@ pnpm rust:clippy   cargo clippy --all-targets -- -D warnings
 
 In CI folgt als letzter Schritt `pnpm bindings` und die Prüfung, dass `src/lib/bindings/` dadurch unverändert bleibt — ein Typ im Core ohne nachgezogene Bindings lässt den Lauf rot werden.
 
+## Voraussetzungen
+
+Clippy, `pnpm bindings` und jeder Bau übersetzen whisper.cpp (Diktieren, [ADR 009](../decisions/009-sprachdiktat-lokal.md)) und brauchen deshalb zusätzlich zu Rust:
+
+- **CMake** im PATH. Fehlt es: aus den Visual-Studio-Build-Tools (`C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin`) oder `winget install Kitware.CMake`.
+- **LLVM (libclang)**, weil `whisper-rs-sys` seine Bindings per bindgen erzeugt: `winget install LLVM.LLVM`. Die mitgelieferten Bindings der Crate sind unter Linux erzeugt und scheitern unter Windows. Wechselt man von einem Stand ohne LLVM, einmal `cargo clean -p whisper-rs-sys`, sonst bleiben die alten Bindings im Zwischenspeicher.
+
 ## Regeln
 
 - Warnungen sind Fehler — in ESLint (`--max-warnings 0`) wie in Clippy (`-D warnings`)

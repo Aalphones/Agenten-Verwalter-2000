@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Bau-Grundlage für whisper.cpp, Sprachmodell laden und prüfen | [phase-1-modell-core.md](phase-1-modell-core.md) | standard | pending |
+| 1 | Core: Bau-Grundlage für whisper.cpp, Sprachmodell laden und prüfen | [phase-1-modell-core.md](phase-1-modell-core.md) | standard | complete |
 | 2 | Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme | [phase-2-aufnahme-erkennung.md](phase-2-aufnahme-erkennung.md) | heikel | pending |
 | 3 | Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 

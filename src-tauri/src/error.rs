@@ -30,6 +30,20 @@ pub enum CommandError {
     RepositoryMissing(String),
     #[error("Anhänge gehen erst, wenn die Rückfrage beantwortet ist")]
     AttachmentsWhileWaiting,
+    #[error("Sprachmodell fehlt")]
+    VoiceModelMissing,
+    #[error("Es läuft schon ein Diktat")]
+    VoiceBusy,
+    #[error("Mikrofon: {0}")]
+    Microphone(String),
+    #[error("Kein Ton vom Mikrofon")]
+    NoAudio,
+    #[error("Keine Sprache erkannt")]
+    NoSpeech,
+    #[error("Diktat abgebrochen")]
+    VoiceCancelled,
+    #[error("Download: {0}")]
+    VoiceDownload(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

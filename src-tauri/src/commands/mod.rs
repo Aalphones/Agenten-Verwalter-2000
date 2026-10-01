@@ -11,3 +11,4 @@ pub mod settings;
 pub mod skills;
 pub mod tldr;
 pub mod usage;
+pub mod voice;

@@ -16,6 +16,7 @@ pub mod settings;
 pub mod skills;
 pub mod tldr;
 pub mod usage;
+pub mod voice;
 pub mod worktrees;
 
 use std::sync::Arc;
@@ -26,6 +27,7 @@ use db::Database;
 use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
 use usage::UsageService;
+use voice::VoiceService;
 
 const DATABASE_FILE: &str = "verwalter.db";
 
@@ -44,6 +46,7 @@ pub fn run() {
             app.manage(registry);
             app.manage(database);
             app.manage(UsageService::new());
+            app.manage(VoiceService::new());
             SessionRegistry::start_reaper(app.handle().clone());
             Ok(())
         })
@@ -94,6 +97,9 @@ pub fn run() {
             commands::tldr::tldr_set_carry,
             commands::settings::settings_load,
             commands::settings::settings_update,
+            commands::voice::voice_model_status,
+            commands::voice::voice_model_download,
+            commands::voice::voice_model_cancel_download,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten");
