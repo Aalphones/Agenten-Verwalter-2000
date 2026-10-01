@@ -1,5 +1,5 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-09-30_vorhaben-und-sessions/`
-**Phase:** 7/7 — alle Phasen complete, Plan wartet auf die Smoke-Checkliste (macht Sascha)
-**Nächster Schritt:** Smoke-Checkliste im README des Plans abarbeiten; danach archivieren (`docs/archive/2026-09/`), Version anheben, `chore(release)`-Commit, Tag pushen (`docs/conventions/releases.md`), dann `/session-review`.
+**Aktiver Plan:** (kein aktiver Plan)
+**Phase:** —
+**Nächster Schritt:** Als Nächstes laut Reihenfolge der Plan „Meilenstein 6 — UI auf Zielbild, plus Altlasten“ (`docs/planning/2026-09-29_m6-ui-zielbild-und-altlasten/`), danach „Sprachdiktat“.

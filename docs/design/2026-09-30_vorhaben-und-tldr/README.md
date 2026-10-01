@@ -1,6 +1,6 @@
 # Design-Entwurf: Vorhaben und TL;DR
 
-**Status:** umgesetzt am 2026-09-30 (Plan [Vorhaben und Sessions](../../planning/2026-09-30_vorhaben-und-sessions/README.md)); abgenommen am 2026-09-30 als Grundlage des Plans [Vorhaben und Sessions](../../planning/2026-09-30_vorhaben-und-sessions/README.md). Für Sidebar, Session-Kopfzeile, Übersicht eines Vorhabens, Einstieg einer neuen Session und die TL;DR-Karten ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md), dessen Tokens, Schriften und Statussymbole er übernimmt. Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
+**Status:** umgesetzt am 2026-09-30 (Plan [Vorhaben und Sessions](../../archive/2026-09/2026-09-30_vorhaben-und-sessions/README.md)); abgenommen am 2026-09-30 als Grundlage des Plans [Vorhaben und Sessions](../../archive/2026-09/2026-09-30_vorhaben-und-sessions/README.md). Für Sidebar, Session-Kopfzeile, Übersicht eines Vorhabens, Einstieg einer neuen Session und die TL;DR-Karten ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md), dessen Tokens, Schriften und Statussymbole er übernimmt. Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
 
 ## Ansehen
 
