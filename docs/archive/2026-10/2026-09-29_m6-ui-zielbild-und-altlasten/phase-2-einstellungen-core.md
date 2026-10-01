@@ -11,7 +11,7 @@ Rating: standard. Kontrakt und Speicherformat stehen im README; hier nur Umsetzu
 - `src-tauri/src/db/mod.rs` (`Database::with`, `enum_to_text`, `enum_from_text`), `src-tauri/src/db/migrations.rs` + `migrations/003_background.sql` (Form einer Migration), `src-tauri/src/db/sessions.rs` (wie Enums gespeichert werden)
 - `src-tauri/src/skills/mod.rs` (`collect`), `src-tauri/src/filesystem/workspace.rs` (`home_dir`, `data_dir`, Konstante `WORKSPACES_DIR`)
 - `src-tauri/src/agents/event.rs` (`ModelId`, `Effort`, `Mode`), `src-tauri/src/error.rs`, `src-tauri/src/lib.rs` (Command-Registrierung), `src-tauri/examples/gen-bindings.rs` (seit Phase 1)
-- [ADR 004](../../decisions/004-persistenz-und-wiederherstellung.md) (Migrationen werden nie geändert, nur angehängt), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (die App legt keine Branches an), [rust.md](../../conventions/rust.md)
+- [ADR 004](../../../decisions/004-persistenz-und-wiederherstellung.md) (Migrationen werden nie geändert, nur angehängt), [ADR 010](../../../decisions/010-worktrees-durch-den-agenten.md) (die App legt keine Branches an), [rust.md](../../../conventions/rust.md)
 - Vault-Fehlerklassen SQLite gelesen: keine einschlägig (alle betreffen Sicherungen und Kopien laufender Datenbanken).
 
 ## Abnahmekriterien

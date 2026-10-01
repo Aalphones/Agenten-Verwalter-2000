@@ -7,10 +7,10 @@ Rating: mechanisch. Drei unabhängige, kleine Änderungen; alle Entscheidungen s
 - [README dieses Plans](README.md), Abschnitt „Festgelegte Entscheidungen“ → „Altlasten“
 - `src-tauri/src/sessions/registry.rs`: `finish_tool` (setzt den Zustand einer Werkzeug-Zeile beim `ToolFinished`), `pause` und `cancel` (setzen `pause_requested` bzw. `cancel_requested`), `pause_after_interrupt` (setzt `pause_requested` beim `result` zurück), `interrupt_running_tools`
 - `src-tauri/src/agents/event.rs`: `ToolState` (Doku-Kommentar zu `Interrupted`)
-- [claude-stream-json.md](../../knowledge/claude-stream-json.md), Abschnitt zur Steueranfrage `interrupt`: nach `interrupt` kommen Werkzeug-Ergebnisse mit `is_error`, dann `user` mit `[Request interrupted by user]`, dann `result`
-- Ursprung des Esc-Befunds: [M4-Archiv](../../archive/2026-09/2026-09-28_m4-persistenz-und-wiederherstellung/README.md), „Deviations from plan“
+- [claude-stream-json.md](../../../knowledge/claude-stream-json.md), Abschnitt zur Steueranfrage `interrupt`: nach `interrupt` kommen Werkzeug-Ergebnisse mit `is_error`, dann `user` mit `[Request interrupted by user]`, dann `result`
+- Ursprung des Esc-Befunds: [M4-Archiv](../../../archive/2026-09/2026-09-28_m4-persistenz-und-wiederherstellung/README.md), „Deviations from plan“
 - `src-tauri/src/bin/gen-bindings.rs`, `src-tauri/Cargo.toml`, `package.json` (Skripte `bindings`, `rust:clippy`), `.github/workflows/check.yml` (ruft `pnpm bindings`)
-- Ursprung des Installer-Befunds: [Gerüst-Archiv](../../archive/2026-09/2026-09-28_geruest/README.md), „Follow-ups“
+- Ursprung des Installer-Befunds: [Gerüst-Archiv](../../../archive/2026-09/2026-09-28_geruest/README.md), „Follow-ups“
 - `src/features/chat/useChatEntries.ts` (`PAGE_SIZE`), `src/vite-env.d.ts`
 - Vault-Fehlerklassen gelesen (React, Tailwind, TypeScript, SQLite): keine für diese Phase einschlägig.
 
@@ -38,7 +38,7 @@ Rating: mechanisch. Drei unabhängige, kleine Änderungen; alle Entscheidungen s
 - [x] `package.json`: `"bindings": "cargo run --manifest-path src-tauri/Cargo.toml --example gen-bindings"`.
 - [x] `src-tauri/Cargo.toml`: nichts eintragen. Cargo findet Beispiele unter `examples/` von selbst; `default-run = "verwalter"` bleibt.
 - [x] Prüfen: `pnpm bindings`, danach `git status --porcelain -- src/lib/bindings` leer; `cargo metadata …` wie AK 3.
-- [x] Doku: [ADR 002](../../decisions/002-typgenerierung-und-listen.md) Zeile mit `src-tauri/src/bin/gen-bindings.rs` → `src-tauri/examples/gen-bindings.rs` plus Halbsatz „ein Beispielprogramm, damit Tauri es nicht in den Installer bündelt“; [rust.md](../../conventions/rust.md) (Treffer auf `gen-bindings`) und [code-map.md](../../code-map.md) (Zeilen „Generierte Typen Rust → TS“ und Einleitungssatz mit `src-tauri/src/bin/`) auf den neuen Pfad. Die Pläne unter `docs/planning/2026-09-29_m2b-…/` und `docs/archive/` bleiben unverändert (historisch).
+- [x] Doku: [ADR 002](../../../decisions/002-typgenerierung-und-listen.md) Zeile mit `src-tauri/src/bin/gen-bindings.rs` → `src-tauri/examples/gen-bindings.rs` plus Halbsatz „ein Beispielprogramm, damit Tauri es nicht in den Installer bündelt“; [rust.md](../../../conventions/rust.md) (Treffer auf `gen-bindings`) und [code-map.md](../../../code-map.md) (Zeilen „Generierte Typen Rust → TS“ und Einleitungssatz mit `src-tauri/src/bin/`) auf den neuen Pfad. Die Pläne unter `docs/planning/2026-09-29_m2b-…/` und `docs/archive/` bleiben unverändert (historisch).
 
 ### Seitengröße des Verlaufs (im Commit 2, Scope passt als Entwicklungswerkzeug)
 

@@ -5,12 +5,12 @@ Rating: standard. Struktur und Texte stehen unten; Maße aus dem Entwurfs-README
 ## Kontext
 
 - [README dieses Plans](README.md): „Festgelegte Entscheidungen“ → „Einstellungen“, „Farbschema“; „Kontrakt“ → „Oberfläche“
-- Entwurf: [Entwurfs-README](../../design/2026-09-28_hauptansichten/README.md) (Layout-Maße „Neue Session, Einstellungen“, Sidebar, Tokens), Prototyp `docs/design/2026-09-28_hauptansichten/canvas/Main.dc.html`: Einstellungen-Knopf der Sidebar Zeilen 71–76, Einstellungsseite Zeilen 627–669, Zeilen-Daten `settingSections` Zeilen 1301–1332 (die Quellen laufen nur in der Zeichenfläche von claude.ai; zum Nachbauen reicht das Lesen des Markups)
+- Entwurf: [Entwurfs-README](../../../design/2026-09-28_hauptansichten/README.md) (Layout-Maße „Neue Session, Einstellungen“, Sidebar, Tokens), Prototyp `docs/design/2026-09-28_hauptansichten/canvas/Main.dc.html`: Einstellungen-Knopf der Sidebar Zeilen 71–76, Einstellungsseite Zeilen 627–669, Zeilen-Daten `settingSections` Zeilen 1301–1332 (die Quellen laufen nur in der Zeichenfläche von claude.ai; zum Nachbauen reicht das Lesen des Markups)
 - Wrapper aus Phase 2: `src/lib/settings.ts`; Typen `src/lib/bindings/{ColorScheme,Settings,SettingsOverview,SettingsChange}.ts`
 - `src/styles/theme.css` (Klassen `:root.dark` / `:root.light`, ohne Klasse System), `src/main.tsx`, `src/app/App.tsx`, `src/app/Sidebar.tsx` + `Sidebar.css`, `src/stores/sessions.ts`
 - Bestehende Bauteile: `src/components/Popover.tsx`, `ModelMenu.tsx`, `ModeMenu.tsx` (enthält die Denkaufwand-Punkte), `src/lib/labels.ts` (`MODEL_OPTIONS`, `MODE_OPTIONS`, `EFFORT_OPTIONS`), Segment-Vorlage `src/features/changes/ChangesToolbar.tsx` + `.css` (`changes-toolbar__segment`, `__segment-button`, `--pressed`, `aria-pressed`), `src/lib/errors.ts` (`commandErrorText`), `src/features/repositories/useKnownRepositories.ts` + `RepositoryPicker.tsx` (Erklärtext noch mit `verwalter/`, veraltet seit ADR 010), `src/features/sessions/NewSession.tsx` (Startwerte Zeilen 42–44), `revealItemInDir` wie in `src/features/background/ScratchpadTab.tsx`
 - `src-tauri/capabilities/default.json`
-- Konventionen: [react.md](../../conventions/react.md), [typescript.md](../../conventions/typescript.md), [tailwind.md](../../conventions/tailwind.md) (BEM pro Komponente, nur semantische Tokens)
+- Konventionen: [react.md](../../../conventions/react.md), [typescript.md](../../../conventions/typescript.md), [tailwind.md](../../../conventions/tailwind.md) (BEM pro Komponente, nur semantische Tokens)
 - Vault-Fehlerklassen React und Tailwind gelesen: keine einschlägig (die React-Einträge betreffen Tests, das Projekt hat keine; die Tailwind-Klasse betrifft Einbau ohne Preflight — `theme.css` importiert `tailwindcss` vollständig).
 
 ## Abnahmekriterien
