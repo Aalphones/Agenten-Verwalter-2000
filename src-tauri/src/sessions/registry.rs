@@ -1600,6 +1600,7 @@ impl SessionState {
         outbox.entries.push(entry.clone());
     }
 
+    /// Ein Fehlergebnis, das nach einer angeforderten Pause oder einem Abbruch eintrifft, ist der abgewürgte Aufruf selbst — deshalb „unterbrochen“, nicht „fehlgeschlagen“.
     fn finish_tool(&mut self, outbox: &mut Outbox, tool_use_id: &str, failed: bool) {
         // `TodoWrite` und `AskUserQuestion` liefern ein Ergebnis ohne vorheriges `ToolStarted`.
         let Some(&seq) = self.tool_seqs.get(tool_use_id) else {
@@ -1614,10 +1615,12 @@ impl SessionState {
         if *state != ToolState::Running {
             return;
         }
-        *state = if failed {
-            ToolState::Failed
-        } else {
+        *state = if !failed {
             ToolState::Done
+        } else if self.pause_requested || self.cancel_requested {
+            ToolState::Interrupted
+        } else {
+            ToolState::Failed
         };
         outbox.entries.push(entry.clone());
     }

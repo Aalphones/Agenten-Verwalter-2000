@@ -178,7 +178,7 @@ Was die Oberfläche in Meilenstein 2a ([Plan-README](../../archive/2026-09/2026-
 - **Status „Startet“:** dasselbe Symbol wie „Läuft“.
 - **Status „Wartet“:** Anzeige „Wartet“ statt „Wartet auf dich“ (Sidebar-Zeile sagt weiter „wartet auf deine Antwort“).
 - **Denkaufwand-Punkte:** wie im Entwurf — die gewählte Stufe ist der große Punkt, nicht ein Füllstand.
-- **Werkzeug-Zeile „unterbrochen“:** Ein Aufruf, der bei Pause oder Abbruch noch lief, zeigt hinter dem Ziel „unterbrochen“ in gedämpfter Farbe — nie „nicht ausgeführt“, denn er kann trotzdem gelaufen sein. Ein fehlgeschlagener Aufruf zeigt den Werkzeugnamen in der Fehlerfarbe.
+- **Werkzeug-Zeile „unterbrochen“:** Ein Aufruf, der bei Pause oder Abbruch noch lief (auch bei Esc auf einen bereits laufenden Aufruf), zeigt hinter dem Ziel „unterbrochen“ in gedämpfter Farbe — nie „nicht ausgeführt“, denn er kann trotzdem gelaufen sein. Ein fehlgeschlagener Aufruf zeigt den Werkzeugnamen in der Fehlerfarbe.
 - **Rückfrage mit Mehrfachauswahl:** Optionen schalten um (gewählt: Rahmen in Akzentfarbe), darunter der Knopf „Antworten“; ohne Mehrfachauswahl sendet der Klick sofort. Mehrere Fragen stehen nacheinander im selben Kasten, jede mit eigener Nummerierung.
 - **Beantwortete Rückfrage:** Der Kasten bleibt im Verlauf, die Knöpfe sind gesperrt, der Kopf lautet „Claude hat gefragt“ in gedämpfter Farbe mit neutralem Rahmen, die Fußzeile „Antwort: …“ nennt die Antwort bzw. wie die Frage erledigt wurde („Erlaubt“, „Pausiert“, „Nicht beantwortet“ …).
 - **Markdown und Code-Blöcke:** ohne Tafel, gebaut nach Plan M2a Phase 5 — Code-Block mit Kopfzeile (Sprache links, „Kopieren“ rechts) auf `bg-surface`, Syntaxfarben nach VS Code Dark+ / Light+; Links öffnen im Standardbrowser.
