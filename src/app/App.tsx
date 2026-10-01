@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionActionError } from '@/app/SessionActionError';
@@ -189,10 +189,10 @@ export function App(): ReactElement {
       return renderOverview(overviewProject, currentSession);
     }
     if (currentSession !== undefined) {
+      // Ein Schlüssel für die ganze Ansicht: Kopfzeile, Fehlerleiste und Inhalt wechseln beim Session-Wechsel als Einheit.
       return (
-        <>
+        <Fragment key={currentSession.id}>
           <SessionHeader
-            key={currentSession.id}
             session={currentSession}
             projectName={projectNameOf(currentSession)}
             activeView={isChangesView ? 'changes' : 'chat'}
@@ -207,21 +207,15 @@ export function App(): ReactElement {
           />
           <SessionActionError sessionId={currentSession.id} />
           {isChangesView ? (
-            <ChangesView
-              key={currentSession.id}
-              session={currentSession}
-              changes={changes}
-              error={changesError}
-            />
+            <ChangesView session={currentSession} changes={changes} error={changesError} />
           ) : (
             <ChatView
-              key={currentSession.id}
               session={currentSession}
               projectName={projectNameOf(currentSession)}
               backgroundByToolUseId={backgroundByToolUseId}
             />
           )}
-        </>
+        </Fragment>
       );
     }
     return <EmptyState onCreate={openNewSession} />;
