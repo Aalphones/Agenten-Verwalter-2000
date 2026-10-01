@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Changes-Review – Kommentare im Diff</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.rv-add{opacity:0}
+.rv-line:hover .rv-add,.rv-add:focus-visible{opacity:1}
+.rv-input::placeholder{color:inherit;opacity:0.6}
+.rv-focus:focus-visible{outline:2px solid #e0825c;outline-offset:1px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; display: flex; background: {{t.base}}; color: {{t.fg}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.45;">
+
+<aside style="width: 240px; flex-shrink: 0; box-sizing: border-box; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; background: {{t.sidebar}}; border-right: 1px solid {{t.borderSubtle}};">
+<div style="padding: 4px 8px 12px; font-size: 12px; color: {{t.muted}};">Vorhaben</div>
+<div style="padding: 6px 8px; font-weight: 600;">Verwalter 2000</div>
+<div style="padding: 6px 8px 6px 20px; border-radius: 6px; background: {{t.selected}};">#3 Retry für Tauri-Aufrufe</div>
+<div style="padding: 6px 8px 6px 20px; color: {{t.fg2}};">#2 TL;DR-Karten</div>
+<div style="padding: 6px 8px 6px 20px; color: {{t.fg2}};">#1 Repository anhängen</div>
+</aside>
+
+<main style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+<header style="height: 44px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px 0 20px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid {{t.borderSubtle}};">
+<span style="color: {{t.muted}};">Verwalter 2000 ›</span>
+<span style="font-weight: 600; margin-left: -10px;">#3 Retry für Tauri-Aufrufe</span>
+<nav aria-label="Ansicht" style="display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: {{t.sidebar}}; border: 1px solid {{t.borderSubtle}};">
+<button type="button" class="rv-focus" onClick="{{ showChat }}" title="{{ chatTabTitle }}" style="height: 26px; padding: 0 10px; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 6px; background: {{chatTabBg}}; color: {{chatTabFg}}; font: inherit; font-size: 12.5px; cursor: pointer;">
+<span>Chat</span>
+<sc-if value="{{ hasComments }}" hint-placeholder-val="{{ true }}">
+<span style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 11px; font-weight: 600;">{{ commentCount }}</span>
+</sc-if>
+</button>
+<button type="button" class="rv-focus" onClick="{{ showChanges }}" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: {{changesTabBg}}; color: {{changesTabFg}}; font: inherit; font-size: 12.5px; cursor: pointer;">Changes</button>
+</nav>
+<span style="flex-grow: 1;"></span>
+<span style="font-size: 12px; color: {{t.muted}};">Hintergrund</span>
+</header>
+
+<sc-if value="{{ isChanges }}" hint-placeholder-val="{{ true }}">
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+<div style="height: 40px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid {{t.borderSubtle}};">
+<div style="display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: {{t.sidebar}}; border: 1px solid {{t.borderSubtle}}; font-size: 12px;">
+<span style="padding: 2px 10px; border-radius: 4px; background: {{t.selected}};">Alle</span>
+<span style="padding: 2px 10px; color: {{t.fg2}};">Uncommitted</span>
+<span style="padding: 2px 10px; color: {{t.fg2}};">Committed</span>
+</div>
+<span style="font-size: 12px; color: {{t.fg2}};">verwalter · main</span>
+</div>
+<div style="flex-grow: 1; min-height: 0; display: flex;">
+<div style="width: 260px; flex-shrink: 0; box-sizing: border-box; padding: 8px 6px; border-right: 1px solid {{t.borderSubtle}}; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px;">
+<div style="padding: 4px 10px; color: {{t.muted}}; font-size: 12px;">src/lib</div>
+<div style="padding: 4px 10px 4px 22px; border-radius: 6px; background: {{t.selected}}; display: flex; gap: 8px;"><span style="flex-grow: 1;">retry.ts</span><span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.addFg}};">+7</span><span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.delFg}};">−3</span></div>
+<div style="padding: 4px 10px 4px 22px; display: flex; gap: 8px; color: {{t.fg2}};"><span style="flex-grow: 1;">chat.ts</span><span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.addFg}};">+2</span><span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.delFg}};">−1</span></div>
+</div>
+
+<section aria-label="Diff von src/lib/retry.ts" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<div style="height: 40px; flex-shrink: 0; box-sizing: border-box; padding: 0 10px 0 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid {{t.borderSubtle}};">
+<span style="color: {{t.muted}};">verwalter /</span>
+<span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 12.5px;">src/lib/retry.ts</span>
+<span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.addFg}};">+7</span>
+<span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.delFg}};">−3</span>
+<span style="flex-grow: 1;"></span>
+<span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.muted}};">Basis → Arbeitsverzeichnis</span>
+</div>
+<div style="flex-grow: 1; min-height: 0; overflow: auto; padding: 6px 0; font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace; font-size: 12px; line-height: 20px;">
+<sc-for list="{{ lines }}" as="line" hint-placeholder-count="12">
+<div class="rv-line" style="position: relative; display: flex; min-height: 20px; background: {{line.bg}}; color: {{line.fg}};">
+<sc-if value="{{ line.showAdd }}" hint-placeholder-val="{{ true }}">
+<button type="button" class="rv-add rv-focus" aria-label="{{line.addLabel}}" title="Kommentar zu dieser Zeile – wird im Chat gesammelt" onClick="{{line.onAdd}}" style="position: absolute; left: 4px; top: 1px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px; background: {{t.accent}}; color: {{t.onAccent}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 1.5v7"></path><path d="M1.5 5h7"></path></svg>
+</button>
+</sc-if>
+<sc-if value="{{ line.hasNote }}" hint-placeholder-val="{{ false }}">
+<button type="button" class="rv-focus" aria-label="{{line.editLabel}}" title="Gesammelten Kommentar bearbeiten" onClick="{{line.onEdit}}" style="position: absolute; left: 4px; top: 1px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px; background: {{t.accentSubtle}}; color: {{t.accentText}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M2 2.5h8v5.5H5.5L3 10V8H2z"></path></svg>
+</button>
+</sc-if>
+<span style="width: 48px; flex-shrink: 0; box-sizing: border-box; padding-right: 10px; text-align: right; color: {{t.muted}};">{{line.oldNo}}</span>
+<span style="width: 48px; flex-shrink: 0; box-sizing: border-box; padding-right: 10px; text-align: right; color: {{t.muted}};">{{line.newNo}}</span>
+<span style="width: 20px; flex-shrink: 0; text-align: center; color: {{line.signColor}};">{{line.sign}}</span>
+<span style="flex: 1; min-width: 0; padding-right: 16px; white-space: pre-wrap; overflow-wrap: anywhere;"><sc-for list="{{line.segs}}" as="seg"><span style="color: {{seg.color}};">{{seg.text}}</span></sc-for></span>
+</div>
+<sc-if value="{{ line.hasNote }}" hint-placeholder-val="{{ false }}">
+<div style="margin: 4px 16px 8px 116px; padding: 8px 10px 8px 12px; border: 1px solid {{t.borderSubtle}}; border-radius: 8px; background: {{t.surface}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.45; display: flex; gap: 10px; align-items: flex-start;">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 11.5px; color: {{t.muted}};">Gesammelt · geht mit deiner nächsten Nachricht im Chat raus</span>
+<span style="white-space: pre-wrap; color: {{t.fg}};">{{line.noteText}}</span>
+</div>
+<button type="button" class="rv-focus" onClick="{{line.onEdit}}" style="height: 24px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; font: inherit; font-size: 12px; cursor: pointer;">Bearbeiten</button>
+<button type="button" class="rv-focus" aria-label="Kommentar entfernen" title="Kommentar entfernen" onClick="{{line.onRemove}}" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 3l6 6"></path><path d="M9 3l-6 6"></path></svg>
+</button>
+</div>
+</sc-if>
+<sc-if value="{{ line.isOpen }}" hint-placeholder-val="{{ false }}">
+<div style="margin: 4px 16px 8px 116px; border: 1px solid {{t.accent}}; border-radius: 8px; background: {{t.surface}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.45; display: flex; flex-direction: column;">
+<span style="padding: 8px 12px 0; font-size: 12px; color: {{t.muted}};">Kommentar zu <span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px;">retry.ts · {{line.lineLabel}}</span></span>
+<textarea class="rv-input" aria-label="Kommentar" placeholder="Was soll der Agent hier ändern oder erklären?" value="{{ boxText }}" onChange="{{ typeBox }}" onKeyDown="{{ boxKey }}" style="min-height: 64px; box-sizing: border-box; width: 100%; padding: 6px 12px 8px; border: 0; outline: none; resize: vertical; background: transparent; color: {{t.fg}}; font: inherit;"></textarea>
+<div style="padding: 6px 8px 8px 12px; display: flex; align-items: center; gap: 8px;">
+<span style="flex-grow: 1; font-size: 11.5px; color: {{t.muted}};">Wird im Chat gesammelt und mit deiner nächsten Nachricht gesendet · Strg+Enter hinzufügen · Esc abbrechen</span>
+<button type="button" class="rv-focus" onClick="{{ cancelBox }}" style="height: 28px; padding: 0 12px; border: 1px solid {{t.border}}; border-radius: 6px; background: transparent; color: {{t.fg}}; font: inherit; font-size: 12.5px; cursor: pointer;">Abbrechen</button>
+<button type="button" class="rv-focus" onClick="{{ submitBox }}" disabled="{{ boxEmpty }}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: {{t.accent}}; color: {{t.onAccent}}; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; opacity: {{ boxOpacity }};">{{ submitLabel }}</button>
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column;">
+<div style="flex-grow: 1; min-height: 0; overflow: auto; padding: 28px 0; display: flex; flex-direction: column; align-items: center; gap: 18px;">
+<div style="width: 760px; display: flex; justify-content: flex-end;">
+<div style="max-width: 520px; padding: 10px 14px; border-radius: 10px; background: {{t.surface}}; border: 1px solid {{t.borderSubtle}};">Bau einen Retry um die Tauri-Aufrufe, drei Versuche reichen.</div>
+</div>
+<div style="width: 760px; display: flex; flex-direction: column; gap: 8px;">
+<p style="margin: 0;">Erledigt: <span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px;">withRetry</span> in <span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px;">src/lib/retry.ts</span>. Die Wartezeit wächst jetzt exponentiell und ist bei 2 s gedeckelt; nach dem letzten Versuch kommt ein Fehler mit Ursache.</p>
+<p style="margin: 0; color: {{t.fg2}};">Sieh dir den Diff in den Changes an.</p>
+</div>
+<sc-for list="{{ sent }}" as="msg" hint-placeholder-count="0">
+<div style="width: 760px; display: flex; justify-content: flex-end;">
+<div style="width: 560px; box-sizing: border-box; padding: 10px; border-radius: 10px; background: {{t.surface}}; border: 1px solid {{t.borderSubtle}}; display: flex; flex-direction: column; gap: 8px;">
+<sc-if value="{{ msg.hasText }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 2px 4px 0; white-space: pre-wrap;">{{msg.text}}</div>
+</sc-if>
+<div style="font-size: 11.5px; color: {{t.muted}}; padding: 0 4px;">{{msg.countLabel}}</div>
+<sc-for list="{{msg.cards}}" as="card">
+<div style="border: 1px solid {{t.borderSubtle}}; border-radius: 8px; background: {{t.base}}; overflow: hidden;">
+<div style="padding: 6px 10px 4px; font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.muted}};">{{card.where}}</div>
+<div style="display: flex; padding: 1px 0; background: {{card.bg}}; font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px; line-height: 20px; white-space: pre; overflow: hidden;"><span style="width: 20px; flex-shrink: 0; text-align: center; color: {{card.signColor}};">{{card.sign}}</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis;"><sc-for list="{{card.segs}}" as="seg"><span style="color: {{seg.color}};">{{seg.text}}</span></sc-for></span></div>
+<div style="padding: 6px 10px 8px; white-space: pre-wrap;">{{card.text}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="padding: 0 0 22px; display: flex; justify-content: center;">
+<div style="width: 760px; box-sizing: border-box; border: 1px solid {{t.border}}; border-radius: 10px; background: {{t.surface}}; display: flex; flex-direction: column;">
+<sc-if value="{{ hasComments }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 10px 10px 0; display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 2px;">
+<span style="font-size: 12px; font-weight: 600;">Review-Kommentare</span>
+<span style="font-size: 12px; color: {{t.muted}};">{{ commentCount }} · gehen mit der nächsten Nachricht raus</span>
+<span style="flex-grow: 1;"></span>
+<button type="button" class="rv-focus" onClick="{{ clearAll }}" style="height: 24px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; font: inherit; font-size: 12px; cursor: pointer;">Alle entfernen</button>
+</div>
+<div style="max-height: 300px; overflow: auto; display: flex; flex-direction: column; gap: 6px;">
+<sc-for list="{{ cards }}" as="card" hint-placeholder-count="2">
+<div style="border: 1px solid {{t.borderSubtle}}; border-radius: 8px; background: {{t.base}}; overflow: hidden;">
+<div style="padding: 4px 4px 2px 10px; display: flex; align-items: center; gap: 6px;">
+<span style="flex-grow: 1; min-width: 0; font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px; color: {{t.muted}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{card.where}}</span>
+<button type="button" class="rv-focus" aria-label="Kommentar bearbeiten" title="Kommentar bearbeiten" onClick="{{card.edit}}" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M2 10l.5-2.2L8.3 2a1 1 0 0 1 1.4 0l.3.3a1 1 0 0 1 0 1.4L4.2 9.5z"></path></svg>
+</button>
+<button type="button" class="rv-focus" aria-label="Kommentar entfernen" title="Kommentar entfernen" onClick="{{card.remove}}" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 3l6 6"></path><path d="M9 3l-6 6"></path></svg>
+</button>
+</div>
+<div style="display: flex; padding: 1px 0; background: {{card.bg}}; font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px; line-height: 20px; white-space: pre; overflow: hidden;"><span style="width: 20px; flex-shrink: 0; text-align: center; color: {{card.signColor}};">{{card.sign}}</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis;"><sc-for list="{{card.segs}}" as="seg"><span style="color: {{seg.color}};">{{seg.text}}</span></sc-for></span></div>
+<sc-if value="{{ card.isEditing }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column;">
+<textarea class="rv-input" aria-label="Kommentar bearbeiten" value="{{ chatEditText }}" onChange="{{ typeChatEdit }}" style="min-height: 52px; box-sizing: border-box; width: 100%; padding: 6px 10px; border: 0; outline: none; resize: vertical; background: transparent; color: {{t.fg}}; font: inherit;"></textarea>
+<div style="padding: 0 6px 6px; display: flex; justify-content: flex-end; gap: 6px;">
+<button type="button" class="rv-focus" onClick="{{ cancelChatEdit }}" style="height: 26px; padding: 0 10px; border: 1px solid {{t.border}}; border-radius: 6px; background: transparent; color: {{t.fg}}; font: inherit; font-size: 12px; cursor: pointer;">Abbrechen</button>
+<button type="button" class="rv-focus" onClick="{{ saveChatEdit }}" style="height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: {{t.accent}}; color: {{t.onAccent}}; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;">Speichern</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ card.isReading }}" hint-placeholder-val="{{ true }}">
+<div style="padding: 6px 10px 8px; white-space: pre-wrap;">{{card.text}}</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<textarea class="rv-input" aria-label="Nachricht" placeholder="{{ placeholder }}" value="{{ message }}" onChange="{{ typeMessage }}" style="min-height: 44px; box-sizing: border-box; width: 100%; padding: 12px 14px 6px; border: 0; outline: none; resize: none; background: transparent; color: {{t.fg}}; font: inherit;"></textarea>
+<div style="padding: 6px 8px; display: flex; align-items: center; gap: 6px;">
+<span style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: {{t.fg2}}; font-family: 'Cascadia Code', Consolas, monospace;">/</span>
+<span style="padding: 0 8px; color: {{t.fg2}}; font-size: 12.5px;">Opus 5.5</span>
+<span style="padding: 0 8px; color: {{t.fg2}}; font-size: 12.5px;">Bearbeiten erlaubt</span>
+<span style="flex-grow: 1;"></span>
+<button type="button" class="rv-focus" aria-label="Senden" onClick="{{ send }}" style="width: 30px; height: 30px; border: 0; border-radius: 8px; background: {{t.accent}}; color: {{t.onAccent}}; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: {{ sendOpacity }};">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3"></path><path d="M3.5 7.5L8 3l4.5 4.5"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dunkel","hell"],"default":"dunkel"},"$preview":{"width":1440,"height":900}}'>
+var THEMES = {
+  dunkel: {
+    base: '#1f1f1f', sidebar: '#181818', surface: '#252526', selected: '#37373d', hover: '#2e2e30',
+    borderSubtle: '#2b2b2b', border: '#3c3c3c', fg: '#d4d4d4', fg2: '#b0b0b0', muted: '#8f8f8f',
+    accent: '#e0825c', onAccent: '#1d130e', accentSubtle: 'rgba(224, 130, 92, 0.16)', accentText: '#eea283',
+    addBg: 'rgba(76, 195, 138, 0.11)', delBg: 'rgba(244, 112, 103, 0.11)', addFg: '#4cc38a', delFg: '#f47067', hunkBg: '#242428',
+    kw: '#569cd6', str: '#ce9178', com: '#6a9955', num: '#b5cea8', fn: '#dcdcaa', type: '#4ec9b0'
+  },
+  hell: {
+    base: '#ffffff', sidebar: '#f8f8f8', surface: '#ffffff', selected: '#e4e6f1', hover: '#f0f0f0',
+    borderSubtle: '#e5e5e5', border: '#cecece', fg: '#3c3c3c', fg2: '#555555', muted: '#6e6e6e',
+    accent: '#c4572f', onAccent: '#ffffff', accentSubtle: 'rgba(196, 87, 47, 0.10)', accentText: '#a8461f',
+    addBg: '#e8f6ee', delBg: '#fdeceb', addFg: '#16803c', delFg: '#d23b33', hunkBg: '#f3f3f6',
+    kw: '#0000ff', str: '#a31515', com: '#008000', num: '#098658', fn: '#795e26', type: '#267f99'
+  }
+};
+
+var FILE = 'verwalter / src/lib/retry.ts';
+
+// [Art, alte Nummer, neue Nummer, Text] — Platzhalter-Code, nicht aus dem Repository.
+var DIFF = [
+  ['hunk', null, null, '@@ -1,18 +1,21 @@'],
+  ['context', 1, 1, "import { invoke } from '@tauri-apps/api/core';"],
+  ['context', 2, 2, ''],
+  ['context', 3, 3, 'const MAX_ATTEMPTS = 3;'],
+  ['deleted', 4, null, 'const DELAY_MS = 250;'],
+  ['added', null, 4, 'const BASE_DELAY_MS = 250;'],
+  ['added', null, 5, 'const MAX_DELAY_MS = 2000;'],
+  ['context', 5, 6, ''],
+  ['context', 6, 7, '/** Wiederholt einen Aufruf, bis er gelingt oder die Versuche aufgebraucht sind. */'],
+  ['context', 7, 8, 'export async function withRetry<T>(command: string, args: object): Promise<T> {'],
+  ['context', 8, 9, '  let lastError: unknown = null;'],
+  ['context', 9, 10, '  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {'],
+  ['context', 10, 11, '    try {'],
+  ['context', 11, 12, '      return await invoke<T>(command, args);'],
+  ['context', 12, 13, '    } catch (reason) {'],
+  ['context', 13, 14, '      lastError = reason;'],
+  ['deleted', 14, null, '      await sleep(DELAY_MS);'],
+  ['added', null, 15, '      await sleep(Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS));'],
+  ['context', 15, 16, '    }'],
+  ['context', 16, 17, '  }'],
+  ['deleted', 17, null, '  throw lastError;'],
+  ['added', null, 18, '  throw new Error(`${command}: ${String(MAX_ATTEMPTS)} Versuche fehlgeschlagen`, {'],
+  ['added', null, 19, '    cause: lastError,'],
+  ['added', null, 20, '  });'],
+  ['context', 18, 21, '}']
+];
+
+var KEYWORDS = ['import', 'from', 'const', 'let', 'export', 'async', 'function', 'return', 'await', 'for', 'try', 'catch', 'throw', 'new', 'null'];
+var TOKEN = /(\/\*.*?\*\/|\/\/.*$)|('[^']*'|`[^`]*`)|(\b\d+\b)|([A-Za-z_$][\w$]*)|(\s+|.)/g;
+
+function tokenize(text, t, plain) {
+  var segs = [];
+  var match;
+  TOKEN.lastIndex = 0;
+  while ((match = TOKEN.exec(text)) !== null) {
+    var color = plain;
+    if (match[1]) { color = t.com; }
+    else if (match[2]) { color = t.str; }
+    else if (match[3]) { color = t.num; }
+    else if (match[4]) {
+      var rest = text.slice(TOKEN.lastIndex);
+      if (KEYWORDS.indexOf(match[4]) >= 0) { color = t.kw; }
+      else if (/^[A-Z]/.test(match[4])) { color = t.type; }
+      else if (/^(<[^>]*>)?\(/.test(rest)) { color = t.fn; }
+    }
+    var last = segs[segs.length - 1];
+    if (last && last.color === color) { last.text += match[0]; } else { segs.push({ text: match[0], color: color }); }
+  }
+  return segs;
+}
+
+function lineKey(row) {
+  return row[0] === 'deleted' ? 'o' + row[1] : 'n' + row[2];
+}
+
+function lineLabel(row) {
+  return row[0] === 'deleted' ? 'Zeile ' + row[1] + ' (alt)' : 'Zeile ' + row[2];
+}
+
+function findRow(key) {
+  for (var i = 0; i < DIFF.length; i++) {
+    if (DIFF[i][0] !== 'hunk' && lineKey(DIFF[i]) === key) { return DIFF[i]; }
+  }
+  return null;
+}
+
+function kindBg(kind, t) {
+  if (kind === 'added') { return t.addBg; }
+  if (kind === 'deleted') { return t.delBg; }
+  if (kind === 'hunk') { return t.hunkBg; }
+  return 'transparent';
+}
+
+function kindSign(kind) {
+  return kind === 'added' ? '+' : kind === 'deleted' ? '-' : '';
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tab: 'changes',
+      openKey: 'n18',
+      boxText: '',
+      editingId: null,
+      comments: [
+        { id: 1, key: 'n15', text: 'Bei drei Versuchen bringt der Exponent kaum etwas. Lass es linear, aber mit Zufallsanteil, damit parallele Aufrufe sich nicht im Gleichschritt wiederholen.' },
+        { id: 2, key: 'o4', text: 'Den Namen DELAY_MS benutzt noch src/lib/chat.ts — dort mit umbenennen.' }
+      ],
+      nextId: 3,
+      chatEditId: null,
+      chatEditText: '',
+      message: '',
+      sent: []
+    };
+  }
+
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var t = THEMES[this.props.theme === 'hell' ? 'hell' : 'dunkel'];
+
+    function noteFor(key) {
+      for (var i = 0; i < s.comments.length; i++) {
+        if (s.comments[i].key === key) { return s.comments[i]; }
+      }
+      return null;
+    }
+
+    function cardOf(comment) {
+      var row = findRow(comment.key);
+      var kind = row[0];
+      return {
+        where: FILE + ' · ' + lineLabel(row),
+        bg: kindBg(kind, t),
+        sign: kindSign(kind),
+        signColor: kind === 'added' ? t.addFg : t.delFg,
+        segs: tokenize(row[3], t, kind === 'context' ? t.fg2 : t.fg),
+        text: comment.text,
+        isEditing: s.chatEditId === comment.id,
+        isReading: s.chatEditId !== comment.id,
+        edit: function () { self.setState({ chatEditId: comment.id, chatEditText: comment.text }); },
+        remove: function () { self.removeComment(comment.id); }
+      };
+    }
+
+    var lines = DIFF.map(function (row) {
+      var kind = row[0];
+      var isHunk = kind === 'hunk';
+      var key = isHunk ? null : lineKey(row);
+      var note = isHunk ? null : noteFor(key);
+      var isOpen = !isHunk && s.openKey === key;
+      var hasNote = note !== null && !isOpen;
+      return {
+        bg: kindBg(kind, t),
+        fg: isHunk ? t.muted : kind === 'context' ? t.fg2 : t.fg,
+        oldNo: row[1] === null ? '' : String(row[1]),
+        newNo: row[2] === null ? '' : String(row[2]),
+        sign: kindSign(kind),
+        signColor: kind === 'added' ? t.addFg : t.delFg,
+        segs: isHunk ? [{ text: row[3], color: t.muted }] : tokenize(row[3], t, kind === 'context' ? t.fg2 : t.fg),
+        showAdd: !isHunk && note === null && !isOpen,
+        hasNote: hasNote,
+        isOpen: isOpen,
+        noteText: note === null ? '' : note.text,
+        lineLabel: isHunk ? '' : lineLabel(row),
+        addLabel: isHunk ? '' : 'Kommentar zu ' + lineLabel(row),
+        editLabel: isHunk ? '' : 'Kommentar zu ' + lineLabel(row) + ' bearbeiten',
+        onAdd: function () { self.setState({ openKey: key, boxText: '', editingId: null }); },
+        onEdit: function () { self.setState({ openKey: key, boxText: note === null ? '' : note.text, editingId: note === null ? null : note.id }); },
+        onRemove: function () { if (note !== null) { self.removeComment(note.id); } }
+      };
+    });
+
+    var count = s.comments.length;
+    var boxEmpty = s.boxText.trim() === '';
+    var canSend = s.message.trim() !== '' || count > 0;
+
+    return {
+      t: t,
+      isChanges: s.tab === 'changes',
+      isChat: s.tab === 'chat',
+      chatTabBg: s.tab === 'chat' ? t.selected : 'transparent',
+      chatTabFg: s.tab === 'chat' ? t.fg : t.fg2,
+      changesTabBg: s.tab === 'changes' ? t.selected : 'transparent',
+      changesTabFg: s.tab === 'changes' ? t.fg : t.fg2,
+      chatTabTitle: count === 0 ? 'Chat' : count + (count === 1 ? ' Kommentar wartet' : ' Kommentare warten') + ' im Chat',
+      hasComments: count > 0,
+      commentCount: String(count),
+      lines: lines,
+      boxText: s.boxText,
+      boxEmpty: boxEmpty,
+      boxOpacity: boxEmpty ? '0.5' : '1',
+      submitLabel: s.editingId === null ? 'Zum Chat hinzufügen' : 'Speichern',
+      cards: s.comments.map(cardOf),
+      chatEditText: s.chatEditText,
+      message: s.message,
+      placeholder: count > 0 ? 'Nachricht zu den Kommentaren (optional) …' : 'Nachricht an Claude …',
+      sendOpacity: canSend ? '1' : '0.5',
+      sent: s.sent.map(function (msg) {
+        return {
+          text: msg.text,
+          hasText: msg.text !== '',
+          countLabel: msg.comments.length === 1 ? '1 Review-Kommentar' : msg.comments.length + ' Review-Kommentare',
+          cards: msg.comments.map(function (comment) { var card = cardOf(comment); card.isEditing = false; card.isReading = true; return card; })
+        };
+      }),
+      showChat: function () { self.setState({ tab: 'chat' }); },
+      showChanges: function () { self.setState({ tab: 'changes' }); },
+      typeBox: function (event) { self.setState({ boxText: event.target.value }); },
+      boxKey: function (event) {
+        if (event.key === 'Escape') { self.cancelBox(); }
+        if (event.key === 'Enter' && event.ctrlKey) { event.preventDefault(); self.submitBox(); }
+      },
+      cancelBox: function () { self.cancelBox(); },
+      submitBox: function () { self.submitBox(); },
+      clearAll: function () { self.setState({ comments: [], chatEditId: null }); },
+      typeChatEdit: function (event) { self.setState({ chatEditText: event.target.value }); },
+      cancelChatEdit: function () { self.setState({ chatEditId: null, chatEditText: '' }); },
+      saveChatEdit: function () {
+        var text = s.chatEditText.trim();
+        if (text === '') { return; }
+        self.setState({
+          comments: s.comments.map(function (c) { return c.id === s.chatEditId ? { id: c.id, key: c.key, text: text } : c; }),
+          chatEditId: null,
+          chatEditText: ''
+        });
+      },
+      typeMessage: function (event) { self.setState({ message: event.target.value }); },
+      send: function () {
+        if (!canSend) { return; }
+        self.setState({
+          sent: s.sent.concat([{ text: s.message.trim(), comments: s.comments }]),
+          comments: [],
+          message: '',
+          chatEditId: null
+        });
+      }
+    };
+  }
+
+  cancelBox() {
+    this.setState({ openKey: null, boxText: '', editingId: null });
+  }
+
+  submitBox() {
+    var s = this.state;
+    var text = s.boxText.trim();
+    if (text === '' || s.openKey === null) { return; }
+    var comments = s.editingId === null
+      ? s.comments.concat([{ id: s.nextId, key: s.openKey, text: text }])
+      : s.comments.map(function (c) { return c.id === s.editingId ? { id: c.id, key: c.key, text: text } : c; });
+    this.setState({ comments: comments, nextId: s.nextId + 1, openKey: null, boxText: '', editingId: null });
+  }
+
+  removeComment(id) {
+    var s = this.state;
+    this.setState({
+      comments: s.comments.filter(function (c) { return c.id !== id; }),
+      chatEditId: s.chatEditId === id ? null : s.chatEditId
+    });
+  }
+}
+</script>
+</body>
+</html>
