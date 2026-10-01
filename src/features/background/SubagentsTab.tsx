@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import type { ReactElement } from 'react';
-import { BackgroundGroup } from '@/features/background/BackgroundGroup';
+import { buildPanelRows } from '@/features/background/buildPanelRows';
+import type { PanelRow } from '@/features/background/buildPanelRows';
 import { pickSelected, selectSubagents } from '@/features/background/backgroundItems';
 import {
   formatDuration,
@@ -15,12 +17,14 @@ import { mentionInChat } from '@/features/background/mention';
 import { OutputPane } from '@/features/background/OutputPane';
 import { PanelLayout } from '@/features/background/PanelLayout';
 import { useActionError } from '@/features/background/useActionError';
+import { VirtualPanelList } from '@/features/background/VirtualPanelList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { SubagentStep } from '@/lib/bindings/SubagentStep';
 import { stopBackgroundItem } from '@/lib/background';
 import { useBackgroundStore } from '@/stores/background';
 
 const UNKNOWN = 'unbekannt';
+const ESTIMATED_ROW_HEIGHT = 42;
 
 interface SubagentsTabProps {
   sessionId: string;
@@ -29,6 +33,7 @@ interface SubagentsTabProps {
 }
 
 export function SubagentsTab({ sessionId, items, now }: SubagentsTabProps): ReactElement {
+  const listRef = useRef<HTMLDivElement>(null);
   const subagents: BackgroundItem[] = selectSubagents(items);
   const selectedId: string | null = useBackgroundStore(
     (state) => state.selections[sessionId]?.subagents ?? null,
@@ -83,32 +88,45 @@ export function SubagentsTab({ sessionId, items, now }: SubagentsTabProps): Reac
     );
   }
 
+  function renderRow(item: BackgroundItem): ReactElement {
+    return (
+      <BackgroundRow
+        icon={stateIcon(item.state)}
+        iconTone={stateTone(item.state)}
+        title={item.title}
+        isMono={false}
+        subtitle={rowSubtitle(item, now)}
+        right={stateLabel(item.state)}
+        rightTone={stateRightTone(item.state)}
+        indent={8}
+        isCurrent={selected !== null && selected.id === item.id}
+        onPick={(): void => {
+          select(sessionId, 'subagents', item.id);
+        }}
+      />
+    );
+  }
+
+  const rows: PanelRow<BackgroundItem>[] = buildPanelRows<BackgroundItem>([
+    {
+      title: 'SUBAGENTEN DIESER SESSION',
+      items: subagents,
+      emptyText: subagents.length === 0 ? 'Keine Subagenten gestartet.' : null,
+      itemKey: (item: BackgroundItem): string => item.id,
+    },
+  ]);
+
   const list: ReactElement = (
-    <BackgroundGroup
-      title="SUBAGENTEN DIESER SESSION"
-      emptyText={subagents.length === 0 ? 'Keine Subagenten gestartet.' : null}
-    >
-      {subagents.map((item: BackgroundItem) => (
-        <BackgroundRow
-          key={item.id}
-          icon={stateIcon(item.state)}
-          iconTone={stateTone(item.state)}
-          title={item.title}
-          isMono={false}
-          subtitle={rowSubtitle(item, now)}
-          right={stateLabel(item.state)}
-          rightTone={stateRightTone(item.state)}
-          indent={8}
-          isCurrent={selected !== null && selected.id === item.id}
-          onPick={(): void => {
-            select(sessionId, 'subagents', item.id);
-          }}
-        />
-      ))}
-    </BackgroundGroup>
+    <VirtualPanelList
+      rows={rows}
+      listRef={listRef}
+      renderItem={renderRow}
+      estimateItem={(): number => ESTIMATED_ROW_HEIGHT}
+      selectedKey={selected === null ? null : selected.id}
+    />
   );
 
-  return <PanelLayout list={list} detail={renderDetail()} />;
+  return <PanelLayout listRef={listRef} list={list} detail={renderDetail()} />;
 }
 
 function typeAndModel(item: BackgroundItem): string {

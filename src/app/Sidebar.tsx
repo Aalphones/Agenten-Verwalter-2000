@@ -1,5 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { ReactElement } from 'react';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import { buildSidebarRows } from '@/app/buildSidebarRows';
+import type { SidebarRow } from '@/app/buildSidebarRows';
+import { SidebarItem } from '@/app/SidebarItem';
 import { SidebarProject } from '@/app/SidebarProject';
 import { projectGroup, sessionsOf } from '@/features/projects/projectStatus';
 import { GROUP_LABEL, GROUP_ORDER } from '@/features/sessions/sessionStatus';
@@ -11,6 +15,15 @@ import { renameSession } from '@/lib/sessions';
 import { useSessionsStore } from '@/stores/sessions';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
 import './Sidebar.css';
+
+const OVERSCAN = 12;
+const ESTIMATED_HEIGHT: Record<SidebarRow['kind'], number> = {
+  group: 26,
+  project: 44,
+  session: 26,
+};
+const SPACED_GROUP_EXTRA = 14;
+const LAST_SESSION_EXTRA = 4;
 
 interface SidebarProps {
   projects: readonly ProjectSummary[];
@@ -44,6 +57,56 @@ export function Sidebar({
   const startRename = useSessionsStore((state) => state.startRename);
   const stopRename = useSessionsStore((state) => state.stopRename);
   const setExpanded = useSessionsStore((state) => state.setExpanded);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const rows: SidebarRow[] = useMemo(
+    () =>
+      buildSidebarRows(
+        GROUP_ORDER.map((group: SessionGroup) => ({
+          group,
+          projects: projects
+            .map((project: ProjectSummary) => {
+              const projectSessions: SessionSummary[] = sessionsOf(project.id, sessions);
+              const isOverviewActive: boolean =
+                showProjectOverview && activeProjectId === project.id;
+              const containsActiveSession: boolean = projectSessions.some(
+                (session: SessionSummary) => session.id === activeSessionId,
+              );
+              return {
+                project,
+                sessions: projectSessions,
+                isExpanded: expanded[project.id] ?? (containsActiveSession || isOverviewActive),
+              };
+            })
+            .filter(({ sessions: projectSessions }) => projectGroup(projectSessions) === group),
+        })),
+      ),
+    [projects, sessions, expanded, activeSessionId, activeProjectId, showProjectOverview],
+  );
+
+  // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: (): HTMLDivElement | null => listRef.current,
+    estimateSize: (index: number): number => estimateHeight(rows[index]),
+    getItemKey: (index: number): string => rows[index]?.key ?? String(index),
+    overscan: OVERSCAN,
+  });
+
+  // Eine Zeile außerhalb des gerenderten Bereichs gibt es im DOM nicht — vor dem Umbenennen zu ihr scrollen.
+  useEffect(() => {
+    if (renaming === null) {
+      return;
+    }
+    const rowKey = `${renaming.kind}:${renaming.id}`;
+    const index: number = rows.findIndex((row: SidebarRow) => row.key === rowKey);
+    if (index >= 0) {
+      virtualizer.scrollToIndex(index, { align: 'auto' });
+    }
+    // Nur der Start des Umbenennens löst das Scrollen aus, nicht jede Änderung der Zeilen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renaming]);
 
   // F2 benennt das Vorhaben um, dessen Übersicht offen ist, sonst die aktive Session — außer der Fokus liegt in einem Textfeld.
   useEffect(() => {
@@ -96,55 +159,76 @@ export function Sidebar({
     onSelectProject(project.id);
   }
 
-  function renderGroup(group: SessionGroup): ReactElement | null {
-    const members = projects
-      .map((project: ProjectSummary) => ({
-        project,
-        projectSessions: sessionsOf(project.id, sessions),
-      }))
-      .filter(({ projectSessions }) => projectGroup(projectSessions) === group);
-    if (members.length === 0) {
+  function renderRow(row: SidebarRow | undefined): ReactElement | null {
+    if (row === undefined) {
       return null;
     }
+    switch (row.kind) {
+      case 'group':
+        return (
+          <h2
+            className={`sidebar__group-title${row.isFirst ? '' : ' sidebar__group-title--spaced'}`}
+          >
+            <span>{GROUP_LABEL[row.group]}</span>
+            <span className="sidebar__group-count">{row.count}</span>
+          </h2>
+        );
+      case 'project':
+        return renderProject(row);
+      case 'session':
+        return renderSession(row);
+    }
+  }
+
+  function renderProject(row: Extract<SidebarRow, { kind: 'project' }>): ReactElement {
+    const { project, sessions: projectSessions, isExpanded } = row;
     return (
-      <section key={group} className="sidebar__group">
-        <h2 className="sidebar__group-title">
-          <span>{GROUP_LABEL[group]}</span>
-          <span className="sidebar__group-count">{members.length}</span>
-        </h2>
-        {members.map(({ project, projectSessions }) => {
-          const isOverviewActive: boolean = showProjectOverview && activeProjectId === project.id;
-          const containsActiveSession: boolean = projectSessions.some(
-            (session: SessionSummary) => session.id === activeSessionId,
-          );
-          const isExpanded: boolean =
-            expanded[project.id] ?? (containsActiveSession || isOverviewActive);
-          return (
-            <SidebarProject
-              key={project.id}
-              project={project}
-              sessions={projectSessions}
-              activeSessionId={activeSessionId}
-              isOverviewActive={isOverviewActive}
-              isExpanded={isExpanded}
-              renaming={renaming}
-              onToggle={(): void => {
-                setExpanded(project.id, !isExpanded);
-              }}
-              onOpen={(): void => {
-                open(project, projectSessions);
-              }}
-              onSelectSession={onSelectSession}
-              onStartRename={startRename}
-              onCommitRename={commitRename}
-              onCancelRename={stopRename}
-              onArchive={(): void => {
-                archive(project.id);
-              }}
-            />
-          );
-        })}
-      </section>
+      <div className={`sidebar__project${isExpanded ? '' : ' sidebar__project--collapsed'}`}>
+        <SidebarProject
+          project={project}
+          sessions={projectSessions}
+          isOverviewActive={showProjectOverview && activeProjectId === project.id}
+          isExpanded={isExpanded}
+          renaming={renaming}
+          onToggle={(): void => {
+            setExpanded(project.id, !isExpanded);
+          }}
+          onOpen={(): void => {
+            open(project, projectSessions);
+          }}
+          onStartRename={startRename}
+          onCommitRename={commitRename}
+          onCancelRename={stopRename}
+          onArchive={(): void => {
+            archive(project.id);
+          }}
+        />
+      </div>
+    );
+  }
+
+  function renderSession(row: Extract<SidebarRow, { kind: 'session' }>): ReactElement {
+    const { session } = row;
+    return (
+      <div className={`sidebar__session${row.isLast ? ' sidebar__session--last' : ''}`}>
+        <SidebarItem
+          session={session}
+          isActive={session.id === activeSessionId}
+          isRenaming={
+            renaming !== null && renaming.kind === 'session' && renaming.id === session.id
+          }
+          onSelect={(): void => {
+            onSelectSession(session.id);
+          }}
+          onStartRename={(): void => {
+            startRename('session', session.id);
+          }}
+          onCommitRename={(name: string): void => {
+            commitRename('session', session.id, name);
+          }}
+          onCancelRename={stopRename}
+        />
+      </div>
     );
   }
 
@@ -185,9 +269,24 @@ export function Sidebar({
           <kbd className="sidebar__new-key">Ctrl N</kbd>
         </button>
       </div>
-      <div className="sidebar__list">
+      <div ref={listRef} className="sidebar__list">
         {projects.length === 0 && <p className="sidebar__empty">Noch keine Vorhaben.</p>}
-        {GROUP_ORDER.map((group: SessionGroup) => renderGroup(group))}
+        <div
+          className="sidebar__rows"
+          style={{ height: `${String(virtualizer.getTotalSize())}px` }}
+        >
+          {virtualizer.getVirtualItems().map((item: VirtualItem) => (
+            <div
+              key={item.key}
+              ref={virtualizer.measureElement}
+              data-index={item.index}
+              className="sidebar__row"
+              style={{ transform: `translateY(${String(item.start)}px)` }}
+            >
+              {renderRow(rows[item.index])}
+            </div>
+          ))}
+        </div>
       </div>
       <div className="sidebar__footer">
         <button
@@ -215,4 +314,17 @@ export function Sidebar({
       </div>
     </nav>
   );
+}
+
+function estimateHeight(row: SidebarRow | undefined): number {
+  if (row === undefined) {
+    return ESTIMATED_HEIGHT.session;
+  }
+  if (row.kind === 'group' && !row.isFirst) {
+    return ESTIMATED_HEIGHT.group + SPACED_GROUP_EXTRA;
+  }
+  if (row.kind === 'session' && row.isLast) {
+    return ESTIMATED_HEIGHT.session + LAST_SESSION_EXTRA;
+  }
+  return ESTIMATED_HEIGHT[row.kind];
 }

@@ -1,12 +1,14 @@
+import { useRef } from 'react';
 import type { ReactElement } from 'react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { formatBytes } from '@/features/attachments/formatBytes';
-import { BackgroundGroup } from '@/features/background/BackgroundGroup';
 import { formatTime } from '@/features/background/backgroundLabels';
 import { BackgroundRow } from '@/features/background/BackgroundRow';
 import { buildScratchpadRows } from '@/features/background/buildScratchpadRows';
 import type { ScratchpadRow } from '@/features/background/buildScratchpadRows';
+import { buildPanelRows } from '@/features/background/buildPanelRows';
+import type { PanelRow } from '@/features/background/buildPanelRows';
 import { DetailHead } from '@/features/background/DetailHead';
 import type { DetailAction } from '@/features/background/DetailHead';
 import { mentionInChat } from '@/features/background/mention';
@@ -16,6 +18,7 @@ import { useActionError } from '@/features/background/useActionError';
 import { useScratchpad } from '@/features/background/useScratchpad';
 import { useScratchpadFile } from '@/features/background/useScratchpadFile';
 import type { ScratchpadFileState } from '@/features/background/useScratchpadFile';
+import { VirtualPanelList } from '@/features/background/VirtualPanelList';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { TextPreview } from '@/lib/bindings/TextPreview';
 import { useBackgroundStore } from '@/stores/background';
@@ -29,12 +32,14 @@ const TRUNCATED_FILE_NOTICE = 'Gekürzt — nur der Anfang wird gezeigt.';
 const BINARY_NOTICE = 'Keine Textvorschau';
 const ROW_INDENT_BASE = 8;
 const ROW_INDENT_PER_LEVEL = 18;
+const ESTIMATED_ROW_HEIGHT = 26;
 
 interface ScratchpadTabProps {
   session: SessionSummary;
 }
 
 export function ScratchpadTab({ session }: ScratchpadTabProps): ReactElement {
+  const listRef = useRef<HTMLDivElement>(null);
   const { listing, error: listError } = useScratchpad(session);
   const selectedPath: string | null = useBackgroundStore(
     (state) => state.selections[session.id]?.scratchpad ?? null,
@@ -124,7 +129,6 @@ export function ScratchpadTab({ session }: ScratchpadTabProps): ReactElement {
   function renderRow(row: ScratchpadRow): ReactElement {
     return (
       <BackgroundRow
-        key={row.path}
         icon={rowIcon(row)}
         iconTone="muted"
         title={row.name}
@@ -147,35 +151,42 @@ export function ScratchpadTab({ session }: ScratchpadTabProps): ReactElement {
     );
   }
 
-  function emptyText(): string | null {
+  // Genau ein Text unter der Liste: Fehler, fehlender Ordner, leerer Ordner oder der Hinweis auf die gekürzte Liste.
+  function footerText(): string | null {
     if (listing === null) {
-      return null;
+      return listError;
     }
     if (listing.dir === null) {
       return NO_FOLDER_TEXT;
     }
-    return rows.length === 0 ? EMPTY_TEXT : null;
+    if (rows.length === 0) {
+      return EMPTY_TEXT;
+    }
+    return listing.truncated ? TRUNCATED_LIST_TEXT : null;
   }
 
+  const rowGroups: PanelRow<ScratchpadRow>[] = buildPanelRows<ScratchpadRow>([
+    {
+      title: folder ?? 'Scratchpad',
+      ...(folder === null ? {} : { titleHint: folder }),
+      items: rows,
+      emptyText: footerText(),
+      isEmptyError: listing === null,
+      itemKey: (row: ScratchpadRow): string => row.path,
+    },
+  ]);
+
   const list: ReactElement = (
-    <BackgroundGroup
-      title={folder ?? 'Scratchpad'}
-      titleHint={folder ?? undefined}
-      emptyText={emptyText()}
-    >
-      {rows.map(renderRow)}
-      {listing !== null && listing.truncated && (
-        <p className="scratchpad-tab__truncated">{TRUNCATED_LIST_TEXT}</p>
-      )}
-      {listError !== null && listing === null && (
-        <p className="scratchpad-tab__error" role="alert">
-          {listError}
-        </p>
-      )}
-    </BackgroundGroup>
+    <VirtualPanelList
+      rows={rowGroups}
+      listRef={listRef}
+      renderItem={renderRow}
+      estimateItem={(): number => ESTIMATED_ROW_HEIGHT}
+      selectedKey={selected === null ? null : selected.path}
+    />
   );
 
-  return <PanelLayout list={list} detail={renderDetail()} />;
+  return <PanelLayout listRef={listRef} list={list} detail={renderDetail()} />;
 }
 
 function rowIcon(row: ScratchpadRow): string {

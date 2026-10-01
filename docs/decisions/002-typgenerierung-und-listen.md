@@ -15,7 +15,7 @@ Typen, die zwischen Core und Oberfläche wandern, sollen im Rust-Core definiert 
 
 - **`ts-rs` 12.0.1, exakt gepinnt.** Export über das Hilfsprogramm `src-tauri/examples/gen-bindings.rs` (`pnpm bindings`; ein Beispielprogramm, damit Tauri es nicht in den Installer bündelt), das `TS::export_all` für jeden Grenz-Typ aufruft. Kein `#[ts(export)]`, weil das über `cargo test` läuft und es keine Tests gibt. Ziel: `src/lib/bindings/`, im Repo eingecheckt.
 - **Aufruf-Wrapper von Hand**, eine Datei pro Feature in `src/lib/<feature>.ts`, die `invoke` mit den generierten Typen kapselt.
-- **Virtualisierte Listen: `@tanstack/react-virtual`** — ohne eigenes Styling, passt zu BEM. Installiert wird sie mit der ersten virtualisierten Liste.
+- **Virtualisierte Listen: `@tanstack/react-virtual`** — ohne eigenes Styling, passt zu BEM. Installiert wird sie mit der ersten virtualisierten Liste. Virtualisiert sind: Chat-Verlauf, Dateibaum und Diff der Changes, Sidebar-Baum, die Listen der Reiter „Prozesse“ und „Subagenten“ im Hintergrund-Panel und der Scratchpad-Baum — gemeinsames Muster: Gruppen werden zu einer flachen Zeilenliste, die Höhe misst `measureElement`. Das Gerenderte wächst so mit dem Sichtbaren; Umfang und Verweis: [ADR 012](012-einstellungen-farbschema-und-listen.md).
 
 ## Konsequenzen
 

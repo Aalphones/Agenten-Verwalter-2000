@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import type { ReactElement } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { BackgroundGroup } from '@/features/background/BackgroundGroup';
+import { buildPanelRows } from '@/features/background/buildPanelRows';
+import type { PanelRow } from '@/features/background/buildPanelRows';
 import { pickSelected, splitProcesses } from '@/features/background/backgroundItems';
 import type { ProcessGroups } from '@/features/background/backgroundItems';
 import {
@@ -21,6 +23,7 @@ import { PanelLayout } from '@/features/background/PanelLayout';
 import { useActionError } from '@/features/background/useActionError';
 import { useCopyFeedback } from '@/features/background/useCopyFeedback';
 import { useItemOutput } from '@/features/background/useItemOutput';
+import { VirtualPanelList } from '@/features/background/VirtualPanelList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { TextPreview } from '@/lib/bindings/TextPreview';
 import { stopBackgroundItem } from '@/lib/background';
@@ -36,6 +39,7 @@ const COPY_LABEL: Record<'idle' | 'copied' | 'failed', string> = {
   failed: 'Fehlgeschlagen',
 };
 const MENTION_MAX_LENGTH = 80;
+const ESTIMATED_ROW_HEIGHT = 42;
 
 interface ProcessesTabProps {
   sessionId: string;
@@ -44,6 +48,7 @@ interface ProcessesTabProps {
 }
 
 export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): ReactElement {
+  const listRef = useRef<HTMLDivElement>(null);
   const groups: ProcessGroups = splitProcesses(items);
   const selectedId: string | null = useBackgroundStore(
     (state) => state.selections[sessionId]?.processes ?? null,
@@ -60,7 +65,6 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
   function renderRow(item: BackgroundItem): ReactElement {
     return (
       <BackgroundRow
-        key={item.id}
         icon={stateIcon(item.state)}
         iconTone={stateTone(item.state)}
         title={item.title}
@@ -148,24 +152,32 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
     );
   }
 
+  const rows: PanelRow<BackgroundItem>[] = buildPanelRows<BackgroundItem>([
+    {
+      title: 'LÄUFT',
+      items: groups.running,
+      emptyText: groups.running.length === 0 ? 'Keine laufenden Prozesse.' : null,
+      itemKey: (item: BackgroundItem): string => item.id,
+    },
+    {
+      title: 'AUSGEFÜHRT',
+      items: groups.executed,
+      emptyText: groups.executed.length === 0 ? 'Noch keine Befehle ausgeführt.' : null,
+      itemKey: (item: BackgroundItem): string => item.id,
+    },
+  ]);
+
   const list: ReactElement = (
-    <>
-      <BackgroundGroup
-        title="LÄUFT"
-        emptyText={groups.running.length === 0 ? 'Keine laufenden Prozesse.' : null}
-      >
-        {groups.running.map(renderRow)}
-      </BackgroundGroup>
-      <BackgroundGroup
-        title="AUSGEFÜHRT"
-        emptyText={groups.executed.length === 0 ? 'Noch keine Befehle ausgeführt.' : null}
-      >
-        {groups.executed.map(renderRow)}
-      </BackgroundGroup>
-    </>
+    <VirtualPanelList
+      rows={rows}
+      listRef={listRef}
+      renderItem={renderRow}
+      estimateItem={(): number => ESTIMATED_ROW_HEIGHT}
+      selectedKey={selected === null ? null : selected.id}
+    />
   );
 
-  return <PanelLayout list={list} detail={renderDetail()} />;
+  return <PanelLayout listRef={listRef} list={list} detail={renderDetail()} />;
 }
 
 function outputNotice(output: TextPreview | null): string | null {

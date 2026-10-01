@@ -1,8 +1,17 @@
-.background-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+.virtual-panel-list {
+  position: relative;
+  width: 100%;
 
+  &__row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding-bottom: 1px;
+  }
+}
+
+.background-group {
   &__title {
     overflow: hidden;
     margin: 0;
@@ -13,6 +22,10 @@
     letter-spacing: 0.05em;
     white-space: nowrap;
     text-overflow: ellipsis;
+
+    &--spaced {
+      margin-top: calc(var(--space-lg) - 1px);
+    }
   }
 
   &__empty {
@@ -20,5 +33,9 @@
     padding: var(--space-xs) var(--space-md);
     color: var(--color-fg-muted);
     font-size: var(--font-size-xs);
+
+    &--error {
+      color: var(--color-status-error);
+    }
   }
 }

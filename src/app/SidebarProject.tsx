@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { MouseEvent, ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
-import { RenameField, SidebarItem } from '@/app/SidebarItem';
+import { RenameField } from '@/app/SidebarItem';
 import { mostUrgent, projectMetaLine } from '@/features/projects/projectStatus';
 import { isMetaHighlighted } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
@@ -17,13 +17,11 @@ interface SidebarProjectProps {
   project: ProjectSummary;
   /** Sessions dieses Vorhabens, aufsteigend nach Nummer. */
   sessions: readonly SessionSummary[];
-  activeSessionId: string | null;
   isOverviewActive: boolean;
   isExpanded: boolean;
   renaming: RenameTarget | null;
   onToggle: () => void;
   onOpen: () => void;
-  onSelectSession: (sessionId: string) => void;
   onStartRename: (kind: RenameKind, id: string) => void;
   onCommitRename: (kind: RenameKind, id: string, name: string) => void;
   onCancelRename: () => void;
@@ -33,13 +31,11 @@ interface SidebarProjectProps {
 export function SidebarProject({
   project,
   sessions,
-  activeSessionId,
   isOverviewActive,
   isExpanded,
   renaming,
   onToggle,
   onOpen,
-  onSelectSession,
   onStartRename,
   onCommitRename,
   onCancelRename,
@@ -162,33 +158,5 @@ export function SidebarProject({
     );
   }
 
-  return (
-    <div className="sidebar-project">
-      {renderRow()}
-      {isExpanded && (
-        <div className="sidebar-project__sessions">
-          {sessions.map((session: SessionSummary) => (
-            <SidebarItem
-              key={session.id}
-              session={session}
-              isActive={session.id === activeSessionId}
-              isRenaming={
-                renaming !== null && renaming.kind === 'session' && renaming.id === session.id
-              }
-              onSelect={(): void => {
-                onSelectSession(session.id);
-              }}
-              onStartRename={(): void => {
-                onStartRename('session', session.id);
-              }}
-              onCommitRename={(name: string): void => {
-                onCommitRename('session', session.id, name);
-              }}
-              onCancelRename={onCancelRename}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return renderRow();
 }

@@ -62,13 +62,41 @@
   }
 
   &__list {
-    display: flex;
-    flex-direction: column;
     flex-grow: 1;
-    gap: 14px;
     min-height: 0;
     padding: var(--space-2xs) var(--space-lg);
-    overflow: hidden;
+    overflow-y: auto;
+    /* Die Liste ändert sich mit jedem Status; ein Ausgleich des Browsers verschöbe die Ansicht zusätzlich. */
+    overflow-anchor: none;
+  }
+
+  &__rows {
+    position: relative;
+    width: 100%;
+  }
+
+  &__row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /* Ein eingeklapptes Vorhaben lässt 1 px bis zur nächsten Zeile; ein aufgeklapptes geht ohne Lücke in seine Sessions über. */
+  &__project--collapsed {
+    padding-bottom: 1px;
+  }
+
+  /* Die Linie liegt an jeder Session-Zeile; weil die Zeilen ohne Lücke aneinanderstoßen, ergibt sich eine durchgehende Linie. */
+  &__session {
+    margin-left: 26px;
+    padding-bottom: 1px;
+    padding-left: var(--space-sm);
+    border-left: 1px solid var(--color-border-subtle);
+
+    &--last {
+      padding-bottom: calc(var(--space-xs) + 1px);
+    }
   }
 
   &__footer {
@@ -113,22 +141,20 @@
     color: var(--color-fg-muted);
   }
 
-  &__group {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
   &__group-title {
     display: flex;
     gap: var(--space-sm);
     margin: 0;
-    padding: var(--space-xs) var(--space-md);
+    padding: var(--space-xs) var(--space-md) calc(var(--space-xs) + 1px);
     font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--color-fg-muted);
+  }
+
+  &__group-title--spaced {
+    padding-top: calc(14px + var(--space-xs));
   }
 
   &__group-count {

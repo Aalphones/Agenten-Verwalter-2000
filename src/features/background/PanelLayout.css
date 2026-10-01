@@ -1,9 +1,6 @@
 .panel-layout {
   &__list {
-    display: flex;
     flex-shrink: 0;
-    flex-direction: column;
-    gap: var(--space-lg);
     box-sizing: border-box;
     max-height: 330px;
     overflow-y: auto;

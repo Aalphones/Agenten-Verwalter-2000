@@ -1,5 +1,5 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-09-29_m6-ui-zielbild-und-altlasten/`
-**Phase:** 4/5 — Virtuelle Listen: Sidebar, Hintergrund-Panel, Scratchpad (pending, Rating standard → `sonnet`)
-**Nächster Schritt:** `phase-4-virtuelle-listen.md` lesen und umsetzen (`Sidebar.tsx` hat seit Phase 3 einen Fuß mit dem Einstellungen-Knopf, `App.tsx` die Einstellungsseite).
+**Phase:** 5/5 — Sichtbare Fehler statt Konsole, Doku-Abschluss (pending, Rating standard → `sonnet`)
+**Nächster Schritt:** `phase-5-fehler-und-doku.md` lesen und umsetzen; danach Plan-Ende (Smoke-Checkliste, Doc-Abgleich, Archivieren, Release-Tag nach AGENTS.md Regel 6).

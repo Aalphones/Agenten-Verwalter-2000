@@ -14,19 +14,4 @@
     height: 100%;
     object-fit: contain;
   }
-
-  &__truncated,
-  &__error {
-    margin: 0;
-    padding: var(--space-xs) var(--space-md);
-    font-size: var(--font-size-xs);
-  }
-
-  &__truncated {
-    color: var(--color-fg-muted);
-  }
-
-  &__error {
-    color: var(--color-status-error);
-  }
 }
