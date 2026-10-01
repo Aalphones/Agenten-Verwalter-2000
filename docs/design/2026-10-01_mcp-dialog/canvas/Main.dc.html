@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>MCP-Server – Dialog</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+@keyframes mcp-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.mcp-spin{animation:mcp-spin 0.9s linear infinite;transform-origin:50% 50%}
+.mcp-input::placeholder{color:inherit;opacity:0.6}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; display: flex; background: {{t.base}}; color: {{t.fg}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.45;">
+
+<aside style="width: 260px; flex-shrink: 0; box-sizing: border-box; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; background: {{t.sidebar}}; border-right: 1px solid {{t.borderSubtle}};">
+<div style="padding: 4px 8px 12px; font-size: 12px; color: {{t.muted}};">Vorhaben</div>
+<div style="padding: 6px 8px; font-weight: 600;">Verwalter 2000</div>
+<div style="padding: 6px 8px 6px 20px; border-radius: 6px; background: {{t.selected}};">MCP-Verbindungen im Dialog</div>
+<div style="padding: 6px 8px 6px 20px; color: {{t.fg2}};">TL;DR-Karten</div>
+<div style="padding: 6px 8px 6px 20px; color: {{t.fg2}};">Repository nachträglich anhängen</div>
+</aside>
+
+<main style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+<header style="height: 44px; flex-shrink: 0; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; border-bottom: 1px solid {{t.borderSubtle}}; font-weight: 600;">MCP-Verbindungen im Dialog</header>
+<div style="flex-grow: 1; padding: 28px 0; display: flex; flex-direction: column; align-items: center; gap: 18px; overflow: hidden;">
+<div style="width: 760px; display: flex; justify-content: flex-end;">
+<div style="max-width: 520px; padding: 10px 14px; border-radius: 10px; background: {{t.surface}}; border: 1px solid {{t.borderSubtle}};">Können wir im Verwalter bereits MCP nutzen?</div>
+</div>
+<div style="width: 760px; display: flex; flex-direction: column; gap: 8px; color: {{t.fg}};">
+<p style="margin: 0;">MCP läuft schon – die Kommandozeile lädt die Server selbst, der Verwalter zeigt die Werkzeugaufrufe als normale Karten.</p>
+<p style="margin: 0; color: {{t.fg2}};">Neu: Status, Ausschalten und Neu-Verbinden direkt im Dialog.</p>
+</div>
+</div>
+
+<div style="padding: 0 0 22px; display: flex; justify-content: center;">
+<div style="width: 760px; box-sizing: border-box; border: 1px solid {{t.border}}; border-radius: 10px; background: {{t.surface}}; display: flex; flex-direction: column;">
+<div style="padding: 12px 14px; min-height: 44px; color: {{t.muted}};">Nachricht an Claude …</div>
+<div style="padding: 6px 8px; display: flex; align-items: center; gap: 6px;">
+<button type="button" aria-label="Befehle" style="width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; font: inherit; font-family: 'Cascadia Code', Consolas, monospace; cursor: pointer;">/</button>
+<span style="padding: 0 8px; color: {{t.fg2}}; font-size: 12.5px;">Opus 5.5</span>
+<span style="padding: 0 8px; color: {{t.fg2}}; font-size: 12.5px;">Bearbeiten erlaubt</span>
+<span style="flex-grow: 1;"></span>
+<sc-if value="{{ hasProblem }}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{ openDialog }}" style="height: 26px; padding: 0 10px; display: flex; align-items: center; gap: 6px; border: 1px solid {{t.border}}; border-radius: 999px; background: transparent; color: {{t.fg2}}; font: inherit; font-size: 12px; cursor: pointer;">
+<span style="width: 7px; height: 7px; border-radius: 999px; background: {{t.red}};"></span>
+<span>{{ problemLabel }}</span>
+</button>
+</sc-if>
+<button type="button" aria-label="Senden" style="width: 30px; height: 30px; border: 0; border-radius: 8px; background: {{t.accent}}; color: {{t.onAccent}}; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3"></path><path d="M3.5 7.5L8 3l4.5 4.5"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</main>
+
+<sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; inset: 0; background: {{t.scrim}}; display: flex; align-items: center; justify-content: center;">
+<section role="dialog" aria-modal="true" aria-labelledby="mcp-title" style="width: 640px; max-height: 780px; box-sizing: border-box; display: flex; flex-direction: column; background: {{t.popover}}; border: 1px solid {{t.border}}; border-radius: 10px; box-shadow: {{t.shadow}};">
+
+<div style="padding: 16px 16px 12px 20px; display: flex; align-items: flex-start; gap: 12px;">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;">
+<h2 id="mcp-title" style="margin: 0; font-size: 15px; font-weight: 600;">MCP-Server</h2>
+<span style="font-size: 12px; color: {{t.muted}};">Session „MCP-Verbindungen im Dialog“</span>
+</div>
+<button type="button" aria-label="Schließen" onClick="{{ closeDialog }}" style="width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8"></path><path d="M12 4l-8 8"></path></svg>
+</button>
+</div>
+
+<div style="padding: 0 20px 10px;">
+<label style="position: relative; display: flex; align-items: center; color: {{t.muted}};">
+<span style="position: absolute; left: 10px; display: flex;">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+</span>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Server filtern</span>
+<input class="mcp-input" type="text" placeholder="Server filtern …" value="{{ filter }}" onChange="{{ onFilter }}" style="box-sizing: border-box; width: 100%; height: 30px; padding: 0 10px 0 32px; border: 0; border-radius: 6px; background: {{t.base}}; color: {{t.fg}}; font: inherit; outline: none;">
+</label>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 0 14px 12px;">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+<div style="padding: 10px 6px 6px; font-size: 12px; color: {{t.muted}};">{{ g.title }}</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<sc-for list="{{ g.servers }}" as="s" hint-placeholder-count="2">
+<div style="border: 1px solid {{s.cardBorder}}; border-radius: 8px; background: {{s.cardBg}};">
+
+<div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px;">
+<button type="button" onClick="{{ s.expand }}" aria-expanded="{{ s.ariaExpanded }}" style="flex-grow: 1; min-width: 0; min-height: 40px; padding: 4px 6px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 6px; background: transparent; color: {{s.nameColor}}; font: inherit; text-align: left; cursor: pointer;">
+<span style="display: flex; color: {{t.muted}}; transform: {{s.chevron}}; transition: transform 160ms;">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"></path></svg>
+</span>
+<span style="width: 8px; height: 8px; flex-shrink: 0; border-radius: 999px; background: {{s.dot}};"></span>
+<span style="min-width: 0; display: flex; flex-direction: column;">
+<span style="font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.name }}</span>
+<span style="font-size: 11px; color: {{t.muted}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.sub }}</span>
+</span>
+</button>
+<span style="flex-shrink: 0; font-size: 12px; color: {{s.statusColor}};">{{ s.statusLabel }}</span>
+<button type="button" onClick="{{ s.reconnect }}" disabled="{{ s.reconnectDisabled }}" aria-label="{{ s.reconnectLabel }}" title="Neu verbinden" style="width: 30px; height: 30px; flex-shrink: 0; border: 1px solid {{t.border}}; border-radius: 6px; background: transparent; color: {{s.reconnectColor}}; cursor: {{s.reconnectCursor}}; display: flex; align-items: center; justify-content: center;">
+<svg class="{{ s.spinClass }}" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"></path><path d="M13.5 2.5v3h-3"></path></svg>
+</button>
+<button type="button" role="switch" aria-checked="{{ s.checked }}" aria-label="{{ s.toggleLabel }}" onClick="{{ s.toggle }}" style="position: relative; width: 34px; height: 20px; flex-shrink: 0; margin-left: 4px; border: 0; border-radius: 999px; background: {{s.toggleBg}}; cursor: pointer; transition: background 160ms;">
+<span style="position: absolute; top: 2px; left: {{s.knobLeft}}; width: 16px; height: 16px; border-radius: 999px; background: {{t.knob}}; transition: left 160ms;"></span>
+</button>
+</div>
+
+<sc-if value="{{ s.expanded }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 4px 16px 14px 46px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid {{t.borderSubtle}};">
+<div style="display: grid; grid-template-columns: 90px minmax(0, 1fr); row-gap: 4px; column-gap: 12px; padding-top: 8px; font-size: 12px;">
+<span style="color: {{t.muted}};">Herkunft</span>
+<span>{{ s.origin }}</span>
+<span style="color: {{t.muted}};">Verbindung</span>
+<span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px;">{{ s.connection }}</span>
+</div>
+
+<sc-if value="{{ s.isFailed }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 8px 10px; border-radius: 6px; background: {{t.errorBg}}; color: {{t.red}}; font-size: 12px; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-weight: 600;">Verbindung fehlgeschlagen</span>
+<span style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 11.5px;">{{ s.error }}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.isDisabled }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 12px; color: {{t.muted}};">Ausgeschaltet – der Agent sieht die Werkzeuge dieses Servers nicht.</p>
+</sc-if>
+
+<sc-if value="{{ s.isPending }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 12px; color: {{t.muted}};">Verbindet …</p>
+</sc-if>
+
+<sc-if value="{{ s.showTools }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 12px; color: {{t.muted}};">{{ s.toolsTitle }}</span>
+<div style="max-height: 148px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px;">
+<sc-for list="{{ s.tools }}" as="tool" hint-placeholder-count="6">
+<span style="padding: 2px 7px; border-radius: 4px; background: {{t.base}}; color: {{t.fg2}}; font-family: 'Cascadia Code', Consolas, monospace; font-size: 11px;">{{ tool }}</span>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+</sc-for>
+</div>
+</sc-for>
+
+<sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; padding: 16px 6px; font-size: 12.5px; color: {{t.muted}};">Kein Server passt zu „{{ filter }}“.</p>
+</sc-if>
+</div>
+
+<div style="padding: 10px 16px 10px 20px; display: flex; align-items: center; gap: 12px; border-top: 1px solid {{t.borderSubtle}};">
+<span style="flex-grow: 1; font-size: 12px; color: {{t.muted}};">{{ summary }}</span>
+<button type="button" onClick="{{ closeDialog }}" style="height: 28px; padding: 0 12px; border: 1px solid {{t.border}}; border-radius: 6px; background: transparent; color: {{t.fg2}}; font: inherit; cursor: pointer;">Schließen</button>
+</div>
+
+</section>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dunkel","hell"],"default":"dunkel"},"$preview":{"width":1440,"height":900}}'>
+var THEMES = {
+  dunkel: {
+    base: '#1f1f1f', sidebar: '#181818', surface: '#252526', popover: '#252526', hover: '#2e2e30',
+    selected: '#37373d', borderSubtle: '#2b2b2b', border: '#3c3c3c', fg: '#d4d4d4', fg2: '#b0b0b0',
+    muted: '#8f8f8f', accent: '#e0825c', onAccent: '#1d130e', toggleOn: '#e0825c', toggleOff: '#4a4a4f',
+    knob: '#f5f5f5', green: '#4cc38a', amber: '#f2b33d', red: '#f47067', blue: '#5b9dff',
+    scrim: 'rgba(0, 0, 0, 0.55)', shadow: '0 10px 30px rgb(0 0 0 / 0.45)', errorBg: 'rgba(244, 112, 103, 0.11)'
+  },
+  hell: {
+    base: '#ffffff', sidebar: '#f8f8f8', surface: '#ffffff', popover: '#ffffff', hover: '#f0f0f0',
+    selected: '#e4e6f1', borderSubtle: '#e5e5e5', border: '#cecece', fg: '#3c3c3c', fg2: '#555555',
+    muted: '#6e6e6e', accent: '#c4572f', onAccent: '#ffffff', toggleOn: '#c4572f', toggleOff: '#c8c8c8',
+    knob: '#ffffff', green: '#16803c', amber: '#a86a00', red: '#d23b33', blue: '#2563eb',
+    scrim: 'rgba(0, 0, 0, 0.28)', shadow: '0 10px 30px rgb(0 0 0 / 0.14)', errorBg: '#fdeceb'
+  }
+};
+
+var STATUS = {
+  connected: { label: 'Verbunden', tone: 'green' },
+  pending: { label: 'Verbindet …', tone: 'blue' },
+  failed: { label: 'Fehlgeschlagen', tone: 'red' },
+  'needs-auth': { label: 'Anmeldung nötig', tone: 'amber' },
+  disabled: { label: 'Aus', tone: 'muted' }
+};
+
+var GROUPS = [
+  { id: 'user', label: 'Benutzer' },
+  { id: 'project', label: 'Projekt' },
+  { id: 'claudeai', label: 'claude.ai' }
+];
+
+function initialServers() {
+  return [
+    {
+      id: 'comfy', name: 'comfy', group: 'user', status: 'connected',
+      origin: 'Benutzer-Konfiguration', transport: 'stdio', target: 'comfy-mcp.exe', error: '',
+      tools: ['auth_login', 'auth_status', 'discover', 'download', 'download_model', 'emit_partner_workflow', 'fetch_outputs', 'fetch_template', 'free_memory', 'generate_image', 'get_logs', 'get_template', 'install_node', 'job', 'launch_comfyui', 'list_partner_models', 'list_workflow_notes', 'list_workflow_slots', 'node_dependencies', 'nodes', 'partner_generate', 'partner_model_schema', 'project', 'restart_comfyui', 'run_template', 'run_workflow', 'search_models', 'search_templates', 'server_info', 'set_workflow_slot', 'stop_comfyui', 'switch_comfyui_version', 'system_stats', 'update_comfyui', 'upload_file', 'validate_workflow', 'vary_workflow', 'which', 'workflow_deps']
+    },
+    {
+      id: 'alpha', name: 'claude.ai Alpha Vantage MCP Server', group: 'claudeai', status: 'connected',
+      origin: 'claude.ai-Connector', transport: 'HTTPS', target: 'mcp.alphavantage.co', error: '',
+      tools: ['AD', 'ADD_TWO_NUMBERS', 'ADOSC', 'ADX', 'ADXR', 'ALL_COMMODITIES', 'ALUMINUM', 'ANALYTICS_FIXED_WINDOW', 'ANALYTICS_SLIDING_WINDOW', 'APO', 'AROON', 'AROONOSC', 'ATR', 'BALANCE_SHEET', 'BBANDS', 'BOP', 'BRENT', 'CASH_FLOW', 'CCI', 'CMO', 'COFFEE', 'COMPANY_LOGO', 'COMPANY_OVERVIEW', 'CONGRESS_TRADES', 'COPPER', 'CORN', 'COTTON', 'CPI', 'CRYPTO_INTRADAY', 'CURRENCY_EXCHANGE_RATE', 'DEMA', 'DIGITAL_CURRENCY_DAILY', 'DIGITAL_CURRENCY_MONTHLY', 'DIGITAL_CURRENCY_WEEKLY', 'DIVIDENDS', 'DURABLES', 'DX', 'EARNINGS', 'EARNINGS_CALENDAR', 'EARNINGS_CALL_TRANSCRIPT', 'EARNINGS_ESTIMATES', 'EMA', 'ETF_PROFILE', 'FEDERAL_FUNDS_RATE', 'FX_DAILY', 'FX_INTRADAY', 'FX_MONTHLY', 'FX_WEEKLY', 'GLOBAL_QUOTE', 'GOLD_SILVER_HISTORY', 'GOLD_SILVER_SPOT', 'HISTORICAL_OPTIONS', 'HISTORICAL_PUT_CALL_RATIO', 'HISTORICAL_VOLUME_OPEN_INTEREST_RATIO', 'HT_DCPERIOD', 'HT_DCPHASE', 'HT_PHASOR', 'HT_SINE', 'HT_TRENDLINE', 'HT_TRENDMODE', 'INCOME_STATEMENT', 'INDEX_CATALOG', 'INDEX_DATA', 'INFLATION', 'INSIDER_TRANSACTIONS', 'INSTITUTIONAL_HOLDINGS', 'IPO_CALENDAR', 'KAMA', 'LISTING_STATUS', 'MACD', 'MACDEXT', 'MAMA', 'MARKET_STATUS', 'MFI', 'MIDPOINT', 'MIDPRICE', 'MINUS_DI', 'MINUS_DM', 'MOM', 'NATR', 'NATURAL_GAS', 'NEWS_SENTIMENT', 'NONFARM_PAYROLL', 'OBV', 'PING', 'PLUS_DI', 'PLUS_DM', 'POLITICIAN_METADATA', 'PPO', 'REALTIME_BULK_BID_ASK_PRICES', 'REALTIME_BULK_QUOTES', 'REALTIME_OPTIONS', 'REALTIME_OPTIONS_FMV', 'REALTIME_PUT_CALL_RATIO', 'REALTIME_VOLUME_OPEN_INTEREST_RATIO', 'REAL_GDP', 'REAL_GDP_PER_CAPITA', 'RETAIL_SALES', 'ROC', 'ROCR', 'RSI', 'SAR', 'SMA', 'SPLITS', 'STOCH', 'STOCHF', 'STOCHRSI', 'SUGAR', 'SYMBOL_SEARCH', 'T3', 'TEMA', 'TIME_SERIES_DAILY', 'TIME_SERIES_DAILY_ADJUSTED', 'TIME_SERIES_INTRADAY', 'TIME_SERIES_MONTHLY', 'TIME_SERIES_MONTHLY_ADJUSTED', 'TIME_SERIES_WEEKLY', 'TIME_SERIES_WEEKLY_ADJUSTED', 'TOOL_CALL', 'TOOL_GET', 'TOOL_LIST', 'TOP_GAINERS_LOSERS', 'TRANGE', 'TREASURY_YIELD', 'TRIMA', 'TRIX', 'ULTOSC', 'UNEMPLOYMENT', 'VWAP', 'WHEAT', 'WILLR', 'WMA', 'WTI']
+    },
+    {
+      id: 'docs', name: 'claude.ai Claude Docs', group: 'claudeai', status: 'connected',
+      origin: 'claude.ai-Connector', transport: 'HTTPS', target: 'api.anthropic.com', error: '',
+      tools: ['batch', 'create', 'delete', 'export', 'guide', 'query', 'read', 'update']
+    },
+    {
+      id: 'fmp', name: 'claude.ai FMP', group: 'claudeai', status: 'failed',
+      origin: 'claude.ai-Connector', transport: 'HTTPS', target: 'financialmodelingprep.com',
+      error: '[Fehlertext aus der Statusabfrage der Kommandozeile]',
+      tools: ['ESG', 'Fundraisers', 'analyst', 'calendar', 'chart', 'commitmentOfTraders', 'commodity', 'company', 'crypto', 'directory', 'discountedCashFlow', 'earningsTranscript', 'economics', 'etfAndMutualFunds', 'forex', 'form13F', 'indexes', 'insiderTrades', 'marketHours', 'marketPerformance', 'news', 'quote', 'search', 'secFilings', 'senate', 'statements', 'technicalIndicators', 'tipranks']
+    },
+    {
+      id: 'drive', name: 'claude.ai Google Drive', group: 'claudeai', status: 'disabled',
+      origin: 'claude.ai-Connector', transport: 'HTTPS', target: 'drivemcp.googleapis.com', error: '',
+      tools: ['copy_file', 'create_file', 'download_file_content', 'get_file_metadata', 'get_file_permissions', 'list_recent_files', 'read_file_content', 'search_files', 'share_file', 'trash_file', 'update_file']
+    }
+  ];
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { open: true, expanded: 'comfy', filter: '', servers: initialServers() };
+    this.timers = [];
+  }
+
+  componentWillUnmount() {
+    this.timers.forEach(function (timer) { clearTimeout(timer); });
+  }
+
+  patchServer(id, patch) {
+    this.setState(function (prev) {
+      return {
+        servers: prev.servers.map(function (server) {
+          return server.id === id ? Object.assign({}, server, patch) : server;
+        })
+      };
+    });
+  }
+
+  connectLater(id) {
+    var self = this;
+    this.patchServer(id, { status: 'pending' });
+    this.timers.push(setTimeout(function () { self.patchServer(id, { status: 'connected' }); }, 1400));
+  }
+
+  renderVals() {
+    var self = this;
+    var t = THEMES[this.props.theme] || THEMES.dunkel;
+    var needle = this.state.filter.trim().toLowerCase();
+    var servers = this.state.servers;
+
+    function view(s) {
+      var status = STATUS[s.status];
+      var on = s.status !== 'disabled';
+      var pending = s.status === 'pending';
+      var expanded = self.state.expanded === s.id;
+      var toneColor = status.tone === 'muted' ? t.muted : t[status.tone];
+      var showTools = s.status === 'connected';
+      return {
+        name: s.name,
+        sub: s.transport + ' · ' + s.target + (showTools ? ' · ' + s.tools.length + ' Werkzeuge' : ''),
+        dot: toneColor,
+        statusLabel: status.label,
+        statusColor: toneColor,
+        nameColor: on ? t.fg : t.muted,
+        cardBg: expanded ? t.hover : 'transparent',
+        cardBorder: expanded ? t.border : t.borderSubtle,
+        chevron: expanded ? 'rotate(90deg)' : 'none',
+        ariaExpanded: expanded ? 'true' : 'false',
+        expanded: expanded,
+        origin: s.origin,
+        connection: s.transport + ' · ' + s.target,
+        error: s.error,
+        isFailed: s.status === 'failed',
+        isDisabled: !on,
+        isPending: pending,
+        showTools: showTools,
+        toolsTitle: 'Werkzeuge (' + s.tools.length + ')',
+        tools: s.tools,
+        reconnectDisabled: !on || pending,
+        reconnectColor: !on || pending ? t.muted : t.fg2,
+        reconnectCursor: !on || pending ? 'default' : 'pointer',
+        reconnectLabel: s.name + ' neu verbinden',
+        spinClass: pending ? 'mcp-spin' : '',
+        checked: on ? 'true' : 'false',
+        toggleLabel: s.name + (on ? ' ausschalten' : ' einschalten'),
+        toggleBg: on ? t.toggleOn : t.toggleOff,
+        knobLeft: on ? '16px' : '2px',
+        expand: function () { self.setState({ expanded: expanded ? null : s.id }); },
+        reconnect: function () { self.connectLater(s.id); },
+        toggle: function () {
+          if (on) {
+            self.patchServer(s.id, { status: 'disabled' });
+          } else {
+            self.connectLater(s.id);
+          }
+        }
+      };
+    }
+
+    var groups = GROUPS.map(function (group) {
+      var members = servers.filter(function (s) {
+        return s.group === group.id && (needle === '' || s.name.toLowerCase().indexOf(needle) !== -1);
+      });
+      return { title: group.label + ' (' + members.length + ')', servers: members.map(view) };
+    }).filter(function (group) { return group.servers.length > 0; });
+
+    var connected = servers.filter(function (s) { return s.status === 'connected'; }).length;
+    var problems = servers.filter(function (s) { return s.status === 'failed' || s.status === 'needs-auth'; }).length;
+    var disabled = servers.filter(function (s) { return s.status === 'disabled'; }).length;
+    var summary = connected + ' von ' + servers.length + ' verbunden';
+    if (problems > 0) { summary += ' · ' + problems + ' fehlgeschlagen'; }
+    if (disabled > 0) { summary += ' · ' + disabled + ' aus'; }
+
+    return {
+      t: t,
+      open: this.state.open,
+      filter: this.state.filter,
+      groups: groups,
+      noResults: groups.length === 0,
+      summary: summary,
+      hasProblem: problems > 0,
+      problemLabel: 'MCP · ' + problems + (problems === 1 ? ' Problem' : ' Probleme'),
+      onFilter: function (event) { self.setState({ filter: event.target.value }); },
+      openDialog: function () { self.setState({ open: true }); },
+      closeDialog: function () { self.setState({ open: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

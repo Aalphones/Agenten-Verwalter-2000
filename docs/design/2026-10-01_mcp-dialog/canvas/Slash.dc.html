@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Einstieg über /mcp</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; display: flex; background: {{t.base}}; color: {{t.fg}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.45;">
+
+<aside style="width: 260px; flex-shrink: 0; box-sizing: border-box; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; background: {{t.sidebar}}; border-right: 1px solid {{t.borderSubtle}};">
+<div style="padding: 4px 8px 12px; font-size: 12px; color: {{t.muted}};">Vorhaben</div>
+<div style="padding: 6px 8px; font-weight: 600;">Verwalter 2000</div>
+<div style="padding: 6px 8px 6px 20px; border-radius: 6px; background: {{t.selected}};">MCP-Verbindungen im Dialog</div>
+<div style="padding: 6px 8px 6px 20px; color: {{t.fg2}};">TL;DR-Karten</div>
+<div style="padding: 6px 8px 6px 20px; color: {{t.fg2}};">Repository nachträglich anhängen</div>
+</aside>
+
+<main style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+<header style="height: 44px; flex-shrink: 0; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; border-bottom: 1px solid {{t.borderSubtle}}; font-weight: 600;">MCP-Verbindungen im Dialog</header>
+<div style="flex-grow: 1; padding: 28px 0; display: flex; flex-direction: column; align-items: center; gap: 18px; overflow: hidden;">
+<div style="width: 760px; display: flex; justify-content: flex-end;">
+<div style="max-width: 520px; padding: 10px 14px; border-radius: 10px; background: {{t.surface}}; border: 1px solid {{t.borderSubtle}};">Können wir im Verwalter bereits MCP nutzen?</div>
+</div>
+<div style="width: 760px; display: flex; flex-direction: column; gap: 8px;">
+<p style="margin: 0;">MCP läuft schon – die Kommandozeile lädt die Server selbst, der Verwalter zeigt die Werkzeugaufrufe als normale Karten.</p>
+</div>
+</div>
+
+<div style="padding: 0 0 22px; display: flex; justify-content: center;">
+<div style="width: 760px; position: relative;">
+
+<div style="position: absolute; left: 0; bottom: calc(100% + 6px); width: 520px; box-sizing: border-box; padding: 4px 4px 6px; background: {{t.popover}}; border: 1px solid {{t.border}}; border-radius: 8px; box-shadow: {{t.shadow}};">
+<div style="padding: 8px 10px 3px; font-size: 12px; color: {{t.muted}};">Session</div>
+<button type="button" style="width: 100%; min-height: 30px; box-sizing: border-box; padding: 3px 10px; display: flex; align-items: center; gap: 12px; border: 0; border-radius: 5px; background: {{t.hover}}; color: {{t.fg}}; font: inherit; text-align: left; cursor: pointer;">
+<span style="width: 150px; flex-shrink: 0; color: {{t.accentText}}; font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace; font-size: 12.5px;">/mcp</span>
+<span style="flex-grow: 1; min-width: 0; color: {{t.muted}}; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">MCP-Server anzeigen, ausschalten, neu verbinden</span>
+<span style="flex-shrink: 0; display: flex; align-items: center; gap: 5px; font-size: 11px; color: {{t.red}};">
+<span style="width: 6px; height: 6px; border-radius: 999px; background: {{t.red}};"></span>1 Problem</span>
+</button>
+</div>
+
+<div style="box-sizing: border-box; border: 1px solid {{t.border}}; border-radius: 10px; background: {{t.surface}}; display: flex; flex-direction: column;">
+<div style="padding: 12px 14px; min-height: 44px; font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace; font-size: 12.5px;">/mcp<span style="display: inline-block; width: 1px; height: 15px; margin-left: 1px; vertical-align: -3px; background: {{t.fg}};"></span></div>
+<div style="padding: 6px 8px; display: flex; align-items: center; gap: 6px;">
+<button type="button" aria-label="Befehle" style="width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: {{t.fg2}}; font: inherit; font-family: 'Cascadia Code', Consolas, monospace; cursor: pointer;">/</button>
+<span style="padding: 0 8px; color: {{t.fg2}}; font-size: 12.5px;">Opus 5.5</span>
+<span style="padding: 0 8px; color: {{t.fg2}}; font-size: 12.5px;">Bearbeiten erlaubt</span>
+<span style="flex-grow: 1;"></span>
+<button type="button" style="height: 26px; padding: 0 10px; display: flex; align-items: center; gap: 6px; border: 1px solid {{t.border}}; border-radius: 999px; background: transparent; color: {{t.fg2}}; font: inherit; font-size: 12px; cursor: pointer;">
+<span style="width: 7px; height: 7px; border-radius: 999px; background: {{t.red}};"></span>
+<span>MCP · 1 Problem</span>
+</button>
+<button type="button" aria-label="Senden" style="width: 30px; height: 30px; border: 0; border-radius: 8px; background: {{t.accent}}; color: {{t.onAccent}}; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3"></path><path d="M3.5 7.5L8 3l4.5 4.5"></path></svg>
+</button>
+</div>
+</div>
+
+</div>
+</div>
+</main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dunkel","hell"],"default":"dunkel"},"$preview":{"width":1440,"height":900}}'>
+var THEMES = {
+  dunkel: {
+    base: '#1f1f1f', sidebar: '#181818', surface: '#252526', popover: '#252526', hover: '#2e2e30',
+    selected: '#37373d', borderSubtle: '#2b2b2b', border: '#3c3c3c', fg: '#d4d4d4', fg2: '#b0b0b0',
+    muted: '#8f8f8f', accent: '#e0825c', accentText: '#eea283', onAccent: '#1d130e', red: '#f47067',
+    shadow: '0 10px 30px rgb(0 0 0 / 0.45)'
+  },
+  hell: {
+    base: '#ffffff', sidebar: '#f8f8f8', surface: '#ffffff', popover: '#ffffff', hover: '#f0f0f0',
+    selected: '#e4e6f1', borderSubtle: '#e5e5e5', border: '#cecece', fg: '#3c3c3c', fg2: '#555555',
+    muted: '#6e6e6e', accent: '#c4572f', accentText: '#a8461f', onAccent: '#ffffff', red: '#d23b33',
+    shadow: '0 10px 30px rgb(0 0 0 / 0.14)'
+  }
+};
+
+class Component extends DCLogic {
+  renderVals() {
+    return { t: THEMES[this.props.theme] || THEMES.dunkel };
+  }
+}
+</script>
+</body>
+</html>
