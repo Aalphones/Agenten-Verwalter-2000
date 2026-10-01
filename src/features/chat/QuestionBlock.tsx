@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { StatusIcon } from '@/components/StatusIcon';
 import {
+  answeredLabels,
   draftAnswer,
   isComplete,
   needsSubmit,
@@ -31,7 +32,9 @@ export function QuestionBlock({
   const isLocked: boolean = isAnswered || isSending;
 
   function renderQuestion(question: Question, questionIndex: number): ReactElement {
-    const selected: readonly string[] = draft[questionIndex] ?? [];
+    const selected: readonly string[] = isAnswered
+      ? answeredLabels(entry, questionIndex)
+      : (draft[questionIndex] ?? []);
     return (
       <div key={questionIndex} className="question-block__question">
         <p className="question-block__text">{question.question}</p>

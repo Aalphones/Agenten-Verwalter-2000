@@ -70,6 +70,26 @@ export function pickOption(
   return { kind: 'draft', draft: next };
 }
 
+/** Trennt die Antworten mehrerer Fragen im gespeicherten Antworttext (Gegenstück zu `ANSWER_SEPARATOR` im Core). */
+const ANSWER_SEPARATOR = ' · ';
+
+/** Die Options-Labels, die ein gespeicherter Antworttext für eine Frage gewählt hat. Freitext trifft kein Label. */
+export function answeredLabels(entry: QuestionEntry, questionIndex: number): readonly string[] {
+  if (entry.answer === null) {
+    return [];
+  }
+  const parts: string[] = entry.answer.split(ANSWER_SEPARATOR);
+  const part: string | undefined =
+    parts.length === entry.questions.length ? parts[questionIndex] : entry.answer;
+  if (part === undefined) {
+    return [];
+  }
+  const labels: readonly string[] =
+    entry.questions[questionIndex]?.options.map((option: { label: string }) => option.label) ?? [];
+  const chosen: readonly string[] = part.split(MULTI_SELECT_SEPARATOR);
+  return labels.filter((label: string) => label === part || chosen.includes(label));
+}
+
 /** Die Frage, auf die eine Ziffer-Taste wirkt: die erste ohne Auswahl, sonst die erste Mehrfachauswahl. */
 export function digitQuestionIndex(entry: QuestionEntry, draft: QuestionDraft): number {
   const unanswered: number = draft.findIndex((labels: readonly string[]) => labels.length === 0);

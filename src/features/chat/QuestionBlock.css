@@ -70,6 +70,12 @@
     &--selected {
       border-color: var(--color-accent);
     }
+
+    &--selected:disabled {
+      border-color: var(--color-accent);
+      background: var(--color-accent-subtle);
+      color: var(--color-fg-primary);
+    }
   }
 
   &__key {
