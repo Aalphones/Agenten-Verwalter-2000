@@ -16,6 +16,7 @@ interface ModeMenuProps {
   onEffortChange: (effort: Effort) => void;
   onClose: () => void;
   placement: 'above' | 'below';
+  align?: 'start' | 'end';
 }
 
 export function ModeMenu({
@@ -25,12 +26,13 @@ export function ModeMenu({
   onEffortChange,
   onClose,
   placement,
+  align = 'end',
 }: ModeMenuProps): ReactElement {
   return (
     <Popover
       label="Modus"
       placement={placement}
-      align="end"
+      align={align}
       width={MODE_MENU_WIDTH}
       onClose={onClose}
     >

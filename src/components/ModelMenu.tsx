@@ -13,6 +13,7 @@ interface ModelMenuProps {
   onClose: () => void;
   placement: 'above' | 'below';
   note: string;
+  title?: string;
 }
 
 export function ModelMenu({
@@ -21,6 +22,7 @@ export function ModelMenu({
   onClose,
   placement,
   note,
+  title = 'Modell für diese Session',
 }: ModelMenuProps): ReactElement {
   return (
     <Popover
@@ -30,7 +32,7 @@ export function ModelMenu({
       width={MODEL_MENU_WIDTH}
       onClose={onClose}
     >
-      <div className="model-menu__head">Modell für diese Session</div>
+      <div className="model-menu__head">{title}</div>
       {MODEL_OPTIONS.map((option: ModelOption) => {
         const isChecked: boolean = option.id === value;
         return (

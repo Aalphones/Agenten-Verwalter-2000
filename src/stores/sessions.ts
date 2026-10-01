@@ -17,6 +17,8 @@ interface SessionsState {
   activeSessionId: string | null;
   activeView: SessionView;
   showNewSession: boolean;
+  /** `true`: die Einstellungsseite statt Session, Übersicht oder „Neues Vorhaben“. */
+  showSettings: boolean;
   activeProjectId: string | null;
   /** `true`: die Übersicht des Vorhabens `activeProjectId` statt einer Session. */
   showProjectOverview: boolean;
@@ -31,6 +33,8 @@ interface SessionsState {
   showProjectView: (view: ProjectView) => void;
   openNewSession: () => void;
   closeNewSession: () => void;
+  openSettings: () => void;
+  closeSettings: () => void;
   setExpanded: (projectId: string, value: boolean) => void;
   startRename: (kind: RenameKind, id: string) => void;
   stopRename: () => void;
@@ -40,13 +44,19 @@ export const useSessionsStore = create<SessionsState>((set) => ({
   activeSessionId: null,
   activeView: 'chat',
   showNewSession: false,
+  showSettings: false,
   activeProjectId: null,
   showProjectOverview: false,
   projectView: 'overview',
   renaming: null,
   expanded: {},
   selectSession: (sessionId: string): void => {
-    set({ activeSessionId: sessionId, showNewSession: false, showProjectOverview: false });
+    set({
+      activeSessionId: sessionId,
+      showNewSession: false,
+      showSettings: false,
+      showProjectOverview: false,
+    });
   },
   selectProject: (projectId: string): void => {
     set({
@@ -54,6 +64,7 @@ export const useSessionsStore = create<SessionsState>((set) => ({
       showProjectOverview: true,
       projectView: 'overview',
       showNewSession: false,
+      showSettings: false,
     });
   },
   showView: (view: SessionView): void => {
@@ -63,10 +74,16 @@ export const useSessionsStore = create<SessionsState>((set) => ({
     set({ projectView: view });
   },
   openNewSession: (): void => {
-    set({ showNewSession: true, showProjectOverview: false });
+    set({ showNewSession: true, showSettings: false, showProjectOverview: false });
   },
   closeNewSession: (): void => {
     set({ showNewSession: false });
+  },
+  openSettings: (): void => {
+    set({ showSettings: true, showNewSession: false, showProjectOverview: false });
+  },
+  closeSettings: (): void => {
+    set({ showSettings: false });
   },
   setExpanded: (projectId: string, value: boolean): void => {
     set((state: SessionsState) => ({ expanded: { ...state.expanded, [projectId]: value } }));

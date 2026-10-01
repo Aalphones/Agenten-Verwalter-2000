@@ -172,7 +172,8 @@ Beide Schriften sind auf Windows 11 vorinstalliert; es wird keine Schrift mit de
 
 Was die Oberfläche in Meilenstein 2a ([Plan-README](../../archive/2026-09/2026-09-28_m2a-durchstich-chat/README.md), „Keine Wegwerf-Oberfläche“) und Meilenstein 5 ([Plan-README](../../archive/2026-09/2026-09-29_m5-changes-und-diff/README.md)) sowie Meilenstein 2b (Plan „Anhänge, Skills, Hintergrund“, Abschnitt „Bewusst weggelassen“) bewusst anders oder gar nicht baut:
 
-- **Fehlt ganz** (kein toter Knopf): Reiter „Artefakte“ (offen), Reiter „Changes“ bei Sessions ohne Repository, ⋯-Menü und Umbenennen (M4), Einstellungen-Knopf (M6).
+- **Fehlt ganz** (kein toter Knopf): Reiter „Artefakte“ (offen), Reiter „Changes“ bei Sessions ohne Repository sowie ⋯-Menü und Umbenennen (M4).
+- **Einstellungen (M6):** Die Zeilen „Basis für Changes“ und „Branch-Präfix“ fehlen — Changes vergleicht gegen den Base ref je Repository ([ADR 006](../../decisions/006-changes-und-diff.md)), und die App legt seit ADR 010 keine Branches an. Der Abschnitt „Git“ heißt „Ordner“, die Zeile „Ordner für Worktrees“ heißt „Workspaces“; „Workspaces“ und „Dateizugriff“ zeigen nur an, ohne Auswahl. Der Denkaufwand steht in der Zeile „Standard-Modus“ statt „Standardmodell“ (er gehört seit M2a zum Modus-Menü). „Im Explorer zeigen“ ersetzt „Ordner öffnen“ und „Ändern …“. Scheitert das Laden oder Speichern, steht darunter ein Satz in Fehlerfarbe.
 - **Repository-Liste:** Ein fehlendes Repository zeigt „nicht gefunden“ in Fehlerfarbe statt der Skill-Zahl, gesperrtes Häkchen und den Knopf „Entfernen“; ohne bekannte Repositories steht ein Satz statt der leeren Liste; ein Fehler beim Hinzufügen steht als Zeile unter der Liste. Während des Anlegens nennt die Fußzeile „Worktrees werden angelegt …“.
 - **Status „Abgebrochen“:** Haken-Symbol in gedämpfter Farbe, Sidebar-Gruppe „Abgeschlossen“.
 - **Status „Startet“:** dasselbe Symbol wie „Läuft“.

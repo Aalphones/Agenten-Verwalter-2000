@@ -20,6 +20,7 @@ import { discardAttachment } from '@/lib/attachments';
 import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/labels';
 import { createProject } from '@/lib/projects';
 import { NEW_SESSION_KEY, useAttachmentsStore } from '@/stores/attachments';
+import { useSettingsStore } from '@/stores/settings';
 import './NewSession.css';
 
 const CLAUDE_NOT_FOUND_MESSAGE =
@@ -39,9 +40,16 @@ interface NewSessionProps {
 
 export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactElement {
   const [text, setText] = useState<string>('');
-  const [model, setModel] = useState<ModelId>('sonnet');
-  const [effort, setEffort] = useState<Effort>('high');
-  const [mode, setMode] = useState<Mode>('auto');
+  // Startwerte aus den Einstellungen; sind sie noch nicht geladen, gelten die eingebauten Standardwerte.
+  const [model, setModel] = useState<ModelId>(
+    () => useSettingsStore.getState().settings?.defaultModel ?? 'sonnet',
+  );
+  const [effort, setEffort] = useState<Effort>(
+    () => useSettingsStore.getState().settings?.defaultEffort ?? 'high',
+  );
+  const [mode, setMode] = useState<Mode>(
+    () => useSettingsStore.getState().settings?.defaultMode ?? 'auto',
+  );
   const [repositoryIds, setRepositoryIds] = useState<string[]>([]);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

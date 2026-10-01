@@ -6,7 +6,7 @@ import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 import './RepositoryPicker.css';
 
 const INFO_TEXT =
-  'Beim Start legt die App in jedem gewählten Repository den Branch verwalter/<Name der Session> an, ausgehend vom gerade ausgecheckten Stand, und checkt ihn in einem eigenen Ordner aus. Dein Arbeitsordner bleibt unverändert.';
+  'Der Agent arbeitet direkt im Ordner jedes gewählten Repositorys, auf dem gerade ausgecheckten Stand. Ob er dafür einen eigenen Branch oder Worktree anlegt, bestimmen seine Anweisungen; die App legt keinen an.';
 
 interface RepositoryPickerProps {
   selectedIds: string[];

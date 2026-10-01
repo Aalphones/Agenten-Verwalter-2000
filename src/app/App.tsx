@@ -16,6 +16,8 @@ import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
+import { SettingsView } from '@/features/settings/SettingsView';
+import { useSettings } from '@/features/settings/useSettings';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
@@ -31,6 +33,7 @@ export function App(): ReactElement {
   const activeProjectId: string | null = useSessionsStore((state) => state.activeProjectId);
   const showProjectOverview: boolean = useSessionsStore((state) => state.showProjectOverview);
   const showNewSession: boolean = useSessionsStore((state) => state.showNewSession);
+  const showSettings: boolean = useSessionsStore((state) => state.showSettings);
   const activeView: SessionView = useSessionsStore((state) => state.activeView);
   const projectView: ProjectView = useSessionsStore((state) => state.projectView);
   const showView = useSessionsStore((state) => state.showView);
@@ -39,8 +42,16 @@ export function App(): ReactElement {
   const selectProject = useSessionsStore((state) => state.selectProject);
   const openNewSession = useSessionsStore((state) => state.openNewSession);
   const closeNewSession = useSessionsStore((state) => state.closeNewSession);
+  const openSettings = useSessionsStore((state) => state.openSettings);
   const isBackgroundOpen: boolean = useBackgroundStore((state) => state.isOpen);
   const toggleBackground = useBackgroundStore((state) => state.toggle);
+  const {
+    overview: settingsOverview,
+    error: settingsError,
+    reload: reloadSettings,
+  } = useSettings();
+  // „Neues Vorhaben“ und die Einstellungen ersetzen den Inhalt; Session und Übersicht sind dann nicht sichtbar.
+  const isMainReplaced: boolean = showNewSession || showSettings;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
@@ -60,7 +71,7 @@ export function App(): ReactElement {
   // Die Übersicht eines Vorhabens gilt nur, solange das Vorhaben da ist (archiviert → bisherige Auswahl); ihre
   // Changes und Zähler liest der Core über die Session mit der höchsten Nummer.
   const overviewProject: ProjectSummary | undefined =
-    showProjectOverview && !showNewSession && activeProjectId !== null
+    showProjectOverview && !isMainReplaced && activeProjectId !== null
       ? projects.find((project: ProjectSummary) => project.id === activeProjectId)
       : undefined;
   const overviewSessions: SessionSummary[] =
@@ -73,19 +84,19 @@ export function App(): ReactElement {
   // Der gewählte Reiter bleibt beim Session-Wechsel stehen; ohne Repository gibt es keine Changes.
   const isChangesView: boolean = isOverview
     ? projectView === 'changes' && (overviewProject?.repositoryNames.length ?? 0) > 0
-    : !showNewSession &&
+    : !isMainReplaced &&
       activeView === 'changes' &&
       currentSession !== undefined &&
       currentSession.repositoryCount > 0;
   const { changes, error: changesError } = useSessionChanges(
-    showNewSession ? null : (currentSession ?? null),
+    isMainReplaced ? null : (currentSession ?? null),
     isChangesView || isOverview,
   );
 
   // Kopfzeile (Zähler), Verlauf (Zeilen) und Panel brauchen dieselben Daten — einmal laden, nicht je Verbraucher.
   // Die Übersicht hat keinen Knopf für das Panel und zeigt deshalb keins.
   const visibleSession: SessionSummary | null =
-    showNewSession || isOverview ? null : (currentSession ?? null);
+    isMainReplaced || isOverview ? null : (currentSession ?? null);
   const { background, error: backgroundError } = useSessionBackground(
     visibleSession === null ? null : visibleSession.id,
   );
@@ -161,6 +172,15 @@ export function App(): ReactElement {
   }
 
   function renderMain(): ReactElement {
+    if (showSettings) {
+      return (
+        <SettingsView
+          overview={settingsOverview}
+          loadError={settingsError}
+          onReload={reloadSettings}
+        />
+      );
+    }
     if (showNewSession) {
       return <NewSession onCreated={handleCreated} onCancel={closeNewSession} />;
     }
@@ -210,12 +230,14 @@ export function App(): ReactElement {
       <Sidebar
         projects={projects}
         sessions={sessions}
-        activeSessionId={showNewSession || isOverview ? null : (currentSession?.id ?? null)}
+        activeSessionId={isMainReplaced || isOverview ? null : (currentSession?.id ?? null)}
         activeProjectId={activeProjectId}
         showProjectOverview={isOverview}
+        isSettingsOpen={showSettings}
         onSelectSession={selectSession}
         onSelectProject={selectProject}
         onNew={openNewSession}
+        onOpenSettings={openSettings}
         onArchived={handleArchived}
       />
       <main className="app__main">{renderMain()}</main>

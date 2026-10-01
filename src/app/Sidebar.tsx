@@ -18,9 +18,11 @@ interface SidebarProps {
   activeSessionId: string | null;
   activeProjectId: string | null;
   showProjectOverview: boolean;
+  isSettingsOpen: boolean;
   onSelectSession: (sessionId: string) => void;
   onSelectProject: (projectId: string) => void;
   onNew: () => void;
+  onOpenSettings: () => void;
   onArchived: (projectId: string) => void;
 }
 
@@ -30,9 +32,11 @@ export function Sidebar({
   activeSessionId,
   activeProjectId,
   showProjectOverview,
+  isSettingsOpen,
   onSelectSession,
   onSelectProject,
   onNew,
+  onOpenSettings,
   onArchived,
 }: SidebarProps): ReactElement {
   const renaming: RenameTarget | null = useSessionsStore((state) => state.renaming);
@@ -184,6 +188,30 @@ export function Sidebar({
       <div className="sidebar__list">
         {projects.length === 0 && <p className="sidebar__empty">Noch keine Vorhaben.</p>}
         {GROUP_ORDER.map((group: SessionGroup) => renderGroup(group))}
+      </div>
+      <div className="sidebar__footer">
+        <button
+          type="button"
+          className={`sidebar__settings${isSettingsOpen ? ' sidebar__settings--active' : ''}`}
+          aria-current={isSettingsOpen ? 'page' : undefined}
+          onClick={onOpenSettings}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12" />
+            <circle cx="9" cy="4" r="1.5" />
+            <circle cx="5" cy="10" r="1.5" />
+          </svg>
+          <span>Einstellungen</span>
+        </button>
       </div>
     </nav>
   );
