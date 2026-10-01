@@ -12,6 +12,7 @@ import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveProject, renameProject } from '@/lib/projects';
 import { renameSession } from '@/lib/sessions';
+import { useActionError } from '@/lib/useActionError';
 import { useSessionsStore } from '@/stores/sessions';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
 import './Sidebar.css';
@@ -32,6 +33,8 @@ interface SidebarProps {
   activeProjectId: string | null;
   showProjectOverview: boolean;
   isSettingsOpen: boolean;
+  /** Satz zum Lade- oder Abo-Fehler der Listen; `null` ohne Fehler. */
+  loadError: string | null;
   onSelectSession: (sessionId: string) => void;
   onSelectProject: (projectId: string) => void;
   onNew: () => void;
@@ -46,6 +49,7 @@ export function Sidebar({
   activeProjectId,
   showProjectOverview,
   isSettingsOpen,
+  loadError,
   onSelectSession,
   onSelectProject,
   onNew,
@@ -57,6 +61,7 @@ export function Sidebar({
   const startRename = useSessionsStore((state) => state.startRename);
   const stopRename = useSessionsStore((state) => state.stopRename);
   const setExpanded = useSessionsStore((state) => state.setExpanded);
+  const { error: actionError, run } = useActionError('sidebar');
   const listRef = useRef<HTMLDivElement>(null);
 
   const rows: SidebarRow[] = useMemo(
@@ -131,23 +136,22 @@ export function Sidebar({
   }, [activeSessionId, activeProjectId, showProjectOverview, startRename]);
 
   function commitRename(kind: RenameKind, id: string, name: string): void {
-    const rename: Promise<void> =
-      kind === 'project' ? renameProject(id, name) : renameSession(id, name);
-    rename.catch((reason: unknown) => {
-      console.error('Nicht umbenennbar', reason);
-    });
+    run(
+      () => (kind === 'project' ? renameProject(id, name) : renameSession(id, name)),
+      'Umbenennen fehlgeschlagen',
+    );
     stopRename();
   }
 
   // Archivieren gibt es nur für das ganze Vorhaben — alle seine Sessions verlassen die Liste.
   function archive(projectId: string): void {
-    archiveProject(projectId)
-      .then(() => {
-        onArchived(projectId);
-      })
-      .catch((reason: unknown) => {
-        console.error('Vorhaben nicht archivierbar', reason);
-      });
+    run(
+      () =>
+        archiveProject(projectId).then(() => {
+          onArchived(projectId);
+        }),
+      'Archivieren fehlgeschlagen',
+    );
   }
 
   function open(project: ProjectSummary, projectSessions: readonly SessionSummary[]): void {
@@ -269,8 +273,15 @@ export function Sidebar({
           <kbd className="sidebar__new-key">Ctrl N</kbd>
         </button>
       </div>
+      {loadError !== null && (
+        <p className="sidebar__error" role="alert">
+          {loadError}
+        </p>
+      )}
       <div ref={listRef} className="sidebar__list">
-        {projects.length === 0 && <p className="sidebar__empty">Noch keine Vorhaben.</p>}
+        {projects.length === 0 && loadError === null && (
+          <p className="sidebar__empty">Noch keine Vorhaben.</p>
+        )}
         <div
           className="sidebar__rows"
           style={{ height: `${String(virtualizer.getTotalSize())}px` }}
@@ -288,6 +299,11 @@ export function Sidebar({
           ))}
         </div>
       </div>
+      {actionError !== null && (
+        <p className="sidebar__error" role="alert">
+          {actionError}
+        </p>
+      )}
       <div className="sidebar__footer">
         <button
           type="button"

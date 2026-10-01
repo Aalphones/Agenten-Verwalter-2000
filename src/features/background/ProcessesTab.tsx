@@ -20,7 +20,7 @@ import type { DetailAction } from '@/features/background/DetailHead';
 import { mentionInChat } from '@/features/background/mention';
 import { OutputPane } from '@/features/background/OutputPane';
 import { PanelLayout } from '@/features/background/PanelLayout';
-import { useActionError } from '@/features/background/useActionError';
+import { useActionError } from '@/lib/useActionError';
 import { useCopyFeedback } from '@/features/background/useCopyFeedback';
 import { useItemOutput } from '@/features/background/useItemOutput';
 import { VirtualPanelList } from '@/features/background/VirtualPanelList';
@@ -58,7 +58,7 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
     [...groups.running, ...groups.executed],
     selectedId,
   );
-  const output: TextPreview | null = useItemOutput(sessionId, selected);
+  const { preview: output, error: outputError } = useItemOutput(sessionId, selected);
   const { error, run } = useActionError(selected === null ? null : selected.id);
   const copyFeedback = useCopyFeedback();
 
@@ -145,7 +145,7 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
         />
         <OutputPane
           text={output === null ? '' : output.text}
-          notice={outputNotice(output)}
+          notice={outputError ?? outputNotice(output)}
           followsEnd={selected.state === 'running'}
         />
       </>

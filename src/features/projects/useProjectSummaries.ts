@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
+import { commandErrorText } from '@/lib/errors';
 import { listProjects, onProjectChanged } from '@/lib/projects';
 
 export interface ProjectSummaries {
@@ -9,6 +10,8 @@ export interface ProjectSummaries {
   upsertProject: (summary: ProjectSummary) => void;
   /** Nimmt ein Vorhaben aus der Liste — für archivierte, zu denen der Core kein Ereignis sendet. */
   removeProject: (projectId: string) => void;
+  /** Satz zum Lade- oder Abo-Fehler (Ladefehler zuerst); `null` ohne Fehler. */
+  error: string | null;
 }
 
 function newestFirst(first: ProjectSummary, second: ProjectSummary): number {
@@ -17,6 +20,8 @@ function newestFirst(first: ProjectSummary, second: ProjectSummary): number {
 
 export function useProjectSummaries(): ProjectSummaries {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
 
   const upsertProject = useCallback((summary: ProjectSummary): void => {
     setProjects((current: ProjectSummary[]) => {
@@ -50,6 +55,7 @@ export function useProjectSummaries(): ProjectSummaries {
       })
       .catch((reason: unknown) => {
         console.error('Vorhaben-Ereignisse nicht abonnierbar', reason);
+        setSubscribeError(`Vorhaben werden nicht mehr aktualisiert: ${commandErrorText(reason)}`);
       });
 
     listProjects()
@@ -70,6 +76,9 @@ export function useProjectSummaries(): ProjectSummaries {
       })
       .catch((reason: unknown) => {
         console.error('Vorhaben nicht ladbar', reason);
+        if (!controller.signal.aborted) {
+          setLoadError(`Vorhaben nicht ladbar: ${commandErrorText(reason)}`);
+        }
       });
 
     return (): void => {
@@ -80,5 +89,5 @@ export function useProjectSummaries(): ProjectSummaries {
     };
   }, [upsertProject]);
 
-  return { projects, upsertProject, removeProject };
+  return { projects, upsertProject, removeProject, error: loadError ?? subscribeError };
 }

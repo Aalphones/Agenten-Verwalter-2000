@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [PROJECT.md](../..
 | 2 | Core: Einstellungen speichern | [phase-2-einstellungen-core.md](phase-2-einstellungen-core.md) | standard | complete |
 | 3 | Oberfläche: Einstellungsseite, Farbschema, Standardwerte in „Neue Session“ | [phase-3-einstellungen-oberflaeche.md](phase-3-einstellungen-oberflaeche.md) | standard | complete |
 | 4 | Virtuelle Listen: Sidebar, Hintergrund-Panel, Scratchpad | [phase-4-virtuelle-listen.md](phase-4-virtuelle-listen.md) | standard | complete |
-| 5 | Sichtbare Fehler statt Konsole, Doku-Abschluss | [phase-5-fehler-und-doku.md](phase-5-fehler-und-doku.md) | standard | pending |
+| 5 | Sichtbare Fehler statt Konsole, Doku-Abschluss | [phase-5-fehler-und-doku.md](phase-5-fehler-und-doku.md) | standard | complete |
 
 **Start erst, wenn der Plan „Vorhaben und Sessions“ (2026-09-30) archiviert ist.** Er baut die Sidebar zum Baum aus Vorhaben und Sessions um und ersetzt `session_create`/`session_archive` durch `project_create`/`project_archive`; die Phasen 2 bis 5 dieses Plans sind gegen diesen Stand geschrieben. Er belegt Migration 005 und ADR 011, dieser Plan nimmt Migration 006 und ADR 012; der Plan „Sprachdiktat“ (ADR 009) folgt nach diesem. Reihenfolge fest: 1 → 2 → 3 → 4 → 5 (Phase 3 braucht die Commands aus 2; Phase 4 und 5 fassen Dateien an, die Phase 3 ändert — `Sidebar.tsx`, `App.tsx`). Umsetzung direkt auf dem aktuellen Branch, ein Commit pro Phase, Phase 1 zwei Commits (Scopes: Phase 1 `sessions` und `setup`, Phase 2 `settings`, Phase 3 `settings`, Phase 4 `ui`, Phase 5 `ui`). Vor jedem Commit muss `pnpm check` grün sein; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` ausführen und die erzeugten Dateien mit committen. Das Projekt hat keine automatisierten Tests und bekommt keine. Erkenntnisse während der Umsetzung gehören nach [FINDINGS.md](FINDINGS.md).
 
@@ -142,10 +142,22 @@ Führt Sascha am Plan-Ende durch. Wackelstellen zuerst:
 
 ## Summary
 
+Einstellungsseite mit Farbschema (sofort wirksam, ohne Aufblitzen beim Start) und Standardwerten für neue Vorhaben; Sidebar, Hintergrund-Listen und Scratchpad-Baum virtualisiert; Lade- und Aktionsfehler als Sätze in der Oberfläche; Altlasten erledigt (Esc-Zustand „unterbrochen“, Typ-Erzeugung als Example, Seitengröße des Verlaufs einstellbar).
+
 ## Files touched
+
+Core: `src-tauri/src/settings/`, `commands/settings.rs`, `db/settings.rs`, Migration 006, `examples/gen-bindings.rs`. Oberfläche: `src/features/settings/`, `src/lib/colorScheme.ts`, `src/stores/settings.ts`, `src/stores/sessionErrors.ts`, `src/lib/useActionError.ts`, `src/app/SessionActionError.*`, Sidebar, Hintergrund-Reiter, Chat-Hooks. Doku: ADR 012, Code-Map, PROJECT.md, Entwurfs-README.
 
 ## Commits
 
+Phase 1: `95af818`, `43decde` · Phase 2: `0fe0d61` · Phase 3: `53e6abb` · Phase 4: `2b55a1f` · Phase 5: `feat(ui): show load and action errors as sentences`.
+
 ## Deviations from plan
 
+- `useActionError.run` nimmt `prefix` als optionalen zweiten Parameter statt als Pflichtparameter; die Aufrufer im Hintergrund-Panel bleiben unverändert. `run` schreibt außerdem selbst ins `console.error`.
+- Die Sidebar bekommt einen einzigen `loadError` (Vorhaben vor Sessions, Ladefehler vor Abo-Fehler); der Satz steht immer über der Liste, „Noch keine Vorhaben.“ entfällt dabei.
+- Nach einem gescheiterten Nachladen älterer Einträge löst das automatische Auffüllen bei kurzem Verlauf nicht erneut aus (sonst Schleife); der nächste Versuch kommt vom Hochscrollen.
+
 ## Follow-ups
+
+- Smoke-Checkliste durch Sascha, Rückstände aus M2b, M3 und M5 im selben Durchgang.

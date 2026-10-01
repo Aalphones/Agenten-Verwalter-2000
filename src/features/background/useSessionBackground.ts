@@ -69,6 +69,14 @@ export function useSessionBackground(sessionId: string | null): SessionBackgroun
       })
       .catch((reason: unknown) => {
         console.error('Hintergrund-Ereignisse nicht abonnierbar', reason);
+        if (controller.signal.aborted) {
+          return;
+        }
+        setState((current: LoadedState | null) => ({
+          sessionId: currentId,
+          background: current?.sessionId === currentId ? current.background : null,
+          error: `Hintergrund wird nicht mehr aktualisiert: ${commandErrorText(reason)}`,
+        }));
       });
 
     return (): void => {

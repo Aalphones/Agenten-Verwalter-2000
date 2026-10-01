@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { commandErrorText } from '@/lib/errors';
 import { listSessions, onSessionChanged } from '@/lib/sessions';
 
 export interface SessionSummaries {
@@ -9,6 +10,8 @@ export interface SessionSummaries {
   upsertSession: (summary: SessionSummary) => void;
   /** Nimmt eine Session aus der Liste — für archivierte, zu denen der Core kein Ereignis sendet. */
   removeSession: (sessionId: string) => void;
+  /** Satz zum Lade- oder Abo-Fehler (Ladefehler zuerst); `null` ohne Fehler. */
+  error: string | null;
 }
 
 function upsert(current: readonly SessionSummary[], summary: SessionSummary): SessionSummary[] {
@@ -22,6 +25,8 @@ function upsert(current: readonly SessionSummary[], summary: SessionSummary): Se
 
 export function useSessionSummaries(): SessionSummaries {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
 
   const upsertSession = useCallback((summary: SessionSummary): void => {
     setSessions((current: SessionSummary[]) => upsert(current, summary));
@@ -50,6 +55,7 @@ export function useSessionSummaries(): SessionSummaries {
       })
       .catch((reason: unknown) => {
         console.error('Session-Ereignisse nicht abonnierbar', reason);
+        setSubscribeError(`Sessions werden nicht mehr aktualisiert: ${commandErrorText(reason)}`);
       });
 
     listSessions()
@@ -72,6 +78,9 @@ export function useSessionSummaries(): SessionSummaries {
       })
       .catch((reason: unknown) => {
         console.error('Sessions nicht ladbar', reason);
+        if (!controller.signal.aborted) {
+          setLoadError(`Sessions nicht ladbar: ${commandErrorText(reason)}`);
+        }
       });
 
     return (): void => {
@@ -82,5 +91,5 @@ export function useSessionSummaries(): SessionSummaries {
     };
   }, [upsertSession]);
 
-  return { sessions, upsertSession, removeSession };
+  return { sessions, upsertSession, removeSession, error: loadError ?? subscribeError };
 }

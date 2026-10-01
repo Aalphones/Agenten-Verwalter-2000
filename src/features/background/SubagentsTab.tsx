@@ -16,7 +16,7 @@ import type { DetailAction } from '@/features/background/DetailHead';
 import { mentionInChat } from '@/features/background/mention';
 import { OutputPane } from '@/features/background/OutputPane';
 import { PanelLayout } from '@/features/background/PanelLayout';
-import { useActionError } from '@/features/background/useActionError';
+import { useActionError } from '@/lib/useActionError';
 import { VirtualPanelList } from '@/features/background/VirtualPanelList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { SubagentStep } from '@/lib/bindings/SubagentStep';

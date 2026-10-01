@@ -28,6 +28,7 @@ export function ExternalLink({ href, children }: ExternalLinkProps): ReactElemen
     // Ohne preventDefault würde das App-Fenster selbst zur Seite navigieren.
     event.preventDefault();
     openUrl(targetUrl).catch((error: unknown): void => {
+      // Ein Link, der nicht aufgeht, fällt dem Benutzer selbst auf; ohne Session-Bezug gibt es keinen Ort für einen Satz.
       console.error('Link konnte nicht geöffnet werden', error);
     });
   }

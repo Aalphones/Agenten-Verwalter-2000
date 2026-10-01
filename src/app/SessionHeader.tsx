@@ -7,7 +7,9 @@ import { ContextPopover } from '@/features/context/ContextPopover';
 import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
 import { UsageButton } from '@/features/usage/UsageButton';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { commandErrorText } from '@/lib/errors';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
+import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
 import './SessionHeader.css';
 
@@ -52,6 +54,8 @@ export function SessionHeader({
 }: SessionHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
   const [openPanel, setOpenPanel] = useState<OpenPanel | null>(null);
+  const reportSessionError = useSessionErrorsStore((state) => state.report);
+  const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const isTicking: boolean = session.runningSince !== null;
 
   useEffect(() => {
@@ -93,9 +97,14 @@ export function SessionHeader({
   }
 
   function runAction(action: (sessionId: string) => Promise<void>): void {
-    action(session.id).catch((reason: unknown) => {
-      console.error('Session-Aktion fehlgeschlagen', reason);
-    });
+    action(session.id)
+      .then(() => {
+        clearSessionError(session.id);
+      })
+      .catch((reason: unknown) => {
+        console.error('Session-Aktion fehlgeschlagen', reason);
+        reportSessionError(session.id, `Aktion fehlgeschlagen: ${commandErrorText(reason)}`);
+      });
   }
 
   function renderControls(): ReactElement | null {

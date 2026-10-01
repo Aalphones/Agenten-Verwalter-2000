@@ -14,7 +14,7 @@ import type { DetailAction } from '@/features/background/DetailHead';
 import { mentionInChat } from '@/features/background/mention';
 import { OutputPane } from '@/features/background/OutputPane';
 import { PanelLayout } from '@/features/background/PanelLayout';
-import { useActionError } from '@/features/background/useActionError';
+import { useActionError } from '@/lib/useActionError';
 import { useScratchpad } from '@/features/background/useScratchpad';
 import { useScratchpadFile } from '@/features/background/useScratchpadFile';
 import type { ScratchpadFileState } from '@/features/background/useScratchpadFile';

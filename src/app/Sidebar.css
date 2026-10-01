@@ -141,6 +141,14 @@
     color: var(--color-fg-muted);
   }
 
+  &__error {
+    flex-shrink: 0;
+    margin: 0;
+    padding: var(--space-md) var(--space-2xl);
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
+
   &__group-title {
     display: flex;
     gap: var(--space-sm);

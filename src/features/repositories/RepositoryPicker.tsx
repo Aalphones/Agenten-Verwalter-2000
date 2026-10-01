@@ -14,7 +14,7 @@ interface RepositoryPickerProps {
 }
 
 export function RepositoryPicker({ selectedIds, onChange }: RepositoryPickerProps): ReactElement {
-  const { repositories, add, remove } = useKnownRepositories();
+  const { repositories, error: loadError, add, remove } = useKnownRepositories();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function toggle(id: string, isChecked: boolean): void {
@@ -87,6 +87,13 @@ export function RepositoryPicker({ selectedIds, onChange }: RepositoryPickerProp
   }
 
   function renderList(): ReactElement {
+    if (loadError !== null) {
+      return (
+        <p className="repository-picker__error" role="alert">
+          {loadError}
+        </p>
+      );
+    }
     if (repositories.length === 0) {
       return (
         <p className="repository-picker__empty">

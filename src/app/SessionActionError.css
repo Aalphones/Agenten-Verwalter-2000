@@ -1,0 +1,43 @@
+.session-action-error {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-lg);
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-status-error);
+  font-size: 12px;
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+  }
+}

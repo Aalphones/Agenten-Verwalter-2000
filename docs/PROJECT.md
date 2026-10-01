@@ -74,7 +74,7 @@ Reihenfolge nach Entwicklungsrisiko (Konzept, Abschnitt 67) — das Riskanteste 
 3. **Worktree-Orchestrierung** (auf der Datenbank aus Meilenstein 4): mehrere Repositories als eine Session anlegen, aufräumen, Fehlerfälle (Branch existiert, Repo fehlt).
 5. **Changes & Diff:** Diffs über mehrere Repositories zusammenfassen, committed/uncommitted, lazy Diff-Ansicht.
 3b. **Vorhaben und Sessions, mit TL;DR:** das Vorhaben als zentrale Einheit, mehrere Sessions darin, Übersicht, Repository nachträglich anhängen, TL;DR von Sessions und Vorhaben ([ADR 011](decisions/011-vorhaben-und-sessions.md)) — gebaut am 2026-09-30.
-6. **UI auf Zielbild:** restliche Tafeln des Entwurfs (Einstellungen, Hellmodus), virtuelle Listen, Zustände konsistent über alle Ansichten → MVP.
+6. **UI auf Zielbild:** restliche Tafeln des Entwurfs (Einstellungen, Hellmodus), virtuelle Listen, Zustände konsistent über alle Ansichten → MVP — gebaut am 2026-10-01. Die Einstellungsseite speichert Farbschema (Dunkel, Hell, System; wirkt sofort und ohne Aufblitzen beim Start) sowie Standardmodell und Standard-Modus samt Denkaufwand für neue Vorhaben ([ADR 012](decisions/012-einstellungen-farbschema-und-listen.md)); Sidebar, Hintergrund-Listen und Scratchpad-Baum rendern nur das Sichtbare; Lade- und Aktionsfehler erscheinen als Satz statt nur in der Konsole.
 
 ## Offene Fragen
 

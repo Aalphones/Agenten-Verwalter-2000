@@ -25,6 +25,8 @@ import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { TodoItem } from '@/lib/bindings/TodoItem';
 import { answerQuestion } from '@/lib/chat';
+import { commandErrorText } from '@/lib/errors';
+import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import './ChatTimeline.css';
 
 const ESTIMATED_BLOCK_HEIGHT = 40;
@@ -44,6 +46,8 @@ interface ChatTimelineProps {
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
   hasMore: boolean;
   loadingOlder: boolean;
+  /** Satz zum gescheiterten Nachladen; steht über dem ältesten geladenen Eintrag. */
+  olderError: string | null;
   onLoadOlder: () => void;
 }
 
@@ -58,6 +62,7 @@ export function ChatTimeline({
   backgroundByToolUseId,
   hasMore,
   loadingOlder,
+  olderError,
   onLoadOlder,
 }: ChatTimelineProps): ReactElement {
   const [containerHeight, setContainerHeight] = useState<number>(0);
@@ -67,6 +72,8 @@ export function ChatTimeline({
     () => new Map<string, QuestionDraft>(),
   );
   const [sendingIds, setSendingIds] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const reportSessionError = useSessionErrorsStore((state) => state.report);
+  const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef<boolean>(true);
   const layoutMarkRef = useRef<LayoutMark>({ firstSeq: null, scrollHeight: 0 });
@@ -133,11 +140,18 @@ export function ChatTimeline({
   }, [entries, totalSize, containerHeight]);
 
   // Füllt der Verlauf die Höhe nicht, gibt es kein Scrollen, das Älteres anstößt — dann gleich nachladen.
+  // Nach einem Fehler nicht: sonst liefe die Wiederholung in einer Schleife; der nächste Versuch kommt vom Hochscrollen.
   useEffect(() => {
-    if (hasMore && !loadingOlder && containerHeight > 0 && totalSize <= containerHeight) {
+    if (
+      hasMore &&
+      !loadingOlder &&
+      olderError === null &&
+      containerHeight > 0 &&
+      totalSize <= containerHeight
+    ) {
       onLoadOlder();
     }
-  }, [hasMore, loadingOlder, containerHeight, totalSize, onLoadOlder]);
+  }, [hasMore, loadingOlder, olderError, containerHeight, totalSize, onLoadOlder]);
 
   const handleDigit = useEffectEvent((event: KeyboardEvent): void => {
     if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) {
@@ -195,8 +209,12 @@ export function ChatTimeline({
     const requestId: string = entry.requestId;
     setSendingIds((current: ReadonlySet<string>) => new Set<string>(current).add(requestId));
     answerQuestion(session.id, requestId, answer)
+      .then(() => {
+        clearSessionError(session.id);
+      })
       .catch((reason: unknown) => {
         console.error('Rückfrage nicht beantwortbar', reason);
+        reportSessionError(session.id, `Antwort nicht gesendet: ${commandErrorText(reason)}`);
       })
       .finally(() => {
         setSendingIds((current: ReadonlySet<string>) => {
@@ -307,6 +325,7 @@ export function ChatTimeline({
       aria-label="Verlauf"
       onScroll={handleScroll}
     >
+      {olderError !== null && <p className="chat-timeline__older-error">{olderError}</p>}
       <div
         className="chat-timeline__surface"
         style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}

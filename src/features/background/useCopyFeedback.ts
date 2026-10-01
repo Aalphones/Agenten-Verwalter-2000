@@ -38,6 +38,7 @@ export function useCopyFeedback(): CopyFeedback {
         }, COPY_FEEDBACK_MS);
       })
       .catch((reason: unknown) => {
+        // Ein gescheitertes Kopieren zeigt der Knopf selbst als „Fehlgeschlagen“; hier scheitert nur die Rückmeldung.
         console.error('Kopieren nicht rückmeldbar', reason);
       });
   }, []);

@@ -86,6 +86,7 @@ export function useAttachmentInput({
         }
       })
       .catch((reason: unknown) => {
+        // Nur das Hineinziehen fehlt; „+“ und Strg+V gehen weiter, deshalb kein Satz in der Oberfläche.
         console.error('Hineinziehen nicht verfügbar', reason);
       });
     return (): void => {

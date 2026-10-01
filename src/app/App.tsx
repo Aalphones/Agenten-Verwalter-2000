@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { ProjectHeader } from '@/app/ProjectHeader';
+import { SessionActionError } from '@/app/SessionActionError';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
@@ -27,8 +28,8 @@ import { useSessionsStore, type ProjectView, type SessionView } from '@/stores/s
 import './App.css';
 
 export function App(): ReactElement {
-  const { sessions, upsertSession, removeSession } = useSessionSummaries();
-  const { projects, upsertProject, removeProject } = useProjectSummaries();
+  const { sessions, upsertSession, removeSession, error: sessionsError } = useSessionSummaries();
+  const { projects, upsertProject, removeProject, error: projectsError } = useProjectSummaries();
   const activeSessionId: string | null = useSessionsStore((state) => state.activeSessionId);
   const activeProjectId: string | null = useSessionsStore((state) => state.activeProjectId);
   const showProjectOverview: boolean = useSessionsStore((state) => state.showProjectOverview);
@@ -204,6 +205,7 @@ export function App(): ReactElement {
               selectProject(currentSession.projectId);
             }}
           />
+          <SessionActionError sessionId={currentSession.id} />
           {isChangesView ? (
             <ChangesView
               key={currentSession.id}
@@ -234,6 +236,7 @@ export function App(): ReactElement {
         activeProjectId={activeProjectId}
         showProjectOverview={isOverview}
         isSettingsOpen={showSettings}
+        loadError={projectsError ?? sessionsError}
         onSelectSession={selectSession}
         onSelectProject={selectProject}
         onNew={openNewSession}

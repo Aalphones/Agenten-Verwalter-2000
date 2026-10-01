@@ -4,6 +4,8 @@ import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { ChatEntryEvent } from '@/lib/bindings/ChatEntryEvent';
 import type { ChatPage } from '@/lib/bindings/ChatPage';
 import { getChatHistory, onChatEntry } from '@/lib/chat';
+import { commandErrorText } from '@/lib/errors';
+import { useSessionErrorsStore } from '@/stores/sessionErrors';
 
 const DEFAULT_PAGE_SIZE = 200;
 // Entspricht MAX_HISTORY_PAGE im Core.
@@ -14,14 +16,23 @@ export interface ChatEntries {
   entries: readonly ChatEntry[];
   hasMore: boolean;
   loadingOlder: boolean;
+  /** Satz, warum die neueste Seite nicht lädt; `null` ohne Fehler. */
+  loadError: string | null;
+  /** Satz, warum das Nachladen älterer Einträge scheiterte; endet mit dem nächsten Versuch. */
+  olderError: string | null;
   loadOlder: () => void;
 }
 
-interface ChatSnapshot {
-  sessionId: string;
+interface ChatState {
   entries: readonly ChatEntry[];
   hasMore: boolean;
   loadingOlder: boolean;
+  loadError: string | null;
+  olderError: string | null;
+}
+
+interface ChatSnapshot extends ChatState {
+  sessionId: string;
 }
 
 interface ChatLoader {
@@ -44,8 +55,8 @@ export function useChatEntries(sessionId: string): ChatEntries {
     const loader: ChatLoader = createChatLoader(
       sessionId,
       controller.signal,
-      (entries: readonly ChatEntry[], hasMore: boolean, loadingOlder: boolean) => {
-        setSnapshot({ sessionId, entries, hasMore, loadingOlder });
+      (state: ChatState) => {
+        setSnapshot({ sessionId, ...state });
       },
     );
     loaderRef.current = loader;
@@ -66,6 +77,12 @@ export function useChatEntries(sessionId: string): ChatEntries {
       })
       .catch((reason: unknown) => {
         console.error('Chat-Ereignisse nicht abonnierbar', reason);
+        useSessionErrorsStore
+          .getState()
+          .report(
+            sessionId,
+            `Verlauf wird nicht mehr live aktualisiert: ${commandErrorText(reason)}`,
+          );
       });
 
     return (): void => {
@@ -83,12 +100,21 @@ export function useChatEntries(sessionId: string): ChatEntries {
 
   // Ein Stand einer anderen Session gilt nicht — so beginnt ein Sessionwechsel leer, ohne Effekt-Reset.
   if (snapshot === null || snapshot.sessionId !== sessionId) {
-    return { entries: NO_ENTRIES, hasMore: false, loadingOlder: false, loadOlder };
+    return {
+      entries: NO_ENTRIES,
+      hasMore: false,
+      loadingOlder: false,
+      loadError: null,
+      olderError: null,
+      loadOlder,
+    };
   }
   return {
     entries: snapshot.entries,
     hasMore: snapshot.hasMore,
     loadingOlder: snapshot.loadingOlder,
+    loadError: snapshot.loadError,
+    olderError: snapshot.olderError,
     loadOlder,
   };
 }
@@ -98,16 +124,18 @@ export function useChatEntries(sessionId: string): ChatEntries {
 function createChatLoader(
   sessionId: string,
   signal: AbortSignal,
-  publish: (entries: readonly ChatEntry[], hasMore: boolean, loadingOlder: boolean) => void,
+  publish: (state: ChatState) => void,
 ): ChatLoader {
   let entries: readonly ChatEntry[] = NO_ENTRIES;
   let hasMore = false;
   let loadingOlder = false;
+  let loadError: string | null = null;
+  let olderError: string | null = null;
   // Nicht `null`, solange die neueste Seite lädt: Ereignisse warten hier, bis der Seitenstand da ist.
   let waiting: ChatEntry[] | null = [];
 
   function emit(): void {
-    publish(entries, hasMore, loadingOlder);
+    publish({ entries, hasMore, loadingOlder, loadError, olderError });
   }
 
   /** `false` heißt: zwischen dem geladenen Ende und dem Eintrag fehlen Einträge. */
@@ -141,6 +169,7 @@ function createChatLoader(
         entries = page.entries;
         hasMore = page.hasMore;
         loadingOlder = false;
+        loadError = null;
         const arrived: ChatEntry[] = waiting ?? [];
         waiting = null;
         for (const entry of arrived) {
@@ -153,8 +182,13 @@ function createChatLoader(
         emit();
       })
       .catch((reason: unknown) => {
+        if (signal.aborted) {
+          return;
+        }
         waiting = null;
         console.error('Verlauf nicht ladbar', reason);
+        loadError = `Verlauf nicht ladbar: ${commandErrorText(reason)}`;
+        emit();
       });
   }
 
@@ -176,6 +210,7 @@ function createChatLoader(
       return;
     }
     loadingOlder = true;
+    olderError = null;
     emit();
     getChatHistory(sessionId, firstSeq, PAGE_SIZE)
       .then((page: ChatPage) => {
@@ -195,6 +230,7 @@ function createChatLoader(
           return;
         }
         loadingOlder = false;
+        olderError = `Ältere Einträge nicht ladbar: ${commandErrorText(reason)}`;
         emit();
         console.error('Ältere Einträge nicht ladbar', reason);
       });

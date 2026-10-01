@@ -47,27 +47,27 @@ Die Zeilennummern sind der Stand vor dem Plan „Vorhaben und Sessions“ und di
 
 ### Session-Fehler
 
-- [ ] `src/stores/sessionErrors.ts` nach Kontrakt (`errors`, `report`, `clear`).
-- [ ] `src/app/SessionActionError.tsx` + `.css` (Block `session-action-error`) nach AK 2; Prop `sessionId`; liest `errors[sessionId]`.
-- [ ] `App.tsx`: `<SessionActionError sessionId={currentSession.id} />` direkt nach `<SessionHeader … />`.
-- [ ] Die fünf `SessionActionError`-Stellen der Tabelle: im `catch` `report(sessionId, '<Text>')`, im Erfolgsfall `clear(sessionId)` (`.then(() => clear(sessionId))`).
+- [x] `src/stores/sessionErrors.ts` nach Kontrakt (`errors`, `report`, `clear`).
+- [x] `src/app/SessionActionError.tsx` + `.css` (Block `session-action-error`) nach AK 2; Prop `sessionId`; liest `errors[sessionId]`.
+- [x] `App.tsx`: `<SessionActionError sessionId={currentSession.id} />` direkt nach `<SessionHeader … />`.
+- [x] Die fünf `SessionActionError`-Stellen der Tabelle: im `catch` `report(sessionId, '<Text>')`, im Erfolgsfall `clear(sessionId)` (`.then(() => clear(sessionId))`).
 
 ### Übrige Stellen
 
-- [ ] `useSessionSummaries` und `useProjectSummaries`: Rückgabe je um `error: string | null` erweitern (Ladefehler gewinnt über Abo-Fehler); `App.tsx` reicht den ersten gesetzten (Vorhaben vor Sessions) an `Sidebar` (Prop `loadError`), die ihn nach Tabelle zeigt (Klasse `sidebar__error`, 12 px Fehlerfarbe, Rand wie `sidebar__empty`).
-- [ ] `Sidebar.tsx`: `useActionError` aus `src/features/background/` nach `src/lib/useActionError.ts` verschieben (Import in `ProcessesTab`, `SubagentsTab`, `ScratchpadTab` anpassen) und für Umbenennen und Archivieren nutzen (`scopeKey` = `'sidebar'`); Zeile über dem Fuß, Klasse `sidebar__error`. Die Texte der Tabelle als Präfix: `run` bekommt dafür einen zweiten Parameter `prefix: string` und setzt `message` auf `${prefix}: ${commandErrorText(reason)}`; die bestehenden Aufrufer im Hintergrund-Panel übergeben `''` und behalten den Text ohne Präfix (bei leerem Präfix kein Doppelpunkt).
-- [ ] `ErrorBlock.tsx`: Zustand `logError: string | null`; `renderLog` zeigt ihn an Stelle des Protokolls.
-- [ ] `useChatEntries`: Rückgabe um `loadError: string | null` und `olderError: string | null` erweitern (`olderError` wird beim nächsten `loadOlder` zurückgesetzt); `ChatView` zeigt `loadError` an Stelle der `ChatTimeline`, `ChatTimeline` bekommt `olderError` als Prop und rendert ihn als erste Zeile (außerhalb der virtualisierten Zeilen, oberhalb des Zeilen-Containers).
-- [ ] `useSessionBackground`: im `catch` des Abos den Zustand wie beim Ladefehler setzen, Text nach Tabelle.
-- [ ] `useItemOutput`: Rückgabe `{ preview: TextPreview | null; error: string | null }`; Aufrufer (`ProcessesTab`) gibt `error` als `notice` an `OutputPane`, wenn gesetzt (vor `outputNotice`).
-- [ ] `useKnownRepositories`: Rückgabe um `error: string | null` erweitern; `RepositoryPicker` zeigt ihn.
+- [x] `useSessionSummaries` und `useProjectSummaries`: Rückgabe je um `error: string | null` erweitern (Ladefehler gewinnt über Abo-Fehler); `App.tsx` reicht den ersten gesetzten (Vorhaben vor Sessions) an `Sidebar` (Prop `loadError`), die ihn nach Tabelle zeigt (Klasse `sidebar__error`, 12 px Fehlerfarbe, Rand wie `sidebar__empty`).
+- [x] `Sidebar.tsx`: `useActionError` aus `src/features/background/` nach `src/lib/useActionError.ts` verschieben (Import in `ProcessesTab`, `SubagentsTab`, `ScratchpadTab` anpassen) und für Umbenennen und Archivieren nutzen (`scopeKey` = `'sidebar'`); Zeile über dem Fuß, Klasse `sidebar__error`. Die Texte der Tabelle als Präfix: `run` bekommt dafür einen zweiten Parameter `prefix: string` und setzt `message` auf `${prefix}: ${commandErrorText(reason)}`; die bestehenden Aufrufer im Hintergrund-Panel übergeben `''` und behalten den Text ohne Präfix (bei leerem Präfix kein Doppelpunkt).
+- [x] `ErrorBlock.tsx`: Zustand `logError: string | null`; `renderLog` zeigt ihn an Stelle des Protokolls.
+- [x] `useChatEntries`: Rückgabe um `loadError: string | null` und `olderError: string | null` erweitern (`olderError` wird beim nächsten `loadOlder` zurückgesetzt); `ChatView` zeigt `loadError` an Stelle der `ChatTimeline`, `ChatTimeline` bekommt `olderError` als Prop und rendert ihn als erste Zeile (außerhalb der virtualisierten Zeilen, oberhalb des Zeilen-Containers).
+- [x] `useSessionBackground`: im `catch` des Abos den Zustand wie beim Ladefehler setzen, Text nach Tabelle.
+- [x] `useItemOutput`: Rückgabe `{ preview: TextPreview | null; error: string | null }`; Aufrufer (`ProcessesTab`) gibt `error` als `notice` an `OutputPane`, wenn gesetzt (vor `outputNotice`).
+- [x] `useKnownRepositories`: Rückgabe um `error: string | null` erweitern; `RepositoryPicker` zeigt ihn.
 
 ### Doku-Abschluss
 
-- [ ] PROJECT.md, Meilenstein 6: „— gebaut am <Datum>“ nach dem Muster von 2b; Satz zu Einstellungen (Farbschema, Standardwerte) und zu den virtualisierten Listen.
-- [ ] Code-Map: Kopfsatz „Stand: Meilenstein 6 …“; Zeilen für `SessionActionError`, `src/stores/sessionErrors.ts`, `src/lib/useActionError.ts`.
-- [ ] Entwurfs-README, „Abweichungen vom Entwurf“: neuer Punkt „Fehlersätze“ — Zeile unter der Session-Kopfzeile, Sätze an Stelle von Liste/Verlauf/Ausgabe, keine Toasts; Maße aus AK 2.
-- [ ] Glossar: nichts Neues, außer ein Begriff aus dieser Phase ist im Code als Name sichtbar geworden (dann eintragen).
-- [ ] README dieses Plans: Bottom-Sektionen füllen (Summary, Files touched, Commits, Deviations, Follow-ups); STATE.md auf den Stand „Smoke durch Sascha“ setzen.
+- [x] PROJECT.md, Meilenstein 6: „— gebaut am <Datum>“ nach dem Muster von 2b; Satz zu Einstellungen (Farbschema, Standardwerte) und zu den virtualisierten Listen.
+- [x] Code-Map: Kopfsatz „Stand: Meilenstein 6 …“; Zeilen für `SessionActionError`, `src/stores/sessionErrors.ts`, `src/lib/useActionError.ts`.
+- [x] Entwurfs-README, „Abweichungen vom Entwurf“: neuer Punkt „Fehlersätze“ — Zeile unter der Session-Kopfzeile, Sätze an Stelle von Liste/Verlauf/Ausgabe, keine Toasts; Maße aus AK 2.
+- [x] Glossar: nichts Neues, außer ein Begriff aus dieser Phase ist im Code als Name sichtbar geworden (dann eintragen).
+- [x] README dieses Plans: Bottom-Sektionen füllen (Summary, Files touched, Commits, Deviations, Follow-ups); STATE.md auf den Stand „Smoke durch Sascha“ setzen.
 
 ## Report-Back

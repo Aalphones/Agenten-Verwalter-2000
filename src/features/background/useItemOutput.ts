@@ -4,18 +4,28 @@ import type { BackgroundKind } from '@/lib/bindings/BackgroundKind';
 import type { BackgroundState } from '@/lib/bindings/BackgroundState';
 import type { TextPreview } from '@/lib/bindings/TextPreview';
 import { loadBackgroundOutput } from '@/lib/background';
+import { commandErrorText } from '@/lib/errors';
 
 const POLL_INTERVAL_MS = 2000;
+
+export interface ItemOutput {
+  preview: TextPreview | null;
+  /** Satz, warum die Ausgabe nicht lädt; `null` ohne Fehler. */
+  error: string | null;
+}
 
 interface LoadedOutput {
   sessionId: string;
   itemId: string;
-  preview: TextPreview;
+  preview: TextPreview | null;
+  error: string | null;
 }
+
+const NO_OUTPUT: ItemOutput = { preview: null, error: null };
 
 /** Ausgabe des gewählten Befehls oder Prozesses. Ein laufender Prozess lädt alle 2 s nach; ein Subagent hat keine
  *  Ausgabe. Der Aufrufer rendert den Reiter nur, solange er sichtbar ist — damit endet der Takt mit dem Reiter. */
-export function useItemOutput(sessionId: string, item: BackgroundItem | null): TextPreview | null {
+export function useItemOutput(sessionId: string, item: BackgroundItem | null): ItemOutput {
   const [loaded, setLoaded] = useState<LoadedOutput | null>(null);
   const requestRef = useRef<number>(0);
 
@@ -39,11 +49,24 @@ export function useItemOutput(sessionId: string, item: BackgroundItem | null): T
       loadBackgroundOutput(sessionId, currentItemId)
         .then((preview: TextPreview) => {
           if (!controller.signal.aborted && requestRef.current === request) {
-            setLoaded({ sessionId, itemId: currentItemId, preview });
+            setLoaded({ sessionId, itemId: currentItemId, preview, error: null });
           }
         })
         .catch((reason: unknown) => {
           console.error('Ausgabe nicht ladbar', reason);
+          if (controller.signal.aborted || requestRef.current !== request) {
+            return;
+          }
+          // Die zuletzt geladene Ausgabe desselben Eintrags bleibt stehen, der Fehler kommt dazu.
+          setLoaded((current: LoadedOutput | null) => ({
+            sessionId,
+            itemId: currentItemId,
+            preview:
+              current?.sessionId === sessionId && current.itemId === currentItemId
+                ? current.preview
+                : null,
+            error: `Ausgabe nicht ladbar: ${commandErrorText(reason)}`,
+          }));
         });
     }
 
@@ -61,7 +84,7 @@ export function useItemOutput(sessionId: string, item: BackgroundItem | null): T
   }, [sessionId, itemId, hasOutput, isPolling, state]);
 
   if (loaded === null || loaded.sessionId !== sessionId || loaded.itemId !== itemId) {
-    return null;
+    return NO_OUTPUT;
   }
-  return loaded.preview;
+  return { preview: loaded.preview, error: loaded.error };
 }

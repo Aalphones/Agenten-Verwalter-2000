@@ -4,6 +4,18 @@
   flex-grow: 1;
   min-height: 0;
 
+  &__error {
+    display: grid;
+    flex-grow: 1;
+    place-items: center;
+    min-height: 0;
+    margin: 0;
+    padding: 0 var(--space-5xl);
+    color: var(--color-status-error);
+    font-size: 12px;
+    text-align: center;
+  }
+
   &__composer {
     flex-shrink: 0;
   }

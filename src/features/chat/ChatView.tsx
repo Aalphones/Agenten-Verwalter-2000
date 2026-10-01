@@ -9,7 +9,9 @@ import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { commandErrorText } from '@/lib/errors';
 import { pauseSession } from '@/lib/sessions';
+import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import './ChatView.css';
 
 const INTERRUPTIBLE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiting'];
@@ -34,7 +36,11 @@ export function ChatView({
   projectName,
   backgroundByToolUseId,
 }: ChatViewProps): ReactElement {
-  const { entries, hasMore, loadingOlder, loadOlder } = useChatEntries(session.id);
+  const { entries, hasMore, loadingOlder, loadError, olderError, loadOlder } = useChatEntries(
+    session.id,
+  );
+  const reportSessionError = useSessionErrorsStore((state) => state.report);
+  const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const canInterrupt: boolean = INTERRUPTIBLE_STATUSES.includes(session.status);
 
   // Ein Menü, das Esc zum Schließen verbraucht hat, setzt `defaultPrevented` — dann nicht pausieren.
@@ -42,9 +48,14 @@ export function ChatView({
     if (event.key !== 'Escape' || event.defaultPrevented) {
       return;
     }
-    pauseSession(session.id).catch((reason: unknown) => {
-      console.error('Session nicht pausierbar', reason);
-    });
+    pauseSession(session.id)
+      .then(() => {
+        clearSessionError(session.id);
+      })
+      .catch((reason: unknown) => {
+        console.error('Session nicht pausierbar', reason);
+        reportSessionError(session.id, `Pausieren fehlgeschlagen: ${commandErrorText(reason)}`);
+      });
   });
 
   useEffect(() => {
@@ -71,6 +82,9 @@ export function ChatView({
         />
       );
     }
+    if (loadError !== null) {
+      return <p className="chat-view__error">{loadError}</p>;
+    }
     return (
       <ChatTimeline
         session={session}
@@ -78,6 +92,7 @@ export function ChatView({
         backgroundByToolUseId={backgroundByToolUseId}
         hasMore={hasMore}
         loadingOlder={loadingOlder}
+        olderError={olderError}
         onLoadOlder={loadOlder}
       />
     );
