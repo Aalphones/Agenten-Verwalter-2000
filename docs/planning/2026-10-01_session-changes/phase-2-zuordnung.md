@@ -10,7 +10,7 @@
 - `src-tauri/src/sessions/registry.rs`: `get`, `repositories_of`, `project_ticket_worktrees`, Feld `database`.
 - `src-tauri/src/git/mod.rs`: `diff_tree_name_status`, `diff_tree_numstat`, `diff_index_*`, `run_raw`.
 - `src-tauri/examples/gen-bindings.rs`, `src/lib/changes.ts`, `src/features/changes/useSessionChanges.ts`, `src/features/changes/useFileDiff.ts`.
-- [ADR 015](../../decisions/015-changes-je-session.md), [ADR 006](../../decisions/006-changes-und-diff.md).
+- [ADR 014](../../decisions/014-changes-je-session.md), [ADR 006](../../decisions/006-changes-und-diff.md).
 - [docs/conventions/rust.md](../../conventions/rust.md), [typescript.md](../../conventions/typescript.md), [linting.md](../../conventions/linting.md).
 - Fehlerklassen geprüft (Vault `werkzeuge/git`, `systeme/sqlite`, `sprachen/typescript`): keine einschlägig.
 
@@ -40,7 +40,7 @@
 
 ### Commit-Verlauf mit Zwischenspeicher
 
-- [ ] Neue Datei `src-tauri/src/changes/history.rs`, Kopf `//! Die Commits seit der Basis mit ihren Dateien. Was ein Commit geändert hat, ändert sich nie — deshalb merkt es sich der Core (ADR 015).`; in `changes/mod.rs` `pub mod history;`.
+- [ ] Neue Datei `src-tauri/src/changes/history.rs`, Kopf `//! Die Commits seit der Basis mit ihren Dateien. Was ein Commit geändert hat, ändert sich nie — deshalb merkt es sich der Core (ADR 014).`; in `changes/mod.rs` `pub mod history;`.
   - `pub struct CommitInfo { pub id: String, pub time: i64, pub first_parent: Option<String>, pub files: Vec<String> }` (`#[derive(Debug, Clone)]`), Doc: „\`files\` relativ zum Repository mit \`/\`; gegen den ersten Elternteil.“
   - `const MAX_CACHED_COMMITS: usize = 50_000;`, `const MAX_CACHED_RANGES: usize = 2_000;` mit Kommentar „Darüber wird der Speicher geleert statt einzeln verdrängt: ein Neuaufbau kostet nur Git-Aufrufe.“
   - `static COMMIT_FILES: OnceLock<Mutex<HashMap<String, Vec<String>>>>` und `static RANGE_STATS: OnceLock<Mutex<HashMap<String, BTreeMap<String, LineStat>>>>`. Zugriff über `fn commit_files_cache() -> MutexGuard<…>` bzw. `fn range_stats_cache()` mit `unwrap_or_else(PoisonError::into_inner)`. **Die Sperre nie während eines Git-Aufrufs halten:** erst nachsehen und freigeben, dann Git, dann einfügen.
@@ -71,7 +71,7 @@
   5. **Alle:** `own_files` nach `from` gruppieren, je Gruppe einmal `parse::scope_stats(&git::diff_index_name_status(worktree, from)?, &git::diff_index_numstat(worktree, from)?)` (ganzer Baum, gefiltert auf die Pfade der Gruppe). `foreign = own_file.foreign_after || (dirty.contains_key(path) && !uncommitted.contains_key(path))`. Dazu jeder Pfad aus Uncommitted, der nicht in `own_files` steht, mit seinem Uncommitted-Eintrag.
   6. `commit_count = attribution::own_commit_count(&commits, &own.commits)`.
   7. Zusammenführen zu `FileChange` wie bisher (sortiert nach Pfad).
-  Kommentar über der Funktion: „Nur was der Reichweite gehört (ADR 015): eigene Commits je Datei von ihrem ersten bis zum letzten, eigene geschriebene Dateien, solange sie seit dem letzten Schreiben nicht committet sind.“
+  Kommentar über der Funktion: „Nur was der Reichweite gehört (ADR 014): eigene Commits je Datei von ihrem ersten bis zum letzten, eigene geschriebene Dateien, solange sie seit dem letzten Schreiben nicht committet sind.“
 - [ ] `pub fn file_diff(workspace, repository, ticket, path, scope, own: &Ownership)`: nach Bestimmen von `worktree` und `base`:
   - Hilfsfunktion `fn own_file(worktree: &Path, base: &str, own: &Ownership, path: &str) -> Result<Option<OwnFile>, CommandError>` = `history::read` + `attribution::own_files` + `remove(path)`.
   - `Committed` → `own_file(…)?` fehlt → `CommandError::Internal("Die Datei hat keine eigenen Commits in dieser Ansicht".to_owned())`, sonst `git::diff_tree_patch(&worktree, &file.from, &file.to, path)?`.
@@ -90,12 +90,12 @@
 - [ ] `commands/changes.rs`:
   - `changes_load(registry, session_id: String, reach: ChangesReach)` → `let input = registry.changes_input(&session_id, reach)?; Ok(changes::load(&input))`.
   - `changes_file_diff(registry, session_id: String, reach: ChangesReach, key: String, path: String, scope: ChangeScope)`: `registry.repositories_of(&session_id)?` ersetzen durch `let input = registry.changes_input(&session_id, reach)?;` und `input.workspace`/`input.repositories` verwenden; beide `changes::file_diff`-Aufrufe bekommen `&input.own`. Die Prüfung `is_assigned` mit `project_ticket_worktrees` bleibt wörtlich.
-  - Doc-Kommentar von `changes_load`: „Die Changes der Reichweite (ADR 015): nur die Session oder das ganze Vorhaben.“
+  - Doc-Kommentar von `changes_load`: „Die Changes der Reichweite (ADR 014): nur die Session oder das ganze Vorhaben.“
 
 ### Oberfläche (nur Anschluss)
 
 - [ ] `pnpm bindings`.
-- [ ] `src/lib/changes.ts`: `loadChanges(sessionId: string, reach: ChangesReach)` → `invoke('changes_load', { sessionId, reach })`; `loadFileDiff(sessionId, reach, key, path, scope)` → `invoke('changes_file_diff', { sessionId, reach, key, path, scope })`. JSDoc: „\`reach\`: \`session\` nur die Session, \`project\` alle Sessions des Vorhabens (ADR 015).“ und bei `loadFileDiff` `internal` um „Datei ohne eigene Commits“ ergänzen.
+- [ ] `src/lib/changes.ts`: `loadChanges(sessionId: string, reach: ChangesReach)` → `invoke('changes_load', { sessionId, reach })`; `loadFileDiff(sessionId, reach, key, path, scope)` → `invoke('changes_file_diff', { sessionId, reach, key, path, scope })`. JSDoc: „\`reach\`: \`session\` nur die Session, \`project\` alle Sessions des Vorhabens (ADR 014).“ und bei `loadFileDiff` `internal` um „Datei ohne eigene Commits“ ergänzen.
 - [ ] `useSessionChanges.ts` und `useFileDiff.ts`: vorerst `'session'` als zweites Argument übergeben, sonst unverändert.
 
 ### Doku und Commit

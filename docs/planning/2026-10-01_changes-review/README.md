@@ -4,13 +4,13 @@ Ziel: Der Diff in der Changes-Ansicht zeigt Syntaxfarben je Sprache. Jede Diff-Z
 
 Design (verbindlich): [docs/design/2026-10-01_changes-review/](../../design/2026-10-01_changes-review/README.md) — Quellen in `canvas/`, klickbare Fassung https://claude.ai/artifact/Vvb1M3AsZTgtq3jMcfrcca.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 006](../../decisions/006-changes-und-diff.md) (eigener virtualisierter Diff), [ADR 007](../../decisions/007-anhaenge-skills-hintergrund.md) (Anhänge: Vorbild für Daten, die an einer Nachricht hängen). ADR 014 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
+Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 006](../../decisions/006-changes-und-diff.md) (eigener virtualisierter Diff), [ADR 007](../../decisions/007-anhaenge-skills-hintergrund.md) (Anhänge: Vorbild für Daten, die an einer Nachricht hängen). ADR 015 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
 
 ## Phasen
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Syntaxfarben im Diff, ADR 014 | [phase-1-syntaxfarben.md](phase-1-syntaxfarben.md) | standard | pending |
+| 1 | Syntaxfarben im Diff, ADR 015 | [phase-1-syntaxfarben.md](phase-1-syntaxfarben.md) | standard | pending |
 | 2 | Core: Typ `ReviewComment`, `chat_send` mit Kommentaren, Text an den Agenten | [phase-2-core.md](phase-2-core.md) | standard | pending |
 | 3 | Kommentieren im Diff: Store, „+“, Kommentarfeld, gesammelte Kommentare, Zahl am Reiter | [phase-3-diff.md](phase-3-diff.md) | heikel | pending |
 | 4 | Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku | [phase-4-chat.md](phase-4-chat.md) | standard | pending |
@@ -24,7 +24,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus [ADR 014](../../decisions/014-changes-review.md) „Changes-Review: Syntaxfarben und Zeilen-Kommentare“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 001–008, 010–012 auf der Platte, 009 im Plan „Sprachdiktat“ und 013 im Plan „MCP-Dialog“; dieser Plan schreibt 014. ADR 014 löst in [ADR 006](../../decisions/006-changes-und-diff.md) die Folge „Keine Syntaxfarben im Diff“ ab (sie war eine Folge der Entscheidung gegen Monaco, kein eigenes Verbot).
+Phase 1 schreibt daraus [ADR 015](../../decisions/015-changes-review.md) „Changes-Review: Syntaxfarben und Zeilen-Kommentare“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 001–008, 010–012 auf der Platte, 009 im Plan „Sprachdiktat“, 013 im Plan „MCP-Dialog“ und 014 im Plan „Session-Changes“; dieser Plan schreibt 015. ADR 015 löst in [ADR 006](../../decisions/006-changes-und-diff.md) die Folge „Keine Syntaxfarben im Diff“ ab (sie war eine Folge der Entscheidung gegen Monaco, kein eigenes Verbot).
 
 - **Syntaxfarben mit lowlight, je Abschnitt und Seite.** Die Sprache kommt aus der Dateiendung (`lowlight.registered`). Gefärbt wird je Abschnitt (zwischen zwei `@@`-Köpfen) die alte Seite (unverändert + gelöscht) und die neue Seite (unverändert + hinzugefügt) als zusammenhängender Text, dann zurück auf die Zeilen verteilt. Verworfen: (a) Zeile für Zeile färben — ein mehrzeiliger Kommentar oder String färbt dann nur seine erste Zeile; (b) die ganzen Dateien beider Fassungen laden — mehr Git-Aufrufe und Speicher für einen Gewinn nur am Abschnittsanfang. Die Farbzuordnung (`.hljs-*` → `--color-code-*`) wandert aus `CodeBlock.css` in eine gemeinsame `src/styles/syntax.css`.
 - **Kommentare sammeln, nicht einzeln senden.** Ein Kommentar landet in einer flüchtigen Liste je Session (Zustand, wie Entwurfstext und Anhänge) und geht mit der nächsten Nachricht. Nach Neustart oder Absturz der App sind ungesendete Kommentare weg (Entscheidung Sascha, 2026-10-01). Verworfen: eigene SQLite-Tabelle — eine Phase mehr für einen seltenen Fall.

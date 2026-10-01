@@ -1,4 +1,4 @@
-# Phase 2 — Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 015
+# Phase 2 — Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 016
 
 Ziel: Der Core kennt die Betriebsart „Claude Code + LM Studio“, fragt LM Studio nach Modellen und startet Agent und TL;DR-Aufruf in dieser Betriebsart mit der LM-Studio-Umgebung. Die Oberfläche ändert sich in dieser Phase nur so weit, wie die neuen Bindings es erzwingen.
 
@@ -31,7 +31,7 @@ Ziel: Der Core kennt die Betriebsart „Claude Code + LM Studio“, fragt LM Stu
 
 ### LM Studio
 
-- [ ] Neues Modul `src-tauri/src/lmstudio/` mit `mod.rs` und `model.rs` (Typen exakt wie im Kontrakt), in `lib.rs` deklariert wie die übrigen Querschnitts-Module. Kopfkommentar `mod.rs`: „Fragt den lokalen Server von LM Studio nach Modellen (ADR 015). Nur lesend; geladen und entladen wird in LM Studio.“
+- [ ] Neues Modul `src-tauri/src/lmstudio/` mit `mod.rs` und `model.rs` (Typen exakt wie im Kontrakt), in `lib.rs` deklariert wie die übrigen Querschnitts-Module. Kopfkommentar `mod.rs`: „Fragt den lokalen Server von LM Studio nach Modellen (ADR 016). Nur lesend; geladen und entladen wird in LM Studio.“
 - [ ] `mod.rs`: `pub const URL_VARIABLE: &str = "VERWALTER_LMSTUDIO_URL"`, `const DEFAULT_URL: &str = "http://localhost:1234"`, `const TIMEOUT: Duration = Duration::from_secs(3)`.
 - [ ] `pub fn base_url() -> String`: Umgebungsvariable, getrimmt, `trim_end_matches('/')`, leer → `DEFAULT_URL`.
 - [ ] Private `fn get(path: &str) -> Result<String, String>`: `ureq`-Agent mit Gesamt-Zeitlimit `TIMEOUT` (ureq 3: `ureq::Agent::config_builder().timeout_global(Some(TIMEOUT)).build().into()` — Signatur gegen docs.rs/ureq/3 prüfen), `GET {base_url}{path}`, Körper als String. Fehler → `error.to_string()`.
@@ -41,7 +41,7 @@ Ziel: Der Core kennt die Betriebsart „Claude Code + LM Studio“, fragt LM Stu
 
 ### Modell-Backend am Agenten
 
-- [ ] `src-tauri/src/agents/claude/local.rs` (in `agents/claude/mod.rs` als `pub mod local;`), Kopfkommentar: „Betriebsart Claude Code + LM Studio: dieselbe Kommandozeile, Modellanfragen an LM Studio (ADR 015).“ `LocalBackend`, `resolve`, `apply` exakt wie im Kontrakt.
+- [ ] `src-tauri/src/agents/claude/local.rs` (in `agents/claude/mod.rs` als `pub mod local;`), Kopfkommentar: „Betriebsart Claude Code + LM Studio: dieselbe Kommandozeile, Modellanfragen an LM Studio (ADR 016).“ `LocalBackend`, `resolve`, `apply` exakt wie im Kontrakt.
 - [ ] `resolve`, Betriebsart `ClaudeCodeLocal`, Fehlertexte wörtlich:
   - kein `local_model` → `LocalModelUnavailable("Kein lokales Modell gewählt — wähle eins in den Einstellungen unter „Lokales Modell“.")`
   - `lmstudio::find` scheitert → `LocalModelUnavailable(format!("LM Studio nicht erreichbar unter {base_url}: {fehler}"))`
@@ -69,7 +69,7 @@ Ziel: Der Core kennt die Betriebsart „Claude Code + LM Studio“, fragt LM Stu
 
 ### Kontingent
 
-- [ ] `commands/usage.rs`, `usage_refresh`: Parameter `database: tauri::State<'_, Arc<Database>>`; vor `service.refresh` `if settings::load(&database)?.operating_mode != OperatingMode::Claude { return Ok(()); }`. Doc-Kommentar ergänzen: „In einer lokalen Betriebsart fragt der Verwalter Anthropic nicht (ADR 015).“
+- [ ] `commands/usage.rs`, `usage_refresh`: Parameter `database: tauri::State<'_, Arc<Database>>`; vor `service.refresh` `if settings::load(&database)?.operating_mode != OperatingMode::Claude { return Ok(()); }`. Doc-Kommentar ergänzen: „In einer lokalen Betriebsart fragt der Verwalter Anthropic nicht (ADR 016).“
 
 ### Command und Bindings
 
@@ -79,9 +79,9 @@ Ziel: Der Core kennt die Betriebsart „Claude Code + LM Studio“, fragt LM Stu
 
 ### Doku
 
-- [ ] `docs/decisions/015-betriebsarten-und-lokales-modell.md` aus „Festgelegte Entscheidungen“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Konsequenzen enthalten: die Messwerte aus Phase 1 in je einem Satz (verbleibende Verbindungen aus M1b mit Adresse/Name, `contextWindow` aus M2, Tempo aus M3, TL;DR-Variante, Ergebnis M5); „Keine Garantie, dass nichts an Anthropic geht“; „Sidebar und Session-Karten zeigen im lokalen Betrieb das gespeicherte Claude-Modell“.
-- [ ] ADR 003, „Konsequenzen“: Zeile „Betriebsart Claude Code + LM Studio: dieselbe Kommandozeile mit anderer Umgebung — [ADR 015](015-betriebsarten-und-lokales-modell.md).“ ADR 008, „Konsequenzen“: „In einer lokalen Betriebsart keine Kontingent-Abfrage ([ADR 015](015-betriebsarten-und-lokales-modell.md)).“
-- [ ] `docs/code-map.md`: neue Zeile „Betriebsart und lokales Modell (LM Studio)“ — Oberfläche „folgt in Phase 3“, Core: `src-tauri/src/lmstudio/` (`model.rs`, `mod.rs` `list`/`find`/`base_url`), `src-tauri/src/agents/claude/local.rs` (`LocalBackend`, `resolve`, `apply`), `process_backend` und `agent_backend` in `src-tauri/src/sessions/registry.rs`, `settings_local_models` in `src-tauri/src/commands/settings.rs` ([ADR 015](decisions/015-betriebsarten-und-lokales-modell.md)). In der Querschnitts-Aufzählung unter „Features:“ `lmstudio` ergänzen. Stand-Satz oben aktualisieren.
+- [ ] `docs/decisions/016-betriebsarten-und-lokales-modell.md` aus „Festgelegte Entscheidungen“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Konsequenzen enthalten: die Messwerte aus Phase 1 in je einem Satz (verbleibende Verbindungen aus M1b mit Adresse/Name, `contextWindow` aus M2, Tempo aus M3, TL;DR-Variante, Ergebnis M5); „Keine Garantie, dass nichts an Anthropic geht“; „Sidebar und Session-Karten zeigen im lokalen Betrieb das gespeicherte Claude-Modell“.
+- [ ] ADR 003, „Konsequenzen“: Zeile „Betriebsart Claude Code + LM Studio: dieselbe Kommandozeile mit anderer Umgebung — [ADR 016](016-betriebsarten-und-lokales-modell.md).“ ADR 008, „Konsequenzen“: „In einer lokalen Betriebsart keine Kontingent-Abfrage ([ADR 016](016-betriebsarten-und-lokales-modell.md)).“
+- [ ] `docs/code-map.md`: neue Zeile „Betriebsart und lokales Modell (LM Studio)“ — Oberfläche „folgt in Phase 3“, Core: `src-tauri/src/lmstudio/` (`model.rs`, `mod.rs` `list`/`find`/`base_url`), `src-tauri/src/agents/claude/local.rs` (`LocalBackend`, `resolve`, `apply`), `process_backend` und `agent_backend` in `src-tauri/src/sessions/registry.rs`, `settings_local_models` in `src-tauri/src/commands/settings.rs` ([ADR 016](decisions/016-betriebsarten-und-lokales-modell.md)). In der Querschnitts-Aufzählung unter „Features:“ `lmstudio` ergänzen. Stand-Satz oben aktualisieren.
 - [ ] `AGENTS.md`, Tabelle „Befehle“: Zeile `VERWALTER_LMSTUDIO_URL` (Umgebungsvariable) — „Adresse des lokalen Servers von LM Studio für die Betriebsart „Claude Code + LM Studio“ (Standard `http://localhost:1234`)“.
 - [ ] Commit `feat(agents): Betriebsart Claude Code mit lokalem Modell über LM Studio`.
 

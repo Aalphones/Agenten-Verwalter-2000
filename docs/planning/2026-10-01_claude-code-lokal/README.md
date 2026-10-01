@@ -4,14 +4,14 @@ Ziel: In den Einstellungen wählt man die Betriebsart „Claude Code + LM Studio
 
 Der Verwalter kennt danach zwei von drei Betriebsarten: **Claude** (wie bisher), **Claude Code + LM Studio** (dieser Plan). Die dritte, **Autark** (eigener Agent im Verwalter, ohne Claude-Kommandozeile), baut der Plan [2026-10-01_autarker-agent](../2026-10-01_autarker-agent/README.md) auf diesem auf.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 003](../../decisions/003-claude-anbindung.md) (Claude-Kommandozeile als Agent), [ADR 008](../../decisions/008-kontext-und-kontingent.md) (Kontingent über Hilfsprozess), [ADR 012](../../decisions/012-einstellungen-farbschema-und-listen.md) (Einstellungen), [docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md). ADR 015 entsteht in Phase 2 aus „Festgelegte Entscheidungen“.
+Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 003](../../decisions/003-claude-anbindung.md) (Claude-Kommandozeile als Agent), [ADR 008](../../decisions/008-kontext-und-kontingent.md) (Kontingent über Hilfsprozess), [ADR 012](../../decisions/012-einstellungen-farbschema-und-listen.md) (Einstellungen), [docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md). ADR 016 entsteht in Phase 2 aus „Festgelegte Entscheidungen“.
 
 ## Phasen
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Messung an der nackten Kommandozeile (Netzverkehr, Kontextfenster, Tempo, TL;DR) | [phase-1-messung.md](phase-1-messung.md) | standard | pending |
-| 2 | Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 015 | [phase-2-core.md](phase-2-core.md) | standard | pending |
+| 2 | Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 016 | [phase-2-core.md](phase-2-core.md) | standard | pending |
 | 3 | Oberfläche: Einstellungen, Eingabeleiste, Neues Vorhaben, Kontingent; Doku, Release | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
 **Reihenfolge:** Phasen strikt 1 → 2 → 3. Keine Abhängigkeit zu den geparkten Plänen „MCP-Dialog“, „Changes-Review“ und „Session-Changes“; der Plan „Autarker Agent“ setzt diesen voraus. Phase 1 stoppt den Plan nicht, sie legt aber fest, welche TL;DR-Variante Phase 2 baut (siehe dort). Umsetzung direkt auf `main`, ein Commit pro Phase: Phase 1 `docs(agents)`, Phase 2 `feat(agents)`, Phase 3 `feat(settings)`. Neuer Scope `lmstudio` wird nicht gebraucht — die LM-Studio-Abfrage gehört zu `agents`/`settings`. Vor jedem Code-Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
@@ -32,7 +32,7 @@ Laut [Claude-Code-Doku, Umgebungsvariablen](https://code.claude.com/docs/en/env-
 
 ## Festgelegte Entscheidungen
 
-Phase 2 schreibt daraus [ADR 015](../../decisions/015-betriebsarten-und-lokales-modell.md) „Betriebsarten und lokales Modell über LM Studio“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 001–012 auf der Platte, 013 im Plan „MCP-Dialog“, 014 im Plan „Changes-Review“; dieser Plan schreibt 015, der Plan „Autarker Agent“ 016.
+Phase 2 schreibt daraus [ADR 016](../../decisions/016-betriebsarten-und-lokales-modell.md) „Betriebsarten und lokales Modell über LM Studio“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 001–012 auf der Platte, 013 im Plan „MCP-Dialog“, 014 im Plan „Session-Changes“, 015 im Plan „Changes-Review“; dieser Plan schreibt 016, der Plan „Autarker Agent“ 017.
 
 - **Begriff „Betriebsart“**, nicht „Modus“ — „Modus“ ist im Glossar für Manuell/Automatisch bearbeiten/Planen/Auto vergeben. Code: `OperatingMode`, Werte `Claude` und `ClaudeCodeLocal` (TS `'claude'`, `'claudeCodeLocal'`). Der Plan „Autarker Agent“ ergänzt `Standalone`.
 - **Global in den Einstellungen, nicht je Session.** Das Kontingent gilt fürs ganze Claude-Konto; ist es aufgebraucht, hängen alle Claude-Sessions zugleich. Verworfen: Auswahl je Session (mischt Betriebsarten, „nichts geht an Anthropic“ hinge an der Aufmerksamkeit des Benutzers).

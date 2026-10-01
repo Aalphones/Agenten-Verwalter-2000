@@ -45,7 +45,7 @@ Ziel: Das Modell kann über das Werkzeug `Agent` einen Subagenten mit eigenem Ko
 
 ### Doku
 
-- [ ] ADR 016, „Konsequenzen“: Subagenten sind nicht fortsetzbar (kein Transkript), nicht verschachtelbar, und die automatische Antwort auf einen fertigen Hintergrund-Subagenten erscheint im Verwalter ohne vorherige Benutzer-Nachricht. FINDINGS-Eintrag, falls der Status der Session dabei nicht auf „Läuft“ springt (Registry setzt „Läuft“ nur beim Senden).
+- [ ] ADR 017, „Konsequenzen“: Subagenten sind nicht fortsetzbar (kein Transkript), nicht verschachtelbar, und die automatische Antwort auf einen fertigen Hintergrund-Subagenten erscheint im Verwalter ohne vorherige Benutzer-Nachricht. FINDINGS-Eintrag, falls der Status der Session dabei nicht auf „Läuft“ springt (Registry setzt „Läuft“ nur beim Senden).
 - [ ] `docs/code-map.md`, Zeile „Autarker Agent“: `agents`, `turn`, `tools/agent`.
 - [ ] Commit `feat(standalone): Subagenten im Vorder- und Hintergrund`.
 

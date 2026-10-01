@@ -34,10 +34,10 @@ Alle Aufrufe im PowerShell-Werkzeug aus dem Repo-Ordner, `$o = "$env:TEMP\verwal
 ## Abbruch- und Verzweigungsregeln
 
 - M1a ohne externe Verbindung → stoppen (siehe oben). Alles andere stoppt den Plan nicht.
-- M1b mit verbleibenden externen Verbindungen → kein Stopp. Die Adressen kommen in ADR 015 unter „Konsequenzen“ (Phase 2) und in die Antwort an den Benutzer als 🟡.
-- M2 meldet weiter 200 000 → kein Stopp; FINDINGS-Eintrag `- [ ] → Phase 2: CLAUDE_CODE_MAX_CONTEXT_TOKENS wirkt nicht; Risiko „Kontext läuft über“ in ADR 015 aufnehmen`.
+- M1b mit verbleibenden externen Verbindungen → kein Stopp. Die Adressen kommen in ADR 016 unter „Konsequenzen“ (Phase 2) und in die Antwort an den Benutzer als 🟡.
+- M2 meldet weiter 200 000 → kein Stopp; FINDINGS-Eintrag `- [ ] → Phase 2: CLAUDE_CODE_MAX_CONTEXT_TOKENS wirkt nicht; Risiko „Kontext läuft über“ in ADR 016 aufnehmen`.
 - M4 ohne `structured_output` → FINDINGS-Eintrag `- [ ] → Phase 2: TL;DR-Variante B (im lokalen Betrieb nicht verfügbar)`. Mit `structured_output` → Variante A.
-- M5 scheitert → FINDINGS-Eintrag `- [ ] → Phase 3: Smoke 1 erwartet Fehler; Satz in ADR 015: Wechsel mitten in einer Claude-Session setzt den Verlauf nicht fort`.
+- M5 scheitert → FINDINGS-Eintrag `- [ ] → Phase 3: Smoke 1 erwartet Fehler; Satz in ADR 016: Wechsel mitten in einer Claude-Session setzt den Verlauf nicht fort`.
 
 ## AK der Phase
 

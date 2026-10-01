@@ -1,4 +1,4 @@
-# Phase 1 — Syntaxfarben im Diff, ADR 014
+# Phase 1 — Syntaxfarben im Diff, ADR 015
 
 ## Kontext (vor dem Start lesen)
 
@@ -19,7 +19,7 @@
 - Text innerhalb eines nicht gefärbten verschachtelten Bereichs (z. B. `${a}` in einem Template-String) übernimmt die Farbe des nächsten gefärbten äußeren Bereichs — genau wie CSS-Vererbung bei verschachtelten Spans.
 - Dateien mit unbekannter Endung (`.ps1`, `.lock`, ohne Endung) zeigen den Diff wie bisher ungefärbt, ohne Fehler in der Konsole.
 - Codeblöcke im Chat sehen unverändert aus (Farbzuordnung nur verschoben).
-- `docs/decisions/014-changes-review.md` existiert; ADR 006 verweist bei „Keine Syntaxfarben im Diff“ auf ADR 014.
+- `docs/decisions/015-changes-review.md` existiert; ADR 006 verweist bei „Keine Syntaxfarben im Diff“ auf ADR 015.
 
 ## Checkliste
 
@@ -49,8 +49,8 @@
 
 ### Doku
 
-- [ ] `docs/decisions/014-changes-review.md` aus README „Festgelegte Entscheidungen“ (alle Punkte, nicht nur Syntaxfarben) und „Messungen“; Format wie ADR 012 (Titel, Status angenommen · Datum 2026-10-01, Kontext / Optionen / Entscheidung / Konsequenzen).
-- [ ] ADR 006, Abschnitt „Konsequenzen“: die Zeile „Keine Syntaxfarben im Diff.“ ergänzen um „ — abgelöst durch [ADR 014](014-changes-review.md).“
+- [ ] `docs/decisions/015-changes-review.md` aus README „Festgelegte Entscheidungen“ (alle Punkte, nicht nur Syntaxfarben) und „Messungen“; Format wie ADR 012 (Titel, Status angenommen · Datum 2026-10-01, Kontext / Optionen / Entscheidung / Konsequenzen).
+- [ ] ADR 006, Abschnitt „Konsequenzen“: die Zeile „Keine Syntaxfarben im Diff.“ ergänzen um „ — abgelöst durch [ADR 015](015-changes-review.md).“
 - [ ] `docs/code-map.md`: Zeile „Changes“ um `highlightDiff` ergänzen; Zeile „Design-Tokens“ um `src/styles/syntax.css` (Zuordnung highlight.js-Klassen → `--color-code-*`); Zeile „Geteilte UI-Bausteine“ bzw. neue Zeile „Syntaxfarben“ mit `src/lib/syntax.ts` (`languageOf`, `highlightLines`, `highlightLine`).
 - [ ] Commit `feat(changes): color diff lines by language`.
 

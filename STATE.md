@@ -14,5 +14,5 @@
 
 ## Offen vor dem Start
 
-- 🔴 **ADR-Nummern kollidieren:** Session-Changes und Claude Code lokal beanspruchen beide ADR 015. Nach obiger Reihenfolge müssten es sein: MCP 013, Session-Changes 014, Changes-Review 015, lokal 016, Autark 017. README, FINDINGS und Phasen-Dateien der betroffenen Pläne sind noch nicht angepasst — Freigabe von Sascha steht aus.
+- **ADR-Nummern** sind auf die Reihenfolge abgestimmt: MCP-Dialog 013, Session-Changes 014, Changes-Review 015, Claude Code lokal 016, Autark 017. Ändert sich die Reihenfolge, müssen die Nummern in den Plänen mitziehen.
 - 🟡 **Autark Phase 7:** Ob LM Studio mehrere Anfragen gleichzeitig rechnet, ist ungeprüft; es entscheidet, ob parallele Subagenten etwas bringen. Vor Plan 5 messen.

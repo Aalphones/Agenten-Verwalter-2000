@@ -54,7 +54,7 @@ Ziel: Der Agent verbindet sich mit den MCP-Servern des Benutzers, die ohne Anthr
 
 ### Doku
 
-- [ ] ADR 016, „Konsequenzen“: claude.ai-Connectoren fehlen; OAuth und SSE nicht unterstützt; viele MCP-Werkzeuge vergrößern den Prompt jeder Anfrage (Tempo); ausgeschaltete Server speichert der eigene Agent in eigener Datei, nicht in der Konfiguration von Claude Code.
+- [ ] ADR 017, „Konsequenzen“: claude.ai-Connectoren fehlen; OAuth und SSE nicht unterstützt; viele MCP-Werkzeuge vergrößern den Prompt jeder Anfrage (Tempo); ausgeschaltete Server speichert der eigene Agent in eigener Datei, nicht in der Konfiguration von Claude Code.
 - [ ] `docs/code-map.md`, Zeile „Autarker Agent“: `mcp/` (`config`, `client`, `mod`).
 - [ ] Commit `feat(standalone): MCP-Server über stdio und HTTP`.
 

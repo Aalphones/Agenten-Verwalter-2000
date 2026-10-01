@@ -43,10 +43,10 @@ Ziel: Das Modell kann Webseiten abrufen und — mit Brave-Schlüssel — im Web 
 ### Doku und Abschluss
 
 - [ ] `AGENTS.md`, Tabelle „Befehle“: Zeile `VERWALTER_BRAVE_API_KEY` — „Schlüssel der Brave Search API für die Websuche des Agenten in der Betriebsart „Autark“; ohne ihn sucht der Agent nicht im Web. Muss beim Start des Verwalters gesetzt sein.“
-- [ ] ADR 016 vollständig: alle Konsequenzen der Phasen 1–9 stehen drin, dazu „Suchanfragen gehen an Brave, Seitenabrufe an die jeweilige Seite — nichts an Anthropic.“
+- [ ] ADR 017 vollständig: alle Konsequenzen der Phasen 1–9 stehen drin, dazu „Suchanfragen gehen an Brave, Seitenabrufe an die jeweilige Seite — nichts an Anthropic.“
 - [ ] `docs/knowledge/claude-stream-json.md`: Abschnitt „Nachbau im eigenen Agenten“ mit Verweis auf den Kontrakt in diesem Plan und auf `src-tauri/src/standalone/` — wer `translate.rs` ändert, prüft dort mit.
-- [ ] `docs/PROJECT.md`: unter Scope „Agent“ die Betriebsart „Autark“ ergänzen; in „Danach …“ „LM-Studio-Provider“ als erledigt durch ADR 015/016 kennzeichnen.
-- [ ] `docs/glossary.md`: Eintrag **Autarker Agent** — „Der eigene Agent des Verwalters für die Betriebsart Autark: gleiche Werkzeugnamen wie Claude Code, Modell aus LM Studio, Subagenten, Hintergrundprozesse, MCP-Server und Web ohne Anthropic ([ADR 016](decisions/016-autarker-agent.md)).“
+- [ ] `docs/PROJECT.md`: unter Scope „Agent“ die Betriebsart „Autark“ ergänzen; in „Danach …“ „LM-Studio-Provider“ als erledigt durch ADR 017/017 kennzeichnen.
+- [ ] `docs/glossary.md`: Eintrag **Autarker Agent** — „Der eigene Agent des Verwalters für die Betriebsart Autark: gleiche Werkzeugnamen wie Claude Code, Modell aus LM Studio, Subagenten, Hintergrundprozesse, MCP-Server und Web ohne Anthropic ([ADR 017](decisions/017-autarker-agent.md)).“
 - [ ] `docs/code-map.md`, Zeile „Autarker Agent“: `tools/web_fetch`, `tools/web_search`; Stand-Satz oben aktualisieren.
 - [ ] Commit `feat(standalone): WebFetch und Websuche über Brave`.
 - [ ] Smoke-Checkliste der README an den Benutzer übergeben (Abnahme macht er), danach Archivierung und Release nach [releases.md](../../conventions/releases.md) über `mode-implementing`.

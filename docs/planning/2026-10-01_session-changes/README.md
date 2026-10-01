@@ -2,13 +2,13 @@
 
 Ziel: Die Changes-Ansicht einer Session zeigt nur, was diese Session geändert hat: ihre eigenen Commits und die uncommitteten Dateien, die ihr Agent oder seine Subagenten geschrieben haben. Die Changes-Ansicht der Vorhaben-Übersicht zeigt die Summe aller Sessions des Vorhabens. Commits und Änderungen, die außerhalb entstanden sind (anderes Werkzeug, Hand, andere Vorhaben), erscheinen nicht. Bisher zeigt jede Session alles seit der Basis des Vorhabens ([ADR 006](../../decisions/006-changes-und-diff.md), [ADR 011](../../decisions/011-vorhaben-und-sessions.md)).
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 006](../../decisions/006-changes-und-diff.md) (drei Blickwinkel, nur Plumbing), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (Haupt-Checkout, Ticket-Worktrees), [ADR 011](../../decisions/011-vorhaben-und-sessions.md) (Vorhaben und Sessions). ADR 015 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
+Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 006](../../decisions/006-changes-und-diff.md) (drei Blickwinkel, nur Plumbing), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (Haupt-Checkout, Ticket-Worktrees), [ADR 011](../../decisions/011-vorhaben-und-sessions.md) (Vorhaben und Sessions). ADR 014 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
 
 ## Phasen
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Erfassen: Migration 7, eigene Commits und geschriebene Dateien je Session mitschreiben, ADR 015 | [phase-1-erfassung.md](phase-1-erfassung.md) | heikel | pending |
+| 1 | Erfassen: Migration 7, eigene Commits und geschriebene Dateien je Session mitschreiben, ADR 014 | [phase-1-erfassung.md](phase-1-erfassung.md) | heikel | pending |
 | 2 | Core-Anzeige: Changes und Diff nach Reichweite Session/Vorhaben, fremde Anteile markieren | [phase-2-zuordnung.md](phase-2-zuordnung.md) | heikel | pending |
 | 3 | Oberfläche und Doku: Reichweite durchreichen, Hinweise, Glossar, Code-Map | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
@@ -22,7 +22,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus [ADR 015](../../decisions/015-changes-je-session.md) „Changes je Session: eigene Commits und geschriebene Dateien“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 001–008 und 010–012 auf der Platte, 009 im Plan „Sprachdiktat“, 013 im Plan „MCP-Dialog“, 014 im Plan „Changes-Review“; dieser Plan schreibt **015**. ADR 015 löst in ADR 011 den Satz „Die Changes gehören dem Vorhaben: Ticket-Worktrees aller seiner Sessions erscheinen in den Changes jeder seiner Sessions“ ab und in ADR 006 die Definition der drei Blickwinkel gegen `base_commit`.
+Phase 1 schreibt daraus [ADR 014](../../decisions/014-changes-je-session.md) „Changes je Session: eigene Commits und geschriebene Dateien“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 001–008 und 010–012 auf der Platte, 009 im Plan „Sprachdiktat“, 013 im Plan „MCP-Dialog“; dieser Plan schreibt **014**, danach vergeben „Changes-Review“ 015, „Claude Code mit lokalem Modell“ 016 und „Autarker Agent“ 017. ADR 014 löst in ADR 011 den Satz „Die Changes gehören dem Vorhaben: Ticket-Worktrees aller seiner Sessions erscheinen in den Changes jeder seiner Sessions“ ab und in ADR 006 die Definition der drei Blickwinkel gegen `base_commit`.
 
 - **Eigene Commits erkennt die App am Zeitfenster.** Jeder Bash- oder PowerShell-Aufruf des Agenten oder eines Subagenten, dessen Befehl `git` enthält und der nicht im Hintergrund läuft, öffnet ein Fenster vom Eingang des Werkzeugaufrufs bis zum Eingang seines Ergebnisses. Wenn das Ergebnis da ist, liest die App in jedem Arbeitsordner der Session (Haupt-Checkout bzw. App-Worktree und benutzte Ticket-Worktrees) die Commits seit der Basis. Jeder Commit, dessen Committer-Zeit im Fenster liegt (Anfang 2 s früher, Ende 1 s später), gehört der Session. Verworfen wurde (a): die Commit-ID aus der Ausgabe von `git commit` lesen. Das erfasst kein `git merge`, keinen Rebase und keine Subagenten, deren Ergebnisse heute verworfen werden. Verworfen wurde auch (b): HEAD vor und nach dem Befehl vergleichen. Der Eingang des Werkzeugaufrufs ist nicht garantiert vor der Ausführung, und ein Rebase brächte Upstream-Commits mit. Das Zeitfenster erfasst Commit, Amend, Cherry-Pick, Rebase und Squash, weil Git dabei die Committer-Zeit auf jetzt setzt. Fremde Commits aus einem Rebase behalten ihre alte Zeit und fallen heraus.
 - **Merge-Commits zählen nie** (`--no-merges`), weder als eigene noch als fremde. Ihr Diff gegen den ersten Elternteil wäre bei „main in den Ticket-Branch mergen“ der ganze Upstream. Die Commits eines gemergten Branches erscheinen trotzdem: sie liegen selbst im Bereich Basis..HEAD und sind einzeln eigene oder fremde Commits. Was nur in der Konfliktlösung eines Merge-Commits steckt, fehlt.
@@ -39,7 +39,7 @@ Phase 1 schreibt daraus [ADR 015](../../decisions/015-changes-je-session.md) „
 ### Typen über die Tauri-Grenze (`src-tauri/src/changes/model.rs`)
 
 ```rust
-/// Wessen Änderungen die Changes zeigen (ADR 015).
+/// Wessen Änderungen die Changes zeigen (ADR 014).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ChangesReach {

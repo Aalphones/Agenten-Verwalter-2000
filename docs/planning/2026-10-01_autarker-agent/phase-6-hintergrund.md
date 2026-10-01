@@ -48,7 +48,7 @@ Ziel: Der Agent startet Befehle auf Wunsch im Hintergrund (Dev-Server, lange Bui
 
 ### Doku
 
-- [ ] ADR 016, „Konsequenzen“: Hintergrundprozesse laufen bei Esc weiter und enden mit dem Agent-Prozess; Hinweise über beendete Aufgaben kommen erst mit der nächsten Modellanfrage beim Modell an (kein eigener Turn).
+- [ ] ADR 017, „Konsequenzen“: Hintergrundprozesse laufen bei Esc weiter und enden mit dem Agent-Prozess; Hinweise über beendete Aufgaben kommen erst mit der nächsten Modellanfrage beim Modell an (kein eigener Turn).
 - [ ] `docs/code-map.md`, Zeile „Autarker Agent“: `tasks`, `tools/task_stop`, Scratchpad.
 - [ ] Commit `feat(standalone): Hintergrundprozesse und Scratchpad`.
 
