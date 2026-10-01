@@ -4,9 +4,14 @@
   &__column {
     box-sizing: border-box;
     width: 100%;
-    max-width: 780px;
-    margin: 0 auto;
     padding: 14px var(--space-5xl) 0;
+  }
+
+  /* Liegt über dem Verlauf: deckend, sonst scheint der Text dahinter durch. */
+  &__card,
+  .tldr-empty-bar {
+    background: var(--color-bg-surface);
+    pointer-events: auto;
   }
 
   &__card {

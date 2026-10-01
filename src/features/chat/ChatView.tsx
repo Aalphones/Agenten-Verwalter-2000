@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ChatTimeline } from '@/features/chat/ChatTimeline';
 import { Composer } from '@/features/chat/Composer';
@@ -42,6 +42,28 @@ export function ChatView({
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const canInterrupt: boolean = INTERRUPTIBLE_STATUSES.includes(session.status);
+  const [topInset, setTopInset] = useState<number>(0);
+  const [bottomInset, setBottomInset] = useState<number>(0);
+  const topRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Die Überlagerung ändert ihre Höhe (TL;DR auf-/zugeklappt, mehrzeilige Eingabe); der Verlauf hält Abstand dazu.
+  useEffect(() => {
+    const top: HTMLDivElement | null = topRef.current;
+    const bottom: HTMLDivElement | null = bottomRef.current;
+    if (top === null || bottom === null) {
+      return undefined;
+    }
+    const observer = new ResizeObserver((): void => {
+      setTopInset(top.offsetHeight);
+      setBottomInset(bottom.offsetHeight);
+    });
+    observer.observe(top);
+    observer.observe(bottom);
+    return (): void => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Ein Menü, das Esc zum Schließen verbraucht hat, setzt `defaultPrevented` — dann nicht pausieren.
   const handleEscape = useEffectEvent((event: KeyboardEvent): void => {
@@ -71,19 +93,30 @@ export function ChatView({
     };
   }, [canInterrupt]);
 
+  function renderFlow(child: ReactElement): ReactElement {
+    return (
+      <div
+        className="chat-view__flow"
+        style={{ paddingTop: `${String(topInset)}px`, paddingBottom: `${String(bottomInset)}px` }}
+      >
+        {child}
+      </div>
+    );
+  }
+
   function renderTimeline(): ReactElement {
     if (session.status === 'new') {
-      return (
+      return renderFlow(
         <NewSessionIntro
           sessionId={session.id}
           projectId={session.projectId}
           projectName={projectName}
           number={session.number}
-        />
+        />,
       );
     }
     if (loadError !== null) {
-      return <p className="chat-view__error">{loadError}</p>;
+      return renderFlow(<p className="chat-view__error">{loadError}</p>);
     }
     return (
       <ChatTimeline
@@ -94,15 +127,19 @@ export function ChatView({
         loadingOlder={loadingOlder}
         olderError={olderError}
         onLoadOlder={loadOlder}
+        topInset={topInset}
+        bottomInset={bottomInset}
       />
     );
   }
 
   return (
     <div className="chat-view">
-      <SessionTldrCard session={session} entryCount={entryCount(entries)} />
-      {renderTimeline()}
-      <div className="chat-view__composer">
+      <div className="chat-view__body">{renderTimeline()}</div>
+      <div ref={topRef} className="chat-view__top">
+        <SessionTldrCard session={session} entryCount={entryCount(entries)} />
+      </div>
+      <div ref={bottomRef} className="chat-view__bottom">
         <Composer session={session} />
       </div>
     </div>

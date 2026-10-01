@@ -1,8 +1,44 @@
 .chat-view {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   min-height: 0;
+  overflow: hidden;
+
+  /* Der Verlauf füllt die ganze Höhe, damit sein Scrollbalken durchgeht; TL;DR und Eingabe liegen darüber. */
+  &__body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__flow {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+  }
+
+  /* Die Ränder der Überlagerung lassen Klicks und Mausrad zum Verlauf durch (auch auf den Scrollbalken). */
+  &__top,
+  &__bottom {
+    position: absolute;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  &__top {
+    top: 0;
+  }
+
+  &__bottom {
+    bottom: 0;
+  }
 
   &__error {
     display: grid;
@@ -14,9 +50,5 @@
     color: var(--color-status-error);
     font-size: 12px;
     text-align: center;
-  }
-
-  &__composer {
-    flex-shrink: 0;
   }
 }

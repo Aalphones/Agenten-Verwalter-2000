@@ -49,6 +49,9 @@ interface ChatTimelineProps {
   /** Satz zum gescheiterten Nachladen; steht über dem ältesten geladenen Eintrag. */
   olderError: string | null;
   onLoadOlder: () => void;
+  /** Höhe der Überlagerung oben (TL;DR) und unten (Eingabe); der Verlauf lässt so viel Platz frei. */
+  topInset: number;
+  bottomInset: number;
 }
 
 interface LayoutMark {
@@ -64,6 +67,8 @@ export function ChatTimeline({
   loadingOlder,
   olderError,
   onLoadOlder,
+  topInset,
+  bottomInset,
 }: ChatTimelineProps): ReactElement {
   const [containerHeight, setContainerHeight] = useState<number>(0);
   // Auf-/Zugeklappt und halbe Antworten leben hier, nicht im Block: ein Block verlässt beim Scrollen das DOM.
@@ -93,8 +98,8 @@ export function ChatTimeline({
     estimateSize: (): number => ESTIMATED_BLOCK_HEIGHT,
     getItemKey: (index: number): string => blocks[index]?.key ?? WORKING_KEY,
     overscan: OVERSCAN,
-    paddingStart: SURFACE_PADDING_TOP,
-    paddingEnd: SURFACE_PADDING_BOTTOM,
+    paddingStart: SURFACE_PADDING_TOP + topInset,
+    paddingEnd: SURFACE_PADDING_BOTTOM + bottomInset,
   });
   const totalSize: number = virtualizer.getTotalSize();
   // Wenig Inhalt klebt unten: alle Blöcke rücken um den freien Platz nach unten.
@@ -325,7 +330,11 @@ export function ChatTimeline({
       aria-label="Verlauf"
       onScroll={handleScroll}
     >
-      {olderError !== null && <p className="chat-timeline__older-error">{olderError}</p>}
+      {olderError !== null && (
+        <p className="chat-timeline__older-error" style={{ marginTop: `${String(topInset)}px` }}>
+          {olderError}
+        </p>
+      )}
       <div
         className="chat-timeline__surface"
         style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}

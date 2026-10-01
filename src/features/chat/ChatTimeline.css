@@ -12,8 +12,7 @@
 
   &__older-error {
     box-sizing: border-box;
-    max-width: 780px;
-    margin: 0 auto;
+    margin: 0;
     padding: var(--space-lg) var(--space-5xl) 0;
     color: var(--color-status-error);
     font-size: 12px;
@@ -34,8 +33,6 @@
 
   &__block {
     box-sizing: border-box;
-    max-width: 780px;
-    margin: 0 auto;
     padding: 0 var(--space-5xl) 14px;
   }
 }
