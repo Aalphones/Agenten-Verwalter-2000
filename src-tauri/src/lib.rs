@@ -100,6 +100,9 @@ pub fn run() {
             commands::voice::voice_model_status,
             commands::voice::voice_model_download,
             commands::voice::voice_model_cancel_download,
+            commands::voice::voice_start,
+            commands::voice::voice_stop,
+            commands::voice::voice_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten");

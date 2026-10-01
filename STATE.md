@@ -1,5 +1,5 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-09-29_sprachdiktat/`
-**Phase:** 2/3 — Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme (pending, Rating heikel → `opusplan`)
-**Nächster Schritt:** Phase 1 ist committet. Phase 2 starten: `phase-2-aufnahme-erkennung.md` lesen. Bau-Voraussetzungen siehe `docs/conventions/linting.md` (CMake im PATH, LLVM installiert).
+**Phase:** 3/3 — Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss (pending, Rating standard → `sonnet`)
+**Nächster Schritt:** Phase 2 ist committet. Phase 3 starten: `phase-3-oberflaeche.md` lesen, dazu die drei offenen `→ Phase 3`-Einträge in `FINDINGS.md` (Esc beim ersten Laden, englische Mikrofon-Fehler, Speicher messen). Danach Smoke-Checkliste aus der README an Sascha.

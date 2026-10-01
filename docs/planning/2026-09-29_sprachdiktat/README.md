@@ -9,7 +9,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Core: Bau-Grundlage für whisper.cpp, Sprachmodell laden und prüfen | [phase-1-modell-core.md](phase-1-modell-core.md) | standard | complete |
-| 2 | Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme | [phase-2-aufnahme-erkennung.md](phase-2-aufnahme-erkennung.md) | heikel | pending |
+| 2 | Core: Aufnahme, Pegel, satzweise Erkennung während der Aufnahme | [phase-2-aufnahme-erkennung.md](phase-2-aufnahme-erkennung.md) | heikel | complete |
 | 3 | Oberfläche: Mikrofon-Knopf, Einrichten, Fehler, Doku-Abschluss | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
 **Dieser Plan kommt zuletzt: erst „Vorhaben und Sessions“, dann „Meilenstein 6“, dann dieser.** Damit steht die Oberfläche fest, in die der Mikrofon-Knopf eingebaut wird (Sidebar-Baum, Status „Neu“, Farbschema-Mechanik, `gen-bindings.rs` unter `src-tauri/examples/`). Reihenfolge fest: 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `voice` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`), ab Phase 1 zusätzlich CMake (siehe Phase 1). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).

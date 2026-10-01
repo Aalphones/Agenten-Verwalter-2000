@@ -1,18 +1,29 @@
-//! Diktieren: Sprachmodell laden und prüfen (Aufnahme und Erkennung folgen in Phase 2).
+//! Diktieren: Sprachmodell laden und prüfen, Sprache aufnehmen und satzweise lokal erkennen.
+pub mod dictation;
 pub mod model;
 pub mod model_file;
+pub mod recorder;
+pub mod resample;
+pub mod segmenter;
+pub mod silence;
+pub mod transcribe;
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::error::CommandError;
+use dictation::base_prompt;
 use model::{VoiceModelEvent, VoiceModelState};
 use model_file::{MODEL_BYTES, download, is_model_ready, model_path};
+use recorder::Recorder;
+use silence::SILENT_PEAK;
+use transcribe::Transcriber;
 
 pub const VOICE_MODEL_EVENT: &str = "voice://model";
 pub const VOICE_LEVEL_EVENT: &str = "voice://level";
@@ -20,13 +31,25 @@ pub const VOICE_PARTIAL_EVENT: &str = "voice://partial";
 
 const PROGRESS_EVENT_INTERVAL: Duration = Duration::from_millis(250);
 
-/// Zustand des Diktierens im Core: heute der laufende Modell-Download, ab Phase 2 auch die Aufnahme.
+/// Zustand des Diktierens im Core: Modell-Download, laufendes Diktat und das geladene Modell.
+/// App-weit höchstens ein Diktat.
 pub struct VoiceService {
     inner: Mutex<VoiceInner>,
+    /// Schaltet nur das Laden des Modells hintereinander, damit es nie zweimal gleichzeitig geladen
+    /// wird; `inner` bleibt während des sekundenlangen Ladens frei.
+    load_lock: Mutex<()>,
 }
 
 struct VoiceInner {
     download: Option<DownloadHandle>,
+    recorder: Option<Recorder>,
+    /// Bleibt nach `cancel` liegen, bis das nächste `start` ihn fallen lässt.
+    worker: Option<JoinHandle<Result<String, CommandError>>>,
+    /// Ein `stop` wartet gerade auf die Erkennung.
+    is_transcribing: bool,
+    /// Je Diktat neu, damit ein auslaufender abgebrochener Thread das nächste Diktat nicht sieht.
+    cancel: Arc<AtomicBool>,
+    transcriber: Option<Arc<Transcriber>>,
 }
 
 struct DownloadHandle {
@@ -44,8 +67,130 @@ impl Default for VoiceService {
 impl VoiceService {
     pub fn new() -> VoiceService {
         VoiceService {
-            inner: Mutex::new(VoiceInner { download: None }),
+            inner: Mutex::new(VoiceInner {
+                download: None,
+                recorder: None,
+                worker: None,
+                is_transcribing: false,
+                cancel: Arc::new(AtomicBool::new(false)),
+                transcriber: None,
+            }),
+            load_lock: Mutex::new(()),
         }
+    }
+
+    /// Startet Aufnahme und Erkennungs-Thread und kehrt zurück, sobald das Mikrofon läuft.
+    pub fn start(&self, app: AppHandle, repository_names: Vec<String>) -> Result<(), CommandError> {
+        let path = model_path(&app)?;
+        let mut inner = self.lock();
+        if inner.recorder.is_some() || inner.is_transcribing {
+            return Err(CommandError::VoiceBusy);
+        }
+        if !is_model_ready(&path) {
+            return Err(CommandError::VoiceModelMissing);
+        }
+        // Ein liegengebliebener Thread stammt von einem abgebrochenen Diktat: er läuft selbst aus und
+        // sendet nichts mehr, weil sein `cancel` gesetzt ist. Nicht joinen — sonst wartet `voice_start`,
+        // und der Thread selbst wartet womöglich in `transcriber` auf `inner`.
+        inner.worker = None;
+        let cancel = Arc::new(AtomicBool::new(false));
+        inner.cancel = Arc::clone(&cancel);
+        let (segment_sender, segment_receiver) = mpsc::channel();
+        let recorder = Recorder::start(app.clone(), segment_sender)?;
+        let (channels, rate) = (recorder.channels, recorder.rate);
+        let prompt = base_prompt(&repository_names);
+        let spawned = thread::Builder::new()
+            .name("voice-transcribe".to_owned())
+            .spawn(move || dictation::run(app, segment_receiver, channels, rate, prompt, cancel));
+        match spawned {
+            Ok(worker) => {
+                inner.recorder = Some(recorder);
+                inner.worker = Some(worker);
+                Ok(())
+            }
+            Err(error) => {
+                recorder.cancel();
+                Err(CommandError::Internal(format!(
+                    "Erkennungs-Thread startet nicht: {error}"
+                )))
+            }
+        }
+    }
+
+    /// Beendet die Aufnahme und wartet, bis auch der letzte Abschnitt erkannt ist. Blockiert — nur aus
+    /// einem blockierenden Thread aufrufen.
+    pub fn stop(&self) -> Result<String, CommandError> {
+        let started = Instant::now();
+        let (recorder, worker, cancel) = {
+            let mut inner = self.lock();
+            let Some(recorder) = inner.recorder.take() else {
+                return Err(CommandError::VoiceCancelled);
+            };
+            let Some(worker) = inner.worker.take() else {
+                recorder.cancel();
+                return Err(CommandError::Internal("kein Erkennungs-Thread".to_owned()));
+            };
+            inner.is_transcribing = true;
+            (recorder, worker, Arc::clone(&inner.cancel))
+        };
+        let _transcribing = TranscribingGuard { service: self };
+
+        let recorded = match recorder.stop() {
+            Ok(recorded) => recorded,
+            Err(error) => {
+                cancel.store(true, Ordering::Relaxed);
+                return Err(error);
+            }
+        };
+        let result = worker
+            .join()
+            .map_err(|_| CommandError::Internal("Erkennungs-Thread abgestürzt".to_owned()))?;
+        if cancel.load(Ordering::Relaxed) {
+            return Err(CommandError::VoiceCancelled);
+        }
+        let text = result?;
+        if cfg!(debug_assertions) {
+            eprintln!("voice: Stopp bis Text {} ms", started.elapsed().as_millis());
+        }
+        if text.is_empty() {
+            if recorded.peak < SILENT_PEAK {
+                return Err(CommandError::NoAudio);
+            }
+            return Err(CommandError::NoSpeech);
+        }
+        Ok(text)
+    }
+
+    /// Bricht Aufnahme und Erkennung ab; ohne laufendes Diktat passiert nichts. Ein laufendes `stop`
+    /// liefert danach `VoiceCancelled`.
+    pub fn cancel(&self) {
+        let mut inner = self.lock();
+        inner.cancel.store(true, Ordering::Relaxed);
+        if let Some(recorder) = inner.recorder.take() {
+            recorder.cancel();
+        }
+    }
+
+    /// Lädt das Modell beim ersten Aufruf und hält es bis zum App-Ende. Ein Ladefehler wird beim
+    /// nächsten Aufruf neu versucht.
+    pub fn transcriber(&self, app: &AppHandle) -> Result<Arc<Transcriber>, CommandError> {
+        let _loading = self
+            .load_lock
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if let Some(transcriber) = &self.lock().transcriber {
+            return Ok(Arc::clone(transcriber));
+        }
+        let started = Instant::now();
+        let transcriber = Arc::new(Transcriber::load(&model_path(app)?)?);
+        if cfg!(debug_assertions) {
+            eprintln!(
+                "voice: Sprachmodell geladen in {} ms",
+                started.elapsed().as_millis()
+            );
+        }
+        self.lock().transcriber = Some(Arc::clone(&transcriber));
+        Ok(transcriber)
     }
 
     pub fn model_state(&self, app: &AppHandle) -> Result<VoiceModelState, CommandError> {
@@ -107,6 +252,17 @@ impl VoiceService {
 
     fn lock(&self) -> MutexGuard<'_, VoiceInner> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// Setzt `is_transcribing` in jedem Ausgang von `stop` zurück.
+struct TranscribingGuard<'a> {
+    service: &'a VoiceService,
+}
+
+impl Drop for TranscribingGuard<'_> {
+    fn drop(&mut self) {
+        self.service.lock().is_transcribing = false;
     }
 }
 
