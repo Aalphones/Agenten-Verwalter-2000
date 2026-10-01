@@ -1,12 +1,11 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-01_ordner-ohne-git.md`
-**Phase:** 2/2 — Oberfläche, Doku (complete, committet; Archivieren + Release stehen aus)
-**Nächster Schritt:** User macht die Smoke-Checkliste im Plan; nach Abnahme Plan archivieren, Release (Minor, Tag) nach `docs/conventions/releases.md`. Offen aus dem Vorplan: Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) — Ergebnisse in die README des archivierten Plans nachtragen.
+**Aktiver Plan:** (kein aktiver Plan)
+**Phase:** —
+**Nächster Schritt:** Nächsten Plan aus der Reihenfolge unten wählen (MCP-Dialog). Offen: Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
-0. **Ordner ohne Git** (`ordner-ohne-git`) — klein, vom User vorgezogen; keine Migration, ADR 018.
 1. **MCP-Dialog** — klein und unabhängig; Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
 2. **Session-Changes** — muss vor Changes-Review kommen (ändert die Signaturen von `changes_load`/`changes_file_diff`).
 3. **Changes-Review** — baut auf dem Diff auf, der nur noch die Änderungen der Session zeigt.

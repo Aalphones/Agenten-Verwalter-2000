@@ -156,10 +156,24 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Ein Ordner ohne `.git` lässt sich als Arbeitsordner aufnehmen, in „Neues Vorhaben“ und über „+ Repository“ wählen und geht dem Agenten wie ein Haupt-Checkout per `--add-dir` mit. Die Art steht im Dateisystem (`<Pfad>\.git` vorhanden oder nicht), es gibt keine Migration. Laufwerke, der Benutzerordner samt allem darüber und der Datenordner der App sind gesperrt. Die Changes-Übersicht führt jeden Ordner ohne Git als eigene Zeile „Ordner ohne Git — die App sieht hier keine Änderungen.“, statt „keine Änderungen“ vorzutäuschen.
+
 ## Files touched
+
+- Core (Phase 1): `src-tauri/src/repositories/` (Art, Sperrliste), `src-tauri/src/worktrees/mod.rs` (`RepositoryCheckout::Folder`), `src-tauri/src/db/session_repositories.rs`, `src-tauri/src/changes/` (`plain_folders`), `src-tauri/src/commands/repositories.rs`, `src-tauri/src/error.rs`, `src-tauri/src/filesystem/workspace.rs`, `src-tauri/src/sessions/registry.rs`, erzeugte Bindings.
+- Oberfläche (Phase 2): `src/features/repositories/RepositoryPicker`, `src/features/projects/AddRepositoryMenu`, `src/features/changes/ChangesOverview`, `src/lib/errors.ts`.
+- Doku: ADR 018, ADR 010 (ein Satz), `AGENTS.md`, `PROJECT.md`, `glossary.md`, `code-map.md`.
 
 ## Commits
 
+- `7fc289c` feat(repositories): Ordner ohne Git im Core zulassen
+- `12a1a07` feat(repositories): Ordner ohne Git in Auswahl und Changes
+
 ## Deviations from plan
 
+- `commandErrorText` bekam einen eigenen Fall für `folderNotAllowed` (der Standardzweig hätte nur den nackten Pfad gezeigt); `describeAddError` ruft ihn auf, damit der Sperrtext nur einmal im Code steht (Phase 2).
+
 ## Follow-ups
+
+- Archiviert und getaggt, ohne dass ein Smoke-Ergebnis festgehalten ist (Entscheidung des Users). Die Smoke-Checkliste (oben) bleibt offen, vor allem Schreiben ohne Rückfrage im Ordner ohne Git, `CLAUDE.md`/Skills dort, die Sperrliste und ein OneDrive-Ordner, der durchgehen muss.
+- Die Oberfläche wurde nicht im laufenden Fenster gesehen; Wackelstelle: Zeilenumbruch der Ordner-Notiz in `ChangesOverview` bei schmalem Fenster.
