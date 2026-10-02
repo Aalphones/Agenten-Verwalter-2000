@@ -123,6 +123,12 @@ fn build_command(opts: &SpawnOptions) -> Command {
     for dir in &opts.add_dirs {
         command.arg("--add-dir").arg(dir);
     }
+    // Claude sucht die `.mcp.json` nur im Arbeitsverzeichnis, das hier der Workspace des Vorhabens
+    // ist — die der Repositories reichen wir ausdrücklich nach.
+    let mcp_configs = project_mcp_configs(&opts.add_dirs);
+    if !mcp_configs.is_empty() {
+        command.arg("--mcp-config").args(&mcp_configs);
+    }
     if opts.resume {
         command.arg("--resume");
     } else {
@@ -131,6 +137,14 @@ fn build_command(opts: &SpawnOptions) -> Command {
     command.arg(&opts.session_id);
     hide_console(&mut command);
     command
+}
+
+/// Die `.mcp.json` der Ordner, die eine hat. Ordner ohne Datei fallen still weg.
+fn project_mcp_configs(dirs: &[PathBuf]) -> Vec<PathBuf> {
+    dirs.iter()
+        .map(|dir: &PathBuf| dir.join(".mcp.json"))
+        .filter(|file: &PathBuf| file.is_file())
+        .collect()
 }
 
 fn start_readers(
