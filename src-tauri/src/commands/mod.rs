@@ -4,6 +4,7 @@ pub mod background;
 pub mod changes;
 pub mod chat;
 pub mod context;
+pub mod mcp;
 pub mod projects;
 pub mod repositories;
 pub mod sessions;

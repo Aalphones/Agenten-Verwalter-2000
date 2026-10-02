@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::context::model::ContextBreakdown;
+use crate::mcp::model::McpServer;
 use crate::skills::model::SkillRef;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -288,6 +289,17 @@ pub enum AgentEvent {
     },
     /// Antwort auf `get_context_usage`.
     ContextBreakdown(ContextBreakdown),
+    /// Antwort auf `mcp_status`.
+    McpServers(Vec<McpServer>),
+    /// Erfolgreiche Antwort auf eine Steueranfrage ohne auswertbaren Inhalt.
+    ControlSucceeded {
+        request_id: String,
+    },
+    /// Fehlerantwort auf eine Steueranfrage.
+    ControlFailed {
+        request_id: String,
+        error: String,
+    },
     /// Der eigene temporäre Ordner, den der Agent für diese Session benutzt.
     ScratchpadDir(String),
     /// Befehl des Hauptagenten im Vordergrund.

@@ -8,7 +8,7 @@ use super::protocol::{
     AssistantMessage, ContentBlock, ControlRequestLine, ControlResponseLine, Incoming, MessageLine,
     ModelUsage, ResultLine, SystemLine, Usage, UserContent, UserMessage,
 };
-use super::stats;
+use super::{mcp, stats};
 use crate::agents::event::{
     AgentEvent, Question, QuestionKind, QuestionOption, TaskEnd, TaskKind, TodoItem, TodoState,
     TurnEnd,
@@ -466,20 +466,28 @@ fn handle_control_request(request: ControlRequestLine, line: &str) -> Vec<AgentE
     }]
 }
 
-/// Erkennung am Inhalt statt an der Request-ID: nur die Antwort auf `get_context_usage` trägt
-/// `categories` und `maxTokens`. Die Bestätigung von `stop_task` und Fehlerantworten sind ohne Folge.
+/// Erkennung am Inhalt: `get_context_usage` trägt `categories` und `maxTokens`, `mcp_status`
+/// trägt `mcpServers`. Alles andere — leere Bestätigungen und Fehler — geht mit seiner Request-ID
+/// weiter; die Registry wertet nur IDs aus, die sie selbst für eine MCP-Aktion vergeben hat.
 fn control_answered(line: ControlResponseLine) -> Vec<AgentEvent> {
     let body = line.response;
+    let request_id = body.request_id.unwrap_or_default();
     if body.subtype != "success" {
-        return Vec::new();
+        return vec![AgentEvent::ControlFailed {
+            request_id,
+            error: body.error.unwrap_or_default(),
+        }];
     }
     let Some(response) = body.response else {
-        return Vec::new();
+        return vec![AgentEvent::ControlSucceeded { request_id }];
     };
-    stats::context_breakdown(&response)
-        .map(AgentEvent::ContextBreakdown)
-        .into_iter()
-        .collect()
+    if let Some(breakdown) = stats::context_breakdown(&response) {
+        return vec![AgentEvent::ContextBreakdown(breakdown)];
+    }
+    if let Some(servers) = mcp::mcp_servers(&response) {
+        return vec![AgentEvent::McpServers(servers)];
+    }
+    vec![AgentEvent::ControlSucceeded { request_id }]
 }
 
 fn ask_user_questions(input: &Value) -> Vec<Question> {

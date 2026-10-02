@@ -18,6 +18,9 @@ use verwalter_lib::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
     },
     error::CommandError,
+    mcp::model::{
+        McpAction, McpActionError, McpChangedEvent, McpServer, McpServerStatus, SessionMcp,
+    },
     projects::model::{ProjectCreated, ProjectSummary},
     repositories::model::{KnownRepository, RepositoryKind},
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
@@ -84,6 +87,12 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ContextBreakdown::export_all(&cfg)?;
     SessionContext::export_all(&cfg)?;
     ContextChangedEvent::export_all(&cfg)?;
+    McpServerStatus::export_all(&cfg)?;
+    McpServer::export_all(&cfg)?;
+    McpAction::export_all(&cfg)?;
+    McpActionError::export_all(&cfg)?;
+    SessionMcp::export_all(&cfg)?;
+    McpChangedEvent::export_all(&cfg)?;
     UsageLimit::export_all(&cfg)?;
     UsageShare::export_all(&cfg)?;
     UsageBreakdown::export_all(&cfg)?;

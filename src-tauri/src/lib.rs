@@ -8,6 +8,7 @@ pub mod db;
 pub mod error;
 pub mod filesystem;
 pub mod git;
+pub mod mcp;
 pub mod processes;
 pub mod projects;
 pub mod repositories;
@@ -73,6 +74,10 @@ pub fn run() {
             commands::chat::chat_answer,
             commands::context::context_load,
             commands::context::context_refresh,
+            commands::mcp::mcp_load,
+            commands::mcp::mcp_refresh,
+            commands::mcp::mcp_reconnect,
+            commands::mcp::mcp_toggle,
             commands::usage::usage_load,
             commands::usage::usage_refresh,
             commands::attachments::attachment_add_files,

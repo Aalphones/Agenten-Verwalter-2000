@@ -24,9 +24,9 @@ Rating: **standard** · Commit: `feat(mcp): MCP-Server einer Session abfragen un
 
 ### Typen und Parser
 
-- [ ] `src-tauri/src/mcp/mod.rs` (`pub mod model;`) und `src-tauri/src/mcp/model.rs` mit den Typen aus dem Kontrakt, Doc-Kommentare wie dort. In `src-tauri/src/lib.rs` `pub mod mcp;` alphabetisch einreihen.
-- [ ] In `McpServerStatus` zusätzlich `impl McpServerStatus { pub fn from_cli(value: &str) -> Self }`: `"connected"` → `Connected`, `"pending"` → `Pending`, `"failed"` → `Failed`, `"needs-auth"` → `NeedsAuth`, `"disabled"` → `Disabled`, alles andere → `Unknown`. Und `pub fn is_problem(self) -> bool` = `Failed | NeedsAuth`.
-- [ ] Neue Datei `src-tauri/src/agents/claude/mcp.rs` (in `agents/claude/mod.rs` eintragen), Kopfkommentar wie `stats.rs`: Format nicht als stabil dokumentiert, jedes Feld optional. Funktion `pub fn mcp_servers(body: &Value) -> Option<Vec<McpServer>>`:
+- [x] `src-tauri/src/mcp/mod.rs` (`pub mod model;`) und `src-tauri/src/mcp/model.rs` mit den Typen aus dem Kontrakt, Doc-Kommentare wie dort. In `src-tauri/src/lib.rs` `pub mod mcp;` alphabetisch einreihen.
+- [x] In `McpServerStatus` zusätzlich `impl McpServerStatus { pub fn from_cli(value: &str) -> Self }`: `"connected"` → `Connected`, `"pending"` → `Pending`, `"failed"` → `Failed`, `"needs-auth"` → `NeedsAuth`, `"disabled"` → `Disabled`, alles andere → `Unknown`. Und `pub fn is_problem(self) -> bool` = `Failed | NeedsAuth`.
+- [x] Neue Datei `src-tauri/src/agents/claude/mcp.rs` (in `agents/claude/mod.rs` eintragen), Kopfkommentar wie `stats.rs`: Format nicht als stabil dokumentiert, jedes Feld optional. Funktion `pub fn mcp_servers(body: &Value) -> Option<Vec<McpServer>>`:
   - `None`, wenn `body["mcpServers"]` kein Array ist (so unterscheidet `control_answered` die Antwort von anderen).
   - Je Element: ohne String-`name` überspringen. `status` über `McpServerStatus::from_cli` (fehlt → `Unknown`). `scope` als String, fehlt → `""`. `tools`: Array von Objekten, je `name` als String, Einträge ohne `name` fallen weg; fehlt → leer. `error`: String oder `None`.
   - `connection` aus `config` (private Funktion `connection(config: &Value) -> String`): hat `config` einen String `url` → Schema und Host: beginnt mit `https://` → `"HTTPS · <host>"`, mit `http://` → `"HTTP · <host>"`, `<host>` = Text nach `://` bis zum ersten `/`, `?` oder `#` (ohne diese Zeichen; Port bleibt dran). Sonst hat `config` einen String `command` → `"stdio · <dateiname>"`, `<dateiname>` = Teil nach dem letzten `\` oder `/` (ganzer String, wenn keiner vorkommt). Sonst `config.type` als String, sonst `""`.
@@ -34,9 +34,9 @@ Rating: **standard** · Commit: `feat(mcp): MCP-Server einer Session abfragen un
 
 ### Protokoll und Übersetzung
 
-- [ ] `protocol.rs`: `pub fn mcp_status() -> Value`, `pub fn mcp_reconnect(server: &str) -> Value`, `pub fn mcp_toggle(server: &str, enabled: bool) -> Value` nach dem Kontrakt, unter `get_usage`, je mit einzeiligem Doc-Kommentar.
-- [ ] `event.rs`: die drei `AgentEvent`-Varianten aus dem Kontrakt hinter `ContextBreakdown` einfügen, mit Doc-Kommentaren („Antwort auf `mcp_status`.“ · „Erfolgreiche Antwort auf eine Steueranfrage ohne auswertbaren Inhalt.“ · „Fehlerantwort auf eine Steueranfrage.“). Import `crate::mcp::model::McpServer`.
-- [ ] `translate.rs`, `control_answered` ersetzen:
+- [x] `protocol.rs`: `pub fn mcp_status() -> Value`, `pub fn mcp_reconnect(server: &str) -> Value`, `pub fn mcp_toggle(server: &str, enabled: bool) -> Value` nach dem Kontrakt, unter `get_usage`, je mit einzeiligem Doc-Kommentar.
+- [x] `event.rs`: die drei `AgentEvent`-Varianten aus dem Kontrakt hinter `ContextBreakdown` einfügen, mit Doc-Kommentaren („Antwort auf `mcp_status`.“ · „Erfolgreiche Antwort auf eine Steueranfrage ohne auswertbaren Inhalt.“ · „Fehlerantwort auf eine Steueranfrage.“). Import `crate::mcp::model::McpServer`.
+- [x] `translate.rs`, `control_answered` ersetzen:
   ```rust
   /// Erkennung am Inhalt: `get_context_usage` trägt `categories` und `maxTokens`, `mcp_status`
   /// trägt `mcpServers`. Alles andere — leere Bestätigungen und Fehler — geht mit seiner Request-ID
@@ -62,7 +62,7 @@ Rating: **standard** · Commit: `feat(mcp): MCP-Server einer Session abfragen un
 
 ### Registry
 
-- [ ] `registry.rs`, `SessionState` — neue Felder hinter `context_breakdown`, mit Doc-Kommentaren:
+- [x] `registry.rs`, `SessionState` — neue Felder hinter `context_breakdown`, mit Doc-Kommentaren:
   ```rust
   /// Letzte Antwort auf `mcp_status`; nur im Speicher und nur, solange der Prozess lebt (ADR 013).
   mcp_servers: Option<Vec<McpServer>>,
@@ -72,9 +72,9 @@ Rating: **standard** · Commit: `feat(mcp): MCP-Server einer Session abfragen un
   mcp_error: Option<McpActionError>,
   ```
   In `SessionState::new` mit `None`, `None`, `HashMap::new()`, `None` belegen.
-- [ ] `Outbox`: Feld `mcp_changed: bool` hinter `context_changed`; in `Outbox::emit` nach dem Kontext-Block analog `McpChangedEvent` an `MCP_CHANGED_EVENT` senden, Logzeile „MCP-Ereignis nicht gesendet: {error}“. Die Konstante `pub(super) const MCP_CHANGED_EVENT: &str = "mcp://changed";` steht in `registry/mcp.rs`.
-- [ ] `summarize`: `mcp_problems: state.mcp_problem_count(),` hinter `number`. `SessionSummary` in `sessions/model.rs`: Feld `pub mcp_problems: u32` mit Doc-Kommentar „Server mit Status `Failed` oder `NeedsAuth`; 0 ohne Liste.“.
-- [ ] `mod mcp;` neben `mod tldr;`. Neue Datei `src-tauri/src/sessions/registry/mcp.rs`, Kopfkommentar: MCP-Server der Session über Steueranfragen an ihren Agenten; Liste nur im Speicher, verworfen mit dem Prozess (ADR 013). Inhalt:
+- [x] `Outbox`: Feld `mcp_changed: bool` hinter `context_changed`; in `Outbox::emit` nach dem Kontext-Block analog `McpChangedEvent` an `MCP_CHANGED_EVENT` senden, Logzeile „MCP-Ereignis nicht gesendet: {error}“. Die Konstante `pub(super) const MCP_CHANGED_EVENT: &str = "mcp://changed";` steht in `registry/mcp.rs`.
+- [x] `summarize`: `mcp_problems: state.mcp_problem_count(),` hinter `number`. `SessionSummary` in `sessions/model.rs`: Feld `pub mcp_problems: u32` mit Doc-Kommentar „Server mit Status `Failed` oder `NeedsAuth`; 0 ohne Liste.“.
+- [x] `mod mcp;` neben `mod tldr;`. Neue Datei `src-tauri/src/sessions/registry/mcp.rs`, Kopfkommentar: MCP-Server der Session über Steueranfragen an ihren Agenten; Liste nur im Speicher, verworfen mit dem Prozess (ADR 013). Inhalt:
   - `impl SessionRegistry`:
     - `pub fn mcp(&self, session_id: &str) -> Result<SessionMcp, CommandError>` — wie `context`: unter der Sperre `servers`, `busy` (Servernamen aus `mcp_actions`, sortiert, ohne Doppelte), `error`, `fetched_at`, `is_agent_running: state.is_listening()`.
     - `pub fn refresh_mcp(&self, app: &AppHandle, session_id: &str) -> Result<bool, CommandError>` — wie `refresh_context`, Anfrage `mcp_status()`.
@@ -87,29 +87,31 @@ Rating: **standard** · Commit: `feat(mcp): MCP-Server einer Session abfragen un
     - `fn mcp_answered(&mut self, outbox: &mut Outbox, request_id: &str, error: Option<String>)`: `mcp_actions.remove(request_id)`; kein Treffer → nichts tun (fremde Antwort, z. B. `stop_task`). Treffer `(server, action)`: bei `Some(text)` → `mcp_error = Some(McpActionError { server, action, text })`. In beiden Fällen `outbox.mcp_changed = true` und `let _ = self.send_control(outbox, mcp_status());` (Kommentar: die Liste ist Beiwerk, ein Fehler beim Einreihen ändert nichts am Ausgang der Aktion).
     - `fn forget_mcp(&mut self, outbox: &mut Outbox)`: hatte die Session eine Liste, laufende Aktionen oder einen Fehler → alles leeren (`None`, `clear()`, `None`, `mcp_fetched_at = None`), `outbox.mcp_changed = true`; war die Problemzahl vorher > 0 → `outbox.summary_dirty = true`.
     - `fn mcp_problem_count(&self) -> u32`: Anzahl Server mit `status.is_problem()`, 0 ohne Liste (`u32::try_from(…).unwrap_or(u32::MAX)`).
-- [ ] `apply_event` in `registry.rs`, neue Arme hinter `ContextBreakdown`:
+- [x] `apply_event` in `registry.rs`, neue Arme hinter `ContextBreakdown`:
   ```rust
   AgentEvent::McpServers(servers) => self.apply_mcp_servers(outbox, servers),
   AgentEvent::ControlSucceeded { request_id } => self.mcp_answered(outbox, &request_id, None),
   AgentEvent::ControlFailed { request_id, error } => self.mcp_answered(outbox, &request_id, Some(error)),
   ```
-- [ ] `end_turn`: direkt unter `let _ = self.send_control(outbox, get_context_usage());` die Zeile `let _ = self.send_control(outbox, mcp_status());` (Kommentar darüber erweitern: „Aufschlüsselung und MCP-Liste sind Beiwerk …“).
-- [ ] `forget_mcp(outbox)` an den drei Stellen aufrufen, an denen der Prozess endet oder ersetzt wird — jeweils direkt nach der Zeile, die `process` leert bzw. ersetzt:
+- [x] `end_turn`: direkt unter `let _ = self.send_control(outbox, get_context_usage());` die Zeile `let _ = self.send_control(outbox, mcp_status());` (Kommentar darüber erweitern: „Aufschlüsselung und MCP-Liste sind Beiwerk …“).
+- [x] `forget_mcp(outbox)` an den drei Stellen aufrufen, an denen der Prozess endet oder ersetzt wird — jeweils direkt nach der Zeile, die `process` leert bzw. ersetzt:
   - `process_exited`: nach `self.process = None;`
   - Start-Funktion (die Stelle mit `if let Some(previous) = state.process.take()`): **nach** diesem `if`-Block, unabhängig davon, ob es einen vorigen Prozess gab, `state.forget_mcp(outbox);`
   - `retire_idle_process`: nach `state.process = None;`
-- [ ] Imports in `registry.rs` und `registry/mcp.rs` ergänzen (`mcp_status`, `mcp_reconnect`, `mcp_toggle`, `control_request` aus `protocol`; Typen aus `crate::mcp::model`). Private Methoden von `SessionState` (`next_request_id`, `is_listening`, `send_control`) sind aus dem Untermodul erreichbar; nichts davon `pub` machen.
+- [x] Imports in `registry.rs` und `registry/mcp.rs` ergänzen (`mcp_status`, `mcp_reconnect`, `mcp_toggle`, `control_request` aus `protocol`; Typen aus `crate::mcp::model`). Private Methoden von `SessionState` (`next_request_id`, `is_listening`, `send_control`) sind aus dem Untermodul erreichbar; nichts davon `pub` machen.
 
 ### Commands, Bindings
 
-- [ ] `src-tauri/src/commands/mcp.rs` (in `commands/mod.rs` eintragen) nach dem Kontrakt, Muster `commands/context.rs` (`async`, Kommentar zum Haupt-Thread übernehmen). Parameter heißen `session_id`, `server`, `enabled`. In `lib.rs` hinter `context_refresh` registrieren: `mcp_load`, `mcp_refresh`, `mcp_reconnect`, `mcp_toggle`.
-- [ ] `gen-bindings.rs`: Import `mcp::model::{McpAction, McpActionError, McpChangedEvent, McpServer, McpServerStatus, SessionMcp}`, Exporte hinter `ContextChangedEvent`. `pnpm bindings`, erzeugte Dateien mitcommitten.
+- [x] `src-tauri/src/commands/mcp.rs` (in `commands/mod.rs` eintragen) nach dem Kontrakt, Muster `commands/context.rs` (`async`, Kommentar zum Haupt-Thread übernehmen). Parameter heißen `session_id`, `server`, `enabled`. In `lib.rs` hinter `context_refresh` registrieren: `mcp_load`, `mcp_refresh`, `mcp_reconnect`, `mcp_toggle`.
+- [x] `gen-bindings.rs`: Import `mcp::model::{McpAction, McpActionError, McpChangedEvent, McpServer, McpServerStatus, SessionMcp}`, Exporte hinter `ContextChangedEvent`. `pnpm bindings`, erzeugte Dateien mitcommitten.
 
 ### Doku (gleicher Commit)
 
-- [ ] `docs/decisions/013-mcp-server-im-dialog.md` aus README „Festgelegte Entscheidungen“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen; Messungen als Kontext).
-- [ ] `docs/knowledge/claude-stream-json.md`: Abschnitt „MCP-Server steuern“ mit den Messungen aus der README (Anfragen, Antwortformen, `pending` ohne Ereignis, Ausschalten pro Arbeitsordner gespeichert), Datum 2026-10-01.
-- [ ] `docs/conventions/commits.md`: Scope `mcp` hinter `usage`.
-- [ ] `docs/code-map.md`: `mcp` in die Feature-Liste; neue Tabellenzeile „MCP-Server (Liste, Neu verbinden, Ausschalten je Session)“, Spalte Oberfläche „folgt in Phase 2/3“ (Phase 3 füllt sie), Spalte Core: `src-tauri/src/mcp/` (`model.rs` Typen), `src-tauri/src/agents/claude/mcp.rs` (Antwort auf `mcp_status` lesen), `src-tauri/src/commands/mcp.rs`, Zustand, Zuordnung der Antworten und Ereignis `mcp://changed` in `src-tauri/src/sessions/registry/mcp.rs` ([ADR 013](decisions/013-mcp-server-im-dialog.md)).
+- [x] `docs/decisions/013-mcp-server-im-dialog.md` aus README „Festgelegte Entscheidungen“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen; Messungen als Kontext).
+- [x] `docs/knowledge/claude-stream-json.md`: Abschnitt „MCP-Server steuern“ mit den Messungen aus der README (Anfragen, Antwortformen, `pending` ohne Ereignis, Ausschalten pro Arbeitsordner gespeichert), Datum 2026-10-01.
+- [x] `docs/conventions/commits.md`: Scope `mcp` hinter `usage`.
+- [x] `docs/code-map.md`: `mcp` in die Feature-Liste; neue Tabellenzeile „MCP-Server (Liste, Neu verbinden, Ausschalten je Session)“, Spalte Oberfläche „folgt in Phase 2/3“ (Phase 3 füllt sie), Spalte Core: `src-tauri/src/mcp/` (`model.rs` Typen), `src-tauri/src/agents/claude/mcp.rs` (Antwort auf `mcp_status` lesen), `src-tauri/src/commands/mcp.rs`, Zustand, Zuordnung der Antworten und Ereignis `mcp://changed` in `src-tauri/src/sessions/registry/mcp.rs` ([ADR 013](decisions/013-mcp-server-im-dialog.md)).
 
 ## Report-Back
+
+Umgesetzt wie geplant, `pnpm check` und `pnpm bindings` grün (2026-10-02). Abweichung: die im Untermodul `registry/mcp.rs` definierten Methoden, die `registry.rs` aufruft (`apply_mcp_servers`, `mcp_answered`, `forget_mcp`, `mcp_problem_count`), sind `pub(super)` statt privat — ein privates Element eines Untermoduls ist für das übergeordnete Modul nicht sichtbar. Nicht am laufenden Agenten geprüft (AK 1–5 setzen die App voraus; die Smoke-Checkliste der README deckt sie in Phase 3 ab).

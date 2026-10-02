@@ -37,6 +37,8 @@ pub struct SessionSummary {
     pub project_id: String,
     /// Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.
     pub number: u32,
+    /// Server mit Status `Failed` oder `NeedsAuth`; 0 ohne Liste.
+    pub mcp_problems: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

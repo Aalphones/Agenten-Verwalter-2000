@@ -17,7 +17,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
 use crate::agents::claude::protocol::{
-    allow, control_request, deny, get_context_usage, stop_task, user_message, user_message_content,
+    allow, control_request, deny, get_context_usage, mcp_status, stop_task, user_message,
+    user_message_content,
 };
 use crate::agents::claude::translate::Translator;
 use crate::agents::event::{
@@ -42,6 +43,7 @@ use crate::db::{
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
+use crate::mcp::model::{McpAction, McpActionError, McpChangedEvent, McpServer};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
@@ -50,6 +52,7 @@ use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
 use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
+mod mcp;
 mod tldr;
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
@@ -164,6 +167,12 @@ struct SessionState {
     context_window: u32,
     /// Letzte Aufschlüsselung des Kontexts; nur im Speicher, nach einem App-Neustart leer (ADR 008).
     context_breakdown: Option<ContextBreakdown>,
+    /// Letzte Antwort auf `mcp_status`; nur im Speicher und nur, solange der Prozess lebt (ADR 013).
+    mcp_servers: Option<Vec<McpServer>>,
+    mcp_fetched_at: Option<f64>,
+    /// Laufende Aktionen als Request-ID → (Server, Aktion).
+    mcp_actions: HashMap<String, (String, McpAction)>,
+    mcp_error: Option<McpActionError>,
     /// Seit wann die Session ruht (`completed`/`paused`) — Grundlage für `reap_idle`.
     idle_since: Option<f64>,
     /// Eine wiederhergestellte Session lädt ihren Verlauf erst beim ersten Zugriff (`Session::lock_loaded`).
@@ -234,6 +243,7 @@ struct Outbox {
     outputs: Vec<(String, String, bool)>,
     background_changed: bool,
     context_changed: bool,
+    mcp_changed: bool,
     /// Neu gemeldeter Scratchpad-Ordner, der für das Asset-Protokoll freigegeben wird.
     scratchpad_dir: Option<String>,
     /// Neu zugeordnete Ticket-Worktrees als (Position, Ordnername).
@@ -1328,6 +1338,10 @@ impl SessionState {
             context_used: 0,
             context_window: model.initial_context_window(),
             context_breakdown: None,
+            mcp_servers: None,
+            mcp_fetched_at: None,
+            mcp_actions: HashMap::new(),
+            mcp_error: None,
             idle_since: None,
             entries_loaded: true,
             needs_settling: false,
@@ -1747,6 +1761,13 @@ impl SessionState {
                 self.context_breakdown = Some(breakdown);
                 outbox.context_changed = true;
             }
+            AgentEvent::McpServers(servers) => self.apply_mcp_servers(outbox, servers),
+            AgentEvent::ControlSucceeded { request_id } => {
+                self.mcp_answered(outbox, &request_id, None);
+            }
+            AgentEvent::ControlFailed { request_id, error } => {
+                self.mcp_answered(outbox, &request_id, Some(error));
+            }
             AgentEvent::ScratchpadDir(dir) => {
                 if self.scratchpad_dir.as_deref() != Some(dir.as_str()) {
                     self.scratchpad_dir = Some(dir.clone());
@@ -2014,8 +2035,9 @@ impl SessionState {
         if self.cancel_requested {
             return;
         }
-        // Die Aufschlüsselung ist Beiwerk: ein Fehler beim Einreihen darf das Ende der Antwort nicht stören.
+        // Aufschlüsselung und MCP-Liste sind Beiwerk: ein Fehler beim Einreihen darf das Ende der Antwort nicht stören.
         let _ = self.send_control(outbox, get_context_usage());
+        let _ = self.send_control(outbox, mcp_status());
         match end {
             TurnEnd::Aborted => self.pause_after_interrupt(outbox),
             _ if self.pause_requested => self.pause_after_interrupt(outbox),
@@ -2041,6 +2063,7 @@ impl SessionState {
 
     fn process_exited(&mut self, outbox: &mut Outbox, exit_code: Option<i32>) {
         self.process = None;
+        self.forget_mcp(outbox);
         // Vor der frühen Rückkehr: auch nach einem Fehler vom Agenten stünden laufende Einträge
         // sonst bis zum nächsten App-Start auf „läuft“.
         self.interrupt_background(outbox);
@@ -2107,6 +2130,14 @@ impl Outbox {
             };
             if let Err(error) = app.emit(CONTEXT_CHANGED_EVENT, event) {
                 session.log_line(format!("Kontext-Ereignis nicht gesendet: {error}"));
+            }
+        }
+        if self.mcp_changed {
+            let event = McpChangedEvent {
+                session_id: session.id.clone(),
+            };
+            if let Err(error) = app.emit(mcp::MCP_CHANGED_EVENT, event) {
+                session.log_line(format!("MCP-Ereignis nicht gesendet: {error}"));
             }
         }
         // Erst freigegeben kann die Oberfläche Bilder aus dem Scratchpad über das Asset-Protokoll zeigen.
@@ -2243,6 +2274,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         repository_count: u32::try_from(session.repositories().len()).unwrap_or(u32::MAX),
         project_id: session.project_id.clone(),
         number: session.number,
+        mcp_problems: state.mcp_problem_count(),
     }
 }
 
@@ -2287,6 +2319,7 @@ fn start_process(
         retire_process(previous);
         state.interrupt_background(outbox);
     }
+    state.forget_mcp(outbox);
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -2321,6 +2354,7 @@ fn retire_idle_process(state: &mut SessionState, outbox: &mut Outbox) {
     state.generation += 1;
     outbox.retire(state);
     state.process = None;
+    state.forget_mcp(outbox);
     state.interrupt_background(outbox);
     state.idle_since = None;
 }

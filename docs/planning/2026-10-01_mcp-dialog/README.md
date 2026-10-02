@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Typen, Steueranfragen, Antworten zuordnen, Commands, Ereignis | [phase-1-core.md](phase-1-core.md) | standard | pending |
+| 1 | Core: Typen, Steueranfragen, Antworten zuordnen, Commands, Ereignis | [phase-1-core.md](phase-1-core.md) | standard | complete |
 | 2 | Oberfläche: Dialog- und Schalter-Baustein, MCP-Dialog | [phase-2-dialog.md](phase-2-dialog.md) | standard | pending |
 | 3 | Einstiege `/mcp` und Hinweis in der Eingabeleiste, Doku, Release | [phase-3-einstiege.md](phase-3-einstiege.md) | mechanisch | pending |
 

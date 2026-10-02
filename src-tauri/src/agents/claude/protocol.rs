@@ -212,6 +212,21 @@ pub fn get_context_usage() -> Value {
     json!({ "subtype": "get_context_usage" })
 }
 
+/// Fragt Status, Herkunft, Verbindung und Werkzeuge aller MCP-Server ab; die Antwort kommt als `control_response`.
+pub fn mcp_status() -> Value {
+    json!({ "subtype": "mcp_status" })
+}
+
+/// Verbindet einen MCP-Server neu; die Antwort kommt erst nach dem Verbindungsversuch.
+pub fn mcp_reconnect(server: &str) -> Value {
+    json!({ "subtype": "mcp_reconnect", "serverName": server })
+}
+
+/// Schaltet einen MCP-Server aus oder ein; die Kommandozeile merkt sich das je Arbeitsordner.
+pub fn mcp_toggle(server: &str, enabled: bool) -> Value {
+    json!({ "subtype": "mcp_toggle", "serverName": server, "enabled": enabled })
+}
+
 /// Fragt das Kontingent des Abos ab; die Antwort kommt als `control_response`. Im SDK als
 /// experimentell markiert — das Format kann sich mit jeder Version ändern.
 pub fn get_usage() -> Value {

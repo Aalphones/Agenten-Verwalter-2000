@@ -12,4 +12,8 @@ runningMs: number, runningSince: number | null, contextUsed: number, contextWind
 /**
  * Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.
  */
-number: number, };
+number: number, 
+/**
+ * Server mit Status `Failed` oder `NeedsAuth`; 0 ohne Liste.
+ */
+mcpProblems: number, };

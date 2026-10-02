@@ -126,6 +126,18 @@ Geprüft am 2026-09-29 mit Claude Code 2.1.284; beide Anfragen stammen aus dem A
   - Der Name im SDK sagt ausdrücklich, dass sich das Format ändern kann — jedes Feld ist optional zu lesen.
 - **Hilfsprozess nur für das Kontingent:** `claude.exe -p --input-format stream-json --output-format stream-json --verbose --strict-mcp-config --no-session-persistence` mit Arbeitsverzeichnis `<Benutzerordner>\.verwalter`, dann sofort `get_usage` senden: Antwort nach rund 1,4 s, danach Prozess beenden. `--strict-mcp-config` ohne `--mcp-config` startet keine MCP-Server. Es entsteht kein Transkript; die Kommandozeile legt nur einmalig einen leeren Ordner `~\.claude\projects\C--Users-<name>--verwalter\memory` an. `--bare` ist ungeeignet (meldet sich nur mit API-Schlüssel an, nicht mit dem Abo).
 
+## MCP-Server steuern
+
+Gemessen am 2026-10-01 mit der Claude-Kommandozeile im Druckmodus mit `--input-format stream-json`; das Format ist nicht als stabil dokumentiert, jedes Feld ist optional zu lesen.
+
+- `{"subtype":"mcp_status"}` → `control_response` `success` mit `response.mcpServers`: je Server `name`, `status`, `scope`, `source`, `config` (`type` `stdio` mit `command`/`args`, `claudeai-proxy` mit `url`), ab `connected` zusätzlich `serverInfo` und `tools` (je `name`, `annotations`), bei `failed` zusätzlich `error` (gemessen `"Connection closed"`). Beobachtete `status`: `pending`, `connected`, `failed`, `disabled`; beobachtete `scope`: `user`, `claudeai`, `dynamic`.
+- Direkt nach dem Start stehen claude.ai-Server auf `pending` und wechseln binnen ~10 s auf `connected` — **ohne eigenes Ereignis**; wer den Wechsel sehen will, fragt erneut.
+- `{"subtype":"mcp_reconnect","serverName":"<name>"}` → bei Erfolg `success` **ohne** `response`; bei Fehlschlag `{"subtype":"error","error":"Connection closed"}`. Die Antwort kommt erst nach dem Verbindungsversuch.
+- `{"subtype":"mcp_toggle","serverName":"<name>","enabled":false|true}` → `success` ohne `response`; unbekannter Name → `error` `"Server not found: <name>"`. Danach meldet `mcp_status` `disabled` bzw. `pending` → `connected`.
+- **Ausschalten bleibt gespeichert, pro Arbeitsordner:** ein neuer Prozess im selben Arbeitsordner meldet den Server weiter `disabled`, ein Prozess in einem anderen Ordner `pending`.
+- `needs-auth` (Anmeldung nötig) ist nur aus der SDK-Dokumentation bekannt, nicht gemessen.
+- Die Antworten auf `mcp_reconnect`/`mcp_toggle` tragen nur die `request_id`; der Core ordnet sie darüber der Aktion zu ([ADR 013](../decisions/013-mcp-server-im-dialog.md)).
+
 ## Einmal-Aufruf im Druckmodus (TL;DR)
 
 Für das TL;DR läuft ein eigener, kurzlebiger `claude.exe` ohne Stream-Protokoll, unabhängig vom Agenten der Session (`src-tauri/src/agents/claude/print.rs`):
