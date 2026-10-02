@@ -1,7 +1,7 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan) — MCP-Dialog ist archiviert (`docs/archive/2026-10/2026-10-01_mcp-dialog/`), aber noch ohne Release-Tag.
-**Nächster Schritt:** Release `v0.8.0` nach Go des Users per [releases.md](docs/conventions/releases.md) (Version in den drei Dateien, `chore(release)`-Commit, Tag pushen). Danach nächster Plan der Reihenfolge unten: Session-Changes (`/plan` ist nicht nötig, der Plan liegt geparkt; `/implement`). Offen aus früheren Plänen: Smoke-Checkliste „MCP-Dialog“ (v0.8.0, noch nicht abgenommen), Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
+**Aktiver Plan:** (kein aktiver Plan) — MCP-Dialog ist archiviert (`docs/archive/2026-10/2026-10-01_mcp-dialog/`) und als `v0.8.0` getaggt.
+**Nächster Schritt:** Nächster Plan der Reihenfolge unten: Session-Changes (liegt geparkt in `docs/planning/`, `/implement`). Offen aus früheren Plänen: Smoke-Checkliste „MCP-Dialog“ (v0.8.0, ohne Abnahme getaggt), Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
