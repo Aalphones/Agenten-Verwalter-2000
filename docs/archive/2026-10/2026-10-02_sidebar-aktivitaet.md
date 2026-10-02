@@ -7,7 +7,7 @@ Die Seitenleiste zeigt die Vorhaben heute in drei Gruppen („Braucht dich“, �
 | Phase | Inhalt | Komplexität | Status |
 |---|---|---|---|
 | 1 | Core: Migration 8, letzte Aktivität und Gesehen-Zeitpunkt je Session, Command `session_set_viewed`, ADR 019 | standard | complete |
-| 2 | Oberfläche: Gruppen entfernen, Sortierung nach Aktivität, Ungelesen-Punkt, gesehene Session melden | standard | pending |
+| 2 | Oberfläche: Gruppen entfernen, Sortierung nach Aktivität, Ungelesen-Punkt, gesehene Session melden | standard | complete |
 
 ## Entscheidungen (mit dem User geklärt, 2026-10-02)
 
@@ -224,7 +224,7 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
 
 ### Checkliste
 
-- [ ] `src/lib/sessions.ts`: Doc von `listSessions` auf „Alle Sessions, zuletzt aktive zuerst.“; neuer Wrapper hinter `renameSession`:
+- [x] `src/lib/sessions.ts`: Doc von `listSessions` auf „Alle Sessions, zuletzt aktive zuerst.“; neuer Wrapper hinter `renameSession`:
   ```ts
   /** Meldet dem Core die sichtbare Session (`null`: keine); ihr Neues gilt dann als gelesen.
    *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
@@ -232,8 +232,8 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
     await invoke('session_set_viewed', { sessionId });
   }
   ```
-- [ ] `src/features/sessions/useSessionSummaries.ts`: beide Sortierungen (`second.createdAt - first.createdAt`) durch eine Funktion `latestActivityFirst(first, second)` mit `second.lastActivityAt - first.lastActivityAt` ersetzen, oben in der Datei definiert wie `newestFirst` in `useProjectSummaries.ts`.
-- [ ] Neue Datei `src/features/sessions/useViewedSession.ts`:
+- [x] `src/features/sessions/useSessionSummaries.ts`: beide Sortierungen (`second.createdAt - first.createdAt`) durch eine Funktion `latestActivityFirst(first, second)` mit `second.lastActivityAt - first.lastActivityAt` ersetzen, oben in der Datei definiert wie `newestFirst` in `useProjectSummaries.ts`.
+- [x] Neue Datei `src/features/sessions/useViewedSession.ts`:
   ```ts
   import { useEffect } from 'react';
   import { setViewedSession } from '@/lib/sessions';
@@ -247,9 +247,9 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
     }, [sessionId]);
   }
   ```
-- [ ] `src/app/App.tsx`: direkt hinter der Definition von `visibleSession` den Aufruf `useViewedSession(visibleSession === null ? null : visibleSession.id);` und den Import ergänzen.
-- [ ] `src/features/sessions/sessionStatus.ts`: `GROUP_ORDER`, `SessionGroup`, `GROUP_LABEL`, `STATUS_GROUP` löschen.
-- [ ] `src/features/projects/projectStatus.ts`:
+- [x] `src/app/App.tsx`: direkt hinter der Definition von `visibleSession` den Aufruf `useViewedSession(visibleSession === null ? null : visibleSession.id);` und den Import ergänzen.
+- [x] `src/features/sessions/sessionStatus.ts`: `GROUP_ORDER`, `SessionGroup`, `GROUP_LABEL`, `STATUS_GROUP` löschen.
+- [x] `src/features/projects/projectStatus.ts`:
   - `projectGroup` und die Importe von `STATUS_GROUP`/`SessionGroup` löschen.
   - `sessionsOf` bleibt unverändert.
   - Neu:
@@ -283,14 +283,14 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
     }
     ```
     (Import `ProjectSummary` aus `@/lib/bindings/ProjectSummary` ergänzen.)
-- [ ] `src/app/buildSidebarRows.ts`: Zeilenart `group` aus `SidebarRow` entfernen, `SidebarGroup` löschen, `SidebarGroupProject` in `SidebarProjectEntry` umbenennen (Doc an `sessions`: „Sessions des Vorhabens, zuletzt aktive zuerst.“). Signatur `buildSidebarRows(projects: readonly SidebarProjectEntry[]): SidebarRow[]`; Doc „Die flache Zeilenliste der Sidebar: je Vorhaben seine Zeile und die Sessions der aufgeklappten Vorhaben.“ Die Schleife über Gruppen entfällt, die Schleife über Vorhaben bleibt wie sie ist. Import `SessionGroup` entfernen.
-- [ ] `src/app/Sidebar.tsx`:
+- [x] `src/app/buildSidebarRows.ts`: Zeilenart `group` aus `SidebarRow` entfernen, `SidebarGroup` löschen, `SidebarGroupProject` in `SidebarProjectEntry` umbenennen (Doc an `sessions`: „Sessions des Vorhabens, zuletzt aktive zuerst.“). Signatur `buildSidebarRows(projects: readonly SidebarProjectEntry[]): SidebarRow[]`; Doc „Die flache Zeilenliste der Sidebar: je Vorhaben seine Zeile und die Sessions der aufgeklappten Vorhaben.“ Die Schleife über Gruppen entfällt, die Schleife über Vorhaben bleibt wie sie ist. Import `SessionGroup` entfernen.
+- [x] `src/app/Sidebar.tsx`:
   - Importe: `projectGroup`, `sessionsOf`, `GROUP_LABEL`, `GROUP_ORDER`, `SessionGroup` entfernen; `projectActivity`, `sessionsByActivity` aus `projectStatus` und `SidebarProjectEntry` aus `buildSidebarRows` importieren.
   - `rows`-Memo: je Vorhaben `projectSessions = sessionsByActivity(project.id, sessions)`, `isExpanded` wie bisher, dazu `activity = projectActivity(project, projectSessions)`; nach `activity` absteigend sortieren, bei Gleichstand `project.createdAt` absteigend; dann in `SidebarProjectEntry` (ohne `activity`) abbilden und `buildSidebarRows` übergeben.
   - `renderRow`: `case 'group'` entfernen.
   - `ESTIMATED_HEIGHT.group`, `SPACED_GROUP_EXTRA` und der Gruppen-Zweig in `estimateHeight` entfallen.
-- [ ] `src/app/Sidebar.css`: Blöcke `&__group-title`, `&__group-title--spaced`, `&__group-count` löschen.
-- [ ] `src/app/SidebarItem.tsx`: Name-Span bekommt bei `session.unread` die Klasse `sidebar-item__name sidebar-item__name--unread`. Hinter dem Namen, nur bei `session.unread`:
+- [x] `src/app/Sidebar.css`: Blöcke `&__group-title`, `&__group-title--spaced`, `&__group-count` löschen.
+- [x] `src/app/SidebarItem.tsx`: Name-Span bekommt bei `session.unread` die Klasse `sidebar-item__name sidebar-item__name--unread`. Hinter dem Namen, nur bei `session.unread`:
   ```tsx
   <span
     className="sidebar-item__unread"
@@ -299,7 +299,7 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
     title="Neue Nachricht, seit du zuletzt in dieser Session warst"
   />
   ```
-- [ ] `src/app/SidebarItem.css` (im Block `.sidebar-item`):
+- [x] `src/app/SidebarItem.css` (im Block `.sidebar-item`):
   ```css
   &__name--unread {
     color: var(--color-fg-primary);
@@ -315,8 +315,8 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
     background: var(--color-accent);
   }
   ```
-- [ ] `src/app/SidebarProject.tsx`: `const isUnread: boolean = hasUnread(sessions);` (Import aus `projectStatus`). Name-Span bekommt zusätzlich `sidebar-project__name--unread`, wenn `isUnread`. Als letztes Kind des Buttons `sidebar-project__button`, nach `sidebar-project__text`, bei `isUnread` derselbe Punkt mit Klasse `sidebar-project__unread`, `aria-label="Ungelesen"` und `title="Neue Nachricht in einer Session dieses Vorhabens, seit du zuletzt drin warst"`. Doc der Prop `sessions`: „Sessions dieses Vorhabens, zuletzt aktive zuerst.“
-- [ ] `src/app/SidebarProject.css`: im Block `&__name` den Modifier `&--unread { font-weight: 700; }`; neuer Block
+- [x] `src/app/SidebarProject.tsx`: `const isUnread: boolean = hasUnread(sessions);` (Import aus `projectStatus`). Name-Span bekommt zusätzlich `sidebar-project__name--unread`, wenn `isUnread`. Als letztes Kind des Buttons `sidebar-project__button`, nach `sidebar-project__text`, bei `isUnread` derselbe Punkt mit Klasse `sidebar-project__unread`, `aria-label="Ungelesen"` und `title="Neue Nachricht in einer Session dieses Vorhabens, seit du zuletzt drin warst"`. Doc der Prop `sessions`: „Sessions dieses Vorhabens, zuletzt aktive zuerst.“
+- [x] `src/app/SidebarProject.css`: im Block `&__name` den Modifier `&--unread { font-weight: 700; }`; neuer Block
   ```css
   &__unread {
     flex-shrink: 0;
@@ -331,19 +331,36 @@ Finale AK 1–7 und 10, sichtbar in `pnpm tauri dev`.
   }
   ```
   `margin-left: auto` schiebt den Punkt an den rechten Rand, weil `sidebar-project__text` nicht wächst (nur `min-width: 0`) und der Button `flex-grow: 1` hat.
-- [ ] `docs/code-map.md`: Zeile „Vorhaben“ und Zeile „App-Rahmen“: „gruppiert Vorhaben“ durch „sortiert Vorhaben und Sessions nach letzter Aktivität, Ungelesen-Punkt“ ersetzen; `projectStatus` um „`sessionsByActivity`, `projectActivity`, `hasUnread`“ ergänzen; Zeile „Sessions“ (Oberfläche) um `useViewedSession` (meldet die sichtbare Session) ergänzen; Zeilenarten in `buildSidebarRows.ts` auf „Vorhaben · Session“ korrigieren.
-- [ ] `pnpm check` grün; Commit `feat(sidebar): Sortierung nach letzter Aktivität und Ungelesen-Punkt`.
+- [x] `docs/code-map.md`: Zeile „Vorhaben“ und Zeile „App-Rahmen“: „gruppiert Vorhaben“ durch „sortiert Vorhaben und Sessions nach letzter Aktivität, Ungelesen-Punkt“ ersetzen; `projectStatus` um „`sessionsByActivity`, `projectActivity`, `hasUnread`“ ergänzen; Zeile „Sessions“ (Oberfläche) um `useViewedSession` (meldet die sichtbare Session) ergänzen; Zeilenarten in `buildSidebarRows.ts` auf „Vorhaben · Session“ korrigieren.
+- [x] `pnpm check` grün; Commit `feat(sidebar): Sortierung nach letzter Aktivität und Ungelesen-Punkt`.
 
 ### Report-Back
+
+Phase 2 komplett, `pnpm check` grün (inkl. Clippy). Abweichung: Im `rows`-Memo von `Sidebar.tsx` trägt der Zwischentyp `RankedProject` (erweitert `SidebarProjectEntry` um `activity`) direkt in `buildSidebarRows`; die im Plan vorgesehene Abbildung „ohne `activity`“ entfällt, weil TypeScript das zusätzliche Feld an einer Variable zulässt. Zusätzlich nachgezogen: `docs/PROJECT.md` (Navigation nannte noch die drei Gruppen) und der Kommentar an `URGENCY` (bestimmt nur noch das Symbol). Nicht gesehen: das Aussehen in `pnpm tauri dev` — die Smoke-Checkliste prüft der User.
 
 ---
 
 ## Summary
 
+Die Seitenleiste zeigt eine Liste ohne Gruppen-Überschriften; das Vorhaben mit der jüngsten Aktivität (Senden, Rückfrage, fertig, Fehler) steht oben, die Sessions darin ebenso. Eine Session mit Neuem, das der User noch nicht gesehen hat, bekommt einen Punkt in Akzentfarbe und einen fetten Namen — an der Session-Zeile und an der Vorhaben-Zeile. Beide Zeitpunkte liegen in SQLite (Migration 8) und überleben den Neustart; „gerade gezeigt“ liegt nur im Speicher des Core.
+
 ## Files touched
+
+- Core (Phase 1): `db/migrations/008_session_activity.sql`, `db/sessions.rs`, `sessions/model.rs`, `sessions/registry.rs`, `commands/sessions.rs`, `lib.rs`, ADR 019, Glossar, Code-Map.
+- Oberfläche (Phase 2): `src/app/` (`App.tsx`, `Sidebar.tsx`/`.css`, `SidebarItem.tsx`/`.css`, `SidebarProject.tsx`/`.css`, `buildSidebarRows.ts`), `src/features/projects/projectStatus.ts`, `src/features/sessions/` (`sessionStatus.ts`, `useSessionSummaries.ts`, neu `useViewedSession.ts`), `src/lib/sessions.ts`, `docs/code-map.md`, `docs/PROJECT.md`.
 
 ## Commits
 
+- `ed0a3c4` feat(sessions): letzte Aktivität und Ungelesen im Core
+- `d22d5a3` feat(sidebar): Sortierung nach letzter Aktivität und Ungelesen-Punkt
+
 ## Deviations from plan
 
+- Glossar-Einträge stehen thematisch statt alphabetisch (das Glossar ist thematisch geordnet).
+- `RankedProject` in `Sidebar.tsx` geht direkt in `buildSidebarRows`; die Abbildung ohne `activity` entfiel.
+- `docs/PROJECT.md` und der Kommentar an `URGENCY` nachgezogen (nannten die Gruppen noch).
+
 ## Follow-ups
+
+- Smoke-Checkliste dieses Plans ist ohne Abnahme (Wackelstelle zuerst: Neustart-Fall, Punkt 1).
+- 🟡 `seen_at` wird erst beim ersten App-Start mit Migration 8 gesetzt; Upsert-Spalten laufen über Smoke 1 mit.
