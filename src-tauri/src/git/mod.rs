@@ -242,6 +242,23 @@ pub fn commit_count(worktree: &Path, from: &str) -> Result<u32, CommandError> {
         .map_err(|_| CommandError::Git(format!("rev-list lieferte keine Zahl: {text}")))
 }
 
+/// `git rev-list --reverse --topo-order --no-merges --timestamp --parents <from>..HEAD`
+pub fn commits_since(worktree: &Path, from: &str) -> Result<String, CommandError> {
+    let range = format!("{from}..HEAD");
+    run(
+        worktree,
+        &args(&[
+            "rev-list",
+            "--reverse",
+            "--topo-order",
+            "--no-merges",
+            "--timestamp",
+            "--parents",
+            &range,
+        ]),
+    )
+}
+
 /// `git diff-tree -r -p --no-renames -U3 <from> <to> -- <path>`
 pub fn diff_tree_patch(
     worktree: &Path,

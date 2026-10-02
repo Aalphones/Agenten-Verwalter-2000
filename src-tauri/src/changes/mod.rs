@@ -1,8 +1,10 @@
 //! Was in den Repositories einer Session und in ihren Ticket-Worktrees gegenüber der Basis geändert
 //! ist — in drei Blickwinkeln, gelesen nur mit Plumbing-Befehlen, die im Worktree keine Sperre
 //! nehmen (ADR 006).
+pub mod attribution;
 pub mod model;
 pub mod parse;
+pub mod scan;
 
 use std::collections::BTreeMap;
 use std::fs;

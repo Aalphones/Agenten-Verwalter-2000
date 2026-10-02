@@ -1,19 +1,21 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan) — MCP-Dialog ist archiviert (`docs/archive/2026-10/2026-10-01_mcp-dialog/`) und als `v0.8.0` getaggt.
-**Nächster Schritt:** Nächster Plan der Reihenfolge unten: Sidebar nach letzter Aktivität (`docs/planning/2026-10-02_sidebar-aktivitaet.md`, `/implement`), danach Session-Changes. Offen aus früheren Plänen: Smoke-Checkliste „MCP-Dialog“ (v0.8.0, ohne Abnahme getaggt), Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
+**Aktiver Plan:** `docs/planning/2026-10-01_session-changes/`
+**Phase:** 2/3 — Core-Anzeige (Phase 1 abgeschlossen und committet)
+**Nächster Schritt:** Phase 2 laut `phase-2-zuordnung.md` (heikel → `/model opusplan`): Changes und Diff nach Reichweite Session/Vorhaben, `foreign`-Markierung. Ordner ohne Git überspringen und `plain_folders` weiterreichen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
-1. ~~MCP-Dialog~~ — erledigt und archiviert; Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
-1a. **Sidebar nach letzter Aktivität** (`2026-10-02_sidebar-aktivitaet.md`) — klein, zwei Phasen; nimmt Migration 7 und ADR 019, Session-Changes rückt deshalb auf Migration 8.
-2. **Session-Changes** — muss vor Changes-Review kommen (ändert die Signaturen von `changes_load`/`changes_file_diff`).
+1. ~~MCP-Dialog~~ — erledigt und archiviert (`v0.8.0`).
+1a. **Sidebar nach letzter Aktivität** (`2026-10-02_sidebar-aktivitaet.md`) — klein, zwei Phasen; läuft jetzt **nach** Session-Changes und nimmt deshalb Migration 8 (`008_session_activity.sql`) und ADR 019.
+2. **Session-Changes** — aktiv; nimmt Migration 7, muss vor Changes-Review kommen (ändert die Signaturen von `changes_load`/`changes_file_diff`).
 3. **Changes-Review** — baut auf dem Diff auf, der nur noch die Änderungen der Session zeigt.
-4. **Claude Code + LM Studio** (`claude-code-lokal`) — Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen auf Platz 1.
+4. **Claude Code + LM Studio** (`claude-code-lokal`) — Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen.
 5. **Autark** (`autarker-agent`) — setzt Plan 4 voraus, größter Plan (9 Phasen, drei „heikel“).
 
-## Offen vor dem Start
+## Offen
 
-- **ADR-Nummern** sind auf die Reihenfolge abgestimmt: MCP-Dialog 013 (geschrieben), Session-Changes 014, Changes-Review 015, Claude Code lokal 016, Autark 017. Ändert sich die Reihenfolge, müssen die Nummern in den Plänen mitziehen. Ausnahme: „Ordner ohne Git“ nimmt 018, obwohl er zuerst kommt.
-- 🟡 **Session-Changes nach „Ordner ohne Git“:** `SessionChanges` hat dann zusätzlich `plain_folders`, und `RepositoryCheckout::Folder` darf nie an `git` gehen. Phase 1/2 dieses Plans (Commit-Suche, `load`-Signatur, Rückgabe `SessionChanges { … }`) müssen Ordner ohne Git überspringen und `plain_folders` weiterreichen — beim Start des Plans nachschärfen.
-- 🟡 **Autark Phase 7:** Ob LM Studio mehrere Anfragen gleichzeitig rechnet, ist ungeprüft; es entscheidet, ob parallele Subagenten etwas bringen. Vor Plan 5 messen.
+- Smoke-Checklisten ohne Abnahme: „MCP-Dialog“ (v0.8.0), „Sprachdiktat“ (v0.6.0, samt Messwerten), „Ordner ohne Git“ (v0.7.0) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
+- **ADR-Nummern:** Session-Changes 014, Changes-Review 015, Claude Code lokal 016, Autark 017, „Ordner ohne Git“ 018, Sidebar 019.
+- 🟡 **Session-Changes nach „Ordner ohne Git“:** `SessionChanges` hat dann zusätzlich `plain_folders`, und `RepositoryCheckout::Folder` darf nie an `git` gehen. Phase 1/2 (Commit-Suche, `load`-Signatur, Rückgabe `SessionChanges { … }`) müssen Ordner ohne Git überspringen und `plain_folders` weiterreichen.
+- 🟡 **Autark Phase 7:** Ob LM Studio mehrere Anfragen gleichzeitig rechnet, ist ungeprüft. Vor Plan 5 messen.

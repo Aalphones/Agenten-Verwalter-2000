@@ -1,0 +1,51 @@
+//! Tabelle `session_files`: Dateien, die der Agent einer Session geschrieben hat, mit der letzten
+//! Uhrzeit (ADR 014).
+use std::collections::HashMap;
+
+use rusqlite::{Connection, params};
+
+use crate::error::CommandError;
+
+/// Schreibt `(normalisierter Pfad, ms)`-Paare in einer Transaktion; die Uhrzeit steigt nur.
+pub fn upsert_all(
+    connection: &mut Connection,
+    session_id: &str,
+    files: &[(String, f64)],
+) -> Result<(), CommandError> {
+    let transaction = connection.transaction()?;
+    {
+        let mut statement = transaction.prepare(
+            "INSERT INTO session_files (session_id, path, touched_at) VALUES (?1, ?2, ?3) \
+             ON CONFLICT(session_id, path) DO UPDATE SET \
+             touched_at = max(touched_at, excluded.touched_at)",
+        )?;
+        for (path, touched_at) in files {
+            statement.execute(params![session_id, path, touched_at])?;
+        }
+    }
+    transaction.commit()?;
+    Ok(())
+}
+
+/// Pfad → letzte Uhrzeit über alle genannten Sessions; bei gleichem Pfad gilt der größere Wert.
+pub fn load_for(
+    connection: &Connection,
+    session_ids: &[String],
+) -> Result<HashMap<String, f64>, CommandError> {
+    let mut statement =
+        connection.prepare("SELECT path, touched_at FROM session_files WHERE session_id = ?1")?;
+    let mut files: HashMap<String, f64> = HashMap::new();
+    for session_id in session_ids {
+        let rows = statement.query_map(params![session_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?))
+        })?;
+        for row in rows {
+            let (path, touched_at) = row?;
+            let latest = files.entry(path).or_insert(touched_at);
+            if touched_at > *latest {
+                *latest = touched_at;
+            }
+        }
+    }
+    Ok(files)
+}

@@ -6,7 +6,7 @@ Die Seitenleiste zeigt die Vorhaben heute in drei Gruppen („Braucht dich“, �
 
 | Phase | Inhalt | Komplexität | Status |
 |---|---|---|---|
-| 1 | Core: Migration 7, letzte Aktivität und Gesehen-Zeitpunkt je Session, Command `session_set_viewed`, ADR 019 | standard | pending |
+| 1 | Core: Migration 8, letzte Aktivität und Gesehen-Zeitpunkt je Session, Command `session_set_viewed`, ADR 019 | standard | pending |
 | 2 | Oberfläche: Gruppen entfernen, Sortierung nach Aktivität, Ungelesen-Punkt, gesehene Session melden | standard | pending |
 
 ## Entscheidungen (mit dem User geklärt, 2026-10-02)
@@ -89,7 +89,7 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
 
 ### Checkliste
 
-- [ ] Neue Datei `src-tauri/src/db/migrations/007_session_activity.sql`, genau:
+- [ ] Neue Datei `src-tauri/src/db/migrations/008_session_activity.sql`, genau:
   ```sql
   ALTER TABLE sessions ADD COLUMN last_activity_at REAL NOT NULL DEFAULT 0;
   ALTER TABLE sessions ADD COLUMN seen_at REAL NOT NULL DEFAULT 0;
@@ -102,7 +102,7 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
 
   UPDATE sessions SET seen_at = last_activity_at;
   ```
-- [ ] `src-tauri/src/db/migrations.rs`: `MIGRATIONS` auf `[&str; 7]`, `include_str!("migrations/007_session_activity.sql")` hinten anhängen.
+- [ ] `src-tauri/src/db/migrations.rs`: `MIGRATIONS` auf `[&str; 8]`, `include_str!("migrations/008_session_activity.sql")` hinten anhängen.
 - [ ] `src-tauri/src/db/sessions.rs`:
   - `SessionRow` um `pub last_activity_at: f64` (Doc: „Letztes Senden oder Abgeben des Agenten“) und `pub seen_at: f64` (Doc: „Wann der User die Session zuletzt gesehen hat“) erweitern, hinter `tldr_seq`.
   - `StoredRow` ebenso; `StoredRow::read` liest sie als Index 18 und 19; `into_row` reicht sie durch.
@@ -193,7 +193,7 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
   In `src-tauri/src/lib.rs` neben `session_rename` registrieren.
 - [ ] `pnpm bindings`.
 - [ ] Neue Datei `docs/decisions/019-letzte-aktivitaet-und-ungelesen.md` in der Form von ADR 011: Kontext (Sidebar sortierte nach Anlegen und Status), Optionen (jeder Chat-Eintrag zählt / nur Senden und Abgeben; Zeitpunkte in SQLite / nur im Speicher), Entscheidung (Abschnitt „Entscheidungen“ dieses Plans), Konsequenzen (ruhige Liste während Läufen; Altbestand gilt als gelesen; nach dem Start ist die automatisch geöffnete Session gelesen).
-- [ ] `docs/code-map.md`: Zeile „Persistenz (SQLite)“ um „Migration 7 = letzte Aktivität und Gesehen-Zeitpunkt je Session“ ergänzen; Zeile „Sessions“ (Core) um „`set_viewed` gezeigte Session, `touch_activity` letzte Aktivität“ ergänzen.
+- [ ] `docs/code-map.md`: Zeile „Persistenz (SQLite)“ um „Migration 8 = letzte Aktivität und Gesehen-Zeitpunkt je Session“ ergänzen; Zeile „Sessions“ (Core) um „`set_viewed` gezeigte Session, `touch_activity` letzte Aktivität“ ergänzen.
 - [ ] `docs/glossary.md`: Einträge **Letzte Aktivität** („Zeitpunkt, an dem der User zuletzt gesendet oder der Agent zuletzt abgegeben hat — Rückfrage, fertig oder Fehler. Werkzeug-Aufrufe zählen nicht. Bestimmt die Reihenfolge in der Sidebar.“) und **Ungelesen** („Eine Session, deren letzte Aktivität jünger ist als der letzte Blick des Users. Gesehen ist eine Session, solange sie im Chat- oder Changes-Reiter offen ist.“) in der vorhandenen Tabellenform, alphabetisch einsortiert.
 - [ ] `pnpm check` grün; Commit `feat(sessions): letzte Aktivität und Ungelesen im Core`.
 

@@ -312,6 +312,13 @@ pub enum AgentEvent {
         output: String,
         exit_code: Option<i32>,
     },
+    /// Ein Bash- oder PowerShell-Aufruf mit `git` im Befehl ist beendet — vom Hauptagenten oder
+    /// einem Subagenten, nicht im Hintergrund. Zeiten in Millisekunden seit 1970, gemessen beim
+    /// Eingang.
+    GitCommandEnded {
+        started_at: f64,
+        ended_at: f64,
+    },
     TaskStarted {
         task_id: String,
         tool_use_id: String,

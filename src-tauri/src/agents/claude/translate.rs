@@ -1,6 +1,6 @@
 //! Übersetzt Zeilen der Claude-Kommandozeile in anbieterneutrale `AgentEvent`s.
 use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value};
 
@@ -18,6 +18,8 @@ const ASK_USER_TOOL: &str = "AskUserQuestion";
 const TODO_TOOL: &str = "TodoWrite";
 const GREP_TOOL: &str = "Grep";
 const BASH_TOOL: &str = "Bash";
+const POWERSHELL_TOOL: &str = "PowerShell";
+const GIT_WORD: &str = "git";
 const ABORTED_REASON: &str = "aborted_streaming";
 const TASK_TYPE_BASH: &str = "local_bash";
 const TASK_TYPE_AGENT: &str = "local_agent";
@@ -53,6 +55,10 @@ pub struct Translator {
     /// der beiden ist nicht belegt, ohne Eintrag gingen Ausgabedatei und Modell verloren.
     /// `task_started` schickt sie noch einmal hinterher.
     early_task_events: HashMap<String, Vec<AgentEvent>>,
+    /// Laufende Bash-/PowerShell-Aufrufe mit `git` im Befehl (Hauptagent und Subagenten, nur
+    /// Vordergrund) nach `tool_use_id` → Eingang in ms; ihr Ergebnis schließt das Zeitfenster für
+    /// die Commit-Suche (ADR 014).
+    git_calls: HashMap<String, f64>,
 }
 
 #[derive(Debug)]
@@ -148,6 +154,9 @@ impl Translator {
     }
 
     fn handle_assistant(&mut self, line: MessageLine<AssistantMessage>) -> Vec<AgentEvent> {
+        for block in &line.message.content {
+            self.remember_git_call(block);
+        }
         // Die `usage` eines Subagenten gilt seinem eigenen Kontext, nicht dem Balken der Session.
         if let Some(parent) = line.parent_tool_use_id {
             return subagent_events(&parent, line.message.content);
@@ -162,6 +171,41 @@ impl Translator {
             events.extend(command_started);
         }
         events
+    }
+
+    /// Merkt sich den Eingang eines Vordergrund-Befehls mit `git`, auch den eines Subagenten.
+    fn remember_git_call(&mut self, block: &ContentBlock) {
+        let ContentBlock::ToolUse { id, name, input } = block else {
+            return;
+        };
+        if name != BASH_TOOL && name != POWERSHELL_TOOL {
+            return;
+        }
+        let command = input
+            .get("command")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let is_background = input.get("run_in_background").and_then(Value::as_bool) == Some(true);
+        if command.contains(GIT_WORD) && !is_background {
+            self.git_calls.insert(id.clone(), now_ms());
+        }
+    }
+
+    /// Schließt die Zeitfenster der Git-Befehle, deren Ergebnis in `blocks` steht.
+    fn ended_git_calls(&mut self, blocks: &[ContentBlock]) -> Vec<AgentEvent> {
+        blocks
+            .iter()
+            .filter_map(|block: &ContentBlock| {
+                let ContentBlock::ToolResult { tool_use_id, .. } = block else {
+                    return None;
+                };
+                let started_at = self.git_calls.remove(tool_use_id)?;
+                Some(AgentEvent::GitCommandEnded {
+                    started_at,
+                    ended_at: now_ms(),
+                })
+            })
+            .collect()
     }
 
     /// Merkt sich einen Bash-Aufruf; im Vordergrund beginnt damit ein ausgeführter Befehl.
@@ -196,19 +240,21 @@ impl Translator {
 
     /// Werkzeug-Ergebnisse des Hauptagenten; die eines Subagenten zeigt nur dessen Schrittliste.
     fn handle_user(&mut self, line: MessageLine<UserMessage>) -> Vec<AgentEvent> {
-        if line.parent_tool_use_id.is_some() {
-            return Vec::new();
-        }
-        let UserContent::Blocks(blocks) = line.message.content else {
-            return Vec::new();
-        };
         let resolved_model: Option<String> = line
             .tool_use_result
             .as_ref()
             .and_then(|result: &Value| result.get(RESOLVED_MODEL_FIELD))
             .and_then(Value::as_str)
             .map(str::to_owned);
-        let mut events: Vec<AgentEvent> = Vec::new();
+        let UserContent::Blocks(blocks) = line.message.content else {
+            return Vec::new();
+        };
+        let mut events = self.ended_git_calls(&blocks);
+        // Von einem Subagenten zählt nur das Ende eines Git-Befehls; seine Ergebnisse zeigt nur
+        // seine Schrittliste.
+        if line.parent_tool_use_id.is_some() {
+            return events;
+        }
         for block in blocks {
             let ContentBlock::ToolResult {
                 tool_use_id,
@@ -292,6 +338,12 @@ impl Translator {
         let rounded_seconds = (started.elapsed().as_millis() + 500) / 1000;
         u32::try_from(rounded_seconds).unwrap_or(u32::MAX).max(1)
     }
+}
+
+fn now_ms() -> f64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0.0, |elapsed: Duration| elapsed.as_secs_f64() * 1000.0)
 }
 
 fn context_used(usage: &Usage) -> u32 {

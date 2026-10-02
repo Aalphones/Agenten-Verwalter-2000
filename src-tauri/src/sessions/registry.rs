@@ -34,12 +34,13 @@ use crate::background::output::{
     MAX_COMMAND_OUTPUT_BYTES, MAX_PREVIEW_BYTES, URL_SCAN_BYTES, exit_code_from_summary,
     find_local_url, read_head, read_tail, tail_text,
 };
+use crate::changes::attribution;
 use crate::context::model::{ContextBreakdown, ContextChangedEvent, SessionContext};
 use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
-    session_repositories, session_ticket_worktrees,
+    session_files, session_repositories, session_ticket_worktrees,
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
@@ -52,6 +53,7 @@ use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
 use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
+mod commit_scan;
 mod mcp;
 mod tldr;
 
@@ -61,6 +63,8 @@ const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
 const CONTEXT_CHANGED_EVENT: &str = "context://changed";
 const MAX_SUBAGENT_STEPS: usize = 200;
+/// Werkzeuge, mit denen der Agent Dateien schreibt (ADR 014).
+const WRITING_TOOLS: [&str; 4] = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
 const KILL_GRACE: Duration = Duration::from_secs(5);
 /// Abstand zwischen dem Abschuss des Agenten und dem Aufräumen seiner Worktrees.
 const CLEANUP_MARGIN: Duration = Duration::from_secs(1);
@@ -248,6 +252,11 @@ struct Outbox {
     scratchpad_dir: Option<String>,
     /// Neu zugeordnete Ticket-Worktrees als (Position, Ordnername).
     ticket_worktrees: Vec<(u32, String)>,
+    /// Von Agent oder Subagent geschriebene Dateien als (normalisierter Pfad, ms).
+    touched_files: Vec<(String, f64)>,
+    /// Zeitfenster beendeter Git-Befehle; nach dem Freigeben der Sperre sucht ein Thread darin die
+    /// eigenen Commits.
+    commit_windows: Vec<(f64, f64)>,
 }
 
 impl SessionRegistry {
@@ -1721,6 +1730,7 @@ impl SessionState {
             } => {
                 self.wake_if_idle(outbox);
                 self.note_ticket_worktrees(outbox, &used_paths);
+                self.note_touched_files(outbox, &tool, &used_paths);
                 let entry_tool_use_id = tool_use_id.clone();
                 let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Tool {
                     seq,
@@ -1831,6 +1841,10 @@ impl SessionState {
                 summary,
                 output_file,
             } => self.end_task(outbox, &task_id, end, summary, output_file),
+            AgentEvent::GitCommandEnded {
+                started_at,
+                ended_at,
+            } => outbox.commit_windows.push((started_at, ended_at)),
             AgentEvent::SubagentStep {
                 parent_tool_use_id,
                 tool,
@@ -1838,6 +1852,7 @@ impl SessionState {
                 used_paths,
             } => {
                 self.note_ticket_worktrees(outbox, &used_paths);
+                self.note_touched_files(outbox, &tool, &used_paths);
                 if let Some(index) = self.subagent_index(&parent_tool_use_id) {
                     let steps = &mut self.background[index].steps;
                     steps.push(SubagentStep { tool, target });
@@ -1889,6 +1904,20 @@ impl SessionState {
                 self.ticket_worktrees.push((position, folder.clone()));
                 outbox.ticket_worktrees.push((position, folder));
             }
+        }
+    }
+
+    /// Merkt sich die Dateien, die ein schreibendes Werkzeug nennt. Liest nur Text — wie
+    /// `note_ticket_worktrees`.
+    fn note_touched_files(&mut self, outbox: &mut Outbox, tool: &str, used_paths: &[String]) {
+        if !WRITING_TOOLS.contains(&tool) {
+            return;
+        }
+        let touched_at = now_ms();
+        for path in used_paths {
+            outbox
+                .touched_files
+                .push((attribution::normalize_path(path), touched_at));
         }
     }
 
@@ -2185,6 +2214,11 @@ fn update<R>(
         result
     };
     outbox.emit(app, session);
+    // Git gehört nicht unter die Session-Sperre.
+    let windows = std::mem::take(&mut outbox.commit_windows);
+    if !windows.is_empty() {
+        commit_scan::schedule(Arc::clone(session), windows);
+    }
     let value = result?;
     outbox.deliver(session)?;
     Ok(value)
@@ -2250,6 +2284,9 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
                 &session.id,
                 &outbox.ticket_worktrees,
             )?;
+        }
+        if !outbox.touched_files.is_empty() {
+            session_files::upsert_all(connection, &session.id, &outbox.touched_files)?;
         }
         Ok(())
     });

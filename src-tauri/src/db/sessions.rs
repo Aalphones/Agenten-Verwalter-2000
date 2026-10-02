@@ -1,5 +1,5 @@
 //! Tabelle `sessions`: ein Zeile je Session mit allem, was ein Neustart wiederherstellen muss.
-use rusqlite::{Connection, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::db::{enum_from_text, enum_to_text};
@@ -159,6 +159,28 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
         .query_map([], StoredRow::read)?
         .collect::<rusqlite::Result<_>>()?;
     stored.into_iter().map(StoredRow::into_row).collect()
+}
+
+/// Wann die Aufzeichnung für die älteste Session der Auswahl begann; `None`, wenn alle ab Anlegen
+/// aufgezeichnet sind.
+pub fn untracked_before(
+    connection: &Connection,
+    session_ids: &[String],
+) -> Result<Option<f64>, CommandError> {
+    let mut statement =
+        connection.prepare("SELECT changes_tracked_at FROM sessions WHERE id = ?1")?;
+    let mut latest: Option<f64> = None;
+    for session_id in session_ids {
+        let tracked_at: Option<f64> = statement
+            .query_row(params![session_id], |row| row.get(0))
+            .optional()?
+            .flatten();
+        latest = match (latest, tracked_at) {
+            (Some(current), Some(candidate)) => Some(current.max(candidate)),
+            (current, candidate) => current.or(candidate),
+        };
+    }
+    Ok(latest)
 }
 
 /// Löscht die Zeile samt ihrer Chat-Einträge (`ON DELETE CASCADE`).

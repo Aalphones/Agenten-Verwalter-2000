@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Erfassen: Migration 8, eigene Commits und geschriebene Dateien je Session mitschreiben, ADR 014 | [phase-1-erfassung.md](phase-1-erfassung.md) | heikel | pending |
+| 1 | Erfassen: Migration 7, eigene Commits und geschriebene Dateien je Session mitschreiben, ADR 014 | [phase-1-erfassung.md](phase-1-erfassung.md) | heikel | complete |
 | 2 | Core-Anzeige: Changes und Diff nach Reichweite Session/Vorhaben, fremde Anteile markieren | [phase-2-zuordnung.md](phase-2-zuordnung.md) | heikel | pending |
 | 3 | Oberfläche und Doku: Reichweite durchreichen, Hinweise, Glossar, Code-Map | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
@@ -30,7 +30,7 @@ Phase 1 schreibt daraus [ADR 014](../../decisions/014-changes-je-session.md) „
 - **Diff aus verstreuten Commits je Datei.** Für eine Datei mit eigenen Commits gilt `from` = erster Elternteil des ersten eigenen Commits, der sie ändert, und `to` = letzter eigener Commit, der sie ändert (Reihenfolge `--topo-order`). „Committed“ = `from → to`, „Alle“ = `from → Arbeitsverzeichnis`, „Uncommitted“ = `HEAD → Arbeitsverzeichnis` wie bisher, nur gefiltert. Ändert ein fremder Commit dieselbe Datei zwischen erstem und letztem eigenen Commit („Committed“) bzw. nach dem ersten eigenen Commit oder liegt fremder Schmutz darin („Alle“), steckt das im Diff. Dann ist `LineStat.foreign = true` und der Diff zeigt einen Hinweis. Verworfen: die Patches der eigenen Commits einzeln aneinanderhängen. Das lässt sich nicht verlässlich zu einem Diff zusammensetzen.
 - **Reichweite** (`ChangesReach`): `Session` = die Session allein, ihre eigenen Ticket-Worktrees. `Project` = alle Sessions des Vorhabens, alle ihre Ticket-Worktrees. Die Changes-Ansicht einer Session fragt `Session`, die der Vorhaben-Übersicht und deren Änderungssumme fragt `Project`. Ein Commit, den zwei parallel arbeitende Sessions im selben Fenster sehen, gehört beiden.
 - **Ticket-Worktrees** werden weiter gegen ihre Abzweigung vom Standard-Branch gemessen (ADR 010), aber ebenfalls nur mit eigenen Commits. Das Merge-Gate sieht damit nicht mehr den ganzen Branch, sondern nur die Arbeit der Reichweite. Das ist bewusst so, denn genau das verlangt der Auftrag.
-- **Kein Nachtragen.** Sessions aus der Zeit vor Migration 8 haben keine Aufzeichnung. Die Migration setzt ihnen `changes_tracked_at` auf den Zeitpunkt der Migration. Neue Sessions bleiben `NULL` (aufgezeichnet ab Anlegen). Die Ansicht nennt den Zeitpunkt, wenn eine Session der Reichweite einen hat. Verworfen: Nachtragen aus den Transkripten der Claude-Kommandozeile. Das wäre ein internes Dateiformat als neue Abhängigkeit, für einen Übergangsfall.
+- **Kein Nachtragen.** Sessions aus der Zeit vor Migration 7 haben keine Aufzeichnung. Die Migration setzt ihnen `changes_tracked_at` auf den Zeitpunkt der Migration. Neue Sessions bleiben `NULL` (aufgezeichnet ab Anlegen). Die Ansicht nennt den Zeitpunkt, wenn eine Session der Reichweite einen hat. Verworfen: Nachtragen aus den Transkripten der Claude-Kommandozeile. Das wäre ein internes Dateiformat als neue Abhängigkeit, für einen Übergangsfall.
 - **Zwischenspeicher für Unveränderliches.** Die Dateiliste eines Commits und die Zahlen `from → to` ändern sich nie, deshalb merkt sich der Core sie im Speicher (Obergrenzen siehe Phase 2). Diffs gegen das Arbeitsverzeichnis werden bei jedem Laden neu gelesen.
 - **Name:** kein neues Feature. Alles gehört zu `changes` (`src-tauri/src/changes/history.rs`, `attribution.rs`, `scan.rs`), die Tabellen heißen `session_commits` und `session_files` mit gleichnamigen Dateien unter `src-tauri/src/db/`.
 
@@ -70,7 +70,7 @@ TS (erzeugt): `ChangesReach = "session" | "project"`, `LineStat.foreign: boolean
 GitCommandEnded { started_at: f64, ended_at: f64 },
 ```
 
-### Schema (Migration 8, `src-tauri/src/db/migrations/008_session_changes.sql`)
+### Schema (Migration 7, `src-tauri/src/db/migrations/007_session_changes.sql`)
 
 ```sql
 CREATE TABLE session_commits (
@@ -111,7 +111,7 @@ UPDATE sessions SET changes_tracked_at = (julianday('now') - 2440587.5) * 864000
 5. Nach einem Commit des Agenten ändert Sascha dieselbe Datei von Hand: sie erscheint nicht unter „Uncommitted“ der Session, unter „Alle“ trägt ihr Diff den Hinweis auf fremde Änderungen.
 6. Zwei Sessions im selben Vorhaben, jede ändert eine andere Datei: jede Session-Ansicht zeigt nur ihre Datei, die Vorhaben-Übersicht beide.
 7. Agent rebased einen Ticket-Branch auf `main`: die Dateien der Session bleiben im Ticket-Worktree-Eintrag sichtbar, Upstream-Commits erscheinen nicht.
-8. Alte Session aus „Spracheingabe“ (vor Migration 8): Übersicht der Changes nennt „Erfasst seit …“, die Ansicht stürzt nicht und der Chat-Verlauf lädt.
+8. Alte Session aus „Spracheingabe“ (vor Migration 7): Übersicht der Changes nennt „Erfasst seit …“, die Ansicht stürzt nicht und der Chat-Verlauf lädt.
 9. Unter „Übersicht“ steht in der Session „Nur, was diese Session geändert hat.“, in der Vorhaben-Übersicht „Was die Sessions dieses Vorhabens geändert haben.“
 
 ## Summary

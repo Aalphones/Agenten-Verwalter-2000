@@ -34,3 +34,4 @@ Meilenstein 5 zeigt, was der Agent in den Worktrees einer Session geändert hat 
 - Der Monaco Diff Editor entfällt aus dem Stack.
 - Artefakte gehören nicht zu Meilenstein 5; ob die Claude-Kommandozeile sie überhaupt meldet, ist offen.
 - „Basis für Changes“ als Einstellung folgt in Meilenstein 6; bis dahin gilt `base_commit`.
+- Welche Commits und Dateien in die drei Blickwinkel eingehen, regelt seit [ADR 014](014-changes-je-session.md) die Zuordnung zur Session.
