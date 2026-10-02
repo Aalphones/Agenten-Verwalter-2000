@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** Nächsten Plan aus `docs/planning/` wählen (Reihenfolge unten) und mit `/implement` starten.
+**Aktiver Plan:** `docs/planning/2026-10-02_innere-repositories/`
+**Phase:** 2/3 — Changes (pending)
+**Nächster Schritt:** Phase 2 umsetzen laut `phase-2-changes.md` (Phase 1 committet).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

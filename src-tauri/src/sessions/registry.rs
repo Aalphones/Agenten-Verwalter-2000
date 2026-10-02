@@ -211,7 +211,8 @@ struct SessionState {
     /// Befehle, Prozesse und Subagenten, nach `started_at` aufsteigend. Wird mit dem Verlauf geladen.
     background: Vec<BackgroundItem>,
     scratchpad_dir: Option<String>,
-    /// Fest ab Anlegen: woran die Ticket-Worktrees der Repositories im Haupt-Checkout zu erkennen sind.
+    /// Woran die Ticket-Worktrees der Repositories und ihrer inneren Repositories zu erkennen sind;
+    /// beim Anlegen, Laden und jedem Agent-Start neu bestimmt (liest die Verzeichnisse der Repositories).
     ticket_roots: Vec<TicketRoot>,
     /// Ticket-Worktrees, die der Agent oder ein Subagent benutzt hat, als (Position, Ordnername).
     ticket_worktrees: Vec<(u32, String)>,
@@ -725,13 +726,15 @@ impl SessionRegistry {
             members
         };
         for session in &members {
+            // Vor `update`: das Verzeichnis wird nicht unter der Session-Sperre gelesen.
+            let roots = worktrees::ticket_roots(&session.repositories());
             // Ein Fehler hier betrifft nur Anzeige und Ruhezustand einer Session; das Repository
             // hängt schon in Datenbank und Speicher.
             let _ = update(
                 app,
                 session,
-                |state: &mut SessionState, outbox: &mut Outbox| {
-                    state.ticket_roots = worktrees::ticket_roots(&session.repositories());
+                move |state: &mut SessionState, outbox: &mut Outbox| {
+                    state.ticket_roots = roots;
                     outbox.summary_dirty = true;
                     if state.process.is_some() && state.is_resting() {
                         retire_idle_process(state, outbox);
@@ -2470,6 +2473,8 @@ fn start_process(
     let resume = state.has_agent_history;
     let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
     let repositories = session.repositories();
+    // Ein inneres Repository, das seit dem letzten Start dazukam, wird so erkannt.
+    state.ticket_roots = worktrees::ticket_roots(&repositories);
     let mut add_dirs: Vec<PathBuf> = Vec::with_capacity(repositories.len());
     for check in worktrees::ensure(&session.workspace, &repositories) {
         match check {

@@ -26,45 +26,45 @@
 
 ### ADR
 
-- [ ] `docs/decisions/020-innere-repositories.md` nach Vorlage ADR 014/018: Kontext (facepass-Aufbau, warum die Changes leer waren), betrachtete Optionen (die verworfenen aus „Festgelegte Entscheidungen“ plus „Workaround: innere Repos einzeln ans Vorhaben hängen“ — verworfen, weil jede Session es von Hand tun müsste und die Worktree-Zuordnung dann vom Zeitpunkt des Anhängens abhinge), Entscheidung (alle Punkte aus „Festgelegte Entscheidungen“), Konsequenzen (je inneres Repository ein `rev-list` je Nachladen und je Git-Befehl des Agenten, bei facepass acht — gemessen 2026-10-02 zusammen gut 1 s nacheinander, deshalb parallel; frühere Commits bleiben unbekannt; „Löst ab: in ADR 018 die Folge ‚`git` läuft für ihn nie‘ …“). Status „angenommen“, Datum 2026-10-02.
+- [x] `docs/decisions/020-innere-repositories.md` nach Vorlage ADR 014/018: Kontext (facepass-Aufbau, warum die Changes leer waren), betrachtete Optionen (die verworfenen aus „Festgelegte Entscheidungen“ plus „Workaround: innere Repos einzeln ans Vorhaben hängen“ — verworfen, weil jede Session es von Hand tun müsste und die Worktree-Zuordnung dann vom Zeitpunkt des Anhängens abhinge), Entscheidung (alle Punkte aus „Festgelegte Entscheidungen“), Konsequenzen (je inneres Repository ein `rev-list` je Nachladen und je Git-Befehl des Agenten, bei facepass acht — gemessen 2026-10-02 zusammen gut 1 s nacheinander, deshalb parallel; frühere Commits bleiben unbekannt; „Löst ab: in ADR 018 die Folge ‚`git` läuft für ihn nie‘ …“). Status „angenommen“, Datum 2026-10-02.
 
 ### `src-tauri/src/worktrees/mod.rs`
 
-- [ ] `TicketRoot` bekommt das Feld `inner: Option<String>` mit dem Doc-Kommentar aus dem Kontrakt.
-- [ ] `pub fn inner_repositories(folder: &Path) -> Vec<String>`: `fs::read_dir(folder)`; Fehler → leere Liste. Je Eintrag: Name als `String` (`to_string_lossy`), überspringen, wenn er mit `.` beginnt; behalten, wenn `entry.path().join(".git").is_dir()`. Sortieren mit `sort_by_key(|name| name.to_ascii_lowercase())`. Doc-Kommentar: Definition „inneres Repository“ aus dem README in einem Satz.
-- [ ] `ticket_roots` umbauen: je Repository mit Index
+- [x] `TicketRoot` bekommt das Feld `inner: Option<String>` mit dem Doc-Kommentar aus dem Kontrakt.
+- [x] `pub fn inner_repositories(folder: &Path) -> Vec<String>`: `fs::read_dir(folder)`; Fehler → leere Liste. Je Eintrag: Name als `String` (`to_string_lossy`), überspringen, wenn er mit `.` beginnt; behalten, wenn `entry.path().join(".git").is_dir()`. Sortieren mit `sort_by_key(|name| name.to_ascii_lowercase())`. Doc-Kommentar: Definition „inneres Repository“ aus dem README in einem Satz.
+- [x] `ticket_roots` umbauen: je Repository mit Index
   - `RepositoryCheckout::AppWorktree` → nichts;
   - `RepositoryCheckout::Main` → zuerst die bisherige Wurzel mit `inner: None`, dann die inneren;
   - `RepositoryCheckout::Folder` → nur die inneren.
   - Innere: für jeden Namen aus `inner_repositories(&repository.repository_path)` eine Wurzel `prefix = format!("{name}{TICKET_WORKTREE_INFIX}").to_ascii_lowercase()`, `inner: Some(name)`.
   - Doc-Kommentar anpassen (Inhalt laut Kontrakt, „liest je Repository einmal das Verzeichnis“).
-- [ ] `pub fn ticket_root_of<'a>(roots: &'a [TicketRoot], position: u32, folder: &str) -> Option<&'a TicketRoot>`: `let lower = folder.to_ascii_lowercase();` Kandidaten `root.position == position && lower.starts_with(&root.prefix)`, davon `max_by_key(|root| root.prefix.len())`.
-- [ ] Basis eines inneren Repositorys:
+- [x] `pub fn ticket_root_of<'a>(roots: &'a [TicketRoot], position: u32, folder: &str) -> Option<&'a TicketRoot>`: `let lower = folder.to_ascii_lowercase();` Kandidaten `root.position == position && lower.starts_with(&root.prefix)`, davon `max_by_key(|root| root.prefix.len())`.
+- [x] Basis eines inneren Repositorys:
   - Den Closure `base` in `main_checkout_since` in eine private Funktion `fn base_since(repository_path: &Path, since_ms: f64) -> Result<(String, String), CommandError>` ziehen (Rückgabe `(base_ref, base_commit)`, Logik unverändert); `main_checkout_since` ruft sie auf.
   - Zwischenspeicher `static INNER_BASES: OnceLock<Mutex<HashMap<String, (String, String)>>>`, Schlüssel `format!("{}|{}", normalized_dir(path), since_seconds)` mit `since_seconds = (since_ms / 1000.0) as i64`; Obergrenze `const MAX_CACHED_BASES: usize = 1_000` — darüber `clear()` vor dem Einfügen (wie `history.rs`). Nur Erfolge werden gespeichert. Sperre mit `unwrap_or_else(PoisonError::into_inner)`.
   - `pub fn inner_checkout(outer: &SessionRepository, folder: &str, since_ms: f64) -> Result<SessionRepository, CommandError>`: `repository_path = outer.repository_path.join(folder)`; Basis aus dem Zwischenspeicher bzw. `base_since` (Fehler mit `prefixed(folder, error)`); Ergebnis `SessionRepository { name: folder.to_owned(), repository_path, base_ref, base_commit, checkout: RepositoryCheckout::Main }`.
-- [ ] `ticket_worktrees` in `pub fn ticket_worktrees_in(repository, position, folders, parent: &Path)` umbenennen; im Körper `let Some(parent) = repository.repository_path.parent()` entfällt, `parent` kommt als Parameter. Neue `pub fn ticket_worktrees(repository, position, folders)` mit unverändertem Doc-Kommentar ruft `ticket_worktrees_in` mit `repository.repository_path.parent()` auf (ohne Elternordner → leere Liste). Alle bisherigen Aufrufer bleiben unverändert.
+- [x] `ticket_worktrees` in `pub fn ticket_worktrees_in(repository, position, folders, parent: &Path)` umbenennen; im Körper `let Some(parent) = repository.repository_path.parent()` entfällt, `parent` kommt als Parameter. Neue `pub fn ticket_worktrees(repository, position, folders)` mit unverändertem Doc-Kommentar ruft `ticket_worktrees_in` mit `repository.repository_path.parent()` auf (ohne Elternordner → leere Liste). Alle bisherigen Aufrufer bleiben unverändert.
 
 ### `src-tauri/src/sessions/registry.rs`
 
-- [ ] Doc-Kommentar des Felds `ticket_roots`: „Woran die Ticket-Worktrees der Repositories und ihrer inneren Repositories zu erkennen sind; beim Anlegen, Laden und jedem Agent-Start neu bestimmt (liest die Verzeichnisse der Repositories).“
-- [ ] `start_process`: direkt nach `let repositories = session.repositories();` die Zeile `state.ticket_roots = worktrees::ticket_roots(&repositories);` mit Kommentar „Ein inneres Repository, das seit dem letzten Start dazukam, wird so erkannt.“
-- [ ] `add_repository`: vor der Schleife `for session in &members` keine Änderung an der Reihenfolge, aber in der Schleife die Wurzeln **vor** `update(...)` berechnen (`let roots = worktrees::ticket_roots(&session.repositories());`) und im Closure nur zuweisen (`state.ticket_roots = roots;` — Closure wird dafür `move` bzw. `roots` per `clone()` hineingegeben). Grund als Kommentar: Verzeichnis lesen nicht unter der Session-Sperre.
-- [ ] `restore`, `create_project`, `create_in_project`: unverändert (rufen dieselbe Funktion; dort hält keine Session-Sperre).
+- [x] Doc-Kommentar des Felds `ticket_roots`: „Woran die Ticket-Worktrees der Repositories und ihrer inneren Repositories zu erkennen sind; beim Anlegen, Laden und jedem Agent-Start neu bestimmt (liest die Verzeichnisse der Repositories).“
+- [x] `start_process`: direkt nach `let repositories = session.repositories();` die Zeile `state.ticket_roots = worktrees::ticket_roots(&repositories);` mit Kommentar „Ein inneres Repository, das seit dem letzten Start dazukam, wird so erkannt.“
+- [x] `add_repository`: vor der Schleife `for session in &members` keine Änderung an der Reihenfolge, aber in der Schleife die Wurzeln **vor** `update(...)` berechnen (`let roots = worktrees::ticket_roots(&session.repositories());`) und im Closure nur zuweisen (`state.ticket_roots = roots;` — Closure wird dafür `move` bzw. `roots` per `clone()` hineingegeben). Grund als Kommentar: Verzeichnis lesen nicht unter der Session-Sperre.
+- [x] `restore`, `create_project`, `create_in_project`: unverändert (rufen dieselbe Funktion; dort hält keine Session-Sperre).
 
 ### Prüfprogramm `src-tauri/examples/changes-probe.rs`
 
-- [ ] Kopfkommentar: „Zeigt, was die Changes für eine Session aus einer **Kopie** der Datenbank ermitteln. Aufruf: `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project]`.“
-- [ ] `fn main() -> Result<(), Box<dyn std::error::Error>>`; Argumente aus `std::env::args()`; fehlen sie → Aufruf-Zeile auf stderr, Exit-Code 2.
-- [ ] Schutz: ist der kanonische Pfad (`fs::canonicalize`) gleich dem von `%USERPROFILE%\.verwalter\verwalter.db` (Umgebungsvariable `USERPROFILE`) → Abbruch mit „Nur gegen eine Kopie: <Pfad> ist die Datenbank der App.“, Exit-Code 2. Grund als Kommentar: `Database::open` führt Migrationen aus.
-- [ ] `Database::open(path)`, dann in `database.with(|connection| …)`: `session_repositories::load`, `session_ticket_worktrees::load`, `session_files::load_for(connection, &[id])`.
-- [ ] Ausgabe (Textzeilen, keine JSON in dieser Phase): je Repository `Position, Name, Pfad, Art`; je Wurzel aus `worktrees::ticket_roots(&repositories)` `Position, Präfix, inner`; gemerkte Ticket-Worktrees; je geschriebene Datei die Treffer von `worktrees::mentioned_ticket_worktrees(&roots, path)` und für jeden Treffer `ticket_root_of(...).and_then(|root| root.inner.clone())`.
-- [ ] Datenbank-Kopie fürs Prüfen: `verwalter.db`, `verwalter.db-wal`, `verwalter.db-shm` aus `%USERPROFILE%\.verwalter\` gemeinsam in einen Ordner außerhalb des Repos kopieren (Scratchpad).
+- [x] Kopfkommentar: „Zeigt, was die Changes für eine Session aus einer **Kopie** der Datenbank ermitteln. Aufruf: `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project]`.“
+- [x] `fn main() -> Result<(), Box<dyn std::error::Error>>`; Argumente aus `std::env::args()`; fehlen sie → Aufruf-Zeile auf stderr, Exit-Code 2.
+- [x] Schutz: ist der kanonische Pfad (`fs::canonicalize`) gleich dem von `%USERPROFILE%\.verwalter\verwalter.db` (Umgebungsvariable `USERPROFILE`) → Abbruch mit „Nur gegen eine Kopie: <Pfad> ist die Datenbank der App.“, Exit-Code 2. Grund als Kommentar: `Database::open` führt Migrationen aus.
+- [x] `Database::open(path)`, dann in `database.with(|connection| …)`: `session_repositories::load`, `session_ticket_worktrees::load`, `session_files::load_for(connection, &[id])`.
+- [x] Ausgabe (Textzeilen, keine JSON in dieser Phase): je Repository `Position, Name, Pfad, Art`; je Wurzel aus `worktrees::ticket_roots(&repositories)` `Position, Präfix, inner`; gemerkte Ticket-Worktrees; je geschriebene Datei die Treffer von `worktrees::mentioned_ticket_worktrees(&roots, path)` und für jeden Treffer `ticket_root_of(...).and_then(|root| root.inner.clone())`.
+- [x] Datenbank-Kopie fürs Prüfen: `verwalter.db`, `verwalter.db-wal`, `verwalter.db-shm` aus `%USERPROFILE%\.verwalter\` gemeinsam in einen Ordner außerhalb des Repos kopieren (Scratchpad).
 
 ### Abschluss
 
-- [ ] `pnpm check` grün; `pnpm bindings` und `git status src/lib/bindings` zeigt nichts.
-- [ ] Commit `feat(changes): innere Repositories und ihre Ticket-Worktrees erkennen` (Body: ADR 020, Prüfprogramm).
+- [x] `pnpm check` grün; `pnpm bindings` und `git status src/lib/bindings` zeigt nichts.
+- [x] Commit `feat(changes): innere Repositories und ihre Ticket-Worktrees erkennen` (Body: ADR 020, Prüfprogramm).
 
 ## Definition of Done
 
@@ -74,3 +74,13 @@
 - Sieben Ziele kurz geprüft (Rubrik `knowledge/topics/goals-rubric.md`).
 
 ## Report-Back
+
+**Status:** complete (2026-10-02, auf der Privatmaschine).
+
+- **Abweichung Prüfgrundlage:** facepass und die Datenbank mit Session `a6357b9c-…` liegen nur auf dem Arbeitslaptop. Geprüft wurde gegen eine Nachbildung unter `%TEMP%\verwalter-probe\` (Skripte `layout.sh`, `prepare.py`): Dach-Repo `dach` mit inneren Repositories `app`, `admin-app`, `Android`, `.hidden`, Unterordner `kein-repo` ohne Git, Ticket-Worktrees `app-wt-gymid-2288`, `admin-app-wt-gymid-2111`, `android-wt-gymid-799` im Dach, `dach-wt-x` daneben; dazu Ordner ohne Git `ordner` mit innerem Repository `notes`. Eine Session der Datenbank-Kopie bekam diese beiden Repositories und sechs geschriebene Dateien. Der facepass-Lauf steht als Finding für die Abnahme in Phase 3.
+- **`changes-probe`-Ausgabe (Nachbildung):** Wurzeln `0 dach-wt- inner=-`, `0 admin-app-wt- inner=admin-app`, `0 android-wt- inner=Android`, `0 app-wt- inner=app`, `1 notes-wt- inner=notes`. Zuordnung: `dach-wt-x\a.txt → (0, dach-wt-x) inner=-`, `admin-app-wt-gymid-2111\x.ts → inner=admin-app` (nicht `app`), `android-wt-gymid-799\…kt → inner=Android`, `app-wt-gymid-2288\src\main.py → inner=app`, `app\direkt.py` und `readme.txt → kein Ticket-Worktree`.
+- **Gegenprobe Git Bash:** `for d in */ .*/; do [ -d "$d.git" ] && echo "${d%/}"; done` im Dach → `Android`, `admin-app`, `app`, `.hidden`; `.hidden` fällt absichtlich weg (führender Punkt), Worktree-Ordner mit `.git`-Datei sind nicht dabei. Im Verwalter-Repo selbst: keine inneren Repositories → genau eine Wurzel wie vorher.
+- **Schutz:** gegen `%USERPROFILE%\.verwalter\verwalter.db` bricht `changes-probe` mit „Nur gegen eine Kopie: …“ und Exit-Code 2 ab.
+- **Kleine Abweichungen:** `main` liefert `Result<ExitCode, …>` statt `Result<(), …>`, damit Exit-Code 2 ohne `process::exit` geht. Reichweite `project` liest die geschriebenen Dateien aller aktiven Sessions des Vorhabens; gemerkte Ticket-Worktrees nur die der genannten Session.
+- `pnpm check` grün, `pnpm bindings` ändert nichts.
+- **Sieben Ziele:** Stabilität — Vorhaben ohne innere Repositories behalten genau ihre Wurzel, bisherige Aufrufer von `ticket_worktrees` unverändert; Sicherheit — keine neue Freigabe, Git nur über `git/`, die Worktree-Prüfung über `git worktree list` bleibt; Simplicity — eine Ebene tief, keine Migration; Wartbarkeit — ADR 020, Doku-Zeilen folgen laut Plan in Phase 3; Performance — Verzeichnis lesen in `add_repository` außerhalb der Session-Sperre, im Agent-Start unter ihr wie festgelegt, Basis-Speicher mit Obergrenze.

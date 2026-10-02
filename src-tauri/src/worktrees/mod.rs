@@ -1,7 +1,9 @@
 //! Arbeitsordner der Session-Repositories: Haupt-Checkouts, Freigaben für Ticket-Worktrees, die
 //! App-Worktrees von Sessions vor ADR 010 und Ordner ohne Git.
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use crate::db::repositories::RepositoryRow;
 use crate::error::CommandError;
@@ -13,6 +15,14 @@ pub const TICKET_WORKTREE_INFIX: &str = "-wt-";
 /// Zeichen, hinter denen im Text ein Ordnername beginnen kann (außer Leerraum).
 const NAME_BOUNDARIES: [char; 6] = ['\\', '/', '"', '\'', '=', ':'];
 const HEAD: &str = "HEAD";
+
+// Darüber wird der Speicher geleert statt einzeln verdrängt: ein Neuaufbau kostet nur Git-Aufrufe.
+const MAX_CACHED_BASES: usize = 1_000;
+
+/// Basis je inneres Repository und Beginn der Reichweite (`<Ordner>|<Sekunde>`). Hält die Basis
+/// fest, solange die App läuft: ohne Commit vor dem Beginn wäre sie sonst der jeweils ausgecheckte
+/// Stand und eigene Commits fielen aus den Changes, sobald sie da sind.
+static INNER_BASES: OnceLock<Mutex<HashMap<String, (String, String)>>> = OnceLock::new();
 
 /// Ein Ticket-Worktree, den der Agent der Session benutzt hat und den es laut Git noch gibt.
 #[derive(Debug, Clone)]
@@ -32,8 +42,11 @@ pub struct TicketWorktree {
 pub struct TicketRoot {
     /// Position des Repositorys in der Session.
     pub position: u32,
-    /// `<Ordner des Repositorys>-wt-` in ASCII-Kleinbuchstaben.
+    /// `<Ordner>-wt-` in ASCII-Kleinbuchstaben.
     pub prefix: String,
+    /// `None`: Ticket-Worktrees des angehängten Repositorys, neben ihm. `Some(<Ordnername>)`:
+    /// Ticket-Worktrees dieses inneren Repositorys, im angehängten Ordner.
+    pub inner: Option<String>,
 }
 
 /// Wo der Agent ein Repository der Session vorfindet.
@@ -119,15 +132,8 @@ pub fn main_checkout_since(
     if !repository_path.join(".git").exists() {
         return Ok(folder_checkout(row));
     }
-    let since_seconds = (since_ms / 1000.0) as i64;
-    let base = || -> Result<(String, String), CommandError> {
-        let Some(commit) = git::commit_before(&repository_path, since_seconds)? else {
-            return read_base(&repository_path);
-        };
-        let reference = git::head_branch(&repository_path)?.unwrap_or_else(|| commit.clone());
-        Ok((reference, commit))
-    };
-    let (base_ref, base_commit) = base().map_err(|error| prefixed(&row.name, error))?;
+    let (base_ref, base_commit) = base_since(&repository_path, since_ms)
+        .map_err(|error: CommandError| prefixed(&row.name, error))?;
     Ok(SessionRepository {
         name: row.name.clone(),
         repository_path,
@@ -135,6 +141,58 @@ pub fn main_checkout_since(
         base_commit,
         checkout: RepositoryCheckout::Main,
     })
+}
+
+/// Ein inneres Repository des angehängten `outer` als Repository im Haupt-Checkout, gemessen ab dem
+/// letzten Commit vor `since_ms` (ms seit 1970); gibt es davor keinen, ab dem ausgecheckten Stand.
+pub fn inner_checkout(
+    outer: &SessionRepository,
+    folder: &str,
+    since_ms: f64,
+) -> Result<SessionRepository, CommandError> {
+    let repository_path = outer.repository_path.join(folder);
+    let since_seconds = (since_ms / 1000.0) as i64;
+    let key = format!("{}|{since_seconds}", normalized_dir(&repository_path));
+    let cached = inner_bases_cache().get(&key).cloned();
+    let (base_ref, base_commit) = match cached {
+        Some(base) => base,
+        None => {
+            // Die Sperre ist hier frei: Git läuft nie unter ihr.
+            let base = base_since(&repository_path, since_ms)
+                .map_err(|error: CommandError| prefixed(folder, error))?;
+            let mut cache = inner_bases_cache();
+            if cache.len() >= MAX_CACHED_BASES {
+                cache.clear();
+            }
+            cache.insert(key, base.clone());
+            base
+        }
+    };
+    Ok(SessionRepository {
+        name: folder.to_owned(),
+        repository_path,
+        base_ref,
+        base_commit,
+        checkout: RepositoryCheckout::Main,
+    })
+}
+
+/// `(base_ref, base_commit)`: der letzte Commit vor `since_ms` auf dem First-Parent-Pfad von `HEAD`
+/// mit dem ausgecheckten Branch; gibt es davor keinen, der ausgecheckte Stand.
+fn base_since(repository_path: &Path, since_ms: f64) -> Result<(String, String), CommandError> {
+    let since_seconds = (since_ms / 1000.0) as i64;
+    let Some(commit) = git::commit_before(repository_path, since_seconds)? else {
+        return read_base(repository_path);
+    };
+    let reference = git::head_branch(repository_path)?.unwrap_or_else(|| commit.clone());
+    Ok((reference, commit))
+}
+
+fn inner_bases_cache() -> MutexGuard<'static, HashMap<String, (String, String)>> {
+    INNER_BASES
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Ein Ordner ohne Git als Repository der Session: leere Basis, denn es gibt nichts zu vergleichen.
@@ -256,24 +314,78 @@ pub fn permission_rules(repositories: &[SessionRepository]) -> Vec<String> {
     rules
 }
 
-/// Je Repository im Haupt-Checkout das Präfix seiner Ticket-Worktrees. App-Worktrees bekommen
-/// keins: dort legt der Agent keine Ticket-Worktrees an.
-pub fn ticket_roots(repositories: &[SessionRepository]) -> Vec<TicketRoot> {
-    repositories
-        .iter()
-        .enumerate()
-        .filter_map(|(index, repository): (usize, &SessionRepository)| {
-            if !matches!(repository.checkout, RepositoryCheckout::Main) {
+/// Die inneren Repositories von `folder`: direkte Unterordner, in denen `.git` ein Ordner ist —
+/// Unterordner mit `.git`-Datei sind Worktrees, Namen mit führendem `.` zählen nicht. Aufsteigend
+/// ohne Rücksicht auf Groß/Klein; ist `folder` nicht lesbar, keine.
+pub fn inner_repositories(folder: &Path) -> Vec<String> {
+    let Ok(entries) = fs::read_dir(folder) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .filter_map(|entry: std::io::Result<fs::DirEntry>| {
+            let entry = entry.ok()?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') || !entry.path().join(".git").is_dir() {
                 return None;
             }
-            let folder_name = repository.repository_path.file_name()?;
-            let prefix = format!("{}{TICKET_WORKTREE_INFIX}", folder_name.to_string_lossy());
-            Some(TicketRoot {
-                position: u32::try_from(index).ok()?,
-                prefix: prefix.to_ascii_lowercase(),
-            })
+            Some(name)
         })
-        .collect()
+        .collect();
+    names.sort_by_key(|name: &String| name.to_ascii_lowercase());
+    names
+}
+
+/// Woran die Ticket-Worktrees zu erkennen sind: je Repository im Haupt-Checkout die Wurzel
+/// `inner: None` plus je inneres Repository eine; je Ordner ohne Git nur die der inneren;
+/// App-Worktrees keine, dort legt der Agent keine Ticket-Worktrees an. Liest je Repository einmal
+/// das Verzeichnis.
+pub fn ticket_roots(repositories: &[SessionRepository]) -> Vec<TicketRoot> {
+    let mut roots: Vec<TicketRoot> = Vec::new();
+    for (index, repository) in repositories.iter().enumerate() {
+        let Ok(position) = u32::try_from(index) else {
+            continue;
+        };
+        match repository.checkout {
+            RepositoryCheckout::AppWorktree { .. } => continue,
+            RepositoryCheckout::Main => {
+                let Some(folder_name) = repository.repository_path.file_name() else {
+                    continue;
+                };
+                roots.push(TicketRoot {
+                    position,
+                    prefix: ticket_prefix(&folder_name.to_string_lossy()),
+                    inner: None,
+                });
+            }
+            RepositoryCheckout::Folder => {}
+        }
+        for name in inner_repositories(&repository.repository_path) {
+            roots.push(TicketRoot {
+                position,
+                prefix: ticket_prefix(&name),
+                inner: Some(name),
+            });
+        }
+    }
+    roots
+}
+
+/// Die Wurzel an `position`, deren Präfix am Anfang von `folder` steht (ASCII ohne Groß/Klein); bei
+/// mehreren die mit dem längsten Präfix — `admin-app-wt-x` gehört zu `admin-app`, nicht zu `app`.
+pub fn ticket_root_of<'a>(
+    roots: &'a [TicketRoot],
+    position: u32,
+    folder: &str,
+) -> Option<&'a TicketRoot> {
+    let lower = folder.to_ascii_lowercase();
+    roots
+        .iter()
+        .filter(|root: &&TicketRoot| root.position == position && lower.starts_with(&root.prefix))
+        .max_by_key(|root: &&TicketRoot| root.prefix.len())
+}
+
+fn ticket_prefix(folder_name: &str) -> String {
+    format!("{folder_name}{TICKET_WORKTREE_INFIX}").to_ascii_lowercase()
 }
 
 /// Die Ticket-Worktrees, die `text` nennt — als absoluten Pfad, `../<Ordner>` oder nackten
@@ -324,13 +436,24 @@ pub fn ticket_worktrees(
     position: u32,
     folders: &[String],
 ) -> Vec<TicketWorktree> {
+    let Some(parent) = repository.repository_path.parent() else {
+        return Vec::new();
+    };
+    ticket_worktrees_in(repository, position, folders, parent)
+}
+
+/// Wie `ticket_worktrees`, aber die Worktree-Ordner liegen in `parent` statt neben dem
+/// Haupt-Checkout — bei einem inneren Repository im angehängten Ordner.
+pub fn ticket_worktrees_in(
+    repository: &SessionRepository,
+    position: u32,
+    folders: &[String],
+    parent: &Path,
+) -> Vec<TicketWorktree> {
     let has_ticket_worktrees = matches!(repository.checkout, RepositoryCheckout::Main);
     if !has_ticket_worktrees || folders.is_empty() {
         return Vec::new();
     }
-    let Some(parent) = repository.repository_path.parent() else {
-        return Vec::new();
-    };
     let Ok(entries) = git::worktree_list(&repository.repository_path) else {
         return Vec::new();
     };

@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Wave | Status |
 |---|---|---|---|---|---|
-| 1 | Erkennung: innere Repositories, ihre Ticket-Worktrees, Prüfprogramm, ADR 020 | [phase-1-erkennung.md](phase-1-erkennung.md) | heikel | 1 | pending |
+| 1 | Erkennung: innere Repositories, ihre Ticket-Worktrees, Prüfprogramm, ADR 020 | [phase-1-erkennung.md](phase-1-erkennung.md) | heikel | 1 | complete |
 | 2 | Changes: Einträge für innere Repositories, Schlüssel `<P>:<Ordner>`, Diff | [phase-2-changes.md](phase-2-changes.md) | heikel | 2 | pending |
 | 3 | Commit-Suche in inneren Repositories, Doku, Abnahme | [phase-3-commits-doku.md](phase-3-commits-doku.md) | standard | 3 | pending |
 
