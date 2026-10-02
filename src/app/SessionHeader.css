@@ -1,6 +1,8 @@
 .session-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Rechts ist die Untergrenze der Inhalt: bei wenig Platz weicht der Titel links, die
+     Werkzeugleiste schiebt sich nie über die Tabs. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(min-content, 1fr);
   align-items: center;
   flex-shrink: 0;
   gap: var(--space-2xl);
@@ -275,6 +277,20 @@
       background: var(--color-accent);
       color: var(--color-fg-on-accent);
       font-weight: 600;
+    }
+  }
+
+  /* Schmale Fenster: Beschriftung und Laufzeit weglassen, Symbole und Punkt bleiben. */
+  @media (max-width: 1100px) {
+    gap: var(--space-lg);
+
+    &__tools {
+      gap: var(--space-lg);
+    }
+
+    &__background-label,
+    &__runtime {
+      display: none;
     }
   }
 }
