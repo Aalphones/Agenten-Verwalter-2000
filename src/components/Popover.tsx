@@ -1,9 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ReactElement, ReactNode } from 'react';
+import { FOCUSABLE_SELECTOR } from '@/lib/focus';
 import './Popover.css';
-
-const FOCUSABLE_SELECTOR =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 interface PopoverProps {
   label: string;

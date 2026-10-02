@@ -1,12 +1,12 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_mcp-dialog/`
-**Phase:** 2/3 — Oberfläche: Dialog- und Schalter-Baustein, MCP-Dialog (nächste, Rating standard)
-**Nächster Schritt:** Phase 2 starten (`phase-2-dialog.md` und Design unter `docs/design/2026-10-01_mcp-dialog/` lesen). Phase 1 (Core) ist committet. Offen aus früheren Plänen: Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
+**Phase:** 3/3 — Einstiege `/mcp` und Hinweis in der Eingabeleiste, Doku, Release (nächste, Rating mechanisch)
+**Nächster Schritt:** Phase 3 starten (`phase-3-einstiege.md` lesen). Phase 2 (Dialog, Schalter, MCP-Dialog) ist committet, aber noch nicht in der laufenden App gesehen — der Dialog hat bis Phase 3 keinen Einstieg. Offen aus früheren Plänen: Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
-1. **MCP-Dialog** — läuft (Phase 2/3 offen). Klein und unabhängig; Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
+1. **MCP-Dialog** — läuft (Phase 3/3 offen). Klein und unabhängig; Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
 2. **Session-Changes** — muss vor Changes-Review kommen (ändert die Signaturen von `changes_load`/`changes_file_diff`).
 3. **Changes-Review** — baut auf dem Diff auf, der nur noch die Änderungen der Session zeigt.
 4. **Claude Code + LM Studio** (`claude-code-lokal`) — Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen auf Platz 1.

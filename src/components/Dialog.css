@@ -1,0 +1,24 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: var(--space-5xl);
+  background: var(--color-scrim);
+}
+
+.dialog__panel {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-popover);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-fg-primary);
+}
