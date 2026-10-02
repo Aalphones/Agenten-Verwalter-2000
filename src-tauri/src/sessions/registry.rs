@@ -37,6 +37,7 @@ use crate::background::output::{
 use crate::changes::ChangesInput;
 use crate::changes::attribution::{self, Ownership};
 use crate::changes::model::ChangesReach;
+use crate::changes::sources;
 use crate::context::model::{ContextBreakdown, ContextChangedEvent, SessionContext};
 use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
@@ -1123,18 +1124,40 @@ impl SessionRegistry {
         reach: ChangesReach,
     ) -> Result<ChangesInput, CommandError> {
         let session = self.get(session_id)?;
-        let (ids, ticket_folders): (Vec<String>, Vec<(u32, String)>) = match reach {
+        let project_created = self
+            .lock_projects()
+            .get(&session.project_id)
+            .map(|project: &ProjectState| project.created_at);
+        let (ids, remembered, ticket_roots, since_ms) = match reach {
             ChangesReach::Session => {
-                let ticket_folders = session.lock().ticket_worktrees.clone();
-                (vec![session.id.clone()], ticket_folders)
+                let (remembered, ticket_roots, created_at) = {
+                    let state = session.lock();
+                    (
+                        state.ticket_worktrees.clone(),
+                        state.ticket_roots.clone(),
+                        state.created_at,
+                    )
+                };
+                (
+                    vec![session.id.clone()],
+                    remembered,
+                    ticket_roots,
+                    created_at,
+                )
             }
             ChangesReach::Project => {
-                let ids = self
+                let ids: Vec<String> = self
                     .project_members(&session.project_id)
                     .iter()
                     .map(|member: &Arc<Session>| member.id.clone())
                     .collect();
-                (ids, self.project_ticket_worktrees(session_id)?)
+                let remembered = self.project_ticket_worktrees(session_id)?;
+                let (ticket_roots, created_at) = {
+                    let state = session.lock();
+                    (state.ticket_roots.clone(), state.created_at)
+                };
+                let since_ms = project_created.unwrap_or(created_at);
+                (ids, remembered, ticket_roots, since_ms)
             }
         };
         let own = self.database.with(|connection| {
@@ -1144,10 +1167,13 @@ impl SessionRegistry {
                 untracked_before: session_rows::untracked_before(connection, &ids)?,
             })
         })?;
+        let ticket_folders = sources::scope_ticket_folders(&ticket_roots, remembered, &own.touched);
         Ok(ChangesInput {
             workspace: session.workspace.clone(),
             repositories: session.repositories(),
+            ticket_roots,
             ticket_folders,
+            since_ms,
             own,
         })
     }

@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-02_innere-repositories/`
-**Phase:** 2/3 — Changes (pending)
-**Nächster Schritt:** Phase 2 umsetzen laut `phase-2-changes.md` (Phase 1 committet).
+**Phase:** 3/3 — Commit-Suche, Doku, Abnahme (pending)
+**Nächster Schritt:** Phase 3 umsetzen laut `phase-3-commits-doku.md` (Phase 2 committet); die facepass-Abnahme aus FINDINGS läuft auf dem Arbeitslaptop.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

@@ -1,16 +1,25 @@
 //! Zeigt, was die Changes für eine Session aus einer **Kopie** der Datenbank ermitteln. Aufruf:
-//! `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project]`.
-use std::collections::HashMap;
+//! `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad>]`.
+//! Ohne Schlüssel die Changes als JSON, mit Schlüssel und Pfad den Diff dieser Datei (Blickwinkel
+//! „alles“). Die Wurzeln der Ticket-Worktrees gehen nach stderr.
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use verwalter_lib::changes::attribution::Ownership;
+use verwalter_lib::changes::model::ChangeScope;
+use verwalter_lib::changes::{self, ChangesInput, sources};
+use verwalter_lib::db::projects::{self, ProjectRow};
 use verwalter_lib::db::sessions::{self, SessionRow};
-use verwalter_lib::db::{Database, session_files, session_repositories, session_ticket_worktrees};
-use verwalter_lib::worktrees::{self, RepositoryCheckout, SessionRepository, TicketRoot};
+use verwalter_lib::db::{
+    Database, session_commits, session_files, session_repositories, session_ticket_worktrees,
+};
+use verwalter_lib::worktrees::{self, TicketRoot};
 
-const USAGE: &str = "Aufruf: changes-probe <Datenbank-Kopie> <Session-ID> [session|project]";
+const USAGE: &str =
+    "Aufruf: changes-probe <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad>]";
+const DIFF_PREVIEW_LINES: usize = 20;
 
 /// Reichweite wie in der Oberfläche: nur die Session oder alle Sessions ihres Vorhabens.
 enum Reach {
@@ -32,6 +41,14 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
             return Ok(ExitCode::from(2));
         }
     };
+    let diff_target = match (arguments.get(3), arguments.get(4)) {
+        (Some(key), Some(path)) => Some((key.as_str(), path.as_str())),
+        (None, None) => None,
+        _ => {
+            eprintln!("{USAGE}");
+            return Ok(ExitCode::from(2));
+        }
+    };
     let database_path = PathBuf::from(database_path);
     // `Database::open` führt Migrationen aus: gegen die Datenbank der App liefe das neben ihr her.
     if is_app_database(&database_path) {
@@ -42,26 +59,79 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         return Ok(ExitCode::from(2));
     }
     let database = Database::open(&database_path)?;
-    let (repositories, remembered, files) = database.with(|connection| {
-        let repositories = session_repositories::load(connection, session_id)?;
-        let remembered = session_ticket_worktrees::load(connection, session_id)?;
-        let session_ids = match reach {
-            Reach::Session => vec![session_id.clone()],
-            Reach::Project => project_session_ids(&sessions::load_active(connection)?, session_id),
+    let input = database.with(|connection| {
+        let rows = sessions::load_active(connection)?;
+        let Some(row) = rows.iter().find(|row: &&SessionRow| row.id == *session_id) else {
+            return Err(verwalter_lib::error::CommandError::Internal(format!(
+                "Session {session_id} ist nicht aktiv oder unbekannt"
+            )));
         };
-        let files = session_files::load_for(connection, &session_ids)?;
-        Ok((repositories, remembered, files))
+        let repositories = session_repositories::load(connection, session_id)?;
+        let session_ids: Vec<String> = match reach {
+            Reach::Session => vec![session_id.clone()],
+            Reach::Project => rows
+                .iter()
+                .filter(|other: &&SessionRow| other.project_id == row.project_id)
+                .map(|other: &SessionRow| other.id.clone())
+                .collect(),
+        };
+        let mut remembered: Vec<(u32, String)> = Vec::new();
+        for id in &session_ids {
+            for (position, folder) in session_ticket_worktrees::load(connection, id)? {
+                let is_known = remembered
+                    .iter()
+                    .any(|(known_position, known): &(u32, String)| {
+                        *known_position == position && known.eq_ignore_ascii_case(&folder)
+                    });
+                if !is_known {
+                    remembered.push((position, folder));
+                }
+            }
+        }
+        let own = Ownership {
+            commits: session_commits::load_for(connection, &session_ids)?,
+            touched: session_files::load_for(connection, &session_ids)?,
+            untracked_before: sessions::untracked_before(connection, &session_ids)?,
+        };
+        let since_ms = match reach {
+            Reach::Session => row.created_at,
+            Reach::Project => projects::load_active(connection)?
+                .iter()
+                .find(|project: &&ProjectRow| project.id == row.project_id)
+                .map_or(row.created_at, |project: &ProjectRow| project.created_at),
+        };
+        let ticket_roots = worktrees::ticket_roots(&repositories);
+        print_roots(&ticket_roots);
+        let ticket_folders = sources::scope_ticket_folders(&ticket_roots, remembered, &own.touched);
+        Ok(ChangesInput {
+            workspace: PathBuf::from(row.workspace_dir.clone().unwrap_or_default()),
+            repositories,
+            ticket_roots,
+            ticket_folders,
+            since_ms,
+            own,
+        })
     })?;
 
-    print_repositories(&repositories);
-    let roots = worktrees::ticket_roots(&repositories);
-    print_roots(&roots);
-    println!("Gemerkte Ticket-Worktrees:");
-    for (position, folder) in &remembered {
-        println!("  {position}  {folder}");
+    let Some((key, path)) = diff_target else {
+        println!("{}", serde_json::to_string_pretty(&changes::load(&input))?);
+        return Ok(ExitCode::SUCCESS);
+    };
+    let diff = sources::find(&input, key)
+        .and_then(|source| changes::file_diff(&source, path, ChangeScope::All, &input.own));
+    match diff {
+        Ok(diff) => {
+            println!("{} Zeilen", diff.lines.len());
+            for line in diff.lines.iter().take(DIFF_PREVIEW_LINES) {
+                println!("{:?}  {}", line.kind, line.text);
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Err(error) => {
+            println!("Fehler: {error}");
+            Ok(ExitCode::from(1))
+        }
     }
-    print_files(&roots, &files);
-    Ok(ExitCode::SUCCESS)
 }
 
 fn is_app_database(path: &Path) -> bool {
@@ -75,61 +145,10 @@ fn is_app_database(path: &Path) -> bool {
     }
 }
 
-/// Die Sessions im Vorhaben von `session_id`; eine archivierte Session nur sich selbst.
-fn project_session_ids(rows: &[SessionRow], session_id: &str) -> Vec<String> {
-    let Some(project_id) = rows
-        .iter()
-        .find(|row: &&SessionRow| row.id == session_id)
-        .map(|row: &SessionRow| row.project_id.clone())
-    else {
-        return vec![session_id.to_owned()];
-    };
-    rows.iter()
-        .filter(|row: &&SessionRow| row.project_id == project_id)
-        .map(|row: &SessionRow| row.id.clone())
-        .collect()
-}
-
-fn print_repositories(repositories: &[SessionRepository]) {
-    println!("Repositories:");
-    for (position, repository) in repositories.iter().enumerate() {
-        let kind = match &repository.checkout {
-            RepositoryCheckout::AppWorktree { .. } => "App-Worktree",
-            RepositoryCheckout::Main => "Haupt-Checkout",
-            RepositoryCheckout::Folder => "Ordner ohne Git",
-        };
-        println!(
-            "  {position}  {}  {}  {kind}",
-            repository.name,
-            repository.repository_path.display()
-        );
-    }
-}
-
 fn print_roots(roots: &[TicketRoot]) {
-    println!("Wurzeln:");
+    eprintln!("Wurzeln:");
     for root in roots {
         let inner = root.inner.as_deref().unwrap_or("-");
-        println!("  {}  {}  inner={inner}", root.position, root.prefix);
-    }
-}
-
-/// Je geschriebene Datei die Ticket-Worktrees, die ihr Pfad nennt, mit dem inneren Repository.
-fn print_files(roots: &[TicketRoot], files: &HashMap<String, f64>) {
-    let mut paths: Vec<&String> = files.keys().collect();
-    paths.sort();
-    println!("Geschriebene Dateien ({}):", paths.len());
-    for path in paths {
-        let found = worktrees::mentioned_ticket_worktrees(roots, path);
-        if found.is_empty() {
-            println!("  {path}  -> kein Ticket-Worktree");
-            continue;
-        }
-        for (position, folder) in found {
-            let inner = worktrees::ticket_root_of(roots, position, &folder)
-                .and_then(|root: &TicketRoot| root.inner.clone())
-                .unwrap_or_else(|| "-".to_owned());
-            println!("  {path}  -> ({position}, {folder}) inner={inner}");
-        }
+        eprintln!("  {}  {}  inner={inner}", root.position, root.prefix);
     }
 }

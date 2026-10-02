@@ -6,6 +6,7 @@ pub mod history;
 pub mod model;
 pub mod parse;
 pub mod scan;
+pub mod sources;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -18,9 +19,10 @@ use crate::changes::model::{
     ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
     RepositoryChanges, SessionChanges,
 };
+use crate::changes::sources::Source;
 use crate::error::CommandError;
 use crate::git;
-use crate::worktrees::{self, RepositoryCheckout, SessionRepository, TicketWorktree};
+use crate::worktrees::{self, RepositoryCheckout, SessionRepository, TicketRoot, TicketWorktree};
 
 /// Größere untracked Dateien gelten als binär: ihre Zeilen zu zählen hieße, sie ganz zu lesen.
 const MAX_UNTRACKED_BYTES: u64 = 8 * 1024 * 1024;
@@ -39,17 +41,19 @@ const UNKNOWN_BASE: &str = "unbekannt";
 pub struct ChangesInput {
     pub workspace: PathBuf,
     pub repositories: Vec<SessionRepository>,
-    /// Die Ticket-Worktrees der Reichweite als `(Position, Ordner)`.
+    /// Woran die Ticket-Worktrees zu erkennen sind; aus `SessionState.ticket_roots`.
+    pub ticket_roots: Vec<TicketRoot>,
+    /// Die Ticket-Worktrees der Reichweite als `(Position, Ordner)`, aus `scope_ticket_folders`.
     pub ticket_folders: Vec<(u32, String)>,
+    /// Beginn der Reichweite in ms; Basis der inneren Repositories.
+    pub since_ms: f64,
     pub own: Ownership,
 }
 
-/// Liest alle Repositories der Session nebeneinander, je eines samt seiner Ticket-Worktrees in einem
-/// eigenen Thread. Scheitert eines, trägt nur sein Eintrag den Fehler. Ordner ohne Git bekommen
-/// keinen Thread und keinen Eintrag, nur ihr Name steht in `plain_folders` (ADR 018).
+/// Liest alle Einträge der Reichweite (`sources::sources`) nebeneinander, je einen in einem eigenen
+/// Thread. Scheitert einer, trägt nur sein Eintrag den Fehler. Ordner ohne Git haben keinen Eintrag,
+/// nur ihr Name steht in `plain_folders` (ADR 018). Innere Repositories, die nichts zeigen, entfallen.
 pub fn load(input: &ChangesInput) -> SessionChanges {
-    let workspace = input.workspace.as_path();
-    let ticket_folders = input.ticket_folders.as_slice();
     let own = &input.own;
     let plain_folders: Vec<String> = input
         .repositories
@@ -57,35 +61,29 @@ pub fn load(input: &ChangesInput) -> SessionChanges {
         .filter(|repository: &&SessionRepository| is_plain_folder(repository))
         .map(|repository: &SessionRepository| repository.name.clone())
         .collect();
+    let sources = sources::sources(input);
     let repositories = thread::scope(|scope| {
-        let handles: Vec<(
-            u32,
-            &SessionRepository,
-            ScopedJoinHandle<'_, Vec<RepositoryChanges>>,
-        )> = input
-            .repositories
+        let handles: Vec<(&Source, ScopedJoinHandle<'_, RepositoryChanges>)> = sources
             .iter()
-            .enumerate()
-            .filter(|(_, repository): &(usize, &SessionRepository)| !is_plain_folder(repository))
-            .map(|(index, repository): (usize, &SessionRepository)| {
-                let position = u32::try_from(index).unwrap_or(u32::MAX);
-                let folders = folders_of(ticket_folders, position);
-                let handle =
-                    scope.spawn(move || load_one(workspace, position, repository, folders, own));
-                (position, repository, handle)
-            })
+            .map(|source: &Source| (source, scope.spawn(move || read_source(source, own))))
             .collect();
         handles
             .into_iter()
-            .flat_map(|(position, repository, handle)| {
-                // Ein panischer Thread trifft nur sein Repository, nicht die ganze Ansicht.
-                handle.join().unwrap_or_else(|_| {
-                    vec![failed_repository(
-                        position,
-                        repository,
+            .filter_map(|(source, handle)| {
+                // Ein panischer Thread trifft nur seinen Eintrag, nicht die ganze Ansicht.
+                let changes = handle.join().unwrap_or_else(|_| {
+                    failed(
+                        source.key.clone(),
+                        source.name.clone(),
+                        branch_label(&source.repository),
+                        source.repository.base_ref.clone(),
                         THREAD_FAILED.to_owned(),
-                    )]
-                })
+                    )
+                });
+                let shows_nothing = changes.files.is_empty()
+                    && changes.commit_count == 0
+                    && !has_touched_under(&source.dir, own);
+                (!(source.optional && shows_nothing)).then_some(changes)
             })
             .collect()
     });
@@ -108,63 +106,78 @@ fn folders_of(ticket_folders: &[(u32, String)], position: u32) -> Vec<String> {
         .collect()
 }
 
-/// Erst der Eintrag des Repositorys, dann einer je Ticket-Worktree, den es noch gibt.
-fn load_one(
-    workspace: &Path,
-    position: u32,
-    repository: &SessionRepository,
-    folders: Vec<String>,
-    own: &Ownership,
-) -> Vec<RepositoryChanges> {
-    let mut entries = vec![load_repository(workspace, position, repository, own)];
-    entries.extend(
-        worktrees::ticket_worktrees(repository, position, &folders)
-            .iter()
-            .map(|worktree: &TicketWorktree| load_ticket(repository, worktree, own)),
-    );
-    entries
+/// Geschriebene Dateien der Reichweite unter `dir`.
+fn has_touched_under(dir: &Path, own: &Ownership) -> bool {
+    let prefix = format!("{}\\", attribution::normalize_path(&dir.to_string_lossy()));
+    own.touched
+        .keys()
+        .any(|path: &String| path.starts_with(&prefix))
+}
+
+fn read_source(source: &Source, own: &Ownership) -> RepositoryChanges {
+    // Gemessen 2026-10-02: schon ein Git-Aufruf über die acht inneren Repositories von facepass kostet
+    // zusammen gut 1 s; für unberührte daher nur die Commit-Liste, die volle Lesung (fünf Aufrufe je
+    // Repository) nur für berührte. Kann Git nicht lesen, zählt das wie „keine eigenen Commits“.
+    if source.optional && !has_touched_under(&source.dir, own) {
+        let has_own_commits = git::commits_since(&source.dir, &source.repository.base_commit)
+            .is_ok_and(|text: String| {
+                scan::parse_rev_list(&text)
+                    .iter()
+                    .any(|entry: &scan::RevListEntry| own.commits.contains(&entry.id))
+            });
+        if !has_own_commits {
+            return RepositoryChanges {
+                key: source.key.clone(),
+                name: source.name.clone(),
+                branch: String::new(),
+                base_ref: source.repository.base_ref.clone(),
+                commit_count: 0,
+                files: Vec::new(),
+                error: None,
+            };
+        }
+    }
+    if let Some(error) = &source.error {
+        return failed_source(source, error.clone());
+    }
+    match &source.ticket {
+        Some(ticket) => load_ticket(source, ticket, own),
+        None => load_repository(source, own),
+    }
 }
 
 /// Nur lesen: ein fehlender Worktree wird gemeldet, nicht angelegt — das bleibt bei
 /// `worktrees::ensure` vor dem Agent-Start.
-fn load_repository(
-    workspace: &Path,
-    position: u32,
-    repository: &SessionRepository,
-    own: &Ownership,
-) -> RepositoryChanges {
+fn load_repository(source: &Source, own: &Ownership) -> RepositoryChanges {
+    let repository = &source.repository;
     if !repository.repository_path.join(".git").exists() {
         let missing =
             CommandError::RepositoryMissing(repository.repository_path.display().to_string());
-        return failed_repository(position, repository, missing.to_string());
+        return failed_source(source, missing.to_string());
     }
-    let worktree = repository.working_dir(workspace);
-    if is_app_worktree_missing(repository, &worktree) {
-        return failed_repository(position, repository, WORKTREE_MISSING.to_owned());
+    if is_app_worktree_missing(repository, &source.dir) {
+        return failed_source(source, WORKTREE_MISSING.to_owned());
     }
-    match read_changes(&worktree, &repository.base_commit, own) {
+    match read_changes(&source.dir, &repository.base_commit, own) {
         Ok((files, commit_count)) => RepositoryChanges {
-            key: position.to_string(),
-            name: repository.name.clone(),
+            key: source.key.clone(),
+            name: source.name.clone(),
             branch: branch_label(repository),
             base_ref: repository.base_ref.clone(),
             commit_count,
             files,
             error: None,
         },
-        Err(error) => failed_repository(position, repository, error.to_string()),
+        Err(error) => failed_source(source, error.to_string()),
     }
 }
 
 /// Ein Ticket-Worktree gegen seine Abzweigung vom Standard-Branch, mit den Änderungen der
 /// Reichweite auf dem Branch.
-fn load_ticket(
-    repository: &SessionRepository,
-    worktree: &TicketWorktree,
-    own: &Ownership,
-) -> RepositoryChanges {
-    let key = format!("{}/{}", worktree.position, worktree.folder);
-    let name = format!("{} · {}", repository.name, worktree.folder);
+fn load_ticket(source: &Source, worktree: &TicketWorktree, own: &Ownership) -> RepositoryChanges {
+    let repository = &source.repository;
+    let key = source.key.clone();
+    let name = source.name.clone();
     let branch = ticket_branch_label(worktree);
     let (base_commit, base_ref) = match worktrees::ticket_base(repository, worktree) {
         Ok(base) => base,
@@ -347,39 +360,32 @@ fn all_stats(
     Ok(all)
 }
 
-/// Der Diff einer Datei im gewählten Blickwinkel — im Arbeitsordner des Repositorys oder, mit
-/// `ticket`, in diesem Ticket-Worktree. Prüft den Pfad, bevor er an Git oder ins Dateisystem geht;
-/// legt nichts an.
+/// Der Diff einer Datei im gewählten Blickwinkel, im Ordner des Eintrags (`sources::find`). Prüft
+/// den Pfad, bevor er an Git oder ins Dateisystem geht; legt nichts an.
 pub fn file_diff(
-    workspace: &Path,
-    repository: &SessionRepository,
-    ticket: Option<&TicketWorktree>,
+    source: &Source,
     path: &str,
     scope: ChangeScope,
     own: &Ownership,
 ) -> Result<FileDiff, CommandError> {
     validate_path(path)?;
-    if is_plain_folder(repository) {
-        return Err(CommandError::Internal(
-            "Ordner ohne Git hat keinen Diff".to_owned(),
-        ));
+    if let Some(error) = &source.error {
+        return Err(CommandError::Io(error.clone()));
     }
+    let repository = &source.repository;
     if !repository.repository_path.join(".git").exists() {
         return Err(CommandError::RepositoryMissing(
             repository.repository_path.display().to_string(),
         ));
     }
-    let (worktree, base): (PathBuf, String) = match ticket {
-        Some(ticket) => {
-            let (base_commit, _) = worktrees::ticket_base(repository, ticket)?;
-            (ticket.path.clone(), base_commit)
-        }
+    let worktree: PathBuf = source.dir.clone();
+    let base: String = match &source.ticket {
+        Some(ticket) => worktrees::ticket_base(repository, ticket)?.0,
         None => {
-            let worktree = repository.working_dir(workspace);
             if is_app_worktree_missing(repository, &worktree) {
                 return Err(CommandError::Io(WORKTREE_MISSING.to_owned()));
             }
-            (worktree, repository.base_commit.clone())
+            repository.base_commit.clone()
         }
     };
     let base = base.as_str();
@@ -533,16 +539,12 @@ fn branch_label(repository: &SessionRepository) -> String {
     }
 }
 
-fn failed_repository(
-    position: u32,
-    repository: &SessionRepository,
-    error: String,
-) -> RepositoryChanges {
+fn failed_source(source: &Source, error: String) -> RepositoryChanges {
     failed(
-        position.to_string(),
-        repository.name.clone(),
-        branch_label(repository),
-        repository.base_ref.clone(),
+        source.key.clone(),
+        source.name.clone(),
+        branch_label(&source.repository),
+        source.repository.base_ref.clone(),
         error,
     )
 }
