@@ -5,7 +5,7 @@ Rating: **standard** · Commit: `feat(mcp): MCP-Server einer Session abfragen un
 ## Kontext (vor dem Start lesen)
 
 - [README.md](README.md) des Plans: Messungen, Festgelegte Entscheidungen, **Kontrakt** (Typen, Commands, Ereignis, Steueranfragen, `AgentEvent`-Varianten — exakt so umsetzen).
-- [docs/conventions/rust.md](../../conventions/rust.md), [docs/conventions/linting.md](../../conventions/linting.md), [ADR 008](../../decisions/008-kontext-und-kontingent.md).
+- [docs/conventions/rust.md](../../../conventions/rust.md), [docs/conventions/linting.md](../../../conventions/linting.md), [ADR 008](../../../decisions/008-kontext-und-kontingent.md).
 - Vorbild in jeder Schicht ist die Kontext-Aufschlüsselung: `src-tauri/src/context/model.rs`, `src-tauri/src/commands/context.rs`, `src-tauri/src/agents/claude/stats.rs` (`context_breakdown`), in `src-tauri/src/sessions/registry.rs` die Methoden `context`/`refresh_context`, das Feld `context_breakdown`, `Outbox::context_changed` und dessen Ausgabe in `Outbox::emit`.
 - `src-tauri/src/agents/claude/translate.rs`: `control_answered` (heute: nur `get_context_usage` wird ausgewertet, Fehler und leere Antworten fallen weg).
 - `src-tauri/src/sessions/registry/tldr.rs` als Muster für ein Untermodul der Registry (`use super::{…}`, `impl SessionRegistry` im Untermodul).

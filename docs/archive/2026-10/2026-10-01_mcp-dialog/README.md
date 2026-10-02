@@ -2,9 +2,9 @@
 
 Ziel: Ein Dialog „MCP-Server“ zeigt für die aktive Session, welche MCP-Server der Agent geladen hat, mit Status, Herkunft, Verbindung und Werkzeugliste; jeder Server lässt sich dort neu verbinden und aus- bzw. einschalten. Geöffnet wird er über `/mcp` im `/`-Menü und über einen Hinweis „MCP · N Problem(e)“ in der Eingabeleiste, der nur erscheint, wenn ein Server fehlgeschlagen ist oder eine Anmeldung braucht. Der Verwalter spricht dafür kein MCP selbst: er schickt Steueranfragen an die laufende Claude-Kommandozeile der Session, die die Server ohnehin lädt.
 
-Design (verbindlich): [docs/design/2026-10-01_mcp-dialog/](../../design/2026-10-01_mcp-dialog/README.md) — Quellen in `canvas/`, klickbare Fassung https://claude.ai/artifact/FfQFLxiZfwmsfMQvPUYd7Q.
+Design (verbindlich): [docs/design/2026-10-01_mcp-dialog/](../../../design/2026-10-01_mcp-dialog/README.md) — Quellen in `canvas/`, klickbare Fassung https://claude.ai/artifact/FfQFLxiZfwmsfMQvPUYd7Q.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 008](../../decisions/008-kontext-und-kontingent.md) (Vorbild: Kontext-Aufschlüsselung per Steueranfrage), [docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md). ADR 013 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [docs/code-map.md](../../../code-map.md), [docs/glossary.md](../../../glossary.md), die Konventionen unter [docs/conventions/](../../../conventions/), [ADR 008](../../../decisions/008-kontext-und-kontingent.md) (Vorbild: Kontext-Aufschlüsselung per Steueranfrage), [docs/knowledge/claude-stream-json.md](../../../knowledge/claude-stream-json.md). ADR 013 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
 
 ## Phasen
 
@@ -14,7 +14,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 2 | Oberfläche: Dialog- und Schalter-Baustein, MCP-Dialog | [phase-2-dialog.md](phase-2-dialog.md) | standard | complete |
 | 3 | Einstiege `/mcp` und Hinweis in der Eingabeleiste, Doku, Release | [phase-3-einstiege.md](phase-3-einstiege.md) | mechanisch | complete |
 
-**Reihenfolge:** nach dem aktiven Plan „Meilenstein 6“ (STATE.md). Zum Plan „Sprachdiktat“ gibt es keine Abhängigkeit; beide bauen in die Eingabeleiste ein — wer zuerst kommt, setzt seinen Knopf, der zweite fügt seinen an der dann aktuellen Stelle ein (Phase 3 nennt die Stelle relativ zu Modus-Menü und Senden-Knopf). Phasen strikt 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `mcp` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
+**Reihenfolge:** nach dem aktiven Plan „Meilenstein 6“ (STATE.md). Zum Plan „Sprachdiktat“ gibt es keine Abhängigkeit; beide bauen in die Eingabeleiste ein — wer zuerst kommt, setzt seinen Knopf, der zweite fügt seinen an der dann aktuellen Stelle ein (Phase 3 nennt die Stelle relativ zu Modus-Menü und Senden-Knopf). Phasen strikt 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `mcp` (Phase 1 trägt ihn in [commits.md](../../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 
 ## Messungen (2026-10-01, Claude-Kommandozeile im Druckmodus mit `--input-format stream-json`)
 
@@ -28,9 +28,9 @@ Grundlage der Entscheidungen; Phase 1 überträgt sie nach `docs/knowledge/claud
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus [ADR 013](../../decisions/013-mcp-server-im-dialog.md) „MCP-Server im Dialog“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 008, 010, 011, 012 auf der Platte und 009 im Plan „Sprachdiktat“; dieser Plan schreibt 013.
+Phase 1 schreibt daraus [ADR 013](../../../decisions/013-mcp-server-im-dialog.md) „MCP-Server im Dialog“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen). Vergeben sind 008, 010, 011, 012 auf der Platte und 009 im Plan „Sprachdiktat“; dieser Plan schreibt 013.
 
-- **Steueranfragen an den Agenten der Session, kein eigener MCP-Client und kein Hilfsprozess.** Betrachtet und verworfen: (a) eigener MCP-Client im Core — zweite Verbindung zu jedem Server, zweite Konfiguration, und der Agent sähe die Wirkung nicht; (b) Hilfsprozess wie beim Kontingent ([ADR 008](../../decisions/008-kontext-und-kontingent.md)) im Workspace — zeigt auch bei ruhendem Agenten etwas an, aber nicht die Verbindungen, die der Agent tatsächlich hat, und kostet je Abfrage einen Prozessstart plus ~10 s Verbindungsaufbau. Folge der Wahl: ohne laufenden Agenten gibt es keine Liste.
+- **Steueranfragen an den Agenten der Session, kein eigener MCP-Client und kein Hilfsprozess.** Betrachtet und verworfen: (a) eigener MCP-Client im Core — zweite Verbindung zu jedem Server, zweite Konfiguration, und der Agent sähe die Wirkung nicht; (b) Hilfsprozess wie beim Kontingent ([ADR 008](../../../decisions/008-kontext-und-kontingent.md)) im Workspace — zeigt auch bei ruhendem Agenten etwas an, aber nicht die Verbindungen, die der Agent tatsächlich hat, und kostet je Abfrage einen Prozessstart plus ~10 s Verbindungsaufbau. Folge der Wahl: ohne laufenden Agenten gibt es keine Liste.
 - **Ausschalten speichert die Kommandozeile, nicht der Verwalter.** Gilt damit für alle Sessions des Vorhabens und übersteht Neustarts; der Dialog sagt das in der Fußzeile und im Tooltip des Schalters. Keine eigene Tabelle, keine Migration.
 - **Liste nur im Speicher und nur, solange der Agent-Prozess lebt** (wie die Kontext-Aufschlüsselung, ADR 008). Endet oder wechselt der Prozess, wird sie verworfen — eine alte Liste würde Verbindungen zeigen, die es nicht mehr gibt.
 - **Wann gefragt wird:** am Ende jeder Antwort des Agenten (neben `get_context_usage`), beim Öffnen des Dialogs, nach jeder beantworteten Aktion, und solange der Dialog offen ist und ein Server `pending` ist oder eine Aktion läuft, alle 2 s.
@@ -136,10 +136,27 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Der Dialog „MCP-Server“ zeigt für die aktive Session, welche MCP-Server der Agent geladen hat (gruppiert nach Herkunft, mit Status, Verbindung und Werkzeugliste), verbindet jeden neu und schaltet ihn aus oder ein. Der Verwalter spricht kein MCP selbst: der Core schickt `mcp_status`, `mcp_reconnect` und `mcp_toggle` als Steueranfragen an die laufende Claude-Kommandozeile und ordnet die Antworten über die Request-ID zu ([ADR 013](../../../decisions/013-mcp-server-im-dialog.md)). Geöffnet wird der Dialog über `/mcp` im `/`-Menü und über den Hinweis „MCP · N Problem(e)“ in der Eingabeleiste, der nur bei fehlgeschlagenen oder anmeldepflichtigen Servern erscheint.
+
 ## Files touched
+
+- Core (Phase 1): `src-tauri/src/mcp/model.rs`, `src-tauri/src/agents/claude/` (`mcp.rs`, `protocol.rs`, `translate.rs`), `src-tauri/src/agents/event.rs`, `src-tauri/src/sessions/registry/mcp.rs`, `src-tauri/src/sessions/registry.rs`, `src-tauri/src/sessions/model.rs` (`mcpProblems`), `src-tauri/src/commands/mcp.rs`, `src-tauri/examples/gen-bindings.rs`, erzeugte Typen unter `src/lib/bindings/`, ADR 013, `docs/knowledge/claude-stream-json.md`.
+- Oberfläche (Phase 2 und 3): `src/features/mcp/` (`McpDialog`, `McpServerRow`, `McpProblemChip`, `useSessionMcp`, `mcpTexts`), `src/components/Dialog` und `Switch`, `src/lib/mcp.ts`, `src/lib/focus.ts`, Einbau in `Composer`, `CommandMenu` und `commandMenuRows`.
+- Doku: `code-map.md`, `glossary.md`, `commits.md` (Scope `mcp`), Design-Entwurf (Status „umgesetzt“).
 
 ## Commits
 
+- `55cf83f` feat(mcp): MCP-Server einer Session abfragen und steuern
+- `e502401` feat(mcp): Dialog MCP-Server
+- `33bd4e0` feat(mcp): Einstiege /mcp und Problem-Hinweis
+
 ## Deviations from plan
 
+- Phase 1: Die vom übergeordneten Modul aufgerufenen Methoden in `registry/mcp.rs` sind `pub(super)` statt privat, weil ein privates Element eines Untermoduls dort nicht sichtbar ist.
+- Phase 2: Der ausgeschaltete Schalter hat einen eigenen Tooltip (`SWITCH_TITLE_OFF`); `.mcp-dialog` setzt `max-height: min(780px, 100%)`; die Filterzeile ohne Treffer heißt `__no-match`.
+- Phase 3: keine.
+
 ## Follow-ups
+
+- Archiviert, ohne dass ein Smoke-Ergebnis festgehalten ist. Die Smoke-Checkliste (oben) bleibt offen, Wackelstellen zuerst: Ausschalten pro Vorhaben (AK 5), Zuordnung der Antworten (AK 4), Hinweis in der Eingabeleiste (AK 6), Fokus und Esc im Dialog. Ergebnisse hier nachtragen.
+- Der Zustand „Anmeldung nötig“ ist nur aus der SDK-Dokumentation bekannt, nicht gemessen; tritt ein anderer unbekannter Status auf, in `docs/knowledge/claude-stream-json.md` nachtragen.

@@ -7,8 +7,8 @@ Diese Phase baut den Dialog vollständig, aber noch ohne Einstieg; `Composer.tsx
 ## Kontext (vor dem Start lesen)
 
 - [README.md](README.md) des Plans: Kontrakt (Typen `SessionMcp`, `McpServer`, `McpServerStatus`, `McpAction`, `McpActionError`; Commands; Ereignis `mcp://changed`).
-- **Design (verbindlich):** [docs/design/2026-10-01_mcp-dialog/README.md](../../design/2026-10-01_mcp-dialog/README.md) und `canvas/Main.dc.html` (alle Maße unten stammen daraus; „Abweichungen vom Entwurf“ dort gelten).
-- [docs/conventions/react.md](../../conventions/react.md), [typescript.md](../../conventions/typescript.md), [tailwind.md](../../conventions/tailwind.md) (BEM, nur semantische Tokens, keine Utility-Klassen, kein Inline-Style).
+- **Design (verbindlich):** [docs/design/2026-10-01_mcp-dialog/README.md](../../../design/2026-10-01_mcp-dialog/README.md) und `canvas/Main.dc.html` (alle Maße unten stammen daraus; „Abweichungen vom Entwurf“ dort gelten).
+- [docs/conventions/react.md](../../../conventions/react.md), [typescript.md](../../../conventions/typescript.md), [tailwind.md](../../../conventions/tailwind.md) (BEM, nur semantische Tokens, keine Utility-Klassen, kein Inline-Style).
 - Vorbilder: `src/components/Popover.tsx` (Esc in der Capture-Phase mit `preventDefault`, damit der Esc-Listener des Chats die Session nicht pausiert; Fokus beim Öffnen), `src/features/context/useSessionContext.ts` (Abo, dann Anfrage, jüngste Antwort gewinnt), `src/features/context/ContextPopover.tsx` (Zustände ohne Daten), `src/lib/context.ts` (Wrapper), `src/lib/errors.ts` (`commandErrorText`), `src/styles/theme.css`.
 - Fehlerklassen geprüft (Vault: `sprachen/typescript`, `frameworks/react`): keine einschlägig.
 

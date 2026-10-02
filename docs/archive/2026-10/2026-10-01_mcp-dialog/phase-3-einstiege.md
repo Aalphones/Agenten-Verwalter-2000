@@ -5,9 +5,9 @@ Rating: **mechanisch** · Commit: `feat(mcp): Einstiege /mcp und Problem-Hinweis
 ## Kontext (vor dem Start lesen)
 
 - [README.md](README.md) des Plans (Kontrakt: `SessionSummary.mcpProblems`) und [phase-2-dialog.md](phase-2-dialog.md) (`McpDialog`, `problemLabel`, `problemShort` in `mcpTexts.ts`).
-- **Design (verbindlich):** [docs/design/2026-10-01_mcp-dialog/README.md](../../design/2026-10-01_mcp-dialog/README.md), `canvas/Slash.dc.html` (Zeile `/mcp`) und die Eingabeleiste unten in `canvas/Main.dc.html` (Hinweis).
+- **Design (verbindlich):** [docs/design/2026-10-01_mcp-dialog/README.md](../../../design/2026-10-01_mcp-dialog/README.md), `canvas/Slash.dc.html` (Zeile `/mcp`) und die Eingabeleiste unten in `canvas/Main.dc.html` (Hinweis).
 - `src/features/chat/Composer.tsx` (`OpenMenu`, `runSessionCommand`, `pickRow`, Leiste `composer__bar`), `src/features/chat/commandMenuRows.ts` (`SessionCommand`, `SESSION_COMMAND_TEXT`, `sessionRows`), `src/features/chat/CommandMenu.tsx` + `.css` (`rowOrigin`, `command-menu__origin`).
-- [docs/conventions/react.md](../../conventions/react.md), [tailwind.md](../../conventions/tailwind.md).
+- [docs/conventions/react.md](../../../conventions/react.md), [tailwind.md](../../../conventions/tailwind.md).
 - Fehlerklassen geprüft (Vault: `sprachen/typescript`, `frameworks/react`): keine einschlägig.
 
 ## Abnahmekriterien der Phase

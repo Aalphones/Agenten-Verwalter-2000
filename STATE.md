@@ -1,12 +1,11 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-01_mcp-dialog/`
-**Phase:** 3/3 — Einstiege `/mcp` und Hinweis in der Eingabeleiste, Doku (complete, committet)
-**Nächster Schritt:** Smoke-Checkliste aus der Plan-README durch den User (AK 1–9, Wackelstellen zuerst); danach Doc-Abgleich, Plan nach `docs/archive/2026-10/` verschieben (Design-README-Link mitziehen), ADR/README-Bottom-Sektionen füllen, Release `v0.8.0` per [releases.md](docs/conventions/releases.md). Offen aus früheren Plänen: Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
+**Aktiver Plan:** (kein aktiver Plan) — MCP-Dialog ist archiviert (`docs/archive/2026-10/2026-10-01_mcp-dialog/`), aber noch ohne Release-Tag.
+**Nächster Schritt:** Release `v0.8.0` nach Go des Users per [releases.md](docs/conventions/releases.md) (Version in den drei Dateien, `chore(release)`-Commit, Tag pushen). Danach nächster Plan der Reihenfolge unten: Session-Changes (`/plan` ist nicht nötig, der Plan liegt geparkt; `/implement`). Offen aus früheren Plänen: Smoke-Checkliste „MCP-Dialog“ (v0.8.0, noch nicht abgenommen), Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
-1. **MCP-Dialog** — implementiert, wartet auf Smoke und Archivierung. Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
+1. ~~MCP-Dialog~~ — erledigt und archiviert; Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
 2. **Session-Changes** — muss vor Changes-Review kommen (ändert die Signaturen von `changes_load`/`changes_file_diff`).
 3. **Changes-Review** — baut auf dem Diff auf, der nur noch die Änderungen der Session zeigt.
 4. **Claude Code + LM Studio** (`claude-code-lokal`) — Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen auf Platz 1.
