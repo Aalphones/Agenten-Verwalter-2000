@@ -83,12 +83,16 @@ impl VoiceService {
     pub fn start(&self, app: AppHandle, repository_names: Vec<String>) -> Result<(), CommandError> {
         let path = model_path(&app)?;
         let mut inner = self.lock();
-        if inner.recorder.is_some() || inner.is_transcribing {
+        // Eine abgebrochene Erkennung läuft womöglich noch aus (das Modell lässt sich mitten im Rechnen
+        // nicht sofort anhalten); sie sendet nichts mehr und darf ein neues Diktat nicht sperren.
+        let is_stopping = inner.is_transcribing && !inner.cancel.load(Ordering::Relaxed);
+        if inner.recorder.is_some() || is_stopping {
             return Err(CommandError::VoiceBusy);
         }
         if !is_model_ready(&path) {
             return Err(CommandError::VoiceModelMissing);
         }
+        inner.is_transcribing = false;
         // Ein liegengebliebener Thread stammt von einem abgebrochenen Diktat: er läuft selbst aus und
         // sendet nichts mehr, weil sein `cancel` gesetzt ist. Nicht joinen — sonst wartet `voice_start`,
         // und der Thread selbst wartet womöglich in `transcriber` auf `inner`.
@@ -133,7 +137,10 @@ impl VoiceService {
             inner.is_transcribing = true;
             (recorder, worker, Arc::clone(&inner.cancel))
         };
-        let _transcribing = TranscribingGuard { service: self };
+        let _transcribing = TranscribingGuard {
+            service: self,
+            cancel: Arc::clone(&cancel),
+        };
 
         let recorded = match recorder.stop() {
             Ok(recorded) => recorded,
@@ -255,14 +262,19 @@ impl VoiceService {
     }
 }
 
-/// Setzt `is_transcribing` in jedem Ausgang von `stop` zurück.
+/// Setzt `is_transcribing` in jedem Ausgang von `stop` zurück — aber nur, solange noch das eigene
+/// Diktat das aktuelle ist: ein auslaufendes abgebrochenes darf das Zeichen eines neuen nicht löschen.
 struct TranscribingGuard<'a> {
     service: &'a VoiceService,
+    cancel: Arc<AtomicBool>,
 }
 
 impl Drop for TranscribingGuard<'_> {
     fn drop(&mut self) {
-        self.service.lock().is_transcribing = false;
+        let mut inner = self.service.lock();
+        if Arc::ptr_eq(&inner.cancel, &self.cancel) {
+            inner.is_transcribing = false;
+        }
     }
 }
 

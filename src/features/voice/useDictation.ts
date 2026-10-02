@@ -56,8 +56,9 @@ export function useDictation({
   const baseRef = useRef<DictationBase | null>(null);
   const isMountedRef = useRef<boolean>(true);
   const isStartingRef = useRef<boolean>(false);
-  const isStopPendingRef = useRef<boolean>(false);
   const isCancelledRef = useRef<boolean>(false);
+  /** Zählt jedes Diktat und jeden Abbruch; ein Ergebnis von `stopDictation` gilt nur, wenn die Nummer noch stimmt. */
+  const runRef = useRef<number>(0);
 
   const isOwner: boolean = storeOwner === owner;
   const phase: DictationPhase = isOwner ? storePhase : 'idle';
@@ -157,11 +158,15 @@ export function useDictation({
       startRecording();
     } else if (phase === 'recording') {
       stopRecording();
+    } else {
+      cancel();
     }
   }
 
   function startRecording(): void {
     onError(null);
+    isCancelledRef.current = false;
+    runRef.current += 1;
     const value: string = getValue();
     const element: HTMLTextAreaElement | null = inputRef.current;
     baseRef.current = {
@@ -200,11 +205,11 @@ export function useDictation({
     if (base === null) {
       return;
     }
-    isStopPendingRef.current = true;
+    const run: number = runRef.current;
     useVoiceStore.getState().setPhase('transcribing', owner);
     stopDictation()
       .then((text: string) => {
-        if (!isMountedRef.current || isCancelledRef.current) {
+        if (!isMountedRef.current || run !== runRef.current) {
           return;
         }
         const inserted = insertDictation(base, text);
@@ -212,7 +217,7 @@ export function useDictation({
         focusAt(inserted.caret);
       })
       .catch((reason: unknown) => {
-        if (!isMountedRef.current || isCancelledRef.current) {
+        if (!isMountedRef.current || run !== runRef.current) {
           return;
         }
         // Der zuletzt angezeigte Text ist echt erkannt und bleibt im Entwurf stehen.
@@ -222,7 +227,7 @@ export function useDictation({
         onError(commandErrorText(reason));
       })
       .finally(() => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && run === runRef.current) {
           finishDictation();
         }
       });
@@ -234,14 +239,16 @@ export function useDictation({
       return;
     }
     isCancelledRef.current = true;
+    // Ein noch ausstehendes `stopDictation` ist damit abgehängt: der Core rechnet womöglich noch, die
+    // Oberfläche wartet nicht darauf, und ein neuer Start ist sofort möglich.
+    runRef.current += 1;
     setValue(base.value);
-    // Das Mikrofon bleibt gesperrt, bis der Core fertig ist: ein neuer Start liefe sonst in `voiceBusy`.
-    // Das ausstehende `stopDictation` kehrt erst zurück, wenn das Modell geladen ist (beim ersten Diktat nach dem Start).
+    // Die Sperre hebt erst auf, wenn der Core den Abbruch angenommen hat: ein Start davor liefe in `voiceBusy`.
     useVoiceStore.getState().setPhase('transcribing', owner);
     cancelDictation()
       .catch(logCancelFailure)
       .finally(() => {
-        if (isMountedRef.current && !isStopPendingRef.current) {
+        if (isMountedRef.current) {
           finishDictation();
         }
       });
@@ -249,8 +256,6 @@ export function useDictation({
 
   function finishDictation(): void {
     baseRef.current = null;
-    isStopPendingRef.current = false;
-    isCancelledRef.current = false;
     useVoiceStore.getState().resetDictation();
   }
 

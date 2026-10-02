@@ -50,7 +50,7 @@ export function VoiceButton({
   });
   const { phase, isBlocked } = dictation;
   const isActive: boolean = phase !== 'idle';
-  const isButtonDisabled: boolean = disabled || isBlocked || phase === 'transcribing';
+  const isButtonDisabled: boolean = disabled || isBlocked;
   const needsSetup: boolean = modelState !== null && modelState.kind !== 'ready';
   const tooltip: string = tooltipFor(phase, isBlocked, modelState);
 
@@ -155,7 +155,7 @@ function tooltipFor(
     return 'Aufnahme beenden (Strg+M) · Esc verwirft das Diktat';
   }
   if (phase === 'transcribing') {
-    return 'Erkenne den Rest … · Esc verwirft das Diktat';
+    return 'Erkenne den Rest … · Klick oder Esc verwirft das Diktat';
   }
   if (modelState !== null && modelState.kind === 'downloading') {
     return `Sprachmodell wird geladen … ${String(downloadPercent(modelState))} %`;

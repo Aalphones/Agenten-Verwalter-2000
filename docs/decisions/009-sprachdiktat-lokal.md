@@ -15,7 +15,7 @@ Die Eingabeleiste soll Sprache aufnehmen und den erkannten Text in den Entwurf s
 
 ## Entscheidung
 
-**(d).** Modell `ggml-large-v3-turbo-q5_0.bin` (574 041 195 Bytes, SHA-256 `394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2`), geladen von einer auf einen festen Stand gepinnten Hugging-Face-Adresse, abgelegt unter `<Benutzerordner>\.verwalter\models\`. Nicht im Installer; der Download startet nur auf Klick „Einrichten“, nie von selbst, und prüft die Prüfsumme, bevor die Datei ihren endgültigen Namen bekommt.
+**(d).** Modell `ggml-small-q5_1.bin` (190 085 487 Bytes, SHA-256 `ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb`; zuerst war es `ggml-large-v3-turbo-q5_0.bin`, das auf einem Ryzen 5 3600 ohne GPU 257 s für 5 s Audio brauchte und deshalb ersetzt wurde), geladen von einer auf einen festen Stand gepinnten Hugging-Face-Adresse, abgelegt unter `<Benutzerordner>\.verwalter\models\`. Nicht im Installer; der Download startet nur auf Klick „Einrichten“, nie von selbst, und prüft die Prüfsumme, bevor die Datei ihren endgültigen Namen bekommt.
 
 - **Nur CPU.** Keine GPU-Features (`cuda`, `vulkan`): die brauchen CUDA-Toolkit bzw. Vulkan-SDK beim Bau, lokal und in der CI. Ist die Erkennung zu langsam (Abnahme: ein ~10-s-Satz in höchstens 5 s nach dem Stopp), wird Vulkan ein Folgeplan, kein Umbau hier.
 - **Aufnahme im Core mit `cpal`** über WASAPI vom Standard-Eingabegerät, nicht im WebView (`getUserMedia`): so gibt es keinen Rechte-Dialog des WebView, und die Tauri-Grenze trägt keine Audiodaten. Die Umrechnung auf 16 kHz mono schreibt eine eigene kleine Funktion (Mittelwert der Kanäle, dann lineare Interpolation) statt einer Resampling-Crate.
@@ -31,5 +31,6 @@ Verworfen: (i) ein gleitendes Fenster (die letzten Sekunden etwa jede Sekunde ne
 ## Konsequenzen
 
 - **Bau-Voraussetzungen:** CMake (whisper.cpp wird bei jedem sauberen Bau übersetzt) und LLVM/libclang (`whisper-rs-sys` erzeugt seine Bindings per bindgen; die mitgelieferten Bindings sind unter Linux erzeugt und scheitern unter Windows an Größenprüfungen). Beides gehört in die Voraussetzungen in [linting.md](../conventions/linting.md).
-- **574 MB Download** einmalig, danach ohne Internet; **rund 0,8 GB Arbeitsspeicher**, solange das Modell geladen ist (Schätzung, Phase 2 misst).
+- **190 MB Download** einmalig, danach ohne Internet; Arbeitsspeicher nicht gemessen (das große Modell brauchte rund 0,8 GB).
+- **Abbrechen wartet nicht auf die Erkennung:** whisper.cpp lässt sich mitten im Rechnen nicht sofort anhalten. Der Abbruch gibt die Oberfläche und das Mikrofon sofort frei; eine auslaufende Erkennung sendet nichts mehr und sperrt kein neues Diktat.
 - Ein Bau von Grund auf dauert durch die C++-Übersetzung deutlich länger; die CI-Zwischenspeicherung (`rust-cache`) fängt das ab.

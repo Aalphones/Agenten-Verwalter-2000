@@ -10,12 +10,14 @@ use sha2::{Digest, Sha256};
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 
-pub const MODEL_FILE_NAME: &str = "ggml-large-v3-turbo-q5_0.bin";
+// „small“ statt „large-v3-turbo“: das große Modell braucht auf einer CPU ohne GPU Minuten je Abschnitt
+// (gemessen: 257 s für 5 s Audio auf einem Ryzen 5 3600).
+pub const MODEL_FILE_NAME: &str = "ggml-small-q5_1.bin";
 // Auf einen festen Stand gepinnt: unter `main` könnte die Datei sich ändern, und die Prüfsumme unten
 // würde nie wieder stimmen.
-const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin";
-pub const MODEL_BYTES: u64 = 574_041_195;
-const MODEL_SHA256: &str = "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2";
+const MODEL_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q5_1.bin";
+pub const MODEL_BYTES: u64 = 190_085_487;
+const MODEL_SHA256: &str = "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb";
 const MODELS_DIR: &str = "models";
 const PART_SUFFIX: &str = ".part";
 const READ_CHUNK_BYTES: usize = 1024 * 1024;
@@ -26,7 +28,7 @@ pub fn model_path(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {
     Ok(data_dir(app)?.join(MODELS_DIR).join(MODEL_FILE_NAME))
 }
 
-/// Nur die Größe wird verglichen: 574 MB bei jedem Status-Aufruf zu hashen dauert Sekunden. Die
+/// Nur die Größe wird verglichen: 190 MB bei jedem Status-Aufruf zu hashen dauert Sekunden. Die
 /// Prüfsumme gilt beim Download; nur eine Datei, die dort bestanden hat, trägt den endgültigen Namen.
 pub fn is_model_ready(path: &Path) -> bool {
     fs::metadata(path).is_ok_and(|metadata: fs::Metadata| metadata.len() == MODEL_BYTES)
