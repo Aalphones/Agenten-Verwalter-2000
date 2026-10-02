@@ -5,4 +5,9 @@ export type LineStat = { kind: ChangeKind, added: number, deleted: number,
 /**
  * Git zählt keine Zeilen; `added` und `deleted` sind dann 0.
  */
-binary: boolean, };
+binary: boolean, 
+/**
+ * Der Diff enthält auch Änderungen von außerhalb der Reichweite (fremder Commit an derselben
+ * Datei oder fremde uncommittete Änderung). Unter Uncommitted immer `false`.
+ */
+foreign: boolean, };

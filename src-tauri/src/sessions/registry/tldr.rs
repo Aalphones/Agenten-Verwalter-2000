@@ -155,8 +155,8 @@ impl SessionRegistry {
         Ok(())
     }
 
-    /// Nach Nummer.
-    fn project_members(&self, project_id: &str) -> Vec<Arc<Session>> {
+    /// Alle Sessions des Vorhabens, nach Nummer.
+    pub(super) fn project_members(&self, project_id: &str) -> Vec<Arc<Session>> {
         let mut members: Vec<Arc<Session>> = self
             .lock_sessions()
             .values()

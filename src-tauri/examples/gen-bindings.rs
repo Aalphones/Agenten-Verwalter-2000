@@ -10,8 +10,8 @@ use verwalter_lib::{
         ScratchpadListing, SessionBackground, SubagentStep, TextPreview,
     },
     changes::model::{
-        ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
-        RepositoryChanges, SessionChanges,
+        ChangeKind, ChangeScope, ChangesReach, DiffLine, DiffLineKind, FileChange, FileDiff,
+        LineStat, RepositoryChanges, SessionChanges,
     },
     commands::app::AppInfo,
     context::model::{
@@ -66,6 +66,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     KnownRepository::export_all(&cfg)?;
     ChangeKind::export_all(&cfg)?;
     ChangeScope::export_all(&cfg)?;
+    ChangesReach::export_all(&cfg)?;
     LineStat::export_all(&cfg)?;
     FileChange::export_all(&cfg)?;
     RepositoryChanges::export_all(&cfg)?;

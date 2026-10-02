@@ -1,7 +1,8 @@
 //! Was in den Repositories einer Session und in ihren Ticket-Worktrees gegenüber der Basis geändert
-//! ist — in drei Blickwinkeln, gelesen nur mit Plumbing-Befehlen, die im Worktree keine Sperre
-//! nehmen (ADR 006).
+//! ist, soweit es der Session oder dem Vorhaben gehört (ADR 014) — in drei Blickwinkeln, gelesen
+//! nur mit Plumbing-Befehlen, die im Worktree keine Sperre nehmen (ADR 006).
 pub mod attribution;
+pub mod history;
 pub mod model;
 pub mod parse;
 pub mod scan;
@@ -11,6 +12,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread::{self, ScopedJoinHandle};
 
+use crate::changes::attribution::{OwnFile, Ownership};
+use crate::changes::history::CommitInfo;
 use crate::changes::model::{
     ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
     RepositoryChanges, SessionChanges,
@@ -27,22 +30,29 @@ const WORKTREE_MISSING: &str =
     "Worktree fehlt — die nächste Nachricht an den Agenten legt ihn neu an.";
 const THREAD_FAILED: &str = "interner Fehler beim Lesen der Changes";
 const HEAD: &str = "HEAD";
+const NO_OWN_COMMITS: &str = "Die Datei hat keine eigenen Commits in dieser Ansicht";
 const SHORT_COMMIT_CHARS: usize = 7;
 /// Basis eines Ticket-Worktrees, wenn sie sich nicht bestimmen ließ; der Eintrag trägt dann den Fehler.
 const UNKNOWN_BASE: &str = "unbekannt";
 
+/// Alles, was die Changes einer Reichweite brauchen; gebaut von `SessionRegistry::changes_input`.
+pub struct ChangesInput {
+    pub workspace: PathBuf,
+    pub repositories: Vec<SessionRepository>,
+    /// Die Ticket-Worktrees der Reichweite als `(Position, Ordner)`.
+    pub ticket_folders: Vec<(u32, String)>,
+    pub own: Ownership,
+}
+
 /// Liest alle Repositories der Session nebeneinander, je eines samt seiner Ticket-Worktrees in einem
 /// eigenen Thread. Scheitert eines, trägt nur sein Eintrag den Fehler. Ordner ohne Git bekommen
 /// keinen Thread und keinen Eintrag, nur ihr Name steht in `plain_folders` (ADR 018).
-///
-/// `ticket_folders`: die Ticket-Worktrees, die der Agent der Session benutzt hat, als
-/// `(Position, Ordner)`.
-pub fn load(
-    workspace: &Path,
-    repositories: &[SessionRepository],
-    ticket_folders: &[(u32, String)],
-) -> SessionChanges {
-    let plain_folders: Vec<String> = repositories
+pub fn load(input: &ChangesInput) -> SessionChanges {
+    let workspace = input.workspace.as_path();
+    let ticket_folders = input.ticket_folders.as_slice();
+    let own = &input.own;
+    let plain_folders: Vec<String> = input
+        .repositories
         .iter()
         .filter(|repository: &&SessionRepository| is_plain_folder(repository))
         .map(|repository: &SessionRepository| repository.name.clone())
@@ -52,7 +62,8 @@ pub fn load(
             u32,
             &SessionRepository,
             ScopedJoinHandle<'_, Vec<RepositoryChanges>>,
-        )> = repositories
+        )> = input
+            .repositories
             .iter()
             .enumerate()
             .filter(|(_, repository): &(usize, &SessionRepository)| !is_plain_folder(repository))
@@ -60,7 +71,7 @@ pub fn load(
                 let position = u32::try_from(index).unwrap_or(u32::MAX);
                 let folders = folders_of(ticket_folders, position);
                 let handle =
-                    scope.spawn(move || load_one(workspace, position, repository, folders));
+                    scope.spawn(move || load_one(workspace, position, repository, folders, own));
                 (position, repository, handle)
             })
             .collect();
@@ -81,6 +92,7 @@ pub fn load(
     SessionChanges {
         repositories,
         plain_folders,
+        untracked_before: own.untracked_before,
     }
 }
 
@@ -102,12 +114,13 @@ fn load_one(
     position: u32,
     repository: &SessionRepository,
     folders: Vec<String>,
+    own: &Ownership,
 ) -> Vec<RepositoryChanges> {
-    let mut entries = vec![load_repository(workspace, position, repository)];
+    let mut entries = vec![load_repository(workspace, position, repository, own)];
     entries.extend(
         worktrees::ticket_worktrees(repository, position, &folders)
             .iter()
-            .map(|worktree: &TicketWorktree| load_ticket(repository, worktree)),
+            .map(|worktree: &TicketWorktree| load_ticket(repository, worktree, own)),
     );
     entries
 }
@@ -118,6 +131,7 @@ fn load_repository(
     workspace: &Path,
     position: u32,
     repository: &SessionRepository,
+    own: &Ownership,
 ) -> RepositoryChanges {
     if !repository.repository_path.join(".git").exists() {
         let missing =
@@ -128,7 +142,7 @@ fn load_repository(
     if is_app_worktree_missing(repository, &worktree) {
         return failed_repository(position, repository, WORKTREE_MISSING.to_owned());
     }
-    match read_changes(&worktree, &repository.base_commit) {
+    match read_changes(&worktree, &repository.base_commit, own) {
         Ok((files, commit_count)) => RepositoryChanges {
             key: position.to_string(),
             name: repository.name.clone(),
@@ -142,9 +156,13 @@ fn load_repository(
     }
 }
 
-/// Ein Ticket-Worktree gegen seine Abzweigung vom Standard-Branch: alles, was auf dem Branch liegt,
-/// egal welche Session es gemacht hat.
-fn load_ticket(repository: &SessionRepository, worktree: &TicketWorktree) -> RepositoryChanges {
+/// Ein Ticket-Worktree gegen seine Abzweigung vom Standard-Branch, mit den Änderungen der
+/// Reichweite auf dem Branch.
+fn load_ticket(
+    repository: &SessionRepository,
+    worktree: &TicketWorktree,
+    own: &Ownership,
+) -> RepositoryChanges {
     let key = format!("{}/{}", worktree.position, worktree.folder);
     let name = format!("{} · {}", repository.name, worktree.folder);
     let branch = ticket_branch_label(worktree);
@@ -160,7 +178,7 @@ fn load_ticket(repository: &SessionRepository, worktree: &TicketWorktree) -> Rep
             );
         }
     };
-    match read_changes(&worktree.path, &base_commit) {
+    match read_changes(&worktree.path, &base_commit, own) {
         Ok((files, commit_count)) => RepositoryChanges {
             key,
             name,
@@ -181,25 +199,20 @@ fn ticket_branch_label(worktree: &TicketWorktree) -> String {
     }
 }
 
-fn read_changes(worktree: &Path, base: &str) -> Result<(Vec<FileChange>, u32), CommandError> {
-    let committed = parse::scope_stats(
-        &git::diff_tree_name_status(worktree, base, HEAD)?,
-        &git::diff_tree_numstat(worktree, base, HEAD)?,
-    );
-    let mut all = parse::scope_stats(
-        &git::diff_index_name_status(worktree, base)?,
-        &git::diff_index_numstat(worktree, base)?,
-    );
-    let mut uncommitted = parse::scope_stats(
-        &git::diff_index_name_status(worktree, HEAD)?,
-        &git::diff_index_numstat(worktree, HEAD)?,
-    );
-    for path in parse::paths(&git::untracked_files(worktree)?) {
-        let stat = untracked_stat(&worktree.join(path.replace('/', "\\")));
-        all.insert(path.clone(), stat.clone());
-        uncommitted.insert(path, stat);
-    }
-    let commit_count = git::commit_count(worktree, base)?;
+/// Nur was der Reichweite gehört (ADR 014): eigene Commits je Datei von ihrem ersten bis zum
+/// letzten, eigene geschriebene Dateien, solange sie seit dem letzten Schreiben nicht committet sind.
+fn read_changes(
+    worktree: &Path,
+    base: &str,
+    own: &Ownership,
+) -> Result<(Vec<FileChange>, u32), CommandError> {
+    let commits = history::read(worktree, base)?;
+    let own_files = attribution::own_files(&commits, &own.commits);
+    let dirty = dirty_stats(worktree)?;
+    let uncommitted = open_uncommitted(worktree, &dirty, &commits, own);
+    let committed = committed_stats(worktree, &own_files)?;
+    let all = all_stats(worktree, &own_files, &dirty, &uncommitted)?;
+    let commit_count = attribution::own_commit_count(&commits, &own.commits);
 
     let mut files: BTreeMap<String, FileChange> = BTreeMap::new();
     for path in all.keys().chain(committed.keys()).chain(uncommitted.keys()) {
@@ -219,6 +232,121 @@ fn read_changes(worktree: &Path, base: &str) -> Result<(Vec<FileChange>, u32), C
     Ok((files.into_values().collect(), commit_count))
 }
 
+/// Alles Uncommittete im Arbeitsordner, egal von wem: `HEAD` → Arbeitsverzeichnis und die untracked
+/// Dateien.
+fn dirty_stats(worktree: &Path) -> Result<BTreeMap<String, LineStat>, CommandError> {
+    let mut dirty = parse::scope_stats(
+        &git::diff_index_name_status(worktree, HEAD)?,
+        &git::diff_index_numstat(worktree, HEAD)?,
+    );
+    for path in parse::paths(&git::untracked_files(worktree)?) {
+        let stat = untracked_stat(&worktree.join(path.replace('/', "\\")));
+        dirty.insert(path, stat);
+    }
+    Ok(dirty)
+}
+
+/// Der Teil von `dirty`, den die Reichweite geschrieben und seitdem nicht committet hat.
+fn open_uncommitted(
+    worktree: &Path,
+    dirty: &BTreeMap<String, LineStat>,
+    commits: &[CommitInfo],
+    own: &Ownership,
+) -> BTreeMap<String, LineStat> {
+    dirty
+        .iter()
+        .filter(|(path, _): &(&String, &LineStat)| {
+            let absolute = worktree.join(path.replace('/', "\\"));
+            let key = attribution::normalize_path(&absolute.to_string_lossy());
+            own.touched.get(&key).is_some_and(|touched_at: &f64| {
+                attribution::is_open(*touched_at, path, commits, &own.commits)
+            })
+        })
+        .map(|(path, stat): (&String, &LineStat)| (path.clone(), stat.clone()))
+        .collect()
+}
+
+/// Je Datei mit eigenen Commits vom ersten bis zum letzten; Dateien mit gleichem `from → to` teilen
+/// sich einen Git-Aufruf. Netto unveränderte Dateien entfallen.
+fn committed_stats(
+    worktree: &Path,
+    own_files: &BTreeMap<String, OwnFile>,
+) -> Result<BTreeMap<String, LineStat>, CommandError> {
+    let mut groups: BTreeMap<(&str, &str), Vec<(&String, &OwnFile)>> = BTreeMap::new();
+    for (path, file) in own_files {
+        groups
+            .entry((file.from.as_str(), file.to.as_str()))
+            .or_default()
+            .push((path, file));
+    }
+    let mut committed: BTreeMap<String, LineStat> = BTreeMap::new();
+    for ((from, to), files) in groups {
+        let stats = history::range_stats(worktree, from, to)?;
+        for (path, file) in files {
+            let Some(stat) = stats.get(path) else {
+                continue;
+            };
+            let mut stat = stat.clone();
+            stat.foreign = file.foreign_between;
+            committed.insert(path.clone(), stat);
+        }
+    }
+    Ok(committed)
+}
+
+/// Dateien mit eigenen Commits vom ersten Elternteil bis zum Arbeitsverzeichnis, dazu die offenen
+/// eigenen Dateien ohne Commit. Dateien mit gleichem `from` teilen sich einen Git-Aufruf; ist keine
+/// davon uncommittet, ist das Arbeitsverzeichnis für sie `HEAD`, und `from → HEAD` kommt aus dem
+/// Zwischenspeicher — sonst liefe jeder Takt der Ansicht zwei Git-Aufrufe je Gruppe.
+fn all_stats(
+    worktree: &Path,
+    own_files: &BTreeMap<String, OwnFile>,
+    dirty: &BTreeMap<String, LineStat>,
+    uncommitted: &BTreeMap<String, LineStat>,
+) -> Result<BTreeMap<String, LineStat>, CommandError> {
+    let mut groups: BTreeMap<&str, Vec<(&String, &OwnFile)>> = BTreeMap::new();
+    for (path, file) in own_files {
+        groups
+            .entry(file.from.as_str())
+            .or_default()
+            .push((path, file));
+    }
+    let mut all: BTreeMap<String, LineStat> = BTreeMap::new();
+    let mut head: Option<String> = None;
+    for (from, files) in groups {
+        let is_clean = files
+            .iter()
+            .all(|(path, _): &(&String, &OwnFile)| !dirty.contains_key(*path));
+        let stats = if is_clean {
+            let head = match &head {
+                Some(head) => head,
+                None => head.insert(git::head_commit(worktree)?),
+            };
+            history::range_stats(worktree, from, head)?
+        } else {
+            parse::scope_stats(
+                &git::diff_index_name_status(worktree, from)?,
+                &git::diff_index_numstat(worktree, from)?,
+            )
+        };
+        for (path, file) in files {
+            let Some(stat) = stats.get(path) else {
+                continue;
+            };
+            let has_foreign_dirt = dirty.contains_key(path) && !uncommitted.contains_key(path);
+            let mut stat = stat.clone();
+            stat.foreign = file.foreign_after || has_foreign_dirt;
+            all.insert(path.clone(), stat);
+        }
+    }
+    for (path, stat) in uncommitted {
+        if !own_files.contains_key(path) {
+            all.insert(path.clone(), stat.clone());
+        }
+    }
+    Ok(all)
+}
+
 /// Der Diff einer Datei im gewählten Blickwinkel — im Arbeitsordner des Repositorys oder, mit
 /// `ticket`, in diesem Ticket-Worktree. Prüft den Pfad, bevor er an Git oder ins Dateisystem geht;
 /// legt nichts an.
@@ -228,6 +356,7 @@ pub fn file_diff(
     ticket: Option<&TicketWorktree>,
     path: &str,
     scope: ChangeScope,
+    own: &Ownership,
 ) -> Result<FileDiff, CommandError> {
     validate_path(path)?;
     if is_plain_folder(repository) {
@@ -255,8 +384,16 @@ pub fn file_diff(
     };
     let base = base.as_str();
     let raw = match scope {
-        ChangeScope::Committed => git::diff_tree_patch(&worktree, base, HEAD, path)?,
-        ChangeScope::All => git::diff_index_patch(&worktree, base, path)?,
+        ChangeScope::Committed => {
+            let Some(file) = own_file(&worktree, base, own, path)? else {
+                return Err(CommandError::Internal(NO_OWN_COMMITS.to_owned()));
+            };
+            git::diff_tree_patch(&worktree, &file.from, &file.to, path)?
+        }
+        ChangeScope::All => match own_file(&worktree, base, own, path)? {
+            Some(file) => git::diff_index_patch(&worktree, &file.from, path)?,
+            None => git::diff_index_patch(&worktree, HEAD, path)?,
+        },
         ChangeScope::Uncommitted => git::diff_index_patch(&worktree, HEAD, path)?,
     };
     // Untracked Dateien kennt kein Diff-Befehl; ihr Inhalt ist der ganze Diff.
@@ -267,6 +404,17 @@ pub fn file_diff(
         return Ok(untracked_diff(&worktree.join(path.replace('/', "\\"))));
     }
     Ok(parse::unified(&raw))
+}
+
+/// Erster und letzter eigener Commit an `path`; `None`, wenn die Reichweite ihn nicht committet hat.
+fn own_file(
+    worktree: &Path,
+    base: &str,
+    own: &Ownership,
+    path: &str,
+) -> Result<Option<OwnFile>, CommandError> {
+    let commits = history::read(worktree, base)?;
+    Ok(attribution::own_files(&commits, &own.commits).remove(path))
 }
 
 /// Der Pfad kommt aus der Oberfläche und landet bei untracked Dateien im Dateisystem: nichts
@@ -349,6 +497,7 @@ fn untracked_stat(path: &Path) -> LineStat {
             added: 0,
             deleted: 0,
             binary: true,
+            foreign: false,
         };
     };
     let newlines = content.matches('\n').count();
@@ -359,6 +508,7 @@ fn untracked_stat(path: &Path) -> LineStat {
         added: u32::try_from(lines).unwrap_or(u32::MAX),
         deleted: 0,
         binary: false,
+        foreign: false,
     }
 }
 

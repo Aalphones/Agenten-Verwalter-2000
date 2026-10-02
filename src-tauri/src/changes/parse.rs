@@ -60,6 +60,7 @@ pub fn scope_stats(name_status_raw: &str, numstat_raw: &str) -> BTreeMap<String,
                 added,
                 deleted,
                 binary,
+                foreign: false,
             };
             (path, stat)
         })

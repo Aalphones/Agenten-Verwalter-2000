@@ -36,7 +36,7 @@ export function useFileDiff(
 
   useEffect(() => {
     const controller = new AbortController();
-    loadFileDiff(sessionId, key, path, scope)
+    loadFileDiff(sessionId, 'session', key, path, scope)
       .then((diff: FileDiff) => {
         if (!controller.signal.aborted) {
           setState({ key: diffKey, diff, error: null });

@@ -30,17 +30,17 @@
 
 ### Typen
 
-- [ ] `changes/model.rs`: `ChangesReach`, `LineStat.foreign`, `SessionChanges.untracked_before`, Doc von `commit_count` laut Kontrakt.
-- [ ] Jede Stelle, die `LineStat { … }` baut (`parse::scope_stats`, `changes::untracked_stat`, per Compiler finden), setzt `foreign: false`.
-- [ ] `examples/gen-bindings.rs`: `ChangesReach::export_all(&cfg)?;` neben `ChangeScope`.
+- [x] `changes/model.rs`: `ChangesReach`, `LineStat.foreign`, `SessionChanges.untracked_before`, Doc von `commit_count` laut Kontrakt.
+- [x] Jede Stelle, die `LineStat { … }` baut (`parse::scope_stats`, `changes::untracked_stat`, per Compiler finden), setzt `foreign: false`.
+- [x] `examples/gen-bindings.rs`: `ChangesReach::export_all(&cfg)?;` neben `ChangeScope`.
 
 ### Git
 
-- [ ] `git/mod.rs`: `pub fn commit_files(worktree: &Path, parent: &str, commit: &str) -> Result<String, CommandError>`, Doc `/// \`git diff-tree -r --no-renames --name-only -z <parent> <commit>\``, über `run_raw`.
+- [x] `git/mod.rs`: `pub fn commit_files(worktree: &Path, parent: &str, commit: &str) -> Result<String, CommandError>`, Doc `/// \`git diff-tree -r --no-renames --name-only -z <parent> <commit>\``, über `run_raw`.
 
 ### Commit-Verlauf mit Zwischenspeicher
 
-- [ ] Neue Datei `src-tauri/src/changes/history.rs`, Kopf `//! Die Commits seit der Basis mit ihren Dateien. Was ein Commit geändert hat, ändert sich nie — deshalb merkt es sich der Core (ADR 014).`; in `changes/mod.rs` `pub mod history;`.
+- [x] Neue Datei `src-tauri/src/changes/history.rs`, Kopf `//! Die Commits seit der Basis mit ihren Dateien. Was ein Commit geändert hat, ändert sich nie — deshalb merkt es sich der Core (ADR 014).`; in `changes/mod.rs` `pub mod history;`.
   - `pub struct CommitInfo { pub id: String, pub time: i64, pub first_parent: Option<String>, pub files: Vec<String> }` (`#[derive(Debug, Clone)]`), Doc: „\`files\` relativ zum Repository mit \`/\`; gegen den ersten Elternteil.“
   - `const MAX_CACHED_COMMITS: usize = 50_000;`, `const MAX_CACHED_RANGES: usize = 2_000;` mit Kommentar „Darüber wird der Speicher geleert statt einzeln verdrängt: ein Neuaufbau kostet nur Git-Aufrufe.“
   - `static COMMIT_FILES: OnceLock<Mutex<HashMap<String, Vec<String>>>>` und `static RANGE_STATS: OnceLock<Mutex<HashMap<String, BTreeMap<String, LineStat>>>>`. Zugriff über `fn commit_files_cache() -> MutexGuard<…>` bzw. `fn range_stats_cache()` mit `unwrap_or_else(PoisonError::into_inner)`. **Die Sperre nie während eines Git-Aufrufs halten:** erst nachsehen und freigeben, dann Git, dann einfügen.
@@ -50,20 +50,20 @@
 
 ### Zuordnung (`changes/attribution.rs`, ohne Git)
 
-- [ ] `pub struct Ownership { pub commits: HashSet<String>, pub touched: HashMap<String, f64>, pub untracked_before: Option<f64> }` (`#[derive(Debug, Clone, Default)]`), Doc je Feld: eigene Commit-IDs der Reichweite; geschriebene Dateien als normalisierter absoluter Pfad → letzte Uhrzeit in ms; wie `SessionChanges.untracked_before`.
-- [ ] `pub struct OwnFile { pub from: String, pub to: String, pub foreign_between: bool, pub foreign_after: bool }` (`#[derive(Debug, Clone)]`) mit Doc: `from` = erster Elternteil des ersten eigenen Commits an der Datei, `to` = letzter eigener Commit an der Datei, `foreign_between` = ein fremder Commit ändert sie zwischen beiden, `foreign_after` = ein fremder Commit ändert sie nach dem ersten eigenen.
-- [ ] `pub fn own_files(commits: &[CommitInfo], own: &HashSet<String>) -> BTreeMap<String, OwnFile>`:
+- [x] `pub struct Ownership { pub commits: HashSet<String>, pub touched: HashMap<String, f64>, pub untracked_before: Option<f64> }` (`#[derive(Debug, Clone, Default)]`), Doc je Feld: eigene Commit-IDs der Reichweite; geschriebene Dateien als normalisierter absoluter Pfad → letzte Uhrzeit in ms; wie `SessionChanges.untracked_before`.
+- [x] `pub struct OwnFile { pub from: String, pub to: String, pub foreign_between: bool, pub foreign_after: bool }` (`#[derive(Debug, Clone)]`) mit Doc: `from` = erster Elternteil des ersten eigenen Commits an der Datei, `to` = letzter eigener Commit an der Datei, `foreign_between` = ein fremder Commit ändert sie zwischen beiden, `foreign_after` = ein fremder Commit ändert sie nach dem ersten eigenen.
+- [x] `pub fn own_files(commits: &[CommitInfo], own: &HashSet<String>) -> BTreeMap<String, OwnFile>`:
   1. Erster Durchlauf mit Index `i` über `commits`: nur Commits mit `own.contains(&id)` und `first_parent == Some(…)`. Je Datei beim ersten Treffer `first_index = i`, `from = first_parent`; bei jedem Treffer `last_index = i`, `to = id`.
   2. Zweiter Durchlauf mit Index `j` über die **nicht** eigenen Commits: je Datei, die in der Map steht, `foreign_between |= first_index < j && j < last_index` und `foreign_after |= j > first_index`.
   3. Indizes nur intern (Hilfs-Struct), Ergebnis ohne sie.
-- [ ] `pub fn own_commit_count(commits: &[CommitInfo], own: &HashSet<String>) -> u32`.
-- [ ] `pub fn is_open(touched_at: f64, path: &str, commits: &[CommitInfo], own: &HashSet<String>) -> bool`: `false`, wenn ein eigener Commit `c` mit `c.time >= (touched_at / 1000.0).floor() as i64` die Datei `path` (relativ, mit `/`) enthält, sonst `true`. Doc: „Nach dem letzten Schreiben committet: neuer Schmutz stammt nicht mehr von der Reichweite. Dieselbe Sekunde zählt als committet.“
+- [x] `pub fn own_commit_count(commits: &[CommitInfo], own: &HashSet<String>) -> u32`.
+- [x] `pub fn is_open(touched_at: f64, path: &str, commits: &[CommitInfo], own: &HashSet<String>) -> bool`: `false`, wenn ein eigener Commit `c` mit `c.time >= (touched_at / 1000.0).floor() as i64` die Datei `path` (relativ, mit `/`) enthält, sonst `true`. Doc: „Nach dem letzten Schreiben committet: neuer Schmutz stammt nicht mehr von der Reichweite. Dieselbe Sekunde zählt als committet.“
 
 ### Changes lesen
 
-- [ ] `changes/mod.rs`: `pub struct ChangesInput { pub workspace: PathBuf, pub repositories: Vec<SessionRepository>, pub ticket_folders: Vec<(u32, String)>, pub own: Ownership }`, Doc „Alles, was die Changes einer Reichweite brauchen; gebaut von \`SessionRegistry::changes_input\`.“
-- [ ] `pub fn load(input: &ChangesInput) -> SessionChanges` statt der bisherigen drei Parameter. `own: &Ownership` geht durch `load_one` → `load_repository`/`load_ticket` → `read_changes(worktree, base, own)`. Rückgabe `SessionChanges { repositories, untracked_before: input.own.untracked_before }`.
-- [ ] `read_changes(worktree: &Path, base: &str, own: &Ownership)` neu, in dieser Reihenfolge:
+- [x] `changes/mod.rs`: `pub struct ChangesInput { pub workspace: PathBuf, pub repositories: Vec<SessionRepository>, pub ticket_folders: Vec<(u32, String)>, pub own: Ownership }`, Doc „Alles, was die Changes einer Reichweite brauchen; gebaut von \`SessionRegistry::changes_input\`.“
+- [x] `pub fn load(input: &ChangesInput) -> SessionChanges` statt der bisherigen drei Parameter. `own: &Ownership` geht durch `load_one` → `load_repository`/`load_ticket` → `read_changes(worktree, base, own)`. Rückgabe `SessionChanges { repositories, untracked_before: input.own.untracked_before }`.
+- [x] `read_changes(worktree: &Path, base: &str, own: &Ownership)` neu, in dieser Reihenfolge:
   1. `let commits = history::read(worktree, base)?; let own_files = attribution::own_files(&commits, &own.commits);`
   2. **Schmutz** `dirty`: wie bisher `uncommitted` (`diff_index_*` gegen `HEAD` plus untracked Dateien mit `untracked_stat`).
   3. **Uncommitted:** aus `dirty` nur Pfade, für die `own.touched.get(&attribution::normalize_path(&worktree.join(path.replace('/', "\\")).to_string_lossy()))` einen Wert `t` hat und `attribution::is_open(t, path, &commits, &own.commits)` gilt. `foreign` bleibt `false`.
@@ -72,7 +72,7 @@
   6. `commit_count = attribution::own_commit_count(&commits, &own.commits)`.
   7. Zusammenführen zu `FileChange` wie bisher (sortiert nach Pfad).
   Kommentar über der Funktion: „Nur was der Reichweite gehört (ADR 014): eigene Commits je Datei von ihrem ersten bis zum letzten, eigene geschriebene Dateien, solange sie seit dem letzten Schreiben nicht committet sind.“
-- [ ] `pub fn file_diff(workspace, repository, ticket, path, scope, own: &Ownership)`: nach Bestimmen von `worktree` und `base`:
+- [x] `pub fn file_diff(workspace, repository, ticket, path, scope, own: &Ownership)`: nach Bestimmen von `worktree` und `base`:
   - Hilfsfunktion `fn own_file(worktree: &Path, base: &str, own: &Ownership, path: &str) -> Result<Option<OwnFile>, CommandError>` = `history::read` + `attribution::own_files` + `remove(path)`.
   - `Committed` → `own_file(…)?` fehlt → `CommandError::Internal("Die Datei hat keine eigenen Commits in dieser Ansicht".to_owned())`, sonst `git::diff_tree_patch(&worktree, &file.from, &file.to, path)?`.
   - `All` → mit `own_file` `git::diff_index_patch(&worktree, &file.from, path)?`, ohne `git::diff_index_patch(&worktree, HEAD, path)?`.
@@ -81,27 +81,46 @@
 
 ### Registry und Commands
 
-- [ ] `registry.rs`: private Methode `fn project_members(&self, session_id: &str) -> Result<Vec<Arc<Session>>, CommandError>` aus dem Anfang von `project_ticket_worktrees` herausziehen (gleiche Filterung, nach `number` sortiert). `project_ticket_worktrees` benutzt sie und bleibt sonst gleich.
-- [ ] `registry.rs`, direkt hinter `project_ticket_worktrees`: `pub fn changes_input(&self, session_id: &str, reach: ChangesReach) -> Result<ChangesInput, CommandError>` mit Doc „Workspace, Repositories, Ticket-Worktrees und eigene Commits/Dateien der Reichweite. Nie zwei Session-Sperren zugleich; die Datenbank erst nach den Sperren.“
+- [x] `registry.rs`: private Methode `fn project_members(&self, session_id: &str) -> Result<Vec<Arc<Session>>, CommandError>` aus dem Anfang von `project_ticket_worktrees` herausziehen (gleiche Filterung, nach `number` sortiert). `project_ticket_worktrees` benutzt sie und bleibt sonst gleich.
+- [x] `registry.rs`, direkt hinter `project_ticket_worktrees`: `pub fn changes_input(&self, session_id: &str, reach: ChangesReach) -> Result<ChangesInput, CommandError>` mit Doc „Workspace, Repositories, Ticket-Worktrees und eigene Commits/Dateien der Reichweite. Nie zwei Session-Sperren zugleich; die Datenbank erst nach den Sperren.“
   - `Session` → Session-IDs `[session.id]`, Ticket-Worktrees `session.lock().ticket_worktrees.clone()`.
   - `Project` → Session-IDs aller `project_members`, Ticket-Worktrees `self.project_ticket_worktrees(session_id)?`.
   - Dann `self.database.with(|connection| Ok(Ownership { commits: session_commits::load_for(connection, &ids)?, touched: session_files::load_for(connection, &ids)?, untracked_before: session_rows::untracked_before(connection, &ids)? }))?` (den Alias für `db::sessions` so verwenden, wie `registry.rs` ihn schon importiert).
   - `ChangesInput { workspace: session.workspace.clone(), repositories: session.repositories(), ticket_folders, own }`.
-- [ ] `commands/changes.rs`:
+- [x] `commands/changes.rs`:
   - `changes_load(registry, session_id: String, reach: ChangesReach)` → `let input = registry.changes_input(&session_id, reach)?; Ok(changes::load(&input))`.
   - `changes_file_diff(registry, session_id: String, reach: ChangesReach, key: String, path: String, scope: ChangeScope)`: `registry.repositories_of(&session_id)?` ersetzen durch `let input = registry.changes_input(&session_id, reach)?;` und `input.workspace`/`input.repositories` verwenden; beide `changes::file_diff`-Aufrufe bekommen `&input.own`. Die Prüfung `is_assigned` mit `project_ticket_worktrees` bleibt wörtlich.
   - Doc-Kommentar von `changes_load`: „Die Changes der Reichweite (ADR 014): nur die Session oder das ganze Vorhaben.“
 
 ### Oberfläche (nur Anschluss)
 
-- [ ] `pnpm bindings`.
-- [ ] `src/lib/changes.ts`: `loadChanges(sessionId: string, reach: ChangesReach)` → `invoke('changes_load', { sessionId, reach })`; `loadFileDiff(sessionId, reach, key, path, scope)` → `invoke('changes_file_diff', { sessionId, reach, key, path, scope })`. JSDoc: „\`reach\`: \`session\` nur die Session, \`project\` alle Sessions des Vorhabens (ADR 014).“ und bei `loadFileDiff` `internal` um „Datei ohne eigene Commits“ ergänzen.
-- [ ] `useSessionChanges.ts` und `useFileDiff.ts`: vorerst `'session'` als zweites Argument übergeben, sonst unverändert.
+- [x] `pnpm bindings`.
+- [x] `src/lib/changes.ts`: `loadChanges(sessionId: string, reach: ChangesReach)` → `invoke('changes_load', { sessionId, reach })`; `loadFileDiff(sessionId, reach, key, path, scope)` → `invoke('changes_file_diff', { sessionId, reach, key, path, scope })`. JSDoc: „\`reach\`: \`session\` nur die Session, \`project\` alle Sessions des Vorhabens (ADR 014).“ und bei `loadFileDiff` `internal` um „Datei ohne eigene Commits“ ergänzen.
+- [x] `useSessionChanges.ts` und `useFileDiff.ts`: vorerst `'session'` als zweites Argument übergeben, sonst unverändert.
 
 ### Doku und Commit
 
-- [ ] Ladezeit messen: App mit `pnpm tauri dev`, Vorhaben „Spracheingabe“ (oder ein anderes mit mehreren Commits), Changes der Session öffnen. Dauer von `changes_load` per `console.time` im Entwicklerfenster um `loadChanges` (danach wieder entfernen) für den ersten und zweiten Aufruf ins Report-Back schreiben.
-- [ ] `docs/code-map.md`, Zeile „Changes“ (Core): „`history.rs` Commits seit der Basis mit Dateien, Zwischenspeicher; `attribution.rs` `Ownership`, `own_files`, `is_open`; `ChangesInput` und `SessionRegistry::changes_input` (Reichweite Session/Vorhaben)“. Den Teil „Ticket-Worktrees aller Sessions des Vorhabens“ ersetzen durch „Ticket-Worktrees der Reichweite“.
-- [ ] Commit `feat(changes): show only the changes of the session or project`.
+- [x] Ladezeit messen: App mit `pnpm tauri dev`, Vorhaben „Spracheingabe“ (oder ein anderes mit mehreren Commits), Changes der Session öffnen. Dauer von `changes_load` per `console.time` im Entwicklerfenster um `loadChanges` (danach wieder entfernen) für den ersten und zweiten Aufruf ins Report-Back schreiben.
+- [x] `docs/code-map.md`, Zeile „Changes“ (Core): „`history.rs` Commits seit der Basis mit Dateien, Zwischenspeicher; `attribution.rs` `Ownership`, `own_files`, `is_open`; `ChangesInput` und `SessionRegistry::changes_input` (Reichweite Session/Vorhaben)“. Den Teil „Ticket-Worktrees aller Sessions des Vorhabens“ ersetzen durch „Ticket-Worktrees der Reichweite“.
+- [x] Commit `feat(changes): show only the changes of the session or project`.
 
 ## Report-Back
+
+Gebaut wie beschrieben, mit vier Abweichungen:
+
+- **`project_members` gab es schon** (`sessions/registry/tldr.rs`, gleiche Filterung und Sortierung, Schlüssel ist die Vorhaben-ID). Statt einer zweiten Methode ist die vorhandene `pub(super)`; `project_ticket_worktrees` und `changes_input` rufen sie mit `session.project_id`.
+- **`git::commit_files` liest alle Commits in einem Aufruf** (`diff-tree --stdin`, Commit-IDs auf der Standardeingabe, neuer interner Helfer `run_raw_with_input` mit Schreib-Thread). Mit einem Aufruf je Commit kostete das erste Laden je Commit seit der Basis rund 60 ms.
+- **„Alle“ nimmt für Gruppen ohne uncommittete Datei `from → HEAD` aus dem Zwischenspeicher** (`history::range_stats` gegen die ID von `HEAD`) statt `diff-index` gegen das Arbeitsverzeichnis. Für diese Dateien ist das Arbeitsverzeichnis gleich `HEAD`, das Ergebnis also dasselbe. Sonst kostete jeder 5-s-Takt zwei Git-Aufrufe je Gruppe, bei 15 eigenen Commits über 2 s.
+- `git::commit_count` ist entfallen; die Zahl kommt aus `attribution::own_commit_count`.
+
+**Ladezeit** gemessen ohne Oberfläche: ein Wegwerf-Programm unter `examples/` (nicht committet) hat eine Kopie der App-Datenbank geöffnet und `changes::load` je Vorhaben zweimal aufgerufen, Debug-Build. In der Datenbank gab es noch **keine** aufgezeichneten eigenen Commits; für „Spracheingabe“ wurden deshalb echte Commits dieses Repositorys im Speicher als eigen eingetragen.
+
+| Fall | erstes Laden | zweites Laden |
+|---|---|---|
+| Vorhaben ohne eigene Commits (3 Vorhaben) | 0,33 s | 0,27–0,28 s |
+| „Spracheingabe“, 2 eigene Commits, eine Gruppe mit uncommitteter Datei | 0,85 s | 0,46 s |
+| „Spracheingabe“, 4 eigene Commits, alle Gruppen sauber | 1,58 s | 0,32 s |
+
+Vor den beiden Abweichungen: 1,98 s / 0,59 s bzw. 2,47 s / ca. 0,9 s (hochgerechnet). Ein Git-Start kostet hier etwa 60 ms; das zweite Laden ohne eigene Dateien (fünf Aufrufe) ist die Untergrenze.
+
+**Zuordnung geprüft** mit `fef9b82` und `5f3aad0` als eigen, `history.rs` als geschriebene Datei: `STATE.md` (zwei fremde Commits dazwischen) unter Committed fremd markiert; Dateien aus `63b6b99` fehlen; `docs/planning/2026-10-01_session-changes/README.md` (fremder Commit nur **vor** dem ersten eigenen) nicht markiert; `history.rs` nur unter Uncommitted; uncommittete, nicht geschriebene Änderungen an Dateien mit eigenen Commits (`changes/mod.rs`, `git/mod.rs`) unter Alle fremd markiert; uncommittete Dateien ohne eigene Commits und ohne Schreiben (`commands/changes.rs`) fehlen; 2 Commits.

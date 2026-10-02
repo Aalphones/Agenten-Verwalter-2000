@@ -10,4 +10,9 @@ repositories: Array<RepositoryChanges>,
  * Namen der Session-Repositories ohne Git, in der Reihenfolge der Session; für sie gibt es
  * keine Changes (ADR 018).
  */
-plainFolders: Array<string>, };
+plainFolders: Array<string>, 
+/**
+ * Gesetzt: mindestens eine Session der Reichweite stammt aus der Zeit vor der Aufzeichnung.
+ * Ihre Änderungen vor diesem Zeitpunkt fehlen. Millisekunden seit 1970.
+ */
+untrackedBefore: number | null, };

@@ -1,8 +1,9 @@
 //! Einziger Ort, der `git` aufruft (AGENTS.md, Regel 2).
 use std::ffi::OsStr;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
+use std::thread;
 
 use crate::error::CommandError;
 use crate::processes::hide_console;
@@ -233,15 +234,6 @@ pub fn untracked_files(worktree: &Path) -> Result<String, CommandError> {
     )
 }
 
-/// `git rev-list --count <from>..HEAD`
-pub fn commit_count(worktree: &Path, from: &str) -> Result<u32, CommandError> {
-    let range = format!("{from}..HEAD");
-    let text = run(worktree, &args(&["rev-list", "--count", &range]))?;
-    text.trim()
-        .parse::<u32>()
-        .map_err(|_| CommandError::Git(format!("rev-list lieferte keine Zahl: {text}")))
-}
-
 /// `git rev-list --reverse --topo-order --no-merges --timestamp --parents <from>..HEAD`
 pub fn commits_since(worktree: &Path, from: &str) -> Result<String, CommandError> {
     let range = format!("{from}..HEAD");
@@ -256,6 +248,26 @@ pub fn commits_since(worktree: &Path, from: &str) -> Result<String, CommandError
             "--parents",
             &range,
         ]),
+    )
+}
+
+/// `git diff-tree --stdin -r --no-renames --name-only -z` mit einer Commit-ID je Zeile: in einem
+/// Aufruf je Commit `<ID>\0<Pfad>\0…` gegen seinen Elternteil. Commits ohne Änderung und ohne
+/// Elternteil fehlen in der Ausgabe.
+pub fn commit_files(worktree: &Path, commits: &[String]) -> Result<String, CommandError> {
+    let mut input = commits.join("\n");
+    input.push('\n');
+    run_raw_with_input(
+        worktree,
+        &args(&[
+            "diff-tree",
+            "--stdin",
+            "-r",
+            "--no-renames",
+            "--name-only",
+            "-z",
+        ]),
+        input,
     )
 }
 
@@ -340,25 +352,63 @@ fn run_raw(dir: &Path, arguments: &[&OsStr]) -> Result<String, CommandError> {
     Err(git_error(&output))
 }
 
+/// Wie `run_raw`, schreibt aber `input` auf die Standardeingabe.
+fn run_raw_with_input(
+    dir: &Path,
+    arguments: &[&OsStr],
+    input: String,
+) -> Result<String, CommandError> {
+    let mut command = git_command(dir, arguments);
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = command.spawn().map_err(spawn_error)?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| CommandError::Internal("Git ohne Standardeingabe gestartet".to_owned()))?;
+    // Eigener Thread: Git schreibt schon, während es liest — eine volle Ausgabe-Pipe hielte sonst
+    // beide Seiten fest.
+    let writer = thread::spawn(move || stdin.write_all(input.as_bytes()));
+    let output = child.wait_with_output()?;
+    // Ein Schreibfehler heißt meist, dass Git vorher beendet war; dann sagt der Exit-Code mehr.
+    let written = writer
+        .join()
+        .unwrap_or_else(|_| Err(io::Error::other("Schreib-Thread abgebrochen")));
+    if !output.status.success() {
+        return Err(git_error(&output));
+    }
+    written?;
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
 fn run_allowing_failure(dir: &Path, arguments: &[&OsStr]) -> Result<Output, CommandError> {
+    let mut command = git_command(dir, arguments);
+    command.stdin(Stdio::null());
+    command.output().map_err(spawn_error)
+}
+
+fn git_command(dir: &Path, arguments: &[&OsStr]) -> Command {
     let mut command = Command::new("git");
     command
         .arg("-C")
         .arg(dir)
         .args(arguments)
-        .stdin(Stdio::null())
         // Ohne das wartet Git bei fehlender Anmeldung auf eine Eingabe, die nie kommt.
         .env("GIT_TERMINAL_PROMPT", "0")
         // Lesende Aufrufe sollen nie eine Sperre im Worktree des Agenten nehmen.
         .env("GIT_OPTIONAL_LOCKS", "0");
     hide_console(&mut command);
-    command.output().map_err(|error: io::Error| {
-        if error.kind() == io::ErrorKind::NotFound {
-            CommandError::GitNotFound
-        } else {
-            CommandError::from(error)
-        }
-    })
+    command
+}
+
+fn spawn_error(error: io::Error) -> CommandError {
+    if error.kind() == io::ErrorKind::NotFound {
+        CommandError::GitNotFound
+    } else {
+        CommandError::from(error)
+    }
 }
 
 fn stdout_text(output: &Output) -> String {

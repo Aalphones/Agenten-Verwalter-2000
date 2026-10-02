@@ -23,6 +23,16 @@ pub enum ChangeScope {
     Uncommitted,
 }
 
+/// Wessen Änderungen die Changes zeigen (ADR 014).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum ChangesReach {
+    /// Nur die Session: ihre eigenen Commits, ihre geschriebenen Dateien, ihre Ticket-Worktrees.
+    Session,
+    /// Alle Sessions des Vorhabens zusammen.
+    Project,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct LineStat {
@@ -31,6 +41,9 @@ pub struct LineStat {
     pub deleted: u32,
     /// Git zählt keine Zeilen; `added` und `deleted` sind dann 0.
     pub binary: bool,
+    /// Der Diff enthält auch Änderungen von außerhalb der Reichweite (fremder Commit an derselben
+    /// Datei oder fremde uncommittete Änderung). Unter Uncommitted immer `false`.
+    pub foreign: bool,
 }
 
 /// Eine geänderte Datei mit ihren Zahlen je Blickwinkel; fehlt ein Wert, ist sie dort unverändert.
@@ -53,7 +66,7 @@ pub struct RepositoryChanges {
     pub name: String,
     pub branch: String,
     pub base_ref: String,
-    /// Commits von der Basis bis `HEAD`.
+    /// Eigene Commits der Reichweite von der Basis bis `HEAD`, ohne Merge-Commits.
     pub commit_count: u32,
     /// Nach `path` sortiert (Byte-Reihenfolge).
     pub files: Vec<FileChange>,
@@ -69,6 +82,9 @@ pub struct SessionChanges {
     /// Namen der Session-Repositories ohne Git, in der Reihenfolge der Session; für sie gibt es
     /// keine Changes (ADR 018).
     pub plain_folders: Vec<String>,
+    /// Gesetzt: mindestens eine Session der Reichweite stammt aus der Zeit vor der Aufzeichnung.
+    /// Ihre Änderungen vor diesem Zeitpunkt fehlen. Millisekunden seit 1970.
+    pub untracked_before: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

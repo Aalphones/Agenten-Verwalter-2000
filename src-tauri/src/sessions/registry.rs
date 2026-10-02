@@ -34,13 +34,15 @@ use crate::background::output::{
     MAX_COMMAND_OUTPUT_BYTES, MAX_PREVIEW_BYTES, URL_SCAN_BYTES, exit_code_from_summary,
     find_local_url, read_head, read_tail, tail_text,
 };
-use crate::changes::attribution;
+use crate::changes::ChangesInput;
+use crate::changes::attribution::{self, Ownership};
+use crate::changes::model::ChangesReach;
 use crate::context::model::{ContextBreakdown, ContextChangedEvent, SessionContext};
 use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
-    session_files, session_repositories, session_ticket_worktrees,
+    session_commits, session_files, session_repositories, session_ticket_worktrees,
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
@@ -1030,20 +1032,14 @@ impl SessionRegistry {
         Ok((session.workspace.clone(), session.repositories()))
     }
 
-    /// Ticket-Worktrees, die ein Agent irgendeiner Session des Vorhabens benutzt hat — die Changes
-    /// gehören dem Vorhaben. Ob es sie noch gibt, prüft der Aufrufer über Git.
+    /// Ticket-Worktrees, die ein Agent irgendeiner Session des Vorhabens benutzt hat. Ob es sie noch
+    /// gibt, prüft der Aufrufer über Git.
     pub fn project_ticket_worktrees(
         &self,
         session_id: &str,
     ) -> Result<Vec<(u32, String)>, CommandError> {
         let project_id = self.get(session_id)?.project_id.clone();
-        let mut members: Vec<Arc<Session>> = self
-            .lock_sessions()
-            .values()
-            .filter(|session: &&Arc<Session>| session.project_id == project_id)
-            .cloned()
-            .collect();
-        members.sort_by_key(|session: &Arc<Session>| session.number);
+        let members = self.project_members(&project_id);
         // Eine Session nach der anderen sperren — nie zwei zugleich und nie unter der Map-Sperre.
         let mut worktrees: Vec<(u32, String)> = Vec::new();
         for session in &members {
@@ -1062,6 +1058,43 @@ impl SessionRegistry {
             }
         }
         Ok(worktrees)
+    }
+
+    /// Workspace, Repositories, Ticket-Worktrees und eigene Commits/Dateien der Reichweite. Nie zwei
+    /// Session-Sperren zugleich; die Datenbank erst nach den Sperren.
+    pub fn changes_input(
+        &self,
+        session_id: &str,
+        reach: ChangesReach,
+    ) -> Result<ChangesInput, CommandError> {
+        let session = self.get(session_id)?;
+        let (ids, ticket_folders): (Vec<String>, Vec<(u32, String)>) = match reach {
+            ChangesReach::Session => {
+                let ticket_folders = session.lock().ticket_worktrees.clone();
+                (vec![session.id.clone()], ticket_folders)
+            }
+            ChangesReach::Project => {
+                let ids = self
+                    .project_members(&session.project_id)
+                    .iter()
+                    .map(|member: &Arc<Session>| member.id.clone())
+                    .collect();
+                (ids, self.project_ticket_worktrees(session_id)?)
+            }
+        };
+        let own = self.database.with(|connection| {
+            Ok(Ownership {
+                commits: session_commits::load_for(connection, &ids)?,
+                touched: session_files::load_for(connection, &ids)?,
+                untracked_before: session_rows::untracked_before(connection, &ids)?,
+            })
+        })?;
+        Ok(ChangesInput {
+            workspace: session.workspace.clone(),
+            repositories: session.repositories(),
+            ticket_folders,
+            own,
+        })
     }
 
     /// Name und Arbeitsordner jedes Repositorys der Session — dort suchen Skills und Befehle.

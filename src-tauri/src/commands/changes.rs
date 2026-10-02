@@ -1,6 +1,6 @@
 use crate::changes::{
     self,
-    model::{ChangeScope, FileDiff, SessionChanges},
+    model::{ChangeScope, ChangesReach, FileDiff, SessionChanges},
 };
 use crate::error::CommandError;
 use crate::sessions::registry::SessionRegistry;
@@ -8,14 +8,15 @@ use crate::worktrees::{self, TicketWorktree};
 
 // Die Commands sind `async`, damit die Git-Aufrufe nicht auf dem Haupt-Thread laufen.
 
+/// Die Changes der Reichweite (ADR 014): nur die Session oder das ganze Vorhaben.
 #[tauri::command]
 pub async fn changes_load(
     registry: tauri::State<'_, SessionRegistry>,
     session_id: String,
+    reach: ChangesReach,
 ) -> Result<SessionChanges, CommandError> {
-    let (workspace, repositories) = registry.repositories_of(&session_id)?;
-    let ticket_folders = registry.project_ticket_worktrees(&session_id)?;
-    Ok(changes::load(&workspace, &repositories, &ticket_folders))
+    let input = registry.changes_input(&session_id, reach)?;
+    Ok(changes::load(&input))
 }
 
 /// `key` wie in `RepositoryChanges`: `"<Position>"` oder `"<Position>/<Ordner>"`. Der Ordner kommt
@@ -25,6 +26,7 @@ pub async fn changes_load(
 pub async fn changes_file_diff(
     registry: tauri::State<'_, SessionRegistry>,
     session_id: String,
+    reach: ChangesReach,
     key: String,
     path: String,
     scope: ChangeScope,
@@ -38,14 +40,14 @@ pub async fn changes_file_diff(
             "Ungültiger Schlüssel {key}"
         )));
     };
-    let (workspace, repositories) = registry.repositories_of(&session_id)?;
-    let Some(repository) = repositories.get(index) else {
+    let input = registry.changes_input(&session_id, reach)?;
+    let Some(repository) = input.repositories.get(index) else {
         return Err(CommandError::Internal(format!(
             "Repository-Position {index} gibt es in dieser Session nicht"
         )));
     };
     let Some(folder) = folder else {
-        return changes::file_diff(&workspace, repository, None, &path, scope);
+        return changes::file_diff(&input.workspace, repository, None, &path, scope, &input.own);
     };
     validate_folder(folder)?;
     let position = u32::try_from(index)
@@ -67,7 +69,14 @@ pub async fn changes_file_diff(
             "Diesen Worktree gibt es nicht mehr.".to_owned(),
         ));
     };
-    changes::file_diff(&workspace, repository, Some(ticket), &path, scope)
+    changes::file_diff(
+        &input.workspace,
+        repository,
+        Some(ticket),
+        &path,
+        scope,
+        &input.own,
+    )
 }
 
 /// Ein einzelner Ordnername neben dem Haupt-Checkout — nichts, was woandershin führt.

@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_session-changes/`
-**Phase:** 2/3 — Core-Anzeige (Phase 1 abgeschlossen und committet)
-**Nächster Schritt:** Phase 2 laut `phase-2-zuordnung.md` (heikel → `/model opusplan`): Changes und Diff nach Reichweite Session/Vorhaben, `foreign`-Markierung. Ordner ohne Git überspringen und `plain_folders` weiterreichen.
+**Phase:** 3/3 — Oberfläche und Doku (Phase 1 und 2 abgeschlossen und committet)
+**Nächster Schritt:** Phase 3 laut `phase-3-oberflaeche.md` (standard → `/model sonnet`): Reichweite in Session-Ansicht und Vorhaben-Übersicht durchreichen, Hinweise, Glossar, Code-Map. Vorher die an Phase 3 getaggten Einträge in `FINDINGS.md` lesen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -17,5 +17,4 @@
 
 - Smoke-Checklisten ohne Abnahme: „MCP-Dialog“ (v0.8.0), „Sprachdiktat“ (v0.6.0, samt Messwerten), „Ordner ohne Git“ (v0.7.0) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
 - **ADR-Nummern:** Session-Changes 014, Changes-Review 015, Claude Code lokal 016, Autark 017, „Ordner ohne Git“ 018, Sidebar 019.
-- 🟡 **Session-Changes nach „Ordner ohne Git“:** `SessionChanges` hat dann zusätzlich `plain_folders`, und `RepositoryCheckout::Folder` darf nie an `git` gehen. Phase 1/2 (Commit-Suche, `load`-Signatur, Rückgabe `SessionChanges { … }`) müssen Ordner ohne Git überspringen und `plain_folders` weiterreichen.
 - 🟡 **Autark Phase 7:** Ob LM Studio mehrere Anfragen gleichzeitig rechnet, ist ungeprüft. Vor Plan 5 messen.

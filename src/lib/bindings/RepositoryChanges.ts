@@ -8,7 +8,7 @@ export type RepositoryChanges = {
  */
 key: string, name: string, branch: string, baseRef: string, 
 /**
- * Commits von der Basis bis `HEAD`.
+ * Eigene Commits der Reichweite von der Basis bis `HEAD`, ohne Merge-Commits.
  */
 commitCount: number, 
 /**

@@ -46,7 +46,7 @@ export function useSessionChanges(
     requestRef.current += 1;
     const request: number = requestRef.current;
     inFlightRef.current = sessionId;
-    loadChanges(sessionId)
+    loadChanges(sessionId, 'session')
       .then((changes: SessionChanges) => {
         if (requestRef.current === request) {
           setState({ sessionId, changes, error: null });
