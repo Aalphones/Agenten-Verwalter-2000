@@ -16,4 +16,12 @@ number: number,
 /**
  * Server mit Status `Failed` oder `NeedsAuth`; 0 ohne Liste.
  */
-mcpProblems: number, };
+mcpProblems: number, 
+/**
+ * Letztes Senden des Users oder Abgeben des Agenten (Rückfrage, fertig, Fehler); beim Anlegen `created_at`.
+ */
+lastActivityAt: number, 
+/**
+ * Seit dem letzten Blick des Users hat der Agent abgegeben.
+ */
+unread: boolean, };

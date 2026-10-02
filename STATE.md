@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** Nächsten Plan wählen: laut Reihenfolge unten „Sidebar nach letzter Aktivität“ (`docs/planning/2026-10-02_sidebar-aktivitaet.md`), danach „Changes-Review“.
+**Aktiver Plan:** `docs/planning/2026-10-02_sidebar-aktivitaet.md`
+**Phase:** 2/2 — Oberfläche (pending; Phase 1 Core ist committet)
+**Nächster Schritt:** Phase 2 laut Checkliste im Plan umsetzen (Kontext-Abschnitt der Phase lesen), dann `pnpm check` und Commit.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

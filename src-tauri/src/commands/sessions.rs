@@ -58,6 +58,15 @@ pub async fn session_rename(
 }
 
 #[tauri::command]
+pub async fn session_set_viewed(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: Option<String>,
+) -> Result<(), CommandError> {
+    registry.set_viewed(&app, session_id.as_deref())
+}
+
+#[tauri::command]
 pub async fn session_restart(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,

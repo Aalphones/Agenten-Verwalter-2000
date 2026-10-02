@@ -6,7 +6,7 @@ Die Seitenleiste zeigt die Vorhaben heute in drei Gruppen („Braucht dich“, �
 
 | Phase | Inhalt | Komplexität | Status |
 |---|---|---|---|
-| 1 | Core: Migration 8, letzte Aktivität und Gesehen-Zeitpunkt je Session, Command `session_set_viewed`, ADR 019 | standard | pending |
+| 1 | Core: Migration 8, letzte Aktivität und Gesehen-Zeitpunkt je Session, Command `session_set_viewed`, ADR 019 | standard | complete |
 | 2 | Oberfläche: Gruppen entfernen, Sortierung nach Aktivität, Ungelesen-Punkt, gesehene Session melden | standard | pending |
 
 ## Entscheidungen (mit dem User geklärt, 2026-10-02)
@@ -89,7 +89,7 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
 
 ### Checkliste
 
-- [ ] Neue Datei `src-tauri/src/db/migrations/008_session_activity.sql`, genau:
+- [x] Neue Datei `src-tauri/src/db/migrations/008_session_activity.sql`, genau:
   ```sql
   ALTER TABLE sessions ADD COLUMN last_activity_at REAL NOT NULL DEFAULT 0;
   ALTER TABLE sessions ADD COLUMN seen_at REAL NOT NULL DEFAULT 0;
@@ -102,20 +102,20 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
 
   UPDATE sessions SET seen_at = last_activity_at;
   ```
-- [ ] `src-tauri/src/db/migrations.rs`: `MIGRATIONS` auf `[&str; 8]`, `include_str!("migrations/008_session_activity.sql")` hinten anhängen.
-- [ ] `src-tauri/src/db/sessions.rs`:
+- [x] `src-tauri/src/db/migrations.rs`: `MIGRATIONS` auf `[&str; 8]`, `include_str!("migrations/008_session_activity.sql")` hinten anhängen.
+- [x] `src-tauri/src/db/sessions.rs`:
   - `SessionRow` um `pub last_activity_at: f64` (Doc: „Letztes Senden oder Abgeben des Agenten“) und `pub seen_at: f64` (Doc: „Wann der User die Session zuletzt gesehen hat“) erweitern, hinter `tldr_seq`.
   - `StoredRow` ebenso; `StoredRow::read` liest sie als Index 18 und 19; `into_row` reicht sie durch.
   - `upsert`: beide Spalten in die `INSERT`-Spaltenliste und als `?16`, `?17` in `VALUES`, in `params!` hinten anhängen, und beide in `ON CONFLICT(id) DO UPDATE SET` aufnehmen (`last_activity_at = excluded.last_activity_at, seen_at = excluded.seen_at`). Den Doc-Kommentar von `upsert` nicht ändern (die Spalten werden normal überschrieben).
   - `load_active`: `last_activity_at, seen_at` ans Ende der `SELECT`-Liste (nach `tldr_seq`).
-- [ ] `src-tauri/src/sessions/model.rs`, `SessionSummary` hinter `mcp_problems`:
+- [x] `src-tauri/src/sessions/model.rs`, `SessionSummary` hinter `mcp_problems`:
   ```rust
   /// Letztes Senden des Users oder Abgeben des Agenten (Rückfrage, fertig, Fehler); beim Anlegen `created_at`.
   pub last_activity_at: f64,
   /// Seit dem letzten Blick des Users hat der Agent abgegeben.
   pub unread: bool,
   ```
-- [ ] `src-tauri/src/sessions/registry.rs`:
+- [x] `src-tauri/src/sessions/registry.rs`:
   - `SessionState` hinter `created_at` drei Felder: `last_activity_at: f64`, `seen_at: f64` (Doc wie in `SessionRow`) und `is_viewed: bool` (Doc: „Die Oberfläche zeigt die Session gerade (`set_viewed`); nur im Speicher.“).
   - `SessionState::new`: vor dem Struct-Literal `let now = now_ms();`, dann `created_at: now`, `last_activity_at: now`, `seen_at: now`, `is_viewed: false`.
   - `SessionState::restored`: hinter `state.created_at = row.created_at;` die Zeilen `state.last_activity_at = row.last_activity_at;` und `state.seen_at = row.seen_at;`.
@@ -179,7 +179,7 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
     ```
     (`self.get` ist die vorhandene private Methode `fn get(&self, session_id: &str) -> Result<Arc<Session>, CommandError>`.)
   - `list`: Doc „Zuletzt aktive zuerst.“, Sortierung `right.last_activity_at.total_cmp(&left.last_activity_at)`.
-- [ ] `src-tauri/src/commands/sessions.rs`: Command hinter `session_rename`:
+- [x] `src-tauri/src/commands/sessions.rs`: Command hinter `session_rename`:
   ```rust
   #[tauri::command]
   pub async fn session_set_viewed(
@@ -191,13 +191,15 @@ Fehlerklassen geprüft (Vault: `frameworks/react`, `sprachen/typescript`, `syste
   }
   ```
   In `src-tauri/src/lib.rs` neben `session_rename` registrieren.
-- [ ] `pnpm bindings`.
-- [ ] Neue Datei `docs/decisions/019-letzte-aktivitaet-und-ungelesen.md` in der Form von ADR 011: Kontext (Sidebar sortierte nach Anlegen und Status), Optionen (jeder Chat-Eintrag zählt / nur Senden und Abgeben; Zeitpunkte in SQLite / nur im Speicher), Entscheidung (Abschnitt „Entscheidungen“ dieses Plans), Konsequenzen (ruhige Liste während Läufen; Altbestand gilt als gelesen; nach dem Start ist die automatisch geöffnete Session gelesen).
-- [ ] `docs/code-map.md`: Zeile „Persistenz (SQLite)“ um „Migration 8 = letzte Aktivität und Gesehen-Zeitpunkt je Session“ ergänzen; Zeile „Sessions“ (Core) um „`set_viewed` gezeigte Session, `touch_activity` letzte Aktivität“ ergänzen.
-- [ ] `docs/glossary.md`: Einträge **Letzte Aktivität** („Zeitpunkt, an dem der User zuletzt gesendet oder der Agent zuletzt abgegeben hat — Rückfrage, fertig oder Fehler. Werkzeug-Aufrufe zählen nicht. Bestimmt die Reihenfolge in der Sidebar.“) und **Ungelesen** („Eine Session, deren letzte Aktivität jünger ist als der letzte Blick des Users. Gesehen ist eine Session, solange sie im Chat- oder Changes-Reiter offen ist.“) in der vorhandenen Tabellenform, alphabetisch einsortiert.
-- [ ] `pnpm check` grün; Commit `feat(sessions): letzte Aktivität und Ungelesen im Core`.
+- [x] `pnpm bindings`.
+- [x] Neue Datei `docs/decisions/019-letzte-aktivitaet-und-ungelesen.md` in der Form von ADR 011: Kontext (Sidebar sortierte nach Anlegen und Status), Optionen (jeder Chat-Eintrag zählt / nur Senden und Abgeben; Zeitpunkte in SQLite / nur im Speicher), Entscheidung (Abschnitt „Entscheidungen“ dieses Plans), Konsequenzen (ruhige Liste während Läufen; Altbestand gilt als gelesen; nach dem Start ist die automatisch geöffnete Session gelesen).
+- [x] `docs/code-map.md`: Zeile „Persistenz (SQLite)“ um „Migration 8 = letzte Aktivität und Gesehen-Zeitpunkt je Session“ ergänzen; Zeile „Sessions“ (Core) um „`set_viewed` gezeigte Session, `touch_activity` letzte Aktivität“ ergänzen.
+- [x] `docs/glossary.md`: Einträge **Letzte Aktivität** („Zeitpunkt, an dem der User zuletzt gesendet oder der Agent zuletzt abgegeben hat — Rückfrage, fertig oder Fehler. Werkzeug-Aufrufe zählen nicht. Bestimmt die Reihenfolge in der Sidebar.“) und **Ungelesen** („Eine Session, deren letzte Aktivität jünger ist als der letzte Blick des Users. Gesehen ist eine Session, solange sie im Chat- oder Changes-Reiter offen ist.“) in der vorhandenen Tabellenform, alphabetisch einsortiert.
+- [x] `pnpm check` grün; Commit `feat(sessions): letzte Aktivität und Ungelesen im Core`.
 
 ### Report-Back
+
+Phase 1 komplett, `pnpm check` grün. Abweichungen: (1) Die Glossar-Einträge stehen hinter „Waiting“ statt alphabetisch — das Glossar ist thematisch geordnet. (2) `restore` baut `interrupted` mit `..row.clone()`; die neuen Spalten laufen dort mit, keine Änderung nötig. Migration gegen das echte Schema gegengelesen (`payload`, `kind = 'user'`, `sentAt` stimmen); ausgeführt wird sie erst beim ersten App-Start.
 
 ---
 

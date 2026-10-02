@@ -39,6 +39,10 @@ pub struct SessionSummary {
     pub number: u32,
     /// Server mit Status `Failed` oder `NeedsAuth`; 0 ohne Liste.
     pub mcp_problems: u32,
+    /// Letztes Senden des Users oder Abgeben des Agenten (Rückfrage, fertig, Fehler); beim Anlegen `created_at`.
+    pub last_activity_at: f64,
+    /// Seit dem letzten Blick des Users hat der Agent abgegeben.
+    pub unread: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

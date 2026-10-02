@@ -86,6 +86,9 @@ pub struct SessionRegistry {
     sessions: Mutex<HashMap<String, Arc<Session>>>,
     /// Schlüssel = Vorhaben-ID.
     projects: Mutex<HashMap<String, ProjectState>>,
+    /// Die Session, die die Oberfläche gerade zeigt. Nur `set_viewed` nimmt die Sperre, und zwar
+    /// vor der Sessions-Map und der Session-Sperre.
+    viewed: Mutex<Option<String>>,
     database: Arc<Database>,
 }
 
@@ -167,6 +170,12 @@ struct SessionState {
     has_agent_history: bool,
     mode: Mode,
     created_at: f64,
+    /// Letztes Senden oder Abgeben des Agenten.
+    last_activity_at: f64,
+    /// Wann der User die Session zuletzt gesehen hat.
+    seen_at: f64,
+    /// Die Oberfläche zeigt die Session gerade (`set_viewed`); nur im Speicher.
+    is_viewed: bool,
     running_ms: f64,
     running_since: Option<f64>,
     context_used: u32,
@@ -266,6 +275,7 @@ impl SessionRegistry {
         SessionRegistry {
             sessions: Mutex::new(HashMap::new()),
             projects: Mutex::new(HashMap::new()),
+            viewed: Mutex::new(None),
             database,
         }
     }
@@ -736,7 +746,7 @@ impl SessionRegistry {
         Ok(summary)
     }
 
-    /// Neueste zuerst.
+    /// Zuletzt aktive zuerst.
     pub fn list(&self) -> Vec<SessionSummary> {
         let sessions: Vec<Arc<Session>> = self.lock_sessions().values().cloned().collect();
         let mut summaries: Vec<SessionSummary> = sessions
@@ -744,7 +754,7 @@ impl SessionRegistry {
             .map(|session: &Arc<Session>| summarize(session, &session.lock()))
             .collect();
         summaries.sort_by(|left: &SessionSummary, right: &SessionSummary| {
-            right.created_at.total_cmp(&left.created_at)
+            right.last_activity_at.total_cmp(&left.last_activity_at)
         });
         summaries
     }
@@ -919,6 +929,48 @@ impl SessionRegistry {
                 Ok(())
             },
         )
+    }
+
+    /// Setzt die Session, die die Oberfläche zeigt (`None`: keine). Die bisher gezeigte gilt danach
+    /// nicht mehr als gesehen; die neue ist sofort gelesen.
+    pub fn set_viewed(
+        &self,
+        app: &AppHandle,
+        session_id: Option<&str>,
+    ) -> Result<(), CommandError> {
+        let mut viewed = self.viewed.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(previous_id) = viewed.take()
+            && Some(previous_id.as_str()) != session_id
+            // Eine inzwischen archivierte Session hat nichts mehr zurückzusetzen.
+            && let Ok(previous) = self.get(&previous_id)
+        {
+            update(
+                app,
+                &previous,
+                |state: &mut SessionState, _outbox: &mut Outbox| {
+                    state.is_viewed = false;
+                    Ok(())
+                },
+            )?;
+        }
+        let Some(id) = session_id else {
+            return Ok(());
+        };
+        let session = self.get(id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.is_viewed = true;
+                if state.seen_at < state.last_activity_at {
+                    state.seen_at = state.last_activity_at;
+                    outbox.summary_dirty = true;
+                }
+                Ok(())
+            },
+        )?;
+        *viewed = Some(id.to_owned());
+        Ok(())
     }
 
     pub fn restart(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
@@ -1365,6 +1417,7 @@ impl Session {
 
 impl SessionState {
     fn new(name: String, model: ModelId, effort: Effort, mode: Mode) -> Self {
+        let now = now_ms();
         SessionState {
             name,
             status: SessionStatus::Starting,
@@ -1374,7 +1427,10 @@ impl SessionState {
             process_repository_count: 0,
             has_agent_history: false,
             mode,
-            created_at: now_ms(),
+            created_at: now,
+            last_activity_at: now,
+            seen_at: now,
+            is_viewed: false,
             running_ms: 0.0,
             running_since: None,
             context_used: 0,
@@ -1425,6 +1481,8 @@ impl SessionState {
             row.status
         };
         state.created_at = row.created_at;
+        state.last_activity_at = row.last_activity_at;
+        state.seen_at = row.seen_at;
         state.running_ms = row.running_ms;
         state.context_used = row.context_used;
         state.context_window = row.context_window;
@@ -1592,6 +1650,17 @@ impl SessionState {
         self.log.push_back(line);
     }
 
+    /// Merkt den Zeitpunkt, an dem der User gesendet oder der Agent abgegeben hat. Zeigt die
+    /// Oberfläche die Session gerade, gilt das Neue sofort als gesehen.
+    fn touch_activity(&mut self, outbox: &mut Outbox) {
+        let now = now_ms();
+        self.last_activity_at = now;
+        if self.is_viewed {
+            self.seen_at = now;
+        }
+        outbox.summary_dirty = true;
+    }
+
     fn set_status(&mut self, outbox: &mut Outbox, status: SessionStatus) {
         if self.status == status {
             return;
@@ -1609,6 +1678,12 @@ impl SessionState {
             matches!(status, SessionStatus::Completed | SessionStatus::Paused).then_some(now);
         self.status = status;
         outbox.summary_dirty = true;
+        if matches!(
+            status,
+            SessionStatus::Waiting | SessionStatus::Completed | SessionStatus::Error
+        ) {
+            self.touch_activity(outbox);
+        }
     }
 
     /// Hängt einen Eintrag an; `build` bekommt seine `seq`.
@@ -1635,6 +1710,9 @@ impl SessionState {
             attachments,
             skill,
         });
+        self.touch_activity(outbox);
+        // Wer sendet, hat die Session gesehen.
+        self.seen_at = self.last_activity_at;
     }
 
     fn replace_entry(&mut self, outbox: &mut Outbox, entry: ChatEntry) {
@@ -2277,6 +2355,8 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         effort: state.effort,
         mode: state.mode,
         created_at: state.created_at,
+        last_activity_at: state.last_activity_at,
+        seen_at: state.seen_at,
         running_ms: state.running_ms,
         context_used: state.context_used,
         context_window: state.context_window,
@@ -2345,6 +2425,8 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         project_id: session.project_id.clone(),
         number: session.number,
         mcp_problems: state.mcp_problem_count(),
+        last_activity_at: state.last_activity_at,
+        unread: state.last_activity_at > state.seen_at,
     }
 }
 
