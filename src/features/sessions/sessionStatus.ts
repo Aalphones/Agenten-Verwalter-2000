@@ -29,7 +29,7 @@ export function metaLine(session: SessionSummary): string | null {
       return null;
     case 'starting':
     case 'running':
-      return modelAndRepositories(session);
+      return session.awaitingSubagent ? 'wartet auf Subagent' : modelAndRepositories(session);
   }
 }
 

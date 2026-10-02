@@ -23,7 +23,10 @@ pub enum SessionStatus {
 pub struct SessionSummary {
     pub id: String,
     pub name: String,
+    /// Anzeige-Status: solange ein Subagent nach der abgegebenen Antwort noch arbeitet, `Running`.
     pub status: SessionStatus,
+    /// Der Hauptagent hat abgegeben und wartet auf einen laufenden Subagenten; `status` ist dann `Running`.
+    pub awaiting_subagent: bool,
     pub model: ModelId,
     pub effort: Effort,
     pub mode: Mode,

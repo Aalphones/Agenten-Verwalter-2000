@@ -4,7 +4,15 @@ import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
 import type { SessionStatus } from "./SessionStatus";
 
-export type SessionSummary = { id: string, name: string, status: SessionStatus, model: ModelId, effort: Effort, mode: Mode, createdAt: number, 
+export type SessionSummary = { id: string, name: string, 
+/**
+ * Anzeige-Status: solange ein Subagent nach der abgegebenen Antwort noch arbeitet, `Running`.
+ */
+status: SessionStatus, 
+/**
+ * Der Hauptagent hat abgegeben und wartet auf einen laufenden Subagenten; `status` ist dann `Running`.
+ */
+awaitingSubagent: boolean, model: ModelId, effort: Effort, mode: Mode, createdAt: number, 
 /**
  * Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
  */

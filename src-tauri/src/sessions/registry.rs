@@ -1574,9 +1574,21 @@ impl SessionState {
     /// Jede Änderung eines Hintergrund-Eintrags geht hierüber: speichern und die Oberfläche benachrichtigen.
     fn touch_background(&self, outbox: &mut Outbox, index: usize) {
         if let Some(item) = self.background.get(index) {
+            if item.kind == BackgroundKind::Subagent {
+                outbox.summary_dirty = true;
+            }
             outbox.background.push(item.clone());
             outbox.background_changed = true;
         }
+    }
+
+    /// Die Antwort des Hauptagenten ist abgegeben, ein Subagent arbeitet aber noch: der Agent
+    /// setzt von selbst fort, sobald dieser fertig ist (`wake_if_idle`) — die Session ist nicht fertig.
+    fn is_awaiting_subagent(&self) -> bool {
+        self.status == SessionStatus::Completed
+            && self.background.iter().any(|item: &BackgroundItem| {
+                item.kind == BackgroundKind::Subagent && item.is_running()
+            })
     }
 
     fn has_running_background(&self) -> bool {
@@ -2409,10 +2421,16 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
 }
 
 fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
+    let awaiting_subagent = state.is_awaiting_subagent();
     SessionSummary {
         id: session.id.clone(),
         name: state.name.clone(),
-        status: state.status,
+        status: if awaiting_subagent {
+            SessionStatus::Running
+        } else {
+            state.status
+        },
+        awaiting_subagent,
         model: state.model,
         effort: state.effort,
         mode: state.mode,
