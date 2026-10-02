@@ -2,15 +2,6 @@ import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { modelName, repositoryCountLabel } from '@/lib/labels';
 
-export const GROUP_ORDER = ['needsYou', 'running', 'done'] as const;
-export type SessionGroup = (typeof GROUP_ORDER)[number];
-
-export const GROUP_LABEL: Record<SessionGroup, string> = {
-  needsYou: 'Braucht dich',
-  running: 'Läuft',
-  done: 'Abgeschlossen',
-};
-
 export const STATUS_LABEL: Record<SessionStatus, string> = {
   starting: 'Startet',
   running: 'Läuft',
@@ -20,17 +11,6 @@ export const STATUS_LABEL: Record<SessionStatus, string> = {
   cancelled: 'Abgebrochen',
   error: 'Fehler',
   new: 'Neu',
-};
-
-export const STATUS_GROUP: Record<SessionStatus, SessionGroup> = {
-  starting: 'running',
-  running: 'running',
-  waiting: 'needsYou',
-  paused: 'running',
-  completed: 'done',
-  cancelled: 'done',
-  error: 'needsYou',
-  new: 'running',
 };
 
 /** Zweite Zeile eines Sidebar-Eintrags; `null`, wenn es nichts Nützliches zu sagen gibt. */

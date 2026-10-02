@@ -17,6 +17,7 @@ import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
+import { useViewedSession } from '@/features/sessions/useViewedSession';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
@@ -103,6 +104,7 @@ export function App(): ReactElement {
   // Die Übersicht hat keinen Knopf für das Panel und zeigt deshalb keins.
   const visibleSession: SessionSummary | null =
     isMainReplaced || isOverview ? null : (currentSession ?? null);
+  useViewedSession(visibleSession === null ? null : visibleSession.id);
   const { background, error: backgroundError } = useSessionBackground(
     visibleSession === null ? null : visibleSession.id,
   );

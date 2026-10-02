@@ -55,6 +55,20 @@
     text-overflow: ellipsis;
   }
 
+  &__name--unread {
+    color: var(--color-fg-primary);
+    font-weight: 600;
+  }
+
+  &__unread {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
   &__menu-item {
     display: flex;
     align-items: center;

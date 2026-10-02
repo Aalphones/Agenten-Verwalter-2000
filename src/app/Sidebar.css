@@ -153,24 +153,4 @@
     font-size: var(--font-size-xs);
     color: var(--color-status-error);
   }
-
-  &__group-title {
-    display: flex;
-    gap: var(--space-sm);
-    margin: 0;
-    padding: var(--space-xs) var(--space-md) calc(var(--space-xs) + 1px);
-    font-size: var(--font-size-2xs);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--color-fg-muted);
-  }
-
-  &__group-title--spaced {
-    padding-top: calc(14px + var(--space-xs));
-  }
-
-  &__group-count {
-    font-weight: 400;
-  }
 }

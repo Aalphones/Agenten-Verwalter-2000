@@ -7,7 +7,7 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 
 const SESSION_CHANGED_EVENT = 'session://changed';
 
-/** Alle Sessions, neueste zuerst.
+/** Alle Sessions, zuletzt aktive zuerst.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} wenn der Core ablehnt */
 export function listSessions(): Promise<SessionSummary[]> {
   return invoke<SessionSummary[]>('session_list');
@@ -41,6 +41,12 @@ export async function cancelSession(sessionId: string): Promise<void> {
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (leerer Name) */
 export async function renameSession(sessionId: string, name: string): Promise<void> {
   await invoke('session_rename', { sessionId, name });
+}
+
+/** Meldet dem Core die sichtbare Session (`null`: keine); ihr Neues gilt dann als gelesen.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
+export async function setViewedSession(sessionId: string | null): Promise<void> {
+  await invoke('session_set_viewed', { sessionId });
 }
 
 /** Startet den Agenten einer Session im Status „Fehler“ mit vollem Verlauf neu; danach „Pausiert“.

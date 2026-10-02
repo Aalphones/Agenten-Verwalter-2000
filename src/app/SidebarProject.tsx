@@ -3,7 +3,7 @@ import type { MouseEvent, ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import { RenameField } from '@/app/SidebarItem';
-import { mostUrgent, projectMetaLine } from '@/features/projects/projectStatus';
+import { hasUnread, mostUrgent, projectMetaLine } from '@/features/projects/projectStatus';
 import { isMetaHighlighted } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -15,7 +15,7 @@ const ARCHIVE_TITLE =
 
 interface SidebarProjectProps {
   project: ProjectSummary;
-  /** Sessions dieses Vorhabens, aufsteigend nach Nummer. */
+  /** Sessions dieses Vorhabens, zuletzt aktive zuerst. */
   sessions: readonly SessionSummary[];
   isOverviewActive: boolean;
   isExpanded: boolean;
@@ -62,6 +62,7 @@ export function SidebarProject({
     const meta: string | null = projectMetaLine(sessions);
     const isDone: boolean =
       urgent === null || urgent.status === 'completed' || urgent.status === 'cancelled';
+    const isUnread: boolean = hasUnread(sessions);
     const metaClass = `sidebar-project__meta${
       urgent !== null && isMetaHighlighted(urgent.status)
         ? ` sidebar-project__meta--${urgent.status}`
@@ -111,12 +112,22 @@ export function SidebarProject({
           </span>
           <span className="sidebar-project__text">
             <span
-              className={`sidebar-project__name${isDone ? ' sidebar-project__name--done' : ''}`}
+              className={`sidebar-project__name${isDone ? ' sidebar-project__name--done' : ''}${
+                isUnread ? ' sidebar-project__name--unread' : ''
+              }`}
             >
               {project.name}
             </span>
             {meta !== null && <span className={metaClass}>{meta}</span>}
           </span>
+          {isUnread && (
+            <span
+              className="sidebar-project__unread"
+              role="img"
+              aria-label="Ungelesen"
+              title="Neue Nachricht in einer Session dieses Vorhabens, seit du zuletzt drin warst"
+            />
+          )}
         </button>
         {isMenuOpen && (
           <Popover

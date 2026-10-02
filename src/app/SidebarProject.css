@@ -96,6 +96,22 @@
     &--done {
       color: var(--color-fg-secondary);
     }
+
+    &--unread {
+      font-weight: 700;
+    }
+  }
+
+  &__unread {
+    flex-shrink: 0;
+    align-self: flex-start;
+    width: 6px;
+    height: 6px;
+    /* mittig zur ersten Zeile (Name), nicht zur Meta-Zeile */
+    margin-top: calc((1lh - 6px) / 2);
+    margin-left: auto;
+    border-radius: 50%;
+    background: var(--color-accent);
   }
 
   &__meta {

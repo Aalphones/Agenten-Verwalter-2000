@@ -57,7 +57,19 @@ export function SidebarItem({
           <StatusIcon status={session.status} size={10} />
         </span>
         <span className="sidebar-item__number">#{session.number}</span>
-        <span className="sidebar-item__name">{session.name}</span>
+        <span
+          className={`sidebar-item__name${session.unread ? ' sidebar-item__name--unread' : ''}`}
+        >
+          {session.name}
+        </span>
+        {session.unread && (
+          <span
+            className="sidebar-item__unread"
+            role="img"
+            aria-label="Ungelesen"
+            title="Neue Nachricht, seit du zuletzt in dieser Session warst"
+          />
+        )}
       </button>
       {isMenuOpen && (
         <Popover

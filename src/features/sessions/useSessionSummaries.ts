@@ -14,13 +14,15 @@ export interface SessionSummaries {
   error: string | null;
 }
 
+function latestActivityFirst(first: SessionSummary, second: SessionSummary): number {
+  return second.lastActivityAt - first.lastActivityAt;
+}
+
 function upsert(current: readonly SessionSummary[], summary: SessionSummary): SessionSummary[] {
   const others: SessionSummary[] = current.filter(
     (candidate: SessionSummary) => candidate.id !== summary.id,
   );
-  return [...others, summary].sort(
-    (first: SessionSummary, second: SessionSummary) => second.createdAt - first.createdAt,
-  );
+  return [...others, summary].sort(latestActivityFirst);
 }
 
 export function useSessionSummaries(): SessionSummaries {
@@ -71,9 +73,7 @@ export function useSessionSummaries(): SessionSummaries {
           const unseen: SessionSummary[] = listed.filter(
             (candidate: SessionSummary) => !knownIds.has(candidate.id),
           );
-          return [...current, ...unseen].sort(
-            (first: SessionSummary, second: SessionSummary) => second.createdAt - first.createdAt,
-          );
+          return [...current, ...unseen].sort(latestActivityFirst);
         });
       })
       .catch((reason: unknown) => {

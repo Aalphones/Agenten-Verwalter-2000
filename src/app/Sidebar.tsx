@@ -2,12 +2,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { buildSidebarRows } from '@/app/buildSidebarRows';
-import type { SidebarRow } from '@/app/buildSidebarRows';
+import type { SidebarProjectEntry, SidebarRow } from '@/app/buildSidebarRows';
 import { SidebarItem } from '@/app/SidebarItem';
 import { SidebarProject } from '@/app/SidebarProject';
-import { projectGroup, sessionsOf } from '@/features/projects/projectStatus';
-import { GROUP_LABEL, GROUP_ORDER } from '@/features/sessions/sessionStatus';
-import type { SessionGroup } from '@/features/sessions/sessionStatus';
+import { projectActivity, sessionsByActivity } from '@/features/projects/projectStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveProject, renameProject } from '@/lib/projects';
@@ -19,12 +17,15 @@ import './Sidebar.css';
 
 const OVERSCAN = 12;
 const ESTIMATED_HEIGHT: Record<SidebarRow['kind'], number> = {
-  group: 26,
   project: 44,
   session: 26,
 };
-const SPACED_GROUP_EXTRA = 14;
 const LAST_SESSION_EXTRA = 4;
+
+interface RankedProject extends SidebarProjectEntry {
+  /** Jüngste Aktivität im Vorhaben — bestimmt die Reihenfolge der Vorhaben. */
+  activity: number;
+}
 
 interface SidebarProps {
   projects: readonly ProjectSummary[];
@@ -64,30 +65,27 @@ export function Sidebar({
   const { error: actionError, run } = useActionError('sidebar');
   const listRef = useRef<HTMLDivElement>(null);
 
-  const rows: SidebarRow[] = useMemo(
-    () =>
-      buildSidebarRows(
-        GROUP_ORDER.map((group: SessionGroup) => ({
-          group,
-          projects: projects
-            .map((project: ProjectSummary) => {
-              const projectSessions: SessionSummary[] = sessionsOf(project.id, sessions);
-              const isOverviewActive: boolean =
-                showProjectOverview && activeProjectId === project.id;
-              const containsActiveSession: boolean = projectSessions.some(
-                (session: SessionSummary) => session.id === activeSessionId,
-              );
-              return {
-                project,
-                sessions: projectSessions,
-                isExpanded: expanded[project.id] ?? (containsActiveSession || isOverviewActive),
-              };
-            })
-            .filter(({ sessions: projectSessions }) => projectGroup(projectSessions) === group),
-        })),
-      ),
-    [projects, sessions, expanded, activeSessionId, activeProjectId, showProjectOverview],
-  );
+  const rows: SidebarRow[] = useMemo(() => {
+    const ranked: RankedProject[] = projects
+      .map((project: ProjectSummary): RankedProject => {
+        const projectSessions: SessionSummary[] = sessionsByActivity(project.id, sessions);
+        const isOverviewActive: boolean = showProjectOverview && activeProjectId === project.id;
+        const containsActiveSession: boolean = projectSessions.some(
+          (session: SessionSummary) => session.id === activeSessionId,
+        );
+        return {
+          project,
+          sessions: projectSessions,
+          isExpanded: expanded[project.id] ?? (containsActiveSession || isOverviewActive),
+          activity: projectActivity(project, projectSessions),
+        };
+      })
+      .sort(
+        (first: RankedProject, second: RankedProject) =>
+          second.activity - first.activity || second.project.createdAt - first.project.createdAt,
+      );
+    return buildSidebarRows(ranked);
+  }, [projects, sessions, expanded, activeSessionId, activeProjectId, showProjectOverview]);
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -168,15 +166,6 @@ export function Sidebar({
       return null;
     }
     switch (row.kind) {
-      case 'group':
-        return (
-          <h2
-            className={`sidebar__group-title${row.isFirst ? '' : ' sidebar__group-title--spaced'}`}
-          >
-            <span>{GROUP_LABEL[row.group]}</span>
-            <span className="sidebar__group-count">{row.count}</span>
-          </h2>
-        );
       case 'project':
         return renderProject(row);
       case 'session':
@@ -335,9 +324,6 @@ export function Sidebar({
 function estimateHeight(row: SidebarRow | undefined): number {
   if (row === undefined) {
     return ESTIMATED_HEIGHT.session;
-  }
-  if (row.kind === 'group' && !row.isFirst) {
-    return ESTIMATED_HEIGHT.group + SPACED_GROUP_EXTRA;
   }
   if (row.kind === 'session' && row.isLast) {
     return ESTIMATED_HEIGHT.session + LAST_SESSION_EXTRA;

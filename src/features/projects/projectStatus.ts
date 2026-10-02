@@ -1,9 +1,9 @@
-import { STATUS_GROUP, metaLine } from '@/features/sessions/sessionStatus';
-import type { SessionGroup } from '@/features/sessions/sessionStatus';
+import { metaLine } from '@/features/sessions/sessionStatus';
+import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 
-/** Vom Dringendsten zum Unwichtigsten — die dringendste Session bestimmt Gruppe und Symbol des Vorhabens. */
+/** Vom Dringendsten zum Unwichtigsten — die dringendste Session bestimmt das Symbol des Vorhabens. */
 export const URGENCY: readonly SessionStatus[] = [
   'waiting',
   'error',
@@ -36,6 +36,34 @@ export function sessionsOf(
     .sort((first: SessionSummary, second: SessionSummary) => first.number - second.number);
 }
 
+/** Sessions eines Vorhabens, zuletzt aktive zuerst — die Reihenfolge in der Sidebar. */
+export function sessionsByActivity(
+  projectId: string,
+  sessions: readonly SessionSummary[],
+): SessionSummary[] {
+  return sessions
+    .filter((session: SessionSummary) => session.projectId === projectId)
+    .sort(
+      (first: SessionSummary, second: SessionSummary) =>
+        second.lastActivityAt - first.lastActivityAt || second.number - first.number,
+    );
+}
+
+/** Jüngste Aktivität im Vorhaben; ohne Sessions sein Anlegezeitpunkt. */
+export function projectActivity(
+  project: ProjectSummary,
+  sessions: readonly SessionSummary[],
+): number {
+  return sessions.reduce(
+    (latest: number, session: SessionSummary) => Math.max(latest, session.lastActivityAt),
+    project.createdAt,
+  );
+}
+
+export function hasUnread(sessions: readonly SessionSummary[]): boolean {
+  return sessions.some((session: SessionSummary) => session.unread);
+}
+
 /** Die dringendste Session; bei Gleichstand die mit der höheren Nummer. */
 export function mostUrgent(sessions: readonly SessionSummary[]): SessionSummary | null {
   let best: SessionSummary | null = null;
@@ -51,11 +79,6 @@ export function mostUrgent(sessions: readonly SessionSummary[]): SessionSummary 
     }
   }
   return best;
-}
-
-export function projectGroup(sessions: readonly SessionSummary[]): SessionGroup {
-  const urgent: SessionSummary | null = mostUrgent(sessions);
-  return urgent === null ? 'done' : STATUS_GROUP[urgent.status];
 }
 
 /** Zweite Zeile eines Vorhabens in der Sidebar; `null`, wenn es nichts Nützliches zu sagen gibt. */
