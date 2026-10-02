@@ -23,7 +23,7 @@ MVP (Version 1):
 - **Artefakte:** von Claude in einer Session erstellte Artefakte als Karte im Chat und im Reiter „Artefakte“ der Session
 - **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind in einem Seitenpanel der Session sichtbar und einsehbar
 - **Workspace:** mehrere Repositories pro Session, auch Ordner ohne Git (ohne Changes, [ADR 018](decisions/018-ordner-ohne-git.md)); der Agent arbeitet im Haupt-Checkout oder in Ticket-Worktrees daneben, die App zeigt beides in den Changes, Ticket-Worktrees gegen den Standard-Branch ([ADR 010](decisions/010-worktrees-durch-den-agenten.md)); Skills der beteiligten Repositories stehen in der Session zur Verfügung
-- **Changes:** Repository-Filter, geänderte Dateien, Unified Diff, Trennung committed/uncommitted gegen eine konfigurierbare Basis
+- **Changes:** Repository-Filter, geänderte Dateien, Unified Diff, Trennung committed/uncommitted gegen eine konfigurierbare Basis; je Session nur ihre eigenen Änderungen, in der Übersicht des Vorhabens die Summe ([ADR 014](decisions/014-changes-je-session.md))
 - **Agent:** Claude als einziger Provider
 - **Persistenz:** SQLite, Session-Wiederherstellung nach App-Neustart
 - **Desktop:** Tauri-App für Windows

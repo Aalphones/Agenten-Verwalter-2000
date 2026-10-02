@@ -1,9 +1,16 @@
 import { useMemo, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
-import { compareLabel, formatCount, statOf, statStamp } from '@/features/changes/changesScope';
+import {
+  compareLabel,
+  formatCount,
+  FOREIGN_TEXT,
+  statOf,
+  statStamp,
+} from '@/features/changes/changesScope';
 import { useFileDiff } from '@/features/changes/useFileDiff';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
+import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { DiffLine } from '@/lib/bindings/DiffLine';
 import type { FileChange } from '@/lib/bindings/FileChange';
 import type { LineStat } from '@/lib/bindings/LineStat';
@@ -18,6 +25,7 @@ const TRUNCATED_TEXT = 'Gekürzt: nur die ersten 20.000 Zeilen werden angezeigt.
 
 interface DiffViewProps {
   sessionId: string;
+  reach: ChangesReach;
   repository: RepositoryChanges;
   file: FileChange;
   scope: ChangeScope;
@@ -41,6 +49,7 @@ const SIGN: Record<DiffLine['kind'], string> = {
 
 export function DiffView({
   sessionId,
+  reach,
   repository,
   file,
   scope,
@@ -49,6 +58,7 @@ export function DiffView({
   const stat: LineStat | null = statOf(file, scope);
   const { diff, error, isLoading } = useFileDiff(
     sessionId,
+    reach,
     { key: repository.key, path: file.path },
     scope,
     statStamp(stat),
@@ -146,6 +156,7 @@ export function DiffView({
           </svg>
         </button>
       </div>
+      {stat !== null && stat.foreign && <p className="diff-view__foreign">{FOREIGN_TEXT[reach]}</p>}
       <div ref={scrollRef} className="diff-view__body">
         {renderBody()}
       </div>

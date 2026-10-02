@@ -6,6 +6,18 @@
   max-width: 760px;
   padding: 28px var(--space-5xl);
 
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  &__reach {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
   &__title {
     margin: 0;
     font-size: var(--font-size-md);

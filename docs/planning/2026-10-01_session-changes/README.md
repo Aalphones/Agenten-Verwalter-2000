@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Erfassen: Migration 7, eigene Commits und geschriebene Dateien je Session mitschreiben, ADR 014 | [phase-1-erfassung.md](phase-1-erfassung.md) | heikel | complete |
 | 2 | Core-Anzeige: Changes und Diff nach Reichweite Session/Vorhaben, fremde Anteile markieren | [phase-2-zuordnung.md](phase-2-zuordnung.md) | heikel | complete |
-| 3 | Oberfläche und Doku: Reichweite durchreichen, Hinweise, Glossar, Code-Map | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
+| 3 | Oberfläche und Doku: Reichweite durchreichen, Hinweise, Glossar, Code-Map | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
 
 **Reihenfolge:** nach dem aktiven Plan „Sprachdiktat“ (STATE.md) und **vor** dem geparkten Plan „Changes-Review“. Der Grund: Review-Kommentare sollen auf dem Diff entstehen, der nur die Änderungen der Session zeigt. Dieser Plan ändert die Signaturen von `changes_load`/`changes_file_diff` und `loadChanges`/`loadFileDiff`; die Folgen für „Changes-Review“ stehen dort in [FINDINGS.md](../2026-10-01_changes-review/FINDINGS.md). Zum Plan „MCP-Dialog“ gibt es keine Berührung. Phasen strikt 1 → 2 → 3. Umgesetzt wird direkt auf `main`, ein Commit pro Phase, Commit-Scope `changes`. Vor jedem Commit muss `pnpm check` grün sein; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` laufen lassen und die erzeugten Dateien mitcommitten. Erkenntnisse aus der Umsetzung gehören nach [FINDINGS.md](FINDINGS.md). Keine automatisierten Tests (Projektprofil); geprüft wird über die Smoke-Checkliste unten.
 
@@ -116,10 +116,25 @@ UPDATE sessions SET changes_tracked_at = (julianday('now') - 2440587.5) * 864000
 
 ## Summary
 
+Die Changes einer Session zeigen nur ihre eigenen Änderungen, die Vorhaben-Übersicht die Summe aller Sessions. Phase 1 zeichnet eigene Commits (Zeitfenster der Git-Befehle) und geschriebene Dateien auf, Phase 2 filtert Changes und Diff danach und markiert fremde Anteile, Phase 3 reicht die Reichweite durch die Oberfläche und fügt die Hinweise hinzu.
+
 ## Files touched
+
+- Core: `src-tauri/src/changes/` (`history.rs`, `attribution.rs`, `scan.rs`, `model.rs`), `src-tauri/src/db/` (`session_commits`, `session_files`, Migration 7), `src-tauri/src/agents/` (`GitCommandEnded`).
+- Oberfläche: `src/features/changes/` (`useSessionChanges`, `useFileDiff`, `ChangesView`, `ChangesOverview`, `DiffView`, `changesScope`), `src/app/App.tsx`, `src/lib/changes.ts`.
+- Doku: ADR 014, Glossar, Code-Map, `docs/PROJECT.md`.
 
 ## Commits
 
+- `5f3aad0` feat(changes): record commits and written files per session
+- `cd9c97f` feat(changes): show only the changes of the session or project
+- Phase 3: `feat(changes): show session or project changes in the views`
+
 ## Deviations from plan
 
+Keine.
+
 ## Follow-ups
+
+- Smoke-Checkliste steht aus (Sascha); Punkt 1 ist der erste Beweis, dass die Aufzeichnung im echten Lauf Commits findet.
+- Archivieren und Versions-Tag nach [releases.md](../../conventions/releases.md).

@@ -8,6 +8,7 @@ import { DiffView } from '@/features/changes/DiffView';
 import { FileTree } from '@/features/changes/FileTree';
 import { fileDiffKey } from '@/features/changes/useFileDiff';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
+import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileChange } from '@/lib/bindings/FileChange';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
@@ -24,6 +25,7 @@ interface ChangesViewProps {
   session: SessionSummary;
   changes: SessionChanges | null;
   error: string | null;
+  reach: ChangesReach;
 }
 
 interface OpenTarget {
@@ -52,7 +54,7 @@ function findOpenTarget(
   return { repository, file };
 }
 
-export function ChangesView({ session, changes, error }: ChangesViewProps): ReactElement {
+export function ChangesView({ session, changes, error, reach }: ChangesViewProps): ReactElement {
   const sessionId: string = session.id;
   const selection: ChangesSelection = useChangesStore(
     (state) => state.selections[sessionId] ?? DEFAULT_SELECTION,
@@ -102,6 +104,8 @@ export function ChangesView({ session, changes, error }: ChangesViewProps): Reac
           {openTarget === null ? (
             <ChangesOverview
               changes={changes}
+              reach={reach}
+              untrackedBefore={changes.untrackedBefore}
               scope={selection.scope}
               hasVisibleFiles={rows.some((row: FileRow) => row.kind === 'file')}
             />
@@ -112,6 +116,7 @@ export function ChangesView({ session, changes, error }: ChangesViewProps): Reac
                 selection.scope,
               )}
               sessionId={sessionId}
+              reach={reach}
               repository={openTarget.repository}
               file={openTarget.file}
               scope={selection.scope}

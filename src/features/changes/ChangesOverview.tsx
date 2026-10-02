@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
-import { EMPTY_SCOPE_TEXT } from '@/features/changes/changesScope';
+import { EMPTY_SCOPE_TEXT, REACH_TEXT, trackedSinceText } from '@/features/changes/changesScope';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
+import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileChange } from '@/lib/bindings/FileChange';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
@@ -8,18 +9,28 @@ import './ChangesOverview.css';
 
 interface ChangesOverviewProps {
   changes: SessionChanges;
+  reach: ChangesReach;
+  untrackedBefore: number | null;
   scope: ChangeScope;
   hasVisibleFiles: boolean;
 }
 
 export function ChangesOverview({
   changes,
+  reach,
+  untrackedBefore,
   scope,
   hasVisibleFiles,
 }: ChangesOverviewProps): ReactElement {
   return (
     <div className="changes-overview">
-      <h2 className="changes-overview__title">Übersicht</h2>
+      <div className="changes-overview__head">
+        <h2 className="changes-overview__title">Übersicht</h2>
+        <p className="changes-overview__reach">{REACH_TEXT[reach]}</p>
+        {untrackedBefore !== null && (
+          <p className="changes-overview__reach">{trackedSinceText(untrackedBefore)}</p>
+        )}
+      </div>
       <div className="changes-overview__box">
         {changes.repositories.map((repository: RepositoryChanges) => (
           <div key={repository.key} className="changes-overview__row">

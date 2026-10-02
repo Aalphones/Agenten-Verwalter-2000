@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
+import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileDiff } from '@/lib/bindings/FileDiff';
 import { loadFileDiff } from '@/lib/changes';
 import { commandErrorText } from '@/lib/errors';
@@ -26,6 +27,7 @@ export function fileDiffKey(file: OpenFile, scope: ChangeScope): string {
  *  als „lädt“. */
 export function useFileDiff(
   sessionId: string,
+  reach: ChangesReach,
   file: OpenFile,
   scope: ChangeScope,
   stamp: string,
@@ -36,7 +38,7 @@ export function useFileDiff(
 
   useEffect(() => {
     const controller = new AbortController();
-    loadFileDiff(sessionId, 'session', key, path, scope)
+    loadFileDiff(sessionId, reach, key, path, scope)
       .then((diff: FileDiff) => {
         if (!controller.signal.aborted) {
           setState({ key: diffKey, diff, error: null });
@@ -52,7 +54,7 @@ export function useFileDiff(
     };
     // `stamp` löst das Nachladen aus, ohne im Effekt gelesen zu werden.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, diffKey, stamp]);
+  }, [sessionId, reach, diffKey, stamp]);
 
   if (state === null || state.key !== diffKey) {
     return { diff: null, error: null, isLoading: true };

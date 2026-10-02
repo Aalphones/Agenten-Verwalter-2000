@@ -21,6 +21,7 @@ import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
+import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -91,8 +92,10 @@ export function App(): ReactElement {
       activeView === 'changes' &&
       currentSession !== undefined &&
       currentSession.repositoryCount > 0;
+  const changesReach: ChangesReach = isOverview ? 'project' : 'session';
   const { changes, error: changesError } = useSessionChanges(
     isMainReplaced ? null : (currentSession ?? null),
+    changesReach,
     isChangesView || isOverview,
   );
 
@@ -158,6 +161,7 @@ export function App(): ReactElement {
             session={latestSession}
             changes={changes}
             error={changesError}
+            reach="project"
           />
         ) : (
           <ProjectOverview
@@ -209,7 +213,12 @@ export function App(): ReactElement {
           />
           <SessionActionError sessionId={currentSession.id} />
           {isChangesView ? (
-            <ChangesView session={currentSession} changes={changes} error={changesError} />
+            <ChangesView
+              session={currentSession}
+              changes={changes}
+              error={changesError}
+              reach="session"
+            />
           ) : (
             <ChatView
               session={currentSession}

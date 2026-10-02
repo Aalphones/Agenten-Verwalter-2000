@@ -1,4 +1,5 @@
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
+import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileChange } from '@/lib/bindings/FileChange';
 import type { LineStat } from '@/lib/bindings/LineStat';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
@@ -11,6 +12,27 @@ export const EMPTY_SCOPE_TEXT: Record<ChangeScope, string> = {
   uncommitted: 'Keine uncommitted Änderungen.',
   committed: 'Noch nichts committed.',
 };
+
+export const REACH_TEXT: Record<ChangesReach, string> = {
+  session: 'Nur, was diese Session geändert hat.',
+  project: 'Was die Sessions dieses Vorhabens geändert haben.',
+};
+
+export const FOREIGN_TEXT: Record<ChangesReach, string> = {
+  session: 'Dieser Diff enthält auch Änderungen von außerhalb dieser Session.',
+  project: 'Dieser Diff enthält auch Änderungen von außerhalb dieses Vorhabens.',
+};
+
+/** Sessions aus der Zeit vor der Aufzeichnung (ADR 014). */
+export function trackedSinceText(milliseconds: number): string {
+  const since: string = new Date(milliseconds).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `Erfasst seit ${since} — Änderungen davor fehlen hier.`;
+}
 
 export interface LineSums {
   added: number;
