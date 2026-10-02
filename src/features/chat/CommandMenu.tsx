@@ -4,6 +4,7 @@ import { EffortDots } from '@/components/EffortDots';
 import { Popover } from '@/components/Popover';
 import { rowKey, rowText } from '@/features/chat/commandMenuRows';
 import type { CommandRow, CommandSection } from '@/features/chat/commandMenuRows';
+import { problemShort } from '@/features/mcp/mcpTexts';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import './CommandMenu.css';
@@ -66,6 +67,7 @@ export function CommandMenu({
     const key: string = rowKey(row);
     const { label, description } = rowText(row, session);
     const isHighlighted: boolean = key === highlightedKey;
+    const hasProblem: boolean = hasMcpProblem(row, session);
     return (
       <button
         key={key}
@@ -86,7 +88,11 @@ export function CommandMenu({
           {label}
         </span>
         <span className="command-menu__description">{description}</span>
-        <span className="command-menu__origin">{rowOrigin(row)}</span>
+        <span
+          className={`command-menu__origin${hasProblem ? ' command-menu__origin--problem' : ''}`}
+        >
+          {rowOrigin(row, session)}
+        </span>
       </button>
     );
   }
@@ -146,9 +152,18 @@ export function CommandMenu({
   );
 }
 
-function rowOrigin(row: CommandRow): string {
+function hasMcpProblem(row: CommandRow, session: SessionSummary | null): boolean {
+  return (
+    row.kind === 'session' && row.command === 'mcp' && session !== null && session.mcpProblems > 0
+  );
+}
+
+function rowOrigin(row: CommandRow, session: SessionSummary | null): string {
   if (row.kind === 'attach') {
     return 'Ctrl U';
+  }
+  if (hasMcpProblem(row, session) && session !== null) {
+    return problemShort(session.mcpProblems);
   }
   if (row.kind !== 'skill') {
     return '';

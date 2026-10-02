@@ -96,6 +96,21 @@
     flex-shrink: 0;
     color: var(--color-fg-muted);
     font-size: var(--font-size-2xs);
+
+    &--problem {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--color-status-error);
+
+      &::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: var(--radius-full);
+        background: currentColor;
+      }
+    }
   }
 
   &__effort {

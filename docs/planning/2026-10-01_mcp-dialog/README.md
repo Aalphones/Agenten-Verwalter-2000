@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Core: Typen, Steueranfragen, Antworten zuordnen, Commands, Ereignis | [phase-1-core.md](phase-1-core.md) | standard | complete |
 | 2 | Oberfläche: Dialog- und Schalter-Baustein, MCP-Dialog | [phase-2-dialog.md](phase-2-dialog.md) | standard | complete |
-| 3 | Einstiege `/mcp` und Hinweis in der Eingabeleiste, Doku, Release | [phase-3-einstiege.md](phase-3-einstiege.md) | mechanisch | pending |
+| 3 | Einstiege `/mcp` und Hinweis in der Eingabeleiste, Doku, Release | [phase-3-einstiege.md](phase-3-einstiege.md) | mechanisch | complete |
 
 **Reihenfolge:** nach dem aktiven Plan „Meilenstein 6“ (STATE.md). Zum Plan „Sprachdiktat“ gibt es keine Abhängigkeit; beide bauen in die Eingabeleiste ein — wer zuerst kommt, setzt seinen Knopf, der zweite fügt seinen an der dann aktuellen Stelle ein (Phase 3 nennt die Stelle relativ zu Modus-Menü und Senden-Knopf). Phasen strikt 1 → 2 → 3. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `mcp` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).
 

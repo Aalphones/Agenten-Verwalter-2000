@@ -5,7 +5,7 @@ import { modelName } from '@/lib/labels';
 
 /** `full`: Knopf `/` in der Eingabeleiste · `slash`: `/` am Feldanfang · `skills`: nur Skills („Neue Session“). */
 export type CommandScope = 'full' | 'slash' | 'skills';
-export type SessionCommand = 'rename' | 'changes' | 'pause';
+export type SessionCommand = 'rename' | 'changes' | 'mcp' | 'pause';
 export type CommandRow =
   | { kind: 'attach' }
   | { kind: 'model' }
@@ -28,6 +28,7 @@ const PAUSABLE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'wai
 const SESSION_COMMAND_TEXT: Record<SessionCommand, RowText> = {
   rename: { label: '/rename', description: 'Session umbenennen' },
   changes: { label: '/changes', description: 'Changes-Ansicht öffnen' },
+  mcp: { label: '/mcp', description: 'MCP-Server anzeigen, ausschalten, neu verbinden' },
   pause: { label: '/pause', description: 'Agent pausieren' },
 };
 
@@ -106,6 +107,7 @@ function sessionRows(session: SessionSummary | null): CommandRow[] {
   if (session.repositoryCount > 0) {
     rows.push({ kind: 'session', command: 'changes' });
   }
+  rows.push({ kind: 'session', command: 'mcp' });
   if (PAUSABLE_STATUSES.includes(session.status)) {
     rows.push({ kind: 'session', command: 'pause' });
   }

@@ -1,6 +1,6 @@
 # Design-Entwurf: MCP-Dialog
 
-**Status:** abgenommen am 2026-10-01 als Grundlage des Plans [MCP-Dialog](../../planning/2026-10-01_mcp-dialog/README.md). Für den Dialog „MCP-Server“, den Hinweis „MCP · N Problem(e)“ in der Eingabeleiste und die Zeile `/mcp` im `/`-Menü ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md). Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
+**Status:** umgesetzt am 2026-10-02 (Plan [MCP-Dialog](../../planning/2026-10-01_mcp-dialog/README.md)); abgenommen am 2026-10-01 als Grundlage des Plans [MCP-Dialog](../../planning/2026-10-01_mcp-dialog/README.md). Für den Dialog „MCP-Server“, den Hinweis „MCP · N Problem(e)“ in der Eingabeleiste und die Zeile `/mcp` im `/`-Menü ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md). Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
 
 ## Ansehen
 

@@ -9,6 +9,8 @@ import { CommandMenu } from '@/features/chat/CommandMenu';
 import { applySkillToDraft } from '@/features/chat/commandMenuRows';
 import type { CommandRow, SessionCommand } from '@/features/chat/commandMenuRows';
 import { useCommandMenu } from '@/features/chat/useCommandMenu';
+import { McpDialog } from '@/features/mcp/McpDialog';
+import { McpProblemChip } from '@/features/mcp/McpProblemChip';
 import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
@@ -36,7 +38,7 @@ const ATTACH_TITLE_WHILE_WAITING = 'Anhänge gehen erst, wenn die Rückfrage bea
 const ACTIVE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiting'];
 const NO_ATTACHMENTS: Attachment[] = [];
 
-type OpenMenu = 'model' | 'mode' | 'plus' | 'command' | null;
+type OpenMenu = 'model' | 'mode' | 'plus' | 'command' | 'mcp' | null;
 
 interface ComposerProps {
   session: SessionSummary;
@@ -162,6 +164,8 @@ export function Composer({ session }: ComposerProps): ReactElement {
       startRename('session', session.id);
     } else if (command === 'changes') {
       showView('changes');
+    } else if (command === 'mcp') {
+      setOpenMenu('mcp');
     } else {
       setErrorMessage(null);
       pauseSession(session.id).catch(report);
@@ -339,6 +343,14 @@ export function Composer({ session }: ComposerProps): ReactElement {
               />
             )}
           </div>
+          {session.mcpProblems > 0 && (
+            <McpProblemChip
+              count={session.mcpProblems}
+              onOpen={(): void => {
+                setOpenMenu('mcp');
+              }}
+            />
+          )}
           <button
             type="button"
             className="composer__send"
@@ -374,6 +386,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
           {errorMessage}
         </p>
       )}
+      {openMenu === 'mcp' && <McpDialog session={session} onClose={closeMenu} />}
     </div>
   );
 }
