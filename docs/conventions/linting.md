@@ -34,6 +34,8 @@ Clippy, `pnpm bindings` und jeder Bau übersetzen whisper.cpp (Diktieren, [ADR 0
 - **CMake** im PATH. Fehlt es: aus den Visual-Studio-Build-Tools (`C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin`) oder `winget install Kitware.CMake`.
 - **LLVM (libclang)**, weil `whisper-rs-sys` seine Bindings per bindgen erzeugt: `winget install LLVM.LLVM`. Die mitgelieferten Bindings der Crate sind unter Linux erzeugt und scheitern unter Windows. Wechselt man von einem Stand ohne LLVM, einmal `cargo clean -p whisper-rs-sys`, sonst bleiben die alten Bindings im Zwischenspeicher.
 
+`.cargo/config.toml` im Projektordner setzt die Compiler-Flags für whisper.cpp (`/O2`, `NDEBUG`); ohne sie wird whisper.cpp unoptimiert übersetzt und die Erkennung ist rund zehnmal langsamer. Nach einer Änderung dort `cargo clean -p whisper-rs-sys` (Cargo erkennt die Änderung am Zwischenspeicher nicht zuverlässig).
+
 ## Regeln
 
 - Warnungen sind Fehler — in ESLint (`--max-warnings 0`) wie in Clippy (`-D warnings`)
