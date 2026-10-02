@@ -1,11 +1,12 @@
 # STATE
 
 **Aktiver Plan:** (kein aktiver Plan) — MCP-Dialog ist archiviert (`docs/archive/2026-10/2026-10-01_mcp-dialog/`) und als `v0.8.0` getaggt.
-**Nächster Schritt:** Nächster Plan der Reihenfolge unten: Session-Changes (liegt geparkt in `docs/planning/`, `/implement`). Offen aus früheren Plänen: Smoke-Checkliste „MCP-Dialog“ (v0.8.0, ohne Abnahme getaggt), Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
+**Nächster Schritt:** Nächster Plan der Reihenfolge unten: Sidebar nach letzter Aktivität (`docs/planning/2026-10-02_sidebar-aktivitaet.md`, `/implement`), danach Session-Changes. Offen aus früheren Plänen: Smoke-Checkliste „MCP-Dialog“ (v0.8.0, ohne Abnahme getaggt), Smoke-Checkliste „Sprachdiktat“ (v0.6.0) samt Messwerten (Erkennungsdauer, Arbeitsspeicher) und die Smoke-Checkliste „Ordner ohne Git“ (v0.7.0, ohne Abnahme getaggt) — Ergebnisse in die jeweilige README unter `docs/archive/2026-10/` nachtragen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
 1. ~~MCP-Dialog~~ — erledigt und archiviert; Autark Phase 8 beantwortet dessen Steueranfragen, und Abnahmekriterium 13 von Autark setzt den Dialog voraus.
+1a. **Sidebar nach letzter Aktivität** (`2026-10-02_sidebar-aktivitaet.md`) — klein, zwei Phasen; nimmt Migration 7 und ADR 019, Session-Changes rückt deshalb auf Migration 8.
 2. **Session-Changes** — muss vor Changes-Review kommen (ändert die Signaturen von `changes_load`/`changes_file_diff`).
 3. **Changes-Review** — baut auf dem Diff auf, der nur noch die Änderungen der Session zeigt.
 4. **Claude Code + LM Studio** (`claude-code-lokal`) — Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen auf Platz 1.

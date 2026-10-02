@@ -31,8 +31,8 @@
 
 ### Schema
 
-- [ ] Neue Datei `src-tauri/src/db/migrations/007_session_changes.sql` mit genau dem SQL aus dem Kontrakt.
-- [ ] `src-tauri/src/db/migrations.rs`: `MIGRATIONS` auf `[&str; 7]`, Eintrag `include_str!("migrations/007_session_changes.sql")` hinten anhängen.
+- [ ] Neue Datei `src-tauri/src/db/migrations/008_session_changes.sql` mit genau dem SQL aus dem Kontrakt.
+- [ ] `src-tauri/src/db/migrations.rs`: `MIGRATIONS` auf `[&str; 8]`, Eintrag `include_str!("migrations/008_session_changes.sql")` hinten anhängen.
 - [ ] Neue Datei `src-tauri/src/db/session_commits.rs`, Kopf `//! Tabelle \`session_commits\`: Commits, die eine Session gemacht hat (ADR 014).`, aufgebaut wie `session_ticket_worktrees.rs`:
   - `pub fn insert_all(connection: &mut Connection, session_id: &str, commits: &[String]) -> Result<(), CommandError>`: eine Transaktion, `INSERT OR IGNORE INTO session_commits (session_id, commit_id) VALUES (?1, ?2)`.
   - `pub fn load_for(connection: &Connection, session_ids: &[String]) -> Result<HashSet<String>, CommandError>`: je Session-ID `SELECT commit_id FROM session_commits WHERE session_id = ?1`, alles in ein `HashSet`.
@@ -89,7 +89,7 @@
 
 ### Doku und Commit
 
-- [ ] `docs/code-map.md`, Zeile „Persistenz (SQLite)“: Dateien `session_commits.rs`, `session_files.rs` und „Migration 7 = Commits und geschriebene Dateien je Session, `sessions.changes_tracked_at`“ ergänzen. Zeile „Changes“ (Core): „`attribution.rs` Zuordnung zur Session (ab Phase 2 vollständig), `scan.rs` Commits im Zeitfenster eines Git-Befehls; Thread `sessions/registry/commit_scan.rs`“. Zeile „Git-Aufrufe“ bleibt (nur `rev-list`).
+- [ ] `docs/code-map.md`, Zeile „Persistenz (SQLite)“: Dateien `session_commits.rs`, `session_files.rs` und „Migration 8 = Commits und geschriebene Dateien je Session, `sessions.changes_tracked_at`“ ergänzen. Zeile „Changes“ (Core): „`attribution.rs` Zuordnung zur Session (ab Phase 2 vollständig), `scan.rs` Commits im Zeitfenster eines Git-Befehls; Thread `sessions/registry/commit_scan.rs`“. Zeile „Git-Aufrufe“ bleibt (nur `rev-list`).
 - [ ] Commit `feat(changes): record commits and written files per session`.
 
 ## Report-Back
