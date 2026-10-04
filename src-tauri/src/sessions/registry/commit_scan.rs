@@ -3,7 +3,8 @@ use std::sync::Arc;
 use std::thread;
 
 use super::Session;
-use crate::changes::scan;
+use crate::changes::attribution::Ownership;
+use crate::changes::{ChangesInput, scan};
 use crate::db::session_commits;
 
 /// Sucht in einem eigenen Thread die Commits der Zeitfenster und speichert sie.
@@ -13,8 +14,25 @@ pub(super) fn schedule(session: Arc<Session>, windows: Vec<(f64, f64)>) {
         .name("commit-scan".to_owned())
         .spawn(move || {
             let repositories = session.repositories();
-            let ticket_folders = session.lock().ticket_worktrees.clone();
-            let dirs = scan::session_dirs(&session.workspace, &repositories, &ticket_folders);
+            let (ticket_roots, ticket_folders, created_at) = {
+                let state = session.lock();
+                (
+                    state.ticket_roots.clone(),
+                    state.ticket_worktrees.clone(),
+                    state.created_at,
+                )
+            };
+            // Die Basis der inneren Repositories liegt vor dem Anlegen der Session; eigene Commits
+            // liegen immer danach.
+            let input = ChangesInput {
+                workspace: session.workspace.clone(),
+                repositories,
+                ticket_roots,
+                ticket_folders,
+                since_ms: created_at,
+                own: Ownership::default(),
+            };
+            let dirs = scan::session_dirs(&input);
             let commits = scan::own_commits(&dirs, &windows);
             if commits.is_empty() {
                 return;

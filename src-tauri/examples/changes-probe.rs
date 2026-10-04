@@ -1,7 +1,8 @@
 //! Zeigt, was die Changes für eine Session aus einer **Kopie** der Datenbank ermitteln. Aufruf:
 //! `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad>]`.
 //! Ohne Schlüssel die Changes als JSON, mit Schlüssel und Pfad den Diff dieser Datei (Blickwinkel
-//! „alles“). Die Wurzeln der Ticket-Worktrees gehen nach stderr.
+//! „alles“). Die Wurzeln der Ticket-Worktrees und, für die Reichweite `session`, die Suchordner der
+//! Commit-Suche gehen nach stderr.
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,7 +10,7 @@ use std::process::ExitCode;
 
 use verwalter_lib::changes::attribution::Ownership;
 use verwalter_lib::changes::model::ChangeScope;
-use verwalter_lib::changes::{self, ChangesInput, sources};
+use verwalter_lib::changes::{self, ChangesInput, scan, sources};
 use verwalter_lib::db::projects::{self, ProjectRow};
 use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::db::{
@@ -59,7 +60,7 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         return Ok(ExitCode::from(2));
     }
     let database = Database::open(&database_path)?;
-    let input = database.with(|connection| {
+    let (input, scan_input) = database.with(|connection| {
         let rows = sessions::load_active(connection)?;
         let Some(row) = rows.iter().find(|row: &&SessionRow| row.id == *session_id) else {
             return Err(verwalter_lib::error::CommandError::Internal(format!(
@@ -102,16 +103,31 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         };
         let ticket_roots = worktrees::ticket_roots(&repositories);
         print_roots(&ticket_roots);
+        let workspace = PathBuf::from(row.workspace_dir.clone().unwrap_or_default());
+        // Die Commit-Suche der App kennt nur die gemerkten Ticket-Worktrees der Session und
+        // rechnet ab deren Anlegen; die Changes der Reichweite „Session“ kennen mehr.
+        let scan_input = ChangesInput {
+            workspace: workspace.clone(),
+            repositories: repositories.clone(),
+            ticket_roots: ticket_roots.clone(),
+            ticket_folders: remembered.clone(),
+            since_ms: row.created_at,
+            own: Ownership::default(),
+        };
         let ticket_folders = sources::scope_ticket_folders(&ticket_roots, remembered, &own.touched);
-        Ok(ChangesInput {
-            workspace: PathBuf::from(row.workspace_dir.clone().unwrap_or_default()),
+        let input = ChangesInput {
+            workspace,
             repositories,
             ticket_roots,
             ticket_folders,
             since_ms,
             own,
-        })
+        };
+        Ok((input, scan_input))
     })?;
+    if matches!(reach, Reach::Session) {
+        print_scan_dirs(&scan_input);
+    }
 
     let Some((key, path)) = diff_target else {
         println!("{}", serde_json::to_string_pretty(&changes::load(&input))?);
@@ -142,6 +158,16 @@ fn is_app_database(path: &Path) -> bool {
     match (fs::canonicalize(path), fs::canonicalize(app_database)) {
         (Ok(given), Ok(app)) => given == app,
         _ => false,
+    }
+}
+
+fn print_scan_dirs(input: &ChangesInput) {
+    for scan_dir in scan::session_dirs(input) {
+        eprintln!(
+            "Suchordner: {} ab {}",
+            scan_dir.dir.display(),
+            scan_dir.base
+        );
     }
 }
 

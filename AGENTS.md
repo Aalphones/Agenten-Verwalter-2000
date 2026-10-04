@@ -45,6 +45,7 @@ Begründungen: [docs/decisions/001-stack-und-plattform.md](docs/decisions/001-st
 | `pnpm check` | gesamte Prüfkette (Lint, Typecheck, Format, Build, rustfmt, Clippy) — vor jedem Commit grün |
 | `pnpm bindings` | TS-Typen aus Rust neu erzeugen — nach jeder Änderung an Typen, die die Tauri-Grenze überqueren |
 | `pnpm format` | Prettier schreibt `src/` neu |
+| `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session\|project] [<Schlüssel> <Pfad>]` | zeigt, was die Changes einer Session aus einer Kopie der Datenbank ermitteln (Einträge, Diff, Suchordner der Commit-Suche); nie gegen `%USERPROFILE%\.verwalter\verwalter.db` |
 | `pnpm tauri build` | NSIS-Installer unter `src-tauri/target/release/bundle/nsis/`, lose exe unter `src-tauri/target/release/verwalter.exe` |
 | `pnpm tauri build --no-bundle` | nur die lose exe, ohne Installer |
 | `VERWALTER_IDLE_SECONDS` (Umgebungsvariable) | Sekunden, nach denen der Agent einer ruhenden Session beendet wird (Standard 1800); der nächste Klick auf Senden startet ihn neu; eine Session mit laufendem Hintergrundprozess oder Subagent gilt nicht als ruhend |

@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|---|
 | 1 | Erkennung: innere Repositories, ihre Ticket-Worktrees, Prüfprogramm, ADR 020 | [phase-1-erkennung.md](phase-1-erkennung.md) | heikel | 1 | complete |
 | 2 | Changes: Einträge für innere Repositories, Schlüssel `<P>:<Ordner>`, Diff | [phase-2-changes.md](phase-2-changes.md) | heikel | 2 | complete |
-| 3 | Commit-Suche in inneren Repositories, Doku, Abnahme | [phase-3-commits-doku.md](phase-3-commits-doku.md) | standard | 3 | pending |
+| 3 | Commit-Suche in inneren Repositories, Doku, Abnahme | [phase-3-commits-doku.md](phase-3-commits-doku.md) | standard | 3 | complete |
 
 **Reihenfolge:** vor allen geparkten Plänen (Fehler im Alltag). Phasen strikt 1 → 2 → 3: Phase 2 braucht die Erkennung aus 1, Phase 3 die Einträge aus 2; alle drei schreiben in `src-tauri/src/worktrees/mod.rs` bzw. `changes/`, parallel geht nichts. Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `changes`. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine Typen über die Tauri-Grenze ändern sich — `pnpm bindings` muss `src/lib/bindings/` unverändert lassen. Erkenntnisse nach [FINDINGS.md](FINDINGS.md). Keine automatisierten Tests (Projektprofil); jede Phase prüft sich mit dem Prüfprogramm `changes-probe` gegen eine **Kopie** der Datenbank, am Ende die Smoke-Checkliste.
 

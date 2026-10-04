@@ -98,14 +98,6 @@ fn is_plain_folder(repository: &SessionRepository) -> bool {
     matches!(repository.checkout, RepositoryCheckout::Folder)
 }
 
-fn folders_of(ticket_folders: &[(u32, String)], position: u32) -> Vec<String> {
-    ticket_folders
-        .iter()
-        .filter(|(ticket_position, _): &&(u32, String)| *ticket_position == position)
-        .map(|(_, folder): &(u32, String)| folder.clone())
-        .collect()
-}
-
 /// Geschriebene Dateien der Reichweite unter `dir`.
 fn has_touched_under(dir: &Path, own: &Ownership) -> bool {
     let prefix = format!("{}\\", attribution::normalize_path(&dir.to_string_lossy()));
