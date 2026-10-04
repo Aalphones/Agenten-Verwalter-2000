@@ -17,7 +17,7 @@ Das Claude Agent SDK gibt es für TypeScript und Python, nicht für Rust ([PROJE
 - **Denkaufwand-Wechsel** = Prozess beenden und mit `--resume` und neuem `--effort` neu starten, weil es dafür keine Steueranfrage gibt. Modell und Modus wechseln per Steueranfrage ohne Neustart.
 - **Übersetzung im Core:** Das Modul `src-tauri/src/agents/claude/` liest das Protokoll und übersetzt es in anbieterneutrale Typen (`src-tauri/src/agents/event.rs`). Die Oberfläche kennt das Claude-Protokoll nicht.
 - **Noch kein Provider-Trait.** Solange Claude der einzige Anbieter ist, ruft `sessions/` das Claude-Modul direkt. Der Trait entsteht mit dem zweiten Anbieter, aus dem, was beide dann wirklich gemeinsam haben.
-- **Programm finden:** Umgebungsvariable `VERWALTER_CLAUDE_PATH`, sonst `%APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`, sonst `%USERPROFILE%\.local\bin\claude.exe`, sonst `claude.exe` im `PATH`. Eine Einstellung dafür kommt mit den Einstellungen (Meilenstein 6).
+- **Programm finden:** Umgebungsvariable `VERWALTER_CLAUDE_PATH`, sonst `%APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`, sonst `%USERPROFILE%\.local\bin\claude.exe`, sonst `claude.exe` im `PATH`. Unter macOS und Linux: `VERWALTER_CLAUDE_PATH`, sonst `~/.local/bin/claude`, `/opt/homebrew/bin/claude`, `/usr/local/bin/claude`, sonst `claude` im `PATH` — die festen Orte zuerst, weil ein aus Finder oder Dock gestartetes Programm den `PATH` der Shell nicht erbt. Eine Einstellung dafür kommt mit den Einstellungen (Meilenstein 6).
 
 ## Konsequenzen
 
