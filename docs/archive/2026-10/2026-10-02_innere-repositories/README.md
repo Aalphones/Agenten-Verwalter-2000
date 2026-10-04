@@ -2,7 +2,7 @@
 
 Ziel: Hängt an einem Vorhaben ein Ordner, in dem weitere Git-Repositories liegen (Beispiel `C:\Users\smick\develop\easyfitness\facepass`: ein Dach-Repo, darin `app\`, `android\` … mit eigener Historie und ihre Ticket-Worktrees `app-wt-*`, `android-wt-*`, alle vom Dach-Repo per `.gitignore` ausgeblendet), zeigen die Changes, was die Sessions in diesen inneren Repositories und ihren Ticket-Worktrees committet und geschrieben haben. Heute zeigen sie dort nichts: Die App kennt nur das angehängte Dach-Repo, sucht eigene Commits nur dort und erwartet Ticket-Worktrees als `facepass-wt-*` neben ihm.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (Ticket-Worktrees), [ADR 014](../../decisions/014-changes-je-session.md) (eigene Commits und Dateien), [ADR 018](../../decisions/018-ordner-ohne-git.md) (Ordner ohne Git). ADR 020 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [docs/code-map.md](../../../code-map.md), [docs/glossary.md](../../../glossary.md), die Konventionen unter [docs/conventions/](../../../conventions/), [ADR 010](../../../decisions/010-worktrees-durch-den-agenten.md) (Ticket-Worktrees), [ADR 014](../../../decisions/014-changes-je-session.md) (eigene Commits und Dateien), [ADR 018](../../../decisions/018-ordner-ohne-git.md) (Ordner ohne Git). ADR 020 entsteht in Phase 1 aus „Festgelegte Entscheidungen“.
 
 ## Phasen
 
@@ -18,7 +18,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus [ADR 020](../../decisions/020-innere-repositories.md) „Innere Repositories: Changes für Repositories in einem angehängten Ordner“. Vergeben sind 001–014, 018, 019 auf der Platte, 015–017 in geparkten Plänen; dieser Plan schreibt 020.
+Phase 1 schreibt daraus [ADR 020](../../../decisions/020-innere-repositories.md) „Innere Repositories: Changes für Repositories in einem angehängten Ordner“. Vergeben sind 001–014, 018, 019 auf der Platte, 015–017 in geparkten Plänen; dieser Plan schreibt 020.
 
 - **Inneres Repository** = direkter Unterordner eines angehängten Repositorys (`RepositoryCheckout::Main`) oder Ordners ohne Git (`RepositoryCheckout::Folder`), in dem `.git` ein **Ordner** ist. Unterordner mit `.git`-**Datei** sind Worktrees, keine inneren Repositories. Namen mit führendem `.` zählen nicht. Nur eine Ebene tief. Sessions mit App-Worktree (`RepositoryCheckout::AppWorktree`, vor ADR 010) bekommen keine. Verworfen: (a) Agenten-Aussagen oder `cd`-Befehle auswerten — unzuverlässig; (b) beliebig tief suchen — kostet bei großen Ordnern Sekunden und findet `node_modules`-Klone.
 - **Ticket-Worktrees eines inneren Repositorys** liegen als `<inneres Repo>-wt-<Name>` **im angehängten Ordner**, also neben dem inneren Repository (Muster facepass). Erkannt wie bisher am Text der Werkzeug-Aufrufe (`mentioned_ticket_worktrees`), gespeichert wie bisher in `session_ticket_worktrees` als `(Position des angehängten Ordners, Ordnername)` — **keine Migration**. Ob ein gespeicherter Ordner ein Ticket-Worktree des angehängten Repos oder eines inneren ist, entscheidet sein Präfix (`ticket_root_of`, längstes passendes Präfix gewinnt).
@@ -122,10 +122,25 @@ pub struct ChangesInput {
 
 ## Summary
 
+Die Changes zeigen jetzt die Arbeit in Git-Repositories innerhalb eines angehängten Ordners (facepass: `app`, `android` …) und in deren Ticket-Worktrees `<Name>-wt-*`; ein inneres Repository erscheint nur, wenn es etwas zeigt. Schlüsselform `"<Position>:<Ordner>"`, aufgelöst an einer Stelle (`changes/sources.rs`). Die Commit-Suche nach einem Git-Befehl des Agenten durchsucht dieselben Einträge, parallel. Entscheidungen: [ADR 020](../../../decisions/020-innere-repositories.md). Archiviert und als `v0.11.0` getaggt.
+
 ## Files touched
+
+- `src-tauri/src/worktrees/mod.rs` — Erkennung innerer Repositories und ihrer Ticket-Worktrees
+- `src-tauri/src/changes/` — `sources.rs` (neu), `mod.rs`, `scan.rs`
+- `src-tauri/src/sessions/registry.rs`, `registry/commit_scan.rs`, `commands/changes.rs`
+- `src-tauri/examples/changes-probe.rs` (neu) — Prüfprogramm gegen eine Kopie der Datenbank
+- `docs/decisions/020-innere-repositories.md`, Glossar, Code-Map, `AGENTS.md`
 
 ## Commits
 
+`e820362` (Phase 1), `2150005` (Phase 2), `e973a5d` (Phase 3), Plan: `ffc0089`.
+
 ## Deviations from plan
 
+- Release `v0.11.0` auf Saschas ausdrückliche Anweisung **vor** der Smoke-Abnahme und vor den facepass-Probe-Läufen auf dem Arbeitslaptop gesetzt (die Release-Regel verlangt sonst die Abnahme). Geprüft ist nur gegen die Nachbildung auf der Privatmaschine.
+
 ## Follow-ups
+
+- Smoke-Checkliste oben und die zwei facepass-Läufe von `changes-probe` (Sessions `a6357b9c…`, `dd292f1c…`) auf dem Arbeitslaptop; Ergebnisse hier nachtragen.
+- Changes-Review: nutzt `sources::find`, siehe [FINDINGS](../../../planning/2026-10-01_changes-review/FINDINGS.md).

@@ -11,7 +11,7 @@
 - `src-tauri/src/sessions/registry.rs`: `changes_input`, `project_ticket_worktrees`, `lock_projects`, `ProjectState.created_at`, `SessionState.created_at`; `sessions/registry/commit_scan.rs`.
 - `src-tauri/src/worktrees/mod.rs` nach Phase 1 (`TicketRoot`, `ticket_root_of`, `inner_checkout`, `ticket_worktrees`, `ticket_worktrees_in`, `mentioned_ticket_worktrees`, `normalized_dir`).
 - `src-tauri/examples/changes-probe.rs` aus Phase 1.
-- [docs/conventions/rust.md](../../conventions/rust.md), [linting.md](../../conventions/linting.md).
+- [docs/conventions/rust.md](../../../conventions/rust.md), [linting.md](../../../conventions/linting.md).
 - Fehlerklassen: wie Phase 1, keine weitere einschlägig.
 
 **Chesterton:** `changes_file_diff` prüft heute, dass ein Ordner aus der Oberfläche einem gemerkten Ticket-Worktree des Vorhabens entspricht und laut Git noch einer ist, bevor er zum Pfad wird (AGENTS.md Regel 5). Diese Grenze bleibt, nur an einer Stelle: `sources::find` akzeptiert ausschließlich Schlüssel, die `sources` für die Reichweite selbst gebaut hat — und `sources` nimmt Ticket-Worktrees nur über `ticket_worktrees`/`ticket_worktrees_in` (Git-Prüfung) und innere Repositories nur aus `ticket_roots` (Verzeichnis-Prüfung). `validate_folder` (kein `/`, `\`, `:`, `.`, `..`) bleibt als erste Prüfung des Schlüssels.

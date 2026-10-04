@@ -7,8 +7,8 @@
 - `src-tauri/src/sessions/registry.rs`: Feld `ticket_roots` in `SessionState` (Doc-Kommentar „Fest ab Anlegen“), die Aufrufe von `worktrees::ticket_roots` in `restore`, `create_project`, `create_in_project`, `add_repository` (dort im `update`-Closure) und `start_process` (dort läuft `worktrees::ensure` unter der Session-Sperre).
 - `src-tauri/src/changes/history.rs` (Muster für einen Zwischenspeicher: `OnceLock<Mutex<HashMap<…>>>`, Leeren über einer Obergrenze).
 - `src-tauri/src/db/mod.rs` (`Database::open`), `src-tauri/src/db/session_repositories.rs` (`load`), `src-tauri/src/db/session_ticket_worktrees.rs` (`load`), `src-tauri/src/db/session_files.rs` (`load_for`), `src-tauri/examples/gen-bindings.rs` (Aufbau eines Beispielprogramms, Import über `verwalter_lib::…`).
-- [ADR 014](../../decisions/014-changes-je-session.md) und [ADR 018](../../decisions/018-ordner-ohne-git.md) als Formvorlage für ADR 020.
-- [docs/conventions/rust.md](../../conventions/rust.md), [linting.md](../../conventions/linting.md), [commits.md](../../conventions/commits.md).
+- [ADR 014](../../../decisions/014-changes-je-session.md) und [ADR 018](../../../decisions/018-ordner-ohne-git.md) als Formvorlage für ADR 020.
+- [docs/conventions/rust.md](../../../conventions/rust.md), [linting.md](../../../conventions/linting.md), [commits.md](../../../conventions/commits.md).
 - Fehlerklassen geprüft: Vault `werkzeuge/git` — „Standard-Branch nicht aus dem ausgecheckten Branch lesen“ ist durch `git::default_branch` (`symbolic-ref`) schon abgedeckt; keine Rust-/Tauri-Entity im Vault. Sonst keine einschlägig.
 
 **Chesterton:** `TicketRoot` ist das Präfix, an dem `mentioned_ticket_worktrees` im Text eines Werkzeug-Aufrufs einen Ticket-Worktree erkennt — reine Textprüfung, weil sie unter der Session-Sperre läuft. Das bleibt so: die neue Erkennung der inneren Repositories (Dateisystem) passiert in `ticket_roots`, nie in `mentioned_ticket_worktrees`. `ticket_worktrees` prüft über `git worktree list`, dass ein gemerkter Ordner wirklich ein Worktree genau dieses Repositorys ist — diese Prüfung ist die Sicherheitsgrenze und bleibt in `ticket_worktrees_in` unverändert.
