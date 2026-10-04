@@ -170,10 +170,29 @@ Wackelstellen zuerst:
 
 ## Summary
 
+In den Einstellungen wählt man die Betriebsart „Claude Code + LM Studio“ und ein in LM Studio geladenes Modell. Ab der nächsten Nachricht startet jede Session ihren Agenten weiter über die Claude-Kommandozeile mit denselben Werkzeugen, Skills, Hooks und Anweisungen, die Modellanfragen gehen aber an LM Studio (Umgebungsvariablen am Agent-Prozess, ADR 016). Eingabeleiste und „Neues Vorhaben“ zeigen den Namen des lokalen Modells ohne Menü und ohne Denkaufwand, die Kontingent-Anzeige fehlt im lokalen Betrieb, der Kontext-Donut rechnet gegen die geladene Kontextlänge. Die Abnahme der Smoke-Checkliste steht aus; der Plan ist auf Wunsch des Benutzers ohne sie zum Release freigegeben.
+
 ## Files touched
+
+- Messung: `docs/knowledge/claude-stream-json.md`, Abschnitt „Messungen (2026-10-01)“ oben in diesem README.
+- Core: `src-tauri/src/lmstudio/` (neu), `src-tauri/src/agents/claude/local.rs` (neu), `sessions/registry.rs`, `settings/`, `commands/settings.rs`, `error.rs`.
+- Oberfläche: `src/features/settings/` (neu: `OperatingModeSegment`, `LocalModelMenu`, `useLocalModels`; `SettingsView`), `src/features/chat/Composer`, `src/features/sessions/NewSession`, `src/app/SessionHeader.tsx`, `src/components/ModeMenu.tsx`, `src/lib/labels.ts`.
+- Doku: ADR 016, `docs/glossary.md`, `docs/code-map.md`, `docs/PROJECT.md`, `AGENTS.md`.
 
 ## Commits
 
+- `03516ea` docs(agents): Messung lokales Modell über LM Studio (Phase 1)
+- `757ddd1` feat(agents): Betriebsart Claude Code mit lokalem Modell über LM Studio (Phase 2)
+- `ae2dea1` feat(settings): Betriebsart und lokales Modell in Einstellungen und Eingabeleiste (Phase 3)
+
 ## Deviations from plan
 
+- Phase 1 maß mit `gemma4-12b-qat-uncensored-hauhaucs-balanced` statt `google/gemma-4-12b-qat`; M3b entfiel (siehe „Phase 1“ oben).
+- Phase 3: Die Oberfläche war nur gebaut und durch `pnpm check` geprüft, nicht in der laufenden App angesehen. Release vor der Abnahme auf ausdrückliche Anweisung des Benutzers (`releases.md` verlangt sonst die Abnahme).
+
 ## Follow-ups
+
+- Smoke-Checkliste oben abarbeiten, Wackelstellen zuerst; Smoke 2 (Kontextfenster, mehrere Werkzeug-Aufrufe) mehr als einmal wiederholen — das Modell scheiterte in Phase 1 einmal an `error_max_turns`, derselbe Aufruf gelang danach.
+- 🟡 Das `/`-Menü der Eingabeleiste zeigt im lokalen Betrieb in der Gruppe „Modell“ weiterhin die Zeile mit den Denkaufwand-Punkten (`commandMenuRows.ts`, Zeilenart `effort`). Der Plan nannte nur das Modus-Menü; die Punkte wirken im lokalen Betrieb nicht.
+- Das lokale Modell hängt unaufgefordert Spott-Zeilen an Antworten, weil es die Anweisungen des Benutzers liest. Kein Fehler, im Chat sichtbar.
+- Welchen Typ LM Studio für Whisper-Modelle meldet, ist ungeprüft; tauchen sie im Menü „Lokales Modell“ auf, FINDINGS-Eintrag.

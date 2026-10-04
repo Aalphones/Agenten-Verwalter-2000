@@ -4,7 +4,7 @@ Ziel: Eine dritte Betriebsart „Autark“, in der kein Programm und kein Server
 
 **Der Kniff:** Der eigene Agent spricht nach außen genau den Ausschnitt des Zeilenprotokolls der Claude-Kommandozeile, den der Verwalter heute liest und schreibt ([docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md), `src-tauri/src/agents/claude/protocol.rs` und `translate.rs`). Registry, Übersetzung, Rückfragen, Unterbrechen, Wiederherstellung, Chat und Hintergrund-Panel bleiben dadurch unverändert — im Core ändert sich nur, **welches Programm** mit welchen Argumenten startet.
 
-**Voraussetzung:** Plan [2026-10-01_claude-code-lokal](../2026-10-01_claude-code-lokal/README.md) ist umgesetzt (Betriebsart, `lmstudio`-Modul, `LocalBackend`, Einstellungszeilen, Ausblenden von Kontingent und Denkaufwand). Dieser Plan ergänzt die Betriebsart `Standalone`.
+**Voraussetzung:** Plan [2026-10-01_claude-code-lokal](../../archive/2026-10/2026-10-01_claude-code-lokal/README.md) ist umgesetzt (Betriebsart, `lmstudio`-Modul, `LocalBackend`, Einstellungszeilen, Ausblenden von Kontingent und Denkaufwand). Dieser Plan ergänzt die Betriebsart `Standalone`.
 
 **Grundsätzlich nicht möglich in „Autark“:** die claude.ai-Connectoren (Google Drive, Claude Docs, Alpha Vantage …) — sie laufen über Server von Anthropic. **Nicht enthalten** (Folgepläne, falls gebraucht): Notebook-Werkzeug, Plan-Modus-Werkzeug, Hook-Ereignisse außer PreToolUse, automatisches Gedächtnis (`MEMORY.md`), OAuth-Anmeldung bei MCP-Servern. Der Agent sagt dem Modell im Systemprompt, was es nicht gibt.
 
