@@ -29,26 +29,26 @@ Verhalten:
 
 ### Karte und Liste
 
-- [ ] `src/features/review/ReviewCommentCard.tsx` + `.css` (Block `review-card`): Props `{ comment: ReviewComment; onEdit?: (text: string) => void; onRemove?: () => void; }` — ohne `onEdit`/`onRemove` (gesendete Nachricht) keine Knöpfe und kein Bearbeiten. Bearbeiten-Zustand lokal (`useState` für `isEditing` und `editText`). Codezeile: `highlightLine(comment.code, languageOf(comment.path))` als Segmente wie in `DiffView` (Phase 1).
-- [ ] `src/features/review/ReviewCommentList.tsx` + `.css` (Block `review-list`): Props `{ sessionId: string }`; liest `collected[sessionId]`, rendert nichts bei leerer Liste; Kopfzeile laut AK, „Alle entfernen“ → `clear(sessionId)`; je Eintrag `ReviewCommentCard` mit `onEdit={(text) => updateText(sessionId, entry.id, text)}` und `onRemove={() => remove(sessionId, entry.id)}`.
+- [x] `src/features/review/ReviewCommentCard.tsx` + `.css` (Block `review-card`): Props `{ comment: ReviewComment; onEdit?: (text: string) => void; onRemove?: () => void; }` — ohne `onEdit`/`onRemove` (gesendete Nachricht) keine Knöpfe und kein Bearbeiten. Bearbeiten-Zustand lokal (`useState` für `isEditing` und `editText`). Codezeile: `highlightLine(comment.code, languageOf(comment.path))` als Segmente wie in `DiffView` (Phase 1).
+- [x] `src/features/review/ReviewCommentList.tsx` + `.css` (Block `review-list`): Props `{ sessionId: string }`; liest `collected[sessionId]`, rendert nichts bei leerer Liste; Kopfzeile laut AK, „Alle entfernen“ → `clear(sessionId)`; je Eintrag `ReviewCommentCard` mit `onEdit={(text) => updateText(sessionId, entry.id, text)}` und `onRemove={() => remove(sessionId, entry.id)}`.
 
 ### Eingabeleiste
 
-- [ ] `Composer.tsx`: `const collected = useReviewStore((state) => state.collected[session.id] ?? NO_COMMENTS)` (Konstante `NO_COMMENTS: CollectedComment[] = []` wie `NO_ATTACHMENTS`). `canSend` um `|| collected.length > 0` erweitern.
-- [ ] Im Rahmen `composer__box` als erstes Kind `<ReviewCommentList sessionId={session.id} />`, dann wie bisher `AttachmentRow`.
-- [ ] `send`: `const sentComments = collected; const commentIds = sentComments.map((entry) => entry.id);` → `sendMessage(session.id, text, attachmentIds, sentComments.map((entry) => entry.comment))`; im `then` zusätzlich `useReviewStore.getState().clearIds(session.id, commentIds)`.
-- [ ] `placeholderFor`: neuer Parameter `hasComments: boolean`; ist er wahr und die Session weder abgebrochen noch im Fehler, „Nachricht zu den Kommentaren (optional) …“.
+- [x] `Composer.tsx`: `const collected = useReviewStore((state) => state.collected[session.id] ?? NO_COMMENTS)` (Konstante `NO_COMMENTS: CollectedComment[] = []` wie `NO_ATTACHMENTS`). `canSend` um `|| collected.length > 0` erweitern.
+- [x] Im Rahmen `composer__box` als erstes Kind `<ReviewCommentList sessionId={session.id} />`, dann wie bisher `AttachmentRow`.
+- [x] `send`: `const sentComments = collected; const commentIds = sentComments.map((entry) => entry.id);` → `sendMessage(session.id, text, attachmentIds, sentComments.map((entry) => entry.comment))`; im `then` zusätzlich `useReviewStore.getState().clearIds(session.id, commentIds)`.
+- [x] `placeholderFor`: neuer Parameter `hasComments: boolean`; ist er wahr und die Session weder abgebrochen noch im Fehler, „Nachricht zu den Kommentaren (optional) …“.
 
 ### Gesendete Nachricht
 
-- [ ] `UserMessage.tsx`: Prop `comments: readonly ReviewComment[]`. Reihenfolge in `user-message__box`: Anhänge (wie bisher), Text (wie bisher), dann bei Kommentaren ein Abschnitt `user-message__comments` mit der Zählzeile laut AK und je Kommentar `<ReviewCommentCard comment={…} />`. Die Blase darf bei Kommentaren auf die Breite der Tafel wachsen (560 px); CSS-Modifier `user-message__box--with-comments`.
-- [ ] `ChatTimeline.tsx`, Fall `user`: `comments={entry.comments}` durchreichen.
+- [x] `UserMessage.tsx`: Prop `comments: readonly ReviewComment[]`. Reihenfolge in `user-message__box`: Anhänge (wie bisher), Text (wie bisher), dann bei Kommentaren ein Abschnitt `user-message__comments` mit der Zählzeile laut AK und je Kommentar `<ReviewCommentCard comment={…} />`. Die Blase darf bei Kommentaren auf die Breite der Tafel wachsen (560 px); CSS-Modifier `user-message__box--with-comments`.
+- [x] `ChatTimeline.tsx`, Fall `user`: `comments={entry.comments}` durchreichen.
 
 ### Doku und Abschluss
 
-- [ ] `docs/code-map.md`, Zeile „Review-Kommentare“, Oberfläche: `ReviewCommentCard`, `ReviewCommentList` in `src/features/review/`, Anschluss in `Composer` (oben im Rahmen, Senden) und `UserMessage`; Zeile „Chat“ um „gesammelte Review-Kommentare über der Eingabe“.
-- [ ] `docs/PROJECT.md`: falls dort ein Meilenstein bzw. Scope-Punkt zur Changes-Ansicht steht, Satz zu Syntaxfarben und Review-Kommentaren ergänzen; sonst nichts.
-- [ ] Commit `feat(review): collect review comments in the composer and show them in sent messages`.
+- [x] `docs/code-map.md`, Zeile „Review-Kommentare“, Oberfläche: `ReviewCommentCard`, `ReviewCommentList` in `src/features/review/`, Anschluss in `Composer` (oben im Rahmen, Senden) und `UserMessage`; Zeile „Chat“ um „gesammelte Review-Kommentare über der Eingabe“.
+- [x] `docs/PROJECT.md`: falls dort ein Meilenstein bzw. Scope-Punkt zur Changes-Ansicht steht, Satz zu Syntaxfarben und Review-Kommentaren ergänzen; sonst nichts.
+- [x] Commit `feat(review): collect review comments in the composer and show them in sent messages`.
 - [ ] Smoke-Checkliste aus der README an Sascha übergeben (Wackelstellen 1–3 zuerst). Erst nach seiner Abnahme: Plan archivieren, Version laut [releases.md](../../conventions/releases.md) anheben (Minor), `chore(release)`-Commit, Tag, Push (AGENTS.md Regel 6).
 
 ## Report-Back

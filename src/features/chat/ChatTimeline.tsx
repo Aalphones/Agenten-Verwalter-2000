@@ -253,7 +253,12 @@ export function ChatTimeline({
     switch (entry.kind) {
       case 'user':
         return (
-          <UserMessage text={entry.text} attachments={entry.attachments} skill={entry.skill} />
+          <UserMessage
+            text={entry.text}
+            attachments={entry.attachments}
+            skill={entry.skill}
+            comments={entry.comments}
+          />
         );
       case 'text':
         return <TextBlock text={entry.text} />;

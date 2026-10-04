@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_changes-review/`
-**Phase:** 4/4 — Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku (pending, standard)
-**Nächster Schritt:** Phase 4 umsetzen (`phase-4-chat.md`; FINDINGS → Phase 4 zuerst lesen), committen; danach Plan-Ende: Smoke-Checkliste an Sascha, Doc-Abgleich, Archivieren mit Versions-Tag. Modell: `sonnet` (standard).
+**Phase:** 4/4 — Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku (complete, committet)
+**Nächster Schritt:** Plan-Ende: Sascha prüft die Smoke-Checkliste aus der Plan-README (Wackelstellen 1–3 zuerst); nach seiner Abnahme Archivieren nach `docs/archive/2026-10/`, Version anheben (Minor), `chore(release)`, Tag, Push.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

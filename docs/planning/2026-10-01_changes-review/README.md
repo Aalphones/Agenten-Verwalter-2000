@@ -13,7 +13,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | Syntaxfarben im Diff, ADR 015 | [phase-1-syntaxfarben.md](phase-1-syntaxfarben.md) | standard | complete |
 | 2 | Core: Typ `ReviewComment`, `chat_send` mit Kommentaren, Text an den Agenten | [phase-2-core.md](phase-2-core.md) | standard | complete |
 | 3 | Kommentieren im Diff: Store, „+“, Kommentarfeld, gesammelte Kommentare, Zahl am Reiter | [phase-3-diff.md](phase-3-diff.md) | heikel | complete |
-| 4 | Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku | [phase-4-chat.md](phase-4-chat.md) | standard | pending |
+| 4 | Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku | [phase-4-chat.md](phase-4-chat.md) | standard | complete |
 
 **Reihenfolge:** nach dem aktiven Plan „Sprachdiktat“ (STATE.md). Zum geparkten Plan „MCP-Dialog“ gibt es keine Abhängigkeit; beide fassen die Eingabeleiste an — dieser Plan setzt seinen Abschnitt **oben in den Rahmen der Eingabeleiste, vor die Anhänge**, also unabhängig von den Knöpfen in der unteren Leiste. Phasen strikt 1 → 2 → 3 → 4 (3 braucht die Typen aus 2). Umsetzung direkt auf `main`, ein Commit pro Phase, Commit-Scope `changes` (Phase 1) bzw. `review` (Phase 2–4; Phase 2 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md). Keine automatisierten Tests (Projektprofil); geprüft wird über die Smoke-Checkliste unten.
 

@@ -11,6 +11,7 @@ import type { CommandRow, SessionCommand } from '@/features/chat/commandMenuRows
 import { useCommandMenu } from '@/features/chat/useCommandMenu';
 import { McpDialog } from '@/features/mcp/McpDialog';
 import { McpProblemChip } from '@/features/mcp/McpProblemChip';
+import { ReviewCommentList } from '@/features/review/ReviewCommentList';
 import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
@@ -25,6 +26,8 @@ import type { ModeOption } from '@/lib/labels';
 import { pauseSession, setSessionEffort, setSessionMode, setSessionModel } from '@/lib/sessions';
 import { useAttachmentsStore } from '@/stores/attachments';
 import { useChatStore } from '@/stores/chat';
+import { NO_COMMENTS, useReviewStore } from '@/stores/review';
+import type { CollectedComment } from '@/stores/review';
 import { useSessionsStore } from '@/stores/sessions';
 import { useVoiceStore } from '@/stores/voice';
 import './Composer.css';
@@ -56,6 +59,9 @@ export function Composer({ session }: ComposerProps): ReactElement {
     (state) => state.pending[session.id] ?? NO_ATTACHMENTS,
   );
   const removeAttachment = useAttachmentsStore((state) => state.remove);
+  const collected: readonly CollectedComment[] = useReviewStore(
+    (state) => state.collected[session.id] ?? NO_COMMENTS,
+  );
   const showView = useSessionsStore((state) => state.showView);
   const startRename = useSessionsStore((state) => state.startRename);
 
@@ -66,8 +72,8 @@ export function Composer({ session }: ComposerProps): ReactElement {
 
   const isLocked: boolean = session.status === 'cancelled' || session.status === 'error';
   const isWaiting: boolean = session.status === 'waiting';
-  const canSend: boolean =
-    (draft.trim() !== '' || pending.length > 0) && !isSending && !isLocked && !isDictating;
+  const hasContent: boolean = draft.trim() !== '' || pending.length > 0 || collected.length > 0;
+  const canSend: boolean = hasContent && !isSending && !isLocked && !isDictating;
   const currentMode = modeOption(session.mode);
   const modelNote: string = ACTIVE_STATUSES.includes(session.status)
     ? NOTE_WHILE_ACTIVE
@@ -116,11 +122,19 @@ export function Composer({ session }: ComposerProps): ReactElement {
     }
     const text: string = draft.trim();
     const attachmentIds: string[] = pending.map((attachment: Attachment) => attachment.id);
+    const sentComments: readonly CollectedComment[] = collected;
+    const commentIds: string[] = sentComments.map((entry: CollectedComment) => entry.id);
     setIsSending(true);
     setErrorMessage(null);
-    sendMessage(session.id, text, attachmentIds, [])
+    sendMessage(
+      session.id,
+      text,
+      attachmentIds,
+      sentComments.map((entry: CollectedComment) => entry.comment),
+    )
       .then(() => {
         useAttachmentsStore.getState().clearIds(session.id, attachmentIds);
+        useReviewStore.getState().clearIds(session.id, commentIds);
         // Wurde während des Sendens weitergetippt, bleibt der neuere Text erhalten.
         if ((useChatStore.getState().drafts[session.id] ?? '') === draft) {
           clearDraft(session.id);
@@ -221,6 +235,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
   return (
     <div className="composer">
       <div className={boxClass}>
+        <ReviewCommentList sessionId={session.id} />
         {pending.length > 0 && (
           <AttachmentRow
             attachments={pending}
@@ -241,7 +256,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
             rows={2}
             disabled={isLocked}
             readOnly={isDictating}
-            placeholder={placeholderFor(session.status)}
+            placeholder={placeholderFor(session.status, collected.length > 0)}
             value={draft}
             onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
               setDraft(session.id, event.target.value);
@@ -391,18 +406,21 @@ export function Composer({ session }: ComposerProps): ReactElement {
   );
 }
 
-function placeholderFor(status: SessionStatus): string {
-  if (status === 'waiting') {
-    return 'Antwort an Claude …';
-  }
-  if (status === 'new') {
-    return 'Erste Nachricht an Claude … (/ für Skills)';
-  }
+function placeholderFor(status: SessionStatus, hasComments: boolean): string {
   if (status === 'cancelled') {
     return 'Session abgebrochen – leg eine neue Session an.';
   }
   if (status === 'error') {
     return 'Agent beendet – starte ihn im Chat neu.';
+  }
+  if (hasComments) {
+    return 'Nachricht zu den Kommentaren (optional) …';
+  }
+  if (status === 'waiting') {
+    return 'Antwort an Claude …';
+  }
+  if (status === 'new') {
+    return 'Erste Nachricht an Claude … (/ für Skills)';
   }
   return 'Nachricht an Claude … (/ für Skills)';
 }
