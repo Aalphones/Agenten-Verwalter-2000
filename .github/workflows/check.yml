@@ -33,3 +33,32 @@ jobs:
         run: |
           pnpm bindings
           test -z "$(git status --porcelain -- src/lib/bindings)" || { git status --porcelain -- src/lib/bindings; echo "src/lib/bindings ist veraltet - pnpm bindings ausführen und committen"; exit 1; }
+
+  # Nur Kompilier-Check: zeigt, was auf macOS/Linux bricht. Die App ist Windows-first und wird dort nicht ausgeliefert.
+  compile:
+    name: compile (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Linux-Abhängigkeiten
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev cmake clang
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
