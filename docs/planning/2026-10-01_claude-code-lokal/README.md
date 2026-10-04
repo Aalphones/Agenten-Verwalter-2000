@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Messung an der nackten Kommandozeile (Netzverkehr, Kontextfenster, Tempo, TL;DR) | [phase-1-messung.md](phase-1-messung.md) | standard | pending |
+| 1 | Messung an der nackten Kommandozeile (Netzverkehr, Kontextfenster, Tempo, TL;DR) | [phase-1-messung.md](phase-1-messung.md) | standard | complete |
 | 2 | Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 016 | [phase-2-core.md](phase-2-core.md) | standard | pending |
 | 3 | Oberfläche: Einstellungen, Eingabeleiste, Neues Vorhaben, Kontingent; Doku, Release | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
@@ -29,6 +29,18 @@ Probe mit `claude -p "Lies die Datei STATE.md mit dem Read-Werkzeug und nenne in
 - `GET http://localhost:1234/api/v0/models/<id>` liefert `id`, `type` (`llm`, `vlm`, `embeddings`), `state` (`loaded`, `not-loaded`), `max_context_length` und nur bei geladenem Modell `loaded_context_length`. `GET /api/v0/models` liefert dieselben Objekte als Liste unter `data`.
 
 Laut [Claude-Code-Doku, Umgebungsvariablen](https://code.claude.com/docs/en/env-vars) (gelesen 2026-10-01): `ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL` legen fest, worauf die Modellnamen zeigen (Haiku auch für Hintergrundarbeit wie Titel), `CLAUDE_CODE_SUBAGENT_MODEL` das Modell der Subagenten, `CLAUDE_CODE_MAX_CONTEXT_TOKENS` das angenommene Kontextfenster bei Umleitung über `ANTHROPIC_BASE_URL`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` schaltet Updates, Telemetrie, Fehlerberichte und Feature-Flags ab, die automatische Installation des offiziellen Plugin-Marktplatzes deckt es nicht ab (dafür `CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL`). Gemessen ist davon nichts — das macht Phase 1.
+
+### Phase 1 (2026-10-04)
+
+Abweichung: statt `google/gemma-4-12b-qat` lief `gemma4-12b-qat-uncensored-hauhaucs-balanced` (Q4_K_M, Kontext 64 000), auf Wunsch des Benutzers; M3b entfällt, das 26B-Modell war nicht geladen. Claude Code 2.1.284. Rohdaten in `%TEMP%\verwalter-messung\`, belegte Fakten in [claude-stream-json.md](../../knowledge/claude-stream-json.md).
+
+- **M1a (Gegenlauf, ohne Schalter):** Verbindungen an `140.82.121.6:443` (GitHub) und `2607:6bc0::10:443` — Messung sieht Verkehr, M1b gilt.
+- **M1b (mit Schaltern):** keine Verbindung außer Loopback, also nichts zu auflösen. Auch M2, M3a, M4 und M5b blieben ohne externe Verbindung. Erwartung erfüllt.
+- **M2:** `contextWindow` = 64000 (Erwartung 64000 erfüllt). Der Lauf scheiterte aber: `error_max_turns` nach 13,6 min, kein `result` — das Modell rief weiter Werkzeuge auf. Erwartung (ganzer Satz) verfehlt.
+- **M3a (derselbe Aufruf wie M2):** 2 Turns, 127 s, erstes Token nach 44 s, 78 413 Eingabe-Token für 2 Anfragen (rund 39 000 je Anfrage), `end_turn`, Antwort ein sinnvoller Satz. Ob LM Studio den Prompt-Anfang wiederverwendet, ist nicht entschieden: `cacheReadInputTokens` war hier null, im gescheiterten M2-Lauf 144 674 von 326 135.
+- **M4:** `structured_output` mit `summary` kam, `is_error: false`, 9 s. Erwartung erfüllt → TL;DR-Variante A.
+- **M5:** Schritt 1 mit Claude „OK“, Schritt 2 lokal mit `--resume` antwortete „Bisasam“, `is_error: false`, erstes Token nach 224 s. Erwartung erfüllt. Im selben Lauf stand `claude-sonnet-5-5` mit `contextWindow` 200000 in `modelUsage` — mitgeführte Statistik der Claude-Session, keine Verbindung nach außen.
+- **Nebenbefund:** das Modell hängt unaufgefordert Spott-Zeilen an die Antwort (M3a, M5b) — es hat die Anweisungen des Benutzers (Persona) gelesen.
 
 ## Festgelegte Entscheidungen
 

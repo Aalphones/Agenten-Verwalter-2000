@@ -36,7 +36,10 @@ if (-not $Claude) {
   $Arguments = "$Arguments --model $Model"
 }
 
-$exe = (Get-Command claude).Source
+# Bei der npm-Installation zeigt Get-Command auf eine Shim-Datei, die Start-Process nicht starten kann: die echte claude.exe daneben nehmen.
+$exe = (Get-Command claude -CommandType Application | Select-Object -First 1).Source
+$npmExe = Join-Path (Split-Path $exe) 'node_modules\@anthropic-ai\claude-code\bin\claude.exe'
+if (Test-Path $npmExe) { $exe = $npmExe }
 $startArgs = @{
   FilePath = $exe; ArgumentList = $Arguments; WorkingDirectory = $WorkingDirectory
   RedirectStandardOutput = "$Out.json"; RedirectStandardError = "$Out.stderr.txt"

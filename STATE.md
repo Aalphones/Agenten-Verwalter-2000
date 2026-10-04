@@ -1,7 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan) — Changes-Review ist archiviert und als `v0.12.0` getaggt.
-**Nächster Schritt:** Nächsten Plan wählen: `claude-code-lokal` (Plan 4 unten) oder `autarker-agent`.
+**Aktiver Plan:** `docs/planning/2026-10-01_claude-code-lokal/`
+**Phase:** 2/3 — Core (Phase 1 Messung abgeschlossen, Freigabe für Phase 2 steht aus)
+**Nächster Schritt:** `phase-2-core.md` lesen und umsetzen; TL;DR-Variante A, FINDINGS „→ Phase 2“ einarbeiten.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -10,7 +11,7 @@
 1b. ~~Innere Repositories~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-02_innere-repositories/`, `v0.11.0`, ADR 020). Changes-Review: dessen FINDINGS trägt den Hinweis auf `changes/sources.rs`.
 2. ~~Session-Changes~~ — erledigt und archiviert (`v0.9.0`).
 3. ~~Changes-Review~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_changes-review/`, `v0.12.0`, ADR 015).
-4. **Claude Code + LM Studio** (`claude-code-lokal`) — Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen.
+4. **Claude Code + LM Studio** (`claude-code-lokal`) — **aktiv.** Voraussetzung für Autark, sonst unabhängig. Drückt das Kontingent, vorziehen.
 5. **Autark** (`autarker-agent`) — setzt Plan 4 voraus, größter Plan (9 Phasen, drei „heikel“).
 
 ## Offen

@@ -47,10 +47,12 @@ Alle Aufrufe im PowerShell-Werkzeug aus dem Repo-Ordner, `$o = "$env:TEMP\verwal
 
 ## Checkliste
 
-- [ ] Voraussetzungen erfragt und geprüft.
-- [ ] Messungen M1a–M5 wie oben.
-- [ ] README „Messungen“ ergänzt, Knowledge-Datei ergänzt, FINDINGS-Einträge gesetzt.
-- [ ] Commit `docs(agents): Messung lokales Modell über LM Studio` (nur Doku).
-- [ ] Ergebnis dem Benutzer in drei Zeilen melden (Netz, Kontext/Tempo, TL;DR/Fortsetzen), Freigabe für Phase 2 abwarten.
+- [x] Voraussetzungen erfragt und geprüft (Modell auf Wunsch des Benutzers `gemma4-12b-qat-uncensored-hauhaucs-balanced`).
+- [x] Messungen M1a–M5 wie oben (M3b ausgelassen: 26B-Modell nicht geladen).
+- [x] README „Messungen“ ergänzt, Knowledge-Datei ergänzt, FINDINGS-Einträge gesetzt.
+- [x] Commit `docs(agents): Messung lokales Modell über LM Studio` (nur Doku).
+- [x] Ergebnis dem Benutzer in drei Zeilen melden (Netz, Kontext/Tempo, TL;DR/Fortsetzen), Freigabe für Phase 2 abwarten.
 
 ## Report-Back
+
+Werte und Urteile stehen in der README unter „Phase 1 (2026-10-04)“. Das Skript `artifacts/messung.ps1` fand bei der npm-Installation die echte `claude.exe` nicht (Shim-Datei) und wurde angepasst.
