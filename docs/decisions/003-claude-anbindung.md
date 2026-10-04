@@ -25,3 +25,4 @@ Das Claude Agent SDK gibt es für TypeScript und Python, nicht für Rust ([PROJE
 - Die Einstellungen des Benutzers (Rechte-Regeln, Hooks, Skills) gelten auch in der App — wie in der VS-Code-Erweiterung. Ob „Manuell“ vor einem Werkzeug nachfragt, hängt damit auch von seinen Freigabe-Regeln ab.
 - Pro offener Session läuft ein `claude.exe` mit rund 390 MB. Prozesse ruhender Sessions zu beenden und bei Bedarf mit `--resume` neu zu starten: umgesetzt, siehe [ADR 004](004-persistenz-und-wiederherstellung.md).
 - Die Anmeldung nutzt die der installierten Kommandozeile; die App verwaltet keinen eigenen API-Schlüssel.
+- Betriebsart Claude Code + LM Studio: dieselbe Kommandozeile mit anderer Umgebung — [ADR 016](016-betriebsarten-und-lokales-modell.md).

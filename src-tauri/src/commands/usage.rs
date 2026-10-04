@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
+use crate::db::Database;
 use crate::error::CommandError;
+use crate::settings::{self, model::OperatingMode};
 use crate::usage::UsageService;
 use crate::usage::model::UsageStatus;
 
@@ -12,13 +16,18 @@ pub async fn usage_load(
     Ok(service.status())
 }
 
-/// Startet einen Abruf im Hintergrund; das Ergebnis meldet `usage://changed`.
+/// Startet einen Abruf im Hintergrund; das Ergebnis meldet `usage://changed`. In einer lokalen
+/// Betriebsart fragt der Verwalter Anthropic nicht (ADR 016).
 #[tauri::command]
 pub async fn usage_refresh(
     app: tauri::AppHandle,
     service: tauri::State<'_, UsageService>,
+    database: tauri::State<'_, Arc<Database>>,
     force: bool,
 ) -> Result<(), CommandError> {
+    if settings::load(&database)?.operating_mode != OperatingMode::Claude {
+        return Ok(());
+    }
     service.refresh(&app, force);
     Ok(())
 }

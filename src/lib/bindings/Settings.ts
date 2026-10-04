@@ -3,9 +3,14 @@ import type { ColorScheme } from "./ColorScheme";
 import type { Effort } from "./Effort";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
+import type { OperatingMode } from "./OperatingMode";
 
 /**
  * Werte, die für die ganze App gelten. Modell, Modus und Denkaufwand gelten für die erste Session
  * eines neuen Vorhabens.
  */
-export type Settings = { colorScheme: ColorScheme, defaultModel: ModelId, defaultEffort: Effort, defaultMode: Mode, };
+export type Settings = { colorScheme: ColorScheme, defaultModel: ModelId, defaultEffort: Effort, defaultMode: Mode, operatingMode: OperatingMode, 
+/**
+ * Kennung des Modells in LM Studio, z. B. `google/gemma-4-12b-qat`; `None`, solange keins gewählt ist.
+ */
+localModel: string | null, };

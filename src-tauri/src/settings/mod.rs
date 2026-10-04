@@ -13,12 +13,14 @@ use crate::db::{Database, enum_from_text, enum_to_text};
 use crate::error::CommandError;
 use crate::filesystem::workspace::{WORKSPACES_DIR, data_dir, home_dir};
 use crate::skills::{self, model::SkillKind, model::SkillOrigin};
-use model::{ColorScheme, Settings, SettingsChange, SettingsOverview};
+use model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview};
 
 const KEY_COLOR_SCHEME: &str = "color_scheme";
 const KEY_DEFAULT_MODEL: &str = "default_model";
 const KEY_DEFAULT_EFFORT: &str = "default_effort";
 const KEY_DEFAULT_MODE: &str = "default_mode";
+const KEY_OPERATING_MODE: &str = "operating_mode";
+const KEY_LOCAL_MODEL: &str = "local_model";
 
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
 const DEFAULT_SETTINGS: Settings = Settings {
@@ -26,6 +28,8 @@ const DEFAULT_SETTINGS: Settings = Settings {
     default_model: ModelId::Sonnet,
     default_effort: Effort::High,
     default_mode: Mode::Auto,
+    operating_mode: OperatingMode::Claude,
+    local_model: None,
 };
 
 pub fn load(database: &Database) -> Result<Settings, CommandError> {
@@ -36,11 +40,22 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
         default_model: stored_or(&stored, KEY_DEFAULT_MODEL, DEFAULT_SETTINGS.default_model),
         default_effort: stored_or(&stored, KEY_DEFAULT_EFFORT, DEFAULT_SETTINGS.default_effort),
         default_mode: stored_or(&stored, KEY_DEFAULT_MODE, DEFAULT_SETTINGS.default_mode),
+        operating_mode: stored_or(&stored, KEY_OPERATING_MODE, DEFAULT_SETTINGS.operating_mode),
+        local_model: stored
+            .get(KEY_LOCAL_MODEL)
+            .map(|text: &String| text.trim())
+            .filter(|text: &&str| !text.is_empty())
+            .map(str::to_owned),
     })
 }
 
 /// Speichert genau die geänderten Schlüssel und gibt den ganzen neuen Stand zurück.
 pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, CommandError> {
+    if let SettingsChange::LocalModel { value } = &change
+        && value.trim().is_empty()
+    {
+        return Err(CommandError::Internal("Modellname leer".to_owned()));
+    }
     database.with(|connection| {
         let transaction = connection.transaction()?;
         match change {
@@ -53,6 +68,12 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             SettingsChange::DefaultMode { mode, effort } => {
                 setting_rows::write(&transaction, KEY_DEFAULT_MODE, &enum_to_text(&mode)?)?;
                 setting_rows::write(&transaction, KEY_DEFAULT_EFFORT, &enum_to_text(&effort)?)?;
+            }
+            SettingsChange::OperatingMode { value } => {
+                setting_rows::write(&transaction, KEY_OPERATING_MODE, &enum_to_text(&value)?)?;
+            }
+            SettingsChange::LocalModel { value } => {
+                setting_rows::write(&transaction, KEY_LOCAL_MODEL, value.trim())?;
             }
         }
         transaction.commit()?;

@@ -8,6 +8,7 @@ pub mod db;
 pub mod error;
 pub mod filesystem;
 pub mod git;
+pub mod lmstudio;
 pub mod mcp;
 pub mod processes;
 pub mod projects;
@@ -104,6 +105,7 @@ pub fn run() {
             commands::tldr::tldr_set_carry,
             commands::settings::settings_load,
             commands::settings::settings_update,
+            commands::settings::settings_local_models,
             commands::voice::voice_model_status,
             commands::voice::voice_model_download,
             commands::voice::voice_model_cancel_download,

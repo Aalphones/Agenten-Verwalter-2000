@@ -12,6 +12,15 @@ pub enum ColorScheme {
     System,
 }
 
+/// Woher die Modellanfragen der Agenten kommen (ADR 016). `ClaudeCodeLocal` startet dieselbe
+/// Claude-Kommandozeile, schickt die Anfragen aber an LM Studio.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum OperatingMode {
+    Claude,
+    ClaudeCodeLocal,
+}
+
 /// Werte, die für die ganze App gelten. Modell, Modus und Denkaufwand gelten für die erste Session
 /// eines neuen Vorhabens.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -21,6 +30,9 @@ pub struct Settings {
     pub default_model: ModelId,
     pub default_effort: Effort,
     pub default_mode: Mode,
+    pub operating_mode: OperatingMode,
+    /// Kennung des Modells in LM Studio, z. B. `google/gemma-4-12b-qat`; `None`, solange keins gewählt ist.
+    pub local_model: Option<String>,
 }
 
 /// Was die Einstellungsseite zeigt: die Werte und die Ordner, die sie nur anzeigt.
@@ -48,4 +60,6 @@ pub enum SettingsChange {
     ColorScheme { value: ColorScheme },
     DefaultModel { value: ModelId },
     DefaultMode { mode: Mode, effort: Effort },
+    OperatingMode { value: OperatingMode },
+    LocalModel { value: String },
 }

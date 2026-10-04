@@ -3,9 +3,10 @@ import type { ColorScheme } from "./ColorScheme";
 import type { Effort } from "./Effort";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
+import type { OperatingMode } from "./OperatingMode";
 
 /**
  * Eine Änderung aus der Einstellungsseite. Modus und Denkaufwand ändern sich gemeinsam, weil sie
  * im selben Menü stehen.
  */
-export type SettingsChange = { "kind": "colorScheme", value: ColorScheme, } | { "kind": "defaultModel", value: ModelId, } | { "kind": "defaultMode", mode: Mode, effort: Effort, };
+export type SettingsChange = { "kind": "colorScheme", value: ColorScheme, } | { "kind": "defaultModel", value: ModelId, } | { "kind": "defaultMode", mode: Mode, effort: Effort, } | { "kind": "operatingMode", value: OperatingMode, } | { "kind": "localModel", value: string, };

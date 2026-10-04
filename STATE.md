@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_claude-code-lokal/`
-**Phase:** 2/3 — Core (Phase 1 Messung abgeschlossen, Freigabe für Phase 2 steht aus)
-**Nächster Schritt:** `phase-2-core.md` lesen und umsetzen; TL;DR-Variante A, FINDINGS „→ Phase 2“ einarbeiten.
+**Phase:** 3/3 — Oberfläche (Phase 2 Core abgeschlossen, Freigabe für Phase 3 steht aus)
+**Nächster Schritt:** `phase-3-oberflaeche.md` lesen und umsetzen; FINDINGS „→ Phase 3“ einarbeiten.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

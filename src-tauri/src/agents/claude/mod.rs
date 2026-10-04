@@ -1,5 +1,6 @@
 //! Anbindung der Claude-Kommandozeile im Stream-Modus (ADR 003).
 pub mod helper;
+pub mod local;
 pub mod locate;
 pub mod mcp;
 pub mod print;

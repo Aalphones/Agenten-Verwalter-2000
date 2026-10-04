@@ -9,13 +9,16 @@ use serde::de::DeserializeOwned;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{ProjectState, Session, SessionRegistry, SessionState, now_ms, project_not_found};
+use crate::agents::claude::local;
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::print::{PrintRequest, run_print};
 use crate::agents::event::ModelId;
+use crate::db::Database;
 use crate::db::tldr as tldr_rows;
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 use crate::sessions::model::SessionStatus;
+use crate::settings;
 use crate::tldr::model::{
     ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
     TldrChangedEvent,
@@ -319,11 +322,15 @@ fn ask_haiku<T: DeserializeOwned>(
     input: &str,
 ) -> Result<T, String> {
     let cwd = data_dir(app).map_err(|error: CommandError| error.to_string())?;
+    let database = app.state::<Arc<Database>>();
+    let settings = settings::load(&database).map_err(|error: CommandError| error.to_string())?;
+    let backend = local::resolve(&settings).map_err(|error: CommandError| error.to_string())?;
     let request = PrintRequest {
         model: ModelId::Haiku,
         system_prompt,
         json_schema,
         input,
+        local: backend.as_ref(),
     };
     let answer = run_print(exe, &cwd, &request, TLDR_TIMEOUT)?;
     serde_json::from_value::<T>(answer)

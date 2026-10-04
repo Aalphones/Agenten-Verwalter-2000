@@ -46,6 +46,8 @@ pub enum CommandError {
     VoiceCancelled,
     #[error("Download: {0}")]
     VoiceDownload(String),
+    #[error("{0}")]
+    LocalModelUnavailable(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

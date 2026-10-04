@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 
+use crate::agents::claude::local::{self, LocalBackend};
 use crate::agents::event::ModelId;
 use crate::processes::hide_console;
 
@@ -16,6 +17,8 @@ pub struct PrintRequest<'a> {
     pub system_prompt: &'a str,
     pub json_schema: &'a str,
     pub input: &'a str,
+    /// `Some` in der Betriebsart Claude Code + LM Studio.
+    pub local: Option<&'a LocalBackend>,
 }
 
 /// Startet `claude.exe`, schickt `input` über die Standardeingabe und liefert `structured_output`.
@@ -48,7 +51,10 @@ fn print_command(exe: &Path, cwd: &Path, request: &PrintRequest<'_>) -> Command 
         .stderr(Stdio::null())
         .arg("-p")
         .arg("--model")
-        .arg(request.model.cli_id())
+        .arg(match request.local {
+            Some(backend) => backend.model.as_str(),
+            None => request.model.cli_id(),
+        })
         // `--tools` nimmt mehrere Werte: der leere schaltet alle ab, `--safe-mode` beendet die Liste.
         .arg("--tools")
         .arg("")
@@ -61,6 +67,9 @@ fn print_command(exe: &Path, cwd: &Path, request: &PrintRequest<'_>) -> Command 
         .arg(request.json_schema)
         .arg("--output-format")
         .arg("json");
+    if let Some(backend) = request.local {
+        local::apply(&mut command, backend);
+    }
     hide_console(&mut command);
     command
 }

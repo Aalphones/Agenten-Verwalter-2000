@@ -11,7 +11,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Messung an der nackten Kommandozeile (Netzverkehr, Kontextfenster, Tempo, TL;DR) | [phase-1-messung.md](phase-1-messung.md) | standard | complete |
-| 2 | Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 016 | [phase-2-core.md](phase-2-core.md) | standard | pending |
+| 2 | Core: Betriebsart, LM-Studio-Abfrage, Umgebung am Agenten, TL;DR, Kontingent, ADR 016 | [phase-2-core.md](phase-2-core.md) | standard | complete |
 | 3 | Oberfläche: Einstellungen, Eingabeleiste, Neues Vorhaben, Kontingent; Doku, Release | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 
 **Reihenfolge:** Phasen strikt 1 → 2 → 3. Keine Abhängigkeit zu den geparkten Plänen „MCP-Dialog“, „Changes-Review“ und „Session-Changes“; der Plan „Autarker Agent“ setzt diesen voraus. Phase 1 stoppt den Plan nicht, sie legt aber fest, welche TL;DR-Variante Phase 2 baut (siehe dort). Umsetzung direkt auf `main`, ein Commit pro Phase: Phase 1 `docs(agents)`, Phase 2 `feat(agents)`, Phase 3 `feat(settings)`. Neuer Scope `lmstudio` wird nicht gebraucht — die LM-Studio-Abfrage gehört zu `agents`/`settings`. Vor jedem Code-Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Nach jeder Änderung an Typen über die Tauri-Grenze `pnpm bindings` und die erzeugten Dateien mitcommitten. Erkenntnisse während der Umsetzung nach [FINDINGS.md](FINDINGS.md).

@@ -14,6 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde_json::{Map, Value, json};
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::agents::claude::local::{self, LocalBackend};
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
 use crate::agents::claude::protocol::{
@@ -52,6 +53,7 @@ use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::review::{self, model::ReviewComment};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
+use crate::settings;
 use crate::skills::{self, model::SkillRef};
 use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
@@ -164,6 +166,8 @@ struct SessionState {
     effort: Effort,
     /// Denkaufwand, mit dem der laufende Prozess gestartet wurde — der lässt sich nur beim Start setzen.
     process_effort: Effort,
+    /// Modell-Backend, mit dem der laufende Prozess gestartet wurde; `None` = Claude.
+    process_backend: Option<LocalBackend>,
     /// Anzahl Repositories, mit denen der laufende Prozess gestartet wurde — `--add-dir` gibt es
     /// nur beim Start, ein angehängtes Repository braucht einen neuen Prozess.
     process_repository_count: usize,
@@ -372,6 +376,12 @@ impl SessionRegistry {
         Ok(registry)
     }
 
+    /// Fragt in der lokalen Betriebsart LM Studio — nie unter einer Session- oder Vorhaben-Sperre
+    /// aufrufen.
+    fn agent_backend(&self) -> Result<Option<LocalBackend>, CommandError> {
+        local::resolve(&settings::load(&self.database)?)
+    }
+
     /// Legt ein Vorhaben mit seiner Session `#1` an: Workspace, Basis jedes Repositorys, beide
     /// Datenbankzeilen, dann der Agent mit der Aufgabe. Alles oder nichts: scheitert ein Schritt,
     /// bleibt weder der Workspace-Ordner noch eine Datenbankzeile zurück. Worktrees und Branches
@@ -390,6 +400,8 @@ impl SessionRegistry {
             mode,
         } = request;
         find_claude().ok_or(CommandError::ClaudeNotFound)?;
+        // Vor dem Workspace: ein Fehler (LM Studio aus) lässt nichts zurück.
+        let backend = self.agent_backend()?;
         let rows = self
             .database
             .with(|connection| repository_rows::get_many(connection, repository_ids))?;
@@ -456,7 +468,7 @@ impl SessionRegistry {
             |state: &mut SessionState, outbox: &mut Outbox| {
                 // Ohne diese Zeile bekäme die neue Session nie ihre Datenbankzeile.
                 outbox.summary_dirty = true;
-                start_process(app, &session, state, outbox)?;
+                start_process(app, &session, state, outbox, backend.as_ref())?;
                 let line = message_line(task, &task_attachments)?;
                 state.push_user(outbox, task, task_attachments, task_skill, Vec::new());
                 outbox.write(state, line)?;
@@ -773,6 +785,10 @@ impl SessionRegistry {
         comments: &[ReviewComment],
     ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
+        // Vor `update`: die Abfrage bei LM Studio gehört nicht unter die Session-Sperre.
+        let backend_result: Result<Option<LocalBackend>, String> = self
+            .agent_backend()
+            .map_err(|error: CommandError| error.to_string());
         review::validate(comments)?;
         // Dateizugriffe gehören nicht unter die Session-Sperre.
         let skill: Option<SkillRef> = skills::match_invocation(
@@ -808,16 +824,22 @@ impl SessionRegistry {
                     state.push_user(outbox, text, Vec::new(), skill, Vec::new());
                     return Ok(());
                 }
+                // Erst nach dem Zweig für Rückfragen: eine offene Rückfrage lässt sich auch dann
+                // beantworten, wenn LM Studio gerade aus ist.
+                let backend = backend_result
+                    .clone()
+                    .map_err(CommandError::LocalModelUnavailable)?;
                 // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem
-                // bisherigen Verlauf. Ein angehängtes Repository startet ihn nur neu, wenn er ruht —
-                // ein arbeitender Agent wird nie unterbrochen.
+                // bisherigen Verlauf. Ein angehängtes Repository oder ein Wechsel der Betriebsart
+                // startet ihn nur neu, wenn er ruht — ein arbeitender Agent wird nie unterbrochen.
                 let has_new_repository =
                     session.repositories().len() != state.process_repository_count;
+                let has_new_backend = state.process_backend != backend;
                 if state.process.is_none()
                     || state.effort != state.process_effort
-                    || (has_new_repository && state.is_resting())
+                    || ((has_new_repository || has_new_backend) && state.is_resting())
                 {
-                    start_process(app, &session, state, outbox)?;
+                    start_process(app, &session, state, outbox, backend.as_ref())?;
                 }
                 // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
                 let sent_attachments =
@@ -994,6 +1016,7 @@ impl SessionRegistry {
 
     pub fn restart(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
+        let backend = self.agent_backend()?;
         update(
             app,
             &session,
@@ -1001,7 +1024,7 @@ impl SessionRegistry {
                 if state.status != SessionStatus::Error {
                     return Ok(());
                 }
-                start_process(app, &session, state, outbox)?;
+                start_process(app, &session, state, outbox, backend.as_ref())?;
                 state.pause_requested = false;
                 state.set_status(outbox, SessionStatus::Paused);
                 Ok(())
@@ -1497,6 +1520,7 @@ impl SessionState {
             model,
             effort,
             process_effort: effort,
+            process_backend: None,
             process_repository_count: 0,
             has_agent_history: false,
             mode,
@@ -2541,6 +2565,7 @@ fn start_process(
     session: &Arc<Session>,
     state: &mut SessionState,
     outbox: &mut Outbox,
+    backend: Option<&LocalBackend>,
 ) -> Result<(), CommandError> {
     let resume = state.has_agent_history;
     let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
@@ -2582,6 +2607,7 @@ fn start_process(
             mode: state.mode,
             add_dirs,
             allowed_rules: worktrees::permission_rules(&repositories),
+            local: backend.cloned(),
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -2589,6 +2615,16 @@ fn start_process(
     )?;
     state.process = Some(Arc::new(process));
     state.process_effort = state.effort;
+    // Im Claude-Betrieb bleibt der gespeicherte Wert stehen, bis die erste Antwort ihn bestätigt;
+    // nur der Wechsel aus dem lokalen Betrieb setzt ihn zurück.
+    if let Some(local) = backend {
+        state.context_window = local.context_window;
+        outbox.summary_dirty = true;
+    } else if state.process_backend.is_some() {
+        state.context_window = state.model.initial_context_window();
+        outbox.summary_dirty = true;
+    }
+    state.process_backend = backend.cloned();
     state.process_repository_count = repositories.len();
     state.translator = Translator::default();
     Ok(())

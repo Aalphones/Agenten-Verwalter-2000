@@ -18,6 +18,7 @@ use verwalter_lib::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
     },
     error::CommandError,
+    lmstudio::model::{LocalModel, LocalModelKind, LocalModels},
     mcp::model::{
         McpAction, McpActionError, McpChangedEvent, McpServer, McpServerStatus, SessionMcp,
     },
@@ -25,7 +26,7 @@ use verwalter_lib::{
     repositories::model::{KnownRepository, RepositoryKind},
     review::model::ReviewComment,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
-    settings::model::{ColorScheme, Settings, SettingsChange, SettingsOverview},
+    settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
     tldr::model::{
         ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
@@ -108,6 +109,10 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ProjectTldrView::export_all(&cfg)?;
     TldrChangedEvent::export_all(&cfg)?;
     ColorScheme::export_all(&cfg)?;
+    OperatingMode::export_all(&cfg)?;
+    LocalModelKind::export_all(&cfg)?;
+    LocalModel::export_all(&cfg)?;
+    LocalModels::export_all(&cfg)?;
     Settings::export_all(&cfg)?;
     SettingsOverview::export_all(&cfg)?;
     SettingsChange::export_all(&cfg)?;

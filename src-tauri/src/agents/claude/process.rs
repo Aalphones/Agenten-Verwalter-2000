@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::Duration;
 
+use crate::agents::claude::local::{self, LocalBackend};
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::processes::hide_console;
 
@@ -24,6 +25,8 @@ pub struct SpawnOptions {
     pub add_dirs: Vec<PathBuf>,
     /// Freigaben für Ticket-Worktrees neben den Haupt-Checkouts (`worktrees::permission_rules`).
     pub allowed_rules: Vec<String>,
+    /// `Some` in der Betriebsart Claude Code + LM Studio.
+    pub local: Option<LocalBackend>,
 }
 
 #[derive(Debug, Clone)]
@@ -108,13 +111,22 @@ fn build_command(opts: &SpawnOptions) -> Command {
         .arg("--permission-prompt-tool")
         .arg("stdio")
         .arg("--model")
-        .arg(opts.model.cli_id())
-        .arg("--effort")
-        .arg(opts.effort.cli_value())
+        .arg(match &opts.local {
+            Some(backend) => backend.model.as_str(),
+            None => opts.model.cli_id(),
+        });
+    // Das lokale Modell kennt keinen Denkaufwand.
+    if opts.local.is_none() {
+        command.arg("--effort").arg(opts.effort.cli_value());
+    }
+    command
         .arg("--permission-mode")
         .arg(opts.mode.cli_value())
         // Ohne die Variable lädt Claude die `CLAUDE.md` eines `--add-dir`-Ordners nicht.
         .env("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1");
+    if let Some(backend) = &opts.local {
+        local::apply(&mut command, backend);
+    }
     // `--allowedTools` nimmt mehrere Werte; die nächste Option (`--add-dir`, `--resume`,
     // `--session-id`) beendet die Liste.
     if !opts.allowed_rules.is_empty() {
