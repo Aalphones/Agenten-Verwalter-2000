@@ -9,6 +9,7 @@ import { UsageButton } from '@/features/usage/UsageButton';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
+import { useReviewStore } from '@/stores/review';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
 import './SessionHeader.css';
@@ -56,6 +57,7 @@ export function SessionHeader({
   const [openPanel, setOpenPanel] = useState<OpenPanel | null>(null);
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
+  const reviewCount: number = useReviewStore((state) => state.collected[session.id]?.length ?? 0);
   const isTicking: boolean = session.runningSince !== null;
 
   useEffect(() => {
@@ -82,6 +84,11 @@ export function SessionHeader({
     session.contextWindow === 0 ? 0 : (session.contextUsed / session.contextWindow) * 100;
   // „Changes“ gibt es nur mit mindestens einem Repository.
   const views: readonly SessionView[] = session.repositoryCount > 0 ? SESSION_VIEWS : ['chat'];
+
+  const reviewTitle: string | undefined =
+    reviewCount === 0
+      ? undefined
+      : `${formatCount(reviewCount)} ${reviewCount === 1 ? 'Kommentar wartet' : 'Kommentare warten'} im Chat`;
 
   const backgroundLabel: string =
     runningBackgroundCount > 0
@@ -204,11 +211,17 @@ export function SessionHeader({
             className={`session-header__tab${view === activeView ? ' session-header__tab--active' : ''}`}
             role="tab"
             aria-selected={view === activeView}
+            title={view === 'chat' ? reviewTitle : undefined}
             onClick={(): void => {
               onShowView(view);
             }}
           >
             {VIEW_LABEL[view]}
+            {view === 'chat' && reviewCount > 0 && (
+              <span className="session-header__tab-count session-header__tab-count--review">
+                {formatCount(reviewCount)}
+              </span>
+            )}
             {view === 'changes' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>
             )}

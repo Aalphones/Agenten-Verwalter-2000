@@ -1,0 +1,66 @@
+.collected-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 4px 16px 8px 116px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1.45;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: 11.5px;
+    color: var(--color-fg-muted);
+  }
+
+  &__text {
+    color: var(--color-fg-primary);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  &__edit,
+  &__remove {
+    flex-shrink: 0;
+    height: 24px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-fg-secondary);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+  }
+
+  &__edit {
+    padding: 0 8px;
+    font: inherit;
+    font-size: var(--font-size-xs);
+  }
+
+  &__remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    padding: 0;
+  }
+}

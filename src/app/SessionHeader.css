@@ -154,6 +154,12 @@
     font-size: var(--font-size-2xs);
     line-height: 18px;
     text-align: center;
+
+    &--review {
+      background: var(--color-accent);
+      color: var(--color-fg-on-accent);
+      font-weight: 600;
+    }
   }
 
   &__tools {

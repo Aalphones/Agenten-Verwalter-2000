@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_changes-review/`
-**Phase:** 3/4 — Kommentieren im Diff: Store, „+“, Kommentarfeld, gesammelte Kommentare, Zahl am Reiter (pending, heikel)
-**Nächster Schritt:** Phase 3 umsetzen (`phase-3-diff.md`; FINDINGS → Phase 3 zuerst lesen), committen, dann Pflicht-Clear. Modell: `opusplan` (heikel).
+**Phase:** 4/4 — Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku (pending, standard)
+**Nächster Schritt:** Phase 4 umsetzen (`phase-4-chat.md`; FINDINGS → Phase 4 zuerst lesen), committen; danach Plan-Ende: Smoke-Checkliste an Sascha, Doc-Abgleich, Archivieren mit Versions-Tag. Modell: `sonnet` (standard).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

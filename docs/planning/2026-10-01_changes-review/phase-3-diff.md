@@ -32,7 +32,7 @@ Verhalten:
 
 ### Store
 
-- [ ] Neue Datei `src/stores/review.ts`:
+- [x] Neue Datei `src/stores/review.ts`:
   - `export interface CollectedComment { id: string; lineId: string; comment: ReviewComment; }` — `id` aus `crypto.randomUUID()`.
   - `export interface OpenCommentBox { lineId: string; text: string; }`
   - `export function lineIdOf(scope: ChangeScope, repositoryKey: string, path: string, kind: DiffLineKind, line: number): string` → `` `${scope}|${repositoryKey}|${path}|${kind === 'deleted' ? 'old' : 'new'}${String(line)}` ``.
@@ -41,7 +41,7 @@ Verhalten:
 
 ### Bausteine
 
-- [ ] Neuer Ordner `src/features/review/`:
+- [x] Neuer Ordner `src/features/review/`:
   - `reviewLabels.ts`: `lineLabel(kind: DiffLineKind, line: number): string` → „Zeile N“ bzw. „Zeile N (alt)“ für `deleted`; `fileName(path: string): string` (Teil nach dem letzten `/`); `whereLabel(comment: ReviewComment): string` → `` `${comment.repositoryName} / ${comment.path} · ${lineLabel(comment.kind, comment.line)}` `` (für Phase 4).
   - `CommentBox.tsx` + `CommentBox.css` (BEM-Block `comment-box`): Props `{ fileLabel: string; lineLabel: string; text: string; isEditing: boolean; onChange: (text: string) => void; onSubmit: () => void; onCancel: () => void; }`. Textfeld mit `autoFocus`; `onKeyDown`: `Escape` → `event.stopPropagation(); onCancel()`, `Enter` mit `ctrlKey` → `event.preventDefault(); event.stopPropagation(); onSubmit()` (nur bei nicht leerem Text). Aussehen laut AK.
   - `CollectedNote.tsx` + `CollectedNote.css` (Block `collected-note`): Props `{ text: string; onEdit: () => void; onRemove: () => void; }`. Aussehen laut AK.
@@ -49,23 +49,34 @@ Verhalten:
 
 ### Diff-Ansicht
 
-- [ ] `ChangesView.tsx`: neue Prop `canComment: boolean`, an `DiffView` durchreichen. `App.tsx`: in `renderOverview` `canComment={false}`, in der Session-Ansicht `canComment`.
-- [ ] `DiffView.tsx`: Prop `canComment: boolean`. Aus dem Store je `sessionId`: die gesammelten Kommentare und `boxes[sessionId]`. `const commentsByLine = useMemo(() => new Map(collected.map(c => [c.lineId, c])), [collected])`.
-- [ ] Zeilen-Element umbauen: Das virtuelle Element ist jetzt ein Wrapper `diff-view__row` (absolut, `transform`, `ref={virtualizer.measureElement}`, `data-index`); darin die bisherige `diff-view__line` (jetzt `position: relative`, nicht mehr absolut) und darunter — nur wenn `canComment` und die Zeile kommentierbar ist — entweder `<CommentBox>` (offenes Feld hat diese `lineId`) oder `<CollectedNote>` (Kommentar zu dieser `lineId` vorhanden). In `DiffView.css` die Positionierung von `&__line` auf `&__row` verlegen; Zeilenhöhe bleibt `min-height: 20px`.
-- [ ] Je Zeile: `lineId = lineIdOf(scope, repository.key, file.path, line.kind, line.kind === 'deleted' ? line.oldLine : line.newLine)` (Zahl ist bei kommentierbaren Zeilen nie `null`; sonst nicht kommentierbar).
-- [ ] Knopf in `diff-view__line` (BEM `diff-view__comment`, Modifier `--collected`): „+“ → `openBox(sessionId, { lineId, text: '' })`; Sprechblase → `openBox(sessionId, { lineId, text: vorhandener.comment.text })`. CSS: `.diff-view__comment { opacity: 0 }`, `.diff-view__line:hover .diff-view__comment, .diff-view__comment:focus-visible, .diff-view__comment--collected { opacity: 1 }`; Fokusring wie `diff-view__close`.
-- [ ] `CommentBox`-Handler: `onChange` → `setBoxText`; `onCancel` → `closeBox`; `onSubmit` → `upsert(sessionId, lineId, { repositoryKey: repository.key, repositoryName: repository.name, path: file.path, kind: line.kind, line: <Nummer>, code: line.text, text: text.trim() })`, dann `closeBox`. `isEditing` = es gibt schon einen Kommentar zu dieser `lineId`. `fileLabel` = `fileName(file.path)`.
-- [ ] `CollectedNote`-Handler: `onEdit` wie Sprechblase, `onRemove` → `remove(sessionId, id)`.
-- [ ] Nach Öffnen eines Felds muss es sichtbar sein: das fokussierte Textfeld scrollt der Browser ins Bild; prüfen an der letzten Zeile eines langen Diffs. Reicht das nicht, nach dem Öffnen `virtualizer.scrollToIndex(index, { align: 'auto' })` (Befund in FINDINGS.md).
+- [x] `ChangesView.tsx`: neue Prop `canComment: boolean`, an `DiffView` durchreichen. `App.tsx`: in `renderOverview` `canComment={false}`, in der Session-Ansicht `canComment`. — **Abgewichen (FINDINGS):** keine neue Prop; `DiffView` leitet `canComment` aus `reach === 'session'` ab, `ChangesView` und `App.tsx` bleiben unverändert.
+- [x] `DiffView.tsx`: Prop `canComment: boolean`. Aus dem Store je `sessionId`: die gesammelten Kommentare und `boxes[sessionId]`. `const commentsByLine = useMemo(() => new Map(collected.map(c => [c.lineId, c])), [collected])`.
+- [x] Zeilen-Element umbauen: Das virtuelle Element ist jetzt ein Wrapper `diff-view__row` (absolut, `transform`, `ref={virtualizer.measureElement}`, `data-index`); darin die bisherige `diff-view__line` (jetzt `position: relative`, nicht mehr absolut) und darunter — nur wenn `canComment` und die Zeile kommentierbar ist — entweder `<CommentBox>` (offenes Feld hat diese `lineId`) oder `<CollectedNote>` (Kommentar zu dieser `lineId` vorhanden). In `DiffView.css` die Positionierung von `&__line` auf `&__row` verlegen; Zeilenhöhe bleibt `min-height: 20px`.
+- [x] Je Zeile: `lineId = lineIdOf(scope, repository.key, file.path, line.kind, line.kind === 'deleted' ? line.oldLine : line.newLine)` (Zahl ist bei kommentierbaren Zeilen nie `null`; sonst nicht kommentierbar).
+- [x] Knopf in `diff-view__line` (BEM `diff-view__comment`, Modifier `--collected`): „+“ → `openBox(sessionId, { lineId, text: '' })`; Sprechblase → `openBox(sessionId, { lineId, text: vorhandener.comment.text })`. CSS: `.diff-view__comment { opacity: 0 }`, `.diff-view__line:hover .diff-view__comment, .diff-view__comment:focus-visible, .diff-view__comment--collected { opacity: 1 }`; Fokusring wie `diff-view__close`.
+- [x] `CommentBox`-Handler: `onChange` → `setBoxText`; `onCancel` → `closeBox`; `onSubmit` → `upsert(sessionId, lineId, { repositoryKey: repository.key, repositoryName: repository.name, path: file.path, kind: line.kind, line: <Nummer>, code: line.text, text: text.trim() })`, dann `closeBox`. `isEditing` = es gibt schon einen Kommentar zu dieser `lineId`. `fileLabel` = `fileName(file.path)`.
+- [x] `CollectedNote`-Handler: `onEdit` wie Sprechblase, `onRemove` → `remove(sessionId, id)`.
+- [x] Nach Öffnen eines Felds muss es sichtbar sein: das fokussierte Textfeld scrollt der Browser ins Bild; prüfen an der letzten Zeile eines langen Diffs. Reicht das nicht, nach dem Öffnen `virtualizer.scrollToIndex(index, { align: 'auto' })` (Befund in FINDINGS.md).
 
 ### Reiter
 
-- [ ] `SessionHeader.tsx`: Zahl aus `useReviewStore((state) => state.collected[session.id]?.length ?? 0)`. Am Reiter `chat` bei Zahl > 0 `<span className="session-header__tab-count session-header__tab-count--review">{formatCount(n)}</span>` und `title` laut AK. CSS-Modifier in `SessionHeader.css`: Hintergrund `--color-accent`, Farbe `--color-fg-on-accent`, sonst wie `__tab-count`.
+- [x] `SessionHeader.tsx`: Zahl aus `useReviewStore((state) => state.collected[session.id]?.length ?? 0)`. Am Reiter `chat` bei Zahl > 0 `<span className="session-header__tab-count session-header__tab-count--review">{formatCount(n)}</span>` und `title` laut AK. CSS-Modifier in `SessionHeader.css`: Hintergrund `--color-accent`, Farbe `--color-fg-on-accent`, sonst wie `__tab-count`.
 
 ### Doku
 
-- [ ] `docs/code-map.md`, Zeile „Review-Kommentare“, Oberfläche: `src/stores/review.ts` (gesammelte Kommentare und offenes Feld je Session, `lineIdOf`), `src/features/review/` (`CommentBox`, `CollectedNote`, `reviewLabels`), Anschluss in `DiffView` (`canComment`) und am Reiter in `SessionHeader`. Zeile „Changes“: `DiffView` rendert je Zeile einen Wrapper mit Kommentarfeld bzw. gesammeltem Kommentar.
-- [ ] `docs/glossary.md`: Begriffe **Review-Kommentar** (Kommentar zu einer Diff-Zeile; wird in der Eingabeleiste gesammelt und mit der nächsten Nachricht an den Agenten geschickt, mit absolutem Pfad, Zeilennummer und Codezeile; im Code `ReviewComment`) und **Gesammelte Kommentare** (noch nicht gesendete Review-Kommentare einer Session; flüchtig, gehen beim Neustart der App verloren).
-- [ ] Commit `feat(review): comment on diff lines`.
+- [x] `docs/code-map.md`, Zeile „Review-Kommentare“, Oberfläche: `src/stores/review.ts` (gesammelte Kommentare und offenes Feld je Session, `lineIdOf`), `src/features/review/` (`CommentBox`, `CollectedNote`, `reviewLabels`), Anschluss in `DiffView` (`canComment`) und am Reiter in `SessionHeader`. Zeile „Changes“: `DiffView` rendert je Zeile einen Wrapper mit Kommentarfeld bzw. gesammeltem Kommentar.
+- [x] `docs/glossary.md`: Begriffe **Review-Kommentar** (Kommentar zu einer Diff-Zeile; wird in der Eingabeleiste gesammelt und mit der nächsten Nachricht an den Agenten geschickt, mit absolutem Pfad, Zeilennummer und Codezeile; im Code `ReviewComment`) und **Gesammelte Kommentare** (noch nicht gesendete Review-Kommentare einer Session; flüchtig, gehen beim Neustart der App verloren).
+- [x] Commit `feat(review): comment on diff lines`.
 
 ## Report-Back
+
+Status: **complete**. `pnpm check` grün; im gebauten CSS beginnt kein Selektor mit `__` oder `--`. Keine automatisierten Tests (Projektprofil), die Oberfläche ist nicht im laufenden Programm geprüft — das deckt die Smoke-Checkliste am Plan-Ende (Punkte 1, 4–7).
+
+Abweichungen:
+
+- **Kein `canComment`-Schalter:** `DiffView` nimmt `reach === 'session'` (FINDINGS → Phase 3); `ChangesView` und `App.tsx` unverändert.
+- **Kein `autoFocus` im Kommentarfeld:** Die virtualisierte Liste hängt eine Zeile beim Zurückscrollen neu ein; `autoFocus` riefe dabei `focus()` mit Scrollen auf und ließe den Diff zur Zeile springen. Stattdessen fokussiert `CommentBox` beim Einhängen mit `preventScroll`; nur direkt nach einem Klick auf „+“, Sprechblase oder „Bearbeiten“ scrollt der Fokus das Feld ins Bild (Props `shouldReveal`/`onRevealed`, Zustand `revealLineId` in `DiffView`). `virtualizer.scrollToIndex` ist nicht eingebaut — ob der Fokus-Scroll an der letzten Zeile eines langen Diffs reicht, ist ungeprüft (Smoke 1).
+- Sprechblasen-Knopf trägt `title` „Gesammelten Kommentar bearbeiten“, die Zahl am Reiter `font-weight: 600` — beides aus der Tafel.
+- Store exportiert zusätzlich `NO_COMMENTS` (stabiler Leerwert für Selektoren).
+
+Wackelstelle: `src/features/changes/DiffView.tsx`, Fokus-Scroll beim Öffnen des Felds an der letzten Zeile und das Nachmessen der wachsenden Zeile (Smoke 1).

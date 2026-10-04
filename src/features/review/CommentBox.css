@@ -1,0 +1,91 @@
+.comment-box {
+  display: flex;
+  flex-direction: column;
+  margin: 4px 16px 8px 116px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  color: var(--color-fg-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1.45;
+
+  &__head {
+    padding: 8px 12px 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__where {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+
+  &__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 64px;
+    padding: 6px 12px 8px;
+    border: 0;
+    outline: none;
+    resize: vertical;
+    background: transparent;
+    color: var(--color-fg-primary);
+    font: inherit;
+
+    &::placeholder {
+      color: var(--color-fg-muted);
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 8px 12px;
+  }
+
+  &__hint {
+    flex-grow: 1;
+    font-size: 11.5px;
+    color: var(--color-fg-muted);
+  }
+
+  &__cancel,
+  &__submit {
+    flex-shrink: 0;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+  }
+
+  &__cancel {
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-fg-primary);
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+  }
+
+  &__submit {
+    border: 0;
+    background: var(--color-accent);
+    color: var(--color-fg-on-accent);
+    font-weight: 600;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+}
