@@ -147,10 +147,11 @@ export function App(): ReactElement {
   }
 
   function renderOverview(project: ProjectSummary, latestSession: SessionSummary): ReactElement {
+    // Ein Schlüssel für die ganze Ansicht, nicht je Kind: gleiche Schlüssel an Geschwistern lassen React beim
+    // Wechsel Kopfzeilen duplizieren statt ersetzen.
     return (
-      <>
+      <Fragment key={project.id}>
         <ProjectHeader
-          key={project.id}
           project={project}
           sessions={overviewSessions}
           activeView={isChangesView ? 'changes' : 'overview'}
@@ -167,7 +168,6 @@ export function App(): ReactElement {
           />
         ) : (
           <ProjectOverview
-            key={project.id}
             project={project}
             sessions={overviewSessions}
             changes={changes}
@@ -176,7 +176,7 @@ export function App(): ReactElement {
             onProjectChanged={upsertProject}
           />
         )}
-      </>
+      </Fragment>
     );
   }
 
