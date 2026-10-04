@@ -120,10 +120,26 @@ Review-Kommentare zu den Changes (<Anzahl>):
 
 ## Summary
 
+Der Diff zeigt Syntaxfarben je Sprache (lowlight, je Abschnitt und Seite gefärbt). Jede Diff-Zeile der Changes-Ansicht einer Session lässt sich über ein „+“ kommentieren; die Kommentare werden je Session flüchtig gesammelt, stehen als Karten oben in der Eingabeleiste (bearbeiten, einzeln oder alle entfernen) und gehen mit der nächsten Nachricht gemeinsam an den Agenten — als strukturierte Liste am Chat-Eintrag, im Verlauf wieder als Karten. Der Core baut daraus den Text mit absolutem Pfad, Zeilennummer und Codezeile. Abgenommen: Sascha gab den Stand zum Release frei (2026-10-04); Ergebnisse der einzelnen Smoke-Punkte sind nicht protokolliert.
+
 ## Files touched
+
+- Core: `src-tauri/src/review/` (neu: `model.rs`, `mod.rs`), `sessions/registry.rs`, `commands/chat.rs`, `agents/event.rs`, `error.rs`, `tldr/transcript.rs`, `lib.rs`, `examples/gen-bindings.rs`.
+- Oberfläche: `src/features/review/` (neu: `CommentBox`, `CollectedNote`, `ReviewCommentCard`, `ReviewCommentList`, `reviewLabels`), `src/features/changes/` (`DiffView`, `highlightDiff`), `src/features/chat/` (`Composer`, `UserMessage`, `ChatTimeline`), `src/app/` (`SessionHeader`, `App`), `src/stores/review.ts`, `src/lib/syntax.ts`, `src/styles/syntax.css`, `src/lib/chat.ts`, erzeugte Typen unter `src/lib/bindings/`.
+- Doku: ADR 015, `docs/code-map.md`, `docs/PROJECT.md`, `docs/conventions/commits.md`.
 
 ## Commits
 
+- `a84bcca` feat(changes): color diff lines by language (Phase 1)
+- `2d8d90f` feat(review): send review comments with a chat message (Phase 2)
+- `2ae051b` feat(review): comment on diff lines (Phase 3)
+- `70f3a0e` feat(review): collect review comments in the composer and show them in sent messages (Phase 4)
+
 ## Deviations from plan
 
+- Kein eigenes `changes/entry.rs`: die Auflösung Schlüssel → Ordner lag durch den Plan „Innere Repositories“ (ADR 020) schon in `changes/sources.rs` und wird von dort genutzt.
+- Phase 4: Der Platzhalter „Nachricht zu den Kommentaren (optional) …“ gilt auch bei offener Rückfrage (Status `waiting`), nur abgebrochene und fehlerhafte Sessions behalten ihren eigenen Text — so steht es in den Abnahmekriterien.
+
 ## Follow-ups
+
+- Ob die gesendete Blase bei Kommentaren tatsächlich auf 560 px wächst, war nur im Code, nicht am Bildschirm geprüft.

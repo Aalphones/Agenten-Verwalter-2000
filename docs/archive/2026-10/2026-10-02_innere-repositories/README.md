@@ -143,4 +143,4 @@ Die Changes zeigen jetzt die Arbeit in Git-Repositories innerhalb eines angehän
 ## Follow-ups
 
 - Smoke-Checkliste oben und die zwei facepass-Läufe von `changes-probe` (Sessions `a6357b9c…`, `dd292f1c…`) auf dem Arbeitslaptop; Ergebnisse hier nachtragen.
-- Changes-Review: nutzt `sources::find`, siehe [FINDINGS](../../../planning/2026-10-01_changes-review/FINDINGS.md).
+- Changes-Review: nutzt `sources::find`, siehe [FINDINGS](../2026-10-01_changes-review/FINDINGS.md).

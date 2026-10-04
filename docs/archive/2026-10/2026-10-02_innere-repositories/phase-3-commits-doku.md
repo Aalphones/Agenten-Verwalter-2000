@@ -6,7 +6,7 @@
 - `src-tauri/src/changes/scan.rs` ganz (`session_dirs`, `own_commits`), `src-tauri/src/sessions/registry/commit_scan.rs`.
 - `src-tauri/src/changes/sources.rs` und `ChangesInput` in `changes/mod.rs` aus Phase 2; `changes::attribution::Ownership` (`Default`).
 - `src-tauri/src/sessions/registry.rs`: `SessionState` (`ticket_roots`, `ticket_worktrees`, `created_at`), `update` (ruft `commit_scan::schedule` nach der Sperre).
-- Doku: [docs/code-map.md](../../../code-map.md) (Zeilen „Changes“ und „Repositories einer Session, Worktrees“), [docs/glossary.md](../../../glossary.md) („Ticket-Worktree“, „Ordner ohne Git“), [AGENTS.md](../../../../AGENTS.md) (Tabelle „Befehle“), [STATE.md](../../../../STATE.md), [docs/planning/2026-10-01_changes-review/FINDINGS.md](../../../planning/2026-10-01_changes-review/FINDINGS.md).
+- Doku: [docs/code-map.md](../../../code-map.md) (Zeilen „Changes“ und „Repositories einer Session, Worktrees“), [docs/glossary.md](../../../glossary.md) („Ticket-Worktree“, „Ordner ohne Git“), [AGENTS.md](../../../../AGENTS.md) (Tabelle „Befehle“), [STATE.md](../../../../STATE.md), [docs/archive/2026-10/2026-10-01_changes-review/FINDINGS.md](../2026-10-01_changes-review/FINDINGS.md).
 - [docs/conventions/rust.md](../../../conventions/rust.md), [linting.md](../../../conventions/linting.md), [commits.md](../../../conventions/commits.md), [releases.md](../../../conventions/releases.md).
 - Fehlerklassen: wie Phase 1, keine weitere einschlägig.
 

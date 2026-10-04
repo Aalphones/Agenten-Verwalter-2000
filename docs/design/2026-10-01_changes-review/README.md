@@ -1,6 +1,6 @@
 # Design-Entwurf: Changes-Review
 
-**Status:** abgenommen am 2026-10-01 als Grundlage des Plans [Changes-Review](../../planning/2026-10-01_changes-review/README.md). Für Syntaxfarben im Diff, das Kommentieren einer Diff-Zeile, die Zahl am Reiter „Chat“, die gesammelten Kommentare über der Eingabe und ihre Darstellung in der gesendeten Nachricht ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md). Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
+**Status:** abgenommen am 2026-10-01 als Grundlage des Plans [Changes-Review](../../archive/2026-10/2026-10-01_changes-review/README.md). Für Syntaxfarben im Diff, das Kommentieren einer Diff-Zeile, die Zahl am Reiter „Chat“, die gesammelten Kommentare über der Eingabe und ihre Darstellung in der gesendeten Nachricht ist dieser Entwurf verbindlich; alles andere regelt weiter der Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md). Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
 
 ## Ansehen
 
