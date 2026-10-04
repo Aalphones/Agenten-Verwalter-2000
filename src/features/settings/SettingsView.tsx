@@ -5,21 +5,25 @@ import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
+import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
+import { OperatingModeSegment } from '@/features/settings/OperatingModeSegment';
 import { SelectButton } from '@/features/settings/SelectButton';
 import { SettingRow } from '@/features/settings/SettingRow';
+import { useLocalModels } from '@/features/settings/useLocalModels';
 import { useSettingsUpdate } from '@/features/settings/useSettingsUpdate';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
+import type { OperatingMode } from '@/lib/bindings/OperatingMode';
 import type { Settings } from '@/lib/bindings/Settings';
 import type { SettingsOverview } from '@/lib/bindings/SettingsOverview';
 import { commandErrorText } from '@/lib/errors';
-import { effortLabel, modeOption, modelName } from '@/lib/labels';
+import { effortLabel, localModelLabel, modeOption, modelName } from '@/lib/labels';
 import { useSettingsStore } from '@/stores/settings';
 import './SettingsView.css';
 
-type OpenMenu = 'model' | 'mode' | null;
+type OpenMenu = 'model' | 'mode' | 'localModel' | null;
 
 interface SettingsViewProps {
   overview: SettingsOverview | null;
@@ -35,8 +39,10 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
   const { save, error: saveError } = useSettingsUpdate();
 
   const settings: Settings | null = storedSettings ?? overview?.settings ?? null;
+  const isLocalOperation: boolean = settings !== null && settings.operatingMode !== 'claude';
+  const localModels = useLocalModels(isLocalOperation);
 
-  function toggleMenu(menu: 'model' | 'mode'): void {
+  function toggleMenu(menu: Exclude<OpenMenu, null>): void {
     setOpenMenu(openMenu === menu ? null : menu);
   }
 
@@ -50,6 +56,16 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
       console.error('Explorer nicht geöffnet', reason);
       setRevealError(`Explorer nicht geöffnet: ${commandErrorText(reason)}`);
     });
+  }
+
+  function saveOperatingMode(operatingMode: OperatingMode): void {
+    closeMenu();
+    save({ kind: 'operatingMode', value: operatingMode }).catch(() => undefined);
+  }
+
+  function saveLocalModel(id: string): void {
+    closeMenu();
+    save({ kind: 'localModel', value: id }).catch(() => undefined);
   }
 
   function saveDefaultModel(model: ModelId): void {
@@ -139,6 +155,36 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
         </section>
         <section className="settings-view__section">
           <h2 className="settings-view__section-title">Agent</h2>
+          <SettingRow
+            label="Betriebsart"
+            info="Claude: Modellanfragen gehen an dein Claude-Abo. Claude Code + LM Studio: dieselbe Claude-Kommandozeile mit Werkzeugen, Skills und Anweisungen, aber das Modell läuft lokal in LM Studio — für die Zeit, in der das Kontingent aufgebraucht ist. Gilt ab der nächsten Nachricht jeder Session."
+          >
+            <OperatingModeSegment value={current.operatingMode} onChange={saveOperatingMode} />
+          </SettingRow>
+          {current.operatingMode !== 'claude' && (
+            <SettingRow
+              label="Lokales Modell"
+              info="Ein in LM Studio geladenes Modell. Die Kontextlänge, mit der es dort geladen ist, gilt als Kontextfenster der Sessions. Adresse des Servers: Umgebungsvariable VERWALTER_LMSTUDIO_URL, sonst http://localhost:1234."
+            >
+              <SelectButton
+                label="Lokales Modell"
+                value={localModelLabel(current.localModel)}
+                isOpen={openMenu === 'localModel'}
+                onToggle={(): void => {
+                  toggleMenu('localModel');
+                }}
+              >
+                <LocalModelMenu
+                  value={current.localModel}
+                  models={localModels.models}
+                  isLoading={localModels.isLoading}
+                  onChange={saveLocalModel}
+                  onReload={localModels.reload}
+                  onClose={closeMenu}
+                />
+              </SelectButton>
+            </SettingRow>
+          )}
           <SettingRow
             label="Standardmodell"
             info="Mit diesem Modell startet die erste Session eines neuen Vorhabens; weitere Sessions im Vorhaben übernehmen den Stand der letzten. In der Session jederzeit über die Eingabeleiste änderbar."

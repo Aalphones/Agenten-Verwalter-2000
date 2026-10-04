@@ -18,7 +18,13 @@ import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import { discardAttachment } from '@/lib/attachments';
-import { effortLabel, modeOption, modelName, repositoryCountLabel } from '@/lib/labels';
+import {
+  effortLabel,
+  localModelLabel,
+  modeOption,
+  modelName,
+  repositoryCountLabel,
+} from '@/lib/labels';
 import { createProject } from '@/lib/projects';
 import { NEW_SESSION_KEY, useAttachmentsStore } from '@/stores/attachments';
 import { useSettingsStore } from '@/stores/settings';
@@ -61,6 +67,9 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     (state) => state.pending[NEW_SESSION_KEY] ?? NO_ATTACHMENTS,
   );
   const removeAttachment = useAttachmentsStore((state) => state.remove);
+  const operatingMode = useSettingsStore((state) => state.settings?.operatingMode ?? 'claude');
+  const localModel: string | null = useSettingsStore((state) => state.settings?.localModel ?? null);
+  const isLocal: boolean = operatingMode !== 'claude';
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Starten würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -281,30 +290,36 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
             Agent
           </div>
           <div className="new-session__pickers">
-            <div className="new-session__anchor">
-              <button
-                type="button"
-                className="new-session__model"
-                aria-haspopup="dialog"
-                aria-expanded={openMenu === 'model'}
-                aria-label={`Modell: ${modelName(model)}, Denkaufwand ${effortLabel(effort)}`}
-                onClick={(): void => {
-                  toggleMenu('model');
-                }}
-              >
-                Claude · {modelName(model)}{' '}
-                <span className="new-session__effort">{effortLabel(effort)}</span>
-              </button>
-              {openMenu === 'model' && (
-                <ModelMenu
-                  value={model}
-                  onChange={setModel}
-                  onClose={closeMenu}
-                  placement="below"
-                  note="Gilt für den Start dieser Session. Später im Chat änderbar."
-                />
-              )}
-            </div>
+            {isLocal ? (
+              <span className="new-session__model new-session__model--static">
+                LM Studio · {localModelLabel(localModel)}
+              </span>
+            ) : (
+              <div className="new-session__anchor">
+                <button
+                  type="button"
+                  className="new-session__model"
+                  aria-haspopup="dialog"
+                  aria-expanded={openMenu === 'model'}
+                  aria-label={`Modell: ${modelName(model)}, Denkaufwand ${effortLabel(effort)}`}
+                  onClick={(): void => {
+                    toggleMenu('model');
+                  }}
+                >
+                  Claude · {modelName(model)}{' '}
+                  <span className="new-session__effort">{effortLabel(effort)}</span>
+                </button>
+                {openMenu === 'model' && (
+                  <ModelMenu
+                    value={model}
+                    onChange={setModel}
+                    onClose={closeMenu}
+                    placement="below"
+                    note="Gilt für den Start dieser Session. Später im Chat änderbar."
+                  />
+                )}
+              </div>
+            )}
             <div className="new-session__anchor">
               <button
                 type="button"
@@ -327,6 +342,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
                   onEffortChange={setEffort}
                   onClose={closeMenu}
                   placement="below"
+                  showEffort={!isLocal}
                 />
               )}
             </div>
@@ -342,7 +358,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
           <span className="new-session__summary">
             {isStarting && repositoryIds.length > 0
               ? 'Session wird angelegt …'
-              : `${repositoryCountLabel(repositoryIds.length)} · ${modelName(model)} · ${currentMode.label}`}
+              : `${repositoryCountLabel(repositoryIds.length)} · ${isLocal ? localModelLabel(localModel) : modelName(model)} · ${currentMode.label}`}
           </span>
         </div>
         {errorMessage !== null && (

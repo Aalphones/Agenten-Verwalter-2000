@@ -12,6 +12,7 @@ import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
 import { useReviewStore } from '@/stores/review';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import './SessionHeader.css';
 
 const MS_PER_SECOND = 1000;
@@ -58,7 +59,16 @@ export function SessionHeader({
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const reviewCount: number = useReviewStore((state) => state.collected[session.id]?.length ?? 0);
+  // Das Kontingent gehört zum Claude-Abo; im lokalen Betrieb gibt es nichts anzuzeigen.
+  const hasUsage: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
+  );
   const isTicking: boolean = session.runningSince !== null;
+
+  // Wechselt die Betriebsart bei offenem Kontingent-Fenster, schließt es mit.
+  if (!hasUsage && openPanel === 'usage') {
+    setOpenPanel(null);
+  }
 
   useEffect(() => {
     if (!isTicking) {
@@ -280,13 +290,15 @@ export function SessionHeader({
           </button>
           {openPanel === 'context' && <ContextPopover session={session} onClose={closePanel} />}
         </div>
-        <UsageButton
-          isOpen={openPanel === 'usage'}
-          onToggle={(): void => {
-            togglePanel('usage');
-          }}
-          onClose={closePanel}
-        />
+        {hasUsage && (
+          <UsageButton
+            isOpen={openPanel === 'usage'}
+            onToggle={(): void => {
+              togglePanel('usage');
+            }}
+            onClose={closePanel}
+          />
+        )}
         <span className="session-header__runtime session-header__mono" title="Laufzeit der Session">
           <svg
             width="12"

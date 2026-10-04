@@ -17,6 +17,8 @@ interface ModeMenuProps {
   onClose: () => void;
   placement: 'above' | 'below';
   align?: 'start' | 'end';
+  /** `false` in der Betriebsart Claude Code + LM Studio: dort gibt es keinen Denkaufwand. */
+  showEffort?: boolean;
 }
 
 export function ModeMenu({
@@ -27,6 +29,7 @@ export function ModeMenu({
   onClose,
   placement,
   align = 'end',
+  showEffort = true,
 }: ModeMenuProps): ReactElement {
   return (
     <Popover
@@ -62,9 +65,11 @@ export function ModeMenu({
           </button>
         );
       })}
-      <div className="mode-menu__foot">
-        <EffortDots value={effort} onChange={onEffortChange} />
-      </div>
+      {showEffort && (
+        <div className="mode-menu__foot">
+          <EffortDots value={effort} onChange={onEffortChange} />
+        </div>
+      )}
     </Popover>
   );
 }

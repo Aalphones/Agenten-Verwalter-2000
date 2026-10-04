@@ -172,6 +172,14 @@
   &__model {
     border-radius: 15px;
     color: var(--color-fg-primary);
+
+    &--static {
+      cursor: default;
+
+      &:hover {
+        background: transparent;
+      }
+    }
   }
 
   &__mode {

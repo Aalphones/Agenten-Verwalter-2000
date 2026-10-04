@@ -124,6 +124,14 @@
     border-radius: 13px;
     color: var(--color-fg-primary);
     font-size: var(--font-size-xs);
+
+    &--static {
+      cursor: default;
+
+      &:hover {
+        background: transparent;
+      }
+    }
   }
 
   &__effort {

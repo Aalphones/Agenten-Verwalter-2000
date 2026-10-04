@@ -21,7 +21,7 @@ import type { ModelId } from '@/lib/bindings/ModelId';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { sendMessage } from '@/lib/chat';
-import { MODE_OPTIONS, effortLabel, modeOption, modelName } from '@/lib/labels';
+import { MODE_OPTIONS, effortLabel, localModelLabel, modeOption, modelName } from '@/lib/labels';
 import type { ModeOption } from '@/lib/labels';
 import { pauseSession, setSessionEffort, setSessionMode, setSessionModel } from '@/lib/sessions';
 import { useAttachmentsStore } from '@/stores/attachments';
@@ -29,9 +29,14 @@ import { useChatStore } from '@/stores/chat';
 import { NO_COMMENTS, useReviewStore } from '@/stores/review';
 import type { CollectedComment } from '@/stores/review';
 import { useSessionsStore } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import { useVoiceStore } from '@/stores/voice';
 import './Composer.css';
 
+const LOCAL_MODEL_TITLE =
+  'Modell der Betriebsart „Claude Code + LM Studio“ — ändern in den Einstellungen';
+const LOCAL_MODEL_PICK_HINT =
+  'Das Modell wählst du in der Betriebsart „Claude Code + LM Studio“ in den Einstellungen.';
 const NOTE_WHILE_ACTIVE =
   'Gilt ab der nächsten Nachricht an den Agenten. Der bisherige Verlauf bleibt erhalten.';
 const NOTE_WHILE_IDLE = 'Gilt ab der nächsten Nachricht in dieser Session.';
@@ -64,6 +69,9 @@ export function Composer({ session }: ComposerProps): ReactElement {
   );
   const showView = useSessionsStore((state) => state.showView);
   const startRename = useSessionsStore((state) => state.startRename);
+  const operatingMode = useSettingsStore((state) => state.settings?.operatingMode ?? 'claude');
+  const localModel: string | null = useSettingsStore((state) => state.settings?.localModel ?? null);
+  const isLocal: boolean = operatingMode !== 'claude';
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Senden würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -192,7 +200,11 @@ export function Composer({ session }: ComposerProps): ReactElement {
     if (row.kind === 'attach') {
       openPicker();
     } else if (row.kind === 'model') {
-      setOpenMenu('model');
+      if (isLocal) {
+        setErrorMessage(LOCAL_MODEL_PICK_HINT);
+      } else {
+        setOpenMenu('model');
+      }
     } else if (row.kind === 'skill') {
       setDraft(session.id, applySkillToDraft(draft, row.skill.name));
       inputRef.current?.focus();
@@ -309,30 +321,36 @@ export function Composer({ session }: ComposerProps): ReactElement {
           >
             <SlashIcon />
           </button>
-          <div className="composer__anchor">
-            <button
-              type="button"
-              className="composer__model"
-              aria-haspopup="dialog"
-              aria-expanded={openMenu === 'model'}
-              aria-label={`Modell: ${modelName(session.model)}, Denkaufwand ${effortLabel(session.effort)}`}
-              onClick={(): void => {
-                toggleMenu('model');
-              }}
-            >
-              <span>{modelName(session.model)}</span>
-              <span className="composer__effort">{effortLabel(session.effort)}</span>
-            </button>
-            {openMenu === 'model' && (
-              <ModelMenu
-                value={session.model}
-                onChange={changeModel}
-                onClose={closeMenu}
-                placement="above"
-                note={modelNote}
-              />
-            )}
-          </div>
+          {isLocal ? (
+            <span className="composer__model composer__model--static" title={LOCAL_MODEL_TITLE}>
+              {localModelLabel(localModel)}
+            </span>
+          ) : (
+            <div className="composer__anchor">
+              <button
+                type="button"
+                className="composer__model"
+                aria-haspopup="dialog"
+                aria-expanded={openMenu === 'model'}
+                aria-label={`Modell: ${modelName(session.model)}, Denkaufwand ${effortLabel(session.effort)}`}
+                onClick={(): void => {
+                  toggleMenu('model');
+                }}
+              >
+                <span>{modelName(session.model)}</span>
+                <span className="composer__effort">{effortLabel(session.effort)}</span>
+              </button>
+              {openMenu === 'model' && (
+                <ModelMenu
+                  value={session.model}
+                  onChange={changeModel}
+                  onClose={closeMenu}
+                  placement="above"
+                  note={modelNote}
+                />
+              )}
+            </div>
+          )}
           <div className="composer__anchor composer__anchor--end">
             <button
               type="button"
@@ -355,6 +373,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
                 onEffortChange={changeEffort}
                 onClose={closeMenu}
                 placement="above"
+                showEffort={!isLocal}
               />
             )}
           </div>

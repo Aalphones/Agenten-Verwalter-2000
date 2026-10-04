@@ -1,6 +1,14 @@
 import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
+import type { OperatingMode } from '@/lib/bindings/OperatingMode';
+
+const NO_LOCAL_MODEL_LABEL = 'Kein Modell gewählt';
+
+export interface OperatingModeOption {
+  readonly id: OperatingMode;
+  readonly label: string;
+}
 
 export interface ModelOption {
   readonly id: ModelId;
@@ -19,6 +27,11 @@ export interface EffortOption {
   readonly id: Effort;
   readonly label: string;
 }
+
+export const OPERATING_MODE_OPTIONS: readonly OperatingModeOption[] = [
+  { id: 'claude', label: 'Claude' },
+  { id: 'claudeCodeLocal', label: 'Claude Code + LM Studio' },
+] as const;
 
 export const MODEL_OPTIONS: readonly ModelOption[] = [
   { id: 'fable', name: 'Fable 5.1', hint: 'Am stärksten, für Planung und Architektur' },
@@ -67,6 +80,14 @@ export function modelName(id: ModelId): string {
     (candidate: ModelOption) => candidate.id === id,
   );
   return option === undefined ? id : option.name;
+}
+
+/** Der Teil der LM-Studio-Kennung nach dem letzten `/`; `null` heißt: kein Modell gewählt. */
+export function localModelLabel(id: string | null): string {
+  if (id === null) {
+    return NO_LOCAL_MODEL_LABEL;
+  }
+  return id.slice(id.lastIndexOf('/') + 1);
 }
 
 export function effortLabel(id: Effort): string {
