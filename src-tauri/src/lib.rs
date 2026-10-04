@@ -12,6 +12,7 @@ pub mod mcp;
 pub mod processes;
 pub mod projects;
 pub mod repositories;
+pub mod review;
 pub mod sessions;
 pub mod settings;
 pub mod skills;

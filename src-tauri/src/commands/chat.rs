@@ -1,5 +1,6 @@
 use crate::agents::event::QuestionAnswer;
 use crate::error::CommandError;
+use crate::review::model::ReviewComment;
 use crate::sessions::model::ChatPage;
 use crate::sessions::registry::SessionRegistry;
 
@@ -20,8 +21,9 @@ pub async fn chat_send(
     session_id: String,
     text: String,
     attachment_ids: Vec<String>,
+    comments: Vec<ReviewComment>,
 ) -> Result<(), CommandError> {
-    registry.send(&app, &session_id, &text, &attachment_ids)
+    registry.send(&app, &session_id, &text, &attachment_ids, &comments)
 }
 
 #[tauri::command]

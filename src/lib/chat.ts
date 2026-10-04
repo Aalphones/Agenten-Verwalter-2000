@@ -3,6 +3,7 @@ import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { ChatEntryEvent } from '@/lib/bindings/ChatEntryEvent';
 import type { ChatPage } from '@/lib/bindings/ChatPage';
 import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
+import type { ReviewComment } from '@/lib/bindings/ReviewComment';
 
 const CHAT_ENTRY_EVENT = 'chat://entry';
 
@@ -17,15 +18,18 @@ export function getChatHistory(
 }
 
 /** Schickt eine Nachricht; ist eine Rückfrage offen, beantwortet sie die älteste. Die Anhänge wandern
- *  dabei aus dem Zwischenordner in den Workspace der Session.
+ *  dabei aus dem Zwischenordner in den Workspace der Session. Die Review-Kommentare gehen als Block
+ *  hinter dem Text an den Agenten.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `sessionClosed`,
- *    `agentStopped`, `attachmentsWhileWaiting`, `io` (Anhang fehlt oder ungültige ID) */
+ *    `agentStopped`, `attachmentsWhileWaiting`, `commentsWhileWaiting`, `io` (Anhang fehlt oder
+ *    ungültige ID), `internal` (Kommentar auf einem Abschnittskopf oder ohne Text) */
 export async function sendMessage(
   sessionId: string,
   text: string,
   attachmentIds: string[],
+  comments: ReviewComment[],
 ): Promise<void> {
-  await invoke('chat_send', { sessionId, text, attachmentIds });
+  await invoke('chat_send', { sessionId, text, attachmentIds, comments });
 }
 
 /** Beantwortet eine Rückfrage oder Rechte-Abfrage.

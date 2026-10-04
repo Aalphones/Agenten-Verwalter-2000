@@ -118,7 +118,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
     const attachmentIds: string[] = pending.map((attachment: Attachment) => attachment.id);
     setIsSending(true);
     setErrorMessage(null);
-    sendMessage(session.id, text, attachmentIds)
+    sendMessage(session.id, text, attachmentIds, [])
       .then(() => {
         useAttachmentsStore.getState().clearIds(session.id, attachmentIds);
         // Wurde während des Sendens weitergetippt, bleibt der neuere Text erhalten.
@@ -424,6 +424,9 @@ function describeError(reason: unknown): string {
     }
     if (reason.kind === 'attachmentsWhileWaiting') {
       return 'Anhänge gehen erst, wenn die Rückfrage beantwortet ist.';
+    }
+    if (reason.kind === 'commentsWhileWaiting') {
+      return 'Review-Kommentare gehen erst, wenn die Rückfrage beantwortet ist.';
     }
     if ('message' in reason) {
       return `Aktion fehlgeschlagen: ${reason.message}`;

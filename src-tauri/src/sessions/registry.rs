@@ -49,6 +49,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::mcp::model::{McpAction, McpActionError, McpChangedEvent, McpServer};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
+use crate::review::{self, model::ReviewComment};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, name_from_task};
 use crate::skills::{self, model::SkillRef};
@@ -457,7 +458,7 @@ impl SessionRegistry {
                 outbox.summary_dirty = true;
                 start_process(app, &session, state, outbox)?;
                 let line = message_line(task, &task_attachments)?;
-                state.push_user(outbox, task, task_attachments, task_skill);
+                state.push_user(outbox, task, task_attachments, task_skill, Vec::new());
                 outbox.write(state, line)?;
                 Ok(summarize(&session, state))
             },
@@ -769,13 +770,16 @@ impl SessionRegistry {
         session_id: &str,
         text: &str,
         attachment_ids: &[String],
+        comments: &[ReviewComment],
     ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
+        review::validate(comments)?;
         // Dateizugriffe gehören nicht unter die Session-Sperre.
         let skill: Option<SkillRef> = skills::match_invocation(
             text,
             &skills::collect(&home_dir(app)?, &self.skill_roots(session_id)?),
         );
+        let folders: Vec<Option<PathBuf>> = self.comment_folders(session_id, comments);
         // Vor `update` gelesen: Vorhaben- und Session-Sperre nie zugleich.
         let carried: Option<String> = self
             .lock_projects()
@@ -792,12 +796,16 @@ impl SessionRegistry {
                     _ => {}
                 }
                 if !state.pending.is_empty() {
-                    // Die Antwort auf eine Rückfrage ist reiner Text — Anhänge hätten keinen Platz.
+                    // Die Antwort auf eine Rückfrage ist reiner Text — Anhänge und Kommentare hätten
+                    // keinen Platz.
+                    if !comments.is_empty() {
+                        return Err(CommandError::CommentsWhileWaiting);
+                    }
                     if !attachment_ids.is_empty() {
                         return Err(CommandError::AttachmentsWhileWaiting);
                     }
                     answer_oldest_with_text(state, outbox, text)?;
-                    state.push_user(outbox, text, Vec::new(), skill);
+                    state.push_user(outbox, text, Vec::new(), skill, Vec::new());
                     return Ok(());
                 }
                 // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem
@@ -823,7 +831,8 @@ impl SessionRegistry {
                     }
                     _ => text,
                 };
-                let line = message_line(sent_text, &sent_attachments)?;
+                let agent_text = review::agent_text(sent_text, comments, &folders);
+                let line = message_line(&agent_text, &sent_attachments)?;
                 // Erst nach allen Schritten, die scheitern können: ein Fehlstart lässt den Namen
                 // stehen. Der Name kommt aus dem getippten Text, nicht aus dem Stand des Vorhabens.
                 if state.status == SessionStatus::New
@@ -832,7 +841,13 @@ impl SessionRegistry {
                     state.name = name_from_task(text);
                     outbox.summary_dirty = true;
                 }
-                state.push_user(outbox, sent_text, sent_attachments, skill);
+                state.push_user(
+                    outbox,
+                    sent_text,
+                    sent_attachments,
+                    skill,
+                    comments.to_vec(),
+                );
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
             },
@@ -882,7 +897,7 @@ impl SessionRegistry {
         if status != SessionStatus::Paused {
             return Ok(());
         }
-        self.send(app, session_id, RESUME_MESSAGE, &[])
+        self.send(app, session_id, RESUME_MESSAGE, &[], &[])
     }
 
     pub fn cancel(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
@@ -1114,6 +1129,35 @@ impl SessionRegistry {
             }
         }
         Ok(worktrees)
+    }
+
+    /// Der Ordner zu jedem Kommentar, in dessen Reihenfolge. Der Schlüssel aus der Oberfläche wird
+    /// nur mit den Einträgen verglichen, die die Changes selbst bauen (wie bei `sources::find`),
+    /// nie als Pfad benutzt. Ein nicht mehr auflösbarer Eintrag nennt den Repository-Namen statt zu
+    /// scheitern.
+    fn comment_folders(
+        &self,
+        session_id: &str,
+        comments: &[ReviewComment],
+    ) -> Vec<Option<PathBuf>> {
+        if comments.is_empty() {
+            return Vec::new();
+        }
+        let Ok(input) = self.changes_input(session_id, ChangesReach::Session) else {
+            return vec![None; comments.len()];
+        };
+        let entries: Vec<sources::Source> = sources::sources(&input);
+        comments
+            .iter()
+            .map(|comment: &ReviewComment| {
+                entries
+                    .iter()
+                    .find(|entry: &&sources::Source| {
+                        entry.key.eq_ignore_ascii_case(&comment.repository_key)
+                    })
+                    .map(|entry: &sources::Source| entry.dir.clone())
+            })
+            .collect()
     }
 
     /// Workspace, Repositories, Ticket-Worktrees und eigene Commits/Dateien der Reichweite. Nie zwei
@@ -1742,6 +1786,7 @@ impl SessionState {
         text: &str,
         attachments: Vec<Attachment>,
         skill: Option<SkillRef>,
+        comments: Vec<ReviewComment>,
     ) {
         let sent_at = now_ms();
         self.push_entry(outbox, |seq: u32| ChatEntry::User {
@@ -1750,6 +1795,7 @@ impl SessionState {
             sent_at,
             attachments,
             skill,
+            comments,
         });
         self.touch_activity(outbox);
         // Wer sendet, hat die Session gesehen.

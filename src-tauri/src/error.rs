@@ -30,6 +30,8 @@ pub enum CommandError {
     FolderNotAllowed(String),
     #[error("Anhänge gehen erst, wenn die Rückfrage beantwortet ist")]
     AttachmentsWhileWaiting,
+    #[error("Review-Kommentare gehen erst, wenn die Rückfrage beantwortet ist")]
+    CommentsWhileWaiting,
     #[error("Sprachmodell fehlt")]
     VoiceModelMissing,
     #[error("Es läuft schon ein Diktat")]

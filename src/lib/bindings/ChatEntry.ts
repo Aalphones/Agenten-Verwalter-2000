@@ -2,6 +2,7 @@
 import type { Attachment } from "./Attachment";
 import type { Question } from "./Question";
 import type { QuestionKind } from "./QuestionKind";
+import type { ReviewComment } from "./ReviewComment";
 import type { SkillRef } from "./SkillRef";
 import type { TodoItem } from "./TodoItem";
 import type { ToolState } from "./ToolState";
@@ -18,4 +19,8 @@ attachments: Array<Attachment>,
 /**
  * Der Skill, den die Nachricht mit `/name` aufruft.
  */
-skill: SkillRef | null, } | { "kind": "text", seq: number, text: string, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "question", seq: number, requestId: string, questionKind: QuestionKind, questions: Array<Question>, answer: string | null, } | { "kind": "error", seq: number, title: string, text: string, };
+skill: SkillRef | null, 
+/**
+ * Review-Kommentare aus der Changes-Ansicht; Einträge von vorher haben das Feld nicht.
+ */
+comments: Array<ReviewComment>, } | { "kind": "text", seq: number, text: string, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "question", seq: number, requestId: string, questionKind: QuestionKind, questions: Array<Question>, answer: string | null, } | { "kind": "error", seq: number, title: string, text: string, };

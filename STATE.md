@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_changes-review/`
-**Phase:** 2/4 — Core: Typ `ReviewComment`, `chat_send` mit Kommentaren (pending)
-**Nächster Schritt:** Phase 2 umsetzen (`phase-2-core.md`; FINDINGS → Phase 2 zuerst lesen), committen, dann Pflicht-Clear.
+**Phase:** 3/4 — Kommentieren im Diff: Store, „+“, Kommentarfeld, gesammelte Kommentare, Zahl am Reiter (pending, heikel)
+**Nächster Schritt:** Phase 3 umsetzen (`phase-3-diff.md`; FINDINGS → Phase 3 zuerst lesen), committen, dann Pflicht-Clear. Modell: `opusplan` (heikel).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

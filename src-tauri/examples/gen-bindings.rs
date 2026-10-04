@@ -23,6 +23,7 @@ use verwalter_lib::{
     },
     projects::model::{ProjectCreated, ProjectSummary},
     repositories::model::{KnownRepository, RepositoryKind},
+    review::model::ReviewComment,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     settings::model::{ColorScheme, Settings, SettingsChange, SettingsOverview},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
@@ -50,6 +51,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     QuestionKind::export_all(&cfg)?;
     AttachmentKind::export_all(&cfg)?;
     Attachment::export_all(&cfg)?;
+    ReviewComment::export_all(&cfg)?;
     SkillOrigin::export_all(&cfg)?;
     SkillKind::export_all(&cfg)?;
     SkillInfo::export_all(&cfg)?;

@@ -59,7 +59,7 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
 
   function compact(): void {
     // Wie eine getippte Nachricht: die Kommandozeile fasst zusammen, der Chat zeigt den Verlauf.
-    sendMessage(session.id, COMPACT_COMMAND, []).catch((reason: unknown) => {
+    sendMessage(session.id, COMPACT_COMMAND, [], []).catch((reason: unknown) => {
       console.error('Compact nicht sendbar', reason);
     });
     onClose();

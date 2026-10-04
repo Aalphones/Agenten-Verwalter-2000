@@ -4,6 +4,7 @@ use ts_rs::TS;
 
 use crate::context::model::ContextBreakdown;
 use crate::mcp::model::McpServer;
+use crate::review::model::ReviewComment;
 use crate::skills::model::SkillRef;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -165,6 +166,9 @@ pub enum ChatEntry {
         /// Der Skill, den die Nachricht mit `/name` aufruft.
         #[serde(default)]
         skill: Option<SkillRef>,
+        /// Review-Kommentare aus der Changes-Ansicht; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        comments: Vec<ReviewComment>,
     },
     Text {
         seq: u32,

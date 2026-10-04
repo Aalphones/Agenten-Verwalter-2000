@@ -1,6 +1,8 @@
 //! Texte für Haiku und den Agenten: der Gesprächstext einer Session, die Session-TL;DRs eines
 //! Vorhabens und der Stand des Vorhabens, den die erste Nachricht einer neuen Session mitnimmt.
 use crate::agents::event::{Attachment, ChatEntry, Question, TodoItem, TodoState};
+use crate::changes::model::DiffLineKind;
+use crate::review::model::ReviewComment;
 use crate::sessions::model::SessionStatus;
 use crate::tldr::model::{ProjectTldr, SessionTldr};
 
@@ -39,9 +41,12 @@ pub fn session_transcript(entries: &[ChatEntry]) -> String {
 fn entry_block(entry: &ChatEntry) -> Option<Block> {
     let text = match entry {
         ChatEntry::User {
-            text, attachments, ..
+            text,
+            attachments,
+            comments,
+            ..
         } => {
-            if attachments.is_empty() {
+            let mut block = if attachments.is_empty() {
                 format!("Nutzer: {text}")
             } else {
                 let names: Vec<&str> = attachments
@@ -49,7 +54,16 @@ fn entry_block(entry: &ChatEntry) -> Option<Block> {
                     .map(|attachment: &Attachment| attachment.name.as_str())
                     .collect();
                 format!("Nutzer: {text} [Anhänge: {}]", names.join(", "))
+            };
+            for comment in comments {
+                block.push_str(&format!(
+                    "\n  Review-Kommentar zu {} {}: {}",
+                    comment.path,
+                    line_label(comment),
+                    comment.text
+                ));
             }
+            block
         }
         ChatEntry::Text { text, .. } => format!("Claude: {text}"),
         ChatEntry::Question {
@@ -74,6 +88,13 @@ fn entry_block(entry: &ChatEntry) -> Option<Block> {
         text,
         is_user: matches!(entry, ChatEntry::User { .. }),
     })
+}
+
+fn line_label(comment: &ReviewComment) -> String {
+    match comment.kind {
+        DiffLineKind::Deleted => format!("Zeile {} (alt)", comment.line),
+        _ => format!("Zeile {}", comment.line),
+    }
 }
 
 fn todo_block(items: &[TodoItem]) -> String {
