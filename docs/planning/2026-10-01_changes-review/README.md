@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Syntaxfarben im Diff, ADR 015 | [phase-1-syntaxfarben.md](phase-1-syntaxfarben.md) | standard | pending |
+| 1 | Syntaxfarben im Diff, ADR 015 | [phase-1-syntaxfarben.md](phase-1-syntaxfarben.md) | standard | complete |
 | 2 | Core: Typ `ReviewComment`, `chat_send` mit Kommentaren, Text an den Agenten | [phase-2-core.md](phase-2-core.md) | standard | pending |
 | 3 | Kommentieren im Diff: Store, „+“, Kommentarfeld, gesammelte Kommentare, Zahl am Reiter | [phase-3-diff.md](phase-3-diff.md) | heikel | pending |
 | 4 | Chat: Karten in der Eingabeleiste, Senden, Karten in der gesendeten Nachricht, Doku | [phase-4-chat.md](phase-4-chat.md) | standard | pending |

@@ -30,7 +30,7 @@ Meilenstein 5 zeigt, was der Agent in den Worktrees einer Session geändert hat 
 
 - Eine umbenannte Datei erscheint doppelt: gelöscht (D) und neu (A).
 - Änderungen des Agenten erscheinen bis zu 5 s verzögert.
-- Keine Syntaxfarben im Diff.
+- Keine Syntaxfarben im Diff — abgelöst durch [ADR 015](015-changes-review.md).
 - Der Monaco Diff Editor entfällt aus dem Stack.
 - Artefakte gehören nicht zu Meilenstein 5; ob die Claude-Kommandozeile sie überhaupt meldet, ist offen.
 - „Basis für Changes“ als Einstellung folgt in Meilenstein 6; bis dahin gilt `base_commit`.

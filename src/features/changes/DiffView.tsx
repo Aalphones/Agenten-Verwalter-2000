@@ -8,6 +8,7 @@ import {
   statOf,
   statStamp,
 } from '@/features/changes/changesScope';
+import { highlightDiff } from '@/features/changes/highlightDiff';
 import { useFileDiff } from '@/features/changes/useFileDiff';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
@@ -15,6 +16,7 @@ import type { DiffLine } from '@/lib/bindings/DiffLine';
 import type { FileChange } from '@/lib/bindings/FileChange';
 import type { LineStat } from '@/lib/bindings/LineStat';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
+import { languageOf, plainLine, type SyntaxLine, type SyntaxSegment } from '@/lib/syntax';
 import './DiffView.css';
 
 const LINE_HEIGHT = 20;
@@ -37,7 +39,7 @@ interface RenderedLine {
   oldLine: string;
   newLine: string;
   sign: string;
-  text: string;
+  segments: SyntaxLine;
 }
 
 const SIGN: Record<DiffLine['kind'], string> = {
@@ -66,6 +68,11 @@ export function DiffView({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const lines: readonly DiffLine[] = useMemo(() => diff?.lines ?? [], [diff]);
+  const language: string | null = useMemo(() => languageOf(file.path), [file.path]);
+  const highlighted: SyntaxLine[] = useMemo(
+    () => highlightDiff(lines, language),
+    [lines, language],
+  );
   const isTruncated: boolean = diff?.truncated ?? false;
   const count: number = lines.length + (isTruncated ? 1 : 0);
 
@@ -100,7 +107,7 @@ export function DiffView({
         style={{ height: `${String(virtualizer.getTotalSize())}px` }}
       >
         {virtualizer.getVirtualItems().map((item: VirtualItem) => {
-          const rendered: RenderedLine = renderLine(lines[item.index]);
+          const rendered: RenderedLine = renderLine(lines[item.index], highlighted[item.index]);
           return (
             <div
               key={item.key}
@@ -112,7 +119,17 @@ export function DiffView({
               <span className="diff-view__old">{rendered.oldLine}</span>
               <span className="diff-view__new">{rendered.newLine}</span>
               <span className="diff-view__sign">{rendered.sign}</span>
-              <span className="diff-view__text">{rendered.text}</span>
+              <span className="diff-view__text">
+                {rendered.segments.map((segment: SyntaxSegment, index: number) =>
+                  segment.className === null ? (
+                    segment.text
+                  ) : (
+                    <span key={index} className={segment.className}>
+                      {segment.text}
+                    </span>
+                  ),
+                )}
+              </span>
             </div>
           );
         })}
@@ -165,15 +182,21 @@ export function DiffView({
 }
 
 /** Ohne Zeile (Index hinter der letzten) steht die Kürzungs-Meldung im Stil eines Abschnittskopfs. */
-function renderLine(line: DiffLine | undefined): RenderedLine {
+function renderLine(line: DiffLine | undefined, segments: SyntaxLine | undefined): RenderedLine {
   if (line === undefined) {
-    return { kind: 'hunk', oldLine: '', newLine: '', sign: '', text: TRUNCATED_TEXT };
+    return {
+      kind: 'hunk',
+      oldLine: '',
+      newLine: '',
+      sign: '',
+      segments: plainLine(TRUNCATED_TEXT),
+    };
   }
   return {
     kind: line.kind,
     oldLine: line.oldLine === null ? '' : String(line.oldLine),
     newLine: line.newLine === null ? '' : String(line.newLine),
     sign: SIGN[line.kind],
-    text: line.text,
+    segments: segments ?? plainLine(line.text),
   };
 }

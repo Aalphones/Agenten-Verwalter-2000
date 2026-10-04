@@ -1,0 +1,66 @@
+/* Farben der Syntaxhervorhebung: highlight.js vergibt nur Klassen, die Zuordnung
+   auf die Tokens steht hier. Kein highlight.js-Stylesheet, damit Hell/Dunkel über
+   die semantischen Tokens läuft. Die Klassen kommen nur in gefärbtem Inhalt vor
+   (Codeblöcke im Chat, Diff-Zeilen), deshalb gilt die Zuordnung global. */
+.hljs-keyword,
+.hljs-literal,
+.hljs-built_in,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-bullet {
+  color: var(--color-code-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-link {
+  color: var(--color-code-string);
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--color-code-comment);
+}
+
+.hljs-number {
+  color: var(--color-code-number);
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-section {
+  color: var(--color-code-function);
+}
+
+.hljs-type,
+.hljs-title.class_ {
+  color: var(--color-code-type);
+}
+
+.hljs-variable,
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-params {
+  color: var(--color-code-variable);
+}
+
+.hljs-addition {
+  color: var(--color-diff-add-fg);
+}
+
+.hljs-deletion {
+  color: var(--color-diff-del-fg);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}
