@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/` (noch nicht gestartet; Freigabe und Reihenfolge klären)
-**Phase:** —
-**Nächster Schritt:** Plan 5 „Autark“ lesen; vorher 🟡 Autark Phase 7 messen (LM Studio parallel).
+**Aktiver Plan:** `docs/planning/2026-10-05_claude-konto.md` (freigegeben, noch nicht gestartet)
+**Phase:** 1 — Core
+**Nächster Schritt:** Phase 1 des Plans umsetzen; danach Plan 5 „Autark“ (vorher 🟡 Autark Phase 7 messen, LM Studio parallel).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -12,6 +12,7 @@
 2. ~~Session-Changes~~ — erledigt und archiviert (`v0.9.0`).
 3. ~~Changes-Review~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_changes-review/`, `v0.12.0`, ADR 015).
 4. ~~Claude Code + LM Studio~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_claude-code-lokal/`, `v0.13.0`, ADR 016).
+4a. **Claude-Konto** (`claude-konto`) — Konto anzeigen und über `claude auth login` wechseln, 2 Phasen, ADR 021.
 5. **Autark** (`autarker-agent`) — Plan 4 steht, größter Plan (9 Phasen, drei „heikel“).
 
 ## Offen
