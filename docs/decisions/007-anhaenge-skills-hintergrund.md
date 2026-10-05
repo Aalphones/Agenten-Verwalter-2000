@@ -40,7 +40,7 @@ Meilenstein 2b ergänzt die Eingabeleiste um Anhänge (Knopf `+`, Hineinziehen, 
 - **Zustände:** `running`, `completed`, `failed`, `stopped` (von der App angehalten), `interrupted` (der Agent-Prozess endete, während der Eintrag lief — er kann trotzdem weitergelaufen sein).
 - **Ausgabe:** `command` aus dem `tool_result` (höchstens 64 KiB, in SQLite); `process` aus Claudes Ausgabedatei (höchstens die letzten 256 KiB). Die Liste lädt nie Ausgaben mit.
 - **Anhalten** über die Steueranfrage `stop_task`. „Neu starten“ und „Erneut ausführen“ entfallen: Die Kommandozeile bietet nichts dafür, und die App führt keine Befehle selbst aus.
-- **(b) Claudes eigener Scratchpad.** `system/init.scratchpad_path` ist belegt und bleibt über `--resume` gleich; ein eigener Ordner bräuchte einen Systemprompt-Zusatz, auf den sich der Agent nicht verlassen muss. Der Core speichert den Pfad an der Session und gibt ihn für das Asset-Protokoll frei.
+- **(b) Claudes eigener Scratchpad** — abgelöst durch [ADR 022](022-scratchpad-im-workspace.md). `system/init.scratchpad_path` ist belegt und bleibt über `--resume` gleich; ein eigener Ordner bräuchte einen Systemprompt-Zusatz, auf den sich der Agent nicht verlassen muss. Der Core speichert den Pfad an der Session und gibt ihn für das Asset-Protokoll frei.
 - **Selbstständiges Aufwachen:** Kommt Ausgabe des Hauptagenten, während die Session `completed` oder `paused` ist und weder Pause noch Abbruch angefordert ist, wechselt sie auf `running`.
 - **Ruhe-Timer:** Kein Agent wird beendet, solange einer seiner Einträge läuft.
 - **(b) Ereignis plus Nachladen.** Begründung wie [ADR 006](006-changes-und-diff.md): ein Beobachter kostet auch, wenn niemand hinsieht.

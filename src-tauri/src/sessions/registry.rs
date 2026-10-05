@@ -35,6 +35,7 @@ use crate::background::output::{
     MAX_COMMAND_OUTPUT_BYTES, MAX_PREVIEW_BYTES, URL_SCAN_BYTES, exit_code_from_summary,
     find_local_url, read_head, read_tail, tail_text,
 };
+use crate::background::scratchpad;
 use crate::changes::ChangesInput;
 use crate::changes::attribution::{self, Ownership};
 use crate::changes::model::ChangesReach;
@@ -2000,13 +2001,9 @@ impl SessionState {
             AgentEvent::ControlFailed { request_id, error } => {
                 self.mcp_answered(outbox, &request_id, Some(error));
             }
-            AgentEvent::ScratchpadDir(dir) => {
-                if self.scratchpad_dir.as_deref() != Some(dir.as_str()) {
-                    self.scratchpad_dir = Some(dir.clone());
-                    outbox.summary_dirty = true;
-                    outbox.scratchpad_dir = Some(dir);
-                }
-            }
+            // Den Ordner gibt die App vor (`use_scratchpad`); meldet die Kommandozeile doch einen
+            // eigenen, schreibt der Agent trotzdem in den vorgegebenen.
+            AgentEvent::ScratchpadDir(_) => {}
             AgentEvent::CommandStarted {
                 tool_use_id,
                 command,
@@ -2592,6 +2589,7 @@ fn start_process(
         state.interrupt_background(outbox);
     }
     state.forget_mcp(outbox);
+    let scratchpad_dir = use_scratchpad(session, state, outbox);
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -2608,6 +2606,7 @@ fn start_process(
             add_dirs,
             allowed_rules: worktrees::permission_rules(&repositories),
             local: backend.cloned(),
+            scratchpad: scratchpad_dir,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -2628,6 +2627,31 @@ fn start_process(
     state.process_repository_count = repositories.len();
     state.translator = Translator::default();
     Ok(())
+}
+
+/// Legt den Scratchpad-Ordner der Session an und merkt ihn sich; ein Ordner, den eine ältere
+/// Version aus `system/init` übernommen hat, wird dabei ersetzt. Scheitert das Anlegen, startet
+/// der Agent ohne Vorgabe.
+fn use_scratchpad(
+    session: &Session,
+    state: &mut SessionState,
+    outbox: &mut Outbox,
+) -> Option<PathBuf> {
+    let dir = match scratchpad::prepare(&session.workspace, &session.id) {
+        Ok(dir) => dir,
+        Err(error) => {
+            // Nicht `session.log_line`: die Sperre auf `state` hält der Aufrufer schon.
+            state.push_log(format!("Scratchpad nicht angelegt: {error}"));
+            return None;
+        }
+    };
+    let path = dir.to_string_lossy().into_owned();
+    if state.scratchpad_dir.as_deref() != Some(path.as_str()) {
+        state.scratchpad_dir = Some(path.clone());
+        outbox.summary_dirty = true;
+        outbox.scratchpad_dir = Some(path);
+    }
+    Some(dir)
 }
 
 /// Beendet den Prozess einer ruhenden Session; die nächste Nachricht startet ihn mit `--resume` neu.

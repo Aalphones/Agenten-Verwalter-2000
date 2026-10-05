@@ -1,8 +1,8 @@
-//! Claudes Scratchpad-Ordner einer Session: auflisten und einzelne Dateien lesen, ohne aus dem
+//! Der Scratchpad-Ordner einer Session: anlegen, auflisten und einzelne Dateien lesen, ohne aus dem
 //! Ordner auszubrechen.
 use std::fs::{self, File};
-use std::io::Read;
-use std::path::{Component, Path};
+use std::io::{self, Read};
+use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::model::{ScratchpadEntry, ScratchpadListing, TextPreview};
@@ -13,6 +13,15 @@ const MAX_DEPTH: usize = 6;
 const MAX_ENTRIES: usize = 2_000;
 const INVALID_PATH: &str = "Ungültiger Pfad";
 const DIRECTORY_PREVIEW: &str = "Ordner haben keine Vorschau";
+const WORKSPACE_FOLDER: &str = ".scratchpad";
+
+/// Legt `<Workspace>\.scratchpad\<session-id>` an, falls er fehlt (ADR 022). Die Kommandozeile
+/// meldet im Betrieb mit `-p` keinen eigenen Ordner; die App gibt dem Agenten diesen vor.
+pub fn prepare(workspace: &Path, session_id: &str) -> io::Result<PathBuf> {
+    let dir = workspace.join(WORKSPACE_FOLDER).join(session_id);
+    fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
 
 /// Der Ordner als flache Liste, nach Pfad sortiert. Fehlt er oder ist er unbekannt, ist die Liste leer.
 pub fn list(dir: Option<&Path>) -> ScratchpadListing {

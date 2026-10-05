@@ -112,7 +112,8 @@ Belegt am 2026-09-29 mit Claude Code 2.1.284 (Modell Haiku 4.5), per Probe-Skrip
 
 ## Scratchpad
 
-- `system/init` meldet `scratchpad_path`, einen eigenen Ordner der Kommandozeile je Session: `%TEMP%\claude\<cwd-slug>\<session-id>\scratchpad`. Nach `--resume` derselben Session ist der Pfad unverändert (geprüft). Die Kommandozeile legt den Ordner selbst an: nach jedem Probe-Lauf existierte er, auch wenn der Agent dort nichts abgelegt hatte. Daneben liegen `tasks\` (Ausgabedateien) und bei Bild-Anhängen `images\`.
+- `system/init` meldete `scratchpad_path`, einen eigenen Ordner der Kommandozeile je Session: `%TEMP%\claude\<cwd-slug>\<session-id>\scratchpad`. Nach `--resume` derselben Session ist der Pfad unverändert (geprüft). Die Kommandozeile legte den Ordner selbst an: nach jedem Probe-Lauf existierte er, auch wenn der Agent dort nichts abgelegt hatte. Daneben liegen `tasks\` (Ausgabedateien) und bei Bild-Anhängen `images\`.
+- **Seit spätestens 2.1.287 fehlt das Feld im Betrieb mit `-p`** (geprüft am 2026-10-05 mit `-p --output-format stream-json --verbose`), und unter `%TEMP%\claude\<cwd-slug>\<session-id>\` liegt nur noch `tasks\`. Interaktiv gestartete Sessions bekommen den Ordner weiter. Die App gibt deshalb einen eigenen vor ([ADR 022](../decisions/022-scratchpad-im-workspace.md)).
 
 ## Kontext und Kontingent abfragen
 

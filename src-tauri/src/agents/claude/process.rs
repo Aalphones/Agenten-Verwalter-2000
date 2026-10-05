@@ -1,6 +1,6 @@
 //! Start und Ein-/Ausgabe eines `claude.exe`-Prozesses.
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
@@ -27,6 +27,9 @@ pub struct SpawnOptions {
     pub allowed_rules: Vec<String>,
     /// `Some` in der Betriebsart Claude Code + LM Studio.
     pub local: Option<LocalBackend>,
+    /// Ordner, in den der Agent alle Arbeitsdateien außerhalb der Repositories legen soll; der
+    /// Scratchpad-Reiter zeigt genau diesen.
+    pub scratchpad: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -127,6 +130,11 @@ fn build_command(opts: &SpawnOptions) -> Command {
     if let Some(backend) = &opts.local {
         local::apply(&mut command, backend);
     }
+    if let Some(dir) = &opts.scratchpad {
+        command
+            .arg("--append-system-prompt")
+            .arg(scratchpad_prompt(dir));
+    }
     // `--allowedTools` nimmt mehrere Werte; die nächste Option (`--add-dir`, `--resume`,
     // `--session-id`) beendet die Liste.
     if !opts.allowed_rules.is_empty() {
@@ -149,6 +157,20 @@ fn build_command(opts: &SpawnOptions) -> Command {
     command.arg(&opts.session_id);
     hide_console(&mut command);
     command
+}
+
+/// Ohne die Vorgabe erfindet jeder Agent seine eigene Ablage (`%TEMP%\<ticket>`, `_scratch\` im
+/// Repository), und der Scratchpad-Reiter bleibt leer.
+fn scratchpad_prompt(dir: &Path) -> String {
+    format!(
+        "Scratchpad dieser Session: {}\n\
+         Lege alle Arbeitsdateien, die nicht ins Repository gehören — Entwürfe, Screenshots, \
+         Logs, Testausgaben, Hilfsskripte, Commit-Nachrichten —, ausschließlich in diesen Ordner \
+         oder seine Unterordner. Nicht nach %TEMP%, nicht in Scratch- oder Temp-Ordner eines \
+         Repositories und nicht ins Arbeitsverzeichnis. Der Benutzer sieht nur diesen Ordner; \
+         nenne Dateien daraus mit absolutem Pfad.",
+        dir.display()
+    )
 }
 
 /// Die `.mcp.json` der Ordner, die eine hat. Ordner ohne Datei fallen still weg.
