@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Entwurf: Artefakte — Agenten Verwalter 2000</title>
+<style>
+  /* Hex-Werte der semantischen Tokens aus src/styles/theme.css (Stand 2026-10-05), wie im Entwurf Git-Werkzeuge. */
+  :root {
+    --bg-base: #1f1f1f; --bg-sidebar: #181818; --bg-surface: #252526; --bg-popover: #252526;
+    --bg-hover: #2e2e30; --bg-selected: #37373d; --border-subtle: #2b2b2b; --border: #3c3c3c;
+    --fg: #d4d4d4; --fg2: #b0b0b0; --muted: #8f8f8f;
+    --accent: #e0825c; --on-accent: #1d130e; --accent-subtle: rgb(224 130 92 / 0.16); --accent-text: #eea283;
+    --running: #5b9dff; --running-subtle: rgb(91 157 255 / .12); --ok: #4cc38a;
+    --shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+    --sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  :root.light {
+    --bg-base: #ffffff; --bg-sidebar: #f8f8f8; --bg-surface: #ffffff; --bg-popover: #ffffff;
+    --bg-hover: #f0f0f0; --bg-selected: #e4e6f1; --border-subtle: #e5e5e5; --border: #cecece;
+    --fg: #3c3c3c; --fg2: #555555; --muted: #6e6e6e;
+    --accent: #c4572f; --on-accent: #ffffff; --accent-subtle: rgb(196 87 47 / 0.10); --accent-text: #a8461f;
+    --running: #2563eb; --running-subtle: rgb(37 99 235 / .08); --ok: #16803c;
+    --shadow: 0 10px 30px rgb(0 0 0 / 0.14);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.45 var(--sans); background: #0c0c0c; color: var(--fg); }
+  :root.light body { background: #d9d9d9; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  svg { display: block; }
+
+  /* Entwurfs-Steuerung (gehört nicht zur App) */
+  .ctl { display: flex; gap: 16px; align-items: center; padding: 8px 20px; font-size: 12px; color: #aaa; background: #111; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  :root.light .ctl { background: #ececec; color: #444; border-color: #ccc; }
+  .ctl b { font-weight: 600; }
+  .ctl .seg { display: inline-flex; border: 1px solid #444; border-radius: 6px; overflow: hidden; }
+  :root.light .ctl .seg { border-color: #bbb; }
+  .ctl .seg button { padding: 2px 10px; }
+  .ctl .seg button.on { background: var(--accent); color: var(--on-accent); }
+  .ctl .act { padding: 2px 10px; border: 1px solid #444; border-radius: 6px; }
+  .ctl .hint { margin-left: auto; opacity: .7; }
+  .marks .new { outline: 1px dashed var(--accent); outline-offset: 2px; }
+
+  /* App-Rahmen */
+  .app { display: grid; grid-template-columns: 256px minmax(0, 1fr); height: calc(100vh - 37px); min-height: 640px; background: var(--bg-base); }
+  .sidebar { background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; font-size: 12.5px; }
+  .sb-head { height: 48px; display: flex; align-items: center; padding: 0 14px; font-weight: 600; }
+  .sb-new { margin: 0 10px 8px; height: 30px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+  .sb-p { display: flex; align-items: center; gap: 8px; padding: 5px 14px; font-weight: 600; cursor: pointer; }
+  .sb-p.sel { color: var(--fg); background: var(--bg-selected); margin: 0 10px; padding: 5px 4px; border-radius: 6px; }
+  .sb-p .ok { color: var(--ok); }
+  .sb-p .run { color: var(--running); }
+  .sb-s { display: flex; align-items: center; gap: 8px; margin: 1px 10px 1px 40px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+  .sb-s.sel { background: var(--bg-selected); }
+  .sb-s .num { color: var(--muted); font-size: 11px; }
+
+  .main { display: grid; grid-template-rows: 48px minmax(0, 1fr); min-width: 0; min-height: 0; }
+  .hdr { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: 0 12px 0 24px; border-bottom: 1px solid var(--border-subtle); gap: 12px; }
+  .hdr-l { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .crumb, .hnum { color: var(--muted); white-space: nowrap; }
+  .hname { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .status { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; color: var(--running); background: var(--running-subtle); }
+  .tabs { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg-sidebar); border: 1px solid var(--border-subtle); }
+  .tab { padding: 4px 14px; border-radius: 6px; color: var(--fg2); display: inline-flex; align-items: center; gap: 6px; }
+  .tab.on { background: var(--bg-selected); color: var(--fg); font-weight: 600; }
+  .tab .n { font-size: 11px; color: var(--muted); background: var(--bg-hover); border-radius: 999px; padding: 0 6px; font-weight: 500; }
+  .hdr-r { display: flex; justify-content: flex-end; gap: 10px; align-items: center; color: var(--fg2); font-size: 12px; white-space: nowrap; }
+  .bgbtn { display: inline-flex; gap: 6px; align-items: center; height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+
+  /* Chat (Platzhalter mit Artefakt-Karte) */
+  .chat { overflow: auto; padding: 24px 32px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .chat .col { max-width: 780px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; color: var(--fg2); }
+  .chat .user { align-self: flex-end; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--fg); max-width: 80%; }
+  .chat .tool { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .chat .tool b { color: var(--fg); font-family: var(--sans); }
+  .card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface); color: var(--fg); }
+  .card .ic { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 6px; background: var(--accent-subtle); color: var(--accent-text); }
+  .card .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .card .tx b { font-weight: 600; }
+  .card .tx span { font-size: 12px; color: var(--muted); }
+  .btn { height: 28px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn:hover { background: var(--bg-hover); }
+  .composer { border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: var(--muted); background: var(--bg-surface); margin-top: 8px; min-height: 64px; }
+  .composer .draft { color: var(--fg); }
+
+  /* Artefakte */
+  .arts { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+  .alist { border-right: 1px solid var(--border-subtle); padding: 12px 8px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+  .alist .lh { padding: 0 8px 6px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .alist .lh .i { margin-left: auto; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-size: 10px; cursor: help; }
+  .aitem { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 8px; border-radius: 6px; text-align: left; }
+  .aitem:hover { background: var(--bg-hover); }
+  .aitem.sel { background: var(--bg-selected); }
+  .aitem .ic { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 5px; background: var(--accent-subtle); color: var(--accent-text); }
+  .aitem .tx { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .aitem .tx b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aitem .tx span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aitem .tx .here { color: var(--accent-text); }
+  .apane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .atb { height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+  .atb .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .atb .m { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .atb .m.flash { color: var(--ok); }
+  .atb .sp { flex: 1; }
+  .iconbtn { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--fg2); border: 1px solid var(--border); flex: none; }
+  .iconbtn:hover { background: var(--bg-hover); color: var(--fg); }
+  .stage { flex: 1; min-height: 0; padding: 20px; display: flex; }
+  .frame { flex: 1; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+  .frame iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+  .empty { margin: auto; max-width: 420px; text-align: center; color: var(--muted); }
+  .empty b { display: block; color: var(--fg); margin-bottom: 4px; }
+
+  /* Vollbild */
+  .full { position: fixed; inset: 0; z-index: 50; background: #000; }
+  .full[hidden] { display: none; }
+  .full iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .full .exit { position: absolute; top: 12px; right: 12px; background: rgb(20 20 20 / .82); color: #eee; border: 1px solid #555; border-radius: 8px; padding: 6px 12px; font-size: 12px; transition: opacity .25s; display: flex; gap: 8px; align-items: center; }
+  .full .exit.hide { opacity: 0; pointer-events: none; }
+  .full .exit kbd { font-family: var(--mono); font-size: 11px; border: 1px solid #666; border-radius: 4px; padding: 0 4px; }
+  .full .edge { position: absolute; top: 0; left: 0; right: 0; height: 56px; }
+</style>
+</head>
+<body class="marks">
+
+<div class="ctl">
+  <b>Entwurf: Artefakte</b>
+  <span>Theme <span class="seg" id="ctlTheme"><button class="on" data-v="dark">dunkel</button><button data-v="light">hell</button></span></span>
+  <span>Ort <span class="seg" id="ctlPlace"><button class="on" data-v="session">Session</button><button data-v="project">Vorhaben-Übersicht</button></span></span>
+  <span>Artefakte <span class="seg" id="ctlFill"><button class="on" data-v="some">vorhanden</button><button data-v="none">gelöscht, während offen</button></span></span>
+  <button class="act" id="ctlWrite">Agent speichert das gezeigte Artefakt neu</button>
+  <span>Neues markieren <span class="seg" id="ctlMarks"><button class="on" data-v="on">an</button><button data-v="off">aus</button></span></span>
+  <span class="hint">Gestrichelt = neu · alles andere ist die heutige App</span>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-head">Agenten Verwalter 2000</div>
+    <div class="sb-new">+ Neues Vorhaben</div>
+    <div class="sb-p" id="sbProject"><span class="run">●</span>Quartalszahlen Q3</div>
+    <div class="sb-s" data-session="1" id="sbS1"><span class="num">#1</span>Daten aus dem Export aufbereiten</div>
+    <div class="sb-s sel" data-session="2" id="sbS2"><span class="num">#2</span>Bericht und Vortrag bauen</div>
+    <div class="sb-p"><span class="ok">✓</span>V2000 Git</div>
+    <div class="sb-p"><span class="ok">✓</span>Homechat</div>
+  </aside>
+
+  <section class="main">
+    <header class="hdr">
+      <div class="hdr-l" id="hdrLeft"></div>
+      <nav class="tabs" id="tabs"></nav>
+      <div class="hdr-r"><span class="bgbtn">▣ Hintergrund</span><span>4:12</span></div>
+    </header>
+    <div id="view" style="min-height:0;display:grid"></div>
+  </section>
+</div>
+
+<div class="full" id="full" hidden>
+  <iframe id="fullFrame" sandbox="allow-scripts allow-popups allow-forms allow-modals" allow="fullscreen" title="Artefakt im Vollbild"></iframe>
+  <div class="edge" id="fullEdge"></div>
+  <button class="exit" id="fullExit">Vollbild beenden</button>
+</div>
+
+<script>
+const I = {
+  page: '<svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><rect x="1.5" y="2" width="11" height="10" rx="1.5"/><path d="M1.5 5h11M4 7.5h3M4 9.5h5"/></svg>',
+  pageS: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><rect x="1.5" y="2" width="11" height="10" rx="1.5"/><path d="M1.5 5h11M4 7.5h3M4 9.5h5"/></svg>',
+  reload: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5V5h-2.5"/></svg>',
+  full: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>',
+  ext: '<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 2.5h6v6M11.5 2.5 4 10"/></svg>',
+};
+
+/* Drei echte Beispiel-Artefakte — so, wie ein Agent sie schreiben würde. */
+const REPORT = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Quartalsbericht Q3</title><style>
+body{margin:0;font:15px/1.5 system-ui,sans-serif;color:#1d2433;background:#f6f7fb}main{max-width:820px;margin:0 auto;padding:36px 32px}
+h1{margin:0 0 4px;font-size:26px}p.sub{margin:0 0 24px;color:#5b6475}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.k{background:#fff;border:1px solid #e3e6ee;border-radius:10px;padding:14px}.k span{display:block;font-size:12px;color:#5b6475}.k b{font-size:22px}.k i{font-style:normal;font-size:12px;color:#16803c}
+.chart{background:#fff;border:1px solid #e3e6ee;border-radius:10px;padding:16px}.chart h2{margin:0 0 10px;font-size:15px}</style></head><body><main>
+<h1>Quartalsbericht Q3</h1><p class="sub">Umsatz und Neukunden, Juli bis September</p>
+<div class="kpis"><div class="k"><span>Umsatz</span><b>1,42 Mio €</b> <i>+8 %</i></div><div class="k"><span>Neukunden</span><b>312</b> <i>+21 %</i></div><div class="k"><span>Kündigungen</span><b>47</b> <i>−6 %</i></div></div>
+<div class="chart"><h2>Umsatz je Monat (Tsd. €)</h2><svg viewBox="0 0 600 220" width="100%"><g fill="#4f6bd8">
+<rect x="60" y="70" width="110" height="130" rx="4"/><rect x="245" y="52" width="110" height="148" rx="4"/><rect x="430" y="30" width="110" height="170" rx="4"/></g>
+<g font-size="13" fill="#1d2433" text-anchor="middle"><text x="115" y="62">438</text><text x="300" y="44">471</text><text x="485" y="22">511</text>
+<text x="115" y="216">Juli</text><text x="300" y="216">August</text><text x="485" y="216">September</text></g></svg></div></main></body></html>`;
+
+const SLIDES = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Vortrag: Ergebnisse Q3</title><style>
+html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#15192b;color:#f2f4fa;overflow:hidden}
+.s{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:0 9vw}.s.on{display:flex}
+h1{font-size:6vw;margin:0}h2{font-size:4vw;margin:0 0 3vh}li{font-size:2.6vw;margin:1.2vh 0}.sub{font-size:2.2vw;opacity:.7}
+.nav{position:absolute;bottom:3vh;right:4vw;font-size:14px;opacity:.6;display:flex;gap:10px;align-items:center}.nav button{background:none;border:1px solid #f2f4fa55;color:inherit;border-radius:6px;padding:2px 10px;cursor:pointer}</style></head><body tabindex="0">
+<section class="s on"><h1>Ergebnisse Q3</h1><p class="sub">Vertriebsrunde · 5. Oktober</p></section>
+<section class="s"><h2>Was lief gut</h2><ul><li>Umsatz +8 % zum Vorquartal</li><li>312 Neukunden, Rekord</li><li>Kündigungen leicht gesunken</li></ul></section>
+<section class="s"><h2>Nächste Schritte</h2><ul><li>Kampagne Q4 starten</li><li>Bestandskunden-Programm</li></ul></section>
+<div class="nav"><button id="p">‹</button><span id="c"></span><button id="n">›</button></div>
+<script>let i=0;const s=[...document.querySelectorAll('.s')];function go(d){i=Math.max(0,Math.min(s.length-1,i+d));s.forEach((x,k)=>x.classList.toggle('on',k===i));c.textContent=(i+1)+' / '+s.length}
+p.onclick=()=>go(-1);n.onclick=()=>go(1);addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')go(1);if(e.key==='ArrowLeft')go(-1)});go(0);<\/script></body></html>`;
+
+const MOCKUP = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Kundenportal – Anmeldung (Entwurf)</title><style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;font:14px system-ui,sans-serif;background:linear-gradient(135deg,#eef2ff,#fdf2f8)}
+.box{width:340px;background:#fff;border-radius:14px;box-shadow:0 12px 40px #0002;padding:28px;display:flex;flex-direction:column;gap:12px}
+h1{margin:0 0 6px;font-size:20px}input{height:38px;border:1px solid #d5d9e4;border-radius:8px;padding:0 12px;font:inherit}
+button{height:40px;border:0;border-radius:8px;background:#4f46e5;color:#fff;font:inherit;font-weight:600;cursor:pointer}small{text-align:center;color:#6b7280}</style></head><body>
+<form class="box" onsubmit="event.preventDefault();this.querySelector('small').textContent='Angemeldet (Entwurf, ohne Funktion)'"><h1>Anmelden</h1><input placeholder="E-Mail"><input type="password" placeholder="Passwort"><button>Weiter</button><small>Passwort vergessen?</small></form></body></html>`;
+
+const state = {
+  place: 'session', view: 'artifacts', session: 2, fill: 'some', sel: 'bericht', flash: false, draft: '',
+  arts: [
+    { id: 'vortrag', title: 'Vortrag: Ergebnisse Q3', file: 'vortrag-q3.html', session: 2, sname: 'Bericht und Vortrag bauen', time: '14:41', html: SLIDES },
+    { id: 'bericht', title: 'Quartalsbericht Q3', file: 'quartalsbericht-q3.html', session: 2, sname: 'Bericht und Vortrag bauen', time: '14:32', html: REPORT },
+    { id: 'login', title: 'Kundenportal – Anmeldung (Entwurf)', file: 'login-entwurf.html', session: 1, sname: 'Daten aus dem Export aufbereiten', time: '11:05', html: MOCKUP },
+  ],
+};
+const W = 'C:\\Users\\sasch\\.verwalter\\workspaces\\quartalszahlen-q3\\.artefakte\\';
+const $ = (s) => document.querySelector(s);
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+function visible() { return state.fill === 'some' ? state.arts : []; }
+function current() { return visible().find((a) => a.id === state.sel) || visible()[0] || null; }
+
+function renderHeader() {
+  const count = visible().length;
+  if (state.place === 'session') {
+    $('#hdrLeft').innerHTML = `<span class="crumb">Quartalszahlen Q3 ›</span><span class="hnum">#${state.session}</span><span class="hname">${state.session === 2 ? 'Bericht und Vortrag bauen' : 'Daten aus dem Export aufbereiten'}</span><span class="status">● Läuft</span>`;
+  } else {
+    $('#hdrLeft').innerHTML = `<span class="hname">Quartalszahlen Q3</span>`;
+  }
+  const first = state.place === 'session' ? ['chat', 'Chat'] : ['overview', 'Übersicht'];
+  const tabs = [first, ['changes', 'Changes']];
+  // Der Reiter erscheint ab dem ersten Artefakt im Vorhaben und bleibt, solange er offen ist.
+  if (count > 0 || state.view === 'artifacts') tabs.push(['artifacts', 'Artefakte']);
+  $('#tabs').innerHTML = tabs.map(([v, l]) => `<button class="tab ${state.view === v ? 'on' : ''} ${v === 'artifacts' ? 'new' : ''}" data-view="${v}">${l}${v === 'artifacts' && count ? ` <span class="n">${count}</span>` : ''}</button>`).join('');
+  $('#tabs').querySelectorAll('.tab').forEach((b) => (b.onclick = () => { state.view = b.dataset.view; render(); }));
+  $('#sbS1').classList.toggle('sel', state.place === 'session' && state.session === 1);
+  $('#sbS2').classList.toggle('sel', state.place === 'session' && state.session === 2);
+  $('#sbProject').classList.toggle('sel', state.place === 'project');
+}
+
+function renderChat() {
+  const a = state.arts[1];
+  return `<div class="chat"><div class="col">
+    <div class="user">Bau mir aus der CSV einen Quartalsbericht mit Kennzahlen und einem Diagramm.</div>
+    <div class="tool">● <b>Read</b> export\\umsatz-q3.csv</div>
+    <div class="tool">● <b>Write</b> .artefakte\\${a.file}</div>
+    <div class="card new"><span class="ic">${I.page}</span><span class="tx"><b>${a.title}</b><span>Artefakt · ${a.file} · ${a.time}</span></span><button class="btn" id="openCard">In der Session ansehen</button></div>
+    <div>Der Bericht liegt im Reiter „Artefakte“. Soll ich noch eine Folie für die Vertriebsrunde daraus machen?</div>
+    <div class="composer">${state.draft ? `<span class="draft">${esc(state.draft)}</span>` : 'Nachricht an den Agenten …'}</div>
+  </div></div>`;
+}
+
+function renderArtifacts() {
+  const list = visible();
+  const cur = current();
+  const items = list.map((a) => {
+    const here = state.place === 'session' && a.session === state.session;
+    return `<button class="aitem ${cur && a.id === cur.id ? 'sel' : ''}" data-id="${a.id}"><span class="ic">${I.pageS}</span><span class="tx"><b>${a.title}</b><span>${here ? '<span class="here">diese Session</span>' : `#${a.session} ${a.sname}`} · ${a.time}</span></span></button>`;
+  }).join('');
+  const head = `<div class="lh">Artefakte des Vorhabens, neueste zuerst<span class="i" title="Seiten, die ein Agent dieses Vorhabens als HTML abgelegt hat (Bericht, Präsentation, Entwurf). Sie liegen im Ordner .artefakte des Vorhabens und aktualisieren sich, sobald der Agent sie neu speichert.">?</span></div>`;
+  const pane = cur ? `
+    <div class="atb">
+      <span class="t">${cur.title}</span>
+      <span class="m ${state.flash ? 'flash' : ''}">${state.flash ? 'gerade aktualisiert' : `${cur.file} · ${cur.time}`}</span>
+      <span class="sp"></span>
+      <button class="iconbtn new" id="reload" title="Neu laden">${I.reload}</button>
+      <button class="iconbtn new" id="full" title="Vollbild">${I.full}</button>
+      ${state.place === 'session' ? '<button class="btn" id="mention">Im Chat besprechen</button>' : ''}
+      <button class="btn" id="browser">Im Browser öffnen ${I.ext}</button>
+    </div>
+    <div class="stage"><div class="frame"><iframe id="frame" sandbox="allow-scripts allow-popups allow-forms allow-modals" allow="fullscreen" title="${esc(cur.title)}"></iframe></div></div>`
+    : `<div class="stage"><div class="empty"><b>Noch keine Artefakte</b>Bitte den Agenten um einen Bericht, eine Präsentation oder einen Entwurf als HTML-Seite — er legt sie im Vorhaben ab, und sie erscheinen hier.</div></div>`;
+  return `<div class="arts"><div class="alist">${head}${items}</div><div class="apane">${pane}</div></div>`;
+}
+
+function renderPlaceholder(text) { return `<div class="chat"><div class="col" style="text-align:center">${text}</div></div>`; }
+
+function render() {
+  renderHeader();
+  const v = state.view;
+  $('#view').innerHTML = v === 'artifacts' ? renderArtifacts()
+    : v === 'chat' ? renderChat()
+    : v === 'overview' ? renderPlaceholder('Übersicht des Vorhabens (unverändert)')
+    : renderPlaceholder('Changes (unverändert)');
+  if (v === 'chat') $('#openCard').onclick = () => { state.view = 'artifacts'; state.sel = 'bericht'; render(); };
+  if (v !== 'artifacts') return;
+  document.querySelectorAll('.aitem').forEach((b) => (b.onclick = () => { state.sel = b.dataset.id; state.flash = false; render(); }));
+  const cur = current();
+  if (!cur) return;
+  $('#frame').srcdoc = cur.html;
+  $('#reload').onclick = () => { $('#frame').srcdoc = cur.html + ' '; };
+  $('#full').onclick = () => openFull(cur);
+  if ($('#mention')) $('#mention').onclick = () => {
+    state.draft = `Zum Artefakt „${cur.title}“ (${W}${cur.file}): `;
+    state.view = 'chat';
+    render();
+  };
+  $('#browser').onclick = () => alert('Öffnet ' + W + cur.file + ' im Standard-Browser.');
+}
+
+let hideTimer = 0;
+function showExit() {
+  $('#fullExit').classList.remove('hide');
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => $('#fullExit').classList.add('hide'), 2000);
+}
+function openFull(a) {
+  $('#full').hidden = false;
+  $('#fullFrame').srcdoc = a.html;
+  showExit();
+}
+function closeFull() { $('#full').hidden = true; $('#fullFrame').srcdoc = ''; }
+$('#fullExit').onclick = closeFull;
+$('#fullEdge').onmousemove = showExit;
+// Tasten im Artefakt (Pfeile, Leertaste) gehören dem Artefakt; Esc wirkt nur, solange der Fokus außerhalb liegt.
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#full').hidden) closeFull(); });
+
+function seg(id, fn) {
+  document.querySelectorAll(`#${id} button`).forEach((b) => (b.onclick = () => {
+    document.querySelectorAll(`#${id} button`).forEach((x) => x.classList.toggle('on', x === b));
+    fn(b.dataset.v);
+  }));
+}
+seg('ctlTheme', (v) => document.documentElement.classList.toggle('light', v === 'light'));
+seg('ctlMarks', (v) => document.body.classList.toggle('marks', v === 'on'));
+seg('ctlPlace', (v) => { state.place = v; if (v === 'project' && state.view === 'chat') state.view = 'overview'; if (v === 'session' && state.view === 'overview') state.view = 'chat'; render(); });
+seg('ctlFill', (v) => { state.fill = v; render(); });
+$('#ctlWrite').onclick = () => {
+  const cur = current();
+  if (!cur || state.view !== 'artifacts') return;
+  cur.time = '14:' + String(42 + Math.floor(Math.random() * 10));
+  state.flash = true;
+  render();
+  setTimeout(() => { state.flash = false; render(); }, 2500);
+};
+$('#sbS1').onclick = () => { state.place = 'session'; state.session = 1; if (state.view === 'overview') state.view = 'chat'; render(); };
+$('#sbS2').onclick = () => { state.place = 'session'; state.session = 2; if (state.view === 'overview') state.view = 'chat'; render(); };
+$('#sbProject').onclick = () => { state.place = 'project'; if (state.view === 'chat') state.view = 'overview'; render(); };
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Sicherheitsprobe Artefakte</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; color: #1d2433; background: #fff; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 0 0 16px; color: #5b6475; }
+  ol { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .ok { color: #16803c; font-weight: 600; }
+  .bad { color: #d23b33; font-weight: 600; }
+  .wait { color: #a86a00; }
+  code { font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Sicherheitsprobe Artefakte</h1>
+<p>Zeilen 1–5: die Seite darf den Verwalter nicht erreichen. Zeilen 6–8: Laden aus dem eigenen Ordner und aus dem Internet muss gehen. Grün = wie erwartet.</p>
+<ol id="out"></ol>
+<p id="origin"></p>
+<img id="img" alt="" width="1" height="1" style="opacity:0">
+<script>
+  const out = document.getElementById('out');
+  const rows = [];
+  function row(text) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="wait">läuft …</span> ${text}`;
+    out.append(li);
+    return (ok, detail) => {
+      li.innerHTML = `<span class="${ok ? 'ok' : 'bad'}">${ok ? 'wie erwartet' : 'NICHT wie erwartet'}</span> ${text}${detail ? ` — <code>${detail}</code>` : ''}`;
+    };
+  }
+
+  // 1–5: Abschottung
+  row('Kein <code>__TAURI_INTERNALS__</code> im Rahmen')(typeof window.__TAURI_INTERNALS__ === 'undefined', typeof window.__TAURI_INTERNALS__);
+  row('Kein <code>__TAURI__</code> im Rahmen')(typeof window.__TAURI__ === 'undefined', typeof window.__TAURI__);
+  const parentRow = row('Kein Zugriff auf das Dokument des Verwalters (<code>parent.document</code>)');
+  try { const title = parent.document.title; parentRow(false, 'gelesen: ' + title); } catch (error) { parentRow(true, error.name); }
+  const ipcRow = row('Anfrage an die Befehls-Schnittstelle des Verwalters scheitert');
+  fetch('http://ipc.localhost/plugin%3Aopener%7Copen_url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"url":"https://example.org"}' })
+    .then((response) => ipcRow(false, 'Status ' + response.status))
+    .catch((error) => ipcRow(true, error.name));
+  const popupRow = row('Neue Fenster sind gesperrt (<code>window.open</code>)');
+  try { const popup = window.open('about:blank'); popupRow(popup === null, popup === null ? 'null' : 'Fenster geöffnet'); if (popup) popup.close(); } catch (error) { popupRow(true, error.name); }
+
+  // 6–8: Laden
+  const imgRow = row('Bild aus dem eigenen Ordner lädt (<code>./probe-bild.svg</code>)');
+  const img = document.getElementById('img');
+  img.onload = () => imgRow(true, 'geladen');
+  img.onerror = () => imgRow(false, 'Fehler');
+  img.src = './probe-bild.svg';
+  const scriptRow = row('Skript aus dem Internet lädt (Chart.js von cdn.jsdelivr.net)');
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+  script.onload = () => scriptRow(typeof window.Chart === 'function', typeof window.Chart);
+  script.onerror = () => scriptRow(false, 'Fehler');
+  document.head.append(script);
+  const fetchRow = row('Daten aus dem Internet abrufbar (<code>fetch</code> über https)');
+  fetch('https://cdn.jsdelivr.net/npm/chart.js@4/package.json')
+    .then((response) => fetchRow(response.ok, 'Status ' + response.status))
+    .catch((error) => fetchRow(false, error.name));
+
+  document.getElementById('origin').textContent = `Adresse: ${location.href} · Herkunft: ${self.origin} (erwartet „null“)`;
+</script>
+</body>
+</html>
