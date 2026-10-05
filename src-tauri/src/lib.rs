@@ -7,6 +7,7 @@ pub mod commands;
 pub mod context;
 pub mod db;
 pub mod error;
+pub mod file_links;
 pub mod filesystem;
 pub mod git;
 pub mod lmstudio;
@@ -104,6 +105,7 @@ pub fn run() {
             commands::repositories::repository_remove,
             commands::changes::changes_load,
             commands::changes::changes_file_diff,
+            commands::file_links::file_link_open,
             commands::tldr::tldr_session_load,
             commands::tldr::tldr_session_create,
             commands::tldr::tldr_project_load,

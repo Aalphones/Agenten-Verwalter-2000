@@ -31,6 +31,10 @@ export function commandErrorText(reason: unknown): string {
       return 'Kein Ton vom Mikrofon — ist das richtige Eingabegerät in Windows eingestellt?';
     case 'noSpeech':
       return 'Keine Sprache erkannt.';
+    case 'fileNotFound':
+      return `Datei nicht gefunden: ${reason.message}`;
+    case 'fileNotAllowed':
+      return reason.message;
     default:
       return 'message' in reason ? reason.message : reason.kind;
   }

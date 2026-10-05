@@ -48,6 +48,10 @@ pub enum CommandError {
     VoiceDownload(String),
     #[error("{0}")]
     LocalModelUnavailable(String),
+    #[error("Datei nicht gefunden: {0}")]
+    FileNotFound(String),
+    #[error("{0}")]
+    FileNotAllowed(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

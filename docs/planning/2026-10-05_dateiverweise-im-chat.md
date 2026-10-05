@@ -8,7 +8,7 @@ Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md) (Regel 5: Workspace des 
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | Dateiverweise: Auflösung + Prüfung in Rust, Klick im Chat, Fehlermeldung, ADR 023, Doku | heikel | 1 | pending |
+| 1 | Dateiverweise: Auflösung + Prüfung in Rust, Klick im Chat, Fehlermeldung, ADR 023, Doku | heikel | 1 | complete (Smoke offen) |
 
 Eine Phase, weil nur das Ganze etwas Klickbares liefert; „heikel“ wegen der Sicherheitsgrenze (die App öffnet Dateien im Namen des Benutzers). Umsetzung direkt auf `main`, ein Commit, Scope `chat`. Vor dem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); die Auflösung prüft sich mit dem Prüfprogramm `file-link-probe`, der Klick mit der Smoke-Checkliste.
 
@@ -110,20 +110,20 @@ export function openFileLink(sessionId: string, path: string): Promise<void>; //
 
 ## Checkliste
 
-- [ ] `file_links/mod.rs` mit `OPENABLE_EXTENSIONS`, `LinkRoots`, `resolve`
-- [ ] Fehlervarianten `FileNotFound`, `FileNotAllowed` in `error.rs`; `pnpm bindings`; `errors.ts` ergänzt
-- [ ] Befehl `file_link_open` in `commands/file_links.rs`, registriert in `lib.rs` und `commands/mod.rs`
-- [ ] Prüfprogramm `examples/file-link-probe.rs`
-- [ ] `src/lib/fileLinks.ts`
-- [ ] `FileLinkSessionContext.ts`, `FileLink.tsx`, `FileLink.css`
-- [ ] `Markdown.tsx`: `InlineCode`, `MarkdownLink`, `urlTransform`
-- [ ] `ChatTimeline.tsx`: Kontext setzen
-- [ ] ADR 023 `docs/decisions/023-dateiverweise-im-chat.md` aus „Festgelegte Entscheidungen“ (Kontext / Optionen / Entscheidung / Konsequenzen, ~10 Zeilen)
-- [ ] `docs/code-map.md`: Zeile `file_links` (Rust-Modul, Befehl, `src/lib/fileLinks.ts`, `src/components/FileLink.tsx`)
-- [ ] `docs/glossary.md`: Begriff **Dateiverweis** — Pfad in einer Agenten-Antwort, der per Klick mit dem Standardprogramm öffnet
-- [ ] Prüfprogramm-Läufe (Artefakt, siehe DoD)
-- [ ] `pnpm check` grün
-- [ ] Commit `feat(chat): Dateiverweise im Chat per Klick öffnen`
+- [x] `file_links/mod.rs` mit `OPENABLE_EXTENSIONS`, `LinkRoots`, `resolve`
+- [x] Fehlervarianten `FileNotFound`, `FileNotAllowed` in `error.rs`; `pnpm bindings`; `errors.ts` ergänzt
+- [x] Befehl `file_link_open` in `commands/file_links.rs`, registriert in `lib.rs` und `commands/mod.rs`
+- [x] Prüfprogramm `examples/file-link-probe.rs`
+- [x] `src/lib/fileLinks.ts`
+- [x] `FileLinkSessionContext.ts`, `FileLink.tsx`, `FileLink.css`
+- [x] `Markdown.tsx`: `InlineCode`, `MarkdownLink`, `urlTransform`
+- [x] `ChatTimeline.tsx`: Kontext setzen
+- [x] ADR 023 `docs/decisions/023-dateiverweise-im-chat.md` aus „Festgelegte Entscheidungen“ (Kontext / Optionen / Entscheidung / Konsequenzen, ~10 Zeilen)
+- [x] `docs/code-map.md`: Zeile `file_links` (Rust-Modul, Befehl, `src/lib/fileLinks.ts`, `src/components/FileLink.tsx`)
+- [x] `docs/glossary.md`: Begriff **Dateiverweis** — Pfad in einer Agenten-Antwort, der per Klick mit dem Standardprogramm öffnet
+- [x] Prüfprogramm-Läufe (Artefakt, siehe DoD)
+- [x] `pnpm check` grün
+- [x] Commit `feat(chat): Dateiverweise im Chat per Klick öffnen`
 
 ## Definition of Done
 
@@ -159,12 +159,48 @@ Wackelstellen zuerst:
 
 ## Report-Back
 
+**Prüfprogramm** — facepass liegt nicht auf der Privatmaschine; gelaufen gegen einen Nachbau im Scratchpad (`facepass\reports\gymid-2291-epassi-sperrfrist-zaehlt-als-checkin.html`, `facepass\starten.cmd`, daneben `draussen\notiz.txt` und eine Junction `facepass\abkuerzung` → `draussen`), Aufruf je Fall `file-link-probe --base <scratch>\facepass <pfad>`:
+
+| Fall | Pfad | Ausgabe | Exit |
+|---|---|---|---|
+| a | `reports/gymid-2291-….html` | `OK <scratch>\facepass\reports\gymid-2291-….html` | 0 |
+| b | `reports/gymid-2291-….html:12` | `OK` derselbe Pfad | 0 |
+| b2 | `…html:12:5` | `OK` derselbe Pfad | 0 |
+| c | `reports/gibtsnicht.html` | `FEHLER FileNotFound: Datei nicht gefunden: reports\gibtsnicht.html` | 1 |
+| d | `starten.cmd` | `FEHLER FileNotAllowed: Dateityp .cmd wird nicht geöffnet` | 1 |
+| e | `..\draussen\notiz.txt` | `FEHLER FileNotAllowed: Liegt außerhalb des Vorhabens` | 1 |
+| e2 | absoluter Pfad auf `draussen\notiz.txt` | `FEHLER FileNotAllowed: Liegt außerhalb des Vorhabens` | 1 |
+| f | absoluter Pfad auf den Bericht | `OK` derselbe Pfad | 0 |
+| g | `file:///C:/…/facepass/reports/gymid-2291-….html` | `OK` mit Backslashes | 0 |
+| h | `abkuerzung\notiz.txt` (Junction nach draußen) | `FEHLER FileNotAllowed: Liegt außerhalb des Vorhabens` | 1 |
+| i | `starten.cmd:x.html` (Datenstrom) | `FEHLER FileNotAllowed: Ungültiger Pfad starten.cmd:x.html` | 1 |
+| j | `reports` | `FEHLER FileNotAllowed: Kein Dateityp erkennbar` | 1 |
+
+`pnpm check`: Exit 0, letzte Zeile `Finished dev profile … (cargo clippy … -D warnings)`. `pnpm bindings`: nur `CommandError.ts` geändert, zwei neue Varianten `fileNotFound`, `fileNotAllowed`.
+
+**Seven Goals:** Sicherheit — Endungsliste und Grenze nur im Core, Grenze kanonisch gegen `..`, Junction und Datenstrom geprüft (Fälle e–i), Endung auch am kanonischen Ziel; Korrektheit — Fälle a–j wie erwartet, Klick selbst nur per Smoke; Wartbarkeit — eine Stelle im Core (`file_links`), Markdown bleibt generisch über den Kontext; Performance — Erkennung im Frontend nur am Muster, kein Aufruf beim Rendern; UX — Link nur in Agenten-Antworten, Fehlersatz in der bestehenden Fehlerleiste; Doku — ADR 023, code-map, glossary, AGENTS.md (Befehl); Tests — keine (Projektprofil), Absicherung über Prüfprogramm + Smoke.
+
 ## Summary
+
+Pfade in Agenten-Antworten (Inline-Code oder Markdown-Link) erscheinen als Link und öffnen per Klick mit dem Standardprogramm; der Core prüft Endung und Sicherheitsgrenze.
 
 ## Files touched
 
+`src-tauri/src/file_links/mod.rs`, `src-tauri/src/commands/file_links.rs`, `src-tauri/src/commands/mod.rs`, `src-tauri/src/lib.rs`, `src-tauri/src/error.rs`, `src-tauri/examples/file-link-probe.rs`, `src/lib/fileLinks.ts`, `src/lib/errors.ts`, `src/lib/bindings/CommandError.ts`, `src/components/FileLink.tsx`, `src/components/FileLink.css`, `src/components/FileLinkSessionContext.ts`, `src/components/Markdown.tsx`, `src/features/chat/ChatTimeline.tsx`, `docs/decisions/023-dateiverweise-im-chat.md`, `docs/code-map.md`, `docs/glossary.md`, `AGENTS.md`.
+
 ## Commits
+
+`feat(chat): Dateiverweise im Chat per Klick öffnen`
 
 ## Deviations from plan
 
+- Wurzeln baut `file_links::roots(&ChangesInput)` im Fachmodul statt im Befehl (Befehle bleiben dünn, `docs/conventions/rust.md`).
+- Zusätzlich zur Endung des genannten Pfads wird die des kanonischen Ziels geprüft (Link `x.html` auf eine exe), und ein Doppelpunkt hinter dem Laufwerk wird abgelehnt (Windows-Datenstrom `x.exe:y.html`).
+- Relative Basen, die selbst nicht absolut sind, werden übersprungen — sonst löste sich ein Pfad gegen das Arbeitsverzeichnis der App auf.
+- `transformUrl` lässt neben `C:\…` auch `file:///…` durch; der Backslash kommt aus mdast-util-to-hast als `%5C` an, das Muster deckt beides.
+- Prüfprogramm gegen einen Nachbau statt gegen facepass (liegt nur auf dem Arbeitslaptop).
+
 ## Follow-ups
+
+- Smoke-Checkliste oben (Wackelstellen 1–3 zuerst), danach archivieren und Minor-Version taggen (`docs/conventions/releases.md`).
+- Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.

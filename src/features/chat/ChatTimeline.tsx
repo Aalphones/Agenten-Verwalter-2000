@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
 import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
@@ -340,22 +341,24 @@ export function ChatTimeline({
           {olderError}
         </p>
       )}
-      <div
-        className="chat-timeline__surface"
-        style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}
-      >
-        {virtualizer.getVirtualItems().map((item: VirtualItem) => (
-          <div
-            key={item.key}
-            ref={virtualizer.measureElement}
-            data-index={item.index}
-            className="chat-timeline__item"
-            style={{ transform: `translateY(${String(item.start + bottomOffset)}px)` }}
-          >
-            <div className="chat-timeline__block">{renderBlock(blocks[item.index])}</div>
-          </div>
-        ))}
-      </div>
+      <FileLinkSessionContext.Provider value={session.id}>
+        <div
+          className="chat-timeline__surface"
+          style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}
+        >
+          {virtualizer.getVirtualItems().map((item: VirtualItem) => (
+            <div
+              key={item.key}
+              ref={virtualizer.measureElement}
+              data-index={item.index}
+              className="chat-timeline__item"
+              style={{ transform: `translateY(${String(item.start + bottomOffset)}px)` }}
+            >
+              <div className="chat-timeline__block">{renderBlock(blocks[item.index])}</div>
+            </div>
+          ))}
+        </div>
+      </FileLinkSessionContext.Provider>
     </div>
   );
 }
