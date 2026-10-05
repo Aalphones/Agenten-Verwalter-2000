@@ -49,6 +49,7 @@ struct Session {
     base_url: String,
     context_window: u32,
     cwd: PathBuf,
+    prompt_appendix: Option<String>,
     model: String,
     transcript: Transcript,
     queue: VecDeque<Value>,
@@ -90,6 +91,7 @@ pub fn run(args: AgentArgs) -> i32 {
         base_url,
         context_window,
         cwd,
+        prompt_appendix: args.append_system_prompt,
         model: args.model,
         transcript,
         queue: VecDeque::new(),
@@ -295,7 +297,7 @@ impl Session {
     /// werden zusammengelegt — manche Chat-Vorlagen lehnen zwei Benutzer-Nachrichten in Folge ab.
     fn request_messages(&self) -> Vec<Value> {
         let mut messages: Vec<Value> = Vec::with_capacity(self.transcript.messages.len() + 1);
-        messages.push(json!({ "role": "system", "content": prompt::system_prompt(&self.cwd) }));
+        messages.push(json!({ "role": "system", "content": prompt::system_prompt(&self.cwd, self.prompt_appendix.as_deref()) }));
         for message in &self.transcript.messages {
             let merged = messages
                 .last_mut()

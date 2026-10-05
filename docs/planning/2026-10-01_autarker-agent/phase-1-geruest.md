@@ -83,4 +83,5 @@ Ziel: `verwalter.exe agent …` ist ein lauffähiger Agent **ohne Werkzeuge**: e
 - Session-ID nur aus Buchstaben, Ziffern und Bindestrich (wird Teil eines Dateinamens).
 - Ein Byte-Order-Mark vor einer Eingabezeile wird überlesen (.NET-`Process` schreibt eins).
 - `llm` liest bei HTTP-Status ab 400 den Körper (`http_status_as_error(false)`) und nennt Status und Anfang des Körpers im Satz.
+- `--append-system-prompt` wird ausgewertet und an den Systemprompt gehängt: Die parallel gebaute ADR 022 schreibt darüber jedem Agenten den Scratchpad-Ordner vor (Kontrakt und FINDINGS → Phase 6 nachgezogen).
 - Zusätzlich `artifacts/treiber.ps1`: schickt Nachrichten, wartet je auf `result`, kann eine Nachricht unterbrechen.

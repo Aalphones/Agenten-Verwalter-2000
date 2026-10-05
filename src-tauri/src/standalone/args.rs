@@ -23,6 +23,8 @@ pub struct AgentArgs {
     pub add_dirs: Vec<PathBuf>,
     pub allowed_rules: Vec<String>,
     pub system_prompt: Option<String>,
+    /// Zusatz des Verwalters zum Systemprompt, z. B. die Vorgabe des Scratchpad-Ordners (ADR 022).
+    pub append_system_prompt: Option<String>,
     pub json_schema: Option<String>,
     pub tools_disabled: bool,
 }
@@ -36,6 +38,7 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
     let mut add_dirs: Vec<PathBuf> = Vec::new();
     let mut allowed_rules: Vec<String> = Vec::new();
     let mut system_prompt: Option<String> = None;
+    let mut append_system_prompt: Option<String> = None;
     let mut json_schema: Option<String> = None;
     let mut tools_disabled = false;
     let mut index = 0;
@@ -65,6 +68,7 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
                 }
             }
             "--system-prompt" => system_prompt = Some(value_of(args, &mut index)?),
+            "--append-system-prompt" => append_system_prompt = Some(value_of(args, &mut index)?),
             "--json-schema" => json_schema = Some(value_of(args, &mut index)?),
             // Ein Wert: der leere schaltet alle Werkzeuge ab.
             "--tools" => tools_disabled = value_of(args, &mut index)?.is_empty(),
@@ -85,6 +89,7 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
         add_dirs,
         allowed_rules,
         system_prompt,
+        append_system_prompt,
         json_schema,
         tools_disabled,
     })

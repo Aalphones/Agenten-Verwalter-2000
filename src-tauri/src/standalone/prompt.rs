@@ -4,13 +4,22 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const SECONDS_PER_DAY: u64 = 86_400;
 
-pub fn system_prompt(cwd: &Path) -> String {
-    format!(
+/// `appendix` hängt der Verwalter an (`--append-system-prompt`).
+pub fn system_prompt(cwd: &Path, appendix: Option<&str>) -> String {
+    let base = format!(
         "You are a coding agent running inside Agenten Verwalter 2000 on Windows. \
          Working directory: {}. Today: {}.",
         cwd.display(),
         today()
-    )
+    );
+    match appendix {
+        Some(text) => format!(
+            "{base}
+
+{text}"
+        ),
+        None => base,
+    }
 }
 
 /// Heutiges Datum (UTC) als `YYYY-MM-DD`.
