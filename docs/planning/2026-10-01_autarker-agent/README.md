@@ -16,7 +16,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Gerüst: Einstieg `agent`, Zeilenprotokoll, LM-Studio-Client, Transkript, Unterbrechen, Betriebsart „Autark“ — Chat ohne Werkzeuge | [phase-1-geruest.md](phase-1-geruest.md) | heikel | complete |
 | 2 | Werkzeug-Schleife und Datei-Werkzeuge: Read, Write, Edit, Glob, Grep, TodoWrite, Pfadgrenzen; Konto-Zeile ohne `claude.exe` in „Autark“ | [phase-2-dateiwerkzeuge.md](phase-2-dateiwerkzeuge.md) | heikel | complete |
-| 3 | Shell, Rechte, Rückfragen, Hooks: Bash, PowerShell, Modi, `can_use_tool`, AskUserQuestion, PreToolUse | [phase-3-shell-rechte-hooks.md](phase-3-shell-rechte-hooks.md) | heikel | pending |
+| 3 | Shell, Rechte, Rückfragen, Hooks: Bash, PowerShell, Modi, `can_use_tool`, AskUserQuestion, PreToolUse | [phase-3-shell-rechte-hooks.md](phase-3-shell-rechte-hooks.md) | heikel | complete |
 | 4 | Anweisungen und Skills: Systemprompt, CLAUDE.md mit Einbindungen, Output-Style, Skill-Liste, Skill-Werkzeug, `/name` | [phase-4-anweisungen-skills.md](phase-4-anweisungen-skills.md) | standard | pending |
 | 5 | Kontext, Verdichten, Bilder, Druckmodus für TL;DR, Kontext-Aufschlüsselung | [phase-5-kontext-bilder-druck.md](phase-5-kontext-bilder-druck.md) | standard | pending |
 | 6 | Hintergrundprozesse und Scratchpad: `run_in_background`, `TaskStop`, `stop_task`, Aufgaben-Zeilen | [phase-6-hintergrund.md](phase-6-hintergrund.md) | standard | pending |
@@ -129,7 +129,7 @@ Vorbereitung: LM Studio mit `google/gemma-4-12b-qat` (Kontext ≥ 64 000) gelade
 
 Wackelstellen zuerst:
 
-1. **Unterbrechen (AK 7):** Aufgabe „Führe in Bash `sleep 30` aus und sag dann fertig“ → Esc während des Befehls → „Pausiert“ binnen 2 s, kein `bash.exe` bleibt im Task-Manager; neue Nachricht wird beantwortet.
+1. **Unterbrechen (AK 7):** Aufgabe „Führe in Bash `sleep 30` aus und sag dann fertig“ → Esc während des Befehls → „Pausiert“ binnen 2 s, kein `bash.exe` bleibt im Task-Manager; neue Nachricht wird beantwortet. In `%USERPROFILE%\.verwalter\agent\<session-id>.jsonl` steht `[Request interrupted by user]` **hinter** dem `tool`-Eintrag des Befehls.
 2. **Subagent (AK 12):** „Lass einen Subagenten alle TODO-Kommentare in `src/` zählen“ → Subagent im Panel mit Schritten, Ergebnis im Chat. Danach dasselbe mit „im Hintergrund“ → Hauptagent antwortet sofort, meldet später das Ergebnis.
 3. **MCP (AK 13):** „Welche Werkzeuge hat der MCP-Server comfy?“ → Antwort nennt Werkzeuge; ein Aufruf (z. B. `server_info`) läuft.
 4. **Fortsetzen nach Neustart (AK 8):** Satz „Merke dir das Wort Bisasam“, App beenden, neu starten, „Welches Wort solltest du dir merken?“.

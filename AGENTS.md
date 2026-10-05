@@ -51,6 +51,7 @@ Begründungen: [docs/decisions/001-stack-und-plattform.md](docs/decisions/001-st
 | `pnpm tauri build --no-bundle` | nur die lose exe, ohne Installer |
 | `VERWALTER_IDLE_SECONDS` (Umgebungsvariable) | Sekunden, nach denen der Agent einer ruhenden Session beendet wird (Standard 1800); der nächste Klick auf Senden startet ihn neu; eine Session mit laufendem Hintergrundprozess oder Subagent gilt nicht als ruhend |
 | `VERWALTER_LMSTUDIO_URL` (Umgebungsvariable) | Adresse des lokalen Servers von LM Studio für die Betriebsart „Claude Code + LM Studio“ (Standard `http://localhost:1234`) |
+| `VERWALTER_BASH_PATH` (Umgebungsvariable) | Pfad zu `bash.exe` von Git für den Agenten der Betriebsart „Autark“, falls Git nicht unter `C:\Program Files\Git` liegt |
 | `VITE_VERWALTER_CHAT_PAGE_SIZE` (Umgebungsvariable, nur `pnpm tauri dev`) | Seitengröße beim Nachladen des Verlaufs (1–500, Standard 200); klein gesetzt lässt sich das Nachladen beim Hochscrollen mit kurzen Verläufen prüfen |
 
 Die Prüfkette im Einzelnen und ihre Reihenfolge: [docs/conventions/linting.md](docs/conventions/linting.md).

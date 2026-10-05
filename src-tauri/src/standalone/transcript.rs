@@ -2,7 +2,7 @@
 //! gehört nicht dazu — er entsteht bei jedem Start neu.
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -56,6 +56,10 @@ impl Transcript {
             messages.push(message);
         }
         Ok(Transcript { path, messages })
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 
     pub fn append(&mut self, message: Value) -> Result<(), String> {

@@ -4,19 +4,32 @@
 //! Der Thread schreibt seine Zeilen selbst auf stdout (`Output` sperrt), das Transkript aber nie:
 //! jede Runde geht als `TurnEvent::Messages` an die Hauptschleife, die allein schreibt. Nur so
 //! landet der Abbruch-Marker nach Esc hinter den Werkzeug-Ergebnissen der letzten Runde.
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Sender;
+//!
+//! Vor jedem Werkzeug: erst die Hooks, dann die Rechte; eine Rückfrage geht als `can_use_tool` an
+//! den Verwalter, die Antwort reicht die Hauptschleife über `answers` herein.
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
 use super::content;
+use super::hooks::{HookCall, HookVerdict, Hooks};
 use super::llm::{self, ChatRequest, Completion, LlmError, ToolCall};
 use super::output::{self, Output};
-use super::tools::{self, INTERRUPTED, ToolContext, ToolOutput};
+use super::paths::{self, Access};
+use super::permissions::{self, Decision};
+use super::tools::{self, ASK_USER_TOOL, INTERRUPTED, ToolContext, ToolOutput};
+use crate::agents::event::Mode;
 
 /// Grenze gegen Endlosschleifen eines Modells, das nie aufhört, Werkzeuge zu rufen.
 const MAX_TOOL_ROUNDS: usize = 50;
+/// Takt beim Warten auf die Antwort einer Rückfrage; dazwischen wird der Abbruch geprüft.
+const ANSWER_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const REQUEST_ID_PREFIX: &str = "agent-";
+const DENIED_PREFIX: &str = "Der Benutzer hat abgelehnt: ";
 /// So viel von unlesbaren Argumenten zeigt der Fehler dem Modell.
 const ARGUMENTS_EXCERPT_CHARS: usize = 200;
 /// Grobe Schätzung, wenn das Modell keine Token-Zahl meldet.
@@ -32,6 +45,23 @@ pub struct TurnJob {
     pub tools: Vec<Value>,
     pub context: Arc<Mutex<ToolContext>>,
     pub cancel: Arc<AtomicBool>,
+    /// Gilt sofort — `set_permission_mode` erreicht auch den laufenden Turn.
+    pub mode: Arc<Mutex<Mode>>,
+    pub hooks: Arc<Hooks>,
+    pub cwd: PathBuf,
+    pub transcript_path: PathBuf,
+    /// Laufende Nummer der Rückfragen, über alle Turns der Session.
+    pub request_counter: Arc<AtomicU64>,
+    /// Antworten auf Rückfragen: Request-ID und `response`-Objekt der `control_response`.
+    pub answers: Receiver<(String, Value)>,
+}
+
+/// Antwort, die ein Werkzeug statt seiner Ausführung bekommt.
+fn refused(text: &str) -> ToolOutput {
+    ToolOutput {
+        text: text.to_owned(),
+        is_error: true,
+    }
 }
 
 pub enum Outcome {
@@ -179,19 +209,97 @@ fn run_tools(job: &TurnJob, completion: &Completion, calls: &[ParsedCall]) -> Ve
 
 fn run_tool(job: &TurnJob, call: &ParsedCall) -> ToolOutput {
     if job.cancel.load(Ordering::SeqCst) {
-        return ToolOutput {
-            text: INTERRUPTED.to_owned(),
-            is_error: true,
-        };
+        return refused(INTERRUPTED);
     }
     if let Some(error) = &call.argument_error {
-        return ToolOutput {
-            text: error.clone(),
-            is_error: true,
-        };
+        return refused(error);
+    }
+    let access = path_access(job, call);
+    let mode = *job.mode.lock().unwrap_or_else(PoisonError::into_inner);
+    let decision = match job
+        .hooks
+        .pre_tool_use(&hook_call(job, call, mode), &job.cancel)
+    {
+        HookVerdict::Deny(reason) => return refused(&reason),
+        // Eine Auswahlfrage braucht die Antwort des Benutzers, egal was ein Hook sagt.
+        HookVerdict::Allow if call.name != ASK_USER_TOOL => Decision::Allow,
+        HookVerdict::Ask => Decision::Ask,
+        HookVerdict::Allow | HookVerdict::None => permissions::decide(&call.name, mode, access),
+    };
+    let input = match decision {
+        Decision::Allow => call.input.clone(),
+        Decision::Deny(text) => return refused(&text),
+        Decision::Ask => match ask_permission(job, call) {
+            Ok(input) => input,
+            Err(output) => return output,
+        },
+    };
+    if job.cancel.load(Ordering::SeqCst) {
+        return refused(INTERRUPTED);
     }
     let mut context = job.context.lock().unwrap_or_else(PoisonError::into_inner);
-    tools::run(&call.name, &call.input, &mut context)
+    // Bis hierher kommt ein Pfad außerhalb nur mit Erlaubnis des Benutzers oder eines Hooks.
+    context.allow_outside = access == Some(Access::Outside);
+    let output = tools::run(&call.name, &input, &mut context);
+    context.allow_outside = false;
+    output
+}
+
+fn path_access(job: &TurnJob, call: &ParsedCall) -> Option<Access> {
+    let raw = tools::path_argument(&call.name, &call.input)?;
+    let context = job.context.lock().unwrap_or_else(PoisonError::into_inner);
+    Some(context.roots.access(&paths::resolve(&context.cwd, raw)))
+}
+
+fn hook_call<'a>(job: &'a TurnJob, call: &'a ParsedCall, mode: Mode) -> HookCall<'a> {
+    HookCall {
+        session_id: &job.session_id,
+        transcript_path: &job.transcript_path,
+        cwd: &job.cwd,
+        permission_mode: mode.cli_value(),
+        tool_use_id: &call.id,
+        tool: &call.name,
+        input: &call.input,
+    }
+}
+
+/// Stellt die Rückfrage und wartet auf die Antwort; Ergebnis ist die freigegebene Eingabe.
+fn ask_permission(job: &TurnJob, call: &ParsedCall) -> Result<Value, ToolOutput> {
+    let number = job.request_counter.fetch_add(1, Ordering::SeqCst) + 1;
+    let request_id = format!("{REQUEST_ID_PREFIX}{number}");
+    job.output
+        .line(&output::can_use_tool(&request_id, &call.name, &call.input));
+    loop {
+        if job.cancel.load(Ordering::SeqCst) {
+            return Err(refused(INTERRUPTED));
+        }
+        match job.answers.recv_timeout(ANSWER_POLL_INTERVAL) {
+            Ok((answered_id, response)) if answered_id == request_id => {
+                return permission_answer(&response, &call.input);
+            }
+            // Antwort auf eine ältere Rückfrage, deren Turn schon vorbei ist.
+            Ok(_) | Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => return Err(refused(INTERRUPTED)),
+        }
+    }
+}
+
+fn permission_answer(response: &Value, original: &Value) -> Result<Value, ToolOutput> {
+    match response.get("behavior").and_then(Value::as_str) {
+        Some("allow") => Ok(response
+            .get("updatedInput")
+            .filter(|input: &&Value| input.is_object())
+            .cloned()
+            .unwrap_or_else(|| original.clone())),
+        Some("deny") => {
+            let message = response
+                .get("message")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            Err(refused(&format!("{DENIED_PREFIX}{message}")))
+        }
+        _ => Err(refused("Unlesbare Antwort auf die Rückfrage.")),
+    }
 }
 
 /// Argumente in der gelesenen Form — unlesbare als `{}`, sonst lehnt die Chat-Vorlage den

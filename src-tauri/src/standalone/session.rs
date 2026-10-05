@@ -8,7 +8,7 @@ use std::collections::{HashSet, VecDeque};
 use std::env;
 use std::io::{self, BufRead};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
@@ -17,12 +17,14 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use super::args::{self, AgentArgs, Start};
+use super::hooks::Hooks;
 use super::output::{self, Output};
-use super::paths::Roots;
+use super::paths::{self, Roots};
 use super::tools::{self, ToolContext};
 use super::transcript::Transcript;
 use super::turn::{self, Outcome, TurnEvent, TurnJob};
 use super::{BASE_URL_VARIABLE, CONTEXT_WINDOW_VARIABLE, EXIT_START_FAILED, content, prompt};
+use crate::agents::event::Mode;
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
@@ -41,6 +43,8 @@ enum Input {
 struct ActiveTurn {
     cancel: Arc<AtomicBool>,
     events: Receiver<TurnEvent>,
+    /// Antworten auf Rückfragen des Arbeits-Threads.
+    answers: Sender<(String, Value)>,
     is_aborted: bool,
     /// Scheiterte das Schreiben ins Transkript, wird der Turn abgebrochen und endet mit diesem Fehler.
     transcript_error: Option<String>,
@@ -54,8 +58,11 @@ struct Session {
     cwd: PathBuf,
     prompt_appendix: Option<String>,
     model: String,
+    mode: Arc<Mutex<Mode>>,
     tools: Vec<Value>,
     tool_context: Arc<Mutex<ToolContext>>,
+    hooks: Arc<Hooks>,
+    request_counter: Arc<AtomicU64>,
     transcript: Transcript,
     queue: VecDeque<Value>,
     turn: Option<ActiveTurn>,
@@ -105,7 +112,14 @@ pub fn run(args: AgentArgs) -> i32 {
         roots: Roots::from_args(&cwd, &args.add_dirs, &args.allowed_rules),
         read_files: HashSet::new(),
         cancel: Arc::new(AtomicBool::new(false)),
+        allow_outside: false,
     };
+    let add_dirs: Vec<PathBuf> = args
+        .add_dirs
+        .iter()
+        .map(|dir: &PathBuf| paths::resolve(&cwd, &dir.to_string_lossy()))
+        .collect();
+    let hooks = Hooks::load(&cwd, &add_dirs);
     let mut session = Session {
         output,
         session_id,
@@ -114,8 +128,11 @@ pub fn run(args: AgentArgs) -> i32 {
         cwd,
         prompt_appendix: args.append_system_prompt,
         model: args.model,
+        mode: Arc::new(Mutex::new(args.mode)),
         tools: tool_definitions,
         tool_context: Arc::new(Mutex::new(tool_context)),
+        hooks: Arc::new(hooks),
+        request_counter: Arc::new(AtomicU64::new(0)),
         transcript,
         queue: VecDeque::new(),
         turn: None,
@@ -198,9 +215,27 @@ impl Session {
                 None => eprintln!("user-Zeile ohne message.content, überlesen"),
             },
             Some("control_request") => self.handle_control(&value),
-            // Rückfragen stellt der Agent noch nicht — es gibt nichts zu beantworten.
-            Some("control_response") => {}
+            Some("control_response") => self.forward_answer(&value),
             other => eprintln!("Unbekannte Zeile, überlesen: {other:?}"),
+        }
+    }
+
+    /// Antwort auf eine Rückfrage an den Arbeits-Thread, der auf sie wartet. Ohne laufenden Turn
+    /// wartet niemand mehr — dann verfällt sie.
+    fn forward_answer(&self, value: &Value) {
+        let Some(response) = value.get("response") else {
+            return;
+        };
+        if response.get("subtype").and_then(Value::as_str) != Some("success") {
+            eprintln!("Antwort auf Rückfrage mit Fehler, überlesen");
+            return;
+        }
+        let Some(request_id) = response.get("request_id").and_then(Value::as_str) else {
+            return;
+        };
+        let answer = response.get("response").cloned().unwrap_or(Value::Null);
+        if let Some(turn) = &self.turn {
+            let _ = turn.answers.send((request_id.to_owned(), answer));
         }
     }
 
@@ -219,13 +254,13 @@ impl Session {
                 self.reply_success(request_id);
                 self.interrupt();
             }
-            // Der Modus wirkt noch nicht auf die Werkzeuge; geprüft wird er trotzdem.
             "set_permission_mode" => {
                 let mode = request
                     .get("mode")
                     .and_then(Value::as_str)
                     .and_then(args::mode_from_cli);
-                if mode.is_some() {
+                if let Some(mode) = mode {
+                    *self.mode.lock().unwrap_or_else(PoisonError::into_inner) = mode;
                     self.reply_success(request_id);
                 } else {
                     self.reply_error(request_id, "unbekannter Modus");
@@ -287,6 +322,7 @@ impl Session {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .cancel = Arc::clone(&cancel);
+        let (answer_sender, answer_receiver) = mpsc::channel::<(String, Value)>();
         let job = TurnJob {
             output: Arc::clone(&self.output),
             session_id: self.session_id.clone(),
@@ -296,6 +332,12 @@ impl Session {
             tools: self.tools.clone(),
             context: Arc::clone(&self.tool_context),
             cancel: Arc::clone(&cancel),
+            mode: Arc::clone(&self.mode),
+            hooks: Arc::clone(&self.hooks),
+            cwd: self.cwd.clone(),
+            transcript_path: self.transcript.path().to_path_buf(),
+            request_counter: Arc::clone(&self.request_counter),
+            answers: answer_receiver,
         };
         let (event_sender, event_receiver) = mpsc::channel::<TurnEvent>();
         let spawned = thread::Builder::new()
@@ -313,6 +355,7 @@ impl Session {
         self.turn = Some(ActiveTurn {
             cancel,
             events: event_receiver,
+            answers: answer_sender,
             is_aborted: false,
             transcript_error: None,
         });

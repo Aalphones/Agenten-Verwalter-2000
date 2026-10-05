@@ -1,9 +1,11 @@
 //! Werkzeuge, die der Agent dem Modell anbietet — Namen und Parameter wie bei Claude Code, damit
 //! Anweisungen, Hooks und die Übersetzung im Verwalter unverändert greifen.
+mod ask;
 mod edit;
 mod glob;
 mod grep;
 mod read;
+pub mod shell;
 mod todo;
 mod walk;
 mod write;
@@ -23,6 +25,9 @@ pub const EDIT_TOOL: &str = "Edit";
 pub const GLOB_TOOL: &str = "Glob";
 pub const GREP_TOOL: &str = "Grep";
 pub const TODO_TOOL: &str = "TodoWrite";
+pub const BASH_TOOL: &str = "Bash";
+pub const POWERSHELL_TOOL: &str = "PowerShell";
+pub const ASK_USER_TOOL: &str = "AskUserQuestion";
 
 /// Ergebnis eines Werkzeugs, das wegen Esc nicht (fertig) lief.
 pub const INTERRUPTED: &str = "Vom Benutzer unterbrochen.";
@@ -42,6 +47,8 @@ pub struct ToolContext {
     pub read_files: HashSet<String>,
     /// Abbruch des laufenden Turns; setzt die Session zu Beginn jedes Turns neu.
     pub cancel: Arc<AtomicBool>,
+    /// Nur für den einen Aufruf, dessen Pfad außerhalb der Grenze der Benutzer erlaubt hat.
+    pub allow_outside: bool,
 }
 
 impl ToolContext {
@@ -141,7 +148,64 @@ pub fn definitions() -> Vec<Value> {
             }),
             &["todos"],
         ),
+        function(
+            BASH_TOOL,
+            "Runs a command in Git Bash on Windows (bash -c) in the working directory and returns \
+             stdout and stderr. Use Unix syntax and forward slashes. timeout in milliseconds \
+             (default 120000, max 600000). Background processes are not supported; the command \
+             must finish on its own.",
+            shell_properties(),
+            &["command"],
+        ),
+        function(
+            POWERSHELL_TOOL,
+            "Runs a command in Windows PowerShell 5.1 in the working directory and returns stdout \
+             and stderr. Use PowerShell syntax (no && or ||; use `; if ($?) { … }`). timeout in \
+             milliseconds (default 120000, max 600000). Background processes are not supported; \
+             the command must finish on its own.",
+            shell_properties(),
+            &["command"],
+        ),
+        function(
+            ASK_USER_TOOL,
+            "Asks the user one or more multiple-choice questions and returns the answers. \
+             Use it when a decision is genuinely the user's; each question has 2-4 options.",
+            json!({
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "question": { "type": "string", "description": "The complete question" },
+                            "header": { "type": "string", "description": "Very short label" },
+                            "options": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "label": { "type": "string" },
+                                        "description": { "type": "string" },
+                                    },
+                                    "required": ["label", "description"],
+                                },
+                            },
+                            "multiSelect": { "type": "boolean" },
+                        },
+                        "required": ["question", "header", "options", "multiSelect"],
+                    },
+                },
+            }),
+            &["questions"],
+        ),
     ]
+}
+
+fn shell_properties() -> Value {
+    json!({
+        "command": { "type": "string", "description": "The command to run" },
+        "timeout": { "type": "integer", "description": "Timeout in milliseconds" },
+        "description": { "type": "string", "description": "What the command does, in a few words" },
+    })
 }
 
 /// Namen der Werkzeuge in `definitions` — für die `init`-Zeile.
@@ -163,6 +227,9 @@ pub fn run(name: &str, input: &Value, context: &mut ToolContext) -> ToolOutput {
         GLOB_TOOL => glob::run(input, context),
         GREP_TOOL => grep::run(input, context),
         TODO_TOOL => todo::run(input),
+        BASH_TOOL => shell::run(shell::ShellKind::Bash, input, context),
+        POWERSHELL_TOOL => shell::run(shell::ShellKind::PowerShell, input, context),
+        ASK_USER_TOOL => ask::run(input),
         unknown => Err(format!("Unbekanntes Werkzeug: {unknown}")),
     };
     match result {
@@ -203,6 +270,20 @@ fn file_key(path: &Path) -> String {
     path.to_string_lossy().to_lowercase()
 }
 
+/// Der Pfad, den ein Datei-Werkzeug anfasst — für Rechte und Pfadgrenze vor dem Aufruf. Glob und
+/// Grep ohne `path` bleiben im Arbeitsordner und haben deshalb keinen.
+pub fn path_argument<'a>(name: &str, input: &'a Value) -> Option<&'a str> {
+    match name {
+        READ_TOOL | WRITE_TOOL | EDIT_TOOL => input.get("file_path").and_then(Value::as_str),
+        GLOB_TOOL | GREP_TOOL => optional_string(input, "path"),
+        _ => None,
+    }
+}
+
+pub fn is_writing(name: &str) -> bool {
+    matches!(name, WRITE_TOOL | EDIT_TOOL)
+}
+
 /// Pfad aus einem Parameter, geprüft gegen die Pfadgrenze; `needs_write` verlangt Schreibzugriff.
 fn checked_path(context: &ToolContext, raw: &str, needs_write: bool) -> Result<PathBuf, String> {
     let path = paths::resolve(&context.cwd, raw);
@@ -210,6 +291,7 @@ fn checked_path(context: &ToolContext, raw: &str, needs_write: bool) -> Result<P
         Access::Write => Ok(path),
         Access::ReadOnly if !needs_write => Ok(path),
         Access::ReadOnly => Err(format!("Nur lesbar: {}", path.display())),
+        Access::Outside if context.allow_outside => Ok(path),
         Access::Outside => Err(format!(
             "Pfad außerhalb von Workspace und Repositories: {}",
             path.display()

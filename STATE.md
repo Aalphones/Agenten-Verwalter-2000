@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/`
-**Phase:** 3/9 — Shell, Rechte, Rückfragen, Hooks (pending; Phase 2 complete)
-**Nächster Schritt:** Phase 3 umsetzen (`phase-3-shell-rechte-hooks.md`, zuerst die drei FINDINGS → Phase 3: Modus in der Session, Pfadgrenze als Rückfrage, Esc mitten in einer Werkzeug-Runde); Smoke „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
+**Phase:** 4/9 — Anweisungen und Skills (pending; Phase 3 complete)
+**Nächster Schritt:** Phase 4 umsetzen (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`); Smoke „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -13,7 +13,7 @@
 3. ~~Changes-Review~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_changes-review/`, `v0.12.0`, ADR 015).
 4. ~~Claude Code + LM Studio~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_claude-code-lokal/`, `v0.13.0`, ADR 016).
 4a. ~~Claude-Konto~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_claude-konto.md`, ADR 021); `v0.14.0`.
-5. **Autark** (`autarker-agent`) — Phasen 1–2 fertig, größter Plan (9 Phasen, drei „heikel“).
+5. **Autark** (`autarker-agent`) — Phasen 1–3 fertig, größter Plan (9 Phasen, drei „heikel“).
 6. **Dateiverweise im Chat** (`2026-10-05_dateiverweise-im-chat.md`) — umgesetzt (ADR 023), Smoke offen; nach Abnahme archivieren und Minor-Version taggen. Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.
 7. **MCP-Anmeldung** (`2026-10-05_mcp-anmeldung.md`) — Knopf „Anmelden“ im MCP-Dialog öffnet die Anmeldeseite im Browser, eine Phase, ADR 024. Unabhängig von Autark, darf zwischen dessen Phasen laufen.
 

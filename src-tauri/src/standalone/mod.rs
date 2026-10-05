@@ -3,9 +3,11 @@
 //! (LM Studio).
 pub mod args;
 pub mod content;
+pub mod hooks;
 pub mod llm;
 pub mod output;
 pub mod paths;
+pub mod permissions;
 pub mod prompt;
 pub mod session;
 pub mod tools;
