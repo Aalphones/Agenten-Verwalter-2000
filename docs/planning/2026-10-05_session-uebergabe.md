@@ -9,7 +9,7 @@ Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](../c
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
 | 1 | Einstiegszeile im Core erkennen, speichern, melden; Sidebar-Symbol „wartet auf Wiedereinstieg“ | standard | 1 | pending |
-| 2 | Knopf „In neuer Session weiter“: Anlegen, Entwurf, Wechsel; ADR 025, Doku | standard | 2 | pending |
+| 2 | Knopf „In neuer Session weiter“: Anlegen, Modell aus der Zeile, Entwurf, Wechsel; ADR 025, Doku | standard | 2 | pending |
 
 Sequenziell, weil Phase 2 das Feld `handoffLine` aus Phase 1 liest. Phase 1 liefert schon etwas Sichtbares (das Symbol). Umsetzung auf `feature/session-uebergabe` im Arbeitsbaum `Agenten-Verwalter-2000-wt-session-uebergabe`, ein Commit je Phase. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); geprüft wird mit der Smoke-Checkliste.
 
@@ -42,6 +42,7 @@ Daraus entsteht [ADR 025](../decisions/025-session-uebergabe.md) „Session-Übe
 - **Rangfolge im Vorhaben:** `waiting, error, running, starting, paused, handoff, new, completed, cancelled` — eine laufende oder wartende Session ist dringender als ein offener Wiedereinstieg.
 - **Symbol:** Kreis mit Pfeil nach rechts („weiter“), Farbe neues Token `--color-status-handoff` = Akzentfarbe (`var(--color-accent)`), hell und dunkel. Anders als Haken (grün) und „wartet auf dich“ (Ring mit Punkt, Bernstein). Text: „wartet auf Wiedereinstieg“.
 - **Knopf: Entwurf statt Senden.** Setzt die Zeile in den Entwurf der neuen Session; gesendet wird mit dem normalen Senden. Grund: vor der ersten Nachricht lassen sich Modell und Denkaufwand ändern — das ist der Sparhebel. Vorhandener Entwurf der Ziel-Session: leer → Zeile; enthält die Zeile schon → unverändert; sonst Zeile + Leerzeile + alter Entwurf.
+- **Modell aus der Zeile.** Die Umsetzungs-Skills schreiben die Modell-Empfehlung für die nächste Phase in die Einstiegszeile (`… Modell sonnet …`). Nennt die Zeile `Modell <fable|opus|sonnet|haiku>` (Groß-/Kleinschreibung egal) und weicht das vom übernommenen Modell ab, stellt der Knopf die neue Session darauf um, bevor der Entwurf gesetzt wird. Ohne Angabe bleibt das übernommene Modell. Denkaufwand und Modus bleiben immer übernommen. Schlägt das Umstellen fehl, bleiben Session und Entwurf, die Fehlerzeile sagt „Modell nicht umgestellt: …“.
 - **Knopf nur unter der letzten Textantwort,** nur wenn `session.handoffLine !== null` und Status nicht `starting`/`running`/`new`. Steht im Vorhaben schon eine Session `new`, wird sie wiederverwendet (Verhalten von `create_in_project`).
 
 ## Kontrakt
@@ -108,7 +109,8 @@ export const HANDOFF_LABEL = 'wartet auf Wiedereinstieg';
 
 ### TS: Knopf (Phase 2)
 
-- `src/features/chat/handoff.ts` (neu): `/** `seq` der letzten Textantwort, wenn nach ihr keine Nutzernachricht steht; sonst `null`. */ export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null;` — von hinten: `user` → `null`, `text` → `entry.seq`, sonst weiter; Ende → `null`.
+- `src/features/chat/handoff.ts` (neu): `/** `seq` der letzten Textantwort, wenn nach ihr keine Nutzernachricht steht; sonst `null`. */ export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null;` — von hinten: `user` → `null`, `text` → `entry.seq`, sonst weiter; Ende → `null`. Dazu `/** Das Modell, das die Einstiegszeile empfiehlt (`Modell sonnet`); `null` ohne Angabe. */ export function modelOfHandoff(line: string): ModelId | null;` — Muster `/\bModell\s+(fable|opus|sonnet|haiku)\b/i`, Treffer klein geschrieben als `ModelId`.
+- Modell umstellen: `setSessionModel(sessionId, model)` aus `src/lib/sessions.ts` wirkt auch bei einer Session `new` ohne Agent (`send_control` kehrt ohne Prozess mit `Ok` zurück, `registry.rs:1920–1923`; `set_model` setzt `summary_dirty`, `registry.rs:1039–1058`) — der Composer nutzt denselben Aufruf (`Composer.tsx:160`).
 - `src/features/background/mention.ts`: `const COMPOSER_INPUT_ID` → `export const COMPOSER_INPUT_ID`.
 - `src/features/chat/HandoffButton.tsx` + `HandoffButton.css` (neu):
 
@@ -122,7 +124,7 @@ export const HANDOFF_LABEL = 'wartet auf Wiedereinstieg';
   }
   ```
 
-  Zustand `isCreating`, `errorMessage` (Muster `ProjectOverview.createSession`, `ProjectOverview.tsx:60–70`). Klick: `createSessionInProject(projectId)` → `.then((created) => { onSessionCreated(created); setHandoffDraft(created.id, line); focusComposer(); })` → `.catch((reason) => setErrorMessage(commandErrorText(reason)))` → `.finally(() => setIsCreating(false))`. `setHandoffDraft` (lokal): `current = useChatStore.getState().drafts[id] ?? ''`; leer → `line`; `current.includes(line)` → nichts; sonst `` `${line}\n\n${current}` ``. `focusComposer`: `window.requestAnimationFrame(() => { document.getElementById(COMPOSER_INPUT_ID)?.focus(); })`. Markup `<div className="handoff">` + `<button type="button" className="handoff__button" title={HANDOFF_TITLE} disabled={isCreating}>{isCreating ? 'Lege Session an …' : 'In neuer Session weiter'}</button>` + bei Fehler `<p className="handoff__error" role="alert">`. `HANDOFF_TITLE = 'Legt im Vorhaben eine neue Session an – Modell, Modus und Repositories wie bisher – und setzt diese Zeile in ihr Eingabefeld. Gesendet wird erst, wenn du auf Senden klickst.'`. CSS BEM, nur Tokens: Textknopf wie `mcp-server__reconnect` (`src/features/mcp/McpServerRow.css`), aber in `--color-status-handoff`; Fehlerzeile wie `new-session-intro__error` (`src/features/projects/NewSessionIntro.css`); `.handoff` Abstand nach oben wie zwischen zwei Absätzen.
+  Zustand `isCreating`, `errorMessage` (Muster `ProjectOverview.createSession`, `ProjectOverview.tsx:60–70`). Klick als `async`-Ablauf: `created = await createSessionInProject(projectId)` (Fehler → `setErrorMessage(commandErrorText(reason))`, Ende); `onSessionCreated(created)`; `model = modelOfHandoff(line)`; ist `model !== null && model !== created.model` → `await setSessionModel(created.id, model)`, Fehler → `setErrorMessage(`Modell nicht umgestellt: ${commandErrorText(reason)}`)` und trotzdem weiter; dann `setHandoffDraft(created.id, line)`; `focusComposer()`; zuletzt `setIsCreating(false)`. `setHandoffDraft` (lokal): `current = useChatStore.getState().drafts[id] ?? ''`; leer → `line`; `current.includes(line)` → nichts; sonst `` `${line}\n\n${current}` ``. `focusComposer`: `window.requestAnimationFrame(() => { document.getElementById(COMPOSER_INPUT_ID)?.focus(); })`. Markup `<div className="handoff">` + `<button type="button" className="handoff__button" title={HANDOFF_TITLE} disabled={isCreating}>{isCreating ? 'Lege Session an …' : 'In neuer Session weiter'}</button>` + bei Fehler `<p className="handoff__error" role="alert">`. `HANDOFF_TITLE = 'Legt im Vorhaben eine neue Session an – Modell, Modus und Repositories wie bisher – und setzt diese Zeile in ihr Eingabefeld. Gesendet wird erst, wenn du auf Senden klickst.'`. CSS BEM, nur Tokens: Textknopf wie `mcp-server__reconnect` (`src/features/mcp/McpServerRow.css`), aber in `--color-status-handoff`; Fehlerzeile wie `new-session-intro__error` (`src/features/projects/NewSessionIntro.css`); `.handoff` Abstand nach oben wie zwischen zwei Absätzen.
 - Anschluss: `App.tsx` `<ChatView … onSessionCreated={handleSessionCreated} />`; `ChatView.tsx` Prop `onSessionCreated` in `ChatViewProps`, weiter an `ChatTimeline`; `ChatTimeline.tsx` Prop `onSessionCreated`, neben `lastErrorSeq`: `const answerSeq = useMemo(() => lastAnswerSeq(entries), [entries]);` und `const showsHandoff = session.handoffLine !== null && !['starting', 'running', 'new'].includes(session.status);`. `case 'text'`:
 
   ```tsx
@@ -150,7 +152,7 @@ export const HANDOFF_LABEL = 'wartet auf Wiedereinstieg';
 
 1. Unter genau der letzten Antwort einer Session mit Pfeil steht der Knopf „In neuer Session weiter“; unter keiner anderen Antwort; nicht während der Agent läuft.
 2. Klick: in der Sidebar erscheint eine neue Session (Nummer +1), sie ist ausgewählt, zeigt „Neue Session im Vorhaben …“, das Eingabefeld enthält die Einstiegszeile mit Fokus; nichts wurde gesendet. Die alte Session zeigt weiter den Pfeil (die neue ist noch `new`).
-3. Modell und Denkaufwand der neuen Session lassen sich vor dem Senden ändern; Senden startet sie mit der Zeile als erster Nachricht; danach zeigt die alte den grünen Haken.
+3. Nennt die Zeile `Modell sonnet` (bzw. ein anderes Modell), steht die neue Session nach dem Klick auf diesem Modell; ohne Angabe auf dem übernommenen. Modell und Denkaufwand lassen sich vor dem Senden ändern; Senden startet sie mit der Zeile als erster Nachricht; danach zeigt die alte den grünen Haken.
 4. Gibt es im Vorhaben schon eine Session „Neu“, wählt der Klick diese aus; ihr Entwurf bleibt hinter der Zeile erhalten.
 5. Schlägt das Anlegen fehl, steht die Meldung unter dem Knopf; der Knopf ist wieder klickbar.
 6. Der Knopf erklärt sich per Tooltip (`title`).
@@ -182,7 +184,7 @@ Phase 2:
 1. **Formen der Zeile** (P1 AK 1, 2): den Agenten nacheinander antworten lassen mit der Zeile in Backticks, fett (`**Weiter:** …`), in einem Code-Block und mit `**TL;DR:** …` danach → jedes Mal Pfeil in der Sidebar; eine Antwort mit „Weiter:“ als erster Zeile und sechs Absätzen danach → Haken. Wackelt, weil die Agenten die Zeile unterschiedlich setzen.
 2. **Vorhaben-Zeile** (P1 AK 3, 4): Vorhaben mit zwei Sessions, die neuere endet mit Einstiegszeile → Vorhaben zeigt Pfeil und „2 Sessions · #2 wartet auf Wiedereinstieg“; eine dritte Session anlegen und senden → #2 zeigt Haken, das Vorhaben den Zustand von #3. Wackelt, weil die Rangfolge jetzt einen Anzeige-Status kennt, den der Core nicht hat.
 3. **Zeilenhöhe im Verlauf** (P2 AK 1): Knopf erscheint unter der Antwort, nichts überlappt, der Verlauf springt nicht; eine weitere Nachricht senden → Knopf weg. Wackelt, weil die Zeile ihre Höhe nachträglich ändert.
-4. **Übergabe** (P2 AK 2, 3): Klick → neue Session ausgewählt, Eingabefeld mit Zeile und Fokus; Modell auf Sonnet, senden → startet auf Sonnet mit der Zeile als erster Nachricht; alte Session zeigt Haken.
+4. **Übergabe** (P2 AK 2, 3): Opus-Session mit Zeile `Weiter: Test — Modell sonnet, Phase 2, nächster Schritt: Smoke` → Klick → neue Session ausgewählt, Modell-Menü zeigt Sonnet, Eingabefeld mit Zeile und Fokus; senden → startet auf Sonnet mit der Zeile als erster Nachricht; alte Session zeigt Haken. Gegenprobe: Zeile ohne „Modell“ → neue Session auf Opus.
 5. **Neustart** (P1 AK 5): App beenden und starten → Pfeil wieder da.
 6. **Wiederverwendung** (P2 AK 4): in der Übersicht des Vorhabens eine Session anlegen, nicht senden, etwas eintippen; zurück, Knopf → dieselbe Session, Zeile vor dem getippten Text.
 
