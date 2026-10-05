@@ -13,12 +13,14 @@ pub enum ColorScheme {
 }
 
 /// Woher die Modellanfragen der Agenten kommen (ADR 016). `ClaudeCodeLocal` startet dieselbe
-/// Claude-Kommandozeile, schickt die Anfragen aber an LM Studio.
+/// Claude-Kommandozeile, schickt die Anfragen aber an LM Studio. `Standalone` („Autark“, ADR 017)
+/// startet statt der Claude-Kommandozeile den eigenen Agenten des Verwalters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum OperatingMode {
     Claude,
     ClaudeCodeLocal,
+    Standalone,
 }
 
 /// Werte, die für die ganze App gelten. Modell, Modus und Denkaufwand gelten für die erste Session

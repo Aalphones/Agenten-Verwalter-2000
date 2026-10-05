@@ -162,7 +162,7 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
           <h2 className="settings-view__section-title">Agent</h2>
           <SettingRow
             label="Betriebsart"
-            info="Claude: Modellanfragen gehen an dein Claude-Abo. Claude Code + LM Studio: dieselbe Claude-Kommandozeile mit Werkzeugen, Skills und Anweisungen, aber das Modell läuft lokal in LM Studio — für die Zeit, in der das Kontingent aufgebraucht ist. Gilt ab der nächsten Nachricht jeder Session."
+            info="Claude: Modellanfragen gehen an dein Claude-Abo. Claude Code + LM Studio: dieselbe Claude-Kommandozeile mit Werkzeugen, Skills und Anweisungen, aber das Modell läuft lokal in LM Studio — für die Zeit, in der das Kontingent aufgebraucht ist. Autark: ohne Claude-Kommandozeile und ohne Anthropic — ein eigener, kleinerer Agent des Verwalters mit dem lokalen Modell. Gilt ab der nächsten Nachricht jeder Session."
           >
             <OperatingModeSegment value={current.operatingMode} onChange={saveOperatingMode} />
           </SettingRow>

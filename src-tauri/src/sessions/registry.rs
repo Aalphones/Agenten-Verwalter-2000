@@ -14,8 +14,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde_json::{Map, Value, json};
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::agents::claude::local::{self, LocalBackend};
-use crate::agents::claude::locate::find_claude;
+use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
+use crate::agents::claude::locate::{self, find_claude};
 use crate::agents::claude::process::{ClaudeProcess, ProcessOutput, SpawnOptions, spawn};
 use crate::agents::claude::protocol::{
     allow, control_request, deny, get_context_usage, mcp_status, stop_task, user_message,
@@ -26,6 +26,7 @@ use crate::agents::event::{
     AgentEvent, Attachment, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
     QuestionKind, TaskEnd, TaskKind, TodoItem, ToolState, TurnEnd,
 };
+use crate::agents::standalone;
 use crate::attachments;
 use crate::background::model::{
     BackgroundChangedEvent, BackgroundItem, BackgroundKind, BackgroundState, SessionBackground,
@@ -400,9 +401,11 @@ impl SessionRegistry {
             effort,
             mode,
         } = request;
-        find_claude().ok_or(CommandError::ClaudeNotFound)?;
         // Vor dem Workspace: ein Fehler (LM Studio aus) lässt nichts zurück.
         let backend = self.agent_backend()?;
+        if !is_standalone(backend.as_ref()) {
+            find_claude().ok_or(CommandError::ClaudeNotFound)?;
+        }
         let rows = self
             .database
             .with(|connection| repository_rows::get_many(connection, repository_ids))?;
@@ -2544,15 +2547,21 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
     }
 }
 
+fn is_standalone(backend: Option<&LocalBackend>) -> bool {
+    backend.is_some_and(|local: &LocalBackend| local.program == LocalProgram::Standalone)
+}
+
 fn now_ms() -> f64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0.0, |elapsed: Duration| elapsed.as_secs_f64() * 1000.0)
 }
 
-/// Startet den Agenten neu und ersetzt einen noch laufenden Prozess. Kennt Claude die Session
-/// schon (`has_agent_history`), setzt der Start sie mit ihrem Verlauf fort (`--resume`), sonst
-/// legt er sie unter der Session-ID an (`--session-id`).
+/// Startet den Agenten neu und ersetzt einen noch laufenden Prozess. Kennt das zu startende Programm
+/// die Session schon (`has_agent_history` und ein Transkript von ihm), setzt der Start sie mit ihrem
+/// Verlauf fort (`--resume`), sonst legt er sie unter der Session-ID an (`--session-id`). Die
+/// Claude-Kommandozeile und der eigene Agent führen getrennte Transkripte (ADR 017): nach einem
+/// Wechsel der Betriebsart beginnt der Verlauf neu, und der Chat sagt das.
 ///
 /// Vorher prüft `worktrees::ensure` die Arbeitsordner: fehlende App-Worktrees entstehen neu, ein
 /// Repository ohne Haupt-Checkout bleibt draußen und bekommt einen Fehler-Eintrag im Chat. Ordner
@@ -2564,8 +2573,28 @@ fn start_process(
     outbox: &mut Outbox,
     backend: Option<&LocalBackend>,
 ) -> Result<(), CommandError> {
-    let resume = state.has_agent_history;
-    let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
+    let (exe, leading_args, has_transcript) = if is_standalone(backend) {
+        let has_transcript = crate::standalone::transcript_path(&session.id)
+            .is_some_and(|path: PathBuf| path.exists());
+        (
+            standalone::program()?,
+            standalone::leading_args(),
+            has_transcript,
+        )
+    } else {
+        let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
+        (exe, Vec::new(), locate::has_transcript(&session.id))
+    };
+    let resume = state.has_agent_history && has_transcript;
+    if state.has_agent_history && !resume {
+        state.push_entry(outbox, |seq: u32| ChatEntry::Error {
+            seq,
+            title: "Verlauf nicht übernommen".to_owned(),
+            text: "Diese Session lief bisher in einer anderen Betriebsart. Der Agent kennt den 
+                   bisherigen Verlauf nicht — schreib ihm kurz, worum es geht."
+                .to_owned(),
+        });
+    }
     let repositories = session.repositories();
     // Ein inneres Repository, das seit dem letzten Start dazukam, wird so erkannt.
     state.ticket_roots = worktrees::ticket_roots(&repositories);
@@ -2597,6 +2626,7 @@ fn start_process(
     let process = spawn(
         SpawnOptions {
             exe,
+            leading_args,
             cwd: session.workspace.clone(),
             session_id: session.id.clone(),
             resume,

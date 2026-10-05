@@ -31,6 +31,7 @@ export interface EffortOption {
 export const OPERATING_MODE_OPTIONS: readonly OperatingModeOption[] = [
   { id: 'claude', label: 'Claude' },
   { id: 'claudeCodeLocal', label: 'Claude Code + LM Studio' },
+  { id: 'standalone', label: 'Autark' },
 ] as const;
 
 export const MODEL_OPTIONS: readonly ModelOption[] = [

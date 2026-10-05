@@ -2,6 +2,7 @@
 
 /**
  * Woher die Modellanfragen der Agenten kommen (ADR 016). `ClaudeCodeLocal` startet dieselbe
- * Claude-Kommandozeile, schickt die Anfragen aber an LM Studio.
+ * Claude-Kommandozeile, schickt die Anfragen aber an LM Studio. `Standalone` („Autark“, ADR 017)
+ * startet statt der Claude-Kommandozeile den eigenen Agenten des Verwalters.
  */
-export type OperatingMode = "claude" | "claudeCodeLocal";
+export type OperatingMode = "claude" | "claudeCodeLocal" | "standalone";

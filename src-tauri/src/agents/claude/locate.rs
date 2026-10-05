@@ -2,6 +2,8 @@ use std::env;
 use std::path::PathBuf;
 
 const PATH_OVERRIDE_VAR: &str = "VERWALTER_CLAUDE_PATH";
+const CONFIG_DIR_VAR: &str = "CLAUDE_CONFIG_DIR";
+const TRANSCRIPT_EXTENSION: &str = "jsonl";
 #[cfg(windows)]
 const EXE_NAME: &str = "claude.exe";
 #[cfg(not(windows))]
@@ -67,4 +69,28 @@ fn install_locations() -> Vec<PathBuf> {
     paths.push(PathBuf::from("/opt/homebrew/bin").join(EXE_NAME));
     paths.push(PathBuf::from("/usr/local/bin").join(EXE_NAME));
     paths
+}
+
+/// Ob die Claude-Kommandozeile ein Transkript dieser Session hat: `<Basis>\projects\<Ordner>\<id>.jsonl`,
+/// Basis `CLAUDE_CONFIG_DIR` oder `<Benutzerordner>\.claude`. Ist `projects` nicht lesbar, gilt die
+/// Session als bekannt — dann setzt der Start sie wie bisher fort.
+pub fn has_transcript(session_id: &str) -> bool {
+    let Some(base) = config_dir() else {
+        return true;
+    };
+    let Ok(entries) = std::fs::read_dir(base.join("projects")) else {
+        return true;
+    };
+    let file_name = format!("{session_id}.{TRANSCRIPT_EXTENSION}");
+    entries
+        .filter_map(Result::ok)
+        .any(|entry: std::fs::DirEntry| entry.path().join(&file_name).is_file())
+}
+
+fn config_dir() -> Option<PathBuf> {
+    if let Some(explicit) = env::var_os(CONFIG_DIR_VAR) {
+        return Some(PathBuf::from(explicit));
+    }
+    let home = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME"))?;
+    Some(PathBuf::from(home).join(".claude"))
 }

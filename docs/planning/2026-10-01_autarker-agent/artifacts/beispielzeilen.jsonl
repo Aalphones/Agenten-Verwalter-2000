@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":"Sag Hallo in einem Satz."}}
+{"type":"user","message":{"role":"user","content":"Worum ging es gerade?"}}
+{"type":"control_request","request_id":"req-1","request":{"subtype":"interrupt"}}

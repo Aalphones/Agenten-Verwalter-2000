@@ -14,6 +14,8 @@ const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct SpawnOptions {
     pub exe: PathBuf,
+    /// Vor allen übrigen Argumenten, z. B. der Unterbefehl des eigenen Agenten.
+    pub leading_args: Vec<String>,
     pub cwd: PathBuf,
     pub session_id: String,
     pub resume: bool,
@@ -101,6 +103,7 @@ impl ClaudeProcess {
 fn build_command(opts: &SpawnOptions) -> Command {
     let mut command = Command::new(&opts.exe);
     command
+        .args(&opts.leading_args)
         .current_dir(&opts.cwd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

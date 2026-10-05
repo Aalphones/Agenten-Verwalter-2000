@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan) — Claude-Konto ist umgesetzt und archiviert, wartet auf Smoke-Abnahme und Release
-**Phase:** —
-**Nächster Schritt:** Smoke-Checkliste „Claude-Konto“ abnehmen lassen (Wackelstellen 1–3 zuerst; `v0.14.0` ist schon getaggt und gepusht); danach Plan 5 „Autark“.
+**Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/`
+**Phase:** 2/9 — Werkzeug-Schleife und Datei-Werkzeuge (pending; Phase 1 complete)
+**Nächster Schritt:** Phase 2 umsetzen (`phase-2-dateiwerkzeuge.md`, zuerst die beiden FINDINGS → Phase 2 zum Transkript beim Abbruch); Smoke „Claude-Konto“ steht weiter offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

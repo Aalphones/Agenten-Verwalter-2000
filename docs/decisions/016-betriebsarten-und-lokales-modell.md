@@ -37,4 +37,4 @@ Ist das Kontingent des Claude-Abos aufgebraucht, hängen alle Sessions. Der Benu
 - **TL;DR lokal geht:** `structured_output` kam im lokalen Betrieb in 9 s.
 - **Das Modell liest die Anweisungen des Benutzers** und hängt dadurch unaufgefordert Persona-Zeilen an die Antwort.
 - claude.ai-Connectoren sind abgeschaltet, sobald eine andere Anmeldung gesetzt ist.
-- Die dritte Betriebsart, Autark, baut der Plan „Autarker Agent“ (ADR 017, noch nicht geschrieben) auf dieser auf.
+- Die dritte Betriebsart, Autark, baut der Plan „Autarker Agent“ auf dieser auf: dieselbe Prüfung bei LM Studio und dieselbe Einstellung „Lokales Modell“, aber statt der Claude-Kommandozeile der eigene Agent des Verwalters — siehe [ADR 017](017-autarker-agent.md).

@@ -1,26 +1,38 @@
-//! Betriebsart Claude Code + LM Studio: dieselbe Kommandozeile, Modellanfragen an LM Studio (ADR 016).
+//! Betriebsarten mit LM Studio: Claude Code + LM Studio (dieselbe Kommandozeile, Modellanfragen an
+//! LM Studio, ADR 016) und Autark (der eigene Agent des Verwalters, ADR 017).
 use std::process::Command;
 
 use crate::error::CommandError;
 use crate::lmstudio;
 use crate::settings::model::{OperatingMode, Settings};
+use crate::standalone;
 
 /// LM Studio versteht jeden Schlüssel, solange „Require Authentication“ aus ist.
 const AUTH_TOKEN: &str = "lmstudio";
+
+/// Welches Programm die Session startet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LocalProgram {
+    ClaudeCode,
+    Standalone,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LocalBackend {
     pub base_url: String,
     pub model: String,
     pub context_window: u32,
+    pub program: LocalProgram,
 }
 
 /// `Ok(None)` in der Betriebsart Claude. Fragt LM Studio (höchstens 3 s) — nie unter einer
 /// Session-Sperre aufrufen.
 pub fn resolve(settings: &Settings) -> Result<Option<LocalBackend>, CommandError> {
-    if settings.operating_mode != OperatingMode::ClaudeCodeLocal {
-        return Ok(None);
-    }
+    let program = match settings.operating_mode {
+        OperatingMode::Claude => return Ok(None),
+        OperatingMode::ClaudeCodeLocal => LocalProgram::ClaudeCode,
+        OperatingMode::Standalone => LocalProgram::Standalone,
+    };
     let Some(model) = settings.local_model.clone() else {
         return Err(CommandError::LocalModelUnavailable(
             "Kein lokales Modell gewählt — wähle eins in den Einstellungen unter „Lokales Modell“."
@@ -44,12 +56,19 @@ pub fn resolve(settings: &Settings) -> Result<Option<LocalBackend>, CommandError
         context_window: found
             .loaded_context_length
             .unwrap_or(found.max_context_length),
+        program,
     }))
 }
 
 /// Setzt die Umgebung des Kindprozesses für LM Studio.
 pub fn apply(command: &mut Command, backend: &LocalBackend) {
     let context_window = backend.context_window.to_string();
+    if backend.program == LocalProgram::Standalone {
+        command
+            .env(standalone::BASE_URL_VARIABLE, &backend.base_url)
+            .env(standalone::CONTEXT_WINDOW_VARIABLE, context_window);
+        return;
+    }
     command
         .env("ANTHROPIC_BASE_URL", &backend.base_url)
         .env("ANTHROPIC_AUTH_TOKEN", AUTH_TOKEN)

@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{ProjectState, Session, SessionRegistry, SessionState, now_ms, project_not_found};
-use crate::agents::claude::local;
+use crate::agents::claude::local::{self, LocalProgram};
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::print::{PrintRequest, run_print};
 use crate::agents::event::ModelId;
@@ -325,6 +325,12 @@ fn ask_haiku<T: DeserializeOwned>(
     let database = app.state::<Arc<Database>>();
     let settings = settings::load(&database).map_err(|error: CommandError| error.to_string())?;
     let backend = local::resolve(&settings).map_err(|error: CommandError| error.to_string())?;
+    if backend
+        .as_ref()
+        .is_some_and(|local: &local::LocalBackend| local.program == LocalProgram::Standalone)
+    {
+        return Err("TL;DR folgt in der Betriebsart „Autark“ mit dem Druckmodus.".to_owned());
+    }
     let request = PrintRequest {
         model: ModelId::Haiku,
         system_prompt,
