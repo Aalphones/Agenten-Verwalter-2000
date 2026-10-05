@@ -15,7 +15,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Gerüst: Einstieg `agent`, Zeilenprotokoll, LM-Studio-Client, Transkript, Unterbrechen, Betriebsart „Autark“ — Chat ohne Werkzeuge | [phase-1-geruest.md](phase-1-geruest.md) | heikel | complete |
-| 2 | Werkzeug-Schleife und Datei-Werkzeuge: Read, Write, Edit, Glob, Grep, TodoWrite, Pfadgrenzen | [phase-2-dateiwerkzeuge.md](phase-2-dateiwerkzeuge.md) | heikel | pending |
+| 2 | Werkzeug-Schleife und Datei-Werkzeuge: Read, Write, Edit, Glob, Grep, TodoWrite, Pfadgrenzen; Konto-Zeile ohne `claude.exe` in „Autark“ | [phase-2-dateiwerkzeuge.md](phase-2-dateiwerkzeuge.md) | heikel | pending |
 | 3 | Shell, Rechte, Rückfragen, Hooks: Bash, PowerShell, Modi, `can_use_tool`, AskUserQuestion, PreToolUse | [phase-3-shell-rechte-hooks.md](phase-3-shell-rechte-hooks.md) | heikel | pending |
 | 4 | Anweisungen und Skills: Systemprompt, CLAUDE.md mit Einbindungen, Output-Style, Skill-Liste, Skill-Werkzeug, `/name` | [phase-4-anweisungen-skills.md](phase-4-anweisungen-skills.md) | standard | pending |
 | 5 | Kontext, Verdichten, Bilder, Druckmodus für TL;DR, Kontext-Aufschlüsselung | [phase-5-kontext-bilder-druck.md](phase-5-kontext-bilder-druck.md) | standard | pending |

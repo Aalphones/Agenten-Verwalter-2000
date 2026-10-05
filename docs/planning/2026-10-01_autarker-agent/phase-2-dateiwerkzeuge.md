@@ -20,6 +20,7 @@ Ziel: Der Agent bietet dem Modell `Read`, `Write`, `Edit`, `Glob`, `Grep` und `T
 - Eine Aufgabe mit `TodoWrite` zeigt die Aufgabenliste im Chat.
 - `Read` auf `C:\Windows\win.ini` → Fehler „Pfad außerhalb von Workspace und Repositories“ an das Modell (Rückfrage erst ab Phase 3).
 - Bricht das Modell nicht ab, endet der Turn nach 50 Runden mit dem Satz aus der README.
+- Einstellungen öffnen in „Autark“: keine Zeile „Claude-Konto“, und der Task-Manager zeigt keine `claude.exe` (vorher startete die Zeile `claude auth status --json`). In „Claude“ und „Claude Code + LM Studio“ ist die Zeile unverändert da.
 - `pnpm check` grün.
 
 ## Checkliste
@@ -49,6 +50,11 @@ Ziel: Der Agent bietet dem Modell `Read`, `Write`, `Edit`, `Glob`, `Grep` und `T
 - [ ] Werkzeuge nacheinander ausführen; vor jedem `cancel` prüfen — gesetzt → für diesen und alle folgenden Aufrufe Ergebnis „Vom Benutzer unterbrochen.“ mit `is_error`. Eine `user`-Zeile mit allen `tool_result`-Blöcken ausgeben; je Aufruf ans Transkript `{"role":"tool","tool_call_id":<id>,"content":<text>}` (immer, auch bei Abbruch — sonst passt das Transkript beim nächsten Start nicht zum Format). Bei Abbruch danach `result_aborted`.
 - [ ] Sonst nächste Anfrage mit dem erweiterten Verlauf; Runden zählen, bei 50 `result_error` mit „Abgebrochen nach 50 Werkzeug-Schritten.“. Antwort ohne `tool_calls` → wie Phase 1.
 - [ ] Die Werkzeuge laufen auf dem Arbeits-Thread des Turns (nicht auf der Hauptschleife), damit `interrupt` weiter ankommt; `ToolContext` lebt in der Session und wird dem Thread für die Dauer des Turns übergeben (z. B. per `Arc<Mutex<ToolContext>>`).
+
+### Konto-Zeile in „Autark“ (Nebenbefund aus Phase 1, Ziel AK 2 der README)
+
+- [ ] `src/features/settings/SettingsView.tsx`: `<AccountRow />` nur rendern, wenn `current.operatingMode !== 'standalone'` — der Hook `useAccount` lädt dann gar nicht erst.
+- [ ] `src-tauri/src/commands/account.rs`: `account_load` und `account_login` prüfen wie `usage_refresh` (`commands/usage.rs`) die Betriebsart; bei `OperatingMode::Standalone` kein Aufruf der Kommandozeile — `account_load` liefert `AccountStatus` mit `info: None`, `error: Some("In der Betriebsart Autark gibt es kein Claude-Konto.")`, `is_logging_in: false`; `account_login` kehrt mit `Ok(())` zurück. Schutz für den Fall, dass die Oberfläche doch fragt.
 
 ### Doku
 
