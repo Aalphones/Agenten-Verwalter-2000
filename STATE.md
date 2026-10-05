@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-05_claude-konto.md` (freigegeben)
-**Phase:** 2/2 — Oberfläche und Doku (pending; Phase 1 Core fertig)
-**Nächster Schritt:** Phase 2 umsetzen (Scope `account` dabei in `docs/conventions/commits.md` ergänzen); danach Plan 5 „Autark“ (vorher 🟡 Autark Phase 7 messen, LM Studio parallel).
+**Aktiver Plan:** (kein aktiver Plan) — Claude-Konto ist umgesetzt und archiviert, wartet auf Smoke-Abnahme und Release
+**Phase:** —
+**Nächster Schritt:** Smoke-Checkliste „Claude-Konto“ abnehmen lassen (Wackelstellen 1–3 zuerst), dann Release `v0.14.0` (Ablauf `docs/conventions/releases.md`); danach Plan 5 „Autark“ (vorher 🟡 Autark Phase 7 messen, LM Studio parallel).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -12,11 +12,11 @@
 2. ~~Session-Changes~~ — erledigt und archiviert (`v0.9.0`).
 3. ~~Changes-Review~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_changes-review/`, `v0.12.0`, ADR 015).
 4. ~~Claude Code + LM Studio~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_claude-code-lokal/`, `v0.13.0`, ADR 016).
-4a. **Claude-Konto** (`claude-konto`) — Konto anzeigen und über `claude auth login` wechseln, 2 Phasen, ADR 021.
+4a. ~~Claude-Konto~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_claude-konto.md`, ADR 021); Release noch nicht getaggt.
 5. **Autark** (`autarker-agent`) — Plan 4 steht, größter Plan (9 Phasen, drei „heikel“).
 
 ## Offen
 
-- Smoke-Checklisten ohne Abnahme: „Claude Code + LM Studio“ (README unter `docs/archive/2026-10/2026-10-01_claude-code-lokal/`, Wackelstellen 1–3 zuerst; zum Release freigegeben), „Changes-Review“ (README unter `docs/archive/2026-10/2026-10-01_changes-review/`, Wackelstellen 1–3 zuerst; zum Release freigegeben, Einzelergebnisse nicht protokolliert), „Innere Repositories“ (README unter `docs/archive/2026-10/2026-10-02_innere-repositories/`, Neuer-Commit-Fall zuerst; dazu die zwei facepass-Probe-Läufe auf dem Arbeitslaptop), „Sidebar nach letzter Aktivität“ (im Plan unter `docs/archive/2026-10/2026-10-02_sidebar-aktivitaet.md`, Neustart-Fall zuerst), „Session-Changes“ (README unter `docs/archive/2026-10/2026-10-01_session-changes/`), „MCP-Dialog“ (v0.8.0), „Sprachdiktat“ (v0.6.0, samt Messwerten), „Ordner ohne Git“ (v0.7.0) — Ergebnisse in die jeweilige Datei unter `docs/archive/2026-10/` nachtragen.
-- **ADR-Nummern:** Changes-Review 015, Claude Code lokal 016 (vergeben), Autark 017, „Ordner ohne Git“ 018 (Sidebar hat 019 bekommen), Innere Repositories 020.
+- Smoke-Checklisten ohne Abnahme: „Claude-Konto“ (im Plan unter `docs/archive/2026-10/2026-10-05_claude-konto.md`, Wackelstellen 1–3 zuerst; Voraussetzung für das Release), „Claude Code + LM Studio“ (README unter `docs/archive/2026-10/2026-10-01_claude-code-lokal/`, Wackelstellen 1–3 zuerst; zum Release freigegeben), „Changes-Review“ (README unter `docs/archive/2026-10/2026-10-01_changes-review/`, Wackelstellen 1–3 zuerst; zum Release freigegeben, Einzelergebnisse nicht protokolliert), „Innere Repositories“ (README unter `docs/archive/2026-10/2026-10-02_innere-repositories/`, Neuer-Commit-Fall zuerst; dazu die zwei facepass-Probe-Läufe auf dem Arbeitslaptop), „Sidebar nach letzter Aktivität“ (im Plan unter `docs/archive/2026-10/2026-10-02_sidebar-aktivitaet.md`, Neustart-Fall zuerst), „Session-Changes“ (README unter `docs/archive/2026-10/2026-10-01_session-changes/`), „MCP-Dialog“ (v0.8.0), „Sprachdiktat“ (v0.6.0, samt Messwerten), „Ordner ohne Git“ (v0.7.0) — Ergebnisse in die jeweilige Datei unter `docs/archive/2026-10/` nachtragen.
+- **ADR-Nummern:** Changes-Review 015, Claude Code lokal 016 (vergeben), Autark 017, „Ordner ohne Git“ 018 (Sidebar hat 019 bekommen), Innere Repositories 020, Claude-Konto 021.
 - 🟡 **Autark Phase 7:** Ob LM Studio mehrere Anfragen gleichzeitig rechnet, ist ungeprüft. Vor Plan 5 messen.

@@ -5,7 +5,7 @@ Die Einstellungsseite zeigt, mit welchem Konto die Claude-Kommandozeile angemeld
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Konto lesen, Anmeldung starten, Ereignis | standard | complete |
-| 2 | Oberfläche: Abschnitt „Konto“, Doku, ADR 021 | standard | pending |
+| 2 | Oberfläche: Abschnitt „Konto“, Doku, ADR 021 | standard | complete |
 
 ## Entscheidungen (fallen hier, nicht beim Umsetzen)
 
@@ -65,12 +65,12 @@ AK:
 - ⓘ-Text: „Das Konto, mit dem die Claude-Kommandozeile angemeldet ist. „Konto wechseln“ startet deren Anmeldung (claude auth login) in einem eigenen Fenster und im Browser; Schließen des Fensters bricht ab. Gilt für jeden Agenten, der danach startet.“
 - `pnpm check` grün.
 
-- [ ] `src/lib/account.ts`: `loadAccount()`, `startAccountLogin()`, `onAccountChanged(cb)` (Muster `src/lib/usage.ts`).
-- [ ] `src/features/account/useAccount.ts`: erst abonnieren, dann laden; jüngste Antwort gewinnt (Muster `useUsage`, ohne Intervall); liefert `{ status, isLoading, login }`.
-- [ ] `src/features/account/AccountRow.tsx` (+ `AccountRow.css`, BEM `account-row`) rendert die `SettingRow` aus der AK; Knopf-Klasse wie `settings-view__button`.
-- [ ] `planLabel(plan: string): string` in `src/lib/labels.ts` (erster Buchstabe groß); `UsagePopover` nutzt es statt seines `capitalize`, falls dieses nur dort dafür dient.
-- [ ] `SettingsView.tsx`: Abschnitt „Konto“ vor „Darstellung“.
-- [ ] Doku: Zeile „Konto (Claude-Anmeldung)“ in `docs/code-map.md` + Feature-Liste; Begriff „Claude-Konto“ in `docs/glossary.md`; `docs/decisions/021-claude-konto.md` (Kontext / Optionen: eigenes OAuth vs. Kommandozeile, verstecktes vs. sichtbares Fenster / Entscheidung / Konsequenzen).
+- [x] `src/lib/account.ts`: `loadAccount()`, `startAccountLogin()`, `onAccountChanged(cb)` (Muster `src/lib/usage.ts`).
+- [x] `src/features/account/useAccount.ts`: erst abonnieren, dann laden; jüngste Antwort gewinnt (Muster `useUsage`, ohne Intervall); liefert `{ status, isLoading, login }`.
+- [x] `src/features/account/AccountRow.tsx` (+ `AccountRow.css`, BEM `account-row`) rendert die `SettingRow` aus der AK; Knopf-Klasse wie `settings-view__button`.
+- [x] `planLabel(plan: string): string` in `src/lib/labels.ts` (erster Buchstabe groß); `UsagePopover` nutzt es statt seines `capitalize`, falls dieses nur dort dafür dient.
+- [x] `SettingsView.tsx`: Abschnitt „Konto“ vor „Darstellung“.
+- [x] Doku: Zeile „Konto (Claude-Anmeldung)“ in `docs/code-map.md` + Feature-Liste; Begriff „Claude-Konto“ in `docs/glossary.md`; `docs/decisions/021-claude-konto.md` (Kontext / Optionen: eigenes OAuth vs. Kommandozeile, verstecktes vs. sichtbares Fenster / Entscheidung / Konsequenzen).
 
 ## Smoke-Checkliste (Abgleich macht Sascha)
 
@@ -82,10 +82,25 @@ AK:
 
 ## Summary
 
+Die Einstellungen zeigen als ersten Abschnitt „Konto“ die Zeile „Claude-Konto“ (E-Mail, Abo, Organisation im Tooltip) mit dem Knopf „Konto wechseln“ bzw. „Anmelden“. Der Wechsel startet `claude auth login` in einem eigenen Konsolenfenster; danach liest die App das Konto neu und ruft das Kontingent ab. ADR 021.
+
 ## Files touched
+
+- Core: `src-tauri/src/account/` (`model.rs`, `mod.rs`), `src-tauri/src/commands/account.rs`, `show_console` in `src-tauri/src/processes/mod.rs`, `lib.rs`, `gen-bindings.rs`.
+- Oberfläche: `src/lib/account.ts`, `src/features/account/` (`useAccount.ts`, `AccountRow.tsx`/`.css`), `planLabel` in `src/lib/labels.ts` (ersetzt `capitalize` in `UsagePopover.tsx`), Abschnitt in `SettingsView.tsx`, `:disabled`-Stil für `settings-view__button`.
+- Doku: `docs/code-map.md`, `docs/glossary.md`, `docs/conventions/commits.md` (Scope `account`), `docs/decisions/021-claude-konto.md`.
 
 ## Commits
 
+- `6c61668` feat(account): read Claude account and start its login from the core
+- `551db17` feat(account): show the Claude account in the settings
+
 ## Deviations from plan
 
+- Der Knopf bleibt auch aktiv, solange das Konto noch nicht gelesen ist (nur während der Anmeldung deaktiviert): scheitert das erste Lesen, bleibt „Anmelden“ erreichbar.
+- Die Zeile zeigt bei einem Lesefehler nach einem früheren Erfolg den letzten Stand **und** den Fehlersatz darunter.
+
 ## Follow-ups
+
+- Smoke-Checkliste (oben) ohne Abnahme; Wackelstellen 1–3 zuerst.
+- Offen aus dem ADR: ob ein bereits laufender Agent nach dem Wechsel das neue Konto sofort übernimmt (Smoke 3).
