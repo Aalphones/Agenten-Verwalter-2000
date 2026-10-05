@@ -9,6 +9,7 @@ import type { UsageLimit } from '@/lib/bindings/UsageLimit';
 import type { UsageShare } from '@/lib/bindings/UsageShare';
 import type { UsageSnapshot } from '@/lib/bindings/UsageSnapshot';
 import type { UsageStatus } from '@/lib/bindings/UsageStatus';
+import { planLabel } from '@/lib/labels';
 import { severityOf } from '@/lib/severity';
 import type { Severity } from '@/lib/severity';
 import { refreshUsage } from '@/lib/usage';
@@ -107,7 +108,7 @@ export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactEleme
         <div className="usage-popover__head">
           <h2 className="usage-popover__title">Kontingent</h2>
           {snapshot?.plan != null && (
-            <span className="usage-popover__plan">Abo: {capitalize(snapshot.plan)}</span>
+            <span className="usage-popover__plan">Abo: {planLabel(snapshot.plan)}</span>
           )}
         </div>
         {renderBody()}
@@ -206,8 +207,4 @@ function renderDrivers(breakdown: UsageBreakdown | null): ReactElement {
       </p>
     </>
   );
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }

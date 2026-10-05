@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
+import { AccountRow } from '@/features/account/AccountRow';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
 import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
@@ -139,6 +140,10 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
     const currentMode = modeOption(current.defaultMode);
     return (
       <>
+        <section className="settings-view__section">
+          <h2 className="settings-view__section-title">Konto</h2>
+          <AccountRow />
+        </section>
         <section className="settings-view__section">
           <h2 className="settings-view__section-title">Darstellung</h2>
           <SettingRow

@@ -97,6 +97,11 @@ export function effortLabel(id: Effort): string {
   return option === undefined ? id : option.label;
 }
 
+/** Abo-Name aus der Kommandozeile (`pro`) für die Anzeige (`Pro`). */
+export function planLabel(plan: string): string {
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
 export function repositoryCountLabel(count: number): string {
   if (count === 0) {
     return 'Kein Repository';
