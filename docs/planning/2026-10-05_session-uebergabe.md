@@ -9,7 +9,7 @@ Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](../c
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
 | 1 | Einstiegszeile im Core erkennen, speichern, melden; Sidebar-Symbol „wartet auf Wiedereinstieg“ | standard | 1 | pending |
-| 2 | Knopf „In neuer Session weiter“: Anlegen, Modell aus der Zeile, Entwurf, Wechsel; ADR 025, Doku | standard | 2 | pending |
+| 2 | Knopf „In neuer Session weiter“: Anlegen, Modell aus der Zeile, Entwurf, Wechsel; ADR 027, Doku | standard | 2 | pending |
 
 Sequenziell, weil Phase 2 das Feld `handoffLine` aus Phase 1 liest. Phase 1 liefert schon etwas Sichtbares (das Symbol). Umsetzung auf `feature/session-uebergabe` im Arbeitsbaum `Agenten-Verwalter-2000-wt-session-uebergabe`, ein Commit je Phase. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); geprüft wird mit der Smoke-Checkliste.
 
@@ -33,7 +33,7 @@ Sequenziell, weil Phase 2 das Feld `handoffLine` aus Phase 1 liest. Phase 1 lief
 
 ## Festgelegte Entscheidungen
 
-Daraus entsteht [ADR 025](../decisions/025-session-uebergabe.md) „Session-Übergabe über die Einstiegszeile“. Vergeben: 001–023 auf der Platte, 024 im geparkten Plan „MCP-Anmeldung“; dieser Plan schreibt 025.
+Daraus entsteht [ADR 027](../decisions/027-session-uebergabe.md) „Session-Übergabe über die Einstiegszeile“. Vergeben: 001–023 auf der Platte, 024–026 in den geparkten Plänen „MCP-Anmeldung“, „Git-Werkzeuge“, „Artefakte“; dieser Plan schreibt 027.
 
 - **Erkennung am Text, im Core, an einer Stelle.** Die Einstiegszeile ist eine Textzeile, die mit `Weiter:` beginnt — so geben die Umsetzungs-Skills sie heute aus. Der Core prüft jede neue Textantwort und merkt sich das Ergebnis je Session (`handoff_line`); die Oberfläche liest nur das Feld. Grund: die Sidebar kennt keine Chat-Einträge, und zwei Erkennungen (Rust + TS) liefen auseinander. Verworfen: eigenes Werkzeug oder Steuerzeichen des Agenten (Änderung in jedem Skill, kein Mehrwert); Erkennung nur in der Oberfläche (Sidebar hätte keine Daten).
 - **Regel der Erkennung:** in den **letzten fünf nicht leeren Zeilen** der Antwort (Code-Zaun-Zeilen ```` ``` ```` zählen nicht), damit ein „Weiter:“ mitten in einer langen Antwort nichts auslöst; eine TL;DR-Zeile danach ist erlaubt.
@@ -50,7 +50,7 @@ Daraus entsteht [ADR 025](../decisions/025-session-uebergabe.md) „Session-Übe
 ### Rust: `src-tauri/src/sessions/handoff.rs` (neu, in `sessions/mod.rs` als `pub mod handoff;`)
 
 ```rust
-/// Die Einstiegszeile am Ende einer Antwort (ADR 025); `None`, wenn keine der letzten fünf nicht
+/// Die Einstiegszeile am Ende einer Antwort (ADR 027); `None`, wenn keine der letzten fünf nicht
 /// leeren Zeilen mit „Weiter:“ beginnt.
 pub fn handoff_line(text: &str) -> Option<String>;
 ```
@@ -60,13 +60,13 @@ Genau so: `text.lines().rev()`; Zeilen, die nach `trim()` leer sind oder mit ```
 ### Rust: Zustand, Speicher, Meldung
 
 - `src-tauri/src/db/migrations/009_session_handoff.sql`: `ALTER TABLE sessions ADD COLUMN handoff_line TEXT;` — eintragen in `src-tauri/src/db/migrations.rs` hinter `008`.
-- `src-tauri/src/db/sessions.rs`: `SessionRow` und `StoredRow` bekommen `pub handoff_line: Option<String>` (Doc: „Einstiegszeile der letzten Antwort (ADR 025); `None` ohne“). `StoredRow::read`: `handoff_line: row.get(20)?`; `into_row` reicht durch. `upsert`: Spalte `handoff_line` als 18. Wert (`?18`) in `INSERT`, `handoff_line = excluded.handoff_line` im `UPDATE`, `row.handoff_line` in `params!`. `load_active`: `, handoff_line` hinter `seen_at` im `SELECT`. Weitere `SELECT`s auf `sessions` mit `StoredRow::read` (per Grep `StoredRow::read` belegen) bekommen dieselbe Spalte an derselben Stelle.
+- `src-tauri/src/db/sessions.rs`: `SessionRow` und `StoredRow` bekommen `pub handoff_line: Option<String>` (Doc: „Einstiegszeile der letzten Antwort (ADR 027); `None` ohne“). `StoredRow::read`: `handoff_line: row.get(20)?`; `into_row` reicht durch. `upsert`: Spalte `handoff_line` als 18. Wert (`?18`) in `INSERT`, `handoff_line = excluded.handoff_line` im `UPDATE`, `row.handoff_line` in `params!`. `load_active`: `, handoff_line` hinter `seen_at` im `SELECT`. Weitere `SELECT`s auf `sessions` mit `StoredRow::read` (per Grep `StoredRow::read` belegen) bekommen dieselbe Spalte an derselben Stelle.
 - `src-tauri/src/sessions/registry.rs`:
   - `SessionState`: Feld `handoff_line: Option<String>` (neben `last_activity_at`), Initialisierung `None` in `SessionState::new`, Wiederherstellung `state.handoff_line = row.handoff_line.clone();` neben `state.last_activity_at = row.last_activity_at;`.
   - `AgentEvent::Text(text)`: vor `push_entry` `let handoff = handoff::handoff_line(&text); if self.handoff_line != handoff { self.handoff_line = handoff; outbox.summary_dirty = true; }`.
   - `push_user`: `self.handoff_line = None;` (`summary_dirty` setzt `touch_activity` schon).
   - `row_of`: `handoff_line: state.handoff_line.clone()`; `summarize`: `handoff_line: state.handoff_line.clone()`.
-- `src-tauri/src/sessions/model.rs` `SessionSummary`: `/// Einstiegszeile der letzten Antwort („Weiter: …“, ADR 025); `None` ohne oder nach einer neueren Nutzernachricht.` `pub handoff_line: Option<String>,` hinter `unread`. Danach `pnpm bindings` (`SessionSummary.ts` bekommt `handoffLine: string | null`).
+- `src-tauri/src/sessions/model.rs` `SessionSummary`: `/// Einstiegszeile der letzten Antwort („Weiter: …“, ADR 027); `None` ohne oder nach einer neueren Nutzernachricht.` `pub handoff_line: Option<String>,` hinter `unread`. Danach `pnpm bindings` (`SessionSummary.ts` bekommt `handoffLine: string | null`).
 - Weitere Stellen, die `SessionSummary { … }` oder `SessionRow { … }` vollständig aufbauen, meldet der Compiler; dort das Feld ergänzen (`None` bzw. aus dem Zustand).
 
 ### TS: Anzeige-Status (Phase 1)
@@ -74,7 +74,7 @@ Genau so: `text.lines().rev()`; Zeilen, die nach `trim()` leer sind oder mit ```
 `src/features/sessions/sessionStatus.ts`:
 
 ```ts
-/** Status, wie die Sidebar ihn zeigt: `handoff` = abgeschlossen mit Einstiegszeile, Folgesession noch nicht gestartet (ADR 025). */
+/** Status, wie die Sidebar ihn zeigt: `handoff` = abgeschlossen mit Einstiegszeile, Folgesession noch nicht gestartet (ADR 027). */
 export type DisplayStatus = SessionStatus | 'handoff';
 
 /** `sessions`: alle bekannten Sessions (oder die des Vorhabens). */
@@ -173,8 +173,8 @@ Phase 1:
 Phase 2:
 
 - [ ] `handoff.ts`, `HandoffButton.tsx` + `.css`, `COMPOSER_INPUT_ID` exportieren, Props durch `App` → `ChatView` → `ChatTimeline`
-- [ ] ADR 025 (Kontext / Optionen / Entscheidung / Konsequenzen aus „Festgelegte Entscheidungen“)
-- [ ] `docs/code-map.md` Zeile „Chat“: `handoff` und `HandoffButton` aufnehmen, ADR 025 verlinken
+- [ ] ADR 027 (Kontext / Optionen / Entscheidung / Konsequenzen aus „Festgelegte Entscheidungen“)
+- [ ] `docs/code-map.md` Zeile „Chat“: `handoff` und `HandoffButton` aufnehmen, ADR 027 verlinken
 - [ ] `docs/glossary.md`: Eintrag „Einstiegszeile“ — Zeile „Weiter: …“ am Ende einer Agenten-Antwort; die Sidebar zeigt die Session dann als „wartet auf Wiedereinstieg“, „In neuer Session weiter“ startet daraus die nächste Session des Vorhabens
 - [ ] Smoke 3, 4, 6 (unten), Ergebnis in „Report-Back“
 - [ ] `pnpm check` grün, Commit `feat(chat): aus der Einstiegszeile in einer neuen Session weiterarbeiten`, Push des Branches
