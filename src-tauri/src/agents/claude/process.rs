@@ -121,9 +121,13 @@ fn build_command(opts: &SpawnOptions) -> Command {
             Some(backend) => backend.model.as_str(),
             None => opts.model.cli_id(),
         });
-    // Das lokale Modell kennt keinen Denkaufwand.
+    // Das lokale Modell kennt keinen Denkaufwand, und Artefakte veröffentlicht nur Anthropic.
     if opts.local.is_none() {
-        command.arg("--effort").arg(opts.effort.cli_value());
+        command
+            .arg("--effort")
+            .arg(opts.effort.cli_value())
+            // Unter `-p` schaltet die Kommandozeile das Artefakt-Werkzeug sonst ab.
+            .env("CLAUDE_CODE_ARTIFACT", "1");
     }
     command
         .arg("--permission-mode")
