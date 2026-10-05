@@ -1,6 +1,7 @@
 //! Erzeugt die TypeScript-Typen in src/lib/bindings/. Aufruf: `pnpm bindings` (`cargo run --example gen-bindings`).
 use ts_rs::{Config, TS};
 use verwalter_lib::{
+    account::model::{AccountInfo, AccountStatus},
     agents::event::{
         Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
         QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
@@ -102,6 +103,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     UsageBreakdown::export_all(&cfg)?;
     UsageSnapshot::export_all(&cfg)?;
     UsageStatus::export_all(&cfg)?;
+    AccountInfo::export_all(&cfg)?;
+    AccountStatus::export_all(&cfg)?;
     SessionTldr::export_all(&cfg)?;
     ProjectTldr::export_all(&cfg)?;
     SessionTldrView::export_all(&cfg)?;

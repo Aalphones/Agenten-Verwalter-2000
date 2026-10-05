@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-05_claude-konto.md` (freigegeben, noch nicht gestartet)
-**Phase:** 1 — Core
-**Nächster Schritt:** Phase 1 des Plans umsetzen; danach Plan 5 „Autark“ (vorher 🟡 Autark Phase 7 messen, LM Studio parallel).
+**Aktiver Plan:** `docs/planning/2026-10-05_claude-konto.md` (freigegeben)
+**Phase:** 2/2 — Oberfläche und Doku (pending; Phase 1 Core fertig)
+**Nächster Schritt:** Phase 2 umsetzen (Scope `account` dabei in `docs/conventions/commits.md` ergänzen); danach Plan 5 „Autark“ (vorher 🟡 Autark Phase 7 messen, LM Studio parallel).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

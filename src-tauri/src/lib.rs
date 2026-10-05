@@ -1,3 +1,4 @@
+pub mod account;
 pub mod agents;
 pub mod attachments;
 pub mod background;
@@ -26,6 +27,7 @@ use std::sync::Arc;
 
 use tauri::Manager;
 
+use account::AccountService;
 use db::Database;
 use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
@@ -49,6 +51,7 @@ pub fn run() {
             app.manage(registry);
             app.manage(database);
             app.manage(UsageService::new());
+            app.manage(AccountService::new());
             app.manage(VoiceService::new());
             SessionRegistry::start_reaper(app.handle().clone());
             Ok(())
@@ -83,6 +86,8 @@ pub fn run() {
             commands::mcp::mcp_toggle,
             commands::usage::usage_load,
             commands::usage::usage_refresh,
+            commands::account::account_load,
+            commands::account::account_login,
             commands::attachments::attachment_add_files,
             commands::attachments::attachment_add_bytes,
             commands::attachments::attachment_discard,

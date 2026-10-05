@@ -4,7 +4,7 @@ Die Einstellungsseite zeigt, mit welchem Konto die Claude-Kommandozeile angemeld
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | Core: Konto lesen, Anmeldung starten, Ereignis | standard | pending |
+| 1 | Core: Konto lesen, Anmeldung starten, Ereignis | standard | complete |
 | 2 | Oberfläche: Abschnitt „Konto“, Doku, ADR 021 | standard | pending |
 
 ## Entscheidungen (fallen hier, nicht beim Umsetzen)
@@ -48,12 +48,12 @@ AK:
 - `account_login` öffnet unter Windows ein Konsolenfenster mit der Anmeldung; nach dessen Ende kommt `account://changed`, `is_logging_in` ist wieder `false`, das Kontingent wird neu abgerufen.
 - `pnpm check` grün.
 
-- [ ] `src-tauri/src/account/model.rs` mit den Typen aus dem Kontrakt.
-- [ ] `src-tauri/src/account/mod.rs`: `AccountService` (Mutex mit `info`, `error`, `is_logging_in`), `pub const ACCOUNT_CHANGED_EVENT = "account://changed"`, `load(&self) -> AccountStatus` (ruft `read_status`, merkt sich Ergebnis), `login(&self, app: &AppHandle)` (Muster `UsageService::refresh`: Flag setzen, Ereignis, Thread `account-login` startet und wartet; danach Flag zurück, `read_status` speichern, Ereignis, `app.state::<UsageService>().refresh(app, true)`).
-- [ ] `read_status(exe)`: `claude auth status --json`, `hide_console`, stdout gepipt, stderr `null`; Warten mit Zeitlimit 15 s über Thread + `mpsc::recv_timeout` (Muster `helper::exchange`), bei Zeitlimit `kill` + `wait`. JSON mit `serde_json::Value` lesen, Felder einzeln als `as_str`/`as_bool`.
-- [ ] `login_command(exe)`: Windows `creation_flags(0x0000_0010)` statt `hide_console`; sonst `Stdio::null()` für alle drei. Die Konstante samt Plattformweiche gehört nach `src-tauri/src/processes/mod.rs` als `pub fn show_console(command: &mut Command)` (Gegenstück zu `hide_console`).
-- [ ] `src-tauri/src/commands/account.rs`: `account_load`, `account_login` (`async`, Kommentar wie in `usage.rs`); in `commands/mod.rs` und `lib.rs` registrieren, `app.manage(AccountService::new())`, `pub mod account;` in `lib.rs`.
-- [ ] `gen-bindings.rs`: `AccountInfo`, `AccountStatus` exportieren; `pnpm bindings`.
+- [x] `src-tauri/src/account/model.rs` mit den Typen aus dem Kontrakt.
+- [x] `src-tauri/src/account/mod.rs`: `AccountService` (Mutex mit `info`, `error`, `is_logging_in`), `pub const ACCOUNT_CHANGED_EVENT = "account://changed"`, `load(&self) -> AccountStatus` (ruft `read_status`, merkt sich Ergebnis), `login(&self, app: &AppHandle)` (Muster `UsageService::refresh`: Flag setzen, Ereignis, Thread `account-login` startet und wartet; danach Flag zurück, `read_status` speichern, Ereignis, `app.state::<UsageService>().refresh(app, true)`).
+- [x] `read_status(exe)`: `claude auth status --json`, `hide_console`, stdout gepipt, stderr `null`; Warten mit Zeitlimit 15 s über Thread + `mpsc::recv_timeout` (Muster `helper::exchange`), bei Zeitlimit `kill` + `wait`. JSON mit `serde_json::Value` lesen, Felder einzeln als `as_str`/`as_bool`.
+- [x] `login_command(exe)`: Windows `creation_flags(0x0000_0010)` statt `hide_console`; sonst `Stdio::null()` für alle drei. Die Konstante samt Plattformweiche gehört nach `src-tauri/src/processes/mod.rs` als `pub fn show_console(command: &mut Command)` (Gegenstück zu `hide_console`).
+- [x] `src-tauri/src/commands/account.rs`: `account_load`, `account_login` (`async`, Kommentar wie in `usage.rs`); in `commands/mod.rs` und `lib.rs` registrieren, `app.manage(AccountService::new())`, `pub mod account;` in `lib.rs`.
+- [x] `gen-bindings.rs`: `AccountInfo`, `AccountStatus` exportieren; `pnpm bindings`.
 
 ## Phase 2 — Oberfläche und Doku
 
