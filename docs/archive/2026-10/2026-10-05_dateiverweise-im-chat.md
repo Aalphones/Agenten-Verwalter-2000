@@ -2,13 +2,13 @@
 
 Ziel: Nennt der Agent im Chat eine Datei — als Inline-Code (`` `reports/gymid-2291-epassi-sperrfrist-zaehlt-als-checkin.html` ``) oder als Markdown-Link (`[Bericht](reports/x.html)`) —, wird der Pfad klickbar und öffnet die Datei mit dem Standardprogramm von Windows (HTML im Browser). Auslöser: Die Change-Übersichten aus facepass liegen ungetrackt unter `facepass/reports/` und müssen heute von Hand im Explorer gesucht werden.
 
-Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md) (Regel 5: Workspace des Vorhabens ist die Sicherheitsgrenze), [docs/code-map.md](../code-map.md), [docs/glossary.md](../glossary.md), [docs/conventions/rust.md](../conventions/rust.md), [docs/conventions/react.md](../conventions/react.md), [docs/conventions/typescript.md](../conventions/typescript.md), [docs/conventions/linting.md](../conventions/linting.md), [ADR 010](../decisions/010-worktrees-durch-den-agenten.md) (Ticket-Worktrees), [ADR 018](../decisions/018-ordner-ohne-git.md) (Ordner ohne Git). Vault-Fehlerklassen geprüft (React, TypeScript; für Rust und Tauri gibt es keine Entity): keine einschlägig.
+Kontext für den Umsetzer: [AGENTS.md](../../../AGENTS.md) (Regel 5: Workspace des Vorhabens ist die Sicherheitsgrenze), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), [docs/conventions/rust.md](../../conventions/rust.md), [docs/conventions/react.md](../../conventions/react.md), [docs/conventions/typescript.md](../../conventions/typescript.md), [docs/conventions/linting.md](../../conventions/linting.md), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md) (Ticket-Worktrees), [ADR 018](../../decisions/018-ordner-ohne-git.md) (Ordner ohne Git). Vault-Fehlerklassen geprüft (React, TypeScript; für Rust und Tauri gibt es keine Entity): keine einschlägig.
 
 ## Phasen
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | Dateiverweise: Auflösung + Prüfung in Rust, Klick im Chat, Fehlermeldung, ADR 023, Doku | heikel | 1 | complete (Smoke offen) |
+| 1 | Dateiverweise: Auflösung + Prüfung in Rust, Klick im Chat, Fehlermeldung, ADR 023, Doku | heikel | 1 | complete (archiviert auf Zuruf, Smoke offen) |
 
 Eine Phase, weil nur das Ganze etwas Klickbares liefert; „heikel“ wegen der Sicherheitsgrenze (die App öffnet Dateien im Namen des Benutzers). Umsetzung direkt auf `main`, ein Commit, Scope `chat`. Vor dem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); die Auflösung prüft sich mit dem Prüfprogramm `file-link-probe`, der Klick mit der Smoke-Checkliste.
 
@@ -21,7 +21,7 @@ Eine Phase, weil nur das Ganze etwas Klickbares liefert; „heikel“ wegen der 
 
 ## Festgelegte Entscheidungen
 
-Daraus entsteht [ADR 023](../decisions/023-dateiverweise-im-chat.md) „Dateiverweise im Chat“. Vergeben: 001–022 auf der Platte, in geparkten Plänen ist keine weitere reserviert; dieser Plan schreibt 023.
+Daraus entsteht [ADR 023](../../decisions/023-dateiverweise-im-chat.md) „Dateiverweise im Chat“. Vergeben: 001–022 auf der Platte, in geparkten Plänen ist keine weitere reserviert; dieser Plan schreibt 023.
 
 - **Öffnen in Rust, nicht im Frontend.** Neuer Befehl `file_link_open` löst den Pfad auf, prüft Grenze und Endung und öffnet über `tauri_plugin_opener::OpenerExt` (`app.opener().open_path(…)`). Verworfen: `openPath` aus `@tauri-apps/plugin-opener` im Frontend — bräuchte eine Capability mit Pfad-Scope, die die Sicherheitsgrenze des Vorhabens nicht kennt; die Prüfung säße in der Oberfläche statt im Core (AGENTS.md Regel 2/5).
 - **Nur Anzeige-Formate, nie Ausführbares.** Erlaubte Endungen (Groß/Klein egal): `html`, `htm`, `pdf`, `svg`, `png`, `jpg`, `jpeg`, `gif`, `webp`, `md`, `txt`. Grund: Das Standardprogramm von `.cmd`, `.bat`, `.exe`, `.ps1`, `.lnk` startet sie; ein Agent könnte so per Klick Code ausführen lassen. Die Liste steht als Konstante in Rust (`file_links::OPENABLE_EXTENSIONS`, maßgeblich) und gespiegelt in TS (`OPENABLE_EXTENSIONS` in `src/lib/fileLinks.ts`, nur für die Darstellung); beide Stellen verweisen per Kommentar aufeinander.
@@ -202,5 +202,5 @@ Pfade in Agenten-Antworten (Inline-Code oder Markdown-Link) erscheinen als Link 
 
 ## Follow-ups
 
-- Smoke-Checkliste oben (Wackelstellen 1–3 zuerst), danach archivieren und Minor-Version taggen (`docs/conventions/releases.md`).
+- Auf Zuruf archiviert (2026-10-05) ohne Smoke-Abnahme; Smoke-Checkliste oben (Wackelstellen 1–3 zuerst) steht offen, Release-Tag erst nach Freigabe (`docs/conventions/releases.md`).
 - Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.
