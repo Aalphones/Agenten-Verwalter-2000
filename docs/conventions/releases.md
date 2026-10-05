@@ -1,6 +1,6 @@
 # Release Conventions — verwalter
 
-> Ein Versions-Tag `vX.Y.Z` löst [.github/workflows/release.yml](../../.github/workflows/release.yml) aus: Windows-Runner baut den NSIS-Installer und die lose `verwalter.exe`, legt ein GitHub-Release an und hängt beide als Downloads an. Projektentscheidungen in dieser Datei haben Vorrang.
+> Ein Versions-Tag `vX.Y.Z` löst [.github/workflows/release.yml](../../.github/workflows/release.yml) aus: Windows baut den NSIS-Installer und die lose `verwalter.exe`, macOS (Apple Silicon) ein `.dmg`, Ubuntu 22.04 ein `.AppImage` und ein `.deb`; ein letzter Job legt das GitHub-Release an und hängt alle Dateien an. Schlägt nur macOS oder Linux fehl, erscheint das Release ohne deren Dateien; schlägt Windows fehl, erscheint keins. „Run workflow" auf der Actions-Seite baut alle Plattformen als Probe, ohne Release. Projektentscheidungen in dieser Datei haben Vorrang.
 
 ## Wann getaggt wird
 
@@ -32,7 +32,8 @@ Dazu gehört der nachgezogene Eintrag in `src-tauri/Cargo.lock`.
 
 - Ein gepushter Tag wird **nie verschoben oder gelöscht** ohne ausdrückliche Anweisung des Users. Schlägt der Release-Lauf wegen abweichender Versionen fehl, ist das eine Rückfrage, keine eigenmächtige Reparatur.
 - Kein Tag ohne den `chore(release)`-Commit darunter — der Tag zeigt immer auf den Stand, dessen Dateien die Version tragen.
-- Das Release ist ohne Code-Signatur: Windows SmartScreen warnt beim Start der heruntergeladenen Datei. Das ist bekannt und kein Fehler des Laufs.
+- Das Release ist ohne Code-Signatur: Windows SmartScreen warnt beim Start der heruntergeladenen Datei. macOS meldet die App als „beschädigt"; nach dem Kopieren nach Programme hilft `xattr -dr com.apple.quarantine "/Applications/Agenten Verwalter 2000.app"`. Das ist bekannt und kein Fehler des Laufs.
+- macOS und Linux sind ungetestet: Pfade werden im Core noch auf Windows-Trenner umgeschrieben, Worktrees und Changes funktionieren dort nicht verlässlich.
 
 ## Critical Rules
 

@@ -3,15 +3,39 @@ name: release
 on:
   push:
     tags: ['v*.*.*']
+  # Probelauf über "Run workflow": baut alle Plattformen, legt kein Release an.
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # macOS und Linux sind Zusatz: ein Fehlschlag dort hält das Windows-Release nicht auf.
+    continue-on-error: ${{ matrix.optional }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis
+            optional: false
+          - os: macos-latest
+            bundles: app,dmg
+            optional: true
+          # Ältestes verfügbares Ubuntu: das AppImage läuft nur auf Systemen mit mindestens dieser glibc.
+          - os: ubuntu-22.04
+            bundles: appimage,deb
+            optional: true
     steps:
       - uses: actions/checkout@v7
+      - name: Linux-Abhängigkeiten
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev cmake clang patchelf
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -23,6 +47,7 @@ jobs:
           workspaces: src-tauri
       - run: pnpm install --frozen-lockfile
       - name: Tag und Versionen stimmen überein
+        if: github.ref_type == 'tag'
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -31,13 +56,45 @@ jobs:
           cargo_version=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -n 1)
           echo "Tag: $version | package.json: $package_version | tauri.conf.json: $tauri_version | Cargo.toml: $cargo_version"
           test "$package_version" = "$version" && test "$tauri_version" = "$version" && test "$cargo_version" = "$version" || { echo "Version im Tag und in den drei Dateien weichen ab - Tag löschen, Versionen angleichen, neu taggen"; exit 1; }
-      - run: pnpm tauri build
-      - name: Release anlegen
+      - run: pnpm tauri build --bundles ${{ matrix.bundles }}
+      - name: Dateien einsammeln
         shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          bundle=src-tauri/target/release/bundle
+          mkdir -p out
+          case "$RUNNER_OS" in
+            Windows)
+              cp "$bundle"/nsis/*-setup.exe out/
+              cp src-tauri/target/release/verwalter.exe "out/Agenten-Verwalter-2000_${version}_x64-portable.exe"
+              ;;
+            macOS)
+              cp "$bundle"/dmg/*.dmg out/
+              ;;
+            Linux)
+              cp "$bundle"/appimage/*.AppImage "$bundle"/deb/*.deb out/
+              ;;
+          esac
+          ls -l out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: out
+          merge-multiple: true
+      - name: Release anlegen
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          portable="Agenten-Verwalter-2000_${version}_x64-portable.exe"
-          cp src-tauri/target/release/verwalter.exe "$portable"
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes src-tauri/target/release/bundle/nsis/*-setup.exe "$portable"
+          ls -l out
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes out/*
