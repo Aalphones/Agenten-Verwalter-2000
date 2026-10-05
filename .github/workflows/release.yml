@@ -56,6 +56,13 @@ jobs:
           cargo_version=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -n 1)
           echo "Tag: $version | package.json: $package_version | tauri.conf.json: $tauri_version | Cargo.toml: $cargo_version"
           test "$package_version" = "$version" && test "$tauri_version" = "$version" && test "$cargo_version" = "$version" || { echo "Version im Tag und in den drei Dateien weichen ab - Tag löschen, Versionen angleichen, neu taggen"; exit 1; }
+      # .cargo/config.toml setzt MSVC-Flags für whisper.cpp; ein schon gesetzter Wert hat Vorrang vor [env].
+      - name: Compiler-Flags für whisper.cpp
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "CMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG" >> "$GITHUB_ENV"
+          echo "CMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG" >> "$GITHUB_ENV"
       - run: pnpm tauri build --bundles ${{ matrix.bundles }}
       - name: Dateien einsammeln
         shell: bash
