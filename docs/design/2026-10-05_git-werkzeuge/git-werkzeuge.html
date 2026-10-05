@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Entwurf: Git in den Changes — Agenten Verwalter 2000</title>
+<style>
+  /* Hex-Werte der semantischen Tokens aus src/styles/theme.css (Stand 2026-10-05). */
+  :root {
+    --bg-base: #1f1f1f; --bg-sidebar: #181818; --bg-surface: #252526; --bg-popover: #252526;
+    --bg-hover: #2e2e30; --bg-selected: #37373d; --border-subtle: #2b2b2b; --border: #3c3c3c;
+    --fg: #d4d4d4; --fg2: #b0b0b0; --muted: #8f8f8f;
+    --accent: #e0825c; --on-accent: #1d130e; --accent-subtle: rgb(224 130 92 / 0.16); --accent-text: #eea283;
+    --running: #5b9dff; --running-subtle: rgb(91 157 255 / .12); --waiting: #f2b33d; --error: #f47067; --ok: #4cc38a;
+    --add: #4cc38a; --del: #f47067; --add-bg: rgb(76 195 138 / .11); --del-bg: rgb(244 112 103 / .11); --hunk-bg: #242428;
+    --scrim: rgb(0 0 0 / 0.55); --shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+    --sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  :root.light {
+    --bg-base: #ffffff; --bg-sidebar: #f8f8f8; --bg-surface: #ffffff; --bg-popover: #ffffff;
+    --bg-hover: #f0f0f0; --bg-selected: #e4e6f1; --border-subtle: #e5e5e5; --border: #cecece;
+    --fg: #3c3c3c; --fg2: #555555; --muted: #6e6e6e;
+    --accent: #c4572f; --on-accent: #ffffff; --accent-subtle: rgb(196 87 47 / 0.10); --accent-text: #a8461f;
+    --running: #2563eb; --running-subtle: rgb(37 99 235 / .08); --waiting: #a86a00; --error: #d23b33; --ok: #16803c;
+    --add: #16803c; --del: #d23b33; --add-bg: #e8f6ee; --del-bg: #fdeceb; --hunk-bg: #f3f3f6;
+    --scrim: rgb(0 0 0 / 0.28); --shadow: 0 10px 30px rgb(0 0 0 / 0.14);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.45 var(--sans); background: #0c0c0c; color: var(--fg); }
+  :root.light body { background: #d9d9d9; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .45; }
+  svg { display: block; }
+  .mono { font-family: var(--mono); font-size: 12px; }
+
+  /* Entwurfs-Steuerung (gehört nicht zur App) */
+  .ctl { display: flex; gap: 16px; align-items: center; padding: 8px 20px; font-size: 12px; color: #aaa; background: #111; border-bottom: 1px solid #333; }
+  :root.light .ctl { background: #ececec; color: #444; border-color: #ccc; }
+  .ctl b { font-weight: 600; }
+  .ctl .seg { display: inline-flex; border: 1px solid #444; border-radius: 6px; overflow: hidden; }
+  :root.light .ctl .seg { border-color: #bbb; }
+  .ctl .seg button { padding: 2px 10px; }
+  .ctl .seg button.on { background: var(--accent); color: var(--on-accent); }
+  .ctl .hint { margin-left: auto; opacity: .7; }
+  /* „Neu“-Markierung: zeigt, was der Entwurf hinzufügt */
+  .marks .new { outline: 1px dashed var(--accent); outline-offset: 2px; }
+
+  /* App-Rahmen */
+  .app { display: grid; grid-template-columns: 256px minmax(0, 1fr); height: calc(100vh - 37px); min-height: 700px; background: var(--bg-base); }
+  .sidebar { background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; font-size: 12.5px; }
+  .sb-head { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-weight: 600; }
+  .sb-new { margin: 0 10px 8px; height: 30px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--fg); }
+  .sb-new .k { margin-left: auto; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .sb-p { display: flex; align-items: center; gap: 8px; padding: 5px 14px; font-weight: 600; }
+  .sb-p .ok { color: var(--ok); }
+  .sb-s { display: flex; align-items: center; gap: 8px; margin: 1px 10px 1px 40px; padding: 4px 8px; border-radius: 6px; }
+  .sb-s.sel { background: var(--bg-selected); }
+  .sb-s .num { color: var(--muted); font-size: 11px; }
+
+  .main { display: grid; grid-template-rows: 48px minmax(0, 1fr); min-width: 0; min-height: 0; }
+  .hdr { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: 0 12px 0 24px; border-bottom: 1px solid var(--border-subtle); gap: 12px; }
+  .hdr-l { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .crumb { color: var(--muted); white-space: nowrap; }
+  .hnum { color: var(--muted); }
+  .hname { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .status { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .status.run { color: var(--running); background: var(--running-subtle); }
+  .status.idle { color: var(--ok); background: rgb(76 195 138 / .12); }
+  .tabs { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg-sidebar); border: 1px solid var(--border-subtle); }
+  .tab { padding: 4px 14px; border-radius: 6px; color: var(--fg2); display: inline-flex; align-items: center; gap: 6px; }
+  .tab.on { background: var(--bg-selected); color: var(--fg); font-weight: 600; }
+  .tab .n { font-size: 11px; color: var(--muted); background: var(--bg-hover); border-radius: 999px; padding: 0 6px; font-weight: 500; }
+  .tab .n.up { color: var(--accent-text); background: var(--accent-subtle); }
+  .hdr-r { display: flex; justify-content: flex-end; gap: 10px; align-items: center; color: var(--fg2); font-size: 12px; white-space: nowrap; }
+  .bgbtn { display: inline-flex; gap: 6px; align-items: center; height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+  .donut { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(var(--fg2) 0 22%, var(--border) 22% 100%); -webkit-mask: radial-gradient(circle, transparent 5px, #000 6px); }
+  .usage { display: inline-flex; gap: 6px; align-items: center; color: var(--waiting); font-family: var(--mono); font-size: 11.5px; }
+  .usage .bar { width: 22px; height: 3px; border-radius: 2px; background: var(--waiting); }
+
+  /* Branch-Pille neben dem Titel */
+  .bpill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 11px; border: 1px solid var(--border); color: var(--fg2); font-size: 11.5px; white-space: nowrap; flex: none; }
+  .bpill:hover { background: var(--bg-hover); color: var(--fg); }
+  .bpill .br { font-family: var(--mono); font-size: 11.5px; color: var(--fg); }
+  .bpill .sync { font-family: var(--mono); font-size: 11px; color: var(--accent-text); }
+  .bpill .dirty { width: 6px; height: 6px; border-radius: 50%; background: var(--waiting); }
+  .bpill .plus { color: var(--muted); }
+
+  /* Chat (Platzhalter) */
+  .chat { overflow: auto; padding: 24px 32px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .chat .col { max-width: 780px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; color: var(--fg2); }
+  .chat .tool { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .chat .tool b { color: var(--fg); font-family: var(--sans); }
+  .composer { border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: var(--muted); background: var(--bg-surface); margin-top: 8px; }
+
+  /* Changes */
+  .changes { display: grid; grid-template-rows: 44px minmax(0, 1fr); min-height: 0; }
+  .tb { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--border); color: var(--fg2); }
+  .chip.on { background: var(--bg-selected); color: var(--fg); border-color: transparent; }
+  .chip .c { font-size: 11px; color: var(--muted); }
+  .tb .sum { margin-left: auto; display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .tb .sum .a { color: var(--add); font-family: var(--mono); } .tb .sum .d { color: var(--del); font-family: var(--mono); }
+  .segm { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .segm button { padding: 3px 10px; color: var(--fg2); font-size: 12px; }
+  .segm button.on { background: var(--bg-selected); color: var(--fg); }
+  .cbody { display: grid; grid-template-columns: 360px minmax(0, 1fr); min-height: 0; }
+  .tree { overflow: auto; border-right: 1px solid var(--border-subtle); padding: 6px 0 16px; }
+  .detail { overflow: auto; min-width: 0; }
+
+  /* Repository-Block im Dateibaum */
+  .repo { padding-bottom: 6px; }
+  .repo + .repo { border-top: 1px solid var(--border-subtle); padding-top: 6px; }
+  .rh { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 10px; }
+  .rh .caret { width: 14px; color: var(--muted); transition: transform .16s; }
+  .repo.closed .rh .caret { transform: rotate(-90deg); }
+  .repo.closed .rb { display: none; }
+  .rh .rn { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .rh .rk { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .rh .sp { flex: 1; }
+  .brbtn { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 7px; border: 1px solid var(--border); border-radius: 6px; flex: none; }
+  .brbtn:hover:not(:disabled) { background: var(--bg-hover); }
+  .brbtn .name { font-family: var(--mono); font-size: 11.5px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .syncbtn { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 5px; border-radius: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .syncbtn:hover:not(:disabled) { background: var(--bg-hover); color: var(--fg); }
+  .syncbtn.hot { color: var(--accent-text); }
+  .iconbtn { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px; color: var(--fg2); flex: none; }
+  .iconbtn:hover:not(:disabled) { background: var(--bg-hover); color: var(--fg); }
+
+  .lock { margin: 2px 10px 6px; padding: 7px 9px; border-radius: 6px; background: var(--running-subtle); border: 1px solid rgb(91 157 255 / .35); font-size: 11.5px; color: var(--fg2); display: flex; gap: 8px; align-items: flex-start; }
+  .lock button { color: var(--running); font-weight: 600; white-space: nowrap; }
+
+  .commit { padding: 2px 10px 6px; }
+  .msgbox { position: relative; }
+  .msgbox textarea { display: block; width: 100%; resize: none; height: 32px; padding: 6px 32px 6px 9px; font: inherit; font-size: 12.5px; color: var(--fg); background: var(--bg-base); border: 1px solid var(--border); border-radius: 6px; outline: none; }
+  .msgbox textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); height: 60px; }
+  .msgbox .spark { position: absolute; right: 4px; top: 4px; }
+  .split { display: flex; margin-top: 6px; border-radius: 6px; overflow: hidden; }
+  .split button { background: var(--accent); color: var(--on-accent); height: 28px; font-weight: 600; font-size: 12.5px; }
+  .split .main-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .split .drop { width: 28px; border-left: 1px solid rgb(0 0 0 / .25); display: grid; place-items: center; }
+
+  .grp { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 12px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+  .grp .cnt { text-transform: none; letter-spacing: 0; }
+  .grp .sp { flex: 1; }
+  .grp button.lnk { text-transform: none; letter-spacing: 0; color: var(--accent-text); font-size: 11.5px; }
+
+  .file { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 12px; cursor: pointer; }
+  .file:hover { background: var(--bg-hover); }
+  .file.sel { background: var(--bg-selected); }
+  .file.foreign .fn { color: var(--fg2); }
+  .file input { margin: 0; accent-color: var(--accent); flex: none; }
+  .file .ck { width: 13px; flex: none; }
+  .file .fn { white-space: nowrap; }
+  .file .fp { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .file .num { font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+  .file .num .a { color: var(--add); } .file .num .d { color: var(--del); }
+  .file .st { width: 12px; text-align: center; font-family: var(--mono); font-size: 11px; font-weight: 600; flex: none; }
+  .st.M { color: var(--waiting); } .st.A, .st.U { color: var(--add); } .st.D { color: var(--del); }
+  .file .undo { display: none; }
+  .file:hover .undo { display: grid; }
+  .file:hover .num { display: none; }
+  .commitrow { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px 0 12px; font-size: 12px; color: var(--fg2); }
+  .commitrow .ring { width: 9px; height: 9px; border-radius: 50%; border: 1.8px solid var(--accent); flex: none; }
+  .commitrow .m { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .commitrow .sha { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .foreign-toggle { display: flex; align-items: center; gap: 6px; width: calc(100% - 20px); margin: 4px 10px 0; padding: 5px 8px; border: 1px dashed var(--border); border-radius: 6px; font-size: 11.5px; color: var(--muted); text-align: left; }
+  .foreign-toggle:hover { color: var(--fg); }
+
+  /* Detail: Übersicht mit Verlauf */
+  .ov { max-width: 760px; padding: 20px 24px; }
+  .ov h2 { margin: 0 0 4px; font-size: 14px; }
+  .ov .reach { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+  .ovbox { border: 1px solid var(--border-subtle); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .ovrow { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 12.5px; }
+  .ovrow + .ovrow { border-top: 1px solid var(--border-subtle); }
+  .ovrow .n { font-weight: 600; }
+  .ovrow .b { color: var(--muted); }
+  .ovrow .b .mono { color: var(--fg2); }
+  .ovrow .s { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--accent-text); }
+  .hist-h { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
+  .hist-h h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg2); }
+  .hist-h .sp { flex: 1; }
+  .incoming { margin: 0 0 4px; padding: 6px 10px; border: 1px dashed var(--border); border-radius: 6px; font-size: 12px; color: var(--fg2); display: flex; gap: 8px; align-items: center; }
+  .incoming .sha { font-family: var(--mono); color: var(--muted); font-size: 11px; }
+  .graph-row { display: flex; align-items: center; height: 22px; padding-right: 10px; border-radius: 4px; cursor: default; }
+  .graph-row:hover { background: var(--bg-hover); }
+  .graph-row.sel { background: var(--bg-selected); }
+  .graph-row .gm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .graph-row.head .gm { font-weight: 600; }
+  .graph-row .ga { color: var(--muted); font-size: 11.5px; margin-left: 8px; white-space: nowrap; }
+  .graph-row .own { font-size: 10.5px; color: var(--accent-text); margin-left: 6px; white-space: nowrap; }
+  .ref { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 0 6px; height: 17px; border-radius: 999px; margin-left: 6px; white-space: nowrap; flex: none; }
+  .ref.local { background: var(--accent); color: var(--on-accent); }
+  .ref.remote { border: 1px solid var(--border); color: var(--fg2); }
+  .ref.tag { border: 1px solid var(--border); color: var(--muted); }
+
+  /* Detail: Diff (Platzhalter) */
+  .diffhead { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; border-bottom: 1px solid var(--border-subtle); font-size: 12.5px; }
+  .diffhead .p { color: var(--muted); }
+  .diffhead .sp { flex: 1; }
+  .dl { display: grid; grid-template-columns: 48px 48px 20px 1fr; font-family: var(--mono); font-size: 12px; line-height: 20px; }
+  .dl span:nth-child(-n+2) { color: var(--muted); text-align: right; padding-right: 8px; }
+  .dl.add { background: var(--add-bg); } .dl.add span:nth-child(3) { color: var(--add); }
+  .dl.del { background: var(--del-bg); } .dl.del span:nth-child(3) { color: var(--del); }
+  .dl.hunk { background: var(--hunk-bg); color: var(--muted); }
+  .dl span:nth-child(3) { text-align: center; }
+
+  /* Popover / Dialog / Toast */
+  .pop { position: fixed; z-index: 10; background: var(--bg-popover); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; }
+  .pop[hidden] { display: none; }
+  .pop input { width: 100%; height: 30px; padding: 0 10px; font: inherit; color: var(--fg); background: var(--bg-base); border: 1px solid var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); border-radius: 6px; outline: none; margin-bottom: 6px; }
+  .pop .pg { padding: 8px 8px 3px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .pop .it { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border-radius: 6px; text-align: left; }
+  .pop .it:hover:not(:disabled) { background: var(--bg-hover); }
+  .pop .it .sub { font-size: 11px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .pop .it .chk { width: 14px; color: var(--accent); flex: none; }
+  .pop .it.add { color: var(--accent-text); }
+  .pop hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 4px 2px; }
+  .pop .kbd { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .pop .note { padding: 4px 8px 6px; font-size: 11.5px; color: var(--running); }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 20; }
+  .scrim[hidden] { display: none; }
+  .dlg { width: 460px; background: var(--bg-popover); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 18px 20px 16px; }
+  .dlg h3 { margin: 0 0 6px; font-size: 14px; }
+  .dlg p { margin: 0 0 12px; color: var(--fg2); }
+  .dlg ul { margin: 0 0 14px; padding-left: 18px; color: var(--fg2); font-family: var(--mono); font-size: 12px; }
+  .dlg .row { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn { height: 30px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border); }
+  .btn:hover { background: var(--bg-hover); }
+  .btn.pri { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--bg-popover); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); padding: 8px 14px; font-size: 12.5px; z-index: 30; }
+  .toast[hidden] { display: none; }
+</style>
+</head>
+<body class="marks">
+
+<div class="ctl">
+  <b>Entwurf: Git in den Changes</b>
+  <span>Theme <span class="seg" id="ctlTheme"><button class="on" data-v="dark">dunkel</button><button data-v="light">hell</button></span></span>
+  <span>Agent <span class="seg" id="ctlAgent"><button class="on" data-v="run">arbeitet</button><button data-v="idle">ruht</button></span></span>
+  <span>Neues markieren <span class="seg" id="ctlMarks"><button class="on" data-v="on">an</button><button data-v="off">aus</button></span></span>
+  <span class="hint">Gestrichelt = neu · alles andere ist die heutige App</span>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-head">Agenten Verwalter 2000</div>
+    <div class="sb-new">+ Neues Vorhaben <span class="k">Ctrl N</span></div>
+    <div class="sb-p"><span class="ok">✓</span>V2000 Git</div>
+    <div class="sb-s sel"><span class="num">#1</span>Ich möchte die GitTools …</div>
+    <div class="sb-p"><span class="ok">✓</span>V2000 Autarker Agent</div>
+    <div class="sb-p"><span class="ok">✓</span>V2000 Login</div>
+    <div class="sb-p"><span class="ok">✓</span>Homechat</div>
+  </aside>
+
+  <section class="main">
+    <header class="hdr">
+      <div class="hdr-l">
+        <span class="crumb">V2000 Git ›</span><span class="hnum">#1</span>
+        <span class="hname">Ich möchte die GitTools wie im VS Code verfügbar haben</span>
+        <span class="status run" id="status">● Läuft</span>
+        <button class="bpill new" id="hdrPill"></button>
+      </div>
+      <nav class="tabs">
+        <button class="tab" data-view="chat">Chat</button>
+        <button class="tab on" data-view="changes">Changes <span class="n" id="tabCount"></span></button>
+      </nav>
+      <div class="hdr-r">
+        <span class="bgbtn">▣ Hintergrund</span>
+        <span class="donut" title="Kontext"></span>
+        <span class="usage">⚠ <span class="bar"></span> 69 %</span>
+        <span class="mono">4:46</span>
+      </div>
+    </header>
+    <div id="view" style="min-height:0;display:grid"></div>
+  </section>
+</div>
+
+<div class="pop" id="pop" hidden></div>
+<div class="scrim" id="scrim" hidden><div class="dlg" id="dlg"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const I = {
+  branch: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4.5" cy="3.5" r="1.6"/><circle cx="4.5" cy="12.5" r="1.6"/><circle cx="11.5" cy="5" r="1.6"/><path d="M4.5 5.1v5.8M11.5 6.6c0 3-7 2-7 4.3"/></svg>',
+  down: '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5"/></svg>',
+  up: '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 14V3M3.5 7.5 8 3l4.5 4.5"/></svg>',
+  fetch: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4.5 11.5a3 3 0 0 1-.3-6 4 4 0 0 1 7.6.7 2.6 2.6 0 0 1-.3 5.3"/><path d="M8 7.5v6M6 11.5l2 2 2-2"/></svg>',
+  caret: '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>',
+  check: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg>',
+  plus: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v10M3 8h10"/></svg>',
+  undo: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3.5 2.5 6 5 8.5"/><path d="M2.5 6h7a4 4 0 0 1 0 8H6"/></svg>',
+  spark: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 1.5 8.3 5.7 12.5 7 8.3 8.3 7 12.5 5.7 8.3 1.5 7l4.2-1.3z"/><path d="M12.5 10.5l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg>',
+  more: '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/></svg>',
+  lock: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="flex:none;margin-top:2px;color:var(--running)"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>',
+  cloud: '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 12.5a3 3 0 0 1-.3-6 4 4 0 0 1 7.6.7 2.6 2.6 0 0 1-.3 5.3z"/></svg>',
+};
+
+const state = {
+  view: 'changes', agent: 'run', chip: 'all', scope: 'all', sel: null, showForeign: {}, closed: {},
+  repos: [
+    { key: 'v', name: 'verwalter', kind: 'Haupt-Checkout', branch: 'main', base: 'main', ahead: 2, behind: 1, msg: '',
+      files: [
+        { f: 'SessionHeader.tsx', p: 'src/app', s: 'M', a: 42, d: 3, on: true },
+        { f: 'GitStrip.tsx', p: 'src/features/changes', s: 'U', a: 118, d: 0, on: true },
+        { f: 'status.rs', p: 'src-tauri/src/git', s: 'M', a: 24, d: 9, on: true },
+      ],
+      foreign: [
+        { f: 'glossary.md', p: 'docs', s: 'M', a: 3, d: 1, on: false },
+        { f: '.env.local', p: '', s: 'U', a: 2, d: 0, on: false },
+      ],
+      out: [
+        { m: 'feat(git): Core liest Status und Ahead/Behind', sha: '9f3a21c', files: ['src-tauri/src/git/status.rs', 'src-tauri/src/commands/git.rs'] },
+        { m: 'feat(git): Branch-Pille neben dem Titel', sha: '7be0d14', files: ['src/app/SessionHeader.tsx'] },
+      ] },
+    { key: 'w', name: 'verwalter-wt-git-tools', kind: 'Ticket-Worktree', branch: 'feat/git-tools', base: 'main', ahead: 0, behind: 0, msg: '',
+      files: [{ f: 'PROJECT.md', p: 'docs', s: 'M', a: 6, d: 2, on: true }], foreign: [], out: [] },
+  ],
+  branches: {
+    local: [
+      { n: 'main', sub: '↓1 ↑2' },
+      { n: 'feat/git-tools', sub: 'Worktree verwalter-wt-git-tools', wt: true },
+      { n: 'fix/sidebar-sort', sub: 'vor 3 Tagen' },
+    ],
+    remote: ['origin/main', 'origin/release/0.14'],
+  },
+  history: [
+    { m: 'feat(git): Branch-Pille neben dem Titel', a: 'Agent', own: true, out: true },
+    { m: 'feat(git): Core liest Status und Ahead/Behind', a: 'Agent', own: true, out: true },
+    { m: 'docs(planning): Konto-Zeile ohne Claude-Login', a: 'Aalphones', refs: ['origin/main'] },
+    { m: 'feat(standalone): Zusatz zum Systemprompt über Einstellungen', a: 'Aalphones' },
+    { m: 'Merge branch feat/background', a: 'Aalphones', merge: true },
+    { m: 'feat(background): App gibt dem Agenten den Scratchpad', a: 'Aalphones', lane: 1 },
+    { m: 'feat(background): Hintergrund-Panel zeigt Subagenten', a: 'Aalphones', lane: 1, forkEnd: true },
+    { m: 'chore(release): v0.14.0', a: 'Aalphones', tag: 'v0.14.0' },
+    { m: 'docs(planning): archive plan Claude-Konto', a: 'Aalphones' },
+    { m: 'feat(account): show the Claude account in the settings', a: 'Aalphones' },
+    { m: 'chore(release): v0.13.0', a: 'Aalphones', tag: 'v0.13.0' },
+  ],
+};
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const busy = () => state.agent === 'run';
+const visibleRepos = () => state.chip === 'all' ? state.repos : state.repos.filter((r) => r.key === state.chip);
+const ownCount = (r) => r.files.length + r.out.reduce((n, c) => n + c.files.length, 0);
+const dirty = (r) => r.files.length + r.foreign.length;
+
+/* Kopfzeile */
+function renderHeader() {
+  const r = state.repos[0], more = state.repos.length - 1;
+  $('#hdrPill').title = state.repos.map((x) => `${x.name}: ${x.branch}${x.ahead ? ' ↑' + x.ahead : ''}${x.behind ? ' ↓' + x.behind : ''}`).join('\n') + '\nKlick: Changes öffnen';
+  $('#hdrPill').innerHTML = `${I.branch}<span class="br">${esc(r.branch)}</span>${r.behind || r.ahead ? `<span class="sync">${r.behind ? '↓' + r.behind : ''}${r.ahead ? '↑' + r.ahead : ''}</span>` : ''}${dirty(r) ? '<span class="dirty"></span>' : ''}${more ? `<span class="plus">+${more}</span>` : ''}`;
+  $('#hdrPill').onclick = () => { state.view = 'changes'; render(); };
+  const total = state.repos.reduce((n, x) => n + ownCount(x), 0);
+  $('#tabCount').textContent = total;
+  document.querySelectorAll('.tab').forEach((t) => { t.classList.toggle('on', t.dataset.view === state.view); t.onclick = () => { state.view = t.dataset.view; render(); }; });
+  $('#status').className = 'status ' + (busy() ? 'run' : 'idle');
+  $('#status').textContent = busy() ? '● Läuft' : '✓ Abgeschlossen';
+}
+
+/* Chat (Platzhalter) */
+function renderChat() {
+  $('#view').innerHTML = `<div class="chat"><div class="col">
+    <div class="tool"><b>Edit</b> src/app/SessionHeader.tsx</div>
+    <div class="tool"><b>Bash</b> git commit -m "feat(git): Branch-Pille neben dem Titel"</div>
+    <div>Pille sitzt neben dem Titel. Als Nächstes die Git-Leiste in den Changes.</div>
+    <div class="composer">Antworten …</div></div></div>`;
+}
+
+/* Changes */
+function renderChanges() {
+  const vis = visibleRepos();
+  const adds = vis.reduce((n, r) => n + r.files.reduce((m, f) => m + f.a, 0), 0) + 31, dels = vis.reduce((n, r) => n + r.files.reduce((m, f) => m + f.d, 0), 0) + 4;
+  const chips = `<button class="chip ${state.chip === 'all' ? 'on' : ''}" data-chip="all">Alle <span class="c">${state.repos.reduce((n, r) => n + ownCount(r), 0)}</span></button>` +
+    state.repos.map((r) => `<button class="chip ${state.chip === r.key ? 'on' : ''}" data-chip="${r.key}">${esc(r.name)} <span class="c">${ownCount(r)}</span></button>`).join('');
+  $('#view').innerHTML = `<div class="changes">
+    <div class="tb">${chips}
+      <div class="sum"><span class="a">+${adds}</span><span class="d">−${dels}</span><span>gegen <span class="mono">main</span></span></div>
+      <div class="segm">${[['all', 'Alle'], ['unc', 'Uncommitted'], ['com', 'Committed']].map(([k, l]) => `<button class="${state.scope === k ? 'on' : ''}" data-scope="${k}">${l}</button>`).join('')}</div>
+    </div>
+    <div class="cbody"><div class="tree">${busy() ? `<div class="lock new">${I.lock}<div>Der Agent arbeitet: <b>Branch wechseln</b>, <b>Pull</b> und <b>Verwerfen</b> warten, bis er ruht. Commit und Push gehen.</div><button data-pause>Pausieren</button></div>` : ''}${vis.map(repoBlock).join('')}</div><div class="detail" id="detail"></div></div></div>`;
+  renderDetail();
+  bindChanges();
+}
+
+function repoBlock(r) {
+  const showUnc = state.scope !== 'com', showCom = state.scope !== 'unc';
+  const checked = r.files.filter((f) => f.on).length + r.foreign.filter((f) => f.on).length;
+  const fRow = (f, foreign) => `<div class="file ${foreign ? 'foreign' : ''} ${state.sel === r.key + '|' + f.f ? 'sel' : ''}" data-sel="${r.key}|${esc(f.f)}" title="${esc(f.p ? f.p + '/' : '')}${esc(f.f)}${foreign ? ' — nicht von dieser Session' : ''}">
+      <input type="checkbox" class="new" ${f.on ? 'checked' : ''} data-ck="${r.key}|${esc(f.f)}|${foreign ? 1 : 0}" title="${f.on ? 'Geht in den nächsten Commit' : 'Bleibt beim Commit draußen'}" />
+      <span class="fn">${esc(f.f)}</span><span class="fp">${esc(f.p)}</span>
+      <span class="num"><span class="a">+${f.a}</span> <span class="d">−${f.d}</span></span>
+      <button class="iconbtn undo new" title="Änderung verwerfen …" data-undo="${r.key}|${esc(f.f)}" ${busy() && !foreign ? 'disabled' : ''}>${I.undo}</button>
+      <span class="st ${f.s}">${f.s}</span></div>`;
+  return `<div class="repo ${state.closed[r.key] ? 'closed' : ''}">
+    <div class="rh">
+      <button class="caret" data-fold="${r.key}">${I.caret}</button>
+      <span class="rn" title="${esc(r.kind)}">${esc(r.name)}</span>
+      <span class="sp"></span>
+      <span class="new" style="display:inline-flex;gap:2px;align-items:center">
+        <button class="brbtn" data-br="${r.key}" title="Branch wechseln oder anlegen">${I.branch}<span class="name">${esc(r.branch)}</span>${I.caret}</button>
+        <button class="syncbtn ${r.behind ? 'hot' : ''}" data-act="pull|${r.key}" title="Pull — ${r.behind} eingehend" ${busy() ? 'disabled' : ''}>${I.down}${r.behind}</button>
+        <button class="syncbtn ${r.ahead ? 'hot' : ''}" data-act="push|${r.key}" title="Push — ${r.ahead} ausgehend">${I.up}${r.ahead}</button>
+        <button class="iconbtn" data-more="${r.key}" title="Fetch, Stash, Merge …">${I.more}</button>
+      </span>
+    </div>
+    <div class="rb">
+      ${showUnc ? `<div class="commit new">
+        <div class="msgbox"><textarea data-msg="${r.key}" placeholder="Nachricht (Strg+Enter committet auf „${esc(r.branch)}“)">${esc(r.msg)}</textarea>
+          <button class="iconbtn spark" data-spark="${r.key}" title="Nachricht vorschlagen lassen (nach docs/conventions/commits.md)">${I.spark}</button></div>
+        <div class="split"><button class="main-btn" data-commit="${r.key}" ${checked ? '' : 'disabled'}>${I.check}Commit${checked ? ` · ${checked} Datei${checked > 1 ? 'en' : ''}` : ''}</button><button class="drop" data-cdrop="${r.key}">${I.caret}</button></div>
+      </div>` : ''}
+      ${showUnc ? `<div class="grp">Uncommitted <span class="cnt">${r.files.length}</span><span class="sp"></span>${r.files.length ? `<button class="lnk new" data-all="${r.key}">${r.files.every((f) => f.on) ? 'keine' : 'alle'} vormerken</button>` : ''}</div>
+        ${r.files.map((f) => fRow(f, false)).join('') || '<div class="file" style="color:var(--muted);cursor:default">Nichts offen</div>'}
+        ${r.foreign.length ? `<button class="foreign-toggle new" data-foreign="${r.key}">${I.caret}${state.showForeign[r.key] ? 'Ausblenden:' : ''} ${r.foreign.length} weitere Änderungen im Ordner — nicht von dieser Session</button>
+          ${state.showForeign[r.key] ? r.foreign.map((f) => fRow(f, true)).join('') : ''}` : ''}` : ''}
+      ${showCom && r.out.length ? `<div class="grp">Committed <span class="cnt">${r.out.length} Commits</span><span class="sp"></span><span class="cnt new" style="color:var(--accent-text)">noch nicht gepusht</span></div>
+        ${r.out.map((c) => `<div class="commitrow"><span class="ring"></span><span class="m">${esc(c.m)}</span><span class="sha">${c.sha}</span></div>` + c.files.map((p) => { const i = p.lastIndexOf('/'); return `<div class="file" style="padding-left:30px"><span class="ck"></span><span class="fn">${esc(p.slice(i + 1))}</span><span class="fp">${esc(p.slice(0, i))}</span><span class="st M">M</span></div>`; }).join('')).join('')}` : ''}
+    </div></div>`;
+}
+
+function laneSvg(c, i) {
+  const W = 26, H = 22, x0 = 9, x1 = 19, m = H / 2, c0 = 'var(--running)', c1 = 'var(--ok)';
+  let s = `<svg width="${W}" height="${H}" style="flex:none"><line x1="${x0}" y1="${i === 0 ? m : 0}" x2="${x0}" y2="${H}" stroke="${c0}" stroke-width="1.6"/>`;
+  if (c.merge) s += `<path d="M${x0} ${m} C ${x0} ${H}, ${x1} ${m}, ${x1} ${H}" stroke="${c1}" stroke-width="1.6" fill="none"/>`;
+  if (c.lane === 1 && !c.forkEnd) s += `<line x1="${x1}" y1="0" x2="${x1}" y2="${H}" stroke="${c1}" stroke-width="1.6"/>`;
+  if (c.forkEnd) s += `<line x1="${x1}" y1="0" x2="${x1}" y2="${m}" stroke="${c1}" stroke-width="1.6"/><path d="M${x1} ${m} C ${x1} ${H}, ${x0} ${m}, ${x0} ${H}" stroke="${c1}" stroke-width="1.6" fill="none"/>`;
+  const cx = c.lane === 1 ? x1 : x0, col = c.lane === 1 ? c1 : c0;
+  if (c.out) s += `<circle cx="${cx}" cy="${m}" r="3.8" fill="var(--bg-base)" stroke="var(--accent)" stroke-width="1.8"/>`;
+  else s += `<circle cx="${cx}" cy="${m}" r="3.6" fill="${col}"/>`;
+  return s + '</svg>';
+}
+
+function renderDetail() {
+  const d = $('#detail');
+  if (state.sel) {
+    const [k, f] = state.sel.split('|');
+    const file = [...repoBy(k).files, ...repoBy(k).foreign].find((x) => x.f === f);
+    d.innerHTML = `<div class="diffhead"><b>${esc(f)}</b><span class="p">${esc(file ? file.p : '')}</span><span class="sp"></span><button class="btn" data-back>Übersicht</button></div>
+      <div class="dl hunk"><span></span><span></span><span></span><span>@@ -12,7 +12,10 @@</span></div>
+      <div class="dl"><span>12</span><span>12</span><span></span><span>export function SessionHeader(props: Props): ReactElement {</span></div>
+      <div class="dl del"><span>13</span><span></span><span>−</span><span>  const title = session.name;</span></div>
+      <div class="dl add"><span></span><span>13</span><span>+</span><span>  const title = session.name;</span></div>
+      <div class="dl add"><span></span><span>14</span><span>+</span><span>  const branches = useBranches(session.id);</span></div>
+      <div class="dl"><span>14</span><span>15</span><span></span><span>  return (</span></div>
+      <div style="padding:14px 16px;color:var(--muted);font-size:12px">Diff wie heute — unverändert.</div>`;
+    d.querySelector('[data-back]').onclick = () => { state.sel = null; renderChanges(); };
+    return;
+  }
+  const vis = visibleRepos();
+  const r = state.repos[0];
+  d.innerHTML = `<div class="ov">
+    <h2>Übersicht</h2><p class="reach">Was diese Session geändert hat — committed und uncommitted.</p>
+    <div class="ovbox">${vis.map((x) => `<div class="ovrow"><span class="n">${esc(x.name)}</span><span class="b">${esc(x.kind)} · <span class="mono">${esc(x.branch)}</span> gegen <span class="mono">${esc(x.base)}</span></span><span class="s new">${x.behind ? '↓' + x.behind + ' ' : ''}${x.ahead ? '↑' + x.ahead : ''}${!x.ahead && !x.behind ? '<span style="color:var(--muted)">synchron</span>' : ''}</span></div>`).join('')}</div>
+    ${vis.includes(r) ? `<div class="new">
+      <div class="hist-h"><h3>Verlauf · ${esc(r.name)}</h3><span class="sp"></span><button class="iconbtn" data-act="fetch|v" title="Fetch — Remote abfragen, nichts ändern">${I.fetch}</button></div>
+      ${r.behind ? `<div class="incoming">${I.down}<span>1 eingehender Commit auf <b>origin/main</b></span><span class="sha">a41f0c2</span><span style="flex:1"></span><button class="syncbtn hot" data-act="pull|v" ${busy() ? 'disabled title="Gesperrt, solange der Agent arbeitet"' : ''}>Pull</button></div>` : ''}
+      ${state.history.map((c, i) => {
+        const refs = [];
+        if (i === 0) refs.push(`<span class="ref local">${I.branch}${esc(r.branch)}</span>`);
+        (c.refs || []).forEach((x) => refs.push(`<span class="ref remote">${I.cloud}${x}</span>`));
+        if (c.tag) refs.push(`<span class="ref tag">${c.tag}</span>`);
+        return `<div class="graph-row ${i === 0 ? 'head' : ''}" title="${esc(c.m)}${c.out ? ' — noch nicht gepusht' : ''}">${laneSvg(c, i)}<span class="gm">${esc(c.m)}</span>${c.own ? '<span class="own">diese Session</span>' : ''}${refs.join('')}<span class="ga">${esc(c.a)}</span></div>`;
+      }).join('')}</div>` : ''}
+  </div>`;
+  d.querySelectorAll('[data-act]').forEach((b) => b.onclick = () => syncAction(...b.dataset.act.split('|')));
+}
+
+function bindChanges() {
+  const v = $('#view');
+  v.querySelectorAll('[data-chip]').forEach((b) => b.onclick = () => { state.chip = b.dataset.chip; state.sel = null; renderChanges(); });
+  v.querySelectorAll('[data-scope]').forEach((b) => b.onclick = () => { state.scope = b.dataset.scope; renderChanges(); });
+  v.querySelectorAll('[data-fold]').forEach((b) => b.onclick = () => { state.closed[b.dataset.fold] = !state.closed[b.dataset.fold]; renderChanges(); });
+  v.querySelectorAll('[data-foreign]').forEach((b) => b.onclick = () => { state.showForeign[b.dataset.foreign] = !state.showForeign[b.dataset.foreign]; renderChanges(); });
+  v.querySelectorAll('[data-sel]').forEach((row) => row.onclick = (e) => { if (e.target.closest('input,button')) return; state.sel = row.dataset.sel; renderChanges(); });
+  v.querySelectorAll('[data-ck]').forEach((c) => c.onchange = () => {
+    const [k, f, fr] = c.dataset.ck.split('|'); const r = repoBy(k);
+    (fr === '1' ? r.foreign : r.files).find((x) => x.f === f).on = c.checked; renderChanges();
+  });
+  v.querySelectorAll('[data-all]').forEach((b) => b.onclick = () => { const r = repoBy(b.dataset.all); const all = r.files.every((f) => f.on); r.files.forEach((f) => f.on = !all); renderChanges(); });
+  v.querySelectorAll('[data-msg]').forEach((t) => {
+    t.oninput = () => { repoBy(t.dataset.msg).msg = t.value; };
+    t.onkeydown = (e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); doCommit(t.dataset.msg, e.shiftKey); } };
+  });
+  v.querySelectorAll('[data-spark]').forEach((b) => b.onclick = () => { const r = repoBy(b.dataset.spark); r.msg = 'feat(git): Git-Leiste in den Changes'; renderChanges(); });
+  v.querySelectorAll('[data-commit]').forEach((b) => b.onclick = () => doCommit(b.dataset.commit, false));
+  v.querySelectorAll('[data-cdrop]').forEach((b) => b.onclick = () => openCommitMenu(b, b.dataset.cdrop));
+  v.querySelectorAll('[data-br]').forEach((b) => b.onclick = () => openBranchMenu(b, b.dataset.br));
+  v.querySelectorAll('[data-more]').forEach((b) => b.onclick = () => openMoreMenu(b, b.dataset.more));
+  v.querySelectorAll('.rh [data-act]').forEach((b) => b.onclick = () => syncAction(...b.dataset.act.split('|')));
+  v.querySelectorAll('[data-pause]').forEach((b) => b.onclick = () => setAgent('idle'));
+  v.querySelectorAll('[data-undo]').forEach((b) => b.onclick = (e) => {
+    e.stopPropagation(); const [k, f] = b.dataset.undo.split('|');
+    dialog(`<h3>Änderung verwerfen?</h3><p><b>${esc(f)}</b> wird auf den letzten Commit zurückgesetzt. Das lässt sich nicht rückgängig machen.</p><div class="row"><button class="btn" data-d="no">Abbrechen</button><button class="btn pri" data-d="yes">Verwerfen</button></div>`,
+      (d) => { if (d === 'yes') { const r = repoBy(k); r.files = r.files.filter((x) => x.f !== f); r.foreign = r.foreign.filter((x) => x.f !== f); render(); toast(`${esc(f)} verworfen`); } });
+  });
+}
+const repoBy = (k) => state.repos.find((r) => r.key === k);
+
+/* Popover */
+function openPop(anchor, html, width, bind) {
+  const p = $('#pop'), rc = anchor.getBoundingClientRect();
+  p.innerHTML = html; p.style.width = width + 'px'; p.hidden = false;
+  p.style.left = Math.max(8, Math.min(rc.left, window.innerWidth - width - 12)) + 'px'; p.style.top = (rc.bottom + 6) + 'px';
+  bind && bind(p);
+  setTimeout(() => document.addEventListener('mousedown', outside), 0);
+}
+function closePop() { $('#pop').hidden = true; document.removeEventListener('mousedown', outside); }
+function outside(e) { if (!$('#pop').contains(e.target)) closePop(); }
+
+function openBranchMenu(a, k) {
+  const r = repoBy(k), locked = busy();
+  openPop(a, `<input placeholder="Branch suchen oder neuen Namen tippen" />
+    ${locked ? '<div class="note">Wechseln gesperrt, solange der Agent hier arbeitet.</div>' : ''}
+    <button class="it add" data-new>${I.plus}<span>Neuer Branch aus <span class="mono">${esc(r.branch)}</span> …</span></button>
+    <button class="it add" data-newwt>${I.plus}<span>Neuer Branch als Ticket-Worktree …</span></button>
+    <hr /><div class="pg">Lokal</div>
+    ${state.branches.local.map((b) => `<button class="it" data-b="${esc(b.n)}" ${(locked && b.n !== r.branch) || (b.wt && b.n !== r.branch) ? 'disabled' : ''} title="${b.wt ? 'In einem Worktree ausgecheckt' : ''}"><span class="chk">${b.n === r.branch ? I.check : ''}</span><span class="mono">${esc(b.n)}</span><span class="sub">${esc(b.sub)}</span></button>`).join('')}
+    <div class="pg">Remote</div>
+    ${state.branches.remote.map((n) => `<button class="it" data-b="${esc(n)}" ${locked ? 'disabled' : ''}><span class="chk">${I.cloud}</span><span class="mono">${esc(n)}</span></button>`).join('')}`,
+    360, (p) => {
+      p.querySelector('input').focus();
+      p.querySelectorAll('[data-b]').forEach((b) => b.onclick = () => { closePop(); switchBranch(r, b.dataset.b); });
+      p.querySelector('[data-new]').onclick = () => { closePop(); toast('Name tippen, Enter legt den Branch an und wechselt darauf.'); };
+      p.querySelector('[data-newwt]').onclick = () => { closePop(); toast('Legt verwalter-wt-&lt;Name&gt; neben dem Haupt-Checkout an; er erscheint hier als eigenes Repository.'); };
+    });
+}
+
+function openCommitMenu(a, k) {
+  openPop(a, `
+    <button class="it" data-k="c">${I.check}<span>Commit</span><span class="kbd">Strg+Enter</span></button>
+    <button class="it" data-k="p">${I.up}<span>Commit &amp; Push</span><span class="kbd">Strg+Umschalt+Enter</span></button>
+    <hr /><button class="it" data-k="a">${I.undo}<span>Letzten Commit ergänzen</span></button>
+    <div class="note" style="color:var(--muted)">Ergänzen geht nur, solange der letzte Commit nicht gepusht ist.</div>`,
+    300, (p) => p.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { closePop(); doCommit(k, b.dataset.k === 'p', b.dataset.k === 'a'); }));
+}
+
+function openMoreMenu(a, k) {
+  const locked = busy();
+  openPop(a, `
+    <button class="it" data-x>${I.fetch}<span>Fetch</span></button>
+    <button class="it" ${locked ? 'disabled' : ''} data-x>${I.down}<span>Pull mit Rebase</span></button>
+    <hr />
+    <button class="it" ${locked ? 'disabled' : ''} data-x><span class="chk"></span><span>Stash: Änderungen beiseitelegen</span></button>
+    <button class="it" ${locked ? 'disabled' : ''} data-x><span class="chk"></span><span>Stash zurückholen …</span></button>
+    <hr />
+    <button class="it" ${locked ? 'disabled' : ''} data-x><span class="chk"></span><span>In <span class="mono">main</span> mergen …</span></button>
+    <button class="it" data-x><span class="chk"></span><span>Branch löschen …</span></button>
+    <hr />
+    <button class="it" data-x><span class="chk"></span><span>Im Explorer öffnen</span></button>
+    <button class="it" data-x><span class="chk"></span><span>In VS Code öffnen</span></button>`,
+    280, (p) => p.querySelectorAll('[data-x]').forEach((b) => b.onclick = () => { closePop(); toast('Nur im Entwurf gezeigt.'); }));
+}
+
+/* Aktionen */
+function switchBranch(r, name) {
+  if (name === r.branch) return;
+  const n = dirty(r), go = (stash) => { if (stash) { r.files = []; r.foreign = []; } r.branch = name.replace('origin/', ''); r.ahead = r.behind = 0; r.out = []; render(); toast(`Gewechselt auf <b>${esc(r.branch)}</b>${stash ? ` · ${n} Änderungen im Stash` : ''}`); };
+  if (!n) return go(false);
+  dialog(`<h3>Wechsel auf „${esc(name)}“</h3><p>${n} ungecommittete Änderungen in <b>${esc(r.name)}</b>. Was soll mit ihnen passieren?</p>
+    <ul>${[...r.files, ...r.foreign].slice(0, 5).map((x) => `<li>${esc(x.p ? x.p + '/' : '')}${esc(x.f)}</li>`).join('')}</ul>
+    <div class="row"><button class="btn" data-d="no">Abbrechen</button><button class="btn" data-d="take">Mitnehmen</button><button class="btn pri" data-d="stash">Beiseitelegen und wechseln</button></div>`,
+    (d) => { if (d !== 'no') go(d === 'stash'); });
+}
+
+function doCommit(k, push, amend) {
+  const r = repoBy(k);
+  if (!r.msg.trim() && !amend) { toast('Erst eine Nachricht — oder ✦ für einen Vorschlag.'); return; }
+  const pick = [...r.files.filter((f) => f.on), ...r.foreign.filter((f) => f.on)];
+  if (!pick.length) return;
+  if (!amend) { r.out.unshift({ m: r.msg, sha: Math.random().toString(16).slice(2, 9), files: pick.map((f) => (f.p ? f.p + '/' : '') + f.f) }); r.ahead++; if (k === 'v') state.history.unshift({ m: r.msg, a: 'du', out: true }); }
+  r.files = r.files.filter((f) => !f.on); r.foreign = r.foreign.filter((f) => !f.on); r.msg = '';
+  if (push) pushRepo(r);
+  render();
+  toast(`${amend ? 'Ergänzt' : 'Committet'}: ${pick.length} Datei${pick.length > 1 ? 'en' : ''} auf <b>${esc(r.branch)}</b>${push ? ' · gepusht' : ''}`);
+}
+function pushRepo(r) { r.ahead = 0; r.out = []; if (r.key === 'v') state.history.forEach((c) => c.out = false); }
+
+function syncAction(kind, k) {
+  const r = repoBy(k);
+  if (kind === 'fetch') return toast('Fetch: origin abgefragt, nichts geändert.');
+  if (kind === 'pull') { if (!r.behind) return toast('Nichts zu holen.'); r.behind = 0; render(); return toast('Pull: 1 Commit geholt.'); }
+  if (!r.ahead) return toast('Nichts zu pushen.');
+  if (r.behind) return dialog(`<h3>Push abgelehnt</h3><p><b>origin/${esc(r.branch)}</b> hat einen Commit, den du noch nicht hast. Erst holen, dann pushen.</p><div class="row"><button class="btn" data-d="no">Abbrechen</button><button class="btn pri" data-d="go" ${busy() ? 'disabled title="Pull ist gesperrt, solange der Agent arbeitet"' : ''}>Pull, dann Push</button></div>`,
+    (d) => { if (d === 'go') { r.behind = 0; pushRepo(r); render(); toast('Geholt und gepusht.'); } });
+  pushRepo(r); render(); toast(`Gepusht nach <b>origin/${esc(r.branch)}</b>`);
+}
+
+function dialog(html, cb) { $('#dlg').innerHTML = html; $('#scrim').hidden = false; $('#dlg').querySelectorAll('[data-d]').forEach((b) => b.onclick = () => { $('#scrim').hidden = true; cb(b.dataset.d); }); }
+let tt; function toast(h) { const t = $('#toast'); t.innerHTML = h; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+
+function setAgent(v) { state.agent = v; seg('#ctlAgent', v); render(); }
+function seg(id, v) { $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); }
+function render() { renderHeader(); state.view === 'chat' ? renderChat() : renderChanges(); }
+
+$('#ctlTheme').querySelectorAll('button').forEach((b) => b.onclick = () => { document.documentElement.classList.toggle('light', b.dataset.v === 'light'); seg('#ctlTheme', b.dataset.v); });
+$('#ctlAgent').querySelectorAll('button').forEach((b) => b.onclick = () => setAgent(b.dataset.v));
+$('#ctlMarks').querySelectorAll('button').forEach((b) => b.onclick = () => { document.body.classList.toggle('marks', b.dataset.v === 'on'); seg('#ctlMarks', b.dataset.v); });
+render();
+</script>
+</body>
+</html>
