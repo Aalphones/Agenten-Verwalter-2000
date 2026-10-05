@@ -142,11 +142,14 @@ fn read_stream(mut reader: impl BufRead, cancel: &AtomicBool) -> Result<Completi
         }
         apply_chunk(&chunk, &mut completion, &mut calls);
     }
+    // Eine fehlende Kennung wird eindeutig erzeugt: der Verwalter ordnet Ergebnisse über sie zu,
+    // über alle Runden und Turns hinweg.
     completion.tool_calls = calls
         .into_values()
-        .enumerate()
-        .map(|(index, call): (usize, PartialCall)| ToolCall {
-            id: call.id.unwrap_or_else(|| format!("call_{index}")),
+        .map(|call: PartialCall| ToolCall {
+            id: call
+                .id
+                .unwrap_or_else(|| format!("call_{}", uuid::Uuid::new_v4().simple())),
             name: call.name,
             arguments: call.arguments,
         })

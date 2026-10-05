@@ -1,24 +1,27 @@
 //! Hauptschleife einer Session: Zeilen von stdin, Turns gegen das Modell, Unterbrechen.
 //!
-//! Die Modellanfrage läuft in einem Arbeits-Thread; die Hauptschleife bleibt frei, damit ein
-//! `interrupt` während der Anfrage ankommt. Nachrichten, die während eines Turns eintreffen,
-//! warten in der Schlange und werden danach je als eigener Turn verarbeitet.
-use std::collections::VecDeque;
+//! Ein Turn — Modellanfragen und Werkzeuge — läuft in einem Arbeits-Thread (`turn`); die
+//! Hauptschleife bleibt frei, damit ein `interrupt` währenddessen ankommt, und ist die einzige
+//! Stelle, die ins Transkript schreibt. Nachrichten, die während eines Turns eintreffen, warten in
+//! der Schlange und werden danach je als eigener Turn verarbeitet.
+use std::collections::{HashSet, VecDeque};
 use std::env;
 use std::io::{self, BufRead};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
 use std::time::Duration;
 
 use serde_json::{Value, json};
 
 use super::args::{self, AgentArgs, Start};
-use super::llm::{self, ChatRequest, Completion, LlmError};
 use super::output::{self, Output};
+use super::paths::Roots;
+use super::tools::{self, ToolContext};
 use super::transcript::Transcript;
+use super::turn::{self, Outcome, TurnEvent, TurnJob};
 use super::{BASE_URL_VARIABLE, CONTEXT_WINDOW_VARIABLE, EXIT_START_FAILED, content, prompt};
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
@@ -26,8 +29,6 @@ const POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// Steht nach einer unterbrochenen Antwort im Verlauf, damit das Modell im nächsten Turn weiß,
 /// dass seine letzte Antwort nie ankam. Wortlaut wie bei der Claude-Kommandozeile.
 const INTERRUPTED_MARKER: &str = "[Request interrupted by user]";
-/// Grobe Schätzung, wenn das Modell keine Token-Zahl meldet.
-const CHARS_PER_TOKEN: usize = 4;
 const BYTE_ORDER_MARK: char = '\u{feff}';
 
 enum Input {
@@ -39,8 +40,10 @@ enum Input {
 /// hier aber weiter, bis der Arbeits-Thread zurückkehrt — erst dann beginnt der nächste.
 struct ActiveTurn {
     cancel: Arc<AtomicBool>,
-    answer: Receiver<Result<Completion, LlmError>>,
+    events: Receiver<TurnEvent>,
     is_aborted: bool,
+    /// Scheiterte das Schreiben ins Transkript, wird der Turn abgebrochen und endet mit diesem Fehler.
+    transcript_error: Option<String>,
 }
 
 struct Session {
@@ -51,6 +54,8 @@ struct Session {
     cwd: PathBuf,
     prompt_appendix: Option<String>,
     model: String,
+    tools: Vec<Value>,
+    tool_context: Arc<Mutex<ToolContext>>,
     transcript: Transcript,
     queue: VecDeque<Value>,
     turn: Option<ActiveTurn>,
@@ -78,13 +83,29 @@ pub fn run(args: AgentArgs) -> i32 {
             return EXIT_START_FAILED;
         }
     };
+    let tool_definitions = if args.tools_disabled {
+        Vec::new()
+    } else {
+        tools::definitions()
+    };
     let output = Arc::new(Output::default());
-    output.line(&output::init(&session_id, &args.model, &cwd, &[]));
+    output.line(&output::init(
+        &session_id,
+        &args.model,
+        &cwd,
+        &tools::names(&tool_definitions),
+    ));
     let (input_sender, input_receiver) = mpsc::channel::<Input>();
     if let Err(error) = spawn_stdin_reader(input_sender) {
         eprintln!("Lese-Thread startet nicht: {error}");
         return EXIT_START_FAILED;
     }
+    let tool_context = ToolContext {
+        cwd: cwd.clone(),
+        roots: Roots::from_args(&cwd, &args.add_dirs, &args.allowed_rules),
+        read_files: HashSet::new(),
+        cancel: Arc::new(AtomicBool::new(false)),
+    };
     let mut session = Session {
         output,
         session_id,
@@ -93,6 +114,8 @@ pub fn run(args: AgentArgs) -> i32 {
         cwd,
         prompt_appendix: args.append_system_prompt,
         model: args.model,
+        tools: tool_definitions,
+        tool_context: Arc::new(Mutex::new(tool_context)),
         transcript,
         queue: VecDeque::new(),
         turn: None,
@@ -175,7 +198,7 @@ impl Session {
                 None => eprintln!("user-Zeile ohne message.content, überlesen"),
             },
             Some("control_request") => self.handle_control(&value),
-            // Antworten auf eigene Rückfragen gibt es erst mit Werkzeugen.
+            // Rückfragen stellt der Agent noch nicht — es gibt nichts zu beantworten.
             Some("control_response") => {}
             other => eprintln!("Unbekannte Zeile, überlesen: {other:?}"),
         }
@@ -196,7 +219,7 @@ impl Session {
                 self.reply_success(request_id);
                 self.interrupt();
             }
-            // Ohne Werkzeuge ändert der Modus nichts; geprüft wird er trotzdem.
+            // Der Modus wirkt noch nicht auf die Werkzeuge; geprüft wird er trotzdem.
             "set_permission_mode" => {
                 let mode = request
                     .get("mode")
@@ -232,7 +255,8 @@ impl Session {
 
     /// Meldet den Turn sofort als abgebrochen, statt auf den Arbeits-Thread zu warten: der liest
     /// erst beim nächsten Stück der Antwort wieder, und während LM Studio den Prompt verarbeitet,
-    /// kommt lange keins.
+    /// kommt lange keins. Der Marker im Transkript folgt erst, wenn der Thread zurück ist — davor
+    /// kommen noch die Werkzeug-Ergebnisse seiner letzten Runde.
     fn interrupt(&mut self) {
         match &mut self.turn {
             Some(turn) if !turn.is_aborted => {
@@ -241,7 +265,6 @@ impl Session {
             }
             _ => return,
         }
-        self.append_or_report(json!({ "role": "user", "content": INTERRUPTED_MARKER }));
         self.output.line(&output::result_aborted(
             &self.session_id,
             &self.model,
@@ -259,24 +282,25 @@ impl Session {
             ));
             return;
         }
-        let messages = self.request_messages();
         let cancel = Arc::new(AtomicBool::new(false));
-        let (answer_sender, answer_receiver) = mpsc::channel();
-        let worker_cancel = Arc::clone(&cancel);
-        let base_url = self.base_url.clone();
-        let model = self.model.clone();
+        self.tool_context
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .cancel = Arc::clone(&cancel);
+        let job = TurnJob {
+            output: Arc::clone(&self.output),
+            session_id: self.session_id.clone(),
+            base_url: self.base_url.clone(),
+            model: self.model.clone(),
+            messages: self.request_messages(),
+            tools: self.tools.clone(),
+            context: Arc::clone(&self.tool_context),
+            cancel: Arc::clone(&cancel),
+        };
+        let (event_sender, event_receiver) = mpsc::channel::<TurnEvent>();
         let spawned = thread::Builder::new()
             .name("agent-turn".to_owned())
-            .spawn(move || {
-                let request = ChatRequest {
-                    base_url: &base_url,
-                    model: &model,
-                    messages: &messages,
-                    tools: &[],
-                    response_format: None,
-                };
-                let _ = answer_sender.send(llm::complete(&request, &worker_cancel));
-            });
+            .spawn(move || turn::run(job, &event_sender));
         if let Err(error) = spawned {
             self.output.line(&output::result_error(
                 &self.session_id,
@@ -288,8 +312,9 @@ impl Session {
         }
         self.turn = Some(ActiveTurn {
             cancel,
-            answer: answer_receiver,
+            events: event_receiver,
             is_aborted: false,
+            transcript_error: None,
         });
     }
 
@@ -309,91 +334,69 @@ impl Session {
         messages
     }
 
+    /// Übernimmt, was der Arbeits-Thread geschickt hat: Runden ins Transkript, am Ende die
+    /// `result`-Zeile.
     fn poll_turn(&mut self) {
-        let Some(turn) = &self.turn else {
+        loop {
+            let Some(turn) = &self.turn else {
+                return;
+            };
+            let event = match turn.events.try_recv() {
+                Ok(event) => event,
+                Err(TryRecvError::Empty) => return,
+                Err(TryRecvError::Disconnected) => TurnEvent::Done(Outcome::Failed(
+                    "Arbeits-Thread ohne Antwort beendet".to_owned(),
+                )),
+            };
+            match event {
+                TurnEvent::Messages(messages) => self.append_round(messages),
+                TurnEvent::Done(outcome) => {
+                    self.finish_turn(outcome);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Auch nach Esc landet die Runde im Transkript: zu jedem `tool_calls` gehören seine Ergebnisse.
+    fn append_round(&mut self, messages: Vec<Value>) {
+        for message in messages {
+            let Err(error) = self.transcript.append(message) else {
+                continue;
+            };
+            if let Some(turn) = &mut self.turn {
+                turn.cancel.store(true, Ordering::SeqCst);
+                turn.transcript_error.get_or_insert(error);
+            }
+            return;
+        }
+    }
+
+    fn finish_turn(&mut self, outcome: Outcome) {
+        let Some(turn) = self.turn.take() else {
             return;
         };
-        let answer = match turn.answer.try_recv() {
-            Ok(answer) => answer,
-            Err(TryRecvError::Empty) => return,
-            Err(TryRecvError::Disconnected) => Err(LlmError::Failed(
-                "Arbeits-Thread ohne Antwort beendet".to_owned(),
-            )),
+        if turn.is_aborted {
+            // Der Verwalter hat `result` schon bei Esc bekommen.
+            if let Err(error) = self
+                .transcript
+                .append(json!({ "role": "user", "content": INTERRUPTED_MARKER }))
+            {
+                eprintln!("{error}");
+            }
+            return;
+        }
+        let line = match (turn.transcript_error, outcome) {
+            (Some(error), _) | (None, Outcome::Failed(error)) => {
+                output::result_error(&self.session_id, &error, &self.model, self.context_window)
+            }
+            (None, Outcome::Completed(text)) => {
+                output::result_success(&self.session_id, &text, &self.model, self.context_window)
+            }
+            (None, Outcome::Aborted) => {
+                output::result_aborted(&self.session_id, &self.model, self.context_window)
+            }
         };
-        let is_aborted = turn.is_aborted;
-        self.turn = None;
-        if is_aborted {
-            // Was das Modell bis zum Abbruch schrieb, hat es nie fertig gesagt — es bleibt draußen.
-            return;
-        }
-        match answer {
-            Ok(completion) => self.finish_turn(&completion),
-            Err(LlmError::Cancelled) => self.output.line(&output::result_aborted(
-                &self.session_id,
-                &self.model,
-                self.context_window,
-            )),
-            Err(LlmError::Failed(message)) => self.output.line(&output::result_error(
-                &self.session_id,
-                &message,
-                &self.model,
-                self.context_window,
-            )),
-        }
-    }
-
-    fn finish_turn(&mut self, completion: &Completion) {
-        let mut blocks: Vec<Value> = Vec::new();
-        if !completion.reasoning.is_empty() {
-            blocks.push(json!({ "type": "thinking", "thinking": completion.reasoning }));
-        }
-        if !completion.text.is_empty() {
-            blocks.push(json!({ "type": "text", "text": completion.text }));
-        }
-        let input_tokens = completion
-            .prompt_tokens
-            .unwrap_or_else(|| self.estimated_prompt_tokens());
-        self.output.line(&output::assistant(
-            &self.session_id,
-            blocks,
-            input_tokens,
-            completion.completion_tokens.unwrap_or(0),
-        ));
-        if let Err(error) = self
-            .transcript
-            .append(json!({ "role": "assistant", "content": completion.text }))
-        {
-            self.output.line(&output::result_error(
-                &self.session_id,
-                &error,
-                &self.model,
-                self.context_window,
-            ));
-            return;
-        }
-        self.output.line(&output::result_success(
-            &self.session_id,
-            &completion.text,
-            &self.model,
-            self.context_window,
-        ));
-    }
-
-    /// Zeichen aller gesendeten Texte / 4 — Bilder zählen nicht mit.
-    fn estimated_prompt_tokens(&self) -> u32 {
-        let characters: usize = self
-            .request_messages()
-            .iter()
-            .map(content::text_chars)
-            .sum();
-        u32::try_from(characters / CHARS_PER_TOKEN).unwrap_or(u32::MAX)
-    }
-
-    /// Ein Schreibfehler am Transkript nach einem Abbruch landet nur auf stderr — der Turn ist für
-    /// den Verwalter schon beendet.
-    fn append_or_report(&mut self, message: Value) {
-        if let Err(error) = self.transcript.append(message) {
-            eprintln!("{error}");
-        }
+        self.output.line(&line);
     }
 }

@@ -5,9 +5,12 @@ pub mod args;
 pub mod content;
 pub mod llm;
 pub mod output;
+pub mod paths;
 pub mod prompt;
 pub mod session;
+pub mod tools;
 pub mod transcript;
+pub mod turn;
 
 use std::env;
 use std::path::PathBuf;
@@ -48,7 +51,12 @@ pub fn run(args: Vec<String>) -> i32 {
 }
 
 fn agent_dir() -> Option<PathBuf> {
+    Some(home_dir()?.join(DATA_DIR).join(AGENT_DIR))
+}
+
+fn home_dir() -> Option<PathBuf> {
     // `HOME` für die Builds unter macOS und Linux, die kein `USERPROFILE` kennen.
-    let home = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME"))?;
-    Some(PathBuf::from(home).join(DATA_DIR).join(AGENT_DIR))
+    env::var_os("USERPROFILE")
+        .or_else(|| env::var_os("HOME"))
+        .map(PathBuf::from)
 }

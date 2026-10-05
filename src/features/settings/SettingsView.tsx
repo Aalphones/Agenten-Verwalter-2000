@@ -140,10 +140,12 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
     const currentMode = modeOption(current.defaultMode);
     return (
       <>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Konto</h2>
-          <AccountRow />
-        </section>
+        {current.operatingMode !== 'standalone' && (
+          <section className="settings-view__section">
+            <h2 className="settings-view__section-title">Konto</h2>
+            <AccountRow />
+          </section>
+        )}
         <section className="settings-view__section">
           <h2 className="settings-view__section-title">Darstellung</h2>
           <SettingRow
