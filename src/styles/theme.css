@@ -101,6 +101,7 @@
   --z-modal: 40;
   --z-toast: 50;
   --z-tooltip: 60;
+  --z-fullscreen: 70;
 }
 
 /* Semantische Tokens, hell. Komponenten lesen nur diese Schicht. */

@@ -1,0 +1,43 @@
+.artifact-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-fullscreen);
+  background: #000;
+
+  &__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    /* Die Seite im iframe bringt ihren eigenen Hintergrund mit; ohne den steht sie auf Weiß. */
+    background: #fff;
+  }
+
+  &__edge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+
+  &__exit {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: rgb(20 20 20 / 0.82);
+    color: #eee;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.25s;
+
+    &--hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+}

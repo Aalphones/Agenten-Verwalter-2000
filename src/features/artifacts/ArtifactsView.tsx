@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ArtifactFrame } from '@/features/artifacts/ArtifactFrame';
+import { ArtifactFullscreen } from '@/features/artifacts/ArtifactFullscreen';
 import {
   ARTIFACTS_HEADING,
   ARTIFACTS_INFO,
@@ -39,6 +40,8 @@ export function ArtifactsView({
   const lastModified = useRef<Record<string, number>>({});
   const selectedFile: string | undefined = useArtifactsStore((state) => state.selected[projectId]);
   const select = useArtifactsStore((state) => state.select);
+  const isFullscreen: boolean = useArtifactsStore((state) => state.fullscreen);
+  const setFullscreen = useArtifactsStore((state) => state.setFullscreen);
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
 
@@ -66,6 +69,13 @@ export function ArtifactsView({
       window.clearTimeout(timer);
     };
   }, [selectedKey, selectedModifiedAt]);
+
+  // Ein Wechsel von Reiter, Session oder Vorhaben hängt die Ansicht aus und beendet damit das Vollbild.
+  useEffect(() => {
+    return (): void => {
+      setFullscreen(false);
+    };
+  }, [setFullscreen]);
 
   if (selected === undefined) {
     return null;
@@ -182,6 +192,29 @@ export function ArtifactsView({
                 <path d="M13 2.5V5h-2.5" />
               </svg>
             </button>
+            <button
+              type="button"
+              className="artifacts__button artifacts__button--icon"
+              title="Vollbild"
+              aria-label="Vollbild"
+              onClick={(): void => {
+                setFullscreen(true);
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />
+              </svg>
+            </button>
             {renderDiscussButton(selected)}
             <button
               type="button"
@@ -211,6 +244,15 @@ export function ArtifactsView({
           <ArtifactFrame baseUrl={list.baseUrl} item={selected} reloadToken={reloadToken} />
         </div>
       </section>
+      {isFullscreen ? (
+        <ArtifactFullscreen
+          baseUrl={list.baseUrl}
+          item={selected}
+          onClose={(): void => {
+            setFullscreen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

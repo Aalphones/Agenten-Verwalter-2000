@@ -1,5 +1,7 @@
 # Phase 3 — Vollbild
 
+**Status:** complete.
+
 **Rating:** standard.
 
 ## Kontext
@@ -21,13 +23,15 @@
 
 ## Checkliste
 
-- [ ] `src-tauri/capabilities/default.json`: `"core:window:allow-set-fullscreen"` in `permissions` ergänzen.
-- [ ] `src/stores/artifacts.ts`: `fullscreen: boolean`, `setFullscreen(value: boolean)`.
-- [ ] `src/features/artifacts/ArtifactFullscreen.tsx` + `ArtifactFullscreen.css` (BEM-Block `artifact-fullscreen`): Props `sessionId`, `item: Artifact`, `onClose: () => void`. Rendert per `createPortal(…, document.body)` ein `div` mit `position: fixed; inset: 0; z-index` über allen Dialogen der App (höchsten vorhandenen `z-index` in `src/` per Grep ermitteln, +10), darin `ArtifactFrame` (Phase 2) mit voller Größe, einen Streifen `div.artifact-fullscreen__edge` (`position: absolute; top: 0; left: 0; right: 0; height: 8px`) und den Knopf `button.artifact-fullscreen__exit` „Vollbild beenden“.
-- [ ] Effekt beim Einhängen: `getCurrentWindow().setFullscreen(true)`; Aufräumen: `getCurrentWindow().setFullscreen(false)`. Fehler beider Aufrufe nur `console.error` — das Overlay bleibt auch ohne Fenster-Vollbild nutzbar.
-- [ ] Sichtbarkeit des Knopfs: Zustand `isExitVisible`, beim Einhängen `true`; `mouseenter`/`mousemove` auf dem Streifen setzen `true`; je Anzeige ein Timer über `EXIT_VISIBLE_MS = 2000`, danach `false` (Klasse `artifact-fullscreen__exit--hidden` mit `opacity: 0; pointer-events: none; transition: opacity 0.25s`). Timer beim Aushängen löschen.
-- [ ] Esc: `keydown`-Listener auf `window` während das Overlay hängt, `event.key === 'Escape'` → `onClose()`.
-- [ ] `ArtifactsView.tsx`: Knopf „Vollbild“ (Symbol `<path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/>`, `viewBox="0 0 16 16"`, `stroke-width="1.5"`, `stroke-linecap="round"`, `fill="none"`) setzt `setFullscreen(true)`; bei `fullscreen && item` rendert die Ansicht zusätzlich `<ArtifactFullscreen … onClose={() => setFullscreen(false)} />`. Beim Aushängen von `ArtifactsView` (Effekt-Aufräumen) `setFullscreen(false)`, damit ein Wechsel der Ansicht das Vollbild beendet.
-- [ ] `docs/code-map.md`, Zeile „Artefakte“: `ArtifactFullscreen` (Overlay + Fenster-Vollbild) ergänzen; im Abschnitt Core der Zeile die Berechtigung `core:window:allow-set-fullscreen` in `capabilities/default.json` nennen.
+- [x] `src-tauri/capabilities/default.json`: `"core:window:allow-set-fullscreen"` in `permissions` ergänzen.
+- [x] `src/stores/artifacts.ts`: `fullscreen: boolean`, `setFullscreen(value: boolean)`.
+- [x] `src/features/artifacts/ArtifactFullscreen.tsx` + `ArtifactFullscreen.css` (BEM-Block `artifact-fullscreen`): Props `sessionId`, `item: Artifact`, `onClose: () => void`. Rendert per `createPortal(…, document.body)` ein `div` mit `position: fixed; inset: 0; z-index` über allen Dialogen der App (höchsten vorhandenen `z-index` in `src/` per Grep ermitteln, +10), darin `ArtifactFrame` (Phase 2) mit voller Größe, einen Streifen `div.artifact-fullscreen__edge` (`position: absolute; top: 0; left: 0; right: 0; height: 8px`) und den Knopf `button.artifact-fullscreen__exit` „Vollbild beenden“.
+- [x] Effekt beim Einhängen: `getCurrentWindow().setFullscreen(true)`; Aufräumen: `getCurrentWindow().setFullscreen(false)`. Fehler beider Aufrufe nur `console.error` — das Overlay bleibt auch ohne Fenster-Vollbild nutzbar.
+- [x] Sichtbarkeit des Knopfs: Zustand `isExitVisible`, beim Einhängen `true`; `mouseenter`/`mousemove` auf dem Streifen setzen `true`; je Anzeige ein Timer über `EXIT_VISIBLE_MS = 2000`, danach `false` (Klasse `artifact-fullscreen__exit--hidden` mit `opacity: 0; pointer-events: none; transition: opacity 0.25s`). Timer beim Aushängen löschen.
+- [x] Esc: `keydown`-Listener auf `window` während das Overlay hängt, `event.key === 'Escape'` → `onClose()`.
+- [x] `ArtifactsView.tsx`: Knopf „Vollbild“ (Symbol `<path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/>`, `viewBox="0 0 16 16"`, `stroke-width="1.5"`, `stroke-linecap="round"`, `fill="none"`) setzt `setFullscreen(true)`; bei `fullscreen && item` rendert die Ansicht zusätzlich `<ArtifactFullscreen … onClose={() => setFullscreen(false)} />`. Beim Aushängen von `ArtifactsView` (Effekt-Aufräumen) `setFullscreen(false)`, damit ein Wechsel der Ansicht das Vollbild beendet.
+- [x] `docs/code-map.md`, Zeile „Artefakte“: `ArtifactFullscreen` (Overlay + Fenster-Vollbild) ergänzen; im Abschnitt Core der Zeile die Berechtigung `core:window:allow-set-fullscreen` in `capabilities/default.json` nennen.
 
 ## Report-Back
+
+Alle Punkte der Checkliste umgesetzt. `tsc`, `eslint` und `prettier` sauber. Abweichungen: `ArtifactFullscreen` bekommt `baseUrl` statt `sessionId` (die Adresse braucht nur die Liste); `ArtifactFrame` hat eine optionale `className`, weil das Vollbild den Rahmen ohne Rand zeigt; `z-index` über das neue Token `--z-fullscreen: 70` (höchstes vorhandenes war `--z-tooltip: 60`). Nicht im Fenster geprüft — Smoke 3 des Plans (Vollbild) steht offen.
