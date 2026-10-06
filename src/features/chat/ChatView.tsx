@@ -20,6 +20,8 @@ interface ChatViewProps {
   session: SessionSummary;
   projectName: string;
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
+  /** Nimmt eine aus der Einstiegszeile angelegte Session in die Liste auf und wählt sie aus. */
+  onSessionCreated: (created: SessionSummary) => void;
 }
 
 /** Die Einträge einer Session sind ab 0 durchnummeriert; der letzte geladene trägt die höchste `seq`. */
@@ -35,6 +37,7 @@ export function ChatView({
   session,
   projectName,
   backgroundByToolUseId,
+  onSessionCreated,
 }: ChatViewProps): ReactElement {
   const { entries, hasMore, loadingOlder, loadError, olderError, loadOlder } = useChatEntries(
     session.id,
@@ -127,6 +130,7 @@ export function ChatView({
         loadingOlder={loadingOlder}
         olderError={olderError}
         onLoadOlder={loadOlder}
+        onSessionCreated={onSessionCreated}
         topInset={topInset}
         bottomInset={bottomInset}
       />

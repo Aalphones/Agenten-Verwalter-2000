@@ -5,6 +5,8 @@ import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
 import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
+import { HandoffButton } from '@/features/chat/HandoffButton';
+import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import {
   digitQuestionIndex,
@@ -24,6 +26,7 @@ import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { TodoItem } from '@/lib/bindings/TodoItem';
 import { answerQuestion } from '@/lib/chat';
 import { commandErrorText } from '@/lib/errors';
@@ -38,6 +41,8 @@ const STICK_TO_BOTTOM_TOLERANCE = 24;
 const LOAD_OLDER_THRESHOLD = 200;
 const WORKING_KEY = 'working';
 const WORKING_FALLBACK_LABEL = 'Claude arbeitet …';
+/** Solange der Agent arbeitet oder die Session leer ist, steht unter der Antwort kein „Weiter“-Knopf. */
+const HANDOFF_HIDDEN_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'new'];
 const DIGIT_KEYS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 interface ChatTimelineProps {
@@ -50,6 +55,8 @@ interface ChatTimelineProps {
   /** Satz zum gescheiterten Nachladen; steht über dem ältesten geladenen Eintrag. */
   olderError: string | null;
   onLoadOlder: () => void;
+  /** Nimmt eine aus der Einstiegszeile angelegte Session in die Liste auf und wählt sie aus. */
+  onSessionCreated: (created: SessionSummary) => void;
   /** Höhe der Überlagerung oben (TL;DR) und unten (Eingabe); der Verlauf lässt so viel Platz frei. */
   topInset: number;
   bottomInset: number;
@@ -68,6 +75,7 @@ export function ChatTimeline({
   loadingOlder,
   olderError,
   onLoadOlder,
+  onSessionCreated,
   topInset,
   bottomInset,
 }: ChatTimelineProps): ReactElement {
@@ -107,6 +115,9 @@ export function ChatTimeline({
   const bottomOffset: number = Math.max(0, containerHeight - totalSize);
 
   const lastErrorSeq: number | null = useMemo(() => findLastErrorSeq(entries), [entries]);
+  const answerSeq: number | null = useMemo(() => lastAnswerSeq(entries), [entries]);
+  const showsHandoff: boolean =
+    session.handoffLine !== null && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
   const workingLabel: string = useMemo(() => findActiveTodoLabel(entries), [entries]);
   const oldestOpenQuestion: QuestionEntry | null = useMemo(
     () => findOldestOpenQuestion(entries),
@@ -262,7 +273,18 @@ export function ChatTimeline({
           />
         );
       case 'text':
-        return <TextBlock text={entry.text} />;
+        return (
+          <>
+            <TextBlock text={entry.text} />
+            {showsHandoff && session.handoffLine !== null && entry.seq === answerSeq && (
+              <HandoffButton
+                projectId={session.projectId}
+                line={session.handoffLine}
+                onSessionCreated={onSessionCreated}
+              />
+            )}
+          </>
+        );
       case 'thinking':
         return (
           <ThinkingBlock

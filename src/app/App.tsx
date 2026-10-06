@@ -226,6 +226,7 @@ export function App(): ReactElement {
               session={currentSession}
               projectName={projectNameOf(currentSession)}
               backgroundByToolUseId={backgroundByToolUseId}
+              onSessionCreated={handleSessionCreated}
             />
           )}
         </Fragment>

@@ -1,7 +1,7 @@
 import { useChatStore } from '@/stores/chat';
 import { useSessionsStore } from '@/stores/sessions';
 
-const COMPOSER_INPUT_ID = 'composer-input';
+export const COMPOSER_INPUT_ID = 'composer-input';
 
 /** Wechselt zum Chat und hängt „Zu <label>: “ an den Entwurf an; der Fokus steht danach im Textfeld. */
 export function mentionInChat(sessionId: string, label: string): void {

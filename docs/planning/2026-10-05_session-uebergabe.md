@@ -9,7 +9,7 @@ Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](../c
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
 | 1 | Einstiegszeile im Core erkennen, speichern, melden; Sidebar-Symbol „wartet auf Wiedereinstieg“ | standard | 1 | complete |
-| 2 | Knopf „In neuer Session weiter“: Anlegen, Modell aus der Zeile, Entwurf, Wechsel; ADR 027, Doku | standard | 2 | pending |
+| 2 | Knopf „In neuer Session weiter“: Anlegen, Modell aus der Zeile, Entwurf, Wechsel; ADR 027, Doku | standard | 2 | complete |
 
 Sequenziell, weil Phase 2 das Feld `handoffLine` aus Phase 1 liest. Phase 1 liefert schon etwas Sichtbares (das Symbol). Umsetzung auf `feature/session-uebergabe` im Arbeitsbaum `Agenten-Verwalter-2000-wt-session-uebergabe`, ein Commit je Phase. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); geprüft wird mit der Smoke-Checkliste.
 
@@ -172,12 +172,12 @@ Phase 1:
 
 Phase 2:
 
-- [ ] `handoff.ts`, `HandoffButton.tsx` + `.css`, `COMPOSER_INPUT_ID` exportieren, Props durch `App` → `ChatView` → `ChatTimeline`
-- [ ] ADR 027 (Kontext / Optionen / Entscheidung / Konsequenzen aus „Festgelegte Entscheidungen“)
-- [ ] `docs/code-map.md` Zeile „Chat“: `handoff` und `HandoffButton` aufnehmen, ADR 027 verlinken
-- [ ] `docs/glossary.md`: Eintrag „Einstiegszeile“ — Zeile „Weiter: …“ am Ende einer Agenten-Antwort; die Sidebar zeigt die Session dann als „wartet auf Wiedereinstieg“, „In neuer Session weiter“ startet daraus die nächste Session des Vorhabens
+- [x] `handoff.ts`, `HandoffButton.tsx` + `.css`, `COMPOSER_INPUT_ID` exportieren, Props durch `App` → `ChatView` → `ChatTimeline`
+- [x] ADR 027 (Kontext / Optionen / Entscheidung / Konsequenzen aus „Festgelegte Entscheidungen“)
+- [x] `docs/code-map.md` Zeile „Chat“: `handoff` und `HandoffButton` aufnehmen, ADR 027 verlinken
+- [x] `docs/glossary.md`: Eintrag „Einstiegszeile“ — Zeile „Weiter: …“ am Ende einer Agenten-Antwort; die Sidebar zeigt die Session dann als „wartet auf Wiedereinstieg“, „In neuer Session weiter“ startet daraus die nächste Session des Vorhabens
 - [ ] Smoke 3, 4, 6 (unten), Ergebnis in „Report-Back“
-- [ ] `pnpm check` grün, Commit `feat(chat): aus der Einstiegszeile in einer neuen Session weiterarbeiten`, Push des Branches
+- [x] `pnpm check` grün, Commit `feat(chat): aus der Einstiegszeile in einer neuen Session weiterarbeiten`, Push des Branches
 
 ## Smoke-Checkliste (Wackelstellen zuerst)
 
@@ -205,3 +205,27 @@ Phase 2:
 ## Deviations from plan
 
 ## Follow-ups
+
+Smoke-Ergebnisse stehen aus (Nutzer prüft: 1–6 oben, Wackelstellen zuerst).
+
+## Summary
+
+Eine abgeschlossene Session mit Einstiegszeile zeigt in der Sidebar „wartet auf Wiedereinstieg“; unter ihrer letzten Antwort steht der Knopf „In neuer Session weiter“. Er legt die Session an, stellt das in der Zeile genannte Modell ein, setzt die Zeile in den Entwurf und fokussiert das Eingabefeld.
+
+## Files touched
+
+- Core (Phase 1): `sessions/handoff.rs`, `sessions/registry.rs`, `sessions/model.rs`, `db/sessions.rs`, Migration 9.
+- Oberfläche: `features/chat/handoff.ts`, `HandoffButton.tsx` + `.css`, `ChatTimeline.tsx`, `ChatView.tsx`, `app/App.tsx`, `features/background/mention.ts` (`COMPOSER_INPUT_ID` exportiert), Sidebar-Dateien aus Phase 1.
+- Doku: ADR 027, `docs/code-map.md`, `docs/glossary.md`.
+
+## Commits
+
+Phase 1: `82037a9`. Phase 2: siehe `git log` (`feat(chat): aus der Einstiegszeile in einer neuen Session weiterarbeiten`).
+
+## Deviations from plan
+
+`modelOfHandoff` prüft den Treffer per `switch` statt per Typ-Cast (strenge Typregeln, kein `as`). Kein Branch und kein Push (Profil private, direkt auf `main`).
+
+## Follow-ups
+
+- Smoke-Checkliste ohne Abnahme.
