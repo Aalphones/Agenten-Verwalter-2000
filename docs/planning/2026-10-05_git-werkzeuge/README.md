@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core liest: Branch, Upstream, ↓/↑, fremde Änderungen, eigene Commits, Sperre; Commands und Bindings | [phase-1-status-lesen.md](phase-1-status-lesen.md) | heikel | pending |
+| 1 | Core liest: Branch, Upstream, ↓/↑, fremde Änderungen, eigene Commits, Sperre; Commands und Bindings | [phase-1-status-lesen.md](phase-1-status-lesen.md) | heikel | complete |
 | 2 | Core schreibt: Commit (auch „& Push“, Ergänzen), Push, Pull, Fetch, Branch wechseln und anlegen, Konflikt-Zustand | [phase-2-commit-und-sync.md](phase-2-commit-und-sync.md) | heikel | pending |
 | 3 | Oberfläche: Branch-Pille, Repository-Zeile, Commit-Feld, Häkchen, fremde Änderungen, Gruppen, Hinweis, Branch-Menü, Dialoge | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | pending |
 | 4 | Weitere Befehle: Verwerfen, Stash, Pull mit Rebase, Merge, Branch löschen, Ticket-Worktree anlegen, Explorer/VS Code — Core und Oberfläche | [phase-4-weitere-befehle.md](phase-4-weitere-befehle.md) | standard | pending |

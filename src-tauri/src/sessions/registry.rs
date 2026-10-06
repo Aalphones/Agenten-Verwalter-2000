@@ -51,6 +51,7 @@ use crate::db::{
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
+use crate::git::model::GitBusySession;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::review::{self, model::ReviewComment};
@@ -1196,6 +1197,44 @@ impl SessionRegistry {
                     .map(|entry: &sources::Source| entry.dir.clone())
             })
             .collect()
+    }
+
+    /// Sessions des Vorhabens, die gerade arbeiten (`Starting`, `Running`, `Waiting`, so wie die
+    /// Oberfläche den Status zeigt) — sie halten die Sperre der Git-Werkzeuge (ADR 025), weil alle
+    /// Sessions eines Vorhabens dieselben Ordner teilen.
+    pub fn busy_in_project(&self, session_id: &str) -> Result<Vec<GitBusySession>, CommandError> {
+        let project_id = self.get(session_id)?.project_id.clone();
+        let mut members = self.project_members(&project_id);
+        members.sort_by_key(|member: &Arc<Session>| member.number);
+        // Eine Session nach der anderen sperren — nie zwei zugleich und nie unter der Map-Sperre.
+        let busy = members
+            .iter()
+            .filter_map(|member: &Arc<Session>| {
+                let summary = summarize(member, &member.lock());
+                let is_busy = matches!(
+                    summary.status,
+                    SessionStatus::Starting | SessionStatus::Running | SessionStatus::Waiting
+                );
+                is_busy.then_some(GitBusySession {
+                    id: summary.id,
+                    number: summary.number,
+                    name: summary.name,
+                })
+            })
+            .collect();
+        Ok(busy)
+    }
+
+    /// Fehler, solange eine Session des Vorhabens arbeitet — für Git-Befehle, die Dateien im
+    /// Arbeitsordner ändern.
+    pub fn ensure_not_busy(&self, session_id: &str) -> Result<(), CommandError> {
+        match self.busy_in_project(session_id)?.first() {
+            Some(busy) => Err(CommandError::Git(format!(
+                "Gesperrt: Session #{} „{}“ arbeitet gerade in diesem Ordner.",
+                busy.number, busy.name
+            ))),
+            None => Ok(()),
+        }
     }
 
     /// Workspace, Repositories, Ticket-Worktrees und eigene Commits/Dateien der Reichweite. Nie zwei

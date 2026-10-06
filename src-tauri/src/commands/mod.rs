@@ -7,6 +7,7 @@ pub mod changes;
 pub mod chat;
 pub mod context;
 pub mod file_links;
+pub mod git;
 pub mod mcp;
 pub mod projects;
 pub mod repositories;

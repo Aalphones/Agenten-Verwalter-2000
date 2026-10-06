@@ -114,6 +114,8 @@ pub fn run() {
             commands::repositories::repository_remove,
             commands::changes::changes_load,
             commands::changes::changes_file_diff,
+            commands::git::git_status,
+            commands::git::git_branches,
             commands::file_links::file_link_open,
             commands::artifacts::artifacts_list,
             commands::artifacts::artifact_open_in_browser,

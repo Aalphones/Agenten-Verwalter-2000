@@ -20,6 +20,10 @@ use verwalter_lib::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
     },
     error::CommandError,
+    git::model::{
+        GitBranch, GitBusySession, GitEntryStatus, GitForeignFile, GitLog, GitLogCommit,
+        GitOpenTarget, GitOperation, GitOwnCommit, GitSessionStatus, GitSwitchMode,
+    },
     lmstudio::model::{LocalModel, LocalModelKind, LocalModels},
     mcp::model::{
         McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer, McpServerStatus,
@@ -128,5 +132,16 @@ fn main() -> Result<(), ts_rs::ExportError> {
     VoicePartialEvent::export_all(&cfg)?;
     Artifact::export_all(&cfg)?;
     ArtifactList::export_all(&cfg)?;
+    GitOperation::export_all(&cfg)?;
+    GitBusySession::export_all(&cfg)?;
+    GitForeignFile::export_all(&cfg)?;
+    GitOwnCommit::export_all(&cfg)?;
+    GitEntryStatus::export_all(&cfg)?;
+    GitSessionStatus::export_all(&cfg)?;
+    GitBranch::export_all(&cfg)?;
+    GitSwitchMode::export_all(&cfg)?;
+    GitOpenTarget::export_all(&cfg)?;
+    GitLogCommit::export_all(&cfg)?;
+    GitLog::export_all(&cfg)?;
     Ok(())
 }

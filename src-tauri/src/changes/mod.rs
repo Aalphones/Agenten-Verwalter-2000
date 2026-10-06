@@ -99,7 +99,7 @@ fn is_plain_folder(repository: &SessionRepository) -> bool {
 }
 
 /// Geschriebene Dateien der Reichweite unter `dir`.
-fn has_touched_under(dir: &Path, own: &Ownership) -> bool {
+pub(crate) fn has_touched_under(dir: &Path, own: &Ownership) -> bool {
     let prefix = format!("{}\\", attribution::normalize_path(&dir.to_string_lossy()));
     own.touched
         .keys()
@@ -138,19 +138,76 @@ fn read_source(source: &Source, own: &Ownership) -> RepositoryChanges {
     }
 }
 
-/// Nur lesen: ein fehlender Worktree wird gemeldet, nicht angelegt — das bleibt bei
-/// `worktrees::ensure` vor dem Agent-Start.
-fn load_repository(source: &Source, own: &Ownership) -> RepositoryChanges {
+/// Der Commit, gegen den ein Eintrag gemessen wird: `base_commit` der Session, bei einem
+/// Ticket-Worktree seine Abzweigung vom Standard-Branch.
+pub(crate) fn source_base(source: &Source) -> Result<String, CommandError> {
+    base_of(source).map(|(commit, _): (String, String)| commit)
+}
+
+/// Basis als `(Commit, Anzeigename)`. Nur lesen: ein fehlender Worktree wird gemeldet, nicht
+/// angelegt — das bleibt bei `worktrees::ensure` vor dem Agent-Start.
+fn base_of(source: &Source) -> Result<(String, String), CommandError> {
+    if let Some(error) = &source.error {
+        return Err(CommandError::Io(error.clone()));
+    }
     let repository = &source.repository;
+    if let Some(ticket) = &source.ticket {
+        return worktrees::ticket_base(repository, ticket);
+    }
     if !repository.repository_path.join(".git").exists() {
-        let missing =
-            CommandError::RepositoryMissing(repository.repository_path.display().to_string());
-        return failed_source(source, missing.to_string());
+        return Err(CommandError::RepositoryMissing(
+            repository.repository_path.display().to_string(),
+        ));
     }
     if is_app_worktree_missing(repository, &source.dir) {
-        return failed_source(source, WORKTREE_MISSING.to_owned());
+        return Err(CommandError::Io(WORKTREE_MISSING.to_owned()));
     }
-    match read_changes(&source.dir, &repository.base_commit, own) {
+    Ok((repository.base_commit.clone(), repository.base_ref.clone()))
+}
+
+/// Der Satz, den ein Eintrag zu einem Fehler zeigt: eigene Sätze ohne Präfix, Fehler von Git und
+/// Co. mit.
+pub(crate) fn entry_error(error: CommandError) -> String {
+    match error {
+        CommandError::Io(text) => text,
+        other => other.to_string(),
+    }
+}
+
+/// Uncommittetes im Ordner eines Eintrags, das nicht zu den eigenen Changes der Reichweite gehört.
+pub(crate) fn foreign_uncommitted(
+    dir: &Path,
+    base: &str,
+    own: &Ownership,
+) -> Result<BTreeMap<String, LineStat>, CommandError> {
+    let commits = history::read(dir, base)?;
+    let mut dirty = dirty_stats(dir)?;
+    let own_uncommitted = open_uncommitted(dir, &dirty, &commits, own);
+    dirty.retain(|path: &String, _: &mut LineStat| !own_uncommitted.contains_key(path));
+    Ok(dirty)
+}
+
+/// Die eigenen Commits der Reichweite seit `base`, neueste zuerst.
+pub(crate) fn own_commits(
+    dir: &Path,
+    base: &str,
+    own: &Ownership,
+) -> Result<Vec<CommitInfo>, CommandError> {
+    let mut commits: Vec<CommitInfo> = history::read(dir, base)?
+        .into_iter()
+        .filter(|commit: &CommitInfo| own.commits.contains(&commit.id))
+        .collect();
+    commits.reverse();
+    Ok(commits)
+}
+
+fn load_repository(source: &Source, own: &Ownership) -> RepositoryChanges {
+    let repository = &source.repository;
+    let base = match source_base(source) {
+        Ok(base) => base,
+        Err(error) => return failed_source(source, entry_error(error)),
+    };
+    match read_changes(&source.dir, &base, own) {
         Ok((files, commit_count)) => RepositoryChanges {
             key: source.key.clone(),
             name: source.name.clone(),
@@ -167,11 +224,10 @@ fn load_repository(source: &Source, own: &Ownership) -> RepositoryChanges {
 /// Ein Ticket-Worktree gegen seine Abzweigung vom Standard-Branch, mit den Änderungen der
 /// Reichweite auf dem Branch.
 fn load_ticket(source: &Source, worktree: &TicketWorktree, own: &Ownership) -> RepositoryChanges {
-    let repository = &source.repository;
     let key = source.key.clone();
     let name = source.name.clone();
     let branch = ticket_branch_label(worktree);
-    let (base_commit, base_ref) = match worktrees::ticket_base(repository, worktree) {
+    let (base_commit, base_ref) = match base_of(source) {
         Ok(base) => base,
         Err(error) => {
             return failed(

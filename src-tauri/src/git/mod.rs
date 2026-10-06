@@ -1,4 +1,10 @@
-//! Einziger Ort, der `git` aufruft (AGENTS.md, Regel 2).
+//! Einziger Ort, der `git` aufruft (AGENTS.md, Regel 2). Lesende Aufrufe nehmen nie eine Sperre im
+//! Arbeitsordner (ADR 006); die schreibenden der Git-Werkzeuge (ADR 025) liegen daneben und tun es
+//! zwangsläufig.
+pub mod model;
+pub mod status;
+
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -316,6 +322,119 @@ pub fn is_untracked(worktree: &Path, path: &str) -> Result<bool, CommandError> {
         ]),
     )?;
     Ok(!output.is_empty())
+}
+
+/// Der Upstream des ausgecheckten Branches, z. B. `origin/main`; `None` ohne Upstream oder bei
+/// losgelöstem HEAD.
+pub fn upstream(dir: &Path) -> Result<Option<String>, CommandError> {
+    let output = run_allowing_failure(
+        dir,
+        &args(&["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]),
+    )?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let upstream = stdout_text(&output);
+    if upstream.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(upstream))
+}
+
+pub fn remotes(dir: &Path) -> Result<Vec<String>, CommandError> {
+    let output = run(dir, &args(&["remote"]))?;
+    Ok(output
+        .lines()
+        .map(|line: &str| line.trim().to_owned())
+        .filter(|name: &String| !name.is_empty())
+        .collect())
+}
+
+/// `(ahead, behind)`: Commits nur in `HEAD`, Commits nur in `upstream`. Ohne Fetch beliebig alt.
+pub fn ahead_behind(dir: &Path, upstream: &str) -> Result<(u32, u32), CommandError> {
+    let range = format!("HEAD...{upstream}");
+    let output = run(dir, &args(&["rev-list", "--left-right", "--count", &range]))?;
+    let mut counts = output.split_whitespace().map(str::parse::<u32>);
+    match (counts.next(), counts.next()) {
+        (Some(Ok(ahead)), Some(Ok(behind))) => Ok((ahead, behind)),
+        _ => Err(CommandError::Git(format!(
+            "Unerwartete Ausgabe von rev-list: {output}"
+        ))),
+    }
+}
+
+/// Die Commits in `HEAD`, die `upstream` nicht enthält.
+pub fn unpushed(dir: &Path, upstream: &str) -> Result<HashSet<String>, CommandError> {
+    let range = format!("{upstream}..HEAD");
+    let output = run(dir, &args(&["rev-list", &range]))?;
+    Ok(output
+        .lines()
+        .map(|line: &str| line.trim().to_owned())
+        .filter(|id: &String| !id.is_empty())
+        .collect())
+}
+
+/// Ob die Datei `name` im Git-Verzeichnis existiert (`MERGE_HEAD`, `rebase-merge`, …) — auch in
+/// Worktrees, deren `.git` nur eine Datei ist.
+pub fn git_path_exists(dir: &Path, name: &str) -> Result<bool, CommandError> {
+    let output = run(dir, &args(&["rev-parse", "--git-path", name]))?;
+    // Git nennt den Pfad relativ zu `dir`, wenn er darunter liegt, sonst absolut; `join` deckt beides.
+    Ok(dir.join(output.replace('/', "\\")).exists())
+}
+
+/// Dateien mit ungelösten Konflikten. `diff-files` statt `diff`: Plumbing, nimmt keine Sperre.
+pub fn conflicted(dir: &Path) -> Result<Vec<String>, CommandError> {
+    let output = run_raw(
+        dir,
+        &args(&["diff-files", "--name-only", "--diff-filter=U", "-z"]),
+    )?;
+    let mut paths: Vec<String> = Vec::new();
+    for path in output.split('\0') {
+        // Je Konfliktstufe kann ein Pfad mehrfach kommen.
+        if !path.is_empty() && !paths.iter().any(|known: &String| known == path) {
+            paths.push(path.to_owned());
+        }
+    }
+    Ok(paths)
+}
+
+/// Betreffzeile je Commit-ID, in einem Aufruf.
+pub fn subjects(dir: &Path, ids: &[String]) -> Result<HashMap<String, String>, CommandError> {
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let mut input = ids.join("\n");
+    input.push('\n');
+    let output = run_raw_with_input(
+        dir,
+        &args(&["log", "--no-walk=unsorted", "--stdin", "--format=%H%x00%s"]),
+        input,
+    )?;
+    Ok(output
+        .lines()
+        .filter_map(|line: &str| line.split_once('\0'))
+        .map(|(id, subject): (&str, &str)| {
+            (id.to_owned(), subject.trim_end_matches('\r').to_owned())
+        })
+        .collect())
+}
+
+/// Ob `commit` in `of` enthalten ist.
+pub fn is_ancestor(dir: &Path, commit: &str, of: &str) -> Result<bool, CommandError> {
+    exit_means_yes_or_no(dir, &args(&["merge-base", "--is-ancestor", commit, of]))
+}
+
+/// Je Branch `<refname>\0<*|Leerzeichen>\0<Worktree-Pfad>` in einer Zeile, lokale und remote.
+pub fn branch_refs(dir: &Path) -> Result<String, CommandError> {
+    run_raw(
+        dir,
+        &args(&[
+            "for-each-ref",
+            "--format=%(refname)%00%(HEAD)%00%(worktreepath)",
+            "refs/heads",
+            "refs/remotes",
+        ]),
+    )
 }
 
 fn args<'a>(values: &[&'a str]) -> Vec<&'a OsStr> {

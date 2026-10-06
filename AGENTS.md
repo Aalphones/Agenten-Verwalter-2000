@@ -46,6 +46,7 @@ Begründungen: [docs/decisions/001-stack-und-plattform.md](docs/decisions/001-st
 | `pnpm bindings` | TS-Typen aus Rust neu erzeugen — nach jeder Änderung an Typen, die die Tauri-Grenze überqueren |
 | `pnpm format` | Prettier schreibt `src/` neu |
 | `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session\|project] [<Schlüssel> <Pfad>]` | zeigt, was die Changes einer Session aus einer Kopie der Datenbank ermitteln (Einträge, Diff, Suchordner der Commit-Suche); nie gegen `%USERPROFILE%\.verwalter\verwalter.db` |
+| `cargo run --manifest-path src-tauri/Cargo.toml --example git-probe -- <Datenbank-Kopie> <Session-ID> [<Schlüssel>]` | zeigt den Git-Zustand der Changes einer Session aus einer Kopie der Datenbank (Branch, ↓/↑, fremde Änderungen, eigene Commits), mit Schlüssel die Branch-Liste des Eintrags; nie gegen `%USERPROFILE%\.verwalter\verwalter.db` |
 | `cargo run --manifest-path src-tauri/Cargo.toml --example file-link-probe -- --base <Ordner> [--base …] [--allow <Ordner> …] <Pfad>` | zeigt, wohin ein Dateiverweis aus dem Chat aufgelöst wird (`OK <Pfad>` oder `FEHLER <Variante>: <Text>`), ohne etwas zu öffnen |
 | `pnpm tauri build` | NSIS-Installer unter `src-tauri/target/release/bundle/nsis/`, lose exe unter `src-tauri/target/release/verwalter.exe` |
 | `pnpm tauri build --no-bundle` | nur die lose exe, ohne Installer |
