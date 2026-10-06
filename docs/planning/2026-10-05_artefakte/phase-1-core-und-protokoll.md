@@ -44,8 +44,8 @@
 
 ### Sicherheitsprobe (Pflicht vor Phase 2)
 
-- [ ] `pnpm tauri dev` starten (nicht die installierte App — die kennt den Server nicht). [artifacts/sicherheitsprobe.html](artifacts/sicherheitsprobe.html), [artifacts/probe-bild.svg](artifacts/probe-bild.svg) und [artifacts/probe-ipc.html](artifacts/probe-ipc.html) in `<Workspace>\.artefakte\` eines Vorhabens kopieren. Die Session-ID steht im Workspace-Pfad des Scratchpads (`.scratchpad\<session-id>`).
-- [ ] Devtools der App öffnen (Rechtsklick → Untersuchen), Konsole:
+- [x] `pnpm tauri dev` starten (nicht die installierte App — die kennt den Server nicht). [artifacts/sicherheitsprobe.html](artifacts/sicherheitsprobe.html), [artifacts/probe-bild.svg](artifacts/probe-bild.svg) und [artifacts/probe-ipc.html](artifacts/probe-ipc.html) in `<Workspace>\.artefakte\` eines Vorhabens kopieren. Die Session-ID steht im Workspace-Pfad des Scratchpads (`.scratchpad\<session-id>`).
+- [x] Devtools der App öffnen (Rechtsklick → Untersuchen), Konsole:
   ```js
   const l = await window.__TAURI_INTERNALS__.invoke('artifacts_list', { sessionId: '<session-id>' });
   for (const [i, page] of ['sicherheitsprobe.html', 'probe-ipc.html'].entries()) {
@@ -57,8 +57,8 @@
   }
   console.log((await fetch(l.baseUrl + '..%5C..%5Cverwalter.db')).status);
   ```
-- [ ] Erwartung: jede Zeile beider Proben grün, der Status 403 oder 404. **Ist eine Zeile rot, die den Zugriff auf den Verwalter betrifft (Sicherheitsprobe 1–5, Befehls-Probe 3–4): anhalten, in FINDINGS eintragen, den User fragen — Phase 2 nicht beginnen.** Zeile 1 der Sicherheitsprobe darf rot bleiben, solange die Befehls-Probe grün ist: das Objekt kommt von Tauri, Befehle von `127.0.0.1` weist Tauri ab. Rote Zeilen 6–8 (Laden aus dem Ordner bzw. dem Internet): Ursache in Server oder CSP suchen und beheben.
-- [ ] Ergebnis (Zeilen der Proben + Status) unter „Report-Back“ eintragen.
+- [x] Erwartung: jede Zeile beider Proben grün, der Status 403 oder 404. **Ist eine Zeile rot, die den Zugriff auf den Verwalter betrifft (Sicherheitsprobe 1–5, Befehls-Probe 3–4): anhalten, in FINDINGS eintragen, den User fragen — Phase 2 nicht beginnen.** Zeile 1 der Sicherheitsprobe darf rot bleiben, solange die Befehls-Probe grün ist: das Objekt kommt von Tauri, Befehle von `127.0.0.1` weist Tauri ab. Rote Zeilen 6–8 (Laden aus dem Ordner bzw. dem Internet): Ursache in Server oder CSP suchen und beheben.
+- [x] Ergebnis (Zeilen der Proben + Status) unter „Report-Back“ eintragen.
 
 ### Doku
 
@@ -69,4 +69,4 @@
 
 - Erste Fassung mit eigenem Tauri-Protokoll `artefakt` (Commit `ecebabe`): Sicherheitsprobe Zeile 1 rot, `invoke` samt Invoke-Key im iframe vorhanden, und Tauri stuft das Protokoll als lokal ein (FINDINGS). Auf Entscheidung des Users durch den Artefakt-Server auf `127.0.0.1` ersetzt.
 - Weitere Abweichungen: `pub mod artifacts;` statt `mod` (wie alle Feature-Module, `gen-bindings` braucht den Zugriff); in `title_of` wird `&amp;` zuletzt ersetzt, sonst würde aus `&amp;lt;` ein `<`; der Server holt die Registry mit `try_state`; die CSP erlaubt nur den Ordner der eigenen Session statt des ganzen Servers; Glossar „Artefakt“ und Commit-Scope `artifacts` nachgezogen.
-- Sicherheitsprobe mit dem Server: **offen**, macht der User (Ergebnis hier eintragen).
+- Sicherheitsprobe mit dem Server (2026-10-06, `pnpm tauri dev`): Sicherheitsprobe Zeile 1 rot (erlaubt, s. o.), Zeilen 2–8 grün, Herkunft `null`; Befehls-Probe `app_info` und `project_list` ohne Antwort (Timeout). Direkt gegen den Server (curl): Datei 200 mit Artefakt-CSP auf den Session-Ordner; `..%5C..%5Cverwalter.db`, `..%2F..%2Fverwalter.db`, `C:%5CWindows%5Cwin.ini` → 403; fehlende Datei, falscher Token → 404; fremder `Host` → 403; `POST` → 405.
