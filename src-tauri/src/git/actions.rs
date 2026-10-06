@@ -3,6 +3,7 @@
 //! greift, prüft der Command davor.
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use crate::changes;
 use crate::error::CommandError;
@@ -11,6 +12,18 @@ use crate::git::model::{GitOperation, GitSwitchMode};
 use crate::git::status;
 use crate::processes::hide_console;
 use crate::worktrees;
+
+const COMMIT_CONVENTION_PATH: &str = "docs/conventions/commits.md";
+const SUGGEST_CONVENTION_MAX_CHARS: usize = 8_000;
+const SUGGEST_DIFF_MAX_CHARS: usize = 20_000;
+const SUGGEST_NEW_FILE_LINES: usize = 200;
+/// Eine Minute reicht für Haiku mit dem gekürzten Diff.
+pub const SUGGEST_TIMEOUT: Duration = Duration::from_secs(60);
+pub const SUGGEST_SYSTEM_PROMPT: &str = "Schreibe eine Commit-Nachricht für den folgenden Diff. Halte dich an die Konvention, falls angegeben, sonst an Conventional Commits. Betreff im Imperativ, höchstens 72 Zeichen. Einen Body nur, wenn der Betreff nicht reicht; jeder Absatz eine Zeile. Antworte nur mit der Nachricht.";
+pub const SUGGEST_SCHEMA: &str = r#"{"type":"object","properties":{"message":{"type":"string"}},"required":["message"],"additionalProperties":false}"#;
+/// Fehlertext der Betriebsart „Autark“, in der es den Druckmodus noch nicht gibt.
+pub const SUGGEST_AUTARK_MESSAGE: &str =
+    "Der Vorschlag folgt in der Betriebsart „Autark“ mit dem Druckmodus.";
 
 /// Committet genau `paths` (bei `amend`: ergänzt `HEAD` um sie) und gibt die neue `HEAD`-ID zurück.
 pub fn commit(
@@ -252,6 +265,42 @@ pub fn open_in_vs_code(dir: &Path) -> Result<(), CommandError> {
     Err(CommandError::Git(
         "VS Code nicht gefunden (Befehl „code“ fehlt im PATH).".to_owned(),
     ))
+}
+
+/// Die Eingabe für den Nachrichtenvorschlag: die Konvention des Ordners, falls es eine gibt, dann der
+/// Diff der angehakten Pfade; neue Dateien mit ihren ersten Zeilen. Der Diff wird gekürzt.
+pub fn suggest_input(dir: &Path, paths: &[String]) -> Result<String, CommandError> {
+    if paths.is_empty() {
+        return Err(CommandError::Git("Keine Datei ausgewählt.".to_owned()));
+    }
+    let mut input = String::new();
+    if let Ok(convention) = std::fs::read_to_string(dir.join(COMMIT_CONVENTION_PATH)) {
+        input.push_str("Konvention:\n");
+        input.extend(convention.chars().take(SUGGEST_CONVENTION_MAX_CHARS));
+        input.push_str("\n\nDiff:\n");
+    }
+    let mut diff = String::new();
+    for path in paths {
+        changes::validate_path(path)?;
+        diff.push_str(&path_diff(dir, path)?);
+    }
+    if diff.chars().count() > SUGGEST_DIFF_MAX_CHARS {
+        input.extend(diff.chars().take(SUGGEST_DIFF_MAX_CHARS));
+        input.push_str("\n[gekürzt]");
+    } else {
+        input.push_str(&diff);
+    }
+    Ok(input)
+}
+
+/// Der Diff einer Datei gegen `HEAD`; eine neue Datei hat keinen, dafür kommen ihre ersten Zeilen.
+fn path_diff(dir: &Path, path: &str) -> Result<String, CommandError> {
+    if git::is_untracked(dir, path)? {
+        let content = std::fs::read_to_string(dir.join(path)).unwrap_or_default();
+        let lines: Vec<&str> = content.lines().take(SUGGEST_NEW_FILE_LINES).collect();
+        return Ok(format!("Neue Datei {path}:\n{}\n", lines.join("\n")));
+    }
+    git::diff_index_patch(dir, "HEAD", path)
 }
 
 pub fn abort_operation(dir: &Path) -> Result<(), CommandError> {

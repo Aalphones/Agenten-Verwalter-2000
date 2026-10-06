@@ -42,6 +42,21 @@
     }
   }
 
+  &__row--git {
+    grid-template-columns: 150px minmax(0, 1fr) 90px 100px 130px;
+  }
+
+  &__sync {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+    text-align: right;
+
+    &--pending {
+      color: var(--color-accent-text);
+    }
+  }
+
   &__name {
     overflow: hidden;
     font-weight: 600;
@@ -64,13 +79,13 @@
   }
 
   &__error {
-    grid-column: 3 / 5;
+    grid-column: 3 / -1;
     font-size: var(--font-size-xs);
     color: var(--color-status-error);
   }
 
   &__note {
-    grid-column: 2 / 5;
+    grid-column: 2 / -1;
     font-size: var(--font-size-xs);
     color: var(--color-fg-muted);
   }

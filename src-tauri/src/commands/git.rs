@@ -3,13 +3,16 @@ use std::sync::Arc;
 
 use tauri_plugin_opener::OpenerExt;
 
+use crate::agents::claude::locate::find_claude;
+use crate::agents::claude::print::{HaikuRequest, ask_haiku};
 use crate::changes::{model::ChangesReach, sources};
 use crate::db::{Database, session_commits};
 use crate::error::CommandError;
-use crate::git::model::{GitBranch, GitOpenTarget, GitSessionStatus, GitSwitchMode};
-use crate::git::{actions, status};
+use crate::git::model::{GitBranch, GitLog, GitOpenTarget, GitSessionStatus, GitSwitchMode};
+use crate::git::{self, actions, log, status};
 use crate::sessions::registry::SessionRegistry;
 use crate::worktrees::RepositoryCheckout;
+use serde::Deserialize;
 
 // Die Commands sind `async`, damit die Git-Aufrufe nicht auf dem Haupt-Thread laufen. `key` wie in
 // `RepositoryChanges`; `sources::find` nimmt nur einen, den die Changes der Session selbst gebaut
@@ -274,6 +277,56 @@ pub async fn git_open(
             .map_err(|error| CommandError::Io(error.to_string())),
         GitOpenTarget::VsCode => actions::open_in_vs_code(&dir),
     }
+}
+
+/// Die letzten Commits des ausgecheckten Branches und, was im Upstream noch dazukommt. Ohne Sperre: liest nur.
+#[tauri::command]
+pub async fn git_log(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+) -> Result<GitLog, CommandError> {
+    let input = registry.changes_input(&session_id, ChangesReach::Session)?;
+    let source = sources::find(&input, &key)?;
+    if let Some(error) = source.error {
+        return Err(CommandError::Git(error));
+    }
+    let upstream = git::upstream(&source.dir)?;
+    log::read(&source.dir, &input.own.commits, upstream.as_deref())
+}
+
+#[derive(Deserialize)]
+struct SuggestedMessage {
+    message: String,
+}
+
+/// Lässt Haiku zum Diff der angehakten Pfade eine Commit-Nachricht schreiben. Ohne Sperre: ändert nichts.
+#[tauri::command]
+pub async fn git_suggest_message(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    paths: Vec<String>,
+) -> Result<String, CommandError> {
+    let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    // Haiku braucht bis zu einer Minute — nicht auf dem Thread der übrigen Befehle.
+    tauri::async_runtime::spawn_blocking(move || {
+        let diff = actions::suggest_input(&dir, &paths)?;
+        let request = HaikuRequest {
+            system_prompt: actions::SUGGEST_SYSTEM_PROMPT,
+            json_schema: actions::SUGGEST_SCHEMA,
+            input: &diff,
+            timeout: actions::SUGGEST_TIMEOUT,
+            autark_message: actions::SUGGEST_AUTARK_MESSAGE,
+        };
+        let suggested: SuggestedMessage =
+            ask_haiku(&app, &exe, &request).map_err(CommandError::Internal)?;
+        Ok(suggested.message.trim().to_owned())
+    })
+    .await
+    .map_err(|error| CommandError::Internal(error.to_string()))?
 }
 
 /// Ordner des Eintrags `key` in den Changes der Session; ein Eintrag ohne bestimmbare Basis meldet

@@ -2,6 +2,7 @@
 //! Arbeitsordner (ADR 006); die schreibenden der Git-Werkzeuge (ADR 025) liegen daneben und tun es
 //! zwangsläufig.
 pub mod actions;
+pub mod log;
 pub mod model;
 pub mod status;
 
@@ -403,6 +404,44 @@ pub fn conflicted(dir: &Path) -> Result<Vec<String>, CommandError> {
         }
     }
     Ok(paths)
+}
+
+const LOG_LIMIT: &str = "50";
+const LOG_FORMAT: &str = "--format=%H%x00%P%x00%an%x00%at%x00%D%x00%s%x1e";
+
+/// Die letzten Commits ab `HEAD` in Graph-Reihenfolge, ein Datensatz je Commit (`log::read` zerlegt sie).
+pub fn log_graph(dir: &Path) -> Result<String, CommandError> {
+    run_raw(
+        dir,
+        &args(&[
+            "log",
+            "--topo-order",
+            "--decorate=full",
+            "-n",
+            LOG_LIMIT,
+            LOG_FORMAT,
+            "HEAD",
+            "--",
+        ]),
+    )
+}
+
+/// Was `upstream` hat und `HEAD` nicht, im selben Format wie `log_graph`.
+pub fn log_incoming(dir: &Path, upstream: &str) -> Result<String, CommandError> {
+    let range = format!("HEAD..{upstream}");
+    run_raw(
+        dir,
+        &args(&[
+            "log",
+            "--topo-order",
+            "--decorate=full",
+            "-n",
+            LOG_LIMIT,
+            LOG_FORMAT,
+            &range,
+            "--",
+        ]),
+    )
 }
 
 /// Betreffzeile je Commit-ID, in einem Aufruf.

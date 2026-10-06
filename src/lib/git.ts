@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { GitBranch } from '@/lib/bindings/GitBranch';
+import type { GitLog } from '@/lib/bindings/GitLog';
 import type { GitOpenTarget } from '@/lib/bindings/GitOpenTarget';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { GitSwitchMode } from '@/lib/bindings/GitSwitchMode';
@@ -139,4 +140,22 @@ export async function gitOpen(
   target: GitOpenTarget,
 ): Promise<void> {
   await invoke('git_open', { sessionId, key, target });
+}
+
+/** Die letzten 50 Commits des ausgecheckten Branches und die eingehenden aus dem Upstream. Die eingehenden sind so
+ *  aktuell wie der letzte Fetch.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal`, `io`, `git` */
+export function loadGitLog(sessionId: string, key: string): Promise<GitLog> {
+  return invoke<GitLog>('git_log', { sessionId, key });
+}
+
+/** Lässt Haiku zum Diff der Pfade `paths` eine Commit-Nachricht schreiben (nach `docs/conventions/commits.md`, falls
+ *  es sie im Ordner gibt).
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `claudeNotFound`, `internal` (auch Zeitlimit, Betriebsart „Autark“), `io`, `git` */
+export function suggestGitMessage(
+  sessionId: string,
+  key: string,
+  paths: readonly string[],
+): Promise<string> {
+  return invoke<string>('git_suggest_message', { sessionId, key, paths });
 }

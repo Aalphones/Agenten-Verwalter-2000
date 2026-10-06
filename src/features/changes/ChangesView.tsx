@@ -169,6 +169,16 @@ export function ChangesView({
               hasVisibleFiles={rows.some(
                 (row: FileRow) => row.kind === 'file' || row.kind === 'commitFile',
               )}
+              git={
+                gitStatus === null
+                  ? null
+                  : {
+                      sessionId,
+                      status: gitStatus,
+                      repositoryFilter: selection.repositoryFilter,
+                      onChanged,
+                    }
+              }
             />
           ) : (
             <DiffView

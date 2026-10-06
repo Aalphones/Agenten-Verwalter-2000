@@ -32,6 +32,7 @@ export const FAILURE = {
   deleteBranch: 'Branch löschen fehlgeschlagen',
   ticketWorktree: 'Ticket-Worktree anlegen fehlgeschlagen',
   open: 'Öffnen fehlgeschlagen',
+  suggest: 'Vorschlag fehlgeschlagen',
 } as const;
 
 /** Beginn des Fehlersatzes, mit dem der Core einen ungemergten Branch beim Löschen meldet. */
@@ -139,3 +140,40 @@ export function switchQuestion(changeCount: number, entryName: string): string {
 export function busyOtherSessionText(number: number, name: string): string {
   return `Session #${String(number)} „${name}“ arbeitet gerade.`;
 }
+
+export function fetchTitle(lastFetchMs: number | null): string {
+  return `Fetch — Remote abfragen, nichts ändern\n${fetchStampText(lastFetchMs)}`;
+}
+
+export function incomingText(count: number, upstream: string): string {
+  const commits: string =
+    count === 1 ? '1 eingehender Commit' : `${String(count)} eingehende Commits`;
+  return `↓ ${commits} auf ${upstream}`;
+}
+
+export function unpushedTitle(subject: string, isPushed: boolean): string {
+  return isPushed ? subject : `${subject} — noch nicht gepusht`;
+}
+
+/** Die ↓/↑-Angabe in einer Zeile der Übersicht. */
+export function syncText(entry: GitEntryStatus): string {
+  if (entry.upstream === null) {
+    return 'nicht veröffentlicht';
+  }
+  if (entry.ahead === 0 && entry.behind === 0) {
+    return 'synchron';
+  }
+  const parts: string[] = [];
+  if (entry.behind > 0) {
+    parts.push(`↓${String(entry.behind)}`);
+  }
+  if (entry.ahead > 0) {
+    parts.push(`↑${String(entry.ahead)}`);
+  }
+  return parts.join(' ');
+}
+
+export const SUGGEST_TITLE = 'Nachricht vorschlagen lassen (nach docs/conventions/commits.md)';
+export const SUGGEST_AUTARK_TITLE =
+  'Der Vorschlag folgt in der Betriebsart „Autark“ mit dem Druckmodus.';
+export const SUGGEST_NOTHING_CHECKED_TITLE = 'Erst Dateien ankreuzen';

@@ -2,15 +2,22 @@
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::thread;
 use std::time::Duration;
 
+use serde::de::DeserializeOwned;
 use serde_json::Value;
+use tauri::{AppHandle, Manager};
 
-use crate::agents::claude::local::{self, LocalBackend};
+use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
 use crate::agents::event::ModelId;
+use crate::db::Database;
+use crate::error::CommandError;
+use crate::filesystem::workspace::data_dir;
 use crate::processes::hide_console;
+use crate::settings;
 
 pub struct PrintRequest<'a> {
     pub model: ModelId,
@@ -19,6 +26,44 @@ pub struct PrintRequest<'a> {
     pub input: &'a str,
     /// `Some` in der Betriebsart Claude Code + LM Studio.
     pub local: Option<&'a LocalBackend>,
+}
+
+/// Ein Einmal-Aufruf von Haiku mit der Betriebsart aus den Einstellungen; in „Autark“ gibt es den
+/// Druckmodus noch nicht, dann kommt `autark_message` als Fehler.
+pub fn ask_haiku<T: DeserializeOwned>(
+    app: &AppHandle,
+    exe: &Path,
+    request: &HaikuRequest<'_>,
+) -> Result<T, String> {
+    let cwd = data_dir(app).map_err(|error: CommandError| error.to_string())?;
+    let database = app.state::<Arc<Database>>();
+    let settings = settings::load(&database).map_err(|error: CommandError| error.to_string())?;
+    let backend = local::resolve(&settings).map_err(|error: CommandError| error.to_string())?;
+    if backend
+        .as_ref()
+        .is_some_and(|local: &LocalBackend| local.program == LocalProgram::Standalone)
+    {
+        return Err(request.autark_message.to_owned());
+    }
+    let print_request = PrintRequest {
+        model: ModelId::Haiku,
+        system_prompt: request.system_prompt,
+        json_schema: request.json_schema,
+        input: request.input,
+        local: backend.as_ref(),
+    };
+    let answer = run_print(exe, &cwd, &print_request, request.timeout)?;
+    serde_json::from_value::<T>(answer)
+        .map_err(|error| format!("Antwort von Claude nicht lesbar: {error}"))
+}
+
+pub struct HaikuRequest<'a> {
+    pub system_prompt: &'a str,
+    pub json_schema: &'a str,
+    pub input: &'a str,
+    pub timeout: Duration,
+    /// Fehlertext der Betriebsart „Autark“.
+    pub autark_message: &'a str,
 }
 
 /// Startet `claude.exe`, schickt `input` über die Standardeingabe und liefert `structured_output`.

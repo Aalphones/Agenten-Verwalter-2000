@@ -112,3 +112,12 @@ export function CloudIcon({ size = 11 }: IconProps): ReactElement {
     </svg>
   );
 }
+
+export function SparkIcon({ size = 14 }: IconProps): ReactElement {
+  return (
+    <svg {...strokeProps(size)} strokeWidth="1.4" strokeLinejoin="round">
+      <path d="M8 2l1.4 3.9L13.5 7.3 9.4 8.7 8 12.6 6.6 8.7 2.5 7.3l4.1-1.4z" />
+      <path d="M12.5 11.5l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z" />
+    </svg>
+  );
+}

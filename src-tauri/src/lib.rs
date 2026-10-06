@@ -132,6 +132,8 @@ pub fn run() {
             commands::git::git_delete_branch,
             commands::git::git_create_ticket_worktree,
             commands::git::git_open,
+            commands::git::git_log,
+            commands::git::git_suggest_message,
             commands::file_links::file_link_open,
             commands::artifacts::artifacts_list,
             commands::artifacts::artifact_open_in_browser,

@@ -6,6 +6,6 @@ export type GitLogCommit = { id: string, shortId: string, parents: Array<string>
  */
 time: number, subject: string, 
 /**
- * Aus `%D`, ohne `HEAD -> `.
+ * Aus `%D` mit vollen Namen (`refs/heads/x`, `refs/remotes/origin/x`, `tag: refs/tags/x`), ohne `HEAD`.
  */
 refs: Array<string>, own: boolean, pushed: boolean, };

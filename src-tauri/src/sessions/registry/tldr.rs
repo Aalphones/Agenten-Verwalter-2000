@@ -9,16 +9,11 @@ use serde::de::DeserializeOwned;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{ProjectState, Session, SessionRegistry, SessionState, now_ms, project_not_found};
-use crate::agents::claude::local::{self, LocalProgram};
 use crate::agents::claude::locate::find_claude;
-use crate::agents::claude::print::{PrintRequest, run_print};
-use crate::agents::event::ModelId;
-use crate::db::Database;
+use crate::agents::claude::print::{HaikuRequest, ask_haiku};
 use crate::db::tldr as tldr_rows;
 use crate::error::CommandError;
-use crate::filesystem::workspace::data_dir;
 use crate::sessions::model::SessionStatus;
-use crate::settings;
 use crate::tldr::model::{
     ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
     TldrChangedEvent,
@@ -30,6 +25,7 @@ use crate::tldr::transcript::{project_input, session_transcript};
 
 const TLDR_CHANGED_EVENT: &str = "tldr://changed";
 const NO_SESSION_HISTORY: &str = "Diese Session hat noch keinen Verlauf.";
+const AUTARK_UNSUPPORTED: &str = "TL;DR folgt in der Betriebsart „Autark“ mit dem Druckmodus.";
 const NO_PROJECT_HISTORY: &str = "Noch keine Session mit Verlauf.";
 
 impl SessionRegistry {
@@ -224,7 +220,7 @@ impl SessionState {
 /// bekommt nichts mehr.
 fn run_session_tldr(app: &AppHandle, session_id: &str, exe: &Path, transcript: &str, seq: u32) {
     let outcome: Result<SessionTldr, String> =
-        ask_haiku(app, exe, SESSION_SYSTEM_PROMPT, SESSION_SCHEMA, transcript);
+        ask_tldr(app, exe, SESSION_SYSTEM_PROMPT, SESSION_SCHEMA, transcript);
     let registry = app.state::<SessionRegistry>();
     let Ok(session) = registry.get(session_id) else {
         return;
@@ -279,7 +275,7 @@ fn run_project_tldr(app: &AppHandle, project_id: &str, exe: &Path) {
     let outcome: Result<ProjectTldr, String> = if sources.is_empty() {
         Err(NO_PROJECT_HISTORY.to_owned())
     } else {
-        ask_haiku(
+        ask_tldr(
             app,
             exe,
             PROJECT_SYSTEM_PROMPT,
@@ -314,33 +310,22 @@ fn begin_missing_tldr(app: &AppHandle, session: &Session) -> Option<(String, u32
     state.begin_tldr()
 }
 
-fn ask_haiku<T: DeserializeOwned>(
+/// Der Einmal-Aufruf von Haiku für ein TL;DR.
+fn ask_tldr<T: DeserializeOwned>(
     app: &AppHandle,
     exe: &Path,
     system_prompt: &str,
     json_schema: &str,
     input: &str,
 ) -> Result<T, String> {
-    let cwd = data_dir(app).map_err(|error: CommandError| error.to_string())?;
-    let database = app.state::<Arc<Database>>();
-    let settings = settings::load(&database).map_err(|error: CommandError| error.to_string())?;
-    let backend = local::resolve(&settings).map_err(|error: CommandError| error.to_string())?;
-    if backend
-        .as_ref()
-        .is_some_and(|local: &local::LocalBackend| local.program == LocalProgram::Standalone)
-    {
-        return Err("TL;DR folgt in der Betriebsart „Autark“ mit dem Druckmodus.".to_owned());
-    }
-    let request = PrintRequest {
-        model: ModelId::Haiku,
+    let request = HaikuRequest {
         system_prompt,
         json_schema,
         input,
-        local: backend.as_ref(),
+        timeout: TLDR_TIMEOUT,
+        autark_message: AUTARK_UNSUPPORTED,
     };
-    let answer = run_print(exe, &cwd, &request, TLDR_TIMEOUT)?;
-    serde_json::from_value::<T>(answer)
-        .map_err(|error| format!("Antwort von Claude nicht lesbar: {error}"))
+    ask_haiku(app, exe, &request)
 }
 
 fn tldr_json<T: serde::Serialize>(tldr: &T) -> Result<String, CommandError> {

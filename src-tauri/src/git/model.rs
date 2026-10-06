@@ -123,7 +123,7 @@ pub struct GitLogCommit {
     #[ts(type = "number")]
     pub time: i64,
     pub subject: String,
-    /// Aus `%D`, ohne `HEAD -> `.
+    /// Aus `%D` mit vollen Namen (`refs/heads/x`, `refs/remotes/origin/x`, `tag: refs/tags/x`), ohne `HEAD`.
     pub refs: Vec<String>,
     pub own: bool,
     pub pushed: bool,

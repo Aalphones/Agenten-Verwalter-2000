@@ -30,6 +30,7 @@ Bisher zeigt der Verwalter nur, was sich geändert hat; committen, pushen, pulle
 - ↓/↑ sind ohne Fetch beliebig alt; die Oberfläche nennt die Uhrzeit des letzten Fetch.
 - Der Agent und die Oberfläche können gleichzeitig committen; schlimmstenfalls kommt einmal „Git ist gerade beschäftigt“.
 - Konflikte nach Pull oder Merge bleiben im Arbeitsordner; die Oberfläche bietet „In VS Code öffnen“ und „abbrechen“, löst aber selbst nichts.
-- Verlauf nur für den aktuellen Branch, die letzten 50 Commits plus eingehende.
+- Verlauf nur für den aktuellen Branch, die letzten 50 Commits plus eingehende; die Marken (Branch, Remote-Branch, Tag) kommen mit vollen Ref-Namen aus dem Core, weil nur so ein Branch `feature/x` von `origin/x` zu unterscheiden ist.
+- Der Nachrichtenvorschlag ✦ ist ein Einmal-Aufruf von Haiku mit dem gekürzten Diff der angehakten Dateien (20 000 Zeichen) und der Commit-Konvention des Ordners; in der Betriebsart „Autark“ ist er ausgegraut.
 - Ticket-Worktrees kann jetzt auch die App anlegen (Ergänzung zu [ADR 010](010-worktrees-durch-den-agenten.md)); sie gehören dann der Session, die sie angelegt hat, und erscheinen als eigener Eintrag in deren Changes.
 - App-Commits landen in `session_commits` der Session, die committet hat — auch fremde Dateien, die man bewusst angehakt hat, zählen danach als ihre.
