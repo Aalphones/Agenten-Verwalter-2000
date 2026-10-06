@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | [Core: Ordner, Liste, Protokoll, Sicherheitsprobe](phase-1-core-und-protokoll.md) | heikel | pending |
+| 1 | [Core: Ordner, Liste, Protokoll, Sicherheitsprobe](phase-1-core-und-protokoll.md) | heikel | in progress (Code fertig, Sicherheitsprobe offen) |
 | 2 | [Reiter „Artefakte“ mit Liste und Vorschau](phase-2-reiter.md) | standard | pending |
 | 3 | [Vollbild](phase-3-vollbild.md) | standard | pending |
 | 4 | [Anweisung an den Agenten, Karte im Chat, Abschluss](phase-4-anweisung-und-karte.md) | standard | pending |

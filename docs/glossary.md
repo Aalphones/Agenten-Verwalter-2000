@@ -48,7 +48,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Befehl** (Command) | Eine Markdown-Datei in `.claude\commands`, aufgerufen wie ein Skill mit `/name`. |
 | **Modus** | Wie selbstständig der Agent arbeitet: Manuell, Automatisch bearbeiten, Planen, Auto. Pro Session, jederzeit wechselbar. |
 | **Denkaufwand** | Wie gründlich das Modell nachdenkt, fünf Stufen von Niedrig bis Max. Pro Session, jederzeit wechselbar. |
-| **Artefakt** | Etwas, das der Agent in einer Session zum Ansehen erstellt und veröffentlicht (Design, Diagramm, Seite). Im Reiter „Artefakte“ der Session. |
+| **Artefakt** | HTML-Seite, die der Agent zum Ansehen erstellt (Bericht, Präsentation, Diagramm, Design): jede `.html`/`.htm`-Datei direkt im Ordner `<Workspace>\.artefakte\`. Gehört dem Vorhaben, nicht der Session; gezeigt im Reiter „Artefakte“, abgeschottet über das Protokoll `artefakt` ([ADR 026](decisions/026-artefakte.md)). |
 | **Subagent** | Ein vom Agenten selbst gestarteter Hilfs-Agent für eine Teilaufgabe. Läuft innerhalb der Session, wird dort angezeigt. |
 | **Hintergrundprozess** | Ein vom Agenten mit `run_in_background` gestarteter Bash-Befehl, der weiterläuft, während der Agent arbeitet (z.B. ein Dev-Server). Seine Ausgabe schreibt die Kommandozeile in eine eigene Ausgabedatei; die App kann ihn anhalten. |
 | **Ausgeführter Befehl** | Ein Bash-Aufruf des Agenten im Vordergrund; steht im Hintergrund-Panel unter „Ausgeführt“ mit Exit-Code und Ausgabe. |

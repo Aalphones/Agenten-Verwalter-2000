@@ -24,38 +24,38 @@
 
 ### Feature-Modul `src-tauri/src/artifacts/`
 
-- [ ] `model.rs`: `Artifact` und `ArtifactList` exakt wie im Kontrakt (Derives und `serde`-Attribute wie die Structs in `src-tauri/src/mcp/model.rs`; exportiert wird über `gen-bindings.rs`, unten). Dazu `pub struct ArtifactOwner { pub session_id: String, pub number: u32, pub name: String, pub touched: HashMap<String, f64> }` (nicht exportiert, nur Core).
-- [ ] `mod.rs`:
+- [x] `model.rs`: `Artifact` und `ArtifactList` exakt wie im Kontrakt (Derives und `serde`-Attribute wie die Structs in `src-tauri/src/mcp/model.rs`; exportiert wird über `gen-bindings.rs`, unten). Dazu `pub struct ArtifactOwner { pub session_id: String, pub number: u32, pub name: String, pub touched: HashMap<String, f64> }` (nicht exportiert, nur Core).
+- [x] `mod.rs`:
   - `pub const DIR_NAME: &str = ".artefakte";`, `pub fn dir(workspace: &Path) -> PathBuf` (= `workspace.join(DIR_NAME)`).
   - `pub fn is_artifact_file(name: &str) -> bool` — kein `/` oder `\` im Namen, Endung `.html`/`.htm` ohne Rücksicht auf Groß-/Kleinschreibung.
   - `pub fn list(dir: &Path, owners: &[ArtifactOwner]) -> Vec<Artifact>` — `fs::read_dir(dir)`; Fehler (auch „nicht vorhanden“) → leere Liste. Nur Einträge mit `file_type().is_file()` und `is_artifact_file`. `modified_at` aus `metadata.modified()` in ms (`duration_since(UNIX_EPOCH)`; Fehler → 0). Besitzer: Schlüssel `attribution::normalize_path(&dir.join(&file).to_string_lossy())`; unter allen `owners` den mit dem größten `touched[schlüssel]`; keiner → alle drei Session-Felder `None`. Sortiert nach `modified_at` absteigend, bei Gleichstand nach `file`.
   - `fn title_of(path: &Path) -> Option<String>` — höchstens 64 KiB lesen (`File::open(..)?.take(65_536)`), `String::from_utf8_lossy`; in einer `to_ascii_lowercase`-Kopie (gleiche Byte-Positionen) `<title` suchen, dann das nächste `>`, dann `</title`; dazwischen aus dem Original schneiden; `&amp; &lt; &gt; &quot; &#39; &nbsp;` ersetzen; Leerraum zu einem Leerzeichen zusammenziehen, trimmen, auf 200 Zeichen kürzen; leer → `None`. `list` nimmt sonst den Dateinamen ohne Endung.
   - `pub fn resolve(dir: &Path, relative: &str) -> Result<PathBuf, CommandError>` — wie `scratchpad::read`: leer oder `Component::ParentDir | RootDir | Prefix` → `CommandError::FileNotAllowed(relative)`; `dir.join(relative)` existiert nicht → `CommandError::FileNotFound(relative)`; kanonisches Ziel nicht unter kanonischem `dir` → `FileNotAllowed`; Ordner statt Datei → `FileNotFound`.
   - `pub mod protocol;`, `pub mod model;`.
-- [ ] `protocol.rs`:
+- [x] `protocol.rs`:
   - `pub const ARTIFACT_CSP: &str` = der Wert aus dem Kontrakt, wörtlich.
   - `pub fn handle(ctx: tauri::UriSchemeContext<'_, tauri::Wry>, request: tauri::http::Request<Vec<u8>>, responder: tauri::UriSchemeResponder)` — `AppHandle` aus `ctx.app_handle().clone()`, Arbeit in `std::thread::spawn` (Dateizugriff nicht auf dem Thread des WebViews), Ergebnis mit `responder.respond(response)`.
   - Ablauf: Methode ≠ `GET` → 405. Pfad `request.uri().path()` ohne führendes `/`, an erstem `/` teilen in Session-Teil und Rest; fehlt der Rest → 404. Beide mit `percent_decode` dekodieren (ungültig → 404). Rest: `/` durch `\` ersetzen. `app.state::<SessionRegistry>().artifacts_dir(&session_id)` (Fehler → 404). `artifacts::resolve(&dir, &rest)`: `FileNotFound` → 404, sonst Fehler → 403. Datei lesen (`fs::read`; Fehler → 404).
   - Antwort 200 mit `Content-Type` = `content_type(&path)`, `Cache-Control: no-store`, `Access-Control-Allow-Origin: *`, `Content-Security-Policy: ARTIFACT_CSP`. Fehlerantworten: `Content-Type: text/plain; charset=utf-8`, Text „Nicht gefunden“ / „Nicht erlaubt“ / „Nur GET“.
   - `fn percent_decode(text: &str) -> Option<String>` — eigene Funktion, keine neue Abhängigkeit: `%` + zwei Hex-Ziffern → Byte, sonst Byte übernehmen; unvollständiges `%` → `None`; Ergebnis `String::from_utf8(..).ok()`.
   - `fn content_type(path: &Path) -> &'static str` — nach Endung in Kleinbuchstaben: `html|htm` → `text/html; charset=utf-8`, `css` → `text/css; charset=utf-8`, `js|mjs` → `text/javascript; charset=utf-8`, `json|map` → `application/json`, `svg` → `image/svg+xml`, `png` → `image/png`, `jpg|jpeg` → `image/jpeg`, `gif` → `image/gif`, `webp` → `image/webp`, `ico` → `image/x-icon`, `woff` → `font/woff`, `woff2` → `font/woff2`, `ttf` → `font/ttf`, `otf` → `font/otf`, `txt|md|csv` → `text/plain; charset=utf-8`, `mp4` → `video/mp4`, `webm` → `video/webm`, sonst `application/octet-stream`.
-- [ ] `src-tauri/src/lib.rs`: `mod artifacts;` (wie die anderen Feature-Module) und am Builder vor `.setup(…)` `.register_asynchronous_uri_scheme_protocol("artefakt", artifacts::protocol::handle)`.
+- [x] `src-tauri/src/lib.rs`: `mod artifacts;` (wie die anderen Feature-Module) und am Builder vor `.setup(…)` `.register_asynchronous_uri_scheme_protocol("artefakt", artifacts::protocol::handle)`.
 
 ### Registry
 
-- [ ] Neue Datei `src-tauri/src/sessions/registry/artifacts.rs` mit eigenem `impl SessionRegistry` (Muster: `registry/mcp.rs`), in `registry.rs` als `mod artifacts;` neben `mod mcp;`:
+- [x] Neue Datei `src-tauri/src/sessions/registry/artifacts.rs` mit eigenem `impl SessionRegistry` (Muster: `registry/mcp.rs`), in `registry.rs` als `mod artifacts;` neben `mod mcp;`:
   - `pub fn artifacts_dir(&self, session_id: &str) -> Result<PathBuf, CommandError>` = `artifacts::dir(&self.get(session_id)?.workspace)`.
   - `pub fn artifact_scope(&self, session_id: &str) -> Result<(PathBuf, Vec<ArtifactOwner>), CommandError>` — Workspace der Session; `self.project_members(&session.project_id)`; je Mitglied **nacheinander** (nie zwei Sperren zugleich, nie unter der Map-Sperre — wie `project_ticket_worktrees`) `name` aus `member.lock()`; danach, ohne Sperre, je Mitglied `self.database.with(|c| session_files::load_for(c, &[member.id.clone()]))` als `touched`.
 
 ### Commands
 
-- [ ] `src-tauri/src/commands/artifacts.rs`: `artifacts_list` und `artifact_open_in_browser` wie im Kontrakt, beide `pub async fn`, Muster `commands/file_links.rs`. `artifact_open_in_browser`: `is_artifact_file(&file)` sonst `FileNotAllowed`; `artifacts::resolve(&dir, &file)?`; `app.opener().open_path(target.to_string_lossy(), None::<&str>)`, Fehler → `CommandError::Io`.
-- [ ] `src-tauri/src/commands/mod.rs` um `pub mod artifacts;` ergänzen, beide Commands in `generate_handler!` in `lib.rs`.
-- [ ] `src-tauri/examples/gen-bindings.rs`: `Artifact` und `ArtifactList` exportieren; `pnpm bindings`.
+- [x] `src-tauri/src/commands/artifacts.rs`: `artifacts_list` und `artifact_open_in_browser` wie im Kontrakt, beide `pub async fn`, Muster `commands/file_links.rs`. `artifact_open_in_browser`: `is_artifact_file(&file)` sonst `FileNotAllowed`; `artifacts::resolve(&dir, &file)?`; `app.opener().open_path(target.to_string_lossy(), None::<&str>)`, Fehler → `CommandError::Io`.
+- [x] `src-tauri/src/commands/mod.rs` um `pub mod artifacts;` ergänzen, beide Commands in `generate_handler!` in `lib.rs`.
+- [x] `src-tauri/examples/gen-bindings.rs`: `Artifact` und `ArtifactList` exportieren; `pnpm bindings`.
 
 ### Konfiguration
 
-- [ ] `src-tauri/tauri.conf.json`: an die CSP `; frame-src http://artefakt.localhost` anhängen. Sonst nichts ändern.
+- [x] `src-tauri/tauri.conf.json`: an die CSP `; frame-src http://artefakt.localhost` anhängen. Sonst nichts ändern.
 
 ### Sicherheitsprobe (Pflicht vor Phase 2)
 
@@ -74,7 +74,10 @@
 
 ### Doku
 
-- [ ] ADR `docs/decisions/026-artefakte.md` (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen, ~10–20 Zeilen): Optionen waren (a) Ablageordner + Anweisung, (b) eigenes MCP-Werkzeug „Ansicht zeigen“, (c) jede vom Agenten geschriebene `.html`-Datei; Darstellung (a) `srcdoc` — erbt die App-CSP und findet keine relativen Bilder, (b) Asset-Protokoll — Scope ist `$HOME/.verwalter/**`, Workspaces liegen woanders und es setzt keine eigene CSP, (c) eigenes Protokoll mit eigener CSP. Entscheidung: Ablageordner `.artefakte` je Vorhaben, eigenes Protokoll `artefakt`, Sandbox ohne `allow-same-origin`, Internet über https erlaubt (der Agent, der das HTML schreibt, hat ohnehin eine Shell), Abfrage alle 2 s statt Dateiwächter (keine neue Abhängigkeit, erfasst auch per Shell geschriebene Seiten). Konsequenzen: keine Links nach außen im Rahmen (App-CSP `frame-src`), Formulare schicken nichts ab, keine Popups.
-- [ ] `docs/code-map.md`: neue Zeile „Artefakte (HTML-Seiten des Agenten im Reiter „Artefakte“)“ — Oberfläche: „folgt in Phase 2“; Core: `src-tauri/src/artifacts/` (`model.rs`, `mod.rs` `dir`/`list`/`resolve`, `protocol.rs` Schema `artefakt`), `src-tauri/src/commands/artifacts.rs`, `src-tauri/src/sessions/registry/artifacts.rs` (ADR 026). In der Feature-Liste unter „Namensschema“ `artifacts` (Artefakte) ergänzen.
+- [x] ADR `docs/decisions/026-artefakte.md` (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen, ~10–20 Zeilen): Optionen waren (a) Ablageordner + Anweisung, (b) eigenes MCP-Werkzeug „Ansicht zeigen“, (c) jede vom Agenten geschriebene `.html`-Datei; Darstellung (a) `srcdoc` — erbt die App-CSP und findet keine relativen Bilder, (b) Asset-Protokoll — Scope ist `$HOME/.verwalter/**`, Workspaces liegen woanders und es setzt keine eigene CSP, (c) eigenes Protokoll mit eigener CSP. Entscheidung: Ablageordner `.artefakte` je Vorhaben, eigenes Protokoll `artefakt`, Sandbox ohne `allow-same-origin`, Internet über https erlaubt (der Agent, der das HTML schreibt, hat ohnehin eine Shell), Abfrage alle 2 s statt Dateiwächter (keine neue Abhängigkeit, erfasst auch per Shell geschriebene Seiten). Konsequenzen: keine Links nach außen im Rahmen (App-CSP `frame-src`), Formulare schicken nichts ab, keine Popups.
+- [x] `docs/code-map.md`: neue Zeile „Artefakte (HTML-Seiten des Agenten im Reiter „Artefakte“)“ — Oberfläche: „folgt in Phase 2“; Core: `src-tauri/src/artifacts/` (`model.rs`, `mod.rs` `dir`/`list`/`resolve`, `protocol.rs` Schema `artefakt`), `src-tauri/src/commands/artifacts.rs`, `src-tauri/src/sessions/registry/artifacts.rs` (ADR 026). In der Feature-Liste unter „Namensschema“ `artifacts` (Artefakte) ergänzen.
 
 ## Report-Back
+
+- Code fertig, `pnpm check` grün. Abweichungen vom Plan: `pub mod artifacts;` statt `mod` (wie alle Feature-Module in `lib.rs`, `gen-bindings` braucht den Zugriff); in `title_of` wird `&amp;` zuletzt ersetzt, sonst würde aus `&amp;lt;` ein `<`; `protocol::handle` holt die Registry mit `try_state` (eine Anfrage vor dem Ende von `setup` beendete die App sonst mit Panic) und antwortet dann 404; Glossar „Artefakt“ und Commit-Scope `artifacts` nachgezogen.
+- Sicherheitsprobe: **offen**, macht der User (Ergebnis hier eintragen).

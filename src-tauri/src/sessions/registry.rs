@@ -62,6 +62,7 @@ use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
 use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
+mod artifacts;
 mod commit_scan;
 mod mcp;
 mod tldr;

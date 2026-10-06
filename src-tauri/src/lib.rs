@@ -1,5 +1,6 @@
 pub mod account;
 pub mod agents;
+pub mod artifacts;
 pub mod attachments;
 pub mod background;
 pub mod changes;
@@ -43,6 +44,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .register_asynchronous_uri_scheme_protocol("artefakt", artifacts::protocol::handle)
         .setup(|app| {
             // Ohne Datenbank startet die App nicht: ein stiller Weiterlauf verlöre jede Session beim Beenden.
             let database = Arc::new(Database::open(
@@ -107,6 +109,8 @@ pub fn run() {
             commands::changes::changes_load,
             commands::changes::changes_file_diff,
             commands::file_links::file_link_open,
+            commands::artifacts::artifacts_list,
+            commands::artifacts::artifact_open_in_browser,
             commands::tldr::tldr_session_load,
             commands::tldr::tldr_session_create,
             commands::tldr::tldr_project_load,

@@ -6,6 +6,7 @@ use verwalter_lib::{
         Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
         QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
     },
+    artifacts::model::{Artifact, ArtifactList},
     background::model::{
         BackgroundChangedEvent, BackgroundItem, BackgroundKind, BackgroundState, ScratchpadEntry,
         ScratchpadListing, SessionBackground, SubagentStep, TextPreview,
@@ -125,5 +126,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     VoiceModelEvent::export_all(&cfg)?;
     VoiceLevelEvent::export_all(&cfg)?;
     VoicePartialEvent::export_all(&cfg)?;
+    Artifact::export_all(&cfg)?;
+    ArtifactList::export_all(&cfg)?;
     Ok(())
 }
