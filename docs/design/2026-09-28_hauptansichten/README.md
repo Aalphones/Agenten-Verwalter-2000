@@ -55,7 +55,7 @@ Jeder Meilenstein baut seine Tafeln gleich nach diesem Entwurf, nicht als Zwisch
 | Chat-Spalte | höchstens 780 px breit, zentriert, 32 px Seitenrand, Verlauf unten verankert |
 | Eingabeleiste | gleiche Breite wie die Chat-Spalte; Radius 10 px; Rahmen 1 px `border`, **nur bei Fokus** `accent` plus 3 px Ring `accent-subtle`; Anhänge als Zeile über dem Textfeld; unten links `+` und `/` (30 × 30 px) und die Modell-Pille (26 px hoch, Radius 13 px), rechts Modus-Knopf und Senden (30 × 30 px, `accent`) |
 | Menüs der Eingabeleiste | öffnen nach oben, 8 px Abstand, Radius 10 px, `shadow-popover`; `/`-Menü so breit wie die Eingabeleiste, höchstens 470 px Listenhöhe mit Scrollen; `+` 330 px, Modell 340 px, Modus 430 px |
-| Changes | Werkzeugleiste 44 px; Dateiliste 340 px breit, Einrückung 14 px pro Ordnerebene; Diff: Zeilennummern je 48 px, Vorzeichen 20 px, Zeilenhöhe 20 px |
+| Changes | Werkzeugleiste 44 px; Dateiliste 360 px breit, Einrückung 14 px pro Ordnerebene; Diff: Zeilennummern je 48 px, Vorzeichen 20 px, Zeilenhöhe 20 px |
 | Artefakte | Liste 300 px breit, Vorschau füllt den Rest mit 20 px Rand |
 | Neue Session, Einstellungen | Inhalt höchstens 720 bzw. 780 px, zentriert; Einstellungszeile: Beschriftung 230 px + Bedienelement |
 

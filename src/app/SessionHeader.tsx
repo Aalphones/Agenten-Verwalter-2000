@@ -4,8 +4,11 @@ import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import { ContextDonut } from '@/features/context/ContextDonut';
 import { ContextPopover } from '@/features/context/ContextPopover';
+import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
 import { UsageButton } from '@/features/usage/UsageButton';
+import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
+import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
@@ -39,6 +42,10 @@ interface SessionHeaderProps {
   activeView: SessionView;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
+  /** Für die Branch-Pille: Namen und eigene uncommittete Dateien; `null`, solange nicht gelesen. */
+  changes: SessionChanges | null;
+  /** Git-Zustand der Session; `null`, solange nicht gelesen. */
+  gitStatus: GitSessionStatus | null;
   /** Artefakte des Vorhabens; „Artefakte“ erscheint erst ab dem ersten. */
   artifactCount: number;
   /** Laufende Prozesse und Subagenten der Session. */
@@ -54,6 +61,8 @@ export function SessionHeader({
   projectName,
   activeView,
   changesCount,
+  changes,
+  gitStatus,
   artifactCount,
   runningBackgroundCount,
   isBackgroundOpen,
@@ -224,6 +233,13 @@ export function SessionHeader({
           <StatusIcon status={session.status} size={10} />
           <span>{STATUS_LABEL[session.status]}</span>
         </span>
+        <GitBranchPill
+          status={gitStatus}
+          changes={changes}
+          onOpenChanges={(): void => {
+            onShowView('changes');
+          }}
+        />
       </div>
       <div className="session-header__tabs" role="tablist" aria-label="Ansicht">
         {views.map((view: SessionView) => (

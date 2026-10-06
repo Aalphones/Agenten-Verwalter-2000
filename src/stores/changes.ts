@@ -5,6 +5,9 @@ export interface OpenFile {
   /** `key` des Eintrags, zu dem die Datei gehört. */
   key: string;
   path: string;
+  /** Blickwinkel, in dem der Diff öffnet, unabhängig vom gewählten (Git-Gruppen in der Session); `null`: der
+   *  gewählte Blickwinkel. */
+  scope: ChangeScope | null;
 }
 
 export interface ChangesSelection {

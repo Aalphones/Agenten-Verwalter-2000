@@ -13,13 +13,16 @@ const ACTIVE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiti
 export interface SessionChangesState {
   changes: SessionChanges | null;
   error: string | null;
+  /** Liest sofort neu, auch wenn gerade eine Abfrage läuft — deren Antwort verfällt, sie kann vor der Änderung
+   *  gelesen haben, die den Aufruf auslöst. */
+  reload: () => void;
 }
 
-interface LoadedState extends SessionChangesState {
+interface LoadedState {
   requestKey: string;
+  changes: SessionChanges | null;
+  error: string | null;
 }
-
-const NOTHING: SessionChangesState = { changes: null, error: null };
 
 /** Liest die Changes der Session aus dem Core: beim Wählen, bei Statuswechsel, beim Öffnen des Reiters, beim
  *  Fenster-Fokus und — solange der Reiter offen ist und der Agent arbeitet — alle 5 s. Ein Dateisystem-Beobachter
@@ -75,6 +78,11 @@ export function useSessionChanges(
       });
   }, [sessionId, reach, requestKey]);
 
+  const reload = useCallback((): void => {
+    inFlightRef.current = null;
+    load();
+  }, [load]);
+
   // Vor allen Ladevorgängen der neuen Session oder Reichweite: eine noch laufende Antwort der alten verfällt.
   useEffect(() => {
     requestRef.current += 1;
@@ -103,7 +111,7 @@ export function useSessionChanges(
   }, [isVisible, isAgentActive, load]);
 
   if (state === null || state.requestKey !== requestKey) {
-    return NOTHING;
+    return { changes: null, error: null, reload };
   }
-  return { changes: state.changes, error: state.error };
+  return { changes: state.changes, error: state.error, reload };
 }

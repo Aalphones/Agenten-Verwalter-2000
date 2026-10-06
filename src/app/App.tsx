@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from 'react';
+import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionActionError } from '@/app/SessionActionError';
@@ -10,6 +10,7 @@ import { useSessionBackground } from '@/features/background/useSessionBackground
 import { ArtifactsView } from '@/features/artifacts/ArtifactsView';
 import { useProjectArtifacts } from '@/features/artifacts/useProjectArtifacts';
 import { ChatView } from '@/features/chat/ChatView';
+import { useGitStatus } from '@/features/git/useGitStatus';
 import { countChangedFiles } from '@/features/changes/changesScope';
 import { ChangesView } from '@/features/changes/ChangesView';
 import { useSessionChanges } from '@/features/changes/useSessionChanges';
@@ -107,7 +108,11 @@ export function App(): ReactElement {
     ? projectView === 'artifacts' && artifactCount > 0
     : !isMainReplaced && activeView === 'artifacts' && artifactCount > 0;
   const changesReach: ChangesReach = isOverview ? 'project' : 'session';
-  const { changes, error: changesError } = useSessionChanges(
+  const {
+    changes,
+    error: changesError,
+    reload: reloadChanges,
+  } = useSessionChanges(
     isMainReplaced ? null : (currentSession ?? null),
     changesReach,
     isChangesView || isOverview,
@@ -118,6 +123,13 @@ export function App(): ReactElement {
   const visibleSession: SessionSummary | null =
     isMainReplaced || isOverview ? null : (currentSession ?? null);
   useViewedSession(visibleSession === null ? null : visibleSession.id);
+  // Git-Zustand für Branch-Pille (Kopfzeile) und Git-Leisten (Changes): einmal je sichtbarer Session, nur in der
+  // Reichweite Session — die Übersicht des Vorhabens bedient kein Git.
+  const { status: gitStatus, reload: reloadGit } = useGitStatus(visibleSession, isChangesView);
+  const reloadAfterGitAction = useCallback((): void => {
+    reloadGit();
+    reloadChanges();
+  }, [reloadGit, reloadChanges]);
   const { background, error: backgroundError } = useSessionBackground(
     visibleSession === null ? null : visibleSession.id,
   );
@@ -206,6 +218,8 @@ export function App(): ReactElement {
           changes={changes}
           error={changesError}
           reach="project"
+          git={null}
+          onChanged={reloadChanges}
         />
       );
     }
@@ -241,7 +255,14 @@ export function App(): ReactElement {
     }
     if (isChangesView) {
       return (
-        <ChangesView session={session} changes={changes} error={changesError} reach="session" />
+        <ChangesView
+          session={session}
+          changes={changes}
+          error={changesError}
+          reach="session"
+          git={gitStatus}
+          onChanged={reloadAfterGitAction}
+        />
       );
     }
     return (
@@ -280,6 +301,8 @@ export function App(): ReactElement {
             projectName={projectNameOf(currentSession)}
             activeView={sessionViewShown()}
             changesCount={changes === null ? null : countChangedFiles(changes)}
+            changes={changes}
+            gitStatus={gitStatus}
             artifactCount={artifactCount}
             runningBackgroundCount={countRunning(backgroundItems)}
             isBackgroundOpen={isBackgroundOpen}

@@ -2,7 +2,7 @@
   overflow-y: auto;
   flex-shrink: 0;
   box-sizing: border-box;
-  width: 340px;
+  width: 360px;
   padding: var(--space-lg) var(--space-md);
   border-right: 1px solid var(--color-border-subtle);
   /* Die Liste ändert sich alle paar Sekunden; ein Ausgleich des Browsers verschöbe die Ansicht zusätzlich. */
@@ -162,4 +162,209 @@
     font-size: var(--font-size-sm);
     color: var(--color-fg-muted);
   }
+
+  /* Git-Bedienung (Reichweite Session) */
+  &__repository--git {
+    box-sizing: border-box;
+    gap: var(--space-sm);
+    min-height: 30px;
+    padding: 0 var(--space-md) 0 var(--space-lg);
+  }
+
+  &__caret {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 14px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition: transform var(--duration-base) var(--ease-out);
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    &--collapsed {
+      transform: rotate(-90deg);
+    }
+  }
+
+  &__file-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  &__check {
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: var(--color-accent);
+  }
+
+  &__file--inline {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    padding-left: 0;
+  }
+
+  &__file--commit {
+    padding-left: 30px;
+  }
+
+  &__commit-file-name {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  &__commit-file-directory {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11.5px;
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    height: 24px;
+    margin-top: var(--space-xs);
+    padding: 0 var(--space-lg) 0 var(--space-xl);
+    font-size: var(--font-size-2xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-fg-muted);
+  }
+
+  &__group-count,
+  &__group-hint,
+  &__group-link {
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  &__group-spacer {
+    flex: 1;
+  }
+
+  &__group-hint {
+    color: var(--color-accent-text);
+  }
+
+  &__group-link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-accent-text);
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  &__note {
+    margin: 0;
+    padding: 3px var(--space-xl);
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__foreign-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    box-sizing: border-box;
+    width: calc(100% - 20px);
+    margin: var(--space-xs) var(--space-lg) 0;
+    padding: 5px var(--space-md);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-fg-muted);
+    font: inherit;
+    font-size: 11.5px;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-fg-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  &__foreign-caret {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+
+    &--closed {
+      transform: rotate(-90deg);
+    }
+  }
+
+  &__commit {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    height: 22px;
+    padding: 0 var(--space-lg) 0 var(--space-xl);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-secondary);
+  }
+
+  &__commit-dot {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-fg-muted);
+
+    &--unpushed {
+      border: 1.8px solid var(--color-accent);
+      background: transparent;
+    }
+  }
+
+  &__commit-subject {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__commit-id {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+}
+
+.file-tree__repository--git.file-tree__repository--spaced {
+  min-height: 41px;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.file-tree__file--foreign .file-tree__name {
+  color: var(--color-fg-secondary);
 }

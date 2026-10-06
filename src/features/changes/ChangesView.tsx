@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
 import type { ReactElement } from 'react';
-import { buildFileRows, type FileRow } from '@/features/changes/buildFileRows';
+import {
+  buildFileRows,
+  foreignLineStat,
+  type FileRow,
+  type GitRowsInput,
+} from '@/features/changes/buildFileRows';
 import { ChangesOverview } from '@/features/changes/ChangesOverview';
 import { ChangesToolbar } from '@/features/changes/ChangesToolbar';
 import { statOf } from '@/features/changes/changesScope';
@@ -10,6 +15,10 @@ import { fileDiffKey } from '@/features/changes/useFileDiff';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileChange } from '@/lib/bindings/FileChange';
+import type { GitEntryStatus } from '@/lib/bindings/GitEntryStatus';
+import type { GitForeignFile } from '@/lib/bindings/GitForeignFile';
+import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
+import type { LineStat } from '@/lib/bindings/LineStat';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -19,6 +28,7 @@ import {
   type ChangesSelection,
   type OpenFile,
 } from '@/stores/changes';
+import { useGitStore } from '@/stores/git';
 import './ChangesView.css';
 
 interface ChangesViewProps {
@@ -26,18 +36,34 @@ interface ChangesViewProps {
   changes: SessionChanges | null;
   error: string | null;
   reach: ChangesReach;
+  /** Git-Zustand der Session; `null` in der Reichweite Projekt (dort gibt es keine Git-Bedienung) und solange er
+   *  nicht gelesen ist. */
+  git: GitSessionStatus | null;
+  /** Lädt nach einer Git-Aktion Git-Zustand und Changes neu. */
+  onChanged: () => void;
 }
 
 interface OpenTarget {
   repository: RepositoryChanges;
   file: FileChange;
+  /** Blickwinkel, in dem der Diff der Datei zeigt: der der Zeile, sonst der gewählte. */
+  scope: ChangeScope;
 }
 
-/** Die geöffnete Datei, sofern sie im gewählten Blickwinkel noch existiert; sonst zeigt die Ansicht die Übersicht. */
+const NO_FLAGS: Readonly<Record<string, boolean>> = {};
+
+/** Eine fremde Datei hat keinen Eintrag in den Changes; für den Diff reicht ein Stand unter „Uncommitted“. */
+function foreignChange(file: GitForeignFile): FileChange {
+  const stat: LineStat = foreignLineStat(file);
+  return { path: file.path, all: stat, committed: null, uncommitted: stat };
+}
+
+/** Die geöffnete Datei, sofern sie in ihrem Blickwinkel noch existiert; sonst zeigt die Ansicht die Übersicht. */
 function findOpenTarget(
   changes: SessionChanges,
+  git: GitSessionStatus | null,
   openFile: OpenFile | null,
-  scope: ChangeScope,
+  selectedScope: ChangeScope,
 ): OpenTarget | null {
   if (openFile === null) {
     return null;
@@ -45,16 +71,33 @@ function findOpenTarget(
   const repository: RepositoryChanges | undefined = changes.repositories.find(
     (candidate: RepositoryChanges) => candidate.key === openFile.key,
   );
-  const file: FileChange | undefined = repository?.files.find(
-    (candidate: FileChange) => candidate.path === openFile.path,
-  );
-  if (repository === undefined || file === undefined || statOf(file, scope) === null) {
+  if (repository === undefined) {
     return null;
   }
-  return { repository, file };
+  const scope: ChangeScope = openFile.scope ?? selectedScope;
+  const file: FileChange | undefined = repository.files.find(
+    (candidate: FileChange) => candidate.path === openFile.path,
+  );
+  if (file !== undefined && statOf(file, scope) !== null) {
+    return { repository, file, scope };
+  }
+  const foreign: GitForeignFile | undefined = git?.entries
+    .find((entry: GitEntryStatus) => entry.key === openFile.key)
+    ?.foreign.find((candidate: GitForeignFile) => candidate.path === openFile.path);
+  if (foreign !== undefined && scope === 'uncommitted') {
+    return { repository, file: foreignChange(foreign), scope };
+  }
+  return null;
 }
 
-export function ChangesView({ session, changes, error, reach }: ChangesViewProps): ReactElement {
+export function ChangesView({
+  session,
+  changes,
+  error,
+  reach,
+  git,
+  onChanged,
+}: ChangesViewProps): ReactElement {
   const sessionId: string = session.id;
   const selection: ChangesSelection = useChangesStore(
     (state) => state.selections[sessionId] ?? DEFAULT_SELECTION,
@@ -63,16 +106,31 @@ export function ChangesView({ session, changes, error, reach }: ChangesViewProps
   const setScope = useChangesStore((state) => state.setScope);
   const openFile = useChangesStore((state) => state.openFile);
   const closeFile = useChangesStore((state) => state.closeFile);
-
-  const rows: FileRow[] = useMemo(
-    () =>
-      changes === null ? [] : buildFileRows(changes, selection.repositoryFilter, selection.scope),
-    [changes, selection.repositoryFilter, selection.scope],
+  const collapsed: Readonly<Record<string, boolean>> = useGitStore(
+    (state) => state.sessions[sessionId]?.collapsed ?? NO_FLAGS,
+  );
+  const showForeign: Readonly<Record<string, boolean>> = useGitStore(
+    (state) => state.sessions[sessionId]?.showForeign ?? NO_FLAGS,
   );
 
+  // Git-Bedienung gibt es nur in der Reichweite Session.
+  const gitStatus: GitSessionStatus | null = reach === 'session' ? git : null;
+
+  const rows: FileRow[] = useMemo(() => {
+    if (changes === null) {
+      return [];
+    }
+    const gitInput: GitRowsInput | null =
+      gitStatus === null ? null : { status: gitStatus, collapsed, showForeign };
+    return buildFileRows(changes, selection.repositoryFilter, selection.scope, gitInput);
+  }, [changes, gitStatus, collapsed, showForeign, selection.repositoryFilter, selection.scope]);
+
   const openTarget: OpenTarget | null = useMemo(
-    () => (changes === null ? null : findOpenTarget(changes, selection.openFile, selection.scope)),
-    [changes, selection.openFile, selection.scope],
+    () =>
+      changes === null
+        ? null
+        : findOpenTarget(changes, gitStatus, selection.openFile, selection.scope),
+    [changes, gitStatus, selection.openFile, selection.scope],
   );
 
   if (changes === null) {
@@ -99,6 +157,7 @@ export function ChangesView({ session, changes, error, reach }: ChangesViewProps
           onOpen={(file): void => {
             openFile(sessionId, file);
           }}
+          git={gitStatus === null ? null : { sessionId, busy: gitStatus.busy, onChanged }}
         />
         <div className="changes-view__detail">
           {openTarget === null ? (
@@ -107,19 +166,21 @@ export function ChangesView({ session, changes, error, reach }: ChangesViewProps
               reach={reach}
               untrackedBefore={changes.untrackedBefore}
               scope={selection.scope}
-              hasVisibleFiles={rows.some((row: FileRow) => row.kind === 'file')}
+              hasVisibleFiles={rows.some(
+                (row: FileRow) => row.kind === 'file' || row.kind === 'commitFile',
+              )}
             />
           ) : (
             <DiffView
               key={fileDiffKey(
                 { key: openTarget.repository.key, path: openTarget.file.path },
-                selection.scope,
+                openTarget.scope,
               )}
               sessionId={sessionId}
               reach={reach}
               repository={openTarget.repository}
               file={openTarget.file}
-              scope={selection.scope}
+              scope={openTarget.scope}
               onClose={(): void => {
                 closeFile(sessionId);
               }}

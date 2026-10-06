@@ -4,7 +4,12 @@ import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileDiff } from '@/lib/bindings/FileDiff';
 import { loadFileDiff } from '@/lib/changes';
 import { commandErrorText } from '@/lib/errors';
-import type { OpenFile } from '@/stores/changes';
+
+/** Welche Datei eines Eintrags; der Blickwinkel kommt getrennt. */
+export interface DiffTarget {
+  key: string;
+  path: string;
+}
 
 export interface FileDiffState {
   diff: FileDiff | null;
@@ -18,7 +23,7 @@ interface LoadedDiff {
   error: string | null;
 }
 
-export function fileDiffKey(file: OpenFile, scope: ChangeScope): string {
+export function fileDiffKey(file: DiffTarget, scope: ChangeScope): string {
   return `${file.key}:${file.path}:${scope}`;
 }
 
@@ -28,7 +33,7 @@ export function fileDiffKey(file: OpenFile, scope: ChangeScope): string {
 export function useFileDiff(
   sessionId: string,
   reach: ChangesReach,
-  file: OpenFile,
+  file: DiffTarget,
   scope: ChangeScope,
   stamp: string,
 ): FileDiffState {

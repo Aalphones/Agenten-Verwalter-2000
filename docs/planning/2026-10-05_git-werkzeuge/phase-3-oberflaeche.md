@@ -45,36 +45,41 @@ Struktur nach Entwurf, je Punkt prüfbar:
 
 ### Wrapper `src/lib/git.ts`
 
-- [ ] Je Command aus Phase 1–2 eine `async`-Funktion mit JSDoc `@throws` wie in `src/lib/changes.ts`: `loadGitStatus`, `loadGitBranches`, `gitCommit`, `gitPush`, `gitPull`, `gitFetch`, `gitSwitch`, `gitCreateBranch`, `gitAbortOperation`.
+- [x] Je Command aus Phase 1–2 eine `async`-Funktion mit JSDoc `@throws` wie in `src/lib/changes.ts`: `loadGitStatus`, `loadGitBranches`, `gitCommit`, `gitPush`, `gitPull`, `gitFetch`, `gitSwitch`, `gitCreateBranch`, `gitAbortOperation`.
 
 ### Zustand `src/stores/git.ts` (Zustand, flüchtig)
 
-- [ ] Je Session: `messages: Record<entryKey, string>`, `checked: Record<entryKey, Record<path, boolean>>` (nur Abweichungen vom Standard; Standard = eigene an, fremde aus), `showForeign: Record<entryKey, boolean>`, `collapsed: Record<entryKey, boolean>`. Aktionen `setMessage`, `toggleChecked`, `setAllOwn(entryKey, paths, value)`, `toggleForeign`, `toggleCollapsed`, `clearEntry(entryKey)` (nach erfolgreichem Commit: Nachricht und Abweichungen löschen).
-- [ ] Selektor `checkedPaths(sessionId, entryKey, ownPaths, foreignPaths): string[]`.
+- [x] Je Session: `messages: Record<entryKey, string>`, `checked: Record<entryKey, Record<path, boolean>>` (nur Abweichungen vom Standard; Standard = eigene an, fremde aus), `showForeign: Record<entryKey, boolean>`, `collapsed: Record<entryKey, boolean>`. Aktionen `setMessage`, `toggleChecked`, `setAllOwn(entryKey, paths, value)`, `toggleForeign`, `toggleCollapsed`, `clearEntry(entryKey)` (nach erfolgreichem Commit: Nachricht und Abweichungen löschen).
+- [x] Selektor `checkedPaths(sessionId, entryKey, ownPaths, foreignPaths): string[]`.
 
 ### Hook `src/features/git/useGitStatus.ts`
 
-- [ ] Lädt `git_status` beim Mount und alle 5 s (Muster `useSessionChanges`), liefert `{ status, error, reload }`. Beim ersten Erfolg je `sessionId:key` in diesem App-Lauf (Modul-`Set`) für jeden Eintrag ohne `error` einmal `gitFetch`, danach `reload` (Fetch-Fehler still verwerfen).
-- [ ] `useSessionChanges` um `reload` ergänzen, falls nicht vorhanden; `ChangesView` reicht beide `reload` an die Git-Bausteine (`onChanged`).
+- [x] Lädt `git_status` beim Mount und alle 5 s (Muster `useSessionChanges`), liefert `{ status, error, reload }`. Beim ersten Erfolg je `sessionId:key` in diesem App-Lauf (Modul-`Set`) für jeden Eintrag ohne `error` einmal `gitFetch`, danach `reload` (Fetch-Fehler still verwerfen).
+- [x] `useSessionChanges` um `reload` ergänzen, falls nicht vorhanden; `ChangesView` reicht beide `reload` an die Git-Bausteine (`onChanged`).
 
 ### Bausteine `src/features/git/` (je Komponente eine `.css` nach BEM)
 
-- [ ] `GitBranchPill.tsx` — Pille aus den AK; eingebaut in `SessionHeader.tsx` direkt hinter dem Status-Span; braucht `useGitStatus` — den Hook in `App.tsx` einmal je sichtbarer Session aufrufen und `status` an Kopfzeile und `ChangesView` reichen (nicht zwei Abfragen).
-- [ ] `GitLockHint.tsx`, `GitOperationRow.tsx`, `GitEntryBar.tsx` (rechte Seite der Repository-Zeile), `GitCommitBox.tsx` (Feld + Split-Knopf + `GitCommitMenu`), `GitBranchMenu.tsx`, `GitMoreMenu.tsx`, `GitSwitchDialog.tsx`, `GitPushRejectedDialog.tsx`, `gitTexts.ts` (alle Sätze aus den AK an einer Stelle).
-- [ ] Commit-Ablauf in `GitCommitBox`: Pfade = `checkedPaths`; „Commit & Push“ mit `behind > 0` → erst `gitCommit(push: false)`, dann `GitPushRejectedDialog`; sonst `gitCommit(push)`. Erfolg → `clearEntry`, `onChanged`.
+- [x] `GitBranchPill.tsx` — Pille aus den AK; eingebaut in `SessionHeader.tsx` direkt hinter dem Status-Span; braucht `useGitStatus` — den Hook in `App.tsx` einmal je sichtbarer Session aufrufen und `status` an Kopfzeile und `ChangesView` reichen (nicht zwei Abfragen).
+- [x] `GitLockHint.tsx`, `GitOperationRow.tsx`, `GitEntryBar.tsx` (rechte Seite der Repository-Zeile), `GitCommitBox.tsx` (Feld + Split-Knopf + `GitCommitMenu`), `GitBranchMenu.tsx`, `GitMoreMenu.tsx`, `GitSwitchDialog.tsx`, `GitPushRejectedDialog.tsx`, `gitTexts.ts` (alle Sätze aus den AK an einer Stelle).
+- [x] Commit-Ablauf in `GitCommitBox`: Pfade = `checkedPaths`; „Commit & Push“ mit `behind > 0` → erst `gitCommit(push: false)`, dann `GitPushRejectedDialog`; sonst `gitCommit(push)`. Erfolg → `clearEntry`, `onChanged`.
 
 ### Dateibaum `src/features/changes/buildFileRows.ts` und `FileTree.tsx`
 
-- [ ] `buildFileRows(changes, filter, scope, git: GitSessionStatus | null)`; `git === null` (Reichweite Projekt) → Verhalten exakt wie heute.
-- [ ] Neue Zeilenarten in `FileRow`: `{ kind: 'operation'; entryKey }`, `{ kind: 'commitBox'; entryKey }`, `{ kind: 'group'; entryKey; group: 'uncommitted' | 'committed' }`, `{ kind: 'foreignToggle'; entryKey; count }`, `{ kind: 'commit'; entryKey; commitId }`; Datei-Zeilen bekommen `checkable: 'own' | 'foreign' | null` und `scope: ChangeScope` (wofür der Diff öffnet). Die Zeile `repository` bekommt `git: true` — `FileTree.renderRow` setzt dann rechts `GitEntryBar` ein und zeigt den Zuklapp-Pfeil; die Zeilenart `branch` entfällt in der Session-Reichweite. Der Sperr-Hinweis ist keine Zeile, sondern steht über der Liste.
-- [ ] Reihenfolge je Eintrag: `repository` → `operation` (falls) → `commitBox` (falls Blickwinkel ≠ committed) → `group uncommitted` → Dateien → `foreignToggle` (falls fremde vorhanden) → fremde Dateien (falls aufgeklappt) → `group committed` → je Commit `commit` + Dateien. Zugeklappter Eintrag: nur `repository`. Ein Eintrag mit `error` bleibt wie heute (Kopf, Branch, Fehler).
-- [ ] `ESTIMATED_HEIGHT` für alle neuen Arten (Werte aus den AK; `commitBox` 76 px).
-- [ ] `FileTree.css`: Breite 360 px.
+- [x] `buildFileRows(changes, filter, scope, git: GitSessionStatus | null)`; `git === null` (Reichweite Projekt) → Verhalten exakt wie heute.
+- [x] Neue Zeilenarten in `FileRow`: `{ kind: 'operation'; entryKey }`, `{ kind: 'commitBox'; entryKey }`, `{ kind: 'group'; entryKey; group: 'uncommitted' | 'committed' }`, `{ kind: 'foreignToggle'; entryKey; count }`, `{ kind: 'commit'; entryKey; commitId }`; Datei-Zeilen bekommen `checkable: 'own' | 'foreign' | null` und `scope: ChangeScope` (wofür der Diff öffnet). Die Zeile `repository` bekommt `git: true` — `FileTree.renderRow` setzt dann rechts `GitEntryBar` ein und zeigt den Zuklapp-Pfeil; die Zeilenart `branch` entfällt in der Session-Reichweite. Der Sperr-Hinweis ist keine Zeile, sondern steht über der Liste.
+- [x] Reihenfolge je Eintrag: `repository` → `operation` (falls) → `commitBox` (falls Blickwinkel ≠ committed) → `group uncommitted` → Dateien → `foreignToggle` (falls fremde vorhanden) → fremde Dateien (falls aufgeklappt) → `group committed` → je Commit `commit` + Dateien. Zugeklappter Eintrag: nur `repository`. Ein Eintrag mit `error` bleibt wie heute (Kopf, Branch, Fehler).
+- [x] `ESTIMATED_HEIGHT` für alle neuen Arten (Werte aus den AK; `commitBox` 76 px).
+- [x] `FileTree.css`: Breite 360 px.
 
 ### Doc-Updates
 
-- [ ] `docs/code-map.md`: Zeile „Git-Werkzeuge“ Oberfläche: `src/features/git/` (Bausteine), `src/stores/git.ts`, `src/lib/git.ts`, Anschluss in `SessionHeader`, `ChangesView`, `buildFileRows`, `FileTree`.
-- [ ] `docs/design/2026-09-28_hauptansichten/README.md`: Layout-Maße „Dateiliste 360 px“.
-- [ ] `docs/design/2026-10-05_git-werkzeuge/README.md`: Abschnitt „Ergänzungen in der Umsetzung“ mit „Veröffentlichen“ und Konflikt-Zeile.
+- [x] `docs/code-map.md`: Zeile „Git-Werkzeuge“ Oberfläche: `src/features/git/` (Bausteine), `src/stores/git.ts`, `src/lib/git.ts`, Anschluss in `SessionHeader`, `ChangesView`, `buildFileRows`, `FileTree`.
+- [x] `docs/design/2026-09-28_hauptansichten/README.md`: Layout-Maße „Dateiliste 360 px“.
+- [x] `docs/design/2026-10-05_git-werkzeuge/README.md`: Abschnitt „Ergänzungen in der Umsetzung“ mit „Veröffentlichen“ und Konflikt-Zeile.
 
 ## Report-Back
+
+- **Gebaut:** alles aus den AK außer den Teilen, die Phase 4 trägt (Ticket-Worktree-Eintrag im Branch-Menü, „In VS Code öffnen“ in der Konflikt-Zeile). `pnpm lint`, `typecheck`, `format:check`, `build` grün; Rust unverändert. Nicht im Browser gesehen — Layout und Menüs sind ungeprüft, sie prüft der Smoke am Plan-Ende.
+- **Abweichung vom Plan:** `buildFileRows` bekommt als vierten Parameter `GitRowsInput` (Status plus `collapsed`/`showForeign` aus dem Store) statt nur `GitSessionStatus`; die Zeilenart `commit` trägt das ganze Commit-Objekt statt `commitId`; Commit-Dateien sind eine eigene Zeilenart `commitFile`, dazu `note` für „Nichts offen.“. `OpenFile` trägt `scope` (`null` = gewählter Blickwinkel), weil Gruppen im Blickwinkel „Alle“ ihren Diff in `uncommitted` bzw. `committed` öffnen. `reload` der beiden Hooks bricht eine laufende Abfrage ab, damit nach einer Aktion kein vor ihr gelesener Stand überschreibt.
+- **Menüs am Dokument:** der scrollende Dateibaum würde Popover abschneiden — `GitMenuHost` hängt sie per Portal an den Knopf; der auslösende Knopf beendet seinen `pointerdown`, solange das Menü offen ist (sonst öffnete es sich beim Schließen-Klick wieder).
+- **Unsicherste Stelle:** `FileTree.tsx` Datei-Zeile mit Häkchen (Einrückung, Wrapper um den Button) und die Höhe des Commit-Felds im virtualisierten Baum (Fokus 32 → 60 px, Neumessung per `measureElement`).

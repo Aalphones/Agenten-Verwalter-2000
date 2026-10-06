@@ -1,0 +1,69 @@
+.git-commit-box {
+  padding: var(--space-2xs) var(--space-lg) var(--space-sm);
+
+  &__message {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: 32px;
+    padding: 6px var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    outline: none;
+    background: var(--color-bg-base);
+    color: var(--color-fg-primary);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    resize: none;
+
+    &:focus {
+      height: 60px;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    }
+  }
+
+  &__split {
+    display: flex;
+    margin-top: var(--space-sm);
+    overflow: hidden;
+    border-radius: var(--radius-md);
+  }
+
+  &__commit,
+  &__drop {
+    height: 28px;
+    border: 0;
+    background: var(--color-accent);
+    color: var(--color-fg-on-accent);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-fg-primary);
+      outline-offset: -3px;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  &__commit {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+  }
+
+  &__drop {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    border-left: 1px solid color-mix(in srgb, var(--color-fg-on-accent) 25%, transparent);
+  }
+}

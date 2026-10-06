@@ -33,6 +33,14 @@ Die Changes zeigen schon heute, was die Session geändert hat, getrennt nach Unc
 - **Eigene Änderungen vorab angehakt, fremde nicht:** nutzt die vorhandene Zuordnung der Changes (ADR 014), damit ein Commit nicht versehentlich Fremdes mitnimmt.
 - **Anzeige aus Git, nie aus dem Agenten** (Critical Rule 2).
 
+## Ergänzungen in der Umsetzung
+
+Was der Entwurf nicht zeigt und die Umsetzung hinzufügt oder anders löst:
+
+- **„↑ Veröffentlichen“:** hat der Branch noch keinen Upstream, steht in der Repository-Zeile statt „↑n“ der Knopf „↑ Veröffentlichen“ (Tooltip „Branch zum ersten Mal pushen“), gestaltet wie der Push-Zähler. Der Klick pusht mit `-u`.
+- **Konflikt-Zeile:** bei einem angehaltenen Merge oder Rebase steht unter der Repository-Zeile eine Zeile im Stil des Sperr-Hinweises, Rand und Symbol in `--color-status-waiting`: „Merge mit Konflikten in N Dateien“ bzw. „Rebase angehalten“, dazu „Merge abbrechen“ bzw. „Rebase abbrechen“ (gesperrt, solange der Agent arbeitet). „In VS Code öffnen“ kommt mit Phase 4. Das Commit-Feld bleibt nutzbar.
+- **Menüs und Hinweise im Dateibaum:** die drei Menüs (Branch, ⋯, Commit) hängen am Dokument statt im scrollenden Baum, damit sie nicht abgeschnitten werden. Unter „Uncommitted“ ohne eigene Dateien steht „Nichts offen.“; ohne eigene Commits fehlt die Gruppe „Committed“ unter „Alle“ und zeigt im eigenen Blickwinkel „Noch nichts committed.“.
+
 ## Offene Fragen
 
 - Pille in der Kopfzeile: nur das erste Repository plus „+N“, oder alle nebeneinander bis zu einer Grenze?

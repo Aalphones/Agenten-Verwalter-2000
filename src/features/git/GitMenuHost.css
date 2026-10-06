@@ -1,0 +1,10 @@
+/* Unsichtbarer Rahmen über dem auslösenden Knopf: das Menü darin richtet sich nach ihm aus (Popover). */
+.git-menu-host {
+  position: fixed;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+
+  & > * {
+    pointer-events: auto;
+  }
+}
