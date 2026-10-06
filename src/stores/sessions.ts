@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 
-export const SESSION_VIEWS = ['chat', 'changes'] as const;
+export const SESSION_VIEWS = ['chat', 'changes', 'artifacts'] as const;
 export type SessionView = (typeof SESSION_VIEWS)[number];
 
-export const PROJECT_VIEWS = ['overview', 'changes'] as const;
+export const PROJECT_VIEWS = ['overview', 'changes', 'artifacts'] as const;
 export type ProjectView = (typeof PROJECT_VIEWS)[number];
 
 export type RenameKind = 'session' | 'project';

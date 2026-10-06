@@ -12,7 +12,11 @@ import './SessionHeader.css';
 
 const MS_PER_SECOND = 1000;
 
-const VIEW_LABEL: Record<ProjectView, string> = { overview: 'Übersicht', changes: 'Changes' };
+const VIEW_LABEL: Record<ProjectView, string> = {
+  overview: 'Übersicht',
+  changes: 'Changes',
+  artifacts: 'Artefakte',
+};
 
 interface ProjectHeaderProps {
   project: ProjectSummary;
@@ -20,6 +24,8 @@ interface ProjectHeaderProps {
   activeView: ProjectView;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
+  /** Artefakte des Vorhabens; „Artefakte“ erscheint erst ab dem ersten. */
+  artifactCount: number;
   onShowView: (view: ProjectView) => void;
 }
 
@@ -28,6 +34,7 @@ export function ProjectHeader({
   sessions,
   activeView,
   changesCount,
+  artifactCount,
   onShowView,
 }: ProjectHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
@@ -59,9 +66,13 @@ export function ProjectHeader({
       (session.runningSince === null ? 0 : Math.max(0, now - session.runningSince)),
     0,
   );
-  // „Changes“ gibt es nur mit mindestens einem Repository.
-  const views: readonly ProjectView[] =
-    project.repositoryNames.length > 0 ? PROJECT_VIEWS : ['overview'];
+  // „Changes“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
+  const views: readonly ProjectView[] = PROJECT_VIEWS.filter(
+    (view: ProjectView) =>
+      view === 'overview' ||
+      (view === 'changes' && project.repositoryNames.length > 0) ||
+      (view === 'artifacts' && artifactCount > 0),
+  );
   const sessionCountLabel: string =
     sessions.length === 1 ? '1 Session' : `${String(sessions.length)} Sessions`;
 
@@ -91,6 +102,9 @@ export function ProjectHeader({
             {VIEW_LABEL[view]}
             {view === 'changes' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+            )}
+            {view === 'artifacts' && (
+              <span className="session-header__tab-count">{formatCount(artifactCount)}</span>
             )}
           </button>
         ))}

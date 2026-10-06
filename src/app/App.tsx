@@ -7,6 +7,8 @@ import { Sidebar } from '@/app/Sidebar';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
 import { countRunning, indexByToolUseId } from '@/features/background/backgroundItems';
 import { useSessionBackground } from '@/features/background/useSessionBackground';
+import { ArtifactsView } from '@/features/artifacts/ArtifactsView';
+import { useProjectArtifacts } from '@/features/artifacts/useProjectArtifacts';
 import { ChatView } from '@/features/chat/ChatView';
 import { countChangedFiles } from '@/features/changes/changesScope';
 import { ChangesView } from '@/features/changes/ChangesView';
@@ -21,6 +23,7 @@ import { useViewedSession } from '@/features/sessions/useViewedSession';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
+import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
@@ -93,6 +96,16 @@ export function App(): ReactElement {
       activeView === 'changes' &&
       currentSession !== undefined &&
       currentSession.repositoryCount > 0;
+  // Die Artefakte gehören dem Vorhaben; in der Übersicht fragt die neueste Session ab (wie bei den Changes).
+  const { list: artifacts }: { list: ArtifactList | null } = useProjectArtifacts(
+    isMainReplaced ? null : (currentSession?.id ?? null),
+    isMainReplaced ? null : (currentSession?.projectId ?? null),
+  );
+  const artifactCount: number = artifacts?.items.length ?? 0;
+  // Ohne Artefakt fällt die Ansicht auf Chat bzw. Übersicht zurück.
+  const isArtifactsView: boolean = isOverview
+    ? projectView === 'artifacts' && artifactCount > 0
+    : !isMainReplaced && activeView === 'artifacts' && artifactCount > 0;
   const changesReach: ChangesReach = isOverview ? 'project' : 'session';
   const { changes, error: changesError } = useSessionChanges(
     isMainReplaced ? null : (currentSession ?? null),
@@ -154,29 +167,90 @@ export function App(): ReactElement {
         <ProjectHeader
           project={project}
           sessions={overviewSessions}
-          activeView={isChangesView ? 'changes' : 'overview'}
+          activeView={projectViewShown()}
           changesCount={changes === null ? null : countChangedFiles(changes)}
+          artifactCount={artifactCount}
           onShowView={showProjectView}
         />
-        {isChangesView ? (
-          <ChangesView
-            key={latestSession.id}
-            session={latestSession}
-            changes={changes}
-            error={changesError}
-            reach="project"
-          />
-        ) : (
-          <ProjectOverview
-            project={project}
-            sessions={overviewSessions}
-            changes={changes}
-            onOpenSession={selectSession}
-            onSessionCreated={handleSessionCreated}
-            onProjectChanged={upsertProject}
-          />
-        )}
+        {renderOverviewBody(project, latestSession)}
       </Fragment>
+    );
+  }
+
+  function projectViewShown(): ProjectView {
+    if (isArtifactsView) {
+      return 'artifacts';
+    }
+    return isChangesView ? 'changes' : 'overview';
+  }
+
+  function renderOverviewBody(
+    project: ProjectSummary,
+    latestSession: SessionSummary,
+  ): ReactElement {
+    if (isArtifactsView && artifacts !== null) {
+      return (
+        <ArtifactsView
+          sessionId={latestSession.id}
+          projectId={project.id}
+          currentSessionId={null}
+          list={artifacts}
+        />
+      );
+    }
+    if (isChangesView) {
+      return (
+        <ChangesView
+          key={latestSession.id}
+          session={latestSession}
+          changes={changes}
+          error={changesError}
+          reach="project"
+        />
+      );
+    }
+    return (
+      <ProjectOverview
+        project={project}
+        sessions={overviewSessions}
+        changes={changes}
+        onOpenSession={selectSession}
+        onSessionCreated={handleSessionCreated}
+        onProjectChanged={upsertProject}
+      />
+    );
+  }
+
+  function sessionViewShown(): SessionView {
+    if (isArtifactsView) {
+      return 'artifacts';
+    }
+    return isChangesView ? 'changes' : 'chat';
+  }
+
+  function renderSessionBody(session: SessionSummary): ReactElement {
+    if (isArtifactsView && artifacts !== null) {
+      return (
+        <ArtifactsView
+          sessionId={session.id}
+          projectId={session.projectId}
+          currentSessionId={session.id}
+          list={artifacts}
+        />
+      );
+    }
+    if (isChangesView) {
+      return (
+        <ChangesView session={session} changes={changes} error={changesError} reach="session" />
+      );
+    }
+    return (
+      <ChatView
+        session={session}
+        projectName={projectNameOf(session)}
+        backgroundByToolUseId={backgroundByToolUseId}
+        onSessionCreated={handleSessionCreated}
+      />
     );
   }
 
@@ -203,8 +277,9 @@ export function App(): ReactElement {
           <SessionHeader
             session={currentSession}
             projectName={projectNameOf(currentSession)}
-            activeView={isChangesView ? 'changes' : 'chat'}
+            activeView={sessionViewShown()}
             changesCount={changes === null ? null : countChangedFiles(changes)}
+            artifactCount={artifactCount}
             runningBackgroundCount={countRunning(backgroundItems)}
             isBackgroundOpen={isBackgroundOpen}
             onToggleBackground={toggleBackground}
@@ -214,21 +289,7 @@ export function App(): ReactElement {
             }}
           />
           <SessionActionError sessionId={currentSession.id} />
-          {isChangesView ? (
-            <ChangesView
-              session={currentSession}
-              changes={changes}
-              error={changesError}
-              reach="session"
-            />
-          ) : (
-            <ChatView
-              session={currentSession}
-              projectName={projectNameOf(currentSession)}
-              backgroundByToolUseId={backgroundByToolUseId}
-              onSessionCreated={handleSessionCreated}
-            />
-          )}
+          {renderSessionBody(currentSession)}
         </Fragment>
       );
     }

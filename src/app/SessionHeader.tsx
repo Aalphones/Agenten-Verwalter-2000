@@ -25,7 +25,11 @@ const BACKGROUND_TITLE =
 
 const CONTEXT_TITLE = 'Kontext dieser Session — Klick zeigt, was ihn belegt';
 
-const VIEW_LABEL: Record<SessionView, string> = { chat: 'Chat', changes: 'Changes' };
+const VIEW_LABEL: Record<SessionView, string> = {
+  chat: 'Chat',
+  changes: 'Changes',
+  artifacts: 'Artefakte',
+};
 
 type OpenPanel = 'context' | 'usage';
 
@@ -35,6 +39,8 @@ interface SessionHeaderProps {
   activeView: SessionView;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
+  /** Artefakte des Vorhabens; „Artefakte“ erscheint erst ab dem ersten. */
+  artifactCount: number;
   /** Laufende Prozesse und Subagenten der Session. */
   runningBackgroundCount: number;
   isBackgroundOpen: boolean;
@@ -48,6 +54,7 @@ export function SessionHeader({
   projectName,
   activeView,
   changesCount,
+  artifactCount,
   runningBackgroundCount,
   isBackgroundOpen,
   onToggleBackground,
@@ -92,8 +99,13 @@ export function SessionHeader({
       : session.runningMs + Math.max(0, now - session.runningSince);
   const contextPercent: number =
     session.contextWindow === 0 ? 0 : (session.contextUsed / session.contextWindow) * 100;
-  // „Changes“ gibt es nur mit mindestens einem Repository.
-  const views: readonly SessionView[] = session.repositoryCount > 0 ? SESSION_VIEWS : ['chat'];
+  // „Changes“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
+  const views: readonly SessionView[] = SESSION_VIEWS.filter(
+    (view: SessionView) =>
+      view === 'chat' ||
+      (view === 'changes' && session.repositoryCount > 0) ||
+      (view === 'artifacts' && artifactCount > 0),
+  );
 
   const reviewTitle: string | undefined =
     reviewCount === 0
@@ -234,6 +246,9 @@ export function SessionHeader({
             )}
             {view === 'changes' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+            )}
+            {view === 'artifacts' && (
+              <span className="session-header__tab-count">{formatCount(artifactCount)}</span>
             )}
           </button>
         ))}

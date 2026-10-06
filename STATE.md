@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-05_artefakte/` (Artefakte)
-**Phase:** 2/4 — Reiter „Artefakte“ mit Liste und Vorschau (pending; Phase 1 complete)
-**Nächster Schritt:** Phase 2 umsetzen (`phase-2-reiter.md`, zuerst FINDINGS → Phase 2); `artifactUrl` nimmt jetzt `baseUrl` aus der Liste (Artefakt-Server statt Protokoll). Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
+**Phase:** 2/4 — Reiter „Artefakte“ mit Liste und Vorschau (complete, committet; Phase 1 complete)
+**Nächster Schritt:** Phase 3 (`phase-3-vollbild.md`) in frischer Session. Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

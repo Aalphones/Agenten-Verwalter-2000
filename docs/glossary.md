@@ -40,6 +40,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Tool-Aktivität** | Die Einzelschritte des Agenten (Datei lesen, Befehl ausführen …). Im Chat standardmäßig eingeklappt zusammengefasst. |
 | **Chat-Ansicht** | Hauptansicht einer Session: Gespräch mit dem Agenten, Status, Rückfragen. |
 | **Changes-Ansicht** | Prüfansicht eines Vorhabens, erreichbar aus jeder seiner Sessions: die eigenen Änderungen (Session) bzw. die aller Sessions (Vorhaben-Übersicht): Repositories, Dateien und Diffs gegen die Basis, im gewählten Blickwinkel. |
+| **Artefakte-Ansicht** | Ansicht eines Vorhabens, erreichbar aus jeder seiner Sessions und der Übersicht: Liste der Artefakte und Vorschau der gewählten Seite; erscheint erst mit dem ersten Artefakt. |
 | **Review-Kommentar** | Kommentar zu einer Diff-Zeile, geschrieben über das „+“ am Zeilenrand in der Changes-Ansicht einer Session; wird in der Eingabeleiste gesammelt und mit der nächsten Nachricht an den Agenten geschickt, mit absolutem Pfad, Zeilennummer und Codezeile. Im Code `ReviewComment` ([ADR 015](decisions/015-changes-review.md)). |
 | **Gesammelte Kommentare** | Die noch nicht gesendeten Review-Kommentare einer Session; flüchtig wie der Entwurf, gehen beim Neustart der App verloren. Ihre Zahl steht am Reiter „Chat“. |
 | **Dateiverweis** | Pfad in einer Agenten-Antwort (als Inline-Code oder Markdown-Link), der per Klick mit dem Standardprogramm von Windows öffnet. Nur Anzeige-Formate (HTML, PDF, Bilder, Markdown, Text) und nur innerhalb des Vorhabens; was scheitert, steht in der Fehlerleiste der Session ([ADR 023](decisions/023-dateiverweise-im-chat.md)). |
@@ -48,7 +49,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Befehl** (Command) | Eine Markdown-Datei in `.claude\commands`, aufgerufen wie ein Skill mit `/name`. |
 | **Modus** | Wie selbstständig der Agent arbeitet: Manuell, Automatisch bearbeiten, Planen, Auto. Pro Session, jederzeit wechselbar. |
 | **Denkaufwand** | Wie gründlich das Modell nachdenkt, fünf Stufen von Niedrig bis Max. Pro Session, jederzeit wechselbar. |
-| **Artefakt** | HTML-Seite, die der Agent zum Ansehen erstellt (Bericht, Präsentation, Diagramm, Design): jede `.html`/`.htm`-Datei direkt im Ordner `<Workspace>\.artefakte\`. Gehört dem Vorhaben, nicht der Session; gezeigt im Reiter „Artefakte“, abgeschottet ausgeliefert vom Artefakt-Server auf `127.0.0.1` ([ADR 026](decisions/026-artefakte.md)). |
+| **Artefakt** | Eine HTML-Seite, die ein Agent zum Ansehen im Ordner `.artefakte` des Vorhabens ablegt (Bericht, Präsentation, Diagramm, Entwurf). Gehört dem Vorhaben, nicht der Session. Im Reiter „Artefakte“ von Session und Übersicht ([ADR 026](decisions/026-artefakte.md)). |
 | **Subagent** | Ein vom Agenten selbst gestarteter Hilfs-Agent für eine Teilaufgabe. Läuft innerhalb der Session, wird dort angezeigt. |
 | **Hintergrundprozess** | Ein vom Agenten mit `run_in_background` gestarteter Bash-Befehl, der weiterläuft, während der Agent arbeitet (z.B. ein Dev-Server). Seine Ausgabe schreibt die Kommandozeile in eine eigene Ausgabedatei; die App kann ihn anhalten. |
 | **Ausgeführter Befehl** | Ein Bash-Aufruf des Agenten im Vordergrund; steht im Hintergrund-Panel unter „Ausgeführt“ mit Exit-Code und Ausgabe. |
