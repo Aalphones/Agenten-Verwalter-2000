@@ -1,8 +1,8 @@
 //! Artefakte: HTML-Seiten, die der Agent im Ordner `.artefakte` des Vorhabens ablegt (ADR 026).
-//! Hier liegen Ordner, Liste und die Pfadprüfung; ausgeliefert werden die Dateien über das
-//! Protokoll `artefakt` (`protocol`).
+//! Hier liegen Ordner, Liste und die Pfadprüfung; ausgeliefert werden die Dateien über einen
+//! eigenen Server auf `127.0.0.1` (`server`).
 pub mod model;
-pub mod protocol;
+pub mod server;
 
 use std::cmp::Ordering;
 use std::fs::{self, File};

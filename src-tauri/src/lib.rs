@@ -44,7 +44,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .register_asynchronous_uri_scheme_protocol("artefakt", artifacts::protocol::handle)
         .setup(|app| {
             // Ohne Datenbank startet die App nicht: ein stiller Weiterlauf verlöre jede Session beim Beenden.
             let database = Arc::new(Database::open(
@@ -58,6 +57,13 @@ pub fn run() {
             app.manage(AccountService::new());
             app.manage(VoiceService::new());
             SessionRegistry::start_reaper(app.handle().clone());
+            // Ohne Server fehlen nur die Artefakte; `artifacts_list` meldet das.
+            match artifacts::server::start(app.handle().clone()) {
+                Ok(server) => {
+                    app.manage(server);
+                }
+                Err(error) => eprintln!("Server für Artefakte nicht gestartet: {error}"),
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Probe Befehle aus dem Rahmen</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; color: #1d2433; background: #fff; }
+  .ok { color: #16803c; font-weight: 600; }
+  .bad { color: #d23b33; font-weight: 600; }
+  .info { color: #5b6475; font-weight: 600; }
+  code { font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Probe: erreicht der Rahmen den Verwalter?</h1>
+<p>Zeile 3 und 4 entscheiden: grün = ein Befehl kommt nicht beim Verwalter an.</p>
+<ol id="out"></ol>
+<script>
+  const out = document.getElementById('out');
+  function row(kind, text, detail) {
+    const li = document.createElement('li');
+    const label = kind === 'ok' ? 'wie erwartet' : kind === 'bad' ? 'NICHT wie erwartet' : 'Info';
+    li.innerHTML = `<span class="${kind}">${label}</span> ${text} — <code>${detail}</code>`;
+    out.append(li);
+  }
+  const internals = window.__TAURI_INTERNALS__;
+  row('info', 'Schlüssel von <code>__TAURI_INTERNALS__</code>', internals ? Object.keys(internals).join(', ') : 'keins');
+  row('info', '<code>window.chrome.webview.postMessage</code> vorhanden', String(typeof window.chrome?.webview?.postMessage));
+
+  function attempt(text, command) {
+    if (!internals || typeof internals.invoke !== 'function') {
+      row('ok', text, 'kein invoke');
+      return;
+    }
+    const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 4000));
+    const call = internals.invoke(command, {}).then(
+      (value) => 'Antwort: ' + JSON.stringify(value).slice(0, 120),
+      (error) => 'Fehler: ' + String(error?.message ?? error).slice(0, 160),
+    );
+    Promise.race([call, timeout]).then((result) => {
+      row(result.startsWith('Antwort') ? 'bad' : 'ok', text, result);
+    });
+  }
+  attempt('Befehl <code>app_info</code> bekommt keine Antwort', 'app_info');
+  attempt('Befehl <code>project_list</code> bekommt keine Antwort', 'project_list');
+</script>
+</body>
+</html>

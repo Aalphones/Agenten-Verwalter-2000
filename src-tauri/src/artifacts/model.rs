@@ -25,6 +25,9 @@ pub struct Artifact {
 pub struct ArtifactList {
     /// Absoluter Pfad des Ordners `.artefakte`, auch wenn es ihn noch nicht gibt.
     pub dir: String,
+    /// Adresse des Ordners auf dem Artefakt-Server, mit `/` am Ende; dahinter folgt der
+    /// prozent-kodierte Dateiname. Gilt nur, solange die App läuft (Zufalls-Port und -Token).
+    pub base_url: String,
     /// Neueste Änderung zuerst.
     pub items: Vec<Artifact>,
 }

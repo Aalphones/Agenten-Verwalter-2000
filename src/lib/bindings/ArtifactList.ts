@@ -7,6 +7,11 @@ export type ArtifactList = {
  */
 dir: string, 
 /**
+ * Adresse des Ordners auf dem Artefakt-Server, mit `/` am Ende; dahinter folgt der
+ * prozent-kodierte Dateiname. Gilt nur, solange die App läuft (Zufalls-Port und -Token).
+ */
+baseUrl: string, 
+/**
  * Neueste Änderung zuerst.
  */
 items: Array<Artifact>, };

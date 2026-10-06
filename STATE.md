@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-05_artefakte/` (Artefakte)
-**Phase:** 1/4 — Core: Ordner, Liste, Protokoll, Sicherheitsprobe (Code fertig und committet, Sicherheitsprobe offen)
-**Nächster Schritt:** User macht die Sicherheitsprobe (`phase-1-core-und-protokoll.md` → „Sicherheitsprobe“), Ergebnis ins Report-Back; alle Zeilen grün → Phase 1 complete, dann Phase 2 (`phase-2-reiter.md`). Rote Zeile 1–5 → anhalten, FINDINGS. Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
+**Phase:** 1/4 — Core: Ordner, Liste, Artefakt-Server, Sicherheitsprobe (auf Server umgebaut und committet, Sicherheitsprobe offen)
+**Nächster Schritt:** User macht die Sicherheitsprobe mit dem Server (`phase-1-core-und-protokoll.md` → „Sicherheitsprobe“), Ergebnis ins Report-Back; Befehls-Probe grün und Status 403/404 → Phase 1 complete, dann Phase 2 (`phase-2-reiter.md`). Sonst anhalten, FINDINGS. Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

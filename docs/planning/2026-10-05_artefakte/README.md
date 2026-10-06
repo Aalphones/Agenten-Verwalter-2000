@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | [Core: Ordner, Liste, Protokoll, Sicherheitsprobe](phase-1-core-und-protokoll.md) | heikel | in progress (Code fertig, Sicherheitsprobe offen) |
+| 1 | [Core: Ordner, Liste, Protokoll, Sicherheitsprobe](phase-1-core-und-protokoll.md) | heikel | in progress (auf Artefakt-Server umgebaut, Sicherheitsprobe offen) |
 | 2 | [Reiter „Artefakte“ mit Liste und Vorschau](phase-2-reiter.md) | standard | pending |
 | 3 | [Vollbild](phase-3-vollbild.md) | standard | pending |
 | 4 | [Anweisung an den Agenten, Karte im Chat, Abschluss](phase-4-anweisung-und-karte.md) | standard | pending |
@@ -43,6 +43,9 @@ pub struct Artifact {
 pub struct ArtifactList {
     /// Absoluter Pfad des Ordners `.artefakte`, auch wenn es ihn noch nicht gibt.
     pub dir: String,
+    /// Adresse des Ordners auf dem Artefakt-Server, mit `/` am Ende
+    /// (`http://127.0.0.1:<port>/<token>/<session-id>/`); gilt nur, solange die App läuft.
+    pub base_url: String,
     /// Neueste Änderung zuerst.
     pub items: Vec<Artifact>,
 }
@@ -55,23 +58,22 @@ pub struct ArtifactList {
 | `artifacts_list(session_id: String)` | `ArtifactList` | Artefakte des Vorhabens, zu dem die Session gehört; fehlt der Ordner, ist `items` leer |
 | `artifact_open_in_browser(session_id: String, file: String)` | `()` | öffnet `<Ordner>\<file>` mit dem Standardprogramm (Opener-Plugin, wie `file_link_open`); `file` muss ein Artefakt aus der Liste sein |
 
-**Protokoll:** eigenes URI-Schema `artefakt`, registriert in `src-tauri/src/lib.rs`. Unter Windows erreichbar als `http://artefakt.localhost/<session-id>/<pfad>` (Tauri 2.12, `register_asynchronous_uri_scheme_protocol`, Doku in `tauri-2.12.0/src/app.rs`). `<pfad>` ist relativ zum Ordner `.artefakte`, Segmente prozent-kodiert. Antwort-Header: `Content-Type` nach Endung, `Cache-Control: no-store`, `Access-Control-Allow-Origin: *`, `Content-Security-Policy` = **Artefakt-CSP** (unten). Pfade außerhalb des Ordners → 403, fehlende Datei → 404, unbekannte Session → 404.
+**Artefakt-Server** (`src-tauri/src/artifacts/server.rs`, gestartet in `setup` in `src-tauri/src/lib.rs`, verwaltet als State `ArtifactServer`): eigener HTTP-Server auf `127.0.0.1` mit Zufalls-Port, `std::net`, keine neue Abhängigkeit. Adresse `http://127.0.0.1:<port>/<token>/<session-id>/<pfad>`; `<token>` ist je App-Start zufällig (UUID v4), `<pfad>` relativ zum Ordner `.artefakte`, Segmente prozent-kodiert. Kein eigenes Tauri-Protokoll: Tauri stuft Seiten eines von der App registrierten Protokolls als „lokal“ ein (volle Rechte der App), und die Init-Skripte samt Invoke-Key laufen unter Windows auch im iframe (FINDINGS → Phase 1); `127.0.0.1` ist für Tauri entfernte Herkunft, jeder Befehl wird ohne Remote-Capability abgewiesen. Antwort-Header: `Content-Type` nach Endung, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `Access-Control-Allow-Origin: *`, `Content-Security-Policy` = **Artefakt-CSP** (unten). `Host` ≠ `127.0.0.1:<port>` → 403 (DNS-Rebinding); falscher Token, unbekannte Session, fehlende Datei → 404; Pfade außerhalb des Ordners → 403; andere Methode als `GET` → 405.
 
 TS-Helfer in `src/lib/artifacts.ts`:
 
 ```ts
-export const ARTIFACT_ORIGIN = 'http://artefakt.localhost';
-export function artifactUrl(sessionId: string, file: string, modifiedAt: number): string {
+export function artifactUrl(baseUrl: string, file: string, modifiedAt: number): string {
   const path: string = file.split('/').map(encodeURIComponent).join('/');
-  return `${ARTIFACT_ORIGIN}/${encodeURIComponent(sessionId)}/${path}?v=${String(modifiedAt)}`;
+  return `${baseUrl}${path}?v=${String(modifiedAt)}`;
 }
 ```
 
 **Abschottung:**
 
 - Vorschau-`<iframe>` mit `sandbox="allow-scripts allow-forms allow-modals"` (ohne `allow-same-origin`, ohne `allow-popups`, ohne `allow-top-navigation`) und `allow="fullscreen"`.
-- **Artefakt-CSP** (Antwort-Header jeder Datei des Protokolls): `default-src 'self' http://artefakt.localhost https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://artefakt.localhost https:; form-action 'none'; base-uri 'self'` — Internet über https erlaubt, `ipc:`/`http://ipc.localhost` nicht.
-- **App-CSP** in `src-tauri/tauri.conf.json` bekommt `frame-src http://artefakt.localhost` dazu; sonst bleibt sie unverändert.
+- **Artefakt-CSP** (Antwort-Header jeder Datei des Servers, `<scope>` = `http://127.0.0.1:<port>/<token>/<session-id>/`): `default-src <scope> https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src <scope> https:; form-action 'none'; base-uri <scope>` — Internet über https erlaubt, `ipc:`/`http://ipc.localhost` und die Ordner anderer Sessions nicht.
+- **App-CSP** in `src-tauri/tauri.conf.json` bekommt `frame-src http://127.0.0.1:*` dazu (der Port ist erst zur Laufzeit bekannt); sonst bleibt sie unverändert.
 
 **Chat-Eintrag** (`src-tauri/src/agents/event.rs`, `ChatEntry`): neue Variante `Artifact { seq: u32, path: String, file: String }` — `path` ungekürzt wie vom Werkzeug genannt, `file` der Dateiname. In TS `kind: 'artifact'`. Gespeichert wie alle Einträge als JSON, keine Migration.
 
@@ -98,7 +100,7 @@ Wackelstellen zuerst:
 6. „Im Browser öffnen“ öffnet die Datei im Standard-Browser; „Im Chat besprechen“ setzt „Zu Artefakt „Titel“ (Pfad): “ in die Eingabeleiste.
 7. Ein Artefakt aus Session #1 zeigt in Session #2 „#1 Name“, in Session #1 „diese Session“.
 8. Betriebsart „Claude Code + LM Studio“ und „Autark“: Frage „Wo legst du Artefakte ab?“ nennt den Ordner `.artefakte`.
-9. Devtools der App (Entwicklungsmodus), Konsole: `fetch('http://artefakt.localhost/<session-id>/..%5C..%5Cverwalter.db')` → Status 403 oder 404, nie 200.
+9. Devtools der App (Entwicklungsmodus), Konsole: `const l = await window.__TAURI_INTERNALS__.invoke('artifacts_list', { sessionId: '<session-id>' }); (await fetch(l.baseUrl + '..%5C..%5Cverwalter.db')).status` → 403 oder 404, nie 200.
 
 ## Summary
 
