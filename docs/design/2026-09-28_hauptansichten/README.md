@@ -21,7 +21,7 @@ Leitlinie: Die App soll sich in der Bedienung so anfühlen wie die Claude-Erweit
 | `Light.dc.html` | Chat im Hellmodus | M6 |
 | `Changes.dc.html` | Changes-Ansicht: Filter, Dateibaum pro Repository, Übersicht | M5 |
 | `Diff.dc.html` | Changes mit geöffneter Datei (Unified Diff) | M5 |
-| `Artifacts.dc.html` | Reiter „Artefakte“: Liste und Vorschau | offen (GAPS: Artefakte) |
+| `Artifacts.dc.html` | Reiter „Artefakte“: Liste und Vorschau | fortgeführt in [2026-10-05_artefakte](../2026-10-05_artefakte/README.md), Plan Artefakte |
 | `Attach.dc.html` | `+`-Menü und angehängte Dateien in der Eingabeleiste | M2b |
 | `Cmd.dc.html` | `/`-Knopf: Menü mit Kontext, Modell, Skills, Session | M2b |
 | `Slash.dc.html` | `/` ins Eingabefeld getippt: nur Skills und Befehle, filtert beim Tippen | M2b |

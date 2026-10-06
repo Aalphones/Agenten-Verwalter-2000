@@ -225,6 +225,9 @@ struct SessionState {
     /// Befehle, Prozesse und Subagenten, nach `started_at` aufsteigend. Wird mit dem Verlauf geladen.
     background: Vec<BackgroundItem>,
     scratchpad_dir: Option<String>,
+    /// Ordner `.artefakte` des Vorhabens, gesetzt bei jedem Agent-Start; daran erkennt `apply_event`
+    /// Artefakte.
+    artifacts_dir: Option<PathBuf>,
     /// Woran die Ticket-Worktrees der Repositories und ihrer inneren Repositories zu erkennen sind;
     /// beim Anlegen, Laden und jedem Agent-Start neu bestimmt (liest die Verzeichnisse der Repositories).
     ticket_roots: Vec<TicketRoot>,
@@ -1567,6 +1570,7 @@ impl SessionState {
             next_request: 0,
             background: Vec::new(),
             scratchpad_dir: None,
+            artifacts_dir: None,
             ticket_roots: Vec::new(),
             ticket_worktrees: Vec::new(),
             tldr: None,
@@ -1974,6 +1978,7 @@ impl SessionState {
                 self.wake_if_idle(outbox);
                 self.note_ticket_worktrees(outbox, &used_paths);
                 self.note_touched_files(outbox, &tool, &used_paths);
+                let is_write: bool = tool == "Write";
                 let entry_tool_use_id = tool_use_id.clone();
                 let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Tool {
                     seq,
@@ -1983,6 +1988,9 @@ impl SessionState {
                     state: ToolState::Running,
                 });
                 self.tool_seqs.insert(tool_use_id, seq);
+                if is_write {
+                    self.push_artifact_entries(outbox, &used_paths);
+                }
             }
             AgentEvent::ToolFinished {
                 tool_use_id,
@@ -2148,6 +2156,24 @@ impl SessionState {
                 self.ticket_worktrees.push((position, folder.clone()));
                 outbox.ticket_worktrees.push((position, folder));
             }
+        }
+    }
+
+    /// Je geschriebenem Artefakt eine Karte im Verlauf; ohne Artefakt-Ordner (Agent nie gestartet)
+    /// passiert nichts.
+    fn push_artifact_entries(&mut self, outbox: &mut Outbox, used_paths: &[String]) {
+        let Some(dir) = self.artifacts_dir.clone() else {
+            return;
+        };
+        for path in used_paths {
+            let Some(file) = crate::artifacts::artifact_file_of(&dir, path) else {
+                continue;
+            };
+            self.push_entry(outbox, |seq: u32| ChatEntry::Artifact {
+                seq,
+                path: path.clone(),
+                file,
+            });
         }
     }
 
@@ -2648,6 +2674,7 @@ fn start_process(
     }
     state.forget_mcp(outbox);
     let scratchpad_dir = use_scratchpad(session, state, outbox);
+    let artifacts_dir = use_artifacts(session, state);
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -2666,6 +2693,7 @@ fn start_process(
             allowed_rules: worktrees::permission_rules(&repositories),
             local: backend.cloned(),
             scratchpad: scratchpad_dir,
+            artifacts: artifacts_dir,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -2711,6 +2739,21 @@ fn use_scratchpad(
         outbox.scratchpad_dir = Some(path);
     }
     Some(dir)
+}
+
+/// Legt den Ordner `.artefakte` des Vorhabens an und merkt ihn sich. Scheitert das Anlegen, startet
+/// der Agent ohne Vorgabe.
+fn use_artifacts(session: &Session, state: &mut SessionState) -> Option<PathBuf> {
+    match crate::artifacts::prepare(&session.workspace) {
+        Ok(dir) => {
+            state.artifacts_dir = Some(dir.clone());
+            Some(dir)
+        }
+        Err(error) => {
+            state.push_log(format!("Artefakt-Ordner nicht angelegt: {error}"));
+            None
+        }
+    }
 }
 
 /// Beendet den Prozess einer ruhenden Session; die nächste Nachricht startet ihn mit `--resume` neu.

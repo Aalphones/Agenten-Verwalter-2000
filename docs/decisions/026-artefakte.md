@@ -26,4 +26,6 @@ Berichte, Präsentationen, Diagramme und Design-Entwürfe sind als HTML-Seite am
 - Andere Programme des Benutzers können den Port finden, brauchen aber den Token; Seiten im `.artefakte`-Ordner sind ohnehin für jedes Programm des Benutzers lesbar.
 - Formulare schicken nichts ab (`form-action 'none'`), Popups gehen nicht.
 - Eine Seite mit `http://`-Quellen (ohne s) lädt diese nicht.
+- Karte im Chat nur für `Write` des Hauptagenten; per Shell oder von Subagenten geschriebene Artefakte erscheinen nur im Reiter.
+- Die Anweisung an den Agenten steht im selben `--append-system-prompt` wie die Scratchpad-Vorgabe (der autarke Agent liest nur eines).
 - Die Abschottung belegt die Sicherheitsprobe im Plan (`artifacts/sicherheitsprobe.html`), kein automatisierter Test.

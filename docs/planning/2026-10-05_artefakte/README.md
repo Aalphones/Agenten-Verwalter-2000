@@ -15,7 +15,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | [Core: Ordner, Liste, Protokoll, Sicherheitsprobe](phase-1-core-und-protokoll.md) | heikel | complete |
 | 2 | [Reiter „Artefakte“ mit Liste und Vorschau](phase-2-reiter.md) | standard | complete |
 | 3 | [Vollbild](phase-3-vollbild.md) | standard | complete |
-| 4 | [Anweisung an den Agenten, Karte im Chat, Abschluss](phase-4-anweisung-und-karte.md) | standard | pending |
+| 4 | [Anweisung an den Agenten, Karte im Chat, Abschluss](phase-4-anweisung-und-karte.md) | standard | complete |
 
 Reihenfolge fest: 2 braucht Liste und Protokoll aus 1, 3 baut auf der Vorschau aus 2 auf, die Karte in 4 öffnet den Reiter aus 2. Unabhängig vom Plan „Autark“: die Anweisung läuft über `--append-system-prompt`, das der autarke Agent schon liest (`standalone/args.rs`).
 

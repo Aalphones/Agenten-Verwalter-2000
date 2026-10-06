@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-05_artefakte/` (Artefakte)
-**Phase:** 3/4 — Vollbild (complete, committet; Phase 1–2 complete)
-**Nächster Schritt:** Phase 4 (`phase-4-anweisung-und-karte.md`) in frischer Session (`/model sonnet`, Rating standard). Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
+**Phase:** 4/4 — Anweisung und Karte (complete, committet; alle Phasen complete)
+**Nächster Schritt:** Smoke-Checkliste der README (Wackelstelle 1 zuerst) durch den User, danach archivieren, Minor-Version, `chore(release)` und Tag nach `docs/conventions/releases.md`. Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

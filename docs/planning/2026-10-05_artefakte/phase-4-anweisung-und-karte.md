@@ -23,9 +23,9 @@
 
 ### Anweisung
 
-- [ ] `src-tauri/src/artifacts/mod.rs`: `pub fn prepare(workspace: &Path) -> io::Result<PathBuf>` = `fs::create_dir_all(dir(workspace))`, gibt den Ordner zurück.
-- [ ] `src-tauri/src/agents/claude/process.rs`: `SpawnOptions` um `pub artifacts: Option<PathBuf>` ergänzen. Die Stelle `if let Some(dir) = &opts.scratchpad { … }` ersetzen durch: Teile sammeln (`scratchpad_prompt(dir)` falls gesetzt, `artifacts_prompt(dir, opts.local.is_none())` falls gesetzt), mit `"\n\n"` verbinden, nur wenn nicht leer einmal `--append-system-prompt` mit dem Ergebnis.
-- [ ] `fn artifacts_prompt(dir: &Path, can_publish: bool) -> String` mit Doc-Kommentar („Ohne die Vorgabe schreibt der Agent Berichte und Entwürfe irgendwohin, und der Reiter „Artefakte“ bleibt leer.“), Text wörtlich:
+- [x] `src-tauri/src/artifacts/mod.rs`: `pub fn prepare(workspace: &Path) -> io::Result<PathBuf>` = `fs::create_dir_all(dir(workspace))`, gibt den Ordner zurück.
+- [x] `src-tauri/src/agents/claude/process.rs`: `SpawnOptions` um `pub artifacts: Option<PathBuf>` ergänzen. Die Stelle `if let Some(dir) = &opts.scratchpad { … }` ersetzen durch: Teile sammeln (`scratchpad_prompt(dir)` falls gesetzt, `artifacts_prompt(dir, opts.local.is_none())` falls gesetzt), mit `"\n\n"` verbinden, nur wenn nicht leer einmal `--append-system-prompt` mit dem Ergebnis.
+- [x] `fn artifacts_prompt(dir: &Path, can_publish: bool) -> String` mit Doc-Kommentar („Ohne die Vorgabe schreibt der Agent Berichte und Entwürfe irgendwohin, und der Reiter „Artefakte“ bleibt leer.“), Text wörtlich:
 
   ```text
   Artefakte dieses Vorhabens: {dir}
@@ -33,32 +33,32 @@
   ```
 
   Bei `can_publish == true` hängt dahinter (neue Zeile): `Soll eine Seite zusätzlich veröffentlicht werden, veröffentliche die Datei aus diesem Ordner.`
-- [ ] `src-tauri/src/sessions/registry.rs`: `SessionState` um `artifacts_dir: Option<PathBuf>` ergänzen (Doc-Kommentar: „Ordner `.artefakte` des Vorhabens, gesetzt bei jedem Agent-Start; daran erkennt `apply_event` Artefakte.“), in `SessionState::new` `None`. Neben `use_scratchpad` eine Funktion `use_artifacts(session: &Session, state: &mut SessionState) -> Option<PathBuf>`: `artifacts::prepare(&session.workspace)`; Fehler → `state.push_log(format!("Artefakt-Ordner nicht angelegt: {error}"))` und `None`; sonst `state.artifacts_dir = Some(dir.clone())`, `Some(dir)`. Im Spawn-Pfad direkt nach `use_scratchpad(…)` aufrufen und als `artifacts:` an `SpawnOptions` geben. Alle anderen Stellen, die `SpawnOptions { … }` bauen, mit `artifacts: None` ergänzen (der Compiler zeigt sie).
+- [x] `src-tauri/src/sessions/registry.rs`: `SessionState` um `artifacts_dir: Option<PathBuf>` ergänzen (Doc-Kommentar: „Ordner `.artefakte` des Vorhabens, gesetzt bei jedem Agent-Start; daran erkennt `apply_event` Artefakte.“), in `SessionState::new` `None`. Neben `use_scratchpad` eine Funktion `use_artifacts(session: &Session, state: &mut SessionState) -> Option<PathBuf>`: `artifacts::prepare(&session.workspace)`; Fehler → `state.push_log(format!("Artefakt-Ordner nicht angelegt: {error}"))` und `None`; sonst `state.artifacts_dir = Some(dir.clone())`, `Some(dir)`. Im Spawn-Pfad direkt nach `use_scratchpad(…)` aufrufen und als `artifacts:` an `SpawnOptions` geben. Alle anderen Stellen, die `SpawnOptions { … }` bauen, mit `artifacts: None` ergänzen (der Compiler zeigt sie).
 
 ### Eintrag im Verlauf
 
-- [ ] `src-tauri/src/agents/event.rs`: `ChatEntry::Artifact { seq: u32, path: String, file: String }` (Doc-Kommentar: „Der Hauptagent hat mit `Write` ein Artefakt geschrieben (ADR 026).“); in `seq()` aufnehmen.
-- [ ] `src-tauri/src/artifacts/mod.rs`: `pub fn artifact_file_of(dir: &Path, used_path: &str) -> Option<String>` — relativer `used_path` wird an `dir.parent()` (den Workspace) gehängt; beide Seiten mit `attribution::normalize_path`; der normalisierte Pfad muss mit `normalize_path(dir) + "\\"` beginnen, der Rest darf kein `\` enthalten und muss `is_artifact_file` erfüllen; Ergebnis ist der letzte Pfadteil in Original-Schreibweise.
-- [ ] `apply_event`, Zweig `AgentEvent::ToolStarted`: vor dem Verschieben von `tool` `let is_write: bool = tool == "Write";` merken; nach `self.tool_seqs.insert(…)`: wenn `is_write` und `self.artifacts_dir` gesetzt, für jeden `used_paths`-Eintrag mit `artifact_file_of(...)` → `self.push_entry(outbox, |seq| ChatEntry::Artifact { seq, path: path.clone(), file })`. `SubagentStep` bleibt unverändert.
-- [ ] `src-tauri/src/tldr/transcript.rs`: `ChatEntry::Artifact { .. }` in den Arm mit `Thinking | Tool | Todos` (→ `None`).
-- [ ] `pnpm bindings` (der Typ `ChatEntry` ist schon exportiert).
+- [x] `src-tauri/src/agents/event.rs`: `ChatEntry::Artifact { seq: u32, path: String, file: String }` (Doc-Kommentar: „Der Hauptagent hat mit `Write` ein Artefakt geschrieben (ADR 026).“); in `seq()` aufnehmen.
+- [x] `src-tauri/src/artifacts/mod.rs`: `pub fn artifact_file_of(dir: &Path, used_path: &str) -> Option<String>` — relativer `used_path` wird an `dir.parent()` (den Workspace) gehängt; beide Seiten mit `attribution::normalize_path`; der normalisierte Pfad muss mit `normalize_path(dir) + "\\"` beginnen, der Rest darf kein `\` enthalten und muss `is_artifact_file` erfüllen; Ergebnis ist der letzte Pfadteil in Original-Schreibweise.
+- [x] `apply_event`, Zweig `AgentEvent::ToolStarted`: vor dem Verschieben von `tool` `let is_write: bool = tool == "Write";` merken; nach `self.tool_seqs.insert(…)`: wenn `is_write` und `self.artifacts_dir` gesetzt, für jeden `used_paths`-Eintrag mit `artifact_file_of(...)` → `self.push_entry(outbox, |seq| ChatEntry::Artifact { seq, path: path.clone(), file })`. `SubagentStep` bleibt unverändert.
+- [x] `src-tauri/src/tldr/transcript.rs`: `ChatEntry::Artifact { .. }` in den Arm mit `Thinking | Tool | Todos` (→ `None`).
+- [x] `pnpm bindings` (der Typ `ChatEntry` ist schon exportiert).
 
 ### Karte
 
-- [ ] `src/features/artifacts/ArtifactCard.tsx` + `ArtifactCard.css` (BEM-Block `artifact-card`): Props `file: string`, `item: Artifact | undefined` (Eintrag der Liste mit gleichem `file`, Vergleich ohne Groß-/Kleinschreibung), `onOpen: () => void`. Seiten-Symbol wie in der Liste, 16 px im 34-px-Kasten.
-- [ ] `src/app/App.tsx` → `ChatView` → `ChatTimeline`: neue Prop `artifacts: ArtifactList | null`.
-- [ ] `ChatTimeline.tsx`, `renderEntry`: `case 'artifact'` → `<ArtifactCard file={entry.file} item={…} onOpen={…} />`; `onOpen` = `useArtifactsStore.getState().select(session.projectId, item.file)` und `useSessionsStore.getState().showView('artifacts')`.
-- [ ] `buildBlocks.ts` prüfen: der neue Eintrag ist kein Werkzeug-Eintrag und muss als eigener Block erscheinen (wie `todos`); falls `buildBlocks` Einträge nach Art filtert, `artifact` dort zulassen.
+- [x] `src/features/artifacts/ArtifactCard.tsx` + `ArtifactCard.css` (BEM-Block `artifact-card`): Props `file: string`, `item: Artifact | undefined` (Eintrag der Liste mit gleichem `file`, Vergleich ohne Groß-/Kleinschreibung), `onOpen: () => void`. Seiten-Symbol wie in der Liste, 16 px im 34-px-Kasten.
+- [x] `src/app/App.tsx` → `ChatView` → `ChatTimeline`: neue Prop `artifacts: ArtifactList | null`.
+- [x] `ChatTimeline.tsx`, `renderEntry`: `case 'artifact'` → `<ArtifactCard file={entry.file} item={…} onOpen={…} />`; `onOpen` = `useArtifactsStore.getState().select(session.projectId, item.file)` und `useSessionsStore.getState().showView('artifacts')`.
+- [x] `buildBlocks.ts` prüfen: der neue Eintrag ist kein Werkzeug-Eintrag und muss als eigener Block erscheinen (wie `todos`); falls `buildBlocks` Einträge nach Art filtert, `artifact` dort zulassen.
 
 ### Doku und Abschluss
 
-- [ ] ADR 026: Abschnitt „Konsequenzen“ um „Karte im Chat nur für `Write` des Hauptagenten; per Shell oder von Subagenten geschriebene Artefakte erscheinen nur im Reiter“ und „die Anweisung steht im selben `--append-system-prompt` wie die Scratchpad-Vorgabe“ ergänzen.
-- [ ] `docs/code-map.md`, Zeile „Artefakte“: `ArtifactCard`, `artifact_file_of`, `prepare`, `use_artifacts` und `artifacts_prompt` in `agents/claude/process.rs`, Eintrag `ChatEntry::Artifact`. Zeile „Chat“: Block-Komponente für `artifact`.
-- [ ] `docs/PROJECT.md`, Zeile „Artefakte“: „von einem Agenten als HTML-Seite im Ordner `.artefakte` des Vorhabens abgelegte Artefakte als Karte im Chat und im Reiter „Artefakte“ von Session und Übersicht (ADR 026)“.
-- [ ] `docs/knowledge/GAPS.md`: Eintrag „Artefakte“ als beantwortet markieren — „Statt der Veröffentlichung bei claude.ai zeigt der Verwalter lokale HTML-Dateien aus `.artefakte` an (ADR 026); das Artefakt-Werkzeug von Claude bleibt zusätzlich nutzbar.“
-- [ ] `docs/design/2026-09-28_hauptansichten/README.md`: Zeile `Artifacts.dc.html` in der Tafel-Tabelle, Spalte „Gebaut in“: „fortgeführt in [2026-10-05_artefakte](../2026-10-05_artefakte/README.md), Plan Artefakte“.
-- [ ] `docs/design/2026-10-05_artefakte/README.md`: Status „umgesetzt in Plan Artefakte“ (Version beim Archivieren nachtragen).
-- [ ] `docs/glossary.md`: prüfen, dass „Artefakt“ und „Artefakte-Ansicht“ aus Phase 2 zum Endstand passen.
-- [ ] Plan-Abschluss nach `mode-implementing`: Smoke-Checkliste der README durch den User, danach archivieren, Minor-Version, `chore(release)`-Commit und Tag nach [docs/conventions/releases.md](../../conventions/releases.md).
+- [x] ADR 026: Abschnitt „Konsequenzen“ um „Karte im Chat nur für `Write` des Hauptagenten; per Shell oder von Subagenten geschriebene Artefakte erscheinen nur im Reiter“ und „die Anweisung steht im selben `--append-system-prompt` wie die Scratchpad-Vorgabe“ ergänzen.
+- [x] `docs/code-map.md`, Zeile „Artefakte“: `ArtifactCard`, `artifact_file_of`, `prepare`, `use_artifacts` und `artifacts_prompt` in `agents/claude/process.rs`, Eintrag `ChatEntry::Artifact`. Zeile „Chat“: Block-Komponente für `artifact`.
+- [x] `docs/PROJECT.md`, Zeile „Artefakte“: „von einem Agenten als HTML-Seite im Ordner `.artefakte` des Vorhabens abgelegte Artefakte als Karte im Chat und im Reiter „Artefakte“ von Session und Übersicht (ADR 026)“.
+- [x] `docs/knowledge/GAPS.md`: Eintrag „Artefakte“ als beantwortet markieren — „Statt der Veröffentlichung bei claude.ai zeigt der Verwalter lokale HTML-Dateien aus `.artefakte` an (ADR 026); das Artefakt-Werkzeug von Claude bleibt zusätzlich nutzbar.“
+- [x] `docs/design/2026-09-28_hauptansichten/README.md`: Zeile `Artifacts.dc.html` in der Tafel-Tabelle, Spalte „Gebaut in“: „fortgeführt in [2026-10-05_artefakte](../2026-10-05_artefakte/README.md), Plan Artefakte“.
+- [x] `docs/design/2026-10-05_artefakte/README.md`: Status „umgesetzt in Plan Artefakte“ (Version beim Archivieren nachtragen).
+- [x] `docs/glossary.md`: prüfen, dass „Artefakt“ und „Artefakte-Ansicht“ aus Phase 2 zum Endstand passen.
+- [x] Plan-Abschluss nach `mode-implementing`: Smoke-Checkliste der README durch den User, danach archivieren, Minor-Version, `chore(release)`-Commit und Tag nach [docs/conventions/releases.md](../../conventions/releases.md).
 
 ## Report-Back

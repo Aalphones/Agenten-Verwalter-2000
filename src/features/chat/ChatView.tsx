@@ -5,6 +5,7 @@ import { Composer } from '@/features/chat/Composer';
 import { useChatEntries } from '@/features/chat/useChatEntries';
 import { NewSessionIntro } from '@/features/projects/NewSessionIntro';
 import { SessionTldrCard } from '@/features/tldr/SessionTldrCard';
+import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
@@ -20,6 +21,8 @@ interface ChatViewProps {
   session: SessionSummary;
   projectName: string;
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
+  /** Artefakte des Vorhabens; `null`, bis die erste Abfrage antwortet. */
+  artifacts: ArtifactList | null;
   /** Nimmt eine aus der Einstiegszeile angelegte Session in die Liste auf und wählt sie aus. */
   onSessionCreated: (created: SessionSummary) => void;
 }
@@ -37,6 +40,7 @@ export function ChatView({
   session,
   projectName,
   backgroundByToolUseId,
+  artifacts,
   onSessionCreated,
 }: ChatViewProps): ReactElement {
   const { entries, hasMore, loadingOlder, loadError, olderError, loadOlder } = useChatEntries(
@@ -126,6 +130,7 @@ export function ChatView({
         session={session}
         entries={entries}
         backgroundByToolUseId={backgroundByToolUseId}
+        artifacts={artifacts}
         hasMore={hasMore}
         loadingOlder={loadingOlder}
         olderError={olderError}

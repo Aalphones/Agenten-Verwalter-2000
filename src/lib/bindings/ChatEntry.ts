@@ -23,4 +23,8 @@ skill: SkillRef | null,
 /**
  * Review-Kommentare aus der Changes-Ansicht; Einträge von vorher haben das Feld nicht.
  */
-comments: Array<ReviewComment>, } | { "kind": "text", seq: number, text: string, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "question", seq: number, requestId: string, questionKind: QuestionKind, questions: Array<Question>, answer: string | null, } | { "kind": "error", seq: number, title: string, text: string, };
+comments: Array<ReviewComment>, } | { "kind": "text", seq: number, text: string, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "artifact", seq: number, 
+/**
+ * Ungekürzt, wie das Werkzeug ihn nannte.
+ */
+path: string, file: string, } | { "kind": "question", seq: number, requestId: string, questionKind: QuestionKind, questions: Array<Question>, answer: string | null, } | { "kind": "error", seq: number, title: string, text: string, };

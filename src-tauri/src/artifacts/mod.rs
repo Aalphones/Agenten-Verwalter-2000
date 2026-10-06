@@ -6,7 +6,7 @@ pub mod server;
 
 use std::cmp::Ordering;
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -33,6 +33,33 @@ const HTML_ENTITIES: [(&str, &str); 6] = [
 /// Der Ordner `.artefakte` im Workspace des Vorhabens — alle Sessions teilen ihn.
 pub fn dir(workspace: &Path) -> PathBuf {
     workspace.join(DIR_NAME)
+}
+
+/// Legt den Ordner `.artefakte` an, falls er fehlt, und gibt ihn zurück.
+pub fn prepare(workspace: &Path) -> io::Result<PathBuf> {
+    let target = dir(workspace);
+    fs::create_dir_all(&target)?;
+    Ok(target)
+}
+
+/// Der Dateiname, wenn `used_path` ein Artefakt direkt in `dir` ist. Relative Pfade gelten ab dem
+/// Workspace, dem Elternordner von `dir`.
+pub fn artifact_file_of(dir: &Path, used_path: &str) -> Option<String> {
+    let absolute = if Path::new(used_path).is_absolute() {
+        used_path.to_owned()
+    } else {
+        dir.parent()?.join(used_path).to_string_lossy().into_owned()
+    };
+    let normalized = normalize_path(&absolute);
+    let prefix = format!("{}\\", normalize_path(&dir.to_string_lossy()));
+    let rest = normalized.strip_prefix(&prefix)?;
+    if !is_artifact_file(rest) {
+        return None;
+    }
+    // Der normalisierte Pfad ist klein geschrieben; der Name soll die Schreibweise des Agenten tragen.
+    let original = absolute.replace('/', "\\");
+    let name = original.rsplit('\\').next()?;
+    Some(name.to_owned())
 }
 
 /// Ein Name direkt im Ordner mit Endung `.html`/`.htm`, Groß-/Kleinschreibung egal.

@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState }
 import type { ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
+import { ArtifactCard } from '@/features/artifacts/ArtifactCard';
 import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
@@ -22,6 +23,8 @@ import { TodoList } from '@/features/chat/TodoList';
 import { ToolGroup } from '@/features/chat/ToolGroup';
 import { UserMessage } from '@/features/chat/UserMessage';
 import { WorkingIndicator } from '@/features/chat/WorkingIndicator';
+import type { Artifact } from '@/lib/bindings/Artifact';
+import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
@@ -30,7 +33,9 @@ import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { TodoItem } from '@/lib/bindings/TodoItem';
 import { answerQuestion } from '@/lib/chat';
 import { commandErrorText } from '@/lib/errors';
+import { useArtifactsStore } from '@/stores/artifacts';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
+import { useSessionsStore } from '@/stores/sessions';
 import './ChatTimeline.css';
 
 const ESTIMATED_BLOCK_HEIGHT = 40;
@@ -50,6 +55,8 @@ interface ChatTimelineProps {
   entries: readonly ChatEntry[];
   /** Subagenten und Hintergrundprozesse nach `toolUseId`; ihre Werkzeug-Zeilen werden zu eigenen Zeilen. */
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
+  /** Für die Karten im Verlauf: Titel, Uhrzeit und ob die Datei noch da ist. */
+  artifacts: ArtifactList | null;
   hasMore: boolean;
   loadingOlder: boolean;
   /** Satz zum gescheiterten Nachladen; steht über dem ältesten geladenen Eintrag. */
@@ -71,6 +78,7 @@ export function ChatTimeline({
   session,
   entries,
   backgroundByToolUseId,
+  artifacts,
   hasMore,
   loadingOlder,
   olderError,
@@ -298,6 +306,22 @@ export function ChatTimeline({
         );
       case 'todos':
         return <TodoList items={entry.items} />;
+      case 'artifact': {
+        const item: Artifact | undefined = findArtifact(artifacts, entry.file);
+        return (
+          <ArtifactCard
+            file={entry.file}
+            item={item}
+            onOpen={(): void => {
+              if (item === undefined) {
+                return;
+              }
+              useArtifactsStore.getState().select(session.projectId, item.file);
+              useSessionsStore.getState().showView('artifacts');
+            }}
+          />
+        );
+      }
       case 'question':
         return (
           <QuestionBlock
@@ -392,6 +416,12 @@ function isTextTarget(target: EventTarget | null): boolean {
   return (
     target.closest('input, textarea, [contenteditable]:not([contenteditable="false"])') !== null
   );
+}
+
+/** Windows unterscheidet bei Dateinamen nicht zwischen Groß- und Kleinschreibung. */
+function findArtifact(artifacts: ArtifactList | null, file: string): Artifact | undefined {
+  const wanted: string = file.toLowerCase();
+  return artifacts?.items.find((item: Artifact) => item.file.toLowerCase() === wanted);
 }
 
 function findLastErrorSeq(entries: readonly ChatEntry[]): number | null {

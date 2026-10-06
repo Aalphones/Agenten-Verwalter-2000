@@ -1,6 +1,6 @@
 # Design-Entwurf: Artefakte
 
-**Status:** abgenommen am 2026-10-05 als Grundlage des Plans [Artefakte](../../planning/2026-10-05_artefakte/README.md). Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code. Er führt die Tafel `Artifacts.dc.html` aus dem Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md) fort, die dort als „offen (GAPS: Artefakte)“ stand: Liste 300 px, Vorschau mit 20 px Rand, Kopf 44 px mit „Im Chat besprechen“ und „Im Browser öffnen“, Karte im Verlauf mit „In der Session ansehen“. Was dieser Entwurf ändert oder ergänzt, ist gestrichelt markiert.
+**Status:** umgesetzt in Plan Artefakte (Version beim Archivieren nachtragen); abgenommen am 2026-10-05 als Grundlage des Plans [Artefakte](../../planning/2026-10-05_artefakte/README.md). Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code. Er führt die Tafel `Artifacts.dc.html` aus dem Entwurf [Hauptansichten](../2026-09-28_hauptansichten/README.md) fort, die dort als „offen (GAPS: Artefakte)“ stand: Liste 300 px, Vorschau mit 20 px Rand, Kopf 44 px mit „Im Chat besprechen“ und „Im Browser öffnen“, Karte im Verlauf mit „In der Session ansehen“. Was dieser Entwurf ändert oder ergänzt, ist gestrichelt markiert.
 
 ## Ansehen
 

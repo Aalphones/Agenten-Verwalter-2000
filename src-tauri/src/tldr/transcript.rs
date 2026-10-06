@@ -80,7 +80,10 @@ fn entry_block(entry: &ChatEntry) -> Option<Block> {
             block
         }
         ChatEntry::Error { title, text, .. } => format!("Fehler: {title} – {text}"),
-        ChatEntry::Thinking { .. } | ChatEntry::Tool { .. } | ChatEntry::Todos { .. } => {
+        ChatEntry::Thinking { .. }
+        | ChatEntry::Tool { .. }
+        | ChatEntry::Todos { .. }
+        | ChatEntry::Artifact { .. } => {
             return None;
         }
     };

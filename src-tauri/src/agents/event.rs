@@ -190,6 +190,13 @@ pub enum ChatEntry {
         seq: u32,
         items: Vec<TodoItem>,
     },
+    /// Der Hauptagent hat mit `Write` ein Artefakt geschrieben (ADR 026).
+    Artifact {
+        seq: u32,
+        /// Ungekürzt, wie das Werkzeug ihn nannte.
+        path: String,
+        file: String,
+    },
     Question {
         seq: u32,
         request_id: String,
@@ -212,6 +219,7 @@ impl ChatEntry {
             | ChatEntry::Thinking { seq, .. }
             | ChatEntry::Tool { seq, .. }
             | ChatEntry::Todos { seq, .. }
+            | ChatEntry::Artifact { seq, .. }
             | ChatEntry::Question { seq, .. }
             | ChatEntry::Error { seq, .. } => *seq,
         }

@@ -32,6 +32,8 @@ pub struct SpawnOptions {
     /// Ordner, in den der Agent alle Arbeitsdateien außerhalb der Repositories legen soll; der
     /// Scratchpad-Reiter zeigt genau diesen.
     pub scratchpad: Option<PathBuf>,
+    /// Ordner `.artefakte` des Vorhabens; der Reiter „Artefakte“ zeigt genau diesen.
+    pub artifacts: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -137,10 +139,19 @@ fn build_command(opts: &SpawnOptions) -> Command {
     if let Some(backend) = &opts.local {
         local::apply(&mut command, backend);
     }
+    // Ein gemeinsamer Text: der autarke Agent liest nur ein `--append-system-prompt`, ein zweites
+    // überschriebe das erste.
+    let mut prompts: Vec<String> = Vec::new();
     if let Some(dir) = &opts.scratchpad {
+        prompts.push(scratchpad_prompt(dir));
+    }
+    if let Some(dir) = &opts.artifacts {
+        prompts.push(artifacts_prompt(dir, opts.local.is_none()));
+    }
+    if !prompts.is_empty() {
         command
             .arg("--append-system-prompt")
-            .arg(scratchpad_prompt(dir));
+            .arg(prompts.join("\n\n"));
     }
     // `--allowedTools` nimmt mehrere Werte; die nächste Option (`--add-dir`, `--resume`,
     // `--session-id`) beendet die Liste.
@@ -178,6 +189,32 @@ fn scratchpad_prompt(dir: &Path) -> String {
          nenne Dateien daraus mit absolutem Pfad.",
         dir.display()
     )
+}
+
+/// Ohne die Vorgabe schreibt der Agent Berichte und Entwürfe irgendwohin, und der Reiter
+/// „Artefakte“ bleibt leer.
+fn artifacts_prompt(dir: &Path, can_publish: bool) -> String {
+    let mut prompt = format!(
+        "Artefakte dieses Vorhabens: {}\n\
+         Möchte der Benutzer etwas zum Ansehen — einen Bericht, eine Präsentation, ein Diagramm, \
+         einen Design-Entwurf oder eine andere Seite —, schreibe es als eigenständige HTML-Datei \
+         direkt in diesen Ordner: Dateiname in Kleinbuchstaben mit Bindestrichen und der Endung \
+         .html, ein sprechender <title>. Bilder, Skripte und Stylesheets dazu gehören in einen \
+         Unterordner daneben und werden relativ eingebunden. Der Verwalter zeigt jede HTML-Datei \
+         dieses Ordners im Reiter „Artefakte“ an und lädt sie nach jedem Speichern neu; zum \
+         Überarbeiten dieselbe Datei ändern statt eine neue anzulegen. Die Seite darf Skripte, \
+         Schriften und Bibliotheken über https aus dem Internet laden, hat aber keinen Zugriff auf \
+         Dateien außerhalb dieses Ordners. Lege in diesem Ordner nichts anderes ab als Artefakte \
+         und ihre Dateien.",
+        dir.display()
+    );
+    if can_publish {
+        prompt.push_str(
+            "\nSoll eine Seite zusätzlich veröffentlicht werden, veröffentliche die Datei aus \
+             diesem Ordner.",
+        );
+    }
+    prompt
 }
 
 /// Die `.mcp.json` der Ordner, die eine hat. Ordner ohne Datei fallen still weg.

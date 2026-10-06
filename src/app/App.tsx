@@ -249,6 +249,7 @@ export function App(): ReactElement {
         session={session}
         projectName={projectNameOf(session)}
         backgroundByToolUseId={backgroundByToolUseId}
+        artifacts={artifacts}
         onSessionCreated={handleSessionCreated}
       />
     );
