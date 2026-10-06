@@ -6,6 +6,7 @@ mod glob;
 mod grep;
 mod read;
 pub mod shell;
+mod skill;
 mod todo;
 mod walk;
 mod write;
@@ -28,6 +29,7 @@ pub const TODO_TOOL: &str = "TodoWrite";
 pub const BASH_TOOL: &str = "Bash";
 pub const POWERSHELL_TOOL: &str = "PowerShell";
 pub const ASK_USER_TOOL: &str = "AskUserQuestion";
+pub const SKILL_TOOL: &str = "Skill";
 
 /// Ergebnis eines Werkzeugs, das wegen Esc nicht (fertig) lief.
 pub const INTERRUPTED: &str = "Vom Benutzer unterbrochen.";
@@ -49,6 +51,10 @@ pub struct ToolContext {
     pub cancel: Arc<AtomicBool>,
     /// Nur für den einen Aufruf, dessen Pfad außerhalb der Grenze der Benutzer erlaubt hat.
     pub allow_outside: bool,
+    /// Benutzerordner und Repository-Ordner, in denen `Skill` nach `.claude\skills` und
+    /// `.claude\commands` sucht.
+    pub home: PathBuf,
+    pub skill_roots: Vec<(String, PathBuf)>,
 }
 
 impl ToolContext {
@@ -197,6 +203,17 @@ pub fn definitions() -> Vec<Value> {
             }),
             &["questions"],
         ),
+        function(
+            SKILL_TOOL,
+            "Loads a skill: detailed instructions for a kind of task. Call it when the description \
+             of a skill in the system prompt matches the task, then follow the returned text. \
+             args is passed to the skill as its arguments.",
+            json!({
+                "skill": { "type": "string", "description": "Name of the skill, as listed in the system prompt" },
+                "args": { "type": "string", "description": "Arguments for the skill, if it takes any" },
+            }),
+            &["skill"],
+        ),
     ]
 }
 
@@ -230,6 +247,7 @@ pub fn run(name: &str, input: &Value, context: &mut ToolContext) -> ToolOutput {
         BASH_TOOL => shell::run(shell::ShellKind::Bash, input, context),
         POWERSHELL_TOOL => shell::run(shell::ShellKind::PowerShell, input, context),
         ASK_USER_TOOL => ask::run(input),
+        SKILL_TOOL => skill::run(input, context),
         unknown => Err(format!("Unbekanntes Werkzeug: {unknown}")),
     };
     match result {

@@ -1,8 +1,7 @@
 //! PreToolUse-Hooks des Benutzers aus denselben Dateien wie bei Claude Code (ADR 017). Vertrag:
 //! JSON auf stdin; Exit 2 blockiert; Exit 0 mit `hookSpecificOutput.permissionDecision` wird
 //! beachtet; jeder andere Exit-Code lässt den Aufruf durch und landet im Protokoll (stderr).
-use std::fs;
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::AtomicBool;
@@ -12,12 +11,10 @@ use std::time::Duration;
 use regex::Regex;
 use serde_json::{Value, json};
 
-use super::home_dir;
+use super::settings;
 use super::tools::shell::{self, Waited};
 use crate::processes::hide_console;
 
-const CLAUDE_DIR: &str = ".claude";
-const SETTINGS_FILES: [&str; 2] = ["settings.json", "settings.local.json"];
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 const EVENT_NAME: &str = "PreToolUse";
 const COMMAND_TYPE: &str = "command";
@@ -96,39 +93,18 @@ pub struct HookCall<'a> {
 }
 
 impl Hooks {
-    /// Benutzer-Einstellungen zuerst, dann je Arbeitsordner und `--add-dir`.
-    pub fn load(cwd: &Path, add_dirs: &[PathBuf]) -> Hooks {
-        let mut claude_dirs: Vec<PathBuf> = home_dir()
-            .map(|home: PathBuf| home.join(CLAUDE_DIR))
-            .into_iter()
-            .collect();
-        claude_dirs.push(cwd.join(CLAUDE_DIR));
-        claude_dirs.extend(add_dirs.iter().map(|dir: &PathBuf| dir.join(CLAUDE_DIR)));
+    /// Alle Hooks aus den Einstellungsdateien von `settings::files`.
+    pub fn load(home: &Path, cwd: &Path, add_dirs: &[PathBuf]) -> Hooks {
         let mut hooks = Hooks::default();
-        for dir in claude_dirs {
-            for file in SETTINGS_FILES {
-                hooks.read_settings(&dir.join(file));
+        for file in settings::files(home, cwd, add_dirs) {
+            if let Some(content) = settings::read(&file) {
+                hooks.add_settings(&content, &file);
             }
         }
         hooks
     }
 
-    fn read_settings(&mut self, path: &Path) {
-        let text = match fs::read_to_string(path) {
-            Ok(text) => text,
-            Err(error) if error.kind() == ErrorKind::NotFound => return,
-            Err(error) => {
-                eprintln!("Einstellungen {} nicht lesbar: {error}", path.display());
-                return;
-            }
-        };
-        let settings: Value = match serde_json::from_str(text.trim_start_matches('\u{feff}')) {
-            Ok(settings) => settings,
-            Err(error) => {
-                eprintln!("Einstellungen {} kein JSON: {error}", path.display());
-                return;
-            }
-        };
+    fn add_settings(&mut self, settings: &Value, path: &Path) {
         let Some(groups) = settings
             .pointer(&format!("/hooks/{EVENT_NAME}"))
             .and_then(Value::as_array)

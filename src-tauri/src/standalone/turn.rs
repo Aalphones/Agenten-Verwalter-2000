@@ -32,8 +32,6 @@ const REQUEST_ID_PREFIX: &str = "agent-";
 const DENIED_PREFIX: &str = "Der Benutzer hat abgelehnt: ";
 /// So viel von unlesbaren Argumenten zeigt der Fehler dem Modell.
 const ARGUMENTS_EXCERPT_CHARS: usize = 200;
-/// Grobe Schätzung, wenn das Modell keine Token-Zahl meldet.
-const CHARS_PER_TOKEN: usize = 4;
 
 pub struct TurnJob {
     pub output: Arc<Output>,
@@ -327,6 +325,6 @@ fn assistant_message(completion: &Completion, calls: &[ParsedCall]) -> Value {
 fn input_tokens(completion: &Completion, messages: &[Value]) -> u32 {
     completion.prompt_tokens.unwrap_or_else(|| {
         let characters: usize = messages.iter().map(content::text_chars).sum();
-        u32::try_from(characters / CHARS_PER_TOKEN).unwrap_or(u32::MAX)
+        u32::try_from(characters / content::CHARS_PER_TOKEN).unwrap_or(u32::MAX)
     })
 }

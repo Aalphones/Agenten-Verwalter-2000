@@ -4,7 +4,7 @@
 use super::paths::Access;
 use super::tools::{
     ASK_USER_TOOL, BASH_TOOL, EDIT_TOOL, GLOB_TOOL, GREP_TOOL, POWERSHELL_TOOL, READ_TOOL,
-    TODO_TOOL, WRITE_TOOL, is_writing,
+    SKILL_TOOL, TODO_TOOL, WRITE_TOOL, is_writing,
 };
 use crate::agents::event::Mode;
 
@@ -28,7 +28,7 @@ pub fn decide(tool: &str, mode: Mode, access: Option<Access>) -> Decision {
         _ => {}
     }
     match tool {
-        READ_TOOL | GLOB_TOOL | GREP_TOOL | TODO_TOOL => Decision::Allow,
+        READ_TOOL | GLOB_TOOL | GREP_TOOL | TODO_TOOL | SKILL_TOOL => Decision::Allow,
         WRITE_TOOL | EDIT_TOOL => match mode {
             Mode::Manual => Decision::Ask,
             Mode::Edit | Mode::Auto => Decision::Allow,

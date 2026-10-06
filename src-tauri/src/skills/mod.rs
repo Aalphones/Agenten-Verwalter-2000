@@ -20,14 +20,48 @@ const COMMAND_EXTENSION: &str = "md";
 /// Alle Skills und Befehle einer Session: erst die des Benutzers (`home`), dann je Repository
 /// in der gegebenen Reihenfolge. Doppelte Namen bleiben beide stehen — die Herkunft unterscheidet sie.
 pub fn collect(home: &Path, repositories: &[(String, PathBuf)]) -> Vec<SkillInfo> {
-    let mut found: Vec<SkillInfo> = skills_in(home, &SkillOrigin::User);
-    found.extend(commands_in(home, &SkillOrigin::User));
-    for (name, root) in repositories {
-        let origin = SkillOrigin::Repository { name: name.clone() };
-        found.extend(skills_in(root, &origin));
-        found.extend(commands_in(root, &origin));
+    let mut found: Vec<SkillInfo> = Vec::new();
+    for (origin, root) in search_roots(home, repositories) {
+        found.extend(entries_in(root, &origin).into_iter().map(|(info, _)| info));
     }
     found
+}
+
+/// Die Datei (`SKILL.md` bzw. Befehlsdatei) des ersten Eintrags namens `name` — gleiche Ordner und
+/// gleiche Reihenfolge wie `collect`.
+pub fn find_file(
+    home: &Path,
+    repositories: &[(String, PathBuf)],
+    name: &str,
+) -> Option<(SkillKind, PathBuf)> {
+    search_roots(home, repositories)
+        .into_iter()
+        .flat_map(|(origin, root)| entries_in(root, &origin))
+        .find(|(info, _)| info.name == name)
+        .map(|(info, file)| (info.kind, file))
+}
+
+/// Die Ordner, in denen `.claude\skills` und `.claude\commands` gesucht werden: erst der des
+/// Benutzers, dann je Repository.
+fn search_roots<'a>(
+    home: &'a Path,
+    repositories: &'a [(String, PathBuf)],
+) -> Vec<(SkillOrigin, &'a Path)> {
+    let mut roots: Vec<(SkillOrigin, &Path)> = vec![(SkillOrigin::User, home)];
+    roots.extend(repositories.iter().map(|(name, root): &(String, PathBuf)| {
+        (
+            SkillOrigin::Repository { name: name.clone() },
+            root.as_path(),
+        )
+    }));
+    roots
+}
+
+/// Erst die Skills, dann die Befehle eines Ordners, je mit ihrer Datei.
+fn entries_in(root: &Path, origin: &SkillOrigin) -> Vec<(SkillInfo, PathBuf)> {
+    let mut entries: Vec<(SkillInfo, PathBuf)> = skills_in(root, origin);
+    entries.extend(commands_in(root, origin));
+    entries
 }
 
 /// Der Skill, den `text` aufruft: `/name` am Anfang (nach Leerzeichen), gefolgt von Leerzeichen oder
@@ -52,15 +86,16 @@ pub fn skills_dir(root: &Path) -> PathBuf {
     root.join(CLAUDE_DIR).join(SKILLS_DIR)
 }
 
-/// Jeder Unterordner von `<root>\.claude\skills` mit einer `SKILL.md`, nach Name sortiert.
-fn skills_in(root: &Path, origin: &SkillOrigin) -> Vec<SkillInfo> {
+/// Jeder Unterordner von `<root>\.claude\skills` mit einer `SKILL.md`, nach Name sortiert; dazu
+/// der Pfad der `SKILL.md`.
+fn skills_in(root: &Path, origin: &SkillOrigin) -> Vec<(SkillInfo, PathBuf)> {
     let Ok(entries) = fs::read_dir(skills_dir(root)) else {
         return Vec::new();
     };
-    let mut found: Vec<SkillInfo> = Vec::new();
+    let mut found: Vec<(SkillInfo, PathBuf)> = Vec::new();
     for entry in entries.flatten() {
-        let folder: PathBuf = entry.path();
-        let Some(text) = read_head(&folder.join(SKILL_FILE)) else {
+        let skill_file: PathBuf = entry.path().join(SKILL_FILE);
+        let Some(text) = read_head(&skill_file) else {
             continue;
         };
         let (values, _) = frontmatter::parse(&text);
@@ -70,23 +105,25 @@ fn skills_in(root: &Path, origin: &SkillOrigin) -> Vec<SkillInfo> {
             .cloned()
             .unwrap_or_else(|| entry.file_name().to_string_lossy().into_owned());
         let description: String = values.get("description").cloned().unwrap_or_default();
-        found.push(SkillInfo {
+        let info = SkillInfo {
             name,
             description: shorten(&description),
             kind: SkillKind::Skill,
             origin: origin.clone(),
-        });
+        };
+        found.push((info, skill_file));
     }
     sort_by_name(&mut found);
     found
 }
 
-/// Jede `*.md` direkt in `<root>\.claude\commands` (keine Unterordner), nach Name sortiert.
-fn commands_in(root: &Path, origin: &SkillOrigin) -> Vec<SkillInfo> {
+/// Jede `*.md` direkt in `<root>\.claude\commands` (keine Unterordner), nach Name sortiert; dazu
+/// der Pfad der Datei.
+fn commands_in(root: &Path, origin: &SkillOrigin) -> Vec<(SkillInfo, PathBuf)> {
     let Ok(entries) = fs::read_dir(root.join(CLAUDE_DIR).join(COMMANDS_DIR)) else {
         return Vec::new();
     };
-    let mut found: Vec<SkillInfo> = Vec::new();
+    let mut found: Vec<(SkillInfo, PathBuf)> = Vec::new();
     for entry in entries.flatten() {
         let file: PathBuf = entry.path();
         let is_command_file: bool = file
@@ -110,12 +147,13 @@ fn commands_in(root: &Path, origin: &SkillOrigin) -> Vec<SkillInfo> {
             .filter(|value: &&String| !value.is_empty())
             .cloned()
             .unwrap_or_else(|| first_text_line(body));
-        found.push(SkillInfo {
+        let info = SkillInfo {
             name,
             description: shorten(&description),
             kind: SkillKind::Command,
             origin: origin.clone(),
-        });
+        };
+        found.push((info, file));
     }
     sort_by_name(&mut found);
     found
@@ -148,6 +186,6 @@ fn shorten(text: &str) -> String {
     shortened
 }
 
-fn sort_by_name(skills: &mut [SkillInfo]) {
-    skills.sort_by_key(|skill: &SkillInfo| skill.name.to_lowercase());
+fn sort_by_name(entries: &mut [(SkillInfo, PathBuf)]) {
+    entries.sort_by_key(|(skill, _): &(SkillInfo, PathBuf)| skill.name.to_lowercase());
 }

@@ -6,8 +6,9 @@
 //! der Schlange und werden danach je als eigener Turn verarbeitet.
 use std::collections::{HashSet, VecDeque};
 use std::env;
+use std::ffi::OsStr;
 use std::io::{self, BufRead};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -20,10 +21,13 @@ use super::args::{self, AgentArgs, Start};
 use super::hooks::Hooks;
 use super::output::{self, Output};
 use super::paths::{self, Roots};
+use super::prompt::{self, MemoryFile, PromptContext};
 use super::tools::{self, ToolContext};
 use super::transcript::Transcript;
 use super::turn::{self, Outcome, TurnEvent, TurnJob};
-use super::{BASE_URL_VARIABLE, CONTEXT_WINDOW_VARIABLE, EXIT_START_FAILED, content, prompt};
+use super::{
+    BASE_URL_VARIABLE, CONTEXT_WINDOW_VARIABLE, EXIT_START_FAILED, content, home_dir, invocation,
+};
 use crate::agents::event::Mode;
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
@@ -56,7 +60,11 @@ struct Session {
     base_url: String,
     context_window: u32,
     cwd: PathBuf,
-    prompt_appendix: Option<String>,
+    home: PathBuf,
+    /// Ordner der Repositories (Name, Pfad), in denen Skills gesucht werden.
+    skill_roots: Vec<(String, PathBuf)>,
+    /// Einmal beim Start gebaut — Anweisungen und Skills ändern sich während einer Session nicht.
+    system_prompt: String,
     model: String,
     mode: Arc<Mutex<Mode>>,
     tools: Vec<Value>,
@@ -90,6 +98,10 @@ pub fn run(args: AgentArgs) -> i32 {
             return EXIT_START_FAILED;
         }
     };
+    let Some(home) = home_dir() else {
+        eprintln!("Benutzerordner unbekannt");
+        return EXIT_START_FAILED;
+    };
     let tool_definitions = if args.tools_disabled {
         Vec::new()
     } else {
@@ -107,26 +119,43 @@ pub fn run(args: AgentArgs) -> i32 {
         eprintln!("Lese-Thread startet nicht: {error}");
         return EXIT_START_FAILED;
     }
+    let add_dirs: Vec<PathBuf> = args
+        .add_dirs
+        .iter()
+        .map(|dir: &PathBuf| paths::resolve(&cwd, &dir.to_string_lossy()))
+        .collect();
+    let skill_roots: Vec<(String, PathBuf)> = add_dirs
+        .iter()
+        .map(|dir: &PathBuf| skill_root(dir))
+        .collect();
     let tool_context = ToolContext {
         cwd: cwd.clone(),
         roots: Roots::from_args(&cwd, &args.add_dirs, &args.allowed_rules),
         read_files: HashSet::new(),
         cancel: Arc::new(AtomicBool::new(false)),
         allow_outside: false,
+        home: home.clone(),
+        skill_roots: skill_roots.clone(),
     };
-    let add_dirs: Vec<PathBuf> = args
-        .add_dirs
-        .iter()
-        .map(|dir: &PathBuf| paths::resolve(&cwd, &dir.to_string_lossy()))
-        .collect();
-    let hooks = Hooks::load(&cwd, &add_dirs);
+    let (system_prompt, memory_files) = prompt::system_prompt(&PromptContext {
+        cwd: &cwd,
+        add_dirs: &add_dirs,
+        home: &home,
+        model: &args.model,
+        skill_roots: &skill_roots,
+        appendix: args.append_system_prompt.as_deref(),
+    });
+    eprintln!("{}", prompt_size_line(&system_prompt, &memory_files));
+    let hooks = Hooks::load(&home, &cwd, &add_dirs);
     let mut session = Session {
         output,
         session_id,
         base_url,
         context_window,
         cwd,
-        prompt_appendix: args.append_system_prompt,
+        home,
+        skill_roots,
+        system_prompt,
         model: args.model,
         mode: Arc::new(Mutex::new(args.mode)),
         tools: tool_definitions,
@@ -139,6 +168,33 @@ pub fn run(args: AgentArgs) -> i32 {
     };
     session.run_loop(&input_receiver);
     0
+}
+
+/// Ein Repository-Ordner für die Skill-Suche, benannt nach seinem Ordnernamen.
+fn skill_root(folder: &Path) -> (String, PathBuf) {
+    let name = folder.file_name().map_or_else(
+        || folder.display().to_string(),
+        |name: &OsStr| name.to_string_lossy().into_owned(),
+    );
+    (name, folder.to_path_buf())
+}
+
+/// Die Größe des Systemprompts fürs Protokoll — der Benutzer sieht, was Tempo und Kontext kostet.
+fn prompt_size_line(system_prompt: &str, files: &[MemoryFile]) -> String {
+    let listed: Vec<String> = files
+        .iter()
+        .map(|file: &MemoryFile| format!("{} ({})", file.path.display(), file.tokens))
+        .collect();
+    let files_text = if listed.is_empty() {
+        "keine".to_owned()
+    } else {
+        listed.join(", ")
+    };
+    format!(
+        "Systemprompt: {} Zeichen, ~{} Token; Dateien: {files_text}",
+        system_prompt.chars().count(),
+        prompt::estimated_tokens(system_prompt)
+    )
 }
 
 fn read_environment() -> Result<(String, u32), String> {
@@ -308,7 +364,9 @@ impl Session {
     }
 
     fn start_turn(&mut self, content: &Value) {
-        if let Err(error) = self.transcript.append(content::user_message(content)) {
+        // Ein getipptes `/name` wird zum Inhalt des Skills; ins Transkript geht der ersetzte Text.
+        let content = invocation::expand_message(content, &self.home, &self.skill_roots);
+        if let Err(error) = self.transcript.append(content::user_message(&content)) {
             self.output.line(&output::result_error(
                 &self.session_id,
                 &error,
@@ -365,7 +423,7 @@ impl Session {
     /// werden zusammengelegt — manche Chat-Vorlagen lehnen zwei Benutzer-Nachrichten in Folge ab.
     fn request_messages(&self) -> Vec<Value> {
         let mut messages: Vec<Value> = Vec::with_capacity(self.transcript.messages.len() + 1);
-        messages.push(json!({ "role": "system", "content": prompt::system_prompt(&self.cwd, self.prompt_appendix.as_deref()) }));
+        messages.push(json!({ "role": "system", "content": self.system_prompt }));
         for message in &self.transcript.messages {
             let merged = messages
                 .last_mut()

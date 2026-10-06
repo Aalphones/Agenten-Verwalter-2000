@@ -4,6 +4,8 @@ use serde_json::{Value, json};
 
 const BASE64_SOURCE: &str = "base64";
 const USER_ROLE: &str = "user";
+/// Grobe Schätzung der Token aus der Zeichenzahl, wo das Modell keine Zahl meldet.
+pub const CHARS_PER_TOKEN: usize = 4;
 
 /// Text bleibt Text; Blöcke werden zu `text`- und `image_url`-Teilen, andere Blöcke (PDF) fallen
 /// weg — das Modell bekommt deren Pfad ohnehin im Text, wenn sie zu groß waren, sonst gar nicht.

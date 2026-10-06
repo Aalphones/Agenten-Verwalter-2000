@@ -4,12 +4,16 @@
 pub mod args;
 pub mod content;
 pub mod hooks;
+pub mod invocation;
 pub mod llm;
+pub mod memory;
 pub mod output;
 pub mod paths;
 pub mod permissions;
 pub mod prompt;
 pub mod session;
+pub mod settings;
+pub mod style;
 pub mod tools;
 pub mod transcript;
 pub mod turn;

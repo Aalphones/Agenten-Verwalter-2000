@@ -17,7 +17,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | Gerüst: Einstieg `agent`, Zeilenprotokoll, LM-Studio-Client, Transkript, Unterbrechen, Betriebsart „Autark“ — Chat ohne Werkzeuge | [phase-1-geruest.md](phase-1-geruest.md) | heikel | complete |
 | 2 | Werkzeug-Schleife und Datei-Werkzeuge: Read, Write, Edit, Glob, Grep, TodoWrite, Pfadgrenzen; Konto-Zeile ohne `claude.exe` in „Autark“ | [phase-2-dateiwerkzeuge.md](phase-2-dateiwerkzeuge.md) | heikel | complete |
 | 3 | Shell, Rechte, Rückfragen, Hooks: Bash, PowerShell, Modi, `can_use_tool`, AskUserQuestion, PreToolUse | [phase-3-shell-rechte-hooks.md](phase-3-shell-rechte-hooks.md) | heikel | complete |
-| 4 | Anweisungen und Skills: Systemprompt, CLAUDE.md mit Einbindungen, Output-Style, Skill-Liste, Skill-Werkzeug, `/name` | [phase-4-anweisungen-skills.md](phase-4-anweisungen-skills.md) | standard | pending |
+| 4 | Anweisungen und Skills: Systemprompt, CLAUDE.md mit Einbindungen, Output-Style, Skill-Liste, Skill-Werkzeug, `/name` | [phase-4-anweisungen-skills.md](phase-4-anweisungen-skills.md) | standard | complete |
 | 5 | Kontext, Verdichten, Bilder, Druckmodus für TL;DR, Kontext-Aufschlüsselung | [phase-5-kontext-bilder-druck.md](phase-5-kontext-bilder-druck.md) | standard | pending |
 | 6 | Hintergrundprozesse und Scratchpad: `run_in_background`, `TaskStop`, `stop_task`, Aufgaben-Zeilen | [phase-6-hintergrund.md](phase-6-hintergrund.md) | standard | pending |
 | 7 | Subagenten: Werkzeug `Agent`, Agent-Definitionen, Vorder- und Hintergrund, Schritte im Verwalter | [phase-7-subagenten.md](phase-7-subagenten.md) | heikel | pending |
