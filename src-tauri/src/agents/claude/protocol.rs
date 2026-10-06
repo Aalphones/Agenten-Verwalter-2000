@@ -227,6 +227,12 @@ pub fn mcp_toggle(server: &str, enabled: bool) -> Value {
     json!({ "subtype": "mcp_toggle", "serverName": server, "enabled": enabled })
 }
 
+/// Startet die Anmeldung bei einem MCP-Server; die Antwort trägt die Anmeldeadresse (ADR 024).
+/// Ohne `redirectUri` nimmt die Kommandozeile den lokalen Rücksprung auf `localhost`.
+pub fn mcp_authenticate(server: &str) -> Value {
+    json!({ "subtype": "mcp_authenticate", "serverName": server })
+}
+
 /// Fragt das Kontingent des Abos ab; die Antwort kommt als `control_response`. Im SDK als
 /// experimentell markiert — das Format kann sich mit jeder Version ändern.
 pub fn get_usage() -> Value {

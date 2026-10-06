@@ -25,6 +25,13 @@ export function reconnectMcpServer(sessionId: string, server: string): Promise<b
   return invoke<boolean>('mcp_reconnect', { sessionId, server });
 }
 
+/** Startet die Anmeldung bei einem Server; der Core öffnet die Anmeldeseite im Browser, Beginn und Ende melden `mcp://changed`.
+ *  `false`, wenn der Agent nicht zuhört.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` bei einem Servernamen, der nicht in der Liste steht */
+export function authenticateMcpServer(sessionId: string, server: string): Promise<boolean> {
+  return invoke<boolean>('mcp_authenticate', { sessionId, server });
+}
+
 /** Schaltet einen Server ein oder aus; die Kommandozeile merkt sich das je Arbeitsordner.
  *  `false`, wenn der Agent nicht zuhört.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` bei einem Servernamen, der nicht in der Liste steht */

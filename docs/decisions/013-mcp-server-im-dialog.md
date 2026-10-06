@@ -26,5 +26,5 @@ Der Agent einer Session lädt MCP-Server aus Benutzer-, Projekt- und claude.ai-K
 ## Konsequenzen
 
 - Ohne laufenden Agenten (neue Session, nach Ruhe-Timer, nach App-Neustart) zeigt der Dialog keine Liste, sondern erklärt, wie sie erscheint.
-- Der Zustand `needs-auth` ist nur aus der SDK-Dokumentation bekannt, nicht gemessen; tritt ein anderer Status auf, zeigt die Zeile „Unbekannt“.
+- Der Zustand `needs-auth` ist am 2026-10-05 gemessen; die Anmeldung aus dem Dialog regelt [ADR 024](024-mcp-anmeldung.md). Tritt ein anderer Status auf, zeigt die Zeile „Unbekannt“.
 - Die Liste altert zwischen zwei Antworten des Agenten; Wechsel von `pending` auf `connected` sieht man nur durch erneutes Fragen, deshalb das 2-Sekunden-Nachfragen bei offenem Dialog.

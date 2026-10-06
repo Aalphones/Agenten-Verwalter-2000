@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value, json};
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
 use crate::agents::claude::locate::{self, find_claude};
@@ -50,7 +51,7 @@ use crate::db::{
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
-use crate::mcp::model::{McpAction, McpActionError, McpChangedEvent, McpServer};
+use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::review::{self, model::ReviewComment};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
@@ -198,6 +199,8 @@ struct SessionState {
     /// Laufende Aktionen als Request-ID → (Server, Aktion).
     mcp_actions: HashMap<String, (String, McpAction)>,
     mcp_error: Option<McpActionError>,
+    /// Gestartete Anmeldung, bis `mcp_status` den Server nicht mehr als `needs-auth` meldet.
+    mcp_auth: Option<McpAuthWait>,
     /// Seit wann die Session ruht (`completed`/`paused`) — Grundlage für `reap_idle`.
     idle_since: Option<f64>,
     /// Eine wiederhergestellte Session lädt ihren Verlauf erst beim ersten Zugriff (`Session::lock_loaded`).
@@ -279,6 +282,8 @@ struct Outbox {
     /// Zeitfenster beendeter Git-Befehle; nach dem Freigeben der Sperre sucht ein Thread darin die
     /// eigenen Commits.
     commit_windows: Vec<(f64, f64)>,
+    /// Adressen, die nach dem Freigeben der Sperre im Browser geöffnet werden (MCP-Anmeldung).
+    open_urls: Vec<String>,
 }
 
 impl SessionRegistry {
@@ -1544,6 +1549,7 @@ impl SessionState {
             mcp_fetched_at: None,
             mcp_actions: HashMap::new(),
             mcp_error: None,
+            mcp_auth: None,
             idle_since: None,
             entries_loaded: true,
             needs_settling: false,
@@ -2008,6 +2014,11 @@ impl SessionState {
                 outbox.context_changed = true;
             }
             AgentEvent::McpServers(servers) => self.apply_mcp_servers(outbox, servers),
+            AgentEvent::McpAuthStarted {
+                request_id,
+                auth_url,
+                callback_expected,
+            } => self.mcp_auth_started(outbox, &request_id, auth_url, callback_expected),
             AgentEvent::ControlSucceeded { request_id } => {
                 self.mcp_answered(outbox, &request_id, None);
             }
@@ -2399,6 +2410,11 @@ impl Outbox {
             };
             if let Err(error) = app.emit(mcp::MCP_CHANGED_EVENT, event) {
                 session.log_line(format!("MCP-Ereignis nicht gesendet: {error}"));
+            }
+        }
+        for url in &self.open_urls {
+            if let Err(error) = app.opener().open_url(url, None::<&str>) {
+                session.log_line(format!("Anmeldeseite nicht geöffnet: {error}"));
             }
         }
         // Erst freigegeben kann die Oberfläche Bilder aus dem Scratchpad über das Asset-Protokoll zeigen.

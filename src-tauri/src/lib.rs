@@ -86,6 +86,7 @@ pub fn run() {
             commands::mcp::mcp_refresh,
             commands::mcp::mcp_reconnect,
             commands::mcp::mcp_toggle,
+            commands::mcp::mcp_authenticate,
             commands::usage::usage_load,
             commands::usage::usage_refresh,
             commands::account::account_load,

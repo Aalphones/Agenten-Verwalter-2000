@@ -295,6 +295,12 @@ pub enum AgentEvent {
     ContextBreakdown(ContextBreakdown),
     /// Antwort auf `mcp_status`.
     McpServers(Vec<McpServer>),
+    /// Antwort auf `mcp_authenticate` mit Inhalt.
+    McpAuthStarted {
+        request_id: String,
+        auth_url: Option<String>,
+        callback_expected: bool,
+    },
     /// Erfolgreiche Antwort auf eine Steueranfrage ohne auswertbaren Inhalt.
     ControlSucceeded {
         request_id: String,

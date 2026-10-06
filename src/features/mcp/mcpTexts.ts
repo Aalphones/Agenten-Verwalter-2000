@@ -1,5 +1,6 @@
 import type { McpAction } from '@/lib/bindings/McpAction';
 import type { McpActionError } from '@/lib/bindings/McpActionError';
+import type { McpAuthWait } from '@/lib/bindings/McpAuthWait';
 import type { McpServer } from '@/lib/bindings/McpServer';
 import type { McpServerStatus } from '@/lib/bindings/McpServerStatus';
 
@@ -46,14 +47,19 @@ const ACTION_FAILURE_PREFIXES: Readonly<Record<McpAction, string>> = {
   reconnect: 'Neu verbinden von',
   enable: 'Einschalten von',
   disable: 'Ausschalten von',
+  authenticate: 'Anmeldung bei',
 };
 
 const DETAIL_NOTES: Readonly<Partial<Record<McpServerStatus, string>>> = {
   disabled: 'Ausgeschaltet – der Agent sieht die Werkzeuge dieses Servers nicht.',
   pending: 'Verbindet …',
-  needsAuth:
-    'Der Server braucht eine Anmeldung, die der Verwalter nicht anbietet. Melde dich einmal in Claude Code an (Befehl /mcp im Terminal oder in der VS-Code-Erweiterung) und verbinde ihn dann hier neu.',
+  needsAuth: 'Der Server braucht eine Anmeldung. „Anmelden“ öffnet sie im Browser.',
 };
+
+export const LOGIN_LABEL = 'Anmelden';
+export const LOGIN_TITLE = 'Anmeldeseite dieses Servers im Browser öffnen';
+export const REOPEN_LABEL = 'Seite erneut öffnen';
+export const RECONNECT_LABEL = 'Neu verbinden';
 
 export const NO_TOOLS_TEXT = 'Keine Werkzeuge gemeldet.';
 export const NO_ERROR_REASON_TEXT = 'Die Kommandozeile nennt keinen Grund.';
@@ -155,6 +161,14 @@ export function summaryText(servers: readonly McpServer[]): string {
 
 export function actionErrorText(error: McpActionError): string {
   return `${ACTION_FAILURE_PREFIXES[error.action]} „${error.server}“ fehlgeschlagen: ${error.text}`;
+}
+
+/** Der Hinweis über der Liste, solange eine Anmeldung offen ist. */
+export function authWaitText(auth: McpAuthWait): string {
+  if (auth.callbackExpected) {
+    return `Anmeldung für „${auth.server}“ im Browser geöffnet. Nach der Anmeldung verbindet sich der Server von selbst.`;
+  }
+  return `Anmeldung für „${auth.server}“ auf claude.ai im Browser geöffnet. Danach hier neu verbinden.`;
 }
 
 /** Der Hinweis in der Eingabeleiste. */

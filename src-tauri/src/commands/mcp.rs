@@ -35,6 +35,17 @@ pub async fn mcp_reconnect(
 
 /// `false`, wenn der Agent nicht zuhört und deshalb nichts angefragt wurde.
 #[tauri::command]
+pub async fn mcp_authenticate(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    server: String,
+) -> Result<bool, CommandError> {
+    registry.authenticate_mcp(&app, &session_id, &server)
+}
+
+/// `false`, wenn der Agent nicht zuhört und deshalb nichts angefragt wurde.
+#[tauri::command]
 pub async fn mcp_toggle(
     app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,

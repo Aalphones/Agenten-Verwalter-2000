@@ -1,9 +1,30 @@
-//! Liest die Antwort der Kommandozeile auf `mcp_status`. Das Format ist nicht als stabil
-//! dokumentiert: jedes Feld ist optional, ein unlesbares Feld bleibt leer, ein unlesbarer Server
-//! fällt weg.
+//! Liest die Antworten der Kommandozeile auf `mcp_status` und `mcp_authenticate`. Das Format ist
+//! nicht als stabil dokumentiert: jedes Feld ist optional, ein unlesbares Feld bleibt leer, ein
+//! unlesbarer Server fällt weg.
 use serde_json::Value;
 
 use crate::mcp::model::{McpServer, McpServerStatus};
+
+/// Antwort auf `mcp_authenticate`.
+pub struct McpAuthAnswer {
+    /// Fehlt, wenn schon ein gültiges Token vorliegt.
+    pub auth_url: Option<String>,
+    pub callback_expected: bool,
+}
+
+/// `None`, wenn `requiresUserAction` fehlt (dann ist es keine Antwort auf `mcp_authenticate`).
+pub fn mcp_auth(body: &Value) -> Option<McpAuthAnswer> {
+    body.get("requiresUserAction")?.as_bool()?;
+    let auth_url = text_field(body, "authUrl").filter(|url: &String| !url.is_empty());
+    let callback_expected = body
+        .get("callbackExpected")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    Some(McpAuthAnswer {
+        auth_url,
+        callback_expected,
+    })
+}
 
 /// `None`, wenn `body` keine Serverliste ist (`mcpServers` fehlt oder ist kein Array).
 pub fn mcp_servers(body: &Value) -> Option<Vec<McpServer>> {

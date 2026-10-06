@@ -15,7 +15,7 @@
 4a. ~~Claude-Konto~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_claude-konto.md`, ADR 021); `v0.14.0`.
 5. **Autark** (`autarker-agent`) — Phasen 1–3 fertig, größter Plan (9 Phasen, drei „heikel“).
 6. ~~Dateiverweise im Chat~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_dateiverweise-im-chat.md`, ADR 023), Smoke offen; `v0.15.0` auf Zuruf gesetzt. Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.
-7. **MCP-Anmeldung** (`2026-10-05_mcp-anmeldung.md`) — Knopf „Anmelden“ im MCP-Dialog öffnet die Anmeldeseite im Browser, eine Phase, ADR 024. Unabhängig von Autark, darf zwischen dessen Phasen laufen.
+7. **MCP-Anmeldung** (`2026-10-05_mcp-anmeldung.md`) — umgesetzt auf `feature/mcp-anmeldung` (Arbeitsbaum `verwalter-wt-mcp-anmeldung`), ADR 024; offen: Smoke 1–4, dann Merge, Archivieren, Release.
 8. **Git-Werkzeuge** (`2026-10-05_git-werkzeuge/`) — Plan freigegeben, geparkt; 5 Phasen (zwei „heikel“), Design abgenommen unter `docs/design/2026-10-05_git-werkzeuge/`, ADR 025. Unabhängig von Autark.
 9. **Artefakte** (`2026-10-05_artefakte/`) — Plan freigegeben, geparkt; 4 Phasen (Phase 1 „heikel“: Abschottung, mit Sicherheitsprobe vor Phase 2), Design abgenommen unter `docs/design/2026-10-05_artefakte/`, ADR 026. Unabhängig von Autark.
 10. ~~Session-Übergabe~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_session-uebergabe.md`, ADR 027, Migration 9), Smoke offen.

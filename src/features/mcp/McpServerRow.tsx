@@ -3,6 +3,8 @@ import { Switch } from '@/components/Switch';
 import {
   detailNote,
   ERROR_BOX_TITLE,
+  LOGIN_LABEL,
+  LOGIN_TITLE,
   NO_ERROR_REASON_TEXT,
   NO_TOOLS_TEXT,
   originText,
@@ -25,6 +27,7 @@ interface McpServerRowProps {
   canAct: boolean;
   onToggleExpanded: () => void;
   onReconnect: () => void;
+  onAuthenticate: () => void;
   onSetEnabled: (enabled: boolean) => void;
 }
 
@@ -37,6 +40,7 @@ export function McpServerRow({
   canAct,
   onToggleExpanded,
   onReconnect,
+  onAuthenticate,
   onSetEnabled,
 }: McpServerRowProps): ReactElement {
   const isOff: boolean = server.status === 'disabled';
@@ -129,6 +133,17 @@ export function McpServerRow({
         <span className={`mcp-server__status mcp-server__status--${server.status}`}>
           {statusText(server.status)}
         </span>
+        {server.status === 'needsAuth' && (
+          <button
+            type="button"
+            className="mcp-server__login"
+            title={LOGIN_TITLE}
+            disabled={!canAct || isBusy}
+            onClick={onAuthenticate}
+          >
+            {LOGIN_LABEL}
+          </button>
+        )}
         <button
           type="button"
           className="mcp-server__reconnect"

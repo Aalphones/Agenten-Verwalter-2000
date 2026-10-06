@@ -13,8 +13,8 @@ interface LoadedMcp {
 }
 
 /** Der MCP-Stand der Session, solange ihr Dialog offen ist: beim Öffnen wird der Agent um eine frische
- *  Liste gebeten, danach lädt jedes `mcp://changed` dieser Session nach. Solange ein Server noch verbindet
- *  oder eine Aktion läuft, fragt der Hook alle 2 s nach — die Kommandozeile meldet den Wechsel nicht von selbst. */
+ *  Liste gebeten, danach lädt jedes `mcp://changed` dieser Session nach. Solange ein Server noch verbindet,
+ *  eine Aktion läuft oder eine Anmeldung offen ist, fragt der Hook alle 2 s nach — die Kommandozeile meldet den Wechsel nicht von selbst. */
 export function useSessionMcp(sessionId: string, isOpen: boolean): SessionMcp | null {
   const [loaded, setLoaded] = useState<LoadedMcp | null>(null);
   const requestRef = useRef<number>(0);
@@ -78,6 +78,7 @@ export function useSessionMcp(sessionId: string, isOpen: boolean): SessionMcp | 
     current.isAgentRunning &&
     (current.servers === null ||
       current.busy.length > 0 ||
+      current.auth !== null ||
       current.servers.some((server: McpServer) => server.status === 'pending'));
 
   useEffect(() => {

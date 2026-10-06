@@ -21,7 +21,8 @@ use verwalter_lib::{
     error::CommandError,
     lmstudio::model::{LocalModel, LocalModelKind, LocalModels},
     mcp::model::{
-        McpAction, McpActionError, McpChangedEvent, McpServer, McpServerStatus, SessionMcp,
+        McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer, McpServerStatus,
+        SessionMcp,
     },
     projects::model::{ProjectCreated, ProjectSummary},
     repositories::model::{KnownRepository, RepositoryKind},
@@ -96,6 +97,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     McpServer::export_all(&cfg)?;
     McpAction::export_all(&cfg)?;
     McpActionError::export_all(&cfg)?;
+    McpAuthWait::export_all(&cfg)?;
     SessionMcp::export_all(&cfg)?;
     McpChangedEvent::export_all(&cfg)?;
     UsageLimit::export_all(&cfg)?;

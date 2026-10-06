@@ -8,7 +8,7 @@ Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](../c
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | Anmelden: Steueranfrage, Öffnen im Core, Knopf + Hinweis im Dialog, ADR 024, Doku | heikel | 1 | pending |
+| 1 | Anmelden: Steueranfrage, Öffnen im Core, Knopf + Hinweis im Dialog, ADR 024, Doku | heikel | 1 | complete (Smoke offen) |
 
 Eine Phase, weil nur das Ganze etwas Klickbares liefert; „heikel“, weil der Core eine Adresse aus der Ausgabe der Kommandozeile im Browser öffnet. Umsetzung auf `feature/mcp-anmeldung` im Arbeitsbaum `Agenten-Verwalter-2000-wt-mcp-anmeldung`, ein Commit, Scope `mcp`. Vor dem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); geprüft wird mit der Smoke-Checkliste.
 
@@ -164,17 +164,17 @@ export function authenticateMcpServer(sessionId: string, server: string): Promis
 
 ## Checkliste
 
-- [ ] Arbeitsbaum + Branch `feature/mcp-anmeldung` von `origin/main`
-- [ ] Rust: Protokoll, Lesen der Antwort, Ereignis, Übersetzung, Modell, Registry, Outbox-Öffnen, Befehl, Registrierung (Kontrakt oben)
-- [ ] `pnpm bindings`
-- [ ] TS: Wrapper, Texte, Zeile, Dialog, Hook
-- [ ] ADR 024 schreiben (Kontext / Optionen / Entscheidung / Konsequenzen aus „Festgelegte Entscheidungen“)
-- [ ] `docs/knowledge/claude-stream-json.md`, Abschnitt „MCP-Server steuern“: Zeile „`needs-auth` … nicht gemessen“ durch die Messung oben ersetzen; Zeile zu `mcp_authenticate` (gemessen für claude.ai, gelesen für `localhost`) ergänzen
-- [ ] ADR 013, Konsequenzen: Satz „Der Zustand `needs-auth` ist nur aus der SDK-Dokumentation bekannt“ → Verweis „gemessen 2026-10-05, Anmeldung: ADR 024“
-- [ ] `docs/code-map.md` Zeile „MCP-Server“: „Anmelden“ in die Beschreibung, `mcp_authenticate` in die Befehlsliste, ADR 024 verlinken
-- [ ] `docs/glossary.md`: Eintrag „Anmeldung (MCP)“, falls das Glossar MCP-Begriffe führt; sonst nichts
-- [ ] Smoke 1–3 selbst gefahren (unten), Ergebnis in „Report-Back“
-- [ ] `pnpm check` grün, ein Commit `feat(mcp): MCP-Server aus dem Dialog im Browser anmelden`, Push des Branches
+- [x] Arbeitsbaum + Branch `feature/mcp-anmeldung` (vom lokalen `main`, siehe Abweichungen)
+- [x] Rust: Protokoll, Lesen der Antwort, Ereignis, Übersetzung, Modell, Registry, Outbox-Öffnen, Befehl, Registrierung (Kontrakt oben)
+- [x] `pnpm bindings`
+- [x] TS: Wrapper, Texte, Zeile, Dialog, Hook
+- [x] ADR 024 schreiben (Kontext / Optionen / Entscheidung / Konsequenzen aus „Festgelegte Entscheidungen“)
+- [x] `docs/knowledge/claude-stream-json.md`, Abschnitt „MCP-Server steuern“: Zeile „`needs-auth` … nicht gemessen“ durch die Messung oben ersetzen; Zeile zu `mcp_authenticate` (gemessen für claude.ai, gelesen für `localhost`) ergänzen
+- [x] ADR 013, Konsequenzen: Satz „Der Zustand `needs-auth` ist nur aus der SDK-Dokumentation bekannt“ → Verweis „gemessen 2026-10-05, Anmeldung: ADR 024“
+- [x] `docs/code-map.md` Zeile „MCP-Server“: „Anmelden“ in die Beschreibung, `mcp_authenticate` in die Befehlsliste, ADR 024 verlinken
+- [x] `docs/glossary.md`: Eintrag „Anmeldung (MCP)“, falls das Glossar MCP-Begriffe führt; sonst nichts
+- [ ] Smoke 1–4 (unten) — fährt Sascha, Ergebnis in „Report-Back“
+- [x] `pnpm check` grün, ein Commit `feat(mcp): MCP-Server aus dem Dialog im Browser anmelden`, Push des Branches
 
 ## Smoke-Checkliste (Wackelstellen zuerst)
 
@@ -191,12 +191,27 @@ export function authenticateMcpServer(sessionId: string, server: string): Promis
 
 ## Report-Back
 
+Smoke 1–4: offen.
+
 ## Summary
+
+Knopf „Anmelden“ in Zeilen mit „Anmeldung nötig“; der Core stellt `mcp_authenticate`, öffnet eine `https://`-Anmeldeseite einmal im Browser und hält die offene Anmeldung bis zum Statuswechsel oder Agent-Ende; der Dialog zeigt darüber einen Hinweis mit „Seite erneut öffnen“ und bei claude.ai „Neu verbinden“.
 
 ## Files touched
 
+- Core: `agents/claude/{protocol,mcp,translate}.rs`, `agents/event.rs`, `mcp/model.rs`, `sessions/registry.rs`, `sessions/registry/mcp.rs`, `commands/mcp.rs`, `lib.rs`, `examples/gen-bindings.rs`
+- Oberfläche: `src/lib/mcp.ts`, `src/features/mcp/{McpDialog,McpServerRow}.{tsx,css}`, `mcpTexts.ts`, `useSessionMcp.ts`, Bindings `McpAuthWait`, `McpAction`, `SessionMcp`
+- Doku: ADR 024 (neu), ADR 013, `claude-stream-json.md`, `code-map.md`, `glossary.md`
+
 ## Commits
+
+`feat(mcp): MCP-Server aus dem Dialog im Browser anmelden` auf `feature/mcp-anmeldung`.
 
 ## Deviations from plan
 
+- Branch vom lokalen `main` statt `origin/main`: `main` lag drei Commits (Session-Übergabe) vor `origin/main`; Arbeitsbaum heißt `verwalter-wt-mcp-anmeldung`, weil das Repository `verwalter` heißt.
+- `mcp_auth_started`: trägt die Request-ID eine andere Aktion als `Authenticate`, gilt sie trotzdem als beantwortet (Ereignis + Liste neu anfragen) statt „ohne Folge“ — sonst bliebe die Zeile ohne Meldung ihres Endes.
+
 ## Follow-ups
+
+- Smoke 1 entscheidet, ob der Hinweis bei claude.ai statt „Neu verbinden“ einen Neustart des Agenten nennen muss.

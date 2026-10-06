@@ -52,6 +52,18 @@ pub enum McpAction {
     Reconnect,
     Enable,
     Disable,
+    Authenticate,
+}
+
+/// Eine gestartete Anmeldung, deren Abschluss noch nicht in `mcp_status` zu sehen ist.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpAuthWait {
+    pub server: String,
+    /// Die Anmeldeseite; immer `https://`.
+    pub url: String,
+    /// `true`: die Kommandozeile wartet auf den Rücksprung und verbindet selbst neu. `false` (claude.ai): danach neu verbinden.
+    pub callback_expected: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -71,6 +83,8 @@ pub struct SessionMcp {
     pub busy: Vec<String>,
     /// Fehler der letzten gescheiterten Aktion; die nächste Aktion löscht ihn.
     pub error: Option<McpActionError>,
+    /// Offene Anmeldung; `None`, wenn keine läuft.
+    pub auth: Option<McpAuthWait>,
     /// Millisekunden seit 1970, gesetzt beim Eintreffen der Liste.
     pub fetched_at: Option<f64>,
     pub is_agent_running: bool,

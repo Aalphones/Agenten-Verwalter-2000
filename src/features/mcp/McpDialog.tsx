@@ -1,25 +1,30 @@
 import { useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { Dialog } from '@/components/Dialog';
+import { ExternalLink } from '@/components/ExternalLink';
 import {
   actionErrorText,
   AGENT_IDLE_TEXT,
+  authWaitText,
   FOOT_NOTE,
   groupServers,
   LOADING_TEXT,
   NEW_SESSION_TEXT,
   NO_SERVERS_TEXT,
+  RECONNECT_LABEL,
+  REOPEN_LABEL,
   summaryText,
 } from '@/features/mcp/mcpTexts';
 import type { McpGroup } from '@/features/mcp/mcpTexts';
 import { McpServerRow } from '@/features/mcp/McpServerRow';
 import { useSessionMcp } from '@/features/mcp/useSessionMcp';
+import type { McpAuthWait } from '@/lib/bindings/McpAuthWait';
 import type { McpServer } from '@/lib/bindings/McpServer';
 import type { SessionMcp } from '@/lib/bindings/SessionMcp';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
-import { reconnectMcpServer, toggleMcpServer } from '@/lib/mcp';
+import { authenticateMcpServer, reconnectMcpServer, toggleMcpServer } from '@/lib/mcp';
 import './McpDialog.css';
 
 const TITLE_ID = 'mcp-dialog-title';
@@ -29,7 +34,7 @@ interface McpDialogProps {
   onClose: () => void;
 }
 
-/** Dialog „MCP-Server“: die Server der Session mit Status, Herkunft und Werkzeugen; Neu verbinden und Ein-/Ausschalten. */
+/** Dialog „MCP-Server“: die Server der Session mit Status, Herkunft und Werkzeugen; Anmelden, Neu verbinden und Ein-/Ausschalten. */
 export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
   const [filter, setFilter] = useState<string>('');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -42,6 +47,14 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     // Die Antwort kommt als `mcp://changed`; hier gibt es nichts abzuwarten.
     setActionFailure(null);
     reconnectMcpServer(session.id, name).catch((reason: unknown) => {
+      setActionFailure(commandErrorText(reason));
+    });
+  }
+
+  function authenticate(name: string): void {
+    // Die Anmeldeseite öffnet der Core, sobald die Antwort da ist; Beginn und Ende melden `mcp://changed`.
+    setActionFailure(null);
+    authenticateMcpServer(session.id, name).catch((reason: unknown) => {
       setActionFailure(commandErrorText(reason));
     });
   }
@@ -104,6 +117,7 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
             />
           </label>
         </div>
+        {loaded.auth !== null && renderAuthWait(loaded, loaded.auth)}
         {failure !== null && (
           <p className="mcp-dialog__error" role="alert">
             {failure}
@@ -116,6 +130,29 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
           )}
         </div>
       </>
+    );
+  }
+
+  function renderAuthWait(loaded: SessionMcp, auth: McpAuthWait): ReactElement {
+    return (
+      <div className="mcp-dialog__auth" role="status">
+        <p className="mcp-dialog__auth-text">{authWaitText(auth)}</p>
+        {!auth.callbackExpected && (
+          <button
+            type="button"
+            className="mcp-dialog__auth-reconnect"
+            disabled={!loaded.isAgentRunning || loaded.busy.includes(auth.server)}
+            onClick={() => {
+              reconnect(auth.server);
+            }}
+          >
+            {RECONNECT_LABEL}
+          </button>
+        )}
+        <span className="mcp-dialog__auth-reopen">
+          <ExternalLink href={auth.url}>{REOPEN_LABEL}</ExternalLink>
+        </span>
+      </div>
     );
   }
 
@@ -136,6 +173,9 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
               }}
               onReconnect={() => {
                 reconnect(server.name);
+              }}
+              onAuthenticate={() => {
+                authenticate(server.name);
               }}
               onSetEnabled={(enabled: boolean) => {
                 setEnabled(server.name, enabled);

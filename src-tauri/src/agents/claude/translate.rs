@@ -519,7 +519,7 @@ fn handle_control_request(request: ControlRequestLine, line: &str) -> Vec<AgentE
 }
 
 /// Erkennung am Inhalt: `get_context_usage` trägt `categories` und `maxTokens`, `mcp_status`
-/// trägt `mcpServers`. Alles andere — leere Bestätigungen und Fehler — geht mit seiner Request-ID
+/// trägt `mcpServers`, `mcp_authenticate` trägt `requiresUserAction`. Alles andere — leere Bestätigungen und Fehler — geht mit seiner Request-ID
 /// weiter; die Registry wertet nur IDs aus, die sie selbst für eine MCP-Aktion vergeben hat.
 fn control_answered(line: ControlResponseLine) -> Vec<AgentEvent> {
     let body = line.response;
@@ -538,6 +538,13 @@ fn control_answered(line: ControlResponseLine) -> Vec<AgentEvent> {
     }
     if let Some(servers) = mcp::mcp_servers(&response) {
         return vec![AgentEvent::McpServers(servers)];
+    }
+    if let Some(answer) = mcp::mcp_auth(&response) {
+        return vec![AgentEvent::McpAuthStarted {
+            request_id,
+            auth_url: answer.auth_url,
+            callback_expected: answer.callback_expected,
+        }];
     }
     vec![AgentEvent::ControlSucceeded { request_id }]
 }
