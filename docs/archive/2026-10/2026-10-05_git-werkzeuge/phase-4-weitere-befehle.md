@@ -4,7 +4,7 @@ Ziel: Die Einträge des ⋯-Menüs und „Verwerfen“ beim Überfahren einer Da
 
 ## Kontext
 
-- **Entwurf:** [git-werkzeuge.html](../../design/2026-10-05_git-werkzeuge/git-werkzeuge.html) — ⋯-Menü (`openMoreMenu`), Branch-Menü (Eintrag „Neuer Branch als Ticket-Worktree …“), Verwerfen-Knopf an der Datei-Zeile und Dialog „Änderung verwerfen?“.
+- **Entwurf:** [git-werkzeuge.html](../../../design/2026-10-05_git-werkzeuge/git-werkzeuge.html) — ⋯-Menü (`openMoreMenu`), Branch-Menü (Eintrag „Neuer Branch als Ticket-Worktree …“), Verwerfen-Knopf an der Datei-Zeile und Dialog „Änderung verwerfen?“.
 - [README.md](README.md): „Festgelegte Entscheidungen“ (Sperre, Neuer Branch als Ticket-Worktree), „Kontrakt“ (Commands Phase 4, `not-merged:`-Präfix).
 - Phase 2: `git/mod.rs` `run_write`, `git/actions.rs`, `commands/git.rs` `entry_dir`, `registry.ensure_not_busy`. Phase 3: `src/lib/git.ts`, `src/features/git/` (`GitMoreMenu`, `GitBranchMenu`, `GitOperationRow`), `buildFileRows`/`FileTree`.
 - `src-tauri/src/git/mod.rs` `worktree_add_new(repo, path, branch, start)`; `src-tauri/src/worktrees/` (Benennung `<repo>-wt-<Name>`, `ticket_roots`); in `sessions/registry.rs` der Weg, auf dem ein vom Agenten benutzter Ticket-Worktree der Session gemerkt wird (`outbox.ticket_worktrees` → `db::session_ticket_worktrees::insert_all`; Fundstelle der Befüllung per Grep auf `ticket_worktrees` in `registry.rs`).

@@ -10,7 +10,7 @@ Ziel: Der Core liefert je Eintrag der Session-Changes Branch, Upstream, ↓/↑,
 - `src-tauri/src/commands/changes.rs` — Muster für Commands mit `session_id` + `key` (`registry.changes_input(&session_id, ChangesReach::Session)`, dann `sources::find`).
 - `src-tauri/src/sessions/registry.rs` — `changes_input`; `src-tauri/src/sessions/model.rs` — `SessionStatus`, `SessionSummary` (`number`, `name`, `project_id`).
 - `src-tauri/examples/gen-bindings.rs` — Export-Liste.
-- [docs/conventions/rust.md](../../conventions/rust.md), [ADR 014](../../decisions/014-changes-je-session.md), [ADR 020](../../decisions/020-innere-repositories.md).
+- [docs/conventions/rust.md](../../../conventions/rust.md), [ADR 014](../../../decisions/014-changes-je-session.md), [ADR 020](../../../decisions/020-innere-repositories.md).
 - Fehlerklassen: Vault `werkzeuge/git.md` — einschlägig: (a) „Negativbefund aus einer nicht aktualisierten Historie“: ↓/↑ gegen `@{u}` sind ohne Fetch beliebig alt → der Fetch-Zeitpunkt wird mitgeführt (Phase 2/3); (b) „`rev-parse --abbrev-ref HEAD` als Default-Branch gelesen“: für den Standard-Branch nur `git::default_branch` verwenden, nie den ausgecheckten Branch.
 
 ## AK der Phase

@@ -1,6 +1,6 @@
 # Design-Entwurf: Git in den Changes
 
-**Status:** abgenommen am 2026-10-05 als Grundlage des Plans [Git-Werkzeuge](../../planning/2026-10-05_git-werkzeuge/README.md). Vorbild ist die Ansicht „Source Control“ in VS Code; nachgebaut wird die Bedienung, eingebaut in den Reiter „Changes“ statt als eigenes Panel. Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
+**Status:** umgesetzt im Plan [Git-Werkzeuge](../../archive/2026-10/2026-10-05_git-werkzeuge/README.md); abgenommen am 2026-10-05 als Grundlage des Plans [Git-Werkzeuge](../../archive/2026-10/2026-10-05_git-werkzeuge/README.md). Vorbild ist die Ansicht „Source Control“ in VS Code; nachgebaut wird die Bedienung, eingebaut in den Reiter „Changes“ statt als eigenes Panel. Wo die Umsetzung abweichen muss, wird erst dieser Entwurf geändert, dann der Code.
 
 ## Ansehen
 

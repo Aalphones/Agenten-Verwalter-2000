@@ -2,9 +2,9 @@
 
 Ziel: Die Bedienung von „Source Control“ aus VS Code im Verwalter — Branch sehen und wechseln, Commit, Push, Pull, Fetch, dazu Verwerfen, Stash, Merge, Rebase, Branch löschen und ein Verlauf als Graph. Alles sitzt im Reiter „Changes“ einer Session, je Eintrag (Repository, Ticket-Worktree, inneres Repository); die Kopfzeile bekommt nur eine Branch-Pille.
 
-**Design (verbindlich):** [docs/design/2026-10-05_git-werkzeuge/](../../design/2026-10-05_git-werkzeuge/README.md) — `git-werkzeuge.html` im Browser öffnen, Schalter „Neues markieren“ zeigt, was neu ist. Abgenommen am 2026-10-05. Wo die Umsetzung abweichen muss, wird erst der Entwurf geändert, dann der Code.
+**Design (verbindlich):** [docs/design/2026-10-05_git-werkzeuge/](../../../design/2026-10-05_git-werkzeuge/README.md) — `git-werkzeuge.html` im Browser öffnen, Schalter „Neues markieren“ zeigt, was neu ist. Abgenommen am 2026-10-05. Wo die Umsetzung abweichen muss, wird erst der Entwurf geändert, dann der Code.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 006](../../decisions/006-changes-und-diff.md), [ADR 010](../../decisions/010-worktrees-durch-den-agenten.md), [ADR 014](../../decisions/014-changes-je-session.md), [ADR 020](../../decisions/020-innere-repositories.md). ADR 025 entsteht in Phase 1 (024 ist an den Plan „MCP-Anmeldung“ vergeben).
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [docs/code-map.md](../../../code-map.md), [docs/glossary.md](../../../glossary.md), die Konventionen unter [docs/conventions/](../../../conventions/), [ADR 006](../../../decisions/006-changes-und-diff.md), [ADR 010](../../../decisions/010-worktrees-durch-den-agenten.md), [ADR 014](../../../decisions/014-changes-je-session.md), [ADR 020](../../../decisions/020-innere-repositories.md). ADR 025 entsteht in Phase 1 (024 ist an den Plan „MCP-Anmeldung“ vergeben).
 
 ## Phasen
 
@@ -14,13 +14,13 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 2 | Core schreibt: Commit (auch „& Push“, Ergänzen), Push, Pull, Fetch, Branch wechseln und anlegen, Konflikt-Zustand | [phase-2-commit-und-sync.md](phase-2-commit-und-sync.md) | heikel | complete |
 | 3 | Oberfläche: Branch-Pille, Repository-Zeile, Commit-Feld, Häkchen, fremde Änderungen, Gruppen, Hinweis, Branch-Menü, Dialoge | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
 | 4 | Weitere Befehle: Verwerfen, Stash, Pull mit Rebase, Merge, Branch löschen, Ticket-Worktree anlegen, Explorer/VS Code — Core und Oberfläche | [phase-4-weitere-befehle.md](phase-4-weitere-befehle.md) | standard | complete |
-| 5 | Übersicht mit ↓/↑ und Verlauf als Graph; Nachrichtenvorschlag ✦; Doku, Release | [phase-5-verlauf-und-vorschlag.md](phase-5-verlauf-und-vorschlag.md) | standard | pending |
+| 5 | Übersicht mit ↓/↑ und Verlauf als Graph; Nachrichtenvorschlag ✦; Doku, Release | [phase-5-verlauf-und-vorschlag.md](phase-5-verlauf-und-vorschlag.md) | standard | complete |
 
 **Reihenfolge:** strikt 1 → 5. Nach Phase 3 ist der Kern benutzbar (Commit, Push, Pull, Wechseln); 4 und 5 ergänzen. Umsetzung direkt auf `main`, ein Commit pro Phase, Scope `git`. Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Keine neuen Abhängigkeiten. Erkenntnisse nach [FINDINGS.md](FINDINGS.md).
 
 ## Festgelegte Entscheidungen
 
-Phase 1 schreibt daraus [ADR 025](../../decisions/025-git-werkzeuge.md) „Git-Werkzeuge in den Changes“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen).
+Phase 1 schreibt daraus [ADR 025](../../../decisions/025-git-werkzeuge.md) „Git-Werkzeuge in den Changes“ (Kontext / betrachtete Optionen / Entscheidung / Konsequenzen).
 
 - **Ort:** Git-Bedienung nur in den Changes einer **Session** (Reichweite `session`). Die Changes der Vorhaben-Übersicht (Reichweite `project`) bleiben unverändert — ein Commit dort wüsste nicht, welcher Session er gehört. Verworfen: eigenes Panel rechts (erster Entwurf, zeigte dieselben Dateien doppelt).
 - **Feature-Name `git`** in allen Schichten: `src-tauri/src/git/` (bleibt der einzige Ort, der `git` startet; neue Dateien `model.rs`, `status.rs`, `actions.rs`, `log.rs` neben `mod.rs`), `src-tauri/src/commands/git.rs`, `src/lib/git.ts`, `src/features/git/`, `src/stores/git.ts`. `git` wird in der Code-Map vom Querschnitt zum Feature.
@@ -145,13 +145,30 @@ Wackelstellen zuerst:
 10. Ticket-Worktree anlegen → erscheint als eigener Eintrag in den Changes.
 11. ✦ schlägt eine Nachricht im Format von `docs/conventions/commits.md` vor; in „Autark“ ausgegraut.
 12. Vorhaben-Übersicht → Changes: keine Git-Bedienung (unverändert).
+13. Ein eigener Commit der Session, der noch nicht gepusht ist: im Verlauf als Ring, Tooltip „— noch nicht gepusht“; nach dem Push ein gefüllter Punkt.
+14. Verwerfen einer vom Agenten mit `git add` vorgemerkten neuen Datei; Stash zurückholen mit Konflikt (der Stash bleibt liegen); Ticket-Worktree mit `/` im Namen (Ordner `…-wt-a-b`); „In VS Code öffnen“ ohne `code` im PATH → Satz statt Absturz.
+15. Verlauf in einer Session mit laufendem Agenten: Pull im Kopf der eingehenden Zeile ausgegraut; Fetch-Knopf funktioniert.
+16. Name eines Branches mit `/` (`feature/x`) erscheint im Verlauf als lokale Marke, `origin/x` als Remote-Marke.
 
 ## Summary
 
+Die Changes einer Session tragen die Git-Bedienung aus VS Code: Branch-Pille in der Kopfzeile; je Eintrag Branch wechseln und anlegen, Commit (auch mit Push und Ergänzen) mit genau den angehakten Dateien, Push, Pull, Fetch, Verwerfen, Stash, Merge, Pull mit Rebase, Branch löschen, Ticket-Worktree anlegen, Ordner öffnen. Der Core sperrt dateiändernde Befehle, solange eine Session des Vorhabens arbeitet. Die Übersicht zeigt ↓/↑ je Eintrag und den Verlauf als Graph; ✦ schlägt eine Commit-Nachricht vor. ADR 025.
+
 ## Files touched
+
+`src-tauri/src/git/` (`model.rs`, `status.rs`, `actions.rs`, `log.rs`, `mod.rs`), `src-tauri/src/commands/git.rs`, `src-tauri/src/agents/claude/print.rs` (`ask_haiku`), `src-tauri/src/sessions/registry/tldr.rs`, `src/features/git/`, `src/features/changes/`, `src/stores/git.ts`, `src/lib/git.ts`, Code-Map, Glossar, ADR 025.
 
 ## Commits
 
+`295a9ac` Core liest · `3be8500` Core schreibt · `bb7ab34` Oberfläche · `5c6beba` weitere Befehle · `db8f365` Verlauf, ↓/↑, Nachrichtenvorschlag.
+
 ## Deviations from plan
 
+- `GitLogCommit.refs` trägt volle Ref-Namen (`refs/heads/x`, `refs/remotes/origin/x`, `tag: refs/tags/x`) statt der kurzen aus `%D` — nur so unterscheidet die Oberfläche `feature/x` von `origin/x`. `git log` läuft dafür mit `--decorate=full`.
+- `ask_haiku` nimmt eine `HaikuRequest` (Anweisung, Schema, Eingabe, Zeitlimit, Autark-Satz) statt fünf einzelner Parameter; das TL;DR hat einen dünnen Aufrufer `ask_tldr`.
+- ✦ ist in „Autark“ über die Einstellung ausgegraut (das TL;DR graut dort nicht aus, sondern zeigt den Fehlersatz).
+
 ## Follow-ups
+
+- Smoke-Checkliste steht offen (Wackelstellen 1–3 zuerst); Ergebnisse hier nachtragen.
+- Release auf Zuruf: Minor-Version, `chore(release)`, Tag.

@@ -4,12 +4,12 @@ Ziel: Die Git-Bedienung erscheint in den Changes einer Session nach dem Entwurf 
 
 ## Kontext
 
-- **Entwurf (verbindlich):** [docs/design/2026-10-05_git-werkzeuge/git-werkzeuge.html](../../design/2026-10-05_git-werkzeuge/git-werkzeuge.html) im Browser öffnen, „Neues markieren: an“. Maße und Farben stehen im `<style>`-Block der Datei (Hex-Werte = semantische Tokens; im Code immer `var(--color-…)` aus `src/styles/theme.css`, nie Hex).
+- **Entwurf (verbindlich):** [docs/design/2026-10-05_git-werkzeuge/git-werkzeuge.html](../../../design/2026-10-05_git-werkzeuge/git-werkzeuge.html) im Browser öffnen, „Neues markieren: an“. Maße und Farben stehen im `<style>`-Block der Datei (Hex-Werte = semantische Tokens; im Code immer `var(--color-…)` aus `src/styles/theme.css`, nie Hex).
 - [README.md](README.md): „Festgelegte Entscheidungen“, „Kontrakt“. Phase 1–2: alle Commands und Typen.
 - `src/features/changes/` — `ChangesView.tsx` (Aufbau, `reach`), `ChangesToolbar.tsx`, `FileTree.tsx` (virtualisiert, `ESTIMATED_HEIGHT` je Zeilenart, `renderRow`), `buildFileRows.ts` (`FileRow`-Union, `appendRepository`), `useSessionChanges.ts` (Nachladen alle 5 s), `changesScope.ts`. `src/stores/changes.ts` (Filter, Blickwinkel, geöffnete Datei).
 - `src/app/SessionHeader.tsx` — Titelbereich `session-header__title` mit Status `session-header__status`.
 - `src/components/` — `Popover` (`autoFocus`, `anchor`), `Dialog`; `src/lib/useActionError.ts`, `src/stores/sessionErrors.ts` (Fehlerzeile unter der Kopfzeile); `src/lib/sessions.ts` `pauseSession`.
-- Muster für Wrapper: `src/lib/changes.ts`. Konventionen: [react.md](../../conventions/react.md), [tailwind.md](../../conventions/tailwind.md) (BEM-CSS pro Komponente), [typescript.md](../../conventions/typescript.md).
+- Muster für Wrapper: `src/lib/changes.ts`. Konventionen: [react.md](../../../conventions/react.md), [tailwind.md](../../../conventions/tailwind.md) (BEM-CSS pro Komponente), [typescript.md](../../../conventions/typescript.md).
 - Fehlerklassen: Vault `frameworks/react.md` — alle drei betreffen Tests; keine einschlägig.
 
 ## Festlegungen dieser Phase
