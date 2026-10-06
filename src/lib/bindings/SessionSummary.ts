@@ -32,4 +32,8 @@ lastActivityAt: number,
 /**
  * Seit dem letzten Blick des Users hat der Agent abgegeben.
  */
-unread: boolean, };
+unread: boolean, 
+/**
+ * Einstiegszeile der letzten Antwort („Weiter: …“, ADR 027); `None` ohne oder nach einer neueren Nutzernachricht.
+ */
+handoffLine: string | null, };

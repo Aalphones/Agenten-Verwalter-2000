@@ -13,6 +13,28 @@ export const STATUS_LABEL: Record<SessionStatus, string> = {
   new: 'Neu',
 };
 
+/** Status, wie die Sidebar ihn zeigt: `handoff` = abgeschlossen mit Einstiegszeile, Folgesession noch nicht gestartet (ADR 027). */
+export type DisplayStatus = SessionStatus | 'handoff';
+
+export const HANDOFF_LABEL = 'wartet auf Wiedereinstieg';
+
+/** `sessions`: alle bekannten Sessions (oder die des Vorhabens). */
+export function displayStatus(
+  session: SessionSummary,
+  sessions: readonly SessionSummary[],
+): DisplayStatus {
+  if (session.status !== 'completed' || session.handoffLine === null) {
+    return session.status;
+  }
+  const hasFollowUp: boolean = sessions.some(
+    (other: SessionSummary) =>
+      other.projectId === session.projectId &&
+      other.number > session.number &&
+      other.status !== 'new',
+  );
+  return hasFollowUp ? session.status : 'handoff';
+}
+
 /** Zweite Zeile eines Sidebar-Eintrags; `null`, wenn es nichts Nützliches zu sagen gibt. */
 export function metaLine(session: SessionSummary): string | null {
   switch (session.status) {

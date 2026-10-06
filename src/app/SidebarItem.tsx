@@ -2,11 +2,14 @@ import { useRef, useState } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent, ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
+import type { DisplayStatus } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import './SidebarItem.css';
 
 interface SidebarItemProps {
   session: SessionSummary;
+  /** Symbol-Status; kann `handoff` sein, was der Core nicht kennt. */
+  status: DisplayStatus;
   isActive: boolean;
   isRenaming: boolean;
   onSelect: () => void;
@@ -18,6 +21,7 @@ interface SidebarItemProps {
 /** Eine Session im aufgeklappten Baum eines Vorhabens. */
 export function SidebarItem({
   session,
+  status,
   isActive,
   isRenaming,
   onSelect,
@@ -54,7 +58,7 @@ export function SidebarItem({
         }}
       >
         <span className="sidebar-item__status">
-          <StatusIcon status={session.status} size={10} />
+          <StatusIcon status={status} size={10} />
         </span>
         <span className="sidebar-item__number">#{session.number}</span>
         <span

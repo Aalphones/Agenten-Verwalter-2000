@@ -8,7 +8,7 @@ Kontext für den Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](../c
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | Einstiegszeile im Core erkennen, speichern, melden; Sidebar-Symbol „wartet auf Wiedereinstieg“ | standard | 1 | pending |
+| 1 | Einstiegszeile im Core erkennen, speichern, melden; Sidebar-Symbol „wartet auf Wiedereinstieg“ | standard | 1 | complete |
 | 2 | Knopf „In neuer Session weiter“: Anlegen, Modell aus der Zeile, Entwurf, Wechsel; ADR 027, Doku | standard | 2 | pending |
 
 Sequenziell, weil Phase 2 das Feld `handoffLine` aus Phase 1 liest. Phase 1 liefert schon etwas Sichtbares (das Symbol). Umsetzung auf `feature/session-uebergabe` im Arbeitsbaum `Agenten-Verwalter-2000-wt-session-uebergabe`, ein Commit je Phase. Vor jedem Commit `pnpm check` grün; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine automatisierten Tests (Projektprofil); geprüft wird mit der Smoke-Checkliste.
@@ -162,13 +162,13 @@ export const HANDOFF_LABEL = 'wartet auf Wiedereinstieg';
 
 Phase 1:
 
-- [ ] Arbeitsbaum + Branch `feature/session-uebergabe` von `origin/main`
-- [ ] Rust: `handoff.rs`, Migration 9, `db/sessions.rs`, Zustand/Ereignis/`push_user`/`row_of`/`summarize`, `SessionSummary` (Kontrakt oben)
-- [ ] `pnpm bindings`
-- [ ] TS: `DisplayStatus`/`displayStatus`/`HANDOFF_LABEL`, `StatusIcon` + CSS + Token, `projectStatus.ts`, `SidebarProject`, `SidebarItem`, `Sidebar`
-- [ ] `docs/code-map.md`: Zeile „Sessions“ um `handoff.rs` und `displayStatus`, Zeile „Persistenz“ um Migration 9
-- [ ] Smoke 1, 2, 5 (unten), Ergebnis in „Report-Back“
-- [ ] `pnpm check` grün, Commit `feat(sessions): abgeschlossene Session mit Einstiegszeile in der Sidebar als „wartet auf Wiedereinstieg“ zeigen`
+- [x] Arbeitsbaum + Branch — entfällt (Profil private: direkt auf `main`)
+- [x] Rust: `handoff.rs`, Migration 9, `db/sessions.rs`, Zustand/Ereignis/`push_user`/`row_of`/`summarize`, `SessionSummary` (Kontrakt oben)
+- [x] `pnpm bindings`
+- [x] TS: `DisplayStatus`/`displayStatus`/`HANDOFF_LABEL`, `StatusIcon` + CSS + Token, `projectStatus.ts`, `SidebarProject`, `SidebarItem`, `Sidebar`
+- [x] `docs/code-map.md`: Zeile „Sessions“ um `handoff.rs` und `displayStatus` (Zeile „Persistenz“ nennt `migrations/*.sql` pauschal — unverändert)
+- [ ] Smoke 1, 2, 5 (unten) — Nutzer prüft am Plan-Ende
+- [x] `pnpm check` grün, Commit `feat(sessions): abgeschlossene Session mit Einstiegszeile in der Sidebar als „wartet auf Wiedereinstieg“ zeigen`
 
 Phase 2:
 

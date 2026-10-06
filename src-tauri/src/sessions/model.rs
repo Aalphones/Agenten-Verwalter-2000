@@ -46,6 +46,8 @@ pub struct SessionSummary {
     pub last_activity_at: f64,
     /// Seit dem letzten Blick des Users hat der Agent abgegeben.
     pub unread: bool,
+    /// Einstiegszeile der letzten Antwort („Weiter: …“, ADR 027); `None` ohne oder nach einer neueren Nutzernachricht.
+    pub handoff_line: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

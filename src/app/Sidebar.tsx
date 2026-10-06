@@ -6,6 +6,7 @@ import type { SidebarProjectEntry, SidebarRow } from '@/app/buildSidebarRows';
 import { SidebarItem } from '@/app/SidebarItem';
 import { SidebarProject } from '@/app/SidebarProject';
 import { projectActivity, sessionsByActivity } from '@/features/projects/projectStatus';
+import { displayStatus } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveProject, renameProject } from '@/lib/projects';
@@ -206,6 +207,7 @@ export function Sidebar({
       <div className={`sidebar__session${row.isLast ? ' sidebar__session--last' : ''}`}>
         <SidebarItem
           session={session}
+          status={displayStatus(session, sessions)}
           isActive={session.id === activeSessionId}
           isRenaming={
             renaming !== null && renaming.kind === 'session' && renaming.id === session.id

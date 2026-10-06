@@ -22,6 +22,10 @@
     color: var(--color-status-completed);
   }
 
+  &--handoff {
+    color: var(--color-status-handoff);
+  }
+
   &--cancelled,
   &--new {
     color: var(--color-fg-muted);

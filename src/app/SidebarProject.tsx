@@ -4,7 +4,11 @@ import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import { RenameField } from '@/app/SidebarItem';
 import { hasUnread, mostUrgent, projectMetaLine } from '@/features/projects/projectStatus';
-import { isMetaHighlighted } from '@/features/sessions/sessionStatus';
+import {
+  displayStatus,
+  isMetaHighlighted,
+  type DisplayStatus,
+} from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
@@ -60,8 +64,9 @@ export function SidebarProject({
     }
     const urgent: SessionSummary | null = mostUrgent(sessions);
     const meta: string | null = projectMetaLine(sessions);
-    const isDone: boolean =
-      urgent === null || urgent.status === 'completed' || urgent.status === 'cancelled';
+    const urgentStatus: DisplayStatus =
+      urgent === null ? 'completed' : displayStatus(urgent, sessions);
+    const isDone: boolean = urgentStatus === 'completed' || urgentStatus === 'cancelled';
     const isUnread: boolean = hasUnread(sessions);
     const metaClass = `sidebar-project__meta${
       urgent !== null && isMetaHighlighted(urgent.status)
@@ -108,7 +113,7 @@ export function SidebarProject({
           }}
         >
           <span className="sidebar-project__status">
-            <StatusIcon status={urgent === null ? 'completed' : urgent.status} size={12} />
+            <StatusIcon status={urgentStatus} size={12} />
           </span>
           <span className="sidebar-project__text">
             <span

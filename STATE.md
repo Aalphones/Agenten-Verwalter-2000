@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/`
-**Phase:** 4/9 — Anweisungen und Skills (pending; Phase 3 complete)
-**Nächster Schritt:** Phase 4 umsetzen (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`); Smoke „Dateiverweise im Chat“ (archiviert, `v0.15.0` auf Zuruf) und „Claude-Konto“ stehen offen (siehe unten).
+**Aktiver Plan:** `docs/planning/2026-10-05_session-uebergabe.md`
+**Phase:** 2/2 — Knopf „In neuer Session weiter“ (pending; Phase 1 complete)
+**Nächster Schritt:** Phase 2 umsetzen (Kontrakt „TS: Knopf“ im Plan). Danach zurück zu Autark Phase 4 (`docs/planning/2026-10-01_autarker-agent/phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`); Smoke „Dateiverweise im Chat“ (archiviert, `v0.15.0` auf Zuruf) und „Claude-Konto“ stehen offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

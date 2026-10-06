@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react';
-import type { SessionStatus } from '@/lib/bindings/SessionStatus';
+import type { DisplayStatus } from '@/features/sessions/sessionStatus';
 import './StatusIcon.css';
 
 interface StatusIconProps {
-  status: SessionStatus;
+  status: DisplayStatus;
   size: 10 | 12 | 14;
 }
 
@@ -21,8 +21,22 @@ export function StatusIcon({ status, size }: StatusIconProps): ReactElement {
   );
 }
 
-function renderShape(status: SessionStatus): ReactElement {
+function renderShape(status: DisplayStatus): ReactElement {
   switch (status) {
+    case 'handoff':
+      return (
+        <>
+          <circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+          <path
+            d="M4 6h3.6M5.9 4.2 7.7 6 5.9 7.8"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      );
     case 'starting':
     case 'running':
       return (

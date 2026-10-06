@@ -1,21 +1,27 @@
-import { metaLine } from '@/features/sessions/sessionStatus';
+import {
+  displayStatus,
+  HANDOFF_LABEL,
+  metaLine,
+  type DisplayStatus,
+} from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
-import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 
 /** Vom Dringendsten zum Unwichtigsten — die dringendste Session bestimmt das Symbol des Vorhabens. */
-export const URGENCY: readonly SessionStatus[] = [
+export const URGENCY: readonly DisplayStatus[] = [
   'waiting',
   'error',
   'running',
   'starting',
   'paused',
+  'handoff',
   'new',
   'completed',
   'cancelled',
 ];
 
-const SHORT_STATUS: Record<SessionStatus, string> = {
+const SHORT_STATUS: Record<DisplayStatus, string> = {
+  handoff: HANDOFF_LABEL,
   starting: 'startet',
   running: 'läuft',
   waiting: 'wartet auf dich',
@@ -72,8 +78,8 @@ export function mostUrgent(sessions: readonly SessionSummary[]): SessionSummary 
       best = session;
       continue;
     }
-    const rank: number = URGENCY.indexOf(session.status);
-    const bestRank: number = URGENCY.indexOf(best.status);
+    const rank: number = URGENCY.indexOf(displayStatus(session, sessions));
+    const bestRank: number = URGENCY.indexOf(displayStatus(best, sessions));
     if (rank < bestRank || (rank === bestRank && session.number > best.number)) {
       best = session;
     }
@@ -87,11 +93,12 @@ export function projectMetaLine(sessions: readonly SessionSummary[]): string | n
   if (urgent === null) {
     return null;
   }
+  const status: DisplayStatus = displayStatus(urgent, sessions);
   if (sessions.length === 1) {
-    return metaLine(urgent);
+    return status === 'handoff' ? HANDOFF_LABEL : metaLine(urgent);
   }
-  if (urgent.status === 'completed' || urgent.status === 'cancelled') {
+  if (status === 'completed' || status === 'cancelled') {
     return null;
   }
-  return `${String(sessions.length)} Sessions · #${String(urgent.number)} ${SHORT_STATUS[urgent.status]}`;
+  return `${String(sessions.length)} Sessions · #${String(urgent.number)} ${SHORT_STATUS[status]}`;
 }

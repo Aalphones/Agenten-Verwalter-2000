@@ -35,6 +35,8 @@ pub struct SessionRow {
     pub last_activity_at: f64,
     /// Wann der User die Session zuletzt gesehen hat.
     pub seen_at: f64,
+    /// Einstiegszeile der letzten Antwort (ADR 027); `None` ohne.
+    pub handoff_line: Option<String>,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -60,6 +62,7 @@ struct StoredRow {
     tldr_seq: Option<u32>,
     last_activity_at: f64,
     seen_at: f64,
+    handoff_line: Option<String>,
 }
 
 impl StoredRow {
@@ -85,6 +88,7 @@ impl StoredRow {
             tldr_seq: row.get(17)?,
             last_activity_at: row.get(18)?,
             seen_at: row.get(19)?,
+            handoff_line: row.get(20)?,
         })
     }
 
@@ -110,6 +114,7 @@ impl StoredRow {
             tldr_seq: self.tldr_seq,
             last_activity_at: self.last_activity_at,
             seen_at: self.seen_at,
+            handoff_line: self.handoff_line,
         })
     }
 }
@@ -122,8 +127,8 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
-             project_id, number, last_activity_at, seen_at) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17) \
+             project_id, number, last_activity_at, seen_at, handoff_line) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18) \
          ON CONFLICT(id) DO UPDATE SET \
              name = excluded.name, \
              status = excluded.status, \
@@ -136,7 +141,8 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
              has_agent_history = excluded.has_agent_history, \
              scratchpad_dir = excluded.scratchpad_dir, \
              last_activity_at = excluded.last_activity_at, \
-             seen_at = excluded.seen_at",
+             seen_at = excluded.seen_at, \
+             handoff_line = excluded.handoff_line",
         params![
             row.id,
             row.name,
@@ -155,6 +161,7 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
             row.number,
             row.last_activity_at,
             row.seen_at,
+            row.handoff_line,
         ],
     )?;
     Ok(())
@@ -166,7 +173,8 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
     let mut statement = connection.prepare(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
-             COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at \
+             COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, \
+             handoff_line \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
