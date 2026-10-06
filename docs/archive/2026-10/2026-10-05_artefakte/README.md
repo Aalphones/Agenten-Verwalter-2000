@@ -2,9 +2,9 @@
 
 Ein Agent legt Berichte, Präsentationen, Diagramme und Design-Entwürfe als HTML-Datei im Ordner `.artefakte` des Vorhabens ab; der Verwalter zeigt sie im Reiter „Artefakte“ (Session-Kopfzeile und Vorhaben-Übersicht) als echte, bedienbare Seite, abgeschottet vom Verwalter selbst, und lädt sie nach jedem Speichern von allein neu.
 
-Design (verbindlich): [docs/design/2026-10-05_artefakte/](../../design/2026-10-05_artefakte/README.md) — [artefakte.html](../../design/2026-10-05_artefakte/artefakte.html) im Browser öffnen. Es führt die Tafel `Artifacts.dc.html` aus [docs/design/2026-09-28_hauptansichten/](../../design/2026-09-28_hauptansichten/README.md) fort.
+Design (verbindlich): [docs/design/2026-10-05_artefakte/](../../../design/2026-10-05_artefakte/README.md) — [artefakte.html](../../../design/2026-10-05_artefakte/artefakte.html) im Browser öffnen. Es führt die Tafel `Artifacts.dc.html` aus [docs/design/2026-09-28_hauptansichten/](../../../design/2026-09-28_hauptansichten/README.md) fort.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 014](../../decisions/014-changes-je-session.md) (Tabelle `session_files`), [ADR 022](../../decisions/022-scratchpad-im-workspace.md) (Vorbild für Ordner + Anweisung), [ADR 023](../../decisions/023-dateiverweise-im-chat.md) (Öffnen über das Opener-Plugin). ADR 026 entsteht in Phase 1 (024 und 025 sind an „MCP-Anmeldung“ und „Git-Werkzeuge“ vergeben).
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [docs/code-map.md](../../../code-map.md), [docs/glossary.md](../../../glossary.md), die Konventionen unter [docs/conventions/](../../../conventions/), [ADR 014](../../../decisions/014-changes-je-session.md) (Tabelle `session_files`), [ADR 022](../../../decisions/022-scratchpad-im-workspace.md) (Vorbild für Ordner + Anweisung), [ADR 023](../../../decisions/023-dateiverweise-im-chat.md) (Öffnen über das Opener-Plugin). ADR 026 entsteht in Phase 1 (024 und 025 sind an „MCP-Anmeldung“ und „Git-Werkzeuge“ vergeben).
 
 **Fehlerklassen geprüft:** React (`frameworks/react.md`) — nur testbezogene Klassen, in diesem Projekt ohne automatisierte Tests nicht einschlägig; für Tauri und Rust gibt es keine Entity. Keine einschlägig.
 
@@ -104,10 +104,23 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Ein Agent legt HTML-Seiten im Ordner `.artefakte` des Vorhabens ab; der Verwalter zeigt sie im Reiter „Artefakte“ (Session und Übersicht) abgeschottet über einen eigenen Server auf `127.0.0.1`, lädt sie nach jedem Speichern neu, bietet Vollbild und zeigt nach jedem `Write` eine Karte im Chat. Die Anweisung an den Agenten steht im gemeinsamen `--append-system-prompt`. Release `v0.17.0`, ADR 026. Smoke-Checkliste beim Archivieren nicht abgenommen (Release auf Zuruf).
+
 ## Files touched
+
+- Core: `src-tauri/src/artifacts/` (`mod.rs`, `model.rs`, `server.rs`), `commands/artifacts.rs`, `sessions/registry.rs` und `sessions/registry/artifacts.rs`, `agents/claude/process.rs`, `agents/event.rs`, `tldr/transcript.rs`, `lib.rs`, `tauri.conf.json`, `capabilities/default.json`
+- Oberfläche: `src/features/artifacts/` (Ansicht, Rahmen, Vollbild, Karte), `src/stores/artifacts.ts`, `src/lib/artifacts.ts`, `src/features/chat/` (Timeline, View), `src/app/App.tsx`, Kopfzeilen
+- Doku: ADR 026, Code-Map, PROJECT, GAPS, Glossar, Design-Status
 
 ## Commits
 
+`ecebabe`, `c45dc6e`, `47db6e0`, `e362fbe`, `b8607b3`, `1d59060`, Release `v0.17.0`.
+
 ## Deviations from plan
 
+Statt eines Tauri-Protokolls liefert ein eigener HTTP-Server auf `127.0.0.1` die Seiten aus: die Sicherheitsprobe zeigte, dass Tauri unter Windows Seiten eines eigenen Protokolls als lokal einstuft (siehe FINDINGS, Phase 1). Kontrakt und Phasen 1–2 wurden angepasst.
+
 ## Follow-ups
+
+- Smoke-Checkliste (Wackelstelle 1, Sicherheitsprobe, zuerst) durch den User; Ergebnisse hier nachtragen.
+- Offen in FINDINGS: Vault-Eintrag zu Tauri (`__TAURI_INTERNALS__` im sandboxed iframe) für `session-review`.

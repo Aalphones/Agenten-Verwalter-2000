@@ -5,7 +5,7 @@
 ## Kontext
 
 - [README des Plans](README.md), Abschnitt „Kontrakt“ (Typen, Commands, `artifactUrl`, Sandbox, Abfrage alle 2 s).
-- Design (verbindlich): [docs/design/2026-10-05_artefakte/README.md](../../design/2026-10-05_artefakte/README.md) und [artefakte.html](../../design/2026-10-05_artefakte/artefakte.html) — Maße und Texte unten sind daraus übernommen.
+- Design (verbindlich): [docs/design/2026-10-05_artefakte/README.md](../../../design/2026-10-05_artefakte/README.md) und [artefakte.html](../../../design/2026-10-05_artefakte/artefakte.html) — Maße und Texte unten sind daraus übernommen.
 - `src/stores/sessions.ts` (`SESSION_VIEWS`, `PROJECT_VIEWS`, `showView`, `showProjectView`), `src/app/App.tsx` (`isChangesView`, `renderOverview`, `renderMain`), `src/app/SessionHeader.tsx` und `src/app/ProjectHeader.tsx` (Reiter, `VIEW_LABEL`, Zähler `session-header__tab-count`), `src/features/background/mention.ts` (`mentionInChat`), `src/stores/sessionErrors.ts` (`useSessionErrorsStore`, Aktion `report`), `src/components/FileLink.tsx` (Fehler einer Öffnen-Aktion melden), `src/features/context/formatTokens.ts` (`formatClock`), `src/features/changes/ChangesView.css` (BEM-Muster), `src/styles/theme.css` (Tokens).
 - `src/lib/fileLinks.ts` (Muster für einen Wrapper mit `@throws`-Kommentar).
 - `docs/conventions/react.md`, `docs/conventions/typescript.md`, `docs/conventions/tailwind.md`.

@@ -7,7 +7,7 @@
 ## Kontext
 
 - [README des Plans](README.md) (Kontrakt: Sandbox, `artifactUrl`).
-- Design: [docs/design/2026-10-05_artefakte/README.md](../../design/2026-10-05_artefakte/README.md), Zeile „Vollbild“, und die Tafel [artefakte.html](../../design/2026-10-05_artefakte/artefakte.html) (Knopf mit vier Ecken im Kopf der Vorschau, Overlay `.full`).
+- Design: [docs/design/2026-10-05_artefakte/README.md](../../../design/2026-10-05_artefakte/README.md), Zeile „Vollbild“, und die Tafel [artefakte.html](../../../design/2026-10-05_artefakte/artefakte.html) (Knopf mit vier Ecken im Kopf der Vorschau, Overlay `.full`).
 - `src/features/artifacts/ArtifactsView.tsx`, `ArtifactFrame.tsx` aus Phase 2; `src/stores/artifacts.ts`.
 - `src/lib/colorScheme.ts` (Muster für `getCurrentWindow()` aus `@tauri-apps/api/window`), `src/components/Dialog.tsx` (Muster für `createPortal` nach `document.body`).
 - `src-tauri/capabilities/default.json` (Rechte des Hauptfensters).

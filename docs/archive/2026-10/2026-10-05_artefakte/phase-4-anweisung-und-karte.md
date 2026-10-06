@@ -9,7 +9,7 @@
 - `src-tauri/src/sessions/registry.rs`: `SessionState` (Feld `scratchpad_dir`), `use_scratchpad` und der Aufruf von `spawn(SpawnOptions { … })`, `apply_event` → Zweig `AgentEvent::ToolStarted` (`note_touched_files`, dann `push_entry` mit `ChatEntry::Tool`).
 - `src-tauri/src/agents/event.rs` (`ChatEntry`, `seq()`), `src-tauri/src/tldr/transcript.rs` (Match über `ChatEntry`), `src-tauri/src/changes/attribution.rs` (`normalize_path`), `src-tauri/src/artifacts/mod.rs` aus Phase 1.
 - Oberfläche: `src/features/chat/ChatTimeline.tsx` (`renderEntry`), `src/features/chat/ChatView.tsx`, `src/features/chat/buildBlocks.ts`, `src/app/App.tsx` (`artifacts` aus Phase 2), `src/stores/artifacts.ts`, `src/stores/sessions.ts`.
-- Design: Zeile „Chat“ in [docs/design/2026-10-05_artefakte/README.md](../../design/2026-10-05_artefakte/README.md); Karte `.card` in [artefakte.html](../../design/2026-10-05_artefakte/artefakte.html) (entspricht der Karte aus `Main.dc.html` des Entwurfs Hauptansichten).
+- Design: Zeile „Chat“ in [docs/design/2026-10-05_artefakte/README.md](../../../design/2026-10-05_artefakte/README.md); Karte `.card` in [artefakte.html](../../../design/2026-10-05_artefakte/artefakte.html) (entspricht der Karte aus `Main.dc.html` des Entwurfs Hauptansichten).
 
 ## Abnahmekriterien der Phase
 
@@ -59,6 +59,6 @@
 - [x] `docs/design/2026-09-28_hauptansichten/README.md`: Zeile `Artifacts.dc.html` in der Tafel-Tabelle, Spalte „Gebaut in“: „fortgeführt in [2026-10-05_artefakte](../2026-10-05_artefakte/README.md), Plan Artefakte“.
 - [x] `docs/design/2026-10-05_artefakte/README.md`: Status „umgesetzt in Plan Artefakte“ (Version beim Archivieren nachtragen).
 - [x] `docs/glossary.md`: prüfen, dass „Artefakt“ und „Artefakte-Ansicht“ aus Phase 2 zum Endstand passen.
-- [x] Plan-Abschluss nach `mode-implementing`: Smoke-Checkliste der README durch den User, danach archivieren, Minor-Version, `chore(release)`-Commit und Tag nach [docs/conventions/releases.md](../../conventions/releases.md).
+- [x] Plan-Abschluss nach `mode-implementing`: Smoke-Checkliste der README durch den User, danach archivieren, Minor-Version, `chore(release)`-Commit und Tag nach [docs/conventions/releases.md](../../../conventions/releases.md).
 
 ## Report-Back
