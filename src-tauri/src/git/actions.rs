@@ -1,11 +1,16 @@
 //! Schreibende Git-Befehle der Changes einer Session (ADR 025): Commit, Push, Pull, Fetch, Branch
-//! wechseln und anlegen, Merge/Rebase abbrechen. Ob die Sperre greift, prüft der Command davor.
+//! wechseln, anlegen und löschen, Verwerfen, Stash, Merge, Rebase, Ticket-Worktree. Ob die Sperre
+//! greift, prüft der Command davor.
 use std::path::Path;
+use std::process::{Command, Stdio};
 
+use crate::changes;
 use crate::error::CommandError;
 use crate::git;
 use crate::git::model::{GitOperation, GitSwitchMode};
 use crate::git::status;
+use crate::processes::hide_console;
+use crate::worktrees;
 
 /// Committet genau `paths` (bei `amend`: ergänzt `HEAD` um sie) und gibt die neue `HEAD`-ID zurück.
 pub fn commit(
@@ -116,6 +121,137 @@ pub fn create_branch(dir: &Path, name: &str) -> Result<(), CommandError> {
         return Err(CommandError::Git(format!("Branch {name} gibt es schon.")));
     }
     git::switch_create(dir, name)
+}
+
+/// Setzt eine Datei auf den letzten Commit zurück; eine neue Datei wird gelöscht. Nicht rückgängig
+/// zu machen — die Rückfrage stellt die Oberfläche.
+pub fn discard(dir: &Path, path: &str) -> Result<(), CommandError> {
+    changes::validate_path(path)?;
+    if git::is_untracked(dir, path)? {
+        return remove_untracked(dir, path);
+    }
+    if git::exists_in_head(dir, path)? {
+        return git::restore(dir, path);
+    }
+    // Vorgemerkt, aber nie committet (etwa vom Agenten mit `git add`): `restore` kennt sie in `HEAD` nicht.
+    git::remove_added(dir, path)
+}
+
+/// Löscht die Datei selbst; ein Verweis (Symlink) wird nicht verfolgt, nur sein Ordner muss unter `dir` liegen.
+fn remove_untracked(dir: &Path, path: &str) -> Result<(), CommandError> {
+    let target = dir.join(path);
+    let root = dir.canonicalize()?;
+    let parent = target
+        .parent()
+        .ok_or_else(|| CommandError::Internal(format!("Ungültiger Pfad {path}")))?
+        .canonicalize()?;
+    if !parent.starts_with(&root) {
+        return Err(CommandError::Internal(format!("Ungültiger Pfad {path}")));
+    }
+    std::fs::remove_file(&target)?;
+    Ok(())
+}
+
+/// Die Zeit steht nicht in der Nachricht: die Stash-Liste zeigt sie aus dem Commit des Stashes.
+pub fn stash_push(dir: &Path) -> Result<(), CommandError> {
+    git::stash_push(dir, "verwalter: Änderungen beiseitegelegt")
+}
+
+pub fn stash_list(dir: &Path) -> Result<Vec<String>, CommandError> {
+    git::stash_labels(dir)
+}
+
+pub fn stash_pop(dir: &Path, index: u32) -> Result<(), CommandError> {
+    git::stash_pop(dir, index)
+}
+
+/// Wie `pull`, aber mit Rebase; ein angehaltener Rebase ist kein Fehler.
+pub fn pull_rebase(dir: &Path) -> Result<(), CommandError> {
+    if git::upstream(dir)?.is_none() {
+        return Err(CommandError::Git(
+            "Kein Upstream — erst veröffentlichen.".to_owned(),
+        ));
+    }
+    match git::pull_rebase(dir) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            if status::operation(dir)? == GitOperation::Rebase {
+                return Ok(());
+            }
+            Err(error)
+        }
+    }
+}
+
+/// Ein Merge mit Konflikten ist kein Fehler: Git lässt ihn stehen, der Status zeigt ihn.
+pub fn merge(dir: &Path, branch: &str) -> Result<(), CommandError> {
+    git::check_branch_name(dir, branch)?;
+    match git::merge(dir, branch) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            if status::operation(dir)? == GitOperation::Merge {
+                return Ok(());
+            }
+            Err(error)
+        }
+    }
+}
+
+/// Ein Branch, der nicht in `HEAD` steckt, meldet sich ohne `force` mit `not-merged:<branch>` — daran erkennt
+/// die Oberfläche die Rückfrage. Der Satz von Git selbst wäre je nach Sprache ein anderer.
+pub fn delete_branch(dir: &Path, branch: &str, force: bool) -> Result<(), CommandError> {
+    git::check_branch_name(dir, branch)?;
+    if !force && !git::is_ancestor(dir, branch, "HEAD")? {
+        return Err(CommandError::Git(format!("not-merged:{branch}")));
+    }
+    git::delete_branch(dir, branch, force)
+}
+
+/// Legt `<Ordner des Haupt-Checkouts>-wt-<name>` neben `main_dir` an, mit neuem Branch `name` vom
+/// aktuellen `HEAD`, und gibt den Ordnernamen zurück. Der Name darf nur Zeichen haben, an denen der
+/// Agent den Ordner im Text wiedererkennt (`worktrees::mentioned_ticket_worktrees`).
+pub fn create_ticket_worktree(main_dir: &Path, name: &str) -> Result<String, CommandError> {
+    git::check_branch_name(main_dir, name)?;
+    let suffix = name.replace('/', "-");
+    if !suffix.chars().all(worktrees::is_folder_character) {
+        return Err(CommandError::Git(format!(
+            "„{name}“ geht nicht als Ordnername — nur Buchstaben, Ziffern, - _ . und /."
+        )));
+    }
+    let (Some(parent), Some(main_name)) = (main_dir.parent(), main_dir.file_name()) else {
+        return Err(CommandError::Internal(format!(
+            "Ungültiger Ordner {}",
+            main_dir.display()
+        )));
+    };
+    let folder = format!(
+        "{}{}{suffix}",
+        main_name.to_string_lossy(),
+        worktrees::TICKET_WORKTREE_INFIX
+    );
+    let path = parent.join(&folder);
+    if path.exists() {
+        return Err(CommandError::Git(format!("Ordner {folder} gibt es schon.")));
+    }
+    if git::branch_exists(main_dir, name)? {
+        return Err(CommandError::Git(format!("Branch {name} gibt es schon.")));
+    }
+    git::worktree_add_new(main_dir, &path, name, "HEAD")?;
+    Ok(folder)
+}
+
+/// `code <dir>` über `cmd`: unter Windows ist `code` ein `.cmd`-Skript, das ein direkter Start nicht findet.
+pub fn open_in_vs_code(dir: &Path) -> Result<(), CommandError> {
+    let mut command = Command::new("cmd");
+    command.args(["/C", "code"]).arg(dir).stdin(Stdio::null());
+    hide_console(&mut command);
+    let output = command.output()?;
+    if output.status.success() {
+        return Ok(());
+    }
+    Err(CommandError::Git(
+        "VS Code nicht gefunden (Befehl „code“ fehlt im PATH).".to_owned(),
+    ))
 }
 
 pub fn abort_operation(dir: &Path) -> Result<(), CommandError> {

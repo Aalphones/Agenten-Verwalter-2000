@@ -513,7 +513,7 @@ pub fn normalized_dir(path: &Path) -> String {
         .to_lowercase()
 }
 
-fn is_folder_character(character: char) -> bool {
+pub fn is_folder_character(character: char) -> bool {
     character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
 }
 

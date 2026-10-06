@@ -65,6 +65,10 @@
     }
   }
 
+  &__back {
+    font-weight: 600;
+  }
+
   &__check {
     display: grid;
     flex-shrink: 0;

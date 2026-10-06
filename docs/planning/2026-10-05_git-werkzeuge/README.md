@@ -13,7 +13,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | Core liest: Branch, Upstream, ↓/↑, fremde Änderungen, eigene Commits, Sperre; Commands und Bindings | [phase-1-status-lesen.md](phase-1-status-lesen.md) | heikel | complete |
 | 2 | Core schreibt: Commit (auch „& Push“, Ergänzen), Push, Pull, Fetch, Branch wechseln und anlegen, Konflikt-Zustand | [phase-2-commit-und-sync.md](phase-2-commit-und-sync.md) | heikel | complete |
 | 3 | Oberfläche: Branch-Pille, Repository-Zeile, Commit-Feld, Häkchen, fremde Änderungen, Gruppen, Hinweis, Branch-Menü, Dialoge | [phase-3-oberflaeche.md](phase-3-oberflaeche.md) | standard | complete |
-| 4 | Weitere Befehle: Verwerfen, Stash, Pull mit Rebase, Merge, Branch löschen, Ticket-Worktree anlegen, Explorer/VS Code — Core und Oberfläche | [phase-4-weitere-befehle.md](phase-4-weitere-befehle.md) | standard | pending |
+| 4 | Weitere Befehle: Verwerfen, Stash, Pull mit Rebase, Merge, Branch löschen, Ticket-Worktree anlegen, Explorer/VS Code — Core und Oberfläche | [phase-4-weitere-befehle.md](phase-4-weitere-befehle.md) | standard | complete |
 | 5 | Übersicht mit ↓/↑ und Verlauf als Graph; Nachrichtenvorschlag ✦; Doku, Release | [phase-5-verlauf-und-vorschlag.md](phase-5-verlauf-und-vorschlag.md) | standard | pending |
 
 **Reihenfolge:** strikt 1 → 5. Nach Phase 3 ist der Kern benutzbar (Commit, Push, Pull, Wechseln); 4 und 5 ergänzen. Umsetzung direkt auf `main`, ein Commit pro Phase, Scope `git`. Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Keine neuen Abhängigkeiten. Erkenntnisse nach [FINDINGS.md](FINDINGS.md).

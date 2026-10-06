@@ -4,6 +4,7 @@ import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import type { FileRow } from '@/features/changes/buildFileRows';
 import { EMPTY_SCOPE_TEXT, formatCount } from '@/features/changes/changesScope';
 import { GitCommitBox } from '@/features/git/GitCommitBox';
+import { GitDiscardButton } from '@/features/git/GitDiscardButton';
 import { GitEntryBar } from '@/features/git/GitEntryBar';
 import { CaretIcon } from '@/features/git/GitIcons';
 import { GitLockHint } from '@/features/git/GitLockHint';
@@ -231,16 +232,18 @@ export function FileTree({ rows, scope, openFile, onOpen, git }: FileTreeProps):
             uncommitted
           </span>
         )}
-        {row.stat.binary ? (
-          <span className="file-tree__binary" title="Binärdatei – keine Zeilenzahl">
-            binär
-          </span>
-        ) : (
-          <>
-            <span className="file-tree__added">+{formatCount(row.stat.added)}</span>
-            <span className="file-tree__deleted">−{formatCount(row.stat.deleted)}</span>
-          </>
-        )}
+        <span className="file-tree__stats">
+          {row.stat.binary ? (
+            <span className="file-tree__binary" title="Binärdatei – keine Zeilenzahl">
+              binär
+            </span>
+          ) : (
+            <>
+              <span className="file-tree__added">+{formatCount(row.stat.added)}</span>
+              <span className="file-tree__deleted">−{formatCount(row.stat.deleted)}</span>
+            </>
+          )}
+        </span>
       </button>
     );
     if (row.checkable === null || git === null) {
@@ -266,6 +269,13 @@ export function FileTree({ rows, scope, openFile, onOpen, git }: FileTreeProps):
           }}
         />
         {button}
+        <GitDiscardButton
+          sessionId={git.sessionId}
+          entryKey={row.entryKey}
+          path={row.path}
+          isBusy={isBusy}
+          onChanged={git.onChanged}
+        />
       </div>
     );
   }

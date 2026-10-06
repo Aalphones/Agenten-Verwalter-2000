@@ -21,7 +21,8 @@
     flex-grow: 1;
   }
 
-  &__abort {
+  &__abort,
+  &__open {
     flex-shrink: 0;
     padding: 0;
     border: 0;
@@ -41,5 +42,10 @@
       opacity: 0.45;
       cursor: not-allowed;
     }
+  }
+
+  &__open {
+    font-weight: 400;
+    color: var(--color-accent-text);
   }
 }

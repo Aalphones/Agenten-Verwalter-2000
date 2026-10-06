@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { abortLabel, FAILURE, LOCKED_TITLE, operationText } from '@/features/git/gitTexts';
 import { useGitActions } from '@/features/git/useGitActions';
 import type { GitEntryStatus } from '@/lib/bindings/GitEntryStatus';
-import { gitAbortOperation } from '@/lib/git';
+import { gitAbortOperation, gitOpen } from '@/lib/git';
 import './GitOperationRow.css';
 
 interface GitOperationRowProps {
@@ -26,6 +26,10 @@ export function GitOperationRow({
     run(() => gitAbortOperation(sessionId, entry.key), FAILURE.abort).catch(() => undefined);
   }
 
+  function openInVsCode(): void {
+    run(() => gitOpen(sessionId, entry.key, 'vsCode'), FAILURE.open).catch(() => undefined);
+  }
+
   return (
     <div className="git-operation-row" role="status">
       <svg
@@ -45,6 +49,14 @@ export function GitOperationRow({
       <div className="git-operation-row__text">
         {operationText(entry.operation, entry.conflicted.length)}
       </div>
+      <button
+        type="button"
+        className="git-operation-row__open"
+        disabled={isRunning}
+        onClick={openInVsCode}
+      >
+        In VS Code öffnen
+      </button>
       <button
         type="button"
         className="git-operation-row__abort"

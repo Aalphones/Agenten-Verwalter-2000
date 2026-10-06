@@ -1237,6 +1237,37 @@ impl SessionRegistry {
         }
     }
 
+    /// Merkt der Session einen Ticket-Worktree, den die App selbst angelegt hat — derselbe Weg wie bei
+    /// einem, den der Agent benutzt: danach erscheint er als eigener Eintrag der Changes und bleibt
+    /// über den Neustart erhalten.
+    pub fn remember_ticket_worktree(
+        &self,
+        session_id: &str,
+        position: u32,
+        folder: &str,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        {
+            let mut state = session.lock();
+            let is_known = state.ticket_worktrees.iter().any(
+                |(known_position, known_folder): &(u32, String)| {
+                    *known_position == position && known_folder.eq_ignore_ascii_case(folder)
+                },
+            );
+            if !is_known {
+                state.ticket_worktrees.push((position, folder.to_owned()));
+            }
+        }
+        // Die Datenbank erst nach der Session-Sperre; `INSERT OR IGNORE` verträgt den Doppelaufruf.
+        self.database.with(|connection| {
+            session_ticket_worktrees::insert_all(
+                connection,
+                session_id,
+                &[(position, folder.to_owned())],
+            )
+        })
+    }
+
     /// Workspace, Repositories, Ticket-Worktrees und eigene Commits/Dateien der Reichweite. Nie zwei
     /// Session-Sperren zugleich; die Datenbank erst nach den Sperren.
     pub fn changes_input(

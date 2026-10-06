@@ -6,13 +6,14 @@ import {
   BRANCH_MENU_LOCKED,
   branchLabel,
   FAILURE,
+  isMainCheckoutKey,
 } from '@/features/git/gitTexts';
 import { CheckIcon, CloudIcon, PlusIcon } from '@/features/git/GitIcons';
 import { useGitActions } from '@/features/git/useGitActions';
 import type { GitBranch } from '@/lib/bindings/GitBranch';
 import type { GitEntryStatus } from '@/lib/bindings/GitEntryStatus';
 import { commandErrorText } from '@/lib/errors';
-import { gitCreateBranch, loadGitBranches } from '@/lib/git';
+import { gitCreateBranch, gitCreateTicketWorktree, loadGitBranches } from '@/lib/git';
 import './GitMenu.css';
 
 const BRANCH_MENU_WIDTH = 360;
@@ -109,6 +110,18 @@ export function GitBranchMenu({
     run(() => gitCreateBranch(sessionId, key, name), FAILURE.createBranch).catch(() => undefined);
   }
 
+  function createTicketWorktree(): void {
+    const name: string = search.trim();
+    if (name === '') {
+      searchRef.current?.focus();
+      return;
+    }
+    onClose();
+    run(() => gitCreateTicketWorktree(sessionId, key, name), FAILURE.ticketWorktree).catch(
+      () => undefined,
+    );
+  }
+
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
     if (event.key !== 'Enter' || query === '' || branches === null) {
       return;
@@ -200,6 +213,18 @@ export function GitBranchMenu({
           Neuer Branch aus <span className="git-menu__mono">{branchLabel(entry.branch)}</span> …
         </span>
       </button>
+      {isMainCheckoutKey(key) && (
+        <button
+          type="button"
+          className="git-menu__item git-menu__item--add"
+          onClick={createTicketWorktree}
+        >
+          <span className="git-menu__check">
+            <PlusIcon />
+          </span>
+          <span className="git-menu__label">Neuer Branch als Ticket-Worktree …</span>
+        </button>
+      )}
       <hr className="git-menu__divider" />
       {renderList()}
     </Popover>

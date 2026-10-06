@@ -4,11 +4,13 @@ import {
   branchLabel,
   FAILURE,
   LOCKED_TITLE,
+  NOT_MERGED_PREFIX,
   PUBLISH_TITLE,
   pullTitle,
   pushTitle,
 } from '@/features/git/gitTexts';
 import { GitBranchMenu } from '@/features/git/GitBranchMenu';
+import { GitDeleteBranchDialog } from '@/features/git/GitDeleteBranchDialog';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -24,7 +26,8 @@ import { useGitPush } from '@/features/git/useGitPush';
 import { useMenuAnchor, type MenuAnchor } from '@/features/git/useMenuAnchor';
 import type { GitEntryStatus } from '@/lib/bindings/GitEntryStatus';
 import type { GitSwitchMode } from '@/lib/bindings/GitSwitchMode';
-import { gitPull, gitSwitch } from '@/lib/git';
+import { commandErrorText } from '@/lib/errors';
+import { gitDeleteBranch, gitPull, gitSwitch } from '@/lib/git';
 import './GitEntryBar.css';
 
 interface GitEntryBarProps {
@@ -48,6 +51,7 @@ export function GitEntryBar({
   onChanged,
 }: GitEntryBarProps): ReactElement {
   const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const branchMenu: MenuAnchor = useMenuAnchor();
   const moreMenu: MenuAnchor = useMenuAnchor();
   const { run, isRunning } = useGitActions(sessionId, onChanged);
@@ -66,6 +70,22 @@ export function GitEntryBar({
       return;
     }
     setPendingSwitch(branch);
+  }
+
+  /** Ohne `force` fragt ein ungemergter Branch nach, statt als Fehler zu erscheinen. */
+  function deleteBranch(branch: string, force: boolean): void {
+    setPendingDelete(null);
+    run(async (): Promise<void> => {
+      try {
+        await gitDeleteBranch(sessionId, key, branch, force);
+      } catch (reason: unknown) {
+        if (!force && commandErrorText(reason).startsWith(NOT_MERGED_PREFIX)) {
+          setPendingDelete(branch);
+          return;
+        }
+        throw reason;
+      }
+    }, FAILURE.deleteBranch).catch(() => undefined);
   }
 
   function pull(): void {
@@ -135,10 +155,24 @@ export function GitEntryBar({
             isBusy={isBusy}
             onClose={moreMenu.close}
             onChanged={onChanged}
+            onDeleteBranch={(branch: string): void => {
+              deleteBranch(branch, false);
+            }}
           />
         </GitMenuHost>
       )}
       {push.dialog}
+      {pendingDelete !== null && (
+        <GitDeleteBranchDialog
+          branch={pendingDelete}
+          onCancel={(): void => {
+            setPendingDelete(null);
+          }}
+          onForceDelete={(): void => {
+            deleteBranch(pendingDelete, true);
+          }}
+        />
+      )}
       {pendingSwitch !== null && (
         <GitSwitchDialog
           branch={pendingSwitch}

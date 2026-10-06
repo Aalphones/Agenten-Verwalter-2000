@@ -31,4 +31,5 @@ Bisher zeigt der Verwalter nur, was sich geändert hat; committen, pushen, pulle
 - Der Agent und die Oberfläche können gleichzeitig committen; schlimmstenfalls kommt einmal „Git ist gerade beschäftigt“.
 - Konflikte nach Pull oder Merge bleiben im Arbeitsordner; die Oberfläche bietet „In VS Code öffnen“ und „abbrechen“, löst aber selbst nichts.
 - Verlauf nur für den aktuellen Branch, die letzten 50 Commits plus eingehende.
+- Ticket-Worktrees kann jetzt auch die App anlegen (Ergänzung zu [ADR 010](010-worktrees-durch-den-agenten.md)); sie gehören dann der Session, die sie angelegt hat, und erscheinen als eigener Eintrag in deren Changes.
 - App-Commits landen in `session_commits` der Session, die committet hat — auch fremde Dateien, die man bewusst angehakt hat, zählen danach als ihre.

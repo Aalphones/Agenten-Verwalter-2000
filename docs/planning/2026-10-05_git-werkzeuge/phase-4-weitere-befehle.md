@@ -27,40 +27,50 @@ Ziel: Die Einträge des ⋯-Menüs und „Verwerfen“ beim Überfahren einer Da
 
 ### Core `src-tauri/src/git/mod.rs` (über `run_write`, Pfade hinter `--`)
 
-- [ ] `restore(dir, path)`: `restore --source=HEAD --staged --worktree -- <path>`.
-- [ ] `stash_list(dir) -> Vec<String>`: `stash list --format=%gd%x00%s` → Anzeigetext „<Betreff>“, Index aus `stash@{n}`.
-- [ ] `stash_pop(dir, index)`: `stash pop stash@{<index>}`.
-- [ ] `pull_rebase(dir)`: `pull --rebase`.
-- [ ] `merge(dir, branch)`: `merge --no-edit <branch>`.
-- [ ] `delete_branch(dir, branch, force)`: `branch -d` bzw. `-D`; Git-Fehlertext enthält „not fully merged“ → `CommandError::Git(format!("not-merged:{branch}"))`.
+- [x] `restore(dir, path)`: `restore --source=HEAD --staged --worktree -- <path>`.
+- [x] `stash_list(dir) -> Vec<String>`: `stash list --format=%gd%x00%s` → Anzeigetext „<Betreff>“, Index aus `stash@{n}`.
+- [x] `stash_pop(dir, index)`: `stash pop stash@{<index>}`.
+- [x] `pull_rebase(dir)`: `pull --rebase`.
+- [x] `merge(dir, branch)`: `merge --no-edit <branch>`.
+- [x] `delete_branch(dir, branch, force)`: `branch -d` bzw. `-D`; Git-Fehlertext enthält „not fully merged“ → `CommandError::Git(format!("not-merged:{branch}"))`.
 
 ### Core `src-tauri/src/git/actions.rs`
 
-- [ ] `discard(dir, path)`: `changes::validate_path(path)`; `git::is_untracked(dir, path)` → Datei unter `dir.join(path)` löschen (`std::fs::remove_file`; vorher kanonisch prüfen, dass der Pfad innerhalb von `dir` liegt), sonst `git::restore`.
-- [ ] `pull_rebase(dir)`: wie `pull` aus Phase 2 (ohne Upstream Fehler; Konflikt → kein Fehler, wenn danach `rebase-merge`/`rebase-apply` existiert).
-- [ ] `merge(dir, branch)`: Konflikt → kein Fehler, wenn danach `MERGE_HEAD` existiert.
-- [ ] `create_ticket_worktree(main_dir, name) -> Result<String /* Ordnername */>`: `check_branch_name`; Ordnername = `<Name des Haupt-Checkout-Ordners>-wt-<name mit / → ->`; Pfad = Geschwister von `main_dir`; existiert → Fehler aus den AK; `git::worktree_add_new(main_dir, &pfad, name, "HEAD")`.
+- [x] `discard(dir, path)`: `changes::validate_path(path)`; `git::is_untracked(dir, path)` → Datei unter `dir.join(path)` löschen (`std::fs::remove_file`; vorher kanonisch prüfen, dass der Pfad innerhalb von `dir` liegt), sonst `git::restore`.
+- [x] `pull_rebase(dir)`: wie `pull` aus Phase 2 (ohne Upstream Fehler; Konflikt → kein Fehler, wenn danach `rebase-merge`/`rebase-apply` existiert).
+- [x] `merge(dir, branch)`: Konflikt → kein Fehler, wenn danach `MERGE_HEAD` existiert.
+- [x] `create_ticket_worktree(main_dir, name) -> Result<String /* Ordnername */>`: `check_branch_name`; Ordnername = `<Name des Haupt-Checkout-Ordners>-wt-<name mit / → ->`; Pfad = Geschwister von `main_dir`; existiert → Fehler aus den AK; `git::worktree_add_new(main_dir, &pfad, name, "HEAD")`.
 
 ### Commands `src-tauri/src/commands/git.rs` und Registry
 
-- [ ] `git_discard`, `git_stash_push` (Nachricht `verwalter: <YYYY-MM-DD HH:MM>`), `git_stash_pop`, `git_pull_rebase`, `git_merge`: zuerst `registry.ensure_not_busy`. `git_stash_list`, `git_delete_branch`: ohne Sperre.
-- [ ] `git_create_ticket_worktree(session_id, key, name)`: Eintrag muss ein Haupt-Checkout sein (`source.ticket.is_none()` und keine innere Repository-Kennung `:` im Schlüssel) — sonst Fehler „Nur am Haupt-Checkout möglich.“; `actions::create_ticket_worktree`; danach den Ordner der Session merken über eine neue Registry-Methode `remember_ticket_worktree(session_id, position, folder)`, die denselben Weg geht wie ein vom Agenten benutzter Ticket-Worktree (Zustand der Session ergänzen + `session_ticket_worktrees::insert_all`). Danach liefert `changes_input` ihn als Eintrag.
-- [ ] `git_open(session_id, key, target)`: `Explorer` → `app.opener().open_path(dir)`; `VsCode` → `Command::new("cmd").args(["/C", "code", <dir>])` mit `hide_console`, Exit ≠ 0 oder „nicht erkannt“ im stderr → Fehler aus den AK. Kein Sperr-Check.
-- [ ] Alle registrieren; Wrapper in `src/lib/git.ts`.
+- [x] `git_discard`, `git_stash_push` (Nachricht `verwalter: <YYYY-MM-DD HH:MM>`), `git_stash_pop`, `git_pull_rebase`, `git_merge`: zuerst `registry.ensure_not_busy`. `git_stash_list`, `git_delete_branch`: ohne Sperre.
+- [x] `git_create_ticket_worktree(session_id, key, name)`: Eintrag muss ein Haupt-Checkout sein (`source.ticket.is_none()` und keine innere Repository-Kennung `:` im Schlüssel) — sonst Fehler „Nur am Haupt-Checkout möglich.“; `actions::create_ticket_worktree`; danach den Ordner der Session merken über eine neue Registry-Methode `remember_ticket_worktree(session_id, position, folder)`, die denselben Weg geht wie ein vom Agenten benutzter Ticket-Worktree (Zustand der Session ergänzen + `session_ticket_worktrees::insert_all`). Danach liefert `changes_input` ihn als Eintrag.
+- [x] `git_open(session_id, key, target)`: `Explorer` → `app.opener().open_path(dir)`; `VsCode` → `Command::new("cmd").args(["/C", "code", <dir>])` mit `hide_console`, Exit ≠ 0 oder „nicht erkannt“ im stderr → Fehler aus den AK. Kein Sperr-Check.
+- [x] Alle registrieren; Wrapper in `src/lib/git.ts`.
 
 ### Oberfläche `src/features/git/`
 
-- [ ] `GitMoreMenu.tsx` vollständig nach den AK; Untermenüs als zweiter Popover-Inhalt im selben Popover (Zurück-Pfeil oben links), nicht als zweites Fenster.
-- [ ] `GitDiscardDialog.tsx`, `GitDeleteBranchDialog.tsx` (Rückfrage „Trotzdem löschen“ bei Fehler mit Präfix `not-merged:`).
-- [ ] Verwerfen-Knopf in der Datei-Zeile (`FileTree.renderFile`, nur `checkable !== null`), Zahlen beim Überfahren ausgeblendet.
-- [ ] `GitBranchMenu.tsx`: Eintrag „+ Neuer Branch als Ticket-Worktree …“ unter „+ Neuer Branch aus …“, nur wenn der Eintrag ein Haupt-Checkout ist (Schlüssel ohne `/` und ohne `:`).
-- [ ] `GitOperationRow.tsx`: „In VS Code öffnen“ ergänzen.
-- [ ] `gitTexts.ts` um alle Sätze dieser Phase.
+- [x] `GitMoreMenu.tsx` vollständig nach den AK; Untermenüs als zweiter Popover-Inhalt im selben Popover (Zurück-Pfeil oben links), nicht als zweites Fenster.
+- [x] `GitDiscardDialog.tsx`, `GitDeleteBranchDialog.tsx` (Rückfrage „Trotzdem löschen“ bei Fehler mit Präfix `not-merged:`).
+- [x] Verwerfen-Knopf in der Datei-Zeile (`FileTree.renderFile`, nur `checkable !== null`), Zahlen beim Überfahren ausgeblendet.
+- [x] `GitBranchMenu.tsx`: Eintrag „+ Neuer Branch als Ticket-Worktree …“ unter „+ Neuer Branch aus …“, nur wenn der Eintrag ein Haupt-Checkout ist (Schlüssel ohne `/` und ohne `:`).
+- [x] `GitOperationRow.tsx`: „In VS Code öffnen“ ergänzen.
+- [x] `gitTexts.ts` um alle Sätze dieser Phase.
 
 ### Doc-Updates
 
-- [ ] `docs/code-map.md`: Zeile „Git-Werkzeuge“ um die neuen Commands und `remember_ticket_worktree`.
-- [ ] `docs/design/2026-10-05_git-werkzeuge/`: HTML-Menütext und README-Tabelle „In main mergen …“ → „Branch hierher mergen …“.
-- [ ] ADR 025: Konsequenz „Ticket-Worktrees kann jetzt auch die App anlegen; sie gehören dann der Session, die sie angelegt hat“ (Ergänzung zu ADR 010).
+- [x] `docs/code-map.md`: Zeile „Git-Werkzeuge“ um die neuen Commands und `remember_ticket_worktree`.
+- [x] `docs/design/2026-10-05_git-werkzeuge/`: HTML-Menütext und README-Tabelle „In main mergen …“ → „Branch hierher mergen …“.
+- [x] ADR 025: Konsequenz „Ticket-Worktrees kann jetzt auch die App anlegen; sie gehören dann der Session, die sie angelegt hat“ (Ergänzung zu ADR 010).
 
 ## Report-Back
+
+Status: complete. Gebaut und geprüft mit `pnpm check` (lint, typecheck, Format, Build, clippy); die Git-Aufrufe einzeln gegen ein Wegwerf-Repository probiert (Stash-Liste mit Ortszeit, `ls-tree`, `restore`, `branch -d`). Oberfläche noch nicht im Browser gesehen.
+
+Abweichungen:
+
+- **Stash-Nachricht:** `verwalter: Änderungen beiseitegelegt` ohne Uhrzeit — das Projekt hat keine Ortszeit-Bibliothek und darf keine neue Abhängigkeit aufnehmen. Die Liste zeigt Datum und Uhrzeit (Ortszeit) stattdessen aus dem Stash-Commit selbst (`git stash list --date=format-local`).
+- **Verwerfen einer vorgemerkten, nie committeten Datei** (z. B. vom Agenten mit `git add`): `restore --source=HEAD` kennt sie nicht, der Core nimmt dann `git rm -f`. Nicht im Plan.
+- **Ungemergt-Erkennung** läuft über `merge-base --is-ancestor <branch> HEAD` im Core statt über Git-Fehlertext — der wäre je nach Sprache ein anderer. Folge: ein Branch, der nur im Upstream gemergt ist, fragt trotzdem nach.
+- **Sperr-Hinweis** nennt jetzt auch „Stash“ und „Merge“ unter den gesperrten Aktionen.
+- **Ticket-Worktree-Name:** nur Buchstaben, Ziffern, `- _ .` und `/` — sonst erkennt der Agent den Ordner im Text nicht wieder (`worktrees::is_folder_character`, dafür `pub` gemacht).

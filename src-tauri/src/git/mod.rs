@@ -521,6 +521,73 @@ pub fn stash_push(dir: &Path, message: &str) -> Result<(), CommandError> {
     run_write(dir, &args(&["stash", "push", "-u", "-m", message])).map(|_| ())
 }
 
+/// Setzt `path` auf den Stand von `HEAD` zurück, im Index und im Arbeitsordner.
+pub fn restore(dir: &Path, path: &str) -> Result<(), CommandError> {
+    let paths = [path.to_owned()];
+    run_write(
+        dir,
+        &with_paths(
+            &["restore", "--source=HEAD", "--staged", "--worktree"],
+            &paths,
+        )?,
+    )
+    .map(|_| ())
+}
+
+/// Entfernt eine schon vorgemerkte, aber nie committete Datei aus Index und Arbeitsordner.
+pub fn remove_added(dir: &Path, path: &str) -> Result<(), CommandError> {
+    let paths = [path.to_owned()];
+    run_write(dir, &with_paths(&["rm", "-f"], &paths)?).map(|_| ())
+}
+
+/// Ob `HEAD` die Datei `path` enthält.
+pub fn exists_in_head(dir: &Path, path: &str) -> Result<bool, CommandError> {
+    changes::validate_path(path)?;
+    let output = run_raw(
+        dir,
+        &args(&["ls-tree", "--name-only", "-z", "HEAD", "--", path]),
+    )?;
+    Ok(!output.is_empty())
+}
+
+/// Je Stash `<Ortszeit> · <Betreff>`, neuester zuerst — die Stelle in der Liste ist der Index in
+/// `stash@{n}`. Die Ortszeit rechnet Git selbst aus.
+pub fn stash_labels(dir: &Path) -> Result<Vec<String>, CommandError> {
+    let output = run_raw(
+        dir,
+        &args(&[
+            "stash",
+            "list",
+            "--date=format-local:%d.%m.%Y %H:%M",
+            "--format=%cd · %s",
+        ]),
+    )?;
+    Ok(output
+        .lines()
+        .map(|line: &str| line.trim_end_matches('\r').to_owned())
+        .collect())
+}
+
+pub fn stash_pop(dir: &Path, index: u32) -> Result<(), CommandError> {
+    let reference = format!("stash@{{{index}}}");
+    run_write(dir, &args(&["stash", "pop", &reference])).map(|_| ())
+}
+
+/// `git pull --rebase`: Konflikte halten den Rebase an, der Arbeitsordner bleibt darin stehen.
+pub fn pull_rebase(dir: &Path) -> Result<(), CommandError> {
+    run_write(dir, &args(&["pull", "--rebase"])).map(|_| ())
+}
+
+pub fn merge(dir: &Path, branch: &str) -> Result<(), CommandError> {
+    run_write(dir, &args(&["merge", "--no-edit", branch])).map(|_| ())
+}
+
+/// `-d` löscht nur gemergte Branches, `force` (`-D`) auch ungemergte.
+pub fn delete_branch(dir: &Path, branch: &str, force: bool) -> Result<(), CommandError> {
+    let flag = if force { "-D" } else { "-d" };
+    run_write(dir, &args(&["branch", flag, branch])).map(|_| ())
+}
+
 pub fn merge_abort(dir: &Path) -> Result<(), CommandError> {
     run_write(dir, &args(&["merge", "--abort"])).map(|_| ())
 }

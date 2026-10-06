@@ -368,3 +368,53 @@
 .file-tree__file--foreign .file-tree__name {
   color: var(--color-fg-secondary);
 }
+
+/* Verwerfen: beim Überfahren einer uncommitteten Datei ersetzt der Knopf die Zahlen. */
+.file-tree__stats {
+  display: contents;
+}
+
+.file-tree__file-row {
+  position: relative;
+}
+
+.file-tree__discard {
+  position: absolute;
+  top: 50%;
+  right: var(--space-md);
+  display: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-hover);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    color: var(--color-status-error);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.file-tree__file-row:hover .file-tree__discard,
+.file-tree__discard:focus-visible {
+  display: grid;
+}
+
+.file-tree__file-row:hover .file-tree__stats {
+  visibility: hidden;
+}

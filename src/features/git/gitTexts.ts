@@ -6,7 +6,13 @@ export const LOCKED_TITLE = 'Gesperrt, solange der Agent arbeitet';
 
 export const LOCK_HINT_OWN_BEFORE = 'Der Agent arbeitet: ';
 export const LOCK_HINT_OWN_AFTER = ' warten, bis er ruht. Commit und Push gehen.';
-export const LOCK_HINT_LOCKED_ACTIONS: readonly string[] = ['Branch wechseln', 'Pull', 'Verwerfen'];
+export const LOCK_HINT_LOCKED_ACTIONS: readonly string[] = [
+  'Branch wechseln',
+  'Pull',
+  'Verwerfen',
+  'Stash',
+  'Merge',
+];
 
 export const FAILURE = {
   commit: 'Commit fehlgeschlagen',
@@ -18,7 +24,35 @@ export const FAILURE = {
   createBranch: 'Branch anlegen fehlgeschlagen',
   abort: 'Abbrechen fehlgeschlagen',
   pause: 'Pausieren fehlgeschlagen',
+  discard: 'Verwerfen fehlgeschlagen',
+  stashPush: 'Beiseitelegen fehlgeschlagen',
+  stashPop: 'Zurückholen fehlgeschlagen',
+  pullRebase: 'Pull mit Rebase fehlgeschlagen',
+  merge: 'Merge fehlgeschlagen',
+  deleteBranch: 'Branch löschen fehlgeschlagen',
+  ticketWorktree: 'Ticket-Worktree anlegen fehlgeschlagen',
+  open: 'Öffnen fehlgeschlagen',
 } as const;
+
+/** Beginn des Fehlersatzes, mit dem der Core einen ungemergten Branch beim Löschen meldet. */
+export const NOT_MERGED_PREFIX = 'not-merged:';
+
+export const DISCARD_TITLE = 'Änderung verwerfen …';
+export const DISCARD_LOCKED_TITLE = 'Wartet, bis der Agent ruht';
+export const NO_STASH_TEXT = 'Kein Stash vorhanden';
+
+export function discardQuestion(path: string): string {
+  return `${path} wird auf den letzten Commit zurückgesetzt. Das lässt sich nicht rückgängig machen.`;
+}
+
+export function notMergedQuestion(branch: string): string {
+  return `${branch} ist nicht gemergt. Trotzdem löschen?`;
+}
+
+/** Nur der Haupt-Checkout eines Repositorys (`<P>`) bekommt einen Ticket-Worktree daneben. */
+export function isMainCheckoutKey(key: string): boolean {
+  return !key.includes('/') && !key.includes(':');
+}
 
 /** Beginnt der Fehlersatz des Core so, ist der Commit schon da — dann steht kein „Commit fehlgeschlagen“ davor. */
 export const COMMIT_CREATED_PREFIX = 'Commit angelegt';

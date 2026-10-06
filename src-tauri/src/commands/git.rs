@@ -1,12 +1,15 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use tauri_plugin_opener::OpenerExt;
+
 use crate::changes::{model::ChangesReach, sources};
 use crate::db::{Database, session_commits};
 use crate::error::CommandError;
-use crate::git::model::{GitBranch, GitSessionStatus, GitSwitchMode};
+use crate::git::model::{GitBranch, GitOpenTarget, GitSessionStatus, GitSwitchMode};
 use crate::git::{actions, status};
 use crate::sessions::registry::SessionRegistry;
+use crate::worktrees::RepositoryCheckout;
 
 // Die Commands sind `async`, damit die Git-Aufrufe nicht auf dem Haupt-Thread laufen. `key` wie in
 // `RepositoryChanges`; `sources::find` nimmt nur einen, den die Changes der Session selbst gebaut
@@ -136,6 +139,141 @@ pub async fn git_abort_operation(
     registry.ensure_not_busy(&session_id)?;
     let dir = entry_dir(&registry, &session_id, &key)?;
     actions::abort_operation(&dir)
+}
+
+/// Setzt eine Datei auf den letzten Commit zurück (neue Dateien werden gelöscht); gesperrt wie
+/// `git_switch`.
+#[tauri::command]
+pub async fn git_discard(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    path: String,
+) -> Result<(), CommandError> {
+    registry.ensure_not_busy(&session_id)?;
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::discard(&dir, &path)
+}
+
+#[tauri::command]
+pub async fn git_stash_push(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+) -> Result<(), CommandError> {
+    registry.ensure_not_busy(&session_id)?;
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::stash_push(&dir)
+}
+
+/// Ohne Sperre: die Liste liest nur.
+#[tauri::command]
+pub async fn git_stash_list(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+) -> Result<Vec<String>, CommandError> {
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::stash_list(&dir)
+}
+
+#[tauri::command]
+pub async fn git_stash_pop(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    index: u32,
+) -> Result<(), CommandError> {
+    registry.ensure_not_busy(&session_id)?;
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::stash_pop(&dir, index)
+}
+
+#[tauri::command]
+pub async fn git_pull_rebase(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+) -> Result<(), CommandError> {
+    registry.ensure_not_busy(&session_id)?;
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::pull_rebase(&dir)?;
+    fetch_quietly(&dir);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn git_merge(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    branch: String,
+) -> Result<(), CommandError> {
+    registry.ensure_not_busy(&session_id)?;
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::merge(&dir, &branch)
+}
+
+/// Ohne Sperre: ein Branch, den niemand ausgecheckt hat, ändert keine Datei im Arbeitsordner.
+#[tauri::command]
+pub async fn git_delete_branch(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    branch: String,
+    force: bool,
+) -> Result<(), CommandError> {
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    actions::delete_branch(&dir, &branch, force)
+}
+
+/// Legt neben dem Haupt-Checkout einen Ticket-Worktree mit neuem Branch an und merkt ihn der Session,
+/// damit er als eigener Eintrag in den Changes erscheint (ADR 025). Ohne Sperre: der Ordner des
+/// Haupt-Checkouts bleibt unberührt.
+#[tauri::command]
+pub async fn git_create_ticket_worktree(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    name: String,
+) -> Result<(), CommandError> {
+    let input = registry.changes_input(&session_id, ChangesReach::Session)?;
+    let source = sources::find(&input, &key)?;
+    if let Some(error) = source.error {
+        return Err(CommandError::Git(error));
+    }
+    let is_main_checkout = source.ticket.is_none()
+        && !key.contains(['/', ':'])
+        && matches!(source.repository.checkout, RepositoryCheckout::Main);
+    if !is_main_checkout {
+        return Err(CommandError::Git(
+            "Nur am Haupt-Checkout möglich.".to_owned(),
+        ));
+    }
+    let position: u32 = key
+        .parse()
+        .map_err(|_| CommandError::Internal(format!("Ungültiger Schlüssel {key}")))?;
+    let folder = actions::create_ticket_worktree(&source.dir, &name)?;
+    registry.remember_ticket_worktree(&session_id, position, &folder)
+}
+
+/// Öffnet den Ordner des Eintrags im Explorer oder in VS Code. Ohne Sperre: ändert nichts.
+#[tauri::command]
+pub async fn git_open(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    target: GitOpenTarget,
+) -> Result<(), CommandError> {
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    match target {
+        GitOpenTarget::Explorer => app
+            .opener()
+            .open_path(dir.to_string_lossy(), None::<&str>)
+            .map_err(|error| CommandError::Io(error.to_string())),
+        GitOpenTarget::VsCode => actions::open_in_vs_code(&dir),
+    }
 }
 
 /// Ordner des Eintrags `key` in den Changes der Session; ein Eintrag ohne bestimmbare Basis meldet
