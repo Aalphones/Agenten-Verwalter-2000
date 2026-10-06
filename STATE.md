@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-05_git-werkzeuge/` (Git-Werkzeuge)
-**Phase:** 2/5 — Core schreibt: Commit, Push, Pull, Fetch, Branch (pending)
-**Nächster Schritt:** Git-Werkzeuge Phase 2 in frischer Session (`phase-2-commit-und-sync.md`, zuerst FINDINGS → Phase 2). Phase 1 fertig. Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
+**Phase:** 3/5 — Oberfläche: Branch-Pille, Repository-Zeile, Commit-Feld, Dialoge (pending)
+**Nächster Schritt:** Git-Werkzeuge Phase 3 in frischer Session (`phase-3-oberflaeche.md`, zuerst FINDINGS → Phase 3). Phasen 1–2 fertig. Autark pausiert bei Phase 4/9 (`phase-4-anweisungen-skills.md`, zuerst FINDINGS → Phase 4: `Skill` in die Nur-Lese-Liste von `permissions::decide`). Smokes „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten).
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -16,7 +16,7 @@
 5. **Autark** (`autarker-agent`) — Phasen 1–3 fertig, größter Plan (9 Phasen, drei „heikel“).
 6. ~~Dateiverweise im Chat~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_dateiverweise-im-chat.md`, ADR 023), Smoke offen; `v0.15.0` auf Zuruf gesetzt. Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.
 7. ~~MCP-Anmeldung~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_mcp-anmeldung.md`, ADR 024), Smoke offen; `v0.16.0` auf Zuruf gesetzt.
-8. **Git-Werkzeuge** (`2026-10-05_git-werkzeuge/`) — aktiv, Phase 1 fertig; 5 Phasen (zwei „heikel“), Design abgenommen unter `docs/design/2026-10-05_git-werkzeuge/`, ADR 025. Unabhängig von Autark.
+8. **Git-Werkzeuge** (`2026-10-05_git-werkzeuge/`) — aktiv, Phasen 1–2 fertig; 5 Phasen (zwei „heikel“), Design abgenommen unter `docs/design/2026-10-05_git-werkzeuge/`, ADR 025. Unabhängig von Autark.
 9. ~~Artefakte~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_artefakte/`, `v0.17.0`, ADR 026), Smoke offen.
 10. ~~Session-Übergabe~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_session-uebergabe.md`, ADR 027, Migration 9), Smoke offen.
 

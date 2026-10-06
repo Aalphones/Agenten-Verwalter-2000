@@ -31,3 +31,4 @@ Bisher zeigt der Verwalter nur, was sich geändert hat; committen, pushen, pulle
 - Der Agent und die Oberfläche können gleichzeitig committen; schlimmstenfalls kommt einmal „Git ist gerade beschäftigt“.
 - Konflikte nach Pull oder Merge bleiben im Arbeitsordner; die Oberfläche bietet „In VS Code öffnen“ und „abbrechen“, löst aber selbst nichts.
 - Verlauf nur für den aktuellen Branch, die letzten 50 Commits plus eingehende.
+- App-Commits landen in `session_commits` der Session, die committet hat — auch fremde Dateien, die man bewusst angehakt hat, zählen danach als ihre.

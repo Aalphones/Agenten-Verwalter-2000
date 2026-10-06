@@ -473,7 +473,7 @@ fn own_file(
 
 /// Der Pfad kommt aus der Oberfläche und landet bei untracked Dateien im Dateisystem: nichts
 /// zulassen, was aus dem Worktree hinausführt.
-fn validate_path(path: &str) -> Result<(), CommandError> {
+pub(crate) fn validate_path(path: &str) -> Result<(), CommandError> {
     let leaves_worktree = path.is_empty()
         || path.starts_with(['/', '\\'])
         || path.contains(':')

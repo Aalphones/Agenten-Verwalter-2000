@@ -1,9 +1,11 @@
 //! Der Git-Zustand der Einträge in den Changes einer Session (ADR 025): Branch, Upstream, ↓/↑,
 //! laufender Merge/Rebase, fremde Änderungen, eigene Commits. Liest nur, ohne Sperre (ADR 006).
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::Path;
+use std::sync::{LazyLock, Mutex, PoisonError};
 use std::thread::{self, ScopedJoinHandle};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::changes::attribution::{self, Ownership};
 use crate::changes::history::CommitInfo;
@@ -26,6 +28,32 @@ const REMOTE_REFS: &str = "refs/remotes/";
 const REMOTE_HEAD_SUFFIX: &str = "/HEAD";
 const CURRENT_MARKER: &str = "*";
 const THREAD_FAILED: &str = "interner Fehler beim Lesen des Git-Zustands";
+
+/// Letzter erfolgreicher Fetch je Ordner (normalisiert), ms seit 1970 — nur für diesen App-Lauf.
+static FETCHED: LazyLock<Mutex<HashMap<String, f64>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+pub fn mark_fetched(dir: &Path) {
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0.0, |elapsed| elapsed.as_secs_f64() * 1000.0);
+    FETCHED
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .insert(fetch_key(dir), now_ms);
+}
+
+fn last_fetch_ms(dir: &Path) -> Option<f64> {
+    FETCHED
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .get(&fetch_key(dir))
+        .copied()
+}
+
+fn fetch_key(dir: &Path) -> String {
+    attribution::normalize_path(&dir.to_string_lossy())
+}
 
 /// Alle Einträge der Reichweite mit Git, je einer in einem eigenen Thread; scheitert einer, trägt
 /// nur er den Fehler. Innere Repositories nur, wenn die Changes sie auch zeigen.
@@ -114,13 +142,13 @@ fn read_entry(source: &Source, own: &Ownership) -> Result<GitEntryStatus, Comman
         foreign,
         commits,
         head_pushed,
-        last_fetch_ms: None,
+        last_fetch_ms: last_fetch_ms(dir),
         error: None,
     })
 }
 
 /// `origin`, sonst der einzige Remote; bei mehreren ohne `origin` keiner.
-fn push_remote(remotes: Vec<String>) -> Option<String> {
+pub(crate) fn push_remote(remotes: Vec<String>) -> Option<String> {
     if remotes
         .iter()
         .any(|remote: &String| remote == PREFERRED_REMOTE)
@@ -133,7 +161,7 @@ fn push_remote(remotes: Vec<String>) -> Option<String> {
     }
 }
 
-fn operation(dir: &Path) -> Result<GitOperation, CommandError> {
+pub(crate) fn operation(dir: &Path) -> Result<GitOperation, CommandError> {
     if git::git_path_exists(dir, MERGE_HEAD)? {
         return Ok(GitOperation::Merge);
     }
