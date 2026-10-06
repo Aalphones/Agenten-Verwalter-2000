@@ -191,7 +191,7 @@ export function authenticateMcpServer(sessionId: string, server: string): Promis
 
 ## Report-Back
 
-Smoke 1–4: offen.
+Smoke 1–4: offen. Auf Zuruf archiviert und als `v0.16.0` released, ohne Abnahme der Smoke-Checkliste.
 
 ## Summary
 
