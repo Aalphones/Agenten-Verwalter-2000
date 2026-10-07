@@ -70,9 +70,20 @@ pub fn ask_haiku<T: DeserializeOwned>(
     program: &PrintProgram,
     request: &HaikuRequest<'_>,
 ) -> Result<T, String> {
+    ask_model(app, program, ModelId::Haiku, request)
+}
+
+/// Ein Einmal-Aufruf des gewählten Modells; in den Betriebsarten mit LM Studio antwortet das
+/// lokale Modell, gleich welches `model` hier steht.
+pub fn ask_model<T: DeserializeOwned>(
+    app: &AppHandle,
+    program: &PrintProgram,
+    model: ModelId,
+    request: &HaikuRequest<'_>,
+) -> Result<T, String> {
     let cwd = data_dir(app).map_err(|error: CommandError| error.to_string())?;
     let print_request = PrintRequest {
-        model: ModelId::Haiku,
+        model,
         system_prompt: request.system_prompt,
         json_schema: request.json_schema,
         input: request.input,

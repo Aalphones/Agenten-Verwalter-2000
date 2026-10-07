@@ -12,9 +12,9 @@ const MAX_FIRST_MESSAGE_CHARS: usize = 20_000;
 const BLOCK_SEPARATOR: &str = "\n\n";
 const CARRY_SEPARATOR: &str = "\n\n---\n\n";
 
-struct Block {
-    text: String,
-    is_user: bool,
+pub(crate) struct Block {
+    pub(crate) text: String,
+    pub(crate) is_user: bool,
 }
 
 /// Nur der Gesprächstext: Nachrichten, Antworten, Rückfragen samt Antwort, Fehler und die letzte
@@ -38,7 +38,7 @@ pub fn session_transcript(entries: &[ChatEntry]) -> String {
     fit(blocks)
 }
 
-fn entry_block(entry: &ChatEntry) -> Option<Block> {
+pub(crate) fn entry_block(entry: &ChatEntry) -> Option<Block> {
     let text = match entry {
         ChatEntry::User {
             text,
@@ -100,7 +100,7 @@ fn line_label(comment: &ReviewComment) -> String {
     }
 }
 
-fn todo_block(items: &[TodoItem]) -> String {
+pub(crate) fn todo_block(items: &[TodoItem]) -> String {
     let mut block = String::from("Aufgabenliste:");
     for item in items {
         let mark = match item.state {
@@ -116,13 +116,21 @@ fn todo_block(items: &[TodoItem]) -> String {
 /// Über der Obergrenze bleiben die erste Nachricht (sie nennt meist die Aufgabe) und das Ende
 /// (der aktuelle Stand); die Mitte fällt weg und wird markiert.
 fn fit(blocks: Vec<Block>) -> String {
+    fit_with_flag(blocks).0
+}
+
+/// Wie `fit`; das Flag ist `true`, wenn die Mitte wegfiel.
+pub(crate) fn fit_with_flag(blocks: Vec<Block>) -> (String, bool) {
     let separator_chars = BLOCK_SEPARATOR.chars().count();
     let total: usize = blocks
         .iter()
         .map(|block: &Block| block.text.chars().count() + separator_chars)
         .sum();
     if total <= MAX_TRANSCRIPT_CHARS {
-        return join(blocks.iter().map(|block: &Block| block.text.as_str()));
+        return (
+            join(blocks.iter().map(|block: &Block| block.text.as_str())),
+            false,
+        );
     }
     let first_user: Option<usize> = blocks.iter().position(|block: &Block| block.is_user);
     let head: Option<String> =
@@ -153,7 +161,7 @@ fn fit(blocks: Vec<Block>) -> String {
         .into_iter()
         .chain(std::iter::once(marker.as_str()))
         .chain(tail);
-    join(parts)
+    (join(parts), true)
 }
 
 fn omitted_marker(count: usize) -> String {
@@ -195,7 +203,7 @@ pub fn project_input(sessions: &[(u32, String, SessionStatus, SessionTldr)]) -> 
     blocks.join(BLOCK_SEPARATOR)
 }
 
-fn status_label(status: SessionStatus) -> &'static str {
+pub(crate) fn status_label(status: SessionStatus) -> &'static str {
     match status {
         SessionStatus::Starting => "Startet",
         SessionStatus::Running => "Läuft",
