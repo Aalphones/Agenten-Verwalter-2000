@@ -7,6 +7,7 @@ mod grep;
 mod read;
 pub mod shell;
 mod skill;
+mod task_stop;
 mod todo;
 mod walk;
 mod write;
@@ -19,6 +20,7 @@ use std::sync::atomic::AtomicBool;
 use serde_json::{Value, json};
 
 use super::paths::{self, Access, Roots};
+use super::tasks::Tasks;
 
 pub const READ_TOOL: &str = "Read";
 pub const WRITE_TOOL: &str = "Write";
@@ -30,6 +32,7 @@ pub const BASH_TOOL: &str = "Bash";
 pub const POWERSHELL_TOOL: &str = "PowerShell";
 pub const ASK_USER_TOOL: &str = "AskUserQuestion";
 pub const SKILL_TOOL: &str = "Skill";
+pub const TASK_STOP_TOOL: &str = "TaskStop";
 
 /// Ergebnis eines Werkzeugs, das wegen Esc nicht (fertig) lief.
 pub const INTERRUPTED: &str = "Vom Benutzer unterbrochen.";
@@ -57,6 +60,8 @@ pub struct ToolContext {
     pub skill_roots: Vec<(String, PathBuf)>,
     /// Ob das geladene Modell Bilder versteht — sonst liest `Read` keine.
     pub has_vision: bool,
+    /// Hintergrundaufgaben der Session; sie überdauern den Turn, der sie gestartet hat.
+    pub tasks: Arc<Tasks>,
 }
 
 impl ToolContext {
@@ -170,8 +175,8 @@ pub fn definitions() -> Vec<Value> {
             BASH_TOOL,
             "Runs a command in Git Bash on Windows (bash -c) in the working directory and returns \
              stdout and stderr. Use Unix syntax and forward slashes. timeout in milliseconds \
-             (default 120000, max 600000). Background processes are not supported; the command \
-             must finish on its own.",
+             (default 120000, max 600000). Set run_in_background for servers and long builds; \
+             read the output file with Read; stop with TaskStop.",
             shell_properties(),
             &["command"],
         ),
@@ -179,8 +184,8 @@ pub fn definitions() -> Vec<Value> {
             POWERSHELL_TOOL,
             "Runs a command in Windows PowerShell 5.1 in the working directory and returns stdout \
              and stderr. Use PowerShell syntax (no && or ||; use `; if ($?) { … }`). timeout in \
-             milliseconds (default 120000, max 600000). Background processes are not supported; \
-             the command must finish on its own.",
+             milliseconds (default 120000, max 600000). Set run_in_background for servers and \
+             long builds; read the output file with Read; stop with TaskStop.",
             shell_properties(),
             &["command"],
         ),
@@ -226,6 +231,14 @@ pub fn definitions() -> Vec<Value> {
             }),
             &["skill"],
         ),
+        function(
+            TASK_STOP_TOOL,
+            "Stops a background task started with run_in_background, by the ID from its start message.",
+            json!({
+                "task_id": { "type": "string", "description": "ID of the background task" },
+            }),
+            &["task_id"],
+        ),
     ]
 }
 
@@ -234,6 +247,10 @@ fn shell_properties() -> Value {
         "command": { "type": "string", "description": "The command to run" },
         "timeout": { "type": "integer", "description": "Timeout in milliseconds" },
         "description": { "type": "string", "description": "What the command does, in a few words" },
+        "run_in_background": {
+            "type": "boolean",
+            "description": "Run without waiting; the result names the task ID and the output file",
+        },
     })
 }
 
@@ -248,7 +265,8 @@ pub fn names(definitions: &[Value]) -> Vec<String> {
         .collect()
 }
 
-pub fn run(name: &str, input: &Value, context: &mut ToolContext) -> ToolOutput {
+/// `tool_use_id` braucht nur ein Hintergrund-Befehl — für seine `task_started`-Zeile.
+pub fn run(name: &str, input: &Value, context: &mut ToolContext, tool_use_id: &str) -> ToolOutput {
     let mut image: Option<ToolImage> = None;
     let result = match name {
         READ_TOOL => {
@@ -262,10 +280,11 @@ pub fn run(name: &str, input: &Value, context: &mut ToolContext) -> ToolOutput {
         GLOB_TOOL => glob::run(input, context),
         GREP_TOOL => grep::run(input, context),
         TODO_TOOL => todo::run(input),
-        BASH_TOOL => shell::run(shell::ShellKind::Bash, input, context),
-        POWERSHELL_TOOL => shell::run(shell::ShellKind::PowerShell, input, context),
+        BASH_TOOL => shell::run(shell::ShellKind::Bash, input, context, tool_use_id),
+        POWERSHELL_TOOL => shell::run(shell::ShellKind::PowerShell, input, context, tool_use_id),
         ASK_USER_TOOL => ask::run(input),
         SKILL_TOOL => skill::run(input, context),
+        TASK_STOP_TOOL => task_stop::run(input, context),
         unknown => Err(format!("Unbekanntes Werkzeug: {unknown}")),
     };
     match result {

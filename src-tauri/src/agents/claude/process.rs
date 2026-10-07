@@ -6,9 +6,10 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::Duration;
 
-use crate::agents::claude::local::{self, LocalBackend};
+use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::processes::hide_console;
+use crate::standalone;
 
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
@@ -138,6 +139,13 @@ fn build_command(opts: &SpawnOptions) -> Command {
         .env("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1");
     if let Some(backend) = &opts.local {
         local::apply(&mut command, backend);
+        // Der autarke Agent braucht den Ordner für die Ausgaben seiner Hintergrundprozesse, und den
+        // Pfad aus dem Prompt-Text zu fischen wäre brüchig.
+        if backend.program == LocalProgram::Standalone
+            && let Some(dir) = &opts.scratchpad
+        {
+            command.env(standalone::SCRATCHPAD_VARIABLE, dir);
+        }
     }
     // Ein gemeinsamer Text: der autarke Agent liest nur ein `--append-system-prompt`, ein zweites
     // überschriebe das erste.

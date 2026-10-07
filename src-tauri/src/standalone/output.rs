@@ -37,7 +37,15 @@ impl Output {
     }
 }
 
-pub fn init(session_id: &str, model: &str, cwd: &Path, tools: &[String]) -> Value {
+/// `scratchpad` steht nur der Vollständigkeit halber in der Zeile: den Ordner gibt der Verwalter
+/// vor (ADR 022) und überliest die Angabe.
+pub fn init(
+    session_id: &str,
+    model: &str,
+    cwd: &Path,
+    tools: &[String],
+    scratchpad: &Path,
+) -> Value {
     json!({
         "type": "system",
         "subtype": "init",
@@ -45,6 +53,7 @@ pub fn init(session_id: &str, model: &str, cwd: &Path, tools: &[String]) -> Valu
         "model": model,
         "cwd": cwd.to_string_lossy(),
         "tools": tools,
+        "scratchpad_path": scratchpad.to_string_lossy(),
     })
 }
 

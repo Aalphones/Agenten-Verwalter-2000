@@ -7,6 +7,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::env;
 use std::ffi::OsStr;
+use std::fs;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -23,10 +24,11 @@ use super::hooks::Hooks;
 use super::output::{self, Output};
 use super::paths::{self, Roots};
 use super::prompt::{self, MemoryFile, PromptContext, SystemPrompt};
+use super::tasks::Tasks;
 use super::tools::{self, ToolContext};
 use super::transcript::Transcript;
 use super::turn::{self, Outcome, TurnEvent, TurnJob};
-use super::{EXIT_START_FAILED, Environment, content, home_dir, invocation};
+use super::{EXIT_START_FAILED, Environment, content, fallback_scratchpad, home_dir, invocation};
 use crate::agents::event::Mode;
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
@@ -35,6 +37,8 @@ const POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// dass seine letzte Antwort nie ankam. Wortlaut wie bei der Claude-Kommandozeile.
 const INTERRUPTED_MARKER: &str = "[Request interrupted by user]";
 const BYTE_ORDER_MARK: char = '\u{feff}';
+/// Unterordner des Scratchpads für die Ausgaben der Hintergrundprozesse.
+const TASKS_DIR: &str = "tasks";
 
 enum Input {
     Line(String),
@@ -78,6 +82,7 @@ struct Session {
     transcript: Transcript,
     queue: VecDeque<Value>,
     turn: Option<ActiveTurn>,
+    tasks: Arc<Tasks>,
 }
 
 pub fn run(args: AgentArgs) -> i32 {
@@ -106,6 +111,13 @@ pub fn run(args: AgentArgs) -> i32 {
         eprintln!("Benutzerordner unbekannt");
         return EXIT_START_FAILED;
     };
+    let scratchpad = match prepare_scratchpad(environment.scratchpad.clone(), &session_id) {
+        Ok(scratchpad) => scratchpad,
+        Err(error) => {
+            eprintln!("{error}");
+            return EXIT_START_FAILED;
+        }
+    };
     let tool_definitions = if args.tools_disabled {
         Vec::new()
     } else {
@@ -117,7 +129,9 @@ pub fn run(args: AgentArgs) -> i32 {
         &args.model,
         &cwd,
         &tools::names(&tool_definitions),
+        &scratchpad,
     ));
+    let tasks = Arc::new(Tasks::new(Arc::clone(&output), scratchpad.join(TASKS_DIR)));
     let (input_sender, input_receiver) = mpsc::channel::<Input>();
     if let Err(error) = spawn_stdin_reader(input_sender) {
         eprintln!("Lese-Thread startet nicht: {error}");
@@ -134,13 +148,14 @@ pub fn run(args: AgentArgs) -> i32 {
         .collect();
     let tool_context = ToolContext {
         cwd: cwd.clone(),
-        roots: Roots::from_args(&cwd, &args.add_dirs, &args.allowed_rules),
+        roots: Roots::from_args(&cwd, &args.add_dirs, &args.allowed_rules, &scratchpad),
         read_files: HashSet::new(),
         cancel: Arc::new(AtomicBool::new(false)),
         allow_outside: false,
         home: home.clone(),
         skill_roots: skill_roots.clone(),
         has_vision: environment.has_vision,
+        tasks: Arc::clone(&tasks),
     };
     let system_prompt = prompt::system_prompt(&PromptContext {
         cwd: &cwd,
@@ -172,9 +187,28 @@ pub fn run(args: AgentArgs) -> i32 {
         transcript,
         queue: VecDeque::new(),
         turn: None,
+        tasks,
     };
     session.run_loop(&input_receiver);
+    // Ohne Agent hätte niemand mehr ihre Ausgabe gelesen oder sie gestoppt.
+    session.tasks.stop_all();
     0
+}
+
+/// Der Ordner, den der Verwalter vorgibt, sonst der Ersatz unter `.verwalter\agent`; samt
+/// Unterordner `tasks` für die Ausgaben der Hintergrundprozesse.
+fn prepare_scratchpad(given: Option<PathBuf>, session_id: &str) -> Result<PathBuf, String> {
+    let scratchpad = given
+        .or_else(|| fallback_scratchpad(session_id))
+        .ok_or_else(|| "Scratchpad-Ordner unbekannt".to_owned())?;
+    let tasks_dir = scratchpad.join(TASKS_DIR);
+    fs::create_dir_all(&tasks_dir).map_err(|error| {
+        format!(
+            "Scratchpad-Ordner {} nicht anlegbar: {error}",
+            tasks_dir.display()
+        )
+    })?;
+    Ok(scratchpad)
 }
 
 /// Ein Repository-Ordner für die Skill-Suche, benannt nach seinem Ordnernamen.
@@ -334,8 +368,16 @@ impl Session {
                     &self.transcript.messages,
                 ),
             )),
-            // Hintergrundaufgaben gibt es noch nicht — nichts zu beenden.
-            "stop_task" => self.reply_success(request_id),
+            "stop_task" => {
+                let task_id = request
+                    .get("task_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
+                match self.tasks.stop(task_id) {
+                    Ok(()) => self.reply_success(request_id),
+                    Err(error) => self.reply_error(request_id, &error),
+                }
+            }
             other => self.reply_error(request_id, &format!("nicht unterstützt: {other}")),
         }
     }
@@ -404,6 +446,7 @@ impl Session {
             transcript_path: self.transcript.path().to_path_buf(),
             request_counter: Arc::clone(&self.request_counter),
             answers: answer_receiver,
+            tasks: Arc::clone(&self.tasks),
         };
         let (event_sender, event_receiver) = mpsc::channel::<TurnEvent>();
         let spawned = thread::Builder::new()

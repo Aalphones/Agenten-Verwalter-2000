@@ -1,5 +1,5 @@
-//! Pfadgrenze der Datei-Werkzeuge: Arbeitsordner und `--add-dir`-Ordner zum Schreiben, die
-//! Ticket-Worktrees aus `--allowedTools` ebenso, `~/.claude` nur zum Lesen (Skills, Anweisungen).
+//! Pfadgrenze der Datei-Werkzeuge: Arbeitsordner, `--add-dir`-Ordner und Scratchpad zum Schreiben,
+//! die Ticket-Worktrees aus `--allowedTools` ebenso, `~/.claude` nur zum Lesen (Skills, Anweisungen).
 use std::path::{Component, Path, PathBuf};
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
@@ -27,13 +27,20 @@ pub struct Roots {
 }
 
 impl Roots {
-    pub fn from_args(cwd: &Path, add_dirs: &[PathBuf], allowed_rules: &[String]) -> Roots {
+    /// `scratchpad` liegt beim Verwalter im Workspace (ADR 022), beim Aufruf von Hand nicht.
+    pub fn from_args(
+        cwd: &Path,
+        add_dirs: &[PathBuf],
+        allowed_rules: &[String],
+        scratchpad: &Path,
+    ) -> Roots {
         let mut writable: Vec<PathBuf> = vec![resolve(cwd, &cwd.to_string_lossy())];
         writable.extend(
             add_dirs
                 .iter()
                 .map(|dir: &PathBuf| resolve(cwd, &dir.to_string_lossy())),
         );
+        writable.push(resolve(cwd, &scratchpad.to_string_lossy()));
         let readonly: Vec<PathBuf> = home_dir()
             .map(|home: PathBuf| home.join(CLAUDE_DIR))
             .into_iter()

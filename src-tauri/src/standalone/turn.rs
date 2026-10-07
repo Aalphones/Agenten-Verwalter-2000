@@ -23,6 +23,7 @@ use super::llm::{self, ChatRequest, Completion, LlmError, ToolCall};
 use super::output::{self, Output};
 use super::paths::{self, Access};
 use super::permissions::{self, Decision};
+use super::tasks::Tasks;
 use super::tools::{self, ASK_USER_TOOL, INTERRUPTED, ToolContext, ToolImage, ToolOutput};
 use crate::agents::event::Mode;
 
@@ -57,6 +58,8 @@ pub struct TurnJob {
     pub request_counter: Arc<AtomicU64>,
     /// Antworten auf Rückfragen: Request-ID und `response`-Objekt der `control_response`.
     pub answers: Receiver<(String, Value)>,
+    /// Liefert die Hinweise über inzwischen beendete Hintergrundaufgaben.
+    pub tasks: Arc<Tasks>,
 }
 
 /// Antwort, die ein Werkzeug statt seiner Ausführung bekommt.
@@ -97,6 +100,7 @@ fn run_rounds(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Outcome {
         if let Err(outcome) = make_room(job, events) {
             return outcome;
         }
+        add_task_notes(job, events);
         let completion = match ask_model(job) {
             Ok(completion) => completion,
             Err(outcome) => return outcome,
@@ -171,6 +175,21 @@ fn make_room(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Result<(), Outcom
     job.messages = messages;
     job.measure = measure;
     Ok(())
+}
+
+/// Beendete Hintergrundaufgaben erfährt das Modell mit der nächsten Anfrage — einen eigenen Turn
+/// lösen sie nicht aus.
+fn add_task_notes(job: &mut TurnJob, events: &Sender<TurnEvent>) {
+    let notes = job.tasks.take_notes();
+    if notes.is_empty() {
+        return;
+    }
+    let reminder = json!({
+        "role": "user",
+        "content": format!("<system-reminder>\n{}\n</system-reminder>", notes.join("\n")),
+    });
+    content::push_merged(&mut job.messages, &reminder);
+    let _ = events.send(TurnEvent::Messages(vec![reminder]));
 }
 
 fn ask_model(job: &TurnJob) -> Result<Completion, Outcome> {
@@ -304,7 +323,7 @@ fn run_tool(job: &TurnJob, call: &ParsedCall) -> ToolOutput {
     let mut context = job.context.lock().unwrap_or_else(PoisonError::into_inner);
     // Bis hierher kommt ein Pfad außerhalb nur mit Erlaubnis des Benutzers oder eines Hooks.
     context.allow_outside = access == Some(Access::Outside);
-    let output = tools::run(&call.name, &input, &mut context);
+    let output = tools::run(&call.name, &input, &mut context, &call.id);
     context.allow_outside = false;
     output
 }

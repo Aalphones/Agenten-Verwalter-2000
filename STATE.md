@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/` (Autark)
-**Phase:** 6/9 — Hintergrundprozesse und Scratchpad (pending; Phase 5 complete)
-**Nächster Schritt:** Autark Phase 6 in frischer Session (`phase-6-hintergrund.md`, zuerst FINDINGS → Phase 6: Scratchpad-Pfad kommt per ADR 022, `TaskStop` in die Nur-Lese-Liste). Phasen 1–5 fertig. Phase-5-Smokes (Verdichten, Bild, TL;DR in Autark) mit echtem Modell stehen noch aus; Smokes „Git-Werkzeuge“, „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ weiter offen.
+**Phase:** 7/9 — Subagenten (pending; Phase 6 complete)
+**Nächster Schritt:** Autark Phase 7 in frischer Session (`phase-7-subagenten.md`, zuerst FINDINGS → Phase 7: `Tasks` um Subagenten erweitern, `answers`-Verteilung, Zeitgrenze und LM-Studio-Schlange). Phasen 1–6 fertig. Phase-5- und Phase-6-Smokes (Verdichten, Bild, TL;DR, Hintergrundprozess samt Hinweis/TaskStop/Stoppen im Panel) mit echtem Modell stehen noch aus; Smokes „Git-Werkzeuge“, „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ weiter offen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

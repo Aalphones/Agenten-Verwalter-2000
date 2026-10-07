@@ -1,8 +1,10 @@
 //! `Bash` (Git Bash) und `PowerShell` (Windows PowerShell 5.1): ein Befehl im Arbeitsordner, mit
-//! Zeitlimit und Abbruch über Esc. Auch die Hooks laufen über `bash_path` und `wait_for`.
+//! Zeitlimit und Abbruch über Esc — oder mit `run_in_background` als Hintergrundaufgaben
+//! (`standalone::tasks`). Auch die Hooks laufen über `bash_path` und `wait_for`.
 use std::env;
-use std::io::Read;
-use std::path::PathBuf;
+use std::fs::{self, File, OpenOptions};
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver};
@@ -12,8 +14,12 @@ use std::time::{Duration, Instant};
 
 use serde_json::Value;
 
-use super::{ToolContext, optional_count, required_string};
+use super::{ToolContext, optional_count, optional_flag, optional_string, required_string};
 use crate::processes::hide_console;
+use crate::standalone::tasks::{NewProcess, kill_process_tree, wait_for_readers};
+
+/// Wohin die Lese-Threads die Ausgabe geben: Puffer im Vordergrund, Datei im Hintergrund.
+type OutputSink = Arc<dyn Fn(&[u8]) + Send + Sync>;
 
 pub const BASH_PATH_VARIABLE: &str = "VERWALTER_BASH_PATH";
 const DEFAULT_GIT_BASH: &str = r"C:\Program Files\Git\bin\bash.exe";
@@ -23,9 +29,6 @@ const BASH_NOT_FOUND: &str =
 const DEFAULT_TIMEOUT_MS: u64 = 120_000;
 const MAX_TIMEOUT_MS: u64 = 600_000;
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
-/// So lange warten die Lese-Threads nach Prozessende noch auf den Rest der Ausgabe. Hält ein
-/// Enkelprozess die Pipe offen, bleibt es bei dem, was bis dahin kam.
-const READER_GRACE: Duration = Duration::from_secs(1);
 /// Exit-Code, den `timeout` aus den GNU-Werkzeugen bei überschrittenem Zeitlimit meldet.
 const TIMEOUT_EXIT_CODE: i32 = 124;
 const CANCELLED_TEXT: &str =
@@ -76,24 +79,30 @@ fn bash_next_to_git() -> Option<PathBuf> {
         .find(|bash: &PathBuf| bash.is_file())
 }
 
-pub fn run(kind: ShellKind, input: &Value, context: &ToolContext) -> Result<String, String> {
+pub fn run(
+    kind: ShellKind,
+    input: &Value,
+    context: &ToolContext,
+    tool_use_id: &str,
+) -> Result<String, String> {
     let command_text = required_string(input, "command")?;
+    if optional_flag(input, "run_in_background") {
+        return run_in_background(kind, input, command_text, context, tool_use_id);
+    }
     let timeout_ms = optional_count(input, "timeout")
         .and_then(|value: usize| u64::try_from(value).ok())
         .unwrap_or(DEFAULT_TIMEOUT_MS)
         .clamp(1, MAX_TIMEOUT_MS);
-    let mut command = shell_command(kind, command_text)?;
-    command
-        .current_dir(&context.cwd)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    hide_console(&mut command);
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("Befehl startet nicht: {error}"))?;
+    let mut child = spawn_shell(kind, command_text, context)?;
     let collected = Arc::new(Mutex::new(Vec::<u8>::new()));
-    let readers = spawn_readers(&mut child, &collected);
+    let collector = Arc::clone(&collected);
+    let sink: OutputSink = Arc::new(move |bytes: &[u8]| {
+        collector
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .extend_from_slice(bytes);
+    });
+    let readers = spawn_readers(&mut child, &sink);
     let timeout = Duration::from_millis(timeout_ms);
     let waited = wait_for(&mut child, timeout, &context.cancel);
     wait_for_readers(&readers);
@@ -108,6 +117,74 @@ pub fn run(kind: ShellKind, input: &Value, context: &ToolContext) -> Result<Stri
         Waited::Exited(0) => Ok(output),
         Waited::Exited(code) => Err(format!("Exit code {code}\n{output}")),
     }
+}
+
+/// Startet den Befehl, schreibt seine Ausgabe fortlaufend in `<scratchpad>\tasks\<id>.output` und
+/// kehrt sofort zurück. Kein Zeitlimit, und Esc betrifft ihn nicht — nur `TaskStop`/`stop_task`
+/// oder das Ende des Agenten.
+fn run_in_background(
+    kind: ShellKind,
+    input: &Value,
+    command_text: &str,
+    context: &ToolContext,
+    tool_use_id: &str,
+) -> Result<String, String> {
+    let (task_id, output_file) = context.tasks.new_process_slot();
+    let file = open_output_file(&output_file)?;
+    let mut child = spawn_shell(kind, command_text, context)?;
+    let file = Mutex::new(file);
+    let sink: OutputSink = Arc::new(move |bytes: &[u8]| {
+        let mut file = file.lock().unwrap_or_else(PoisonError::into_inner);
+        // Schreibfehler (Platte voll) dürfen den Prozess nicht an einer vollen Pipe hängen lassen —
+        // weitergelesen wird trotzdem.
+        let _ = file.write_all(bytes).and_then(|()| file.flush());
+    });
+    let readers = spawn_readers(&mut child, &sink);
+    let description = optional_string(input, "description")
+        .unwrap_or(command_text)
+        .to_owned();
+    context.tasks.watch_process(NewProcess {
+        task_id: task_id.clone(),
+        tool_use_id: tool_use_id.to_owned(),
+        description,
+        output_file: output_file.clone(),
+        child,
+        readers,
+    })?;
+    // Wortlaut wie bei Claude Code: der Verwalter sucht „Output is being written to: “.
+    Ok(format!(
+        "Command running in background with ID: {task_id}. Output is being written to: {}",
+        output_file.display()
+    ))
+}
+
+fn open_output_file(path: &Path) -> Result<File, String> {
+    if let Some(folder) = path.parent() {
+        fs::create_dir_all(folder)
+            .map_err(|error| format!("Ordner {} nicht anlegbar: {error}", folder.display()))?;
+    }
+    OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|error| format!("Ausgabedatei {} nicht anlegbar: {error}", path.display()))
+}
+
+fn spawn_shell(
+    kind: ShellKind,
+    command_text: &str,
+    context: &ToolContext,
+) -> Result<Child, String> {
+    let mut command = shell_command(kind, command_text)?;
+    command
+        .current_dir(&context.cwd)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    hide_console(&mut command);
+    command
+        .spawn()
+        .map_err(|error| format!("Befehl startet nicht: {error}"))
 }
 
 fn shell_command(kind: ShellKind, command_text: &str) -> Result<Command, String> {
@@ -129,9 +206,9 @@ fn shell_command(kind: ShellKind, command_text: &str) -> Result<Command, String>
     }
 }
 
-/// Je ein Lese-Thread für stdout und stderr, beide in denselben Puffer — die Reihenfolge der
+/// Je ein Lese-Thread für stdout und stderr, beide in dieselbe Senke — die Reihenfolge der
 /// Ausgabe bleibt grob erhalten. Jeder meldet sein Ende über den Kanal.
-fn spawn_readers(child: &mut Child, collected: &Arc<Mutex<Vec<u8>>>) -> Receiver<()> {
+fn spawn_readers(child: &mut Child, sink: &OutputSink) -> Receiver<()> {
     let (done_sender, done_receiver) = mpsc::channel::<()>();
     let streams: Vec<Box<dyn Read + Send>> = [
         child
@@ -147,7 +224,7 @@ fn spawn_readers(child: &mut Child, collected: &Arc<Mutex<Vec<u8>>>) -> Receiver
     .flatten()
     .collect();
     for mut stream in streams {
-        let collected = Arc::clone(collected);
+        let sink = Arc::clone(sink);
         let done_sender = done_sender.clone();
         thread::spawn(move || {
             let mut buffer = [0_u8; 8192];
@@ -155,26 +232,12 @@ fn spawn_readers(child: &mut Child, collected: &Arc<Mutex<Vec<u8>>>) -> Receiver
                 if read == 0 {
                     break;
                 }
-                collected
-                    .lock()
-                    .unwrap_or_else(PoisonError::into_inner)
-                    .extend_from_slice(&buffer[..read]);
+                sink(&buffer[..read]);
             }
             let _ = done_sender.send(());
         });
     }
     done_receiver
-}
-
-fn wait_for_readers(readers: &Receiver<()>) {
-    let deadline = Instant::now() + READER_GRACE;
-    loop {
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        if readers.recv_timeout(remaining).is_err() {
-            // Alle fertig (Kanal getrennt) oder die Frist ist um.
-            return;
-        }
-    }
 }
 
 /// Wartet in 50-ms-Schritten auf das Prozessende. Abbruch oder Zeitlimit beenden den ganzen
@@ -201,16 +264,9 @@ pub fn wait_for(child: &mut Child, timeout: Duration, cancel: &AtomicBool) -> Wa
 }
 
 fn kill_tree(child: &mut Child) {
-    let mut taskkill = Command::new("taskkill");
-    taskkill
-        .args(["/PID", &child.id().to_string(), "/T", "/F"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    hide_console(&mut taskkill);
-    if taskkill.status().is_err() {
-        let _ = child.kill();
-    }
+    kill_process_tree(child.id());
+    // Falls `taskkill` fehlt oder scheitert; nach Erfolg ist das ein harmloser Fehlschlag.
+    let _ = child.kill();
     let _ = child.wait();
 }
 

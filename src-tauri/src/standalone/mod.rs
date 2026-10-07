@@ -17,11 +17,13 @@ pub mod prompt;
 pub mod session;
 pub mod settings;
 pub mod style;
+pub mod tasks;
 pub mod tools;
 pub mod transcript;
 pub mod turn;
 
 use std::env;
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 /// Erstes Argument von `verwalter.exe`, das statt der App den Agenten startet.
@@ -32,6 +34,8 @@ pub const BASE_URL_VARIABLE: &str = "VERWALTER_AGENT_BASE_URL";
 pub const CONTEXT_WINDOW_VARIABLE: &str = "VERWALTER_AGENT_CONTEXT_WINDOW";
 /// `1`, wenn das geladene Modell Bilder versteht, sonst `0`.
 pub const VISION_VARIABLE: &str = "VERWALTER_AGENT_VISION";
+/// Scratchpad-Ordner der Session (ADR 022), gesetzt von `agents::claude::process`.
+pub const SCRATCHPAD_VARIABLE: &str = "VERWALTER_AGENT_SCRATCHPAD";
 
 /// Exit-Code bei fehlerhaften Argumenten, fehlender Umgebung oder unlesbarem Transkript.
 pub const EXIT_START_FAILED: i32 = 2;
@@ -39,10 +43,17 @@ pub const EXIT_START_FAILED: i32 = 2;
 const DATA_DIR: &str = ".verwalter";
 const AGENT_DIR: &str = "agent";
 const TRANSCRIPT_EXTENSION: &str = "jsonl";
+const SCRATCHPAD_DIR: &str = "scratchpad";
 
 /// `<Benutzerordner>\.verwalter\agent\<id>.jsonl`; ohne bekannten Benutzerordner `None`.
 pub fn transcript_path(session_id: &str) -> Option<PathBuf> {
     Some(agent_dir()?.join(format!("{session_id}.{TRANSCRIPT_EXTENSION}")))
+}
+
+/// Ersatz-Scratchpad, wenn der Agent ohne Verwalter läuft (Aufruf von Hand):
+/// `<Benutzerordner>\.verwalter\agent\<id>\scratchpad`.
+pub fn fallback_scratchpad(session_id: &str) -> Option<PathBuf> {
+    Some(agent_dir()?.join(session_id).join(SCRATCHPAD_DIR))
 }
 
 /// Läuft bis zum Dateiende der Standardeingabe; Rückgabe ist der Exit-Code des Prozesses.
@@ -66,6 +77,8 @@ pub struct Environment {
     pub context_window: u32,
     /// Fehlt die Variable, versteht das Modell keine Bilder.
     pub has_vision: bool,
+    /// Fehlt die Variable, nimmt die Session `fallback_scratchpad`.
+    pub scratchpad: Option<PathBuf>,
 }
 
 impl Environment {
@@ -80,10 +93,14 @@ impl Environment {
             .and_then(|value: String| value.trim().parse::<u32>().ok())
             .ok_or_else(|| format!("{CONTEXT_WINDOW_VARIABLE} fehlt oder ist keine Ganzzahl"))?;
         let has_vision = env::var(VISION_VARIABLE).is_ok_and(|value: String| value.trim() == "1");
+        let scratchpad = env::var_os(SCRATCHPAD_VARIABLE)
+            .filter(|value: &OsString| !value.is_empty())
+            .map(PathBuf::from);
         Ok(Environment {
             base_url,
             context_window,
             has_vision,
+            scratchpad,
         })
     }
 }
