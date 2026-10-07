@@ -10,7 +10,7 @@ import { displayStatus } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveProject, renameProject } from '@/lib/projects';
-import { renameSession } from '@/lib/sessions';
+import { deleteSession, renameSession } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
 import { useSessionsStore } from '@/stores/sessions';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
@@ -42,6 +42,7 @@ interface SidebarProps {
   onNew: () => void;
   onOpenSettings: () => void;
   onArchived: (projectId: string) => void;
+  onSessionDeleted: (session: SessionSummary, isProjectDeleted: boolean) => void;
 }
 
 export function Sidebar({
@@ -57,6 +58,7 @@ export function Sidebar({
   onNew,
   onOpenSettings,
   onArchived,
+  onSessionDeleted,
 }: SidebarProps): ReactElement {
   const renaming: RenameTarget | null = useSessionsStore((state) => state.renaming);
   const expanded: Record<string, boolean> = useSessionsStore((state) => state.expanded);
@@ -153,6 +155,17 @@ export function Sidebar({
     );
   }
 
+  // Löschen gilt der einzelnen Session; war sie die letzte, meldet der Core das Vorhaben als mit gelöscht.
+  function removeSession(session: SessionSummary): void {
+    run(
+      () =>
+        deleteSession(session.id).then((isProjectDeleted: boolean) => {
+          onSessionDeleted(session, isProjectDeleted);
+        }),
+      'Löschen fehlgeschlagen',
+    );
+  }
+
   function open(project: ProjectSummary, projectSessions: readonly SessionSummary[]): void {
     const [only] = projectSessions;
     if (projectSessions.length === 1 && only !== undefined) {
@@ -222,6 +235,13 @@ export function Sidebar({
             commitRename('session', session.id, name);
           }}
           onCancelRename={stopRename}
+          isOnlySession={
+            sessions.filter((other: SessionSummary) => other.projectId === session.projectId)
+              .length === 1
+          }
+          onDelete={(): void => {
+            removeSession(session);
+          }}
         />
       </div>
     );

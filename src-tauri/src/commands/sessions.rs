@@ -57,6 +57,16 @@ pub async fn session_rename(
     registry.rename(&app, &session_id, &name)
 }
 
+/// `true`: es war die letzte Session des Vorhabens, das Vorhaben ist mit gelöscht.
+#[tauri::command]
+pub async fn session_delete(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+) -> Result<bool, CommandError> {
+    registry.delete_session(&app, &session_id)
+}
+
 #[tauri::command]
 pub async fn session_set_viewed(
     app: tauri::AppHandle,

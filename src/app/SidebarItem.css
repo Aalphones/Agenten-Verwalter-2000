@@ -90,6 +90,10 @@
     & > span:first-child {
       flex-grow: 1;
     }
+
+    &--danger {
+      color: var(--color-status-error);
+    }
   }
 
   &__menu-key {

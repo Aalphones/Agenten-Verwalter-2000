@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent, ReactElement } from 'react';
+import { SessionDeleteDialog } from '@/app/SessionDeleteDialog';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import type { DisplayStatus } from '@/features/sessions/sessionStatus';
@@ -16,6 +17,10 @@ interface SidebarItemProps {
   onStartRename: () => void;
   onCommitRename: (name: string) => void;
   onCancelRename: () => void;
+  /** Die Session ist die einzige im Vorhaben — Löschen nimmt das Vorhaben mit. */
+  isOnlySession: boolean;
+  /** Nach der Bestätigung im Dialog. */
+  onDelete: () => void;
 }
 
 /** Eine Session im aufgeklappten Baum eines Vorhabens. */
@@ -28,8 +33,11 @@ export function SidebarItem({
   onStartRename,
   onCommitRename,
   onCancelRename,
+  isOnlySession,
+  onDelete,
 }: SidebarItemProps): ReactElement {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
 
   if (isRenaming) {
     return (
@@ -97,7 +105,31 @@ export function SidebarItem({
             <span>Umbenennen</span>
             <kbd className="sidebar-item__menu-key">F2</kbd>
           </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="sidebar-item__menu-item sidebar-item__menu-item--danger"
+            onClick={(): void => {
+              setIsMenuOpen(false);
+              setIsConfirmingDelete(true);
+            }}
+          >
+            <span>Löschen</span>
+          </button>
         </Popover>
+      )}
+      {isConfirmingDelete && (
+        <SessionDeleteDialog
+          name={session.name}
+          isOnlySession={isOnlySession}
+          onCancel={(): void => {
+            setIsConfirmingDelete(false);
+          }}
+          onDelete={(): void => {
+            setIsConfirmingDelete(false);
+            onDelete();
+          }}
+        />
       )}
     </div>
   );

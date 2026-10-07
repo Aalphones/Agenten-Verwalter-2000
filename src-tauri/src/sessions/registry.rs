@@ -988,6 +988,45 @@ impl SessionRegistry {
         )
     }
 
+    /// Löscht die Session endgültig: Agent beenden, Zeile samt Verlauf aus der Datenbank entfernen.
+    /// War es die letzte Session des Vorhabens, verschwindet das Vorhaben mit (sonst bliebe ein
+    /// leeres zurück) und seine App-Worktrees ohne offene Änderungen werden aufgeräumt wie beim
+    /// Archivieren. `true`: das Vorhaben ist mit gelöscht.
+    pub fn delete_session(&self, app: &AppHandle, session_id: &str) -> Result<bool, CommandError> {
+        let session = self.get(session_id)?;
+        self.cancel(app, session_id)?;
+        // Bis zum Entfernen gehalten: ein gleichzeitiges `create_in_project` wartet darauf.
+        let mut projects = self.lock_projects();
+        let is_last = !self.lock_sessions().values().any(|other: &Arc<Session>| {
+            other.project_id == session.project_id && other.id != session.id
+        });
+        self.database.with(|connection| {
+            session_rows::delete(connection, &session.id)?;
+            if is_last {
+                project_rows::delete(connection, &session.project_id)?;
+            }
+            Ok(())
+        })?;
+        self.lock_sessions().remove(&session.id);
+        if is_last {
+            projects.remove(&session.project_id);
+        }
+        drop(projects);
+        {
+            let mut viewed = self.viewed.lock().unwrap_or_else(PoisonError::into_inner);
+            if viewed.as_deref() == Some(session.id.as_str()) {
+                *viewed = None;
+            }
+        }
+        if is_last {
+            let repositories = session.repositories();
+            if !repositories.is_empty() {
+                schedule_worktree_cleanup(session.workspace.clone(), repositories);
+            }
+        }
+        Ok(is_last)
+    }
+
     /// Setzt die Session, die die Oberfläche zeigt (`None`: keine). Die bisher gezeigte gilt danach
     /// nicht mehr als gesehen; die neue ist sofort gelesen.
     pub fn set_viewed(

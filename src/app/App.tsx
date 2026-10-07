@@ -158,6 +158,13 @@ export function App(): ReactElement {
     }
   }
 
+  function handleSessionDeleted(session: SessionSummary, isProjectDeleted: boolean): void {
+    removeSession(session.id);
+    if (isProjectDeleted) {
+      removeProject(session.projectId);
+    }
+  }
+
   function projectNameOf(session: SessionSummary): string {
     const project: ProjectSummary | undefined = projects.find(
       (candidate: ProjectSummary) => candidate.id === session.projectId,
@@ -335,6 +342,7 @@ export function App(): ReactElement {
         onNew={openNewSession}
         onOpenSettings={openSettings}
         onArchived={handleArchived}
+        onSessionDeleted={handleSessionDeleted}
       />
       <main className="app__main">{renderMain()}</main>
       {isBackgroundOpen && visibleSession !== null && (

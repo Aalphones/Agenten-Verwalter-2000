@@ -43,6 +43,13 @@ export async function renameSession(sessionId: string, name: string): Promise<vo
   await invoke('session_rename', { sessionId, name });
 }
 
+/** Löscht die Session samt Verlauf endgültig; war es die letzte des Vorhabens, geht das Vorhaben mit.
+ *  @returns `true`, wenn das Vorhaben mit gelöscht wurde
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `database` */
+export function deleteSession(sessionId: string): Promise<boolean> {
+  return invoke<boolean>('session_delete', { sessionId });
+}
+
 /** Meldet dem Core die sichtbare Session (`null`: keine); ihr Neues gilt dann als gelesen.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
 export async function setViewedSession(sessionId: string | null): Promise<void> {
