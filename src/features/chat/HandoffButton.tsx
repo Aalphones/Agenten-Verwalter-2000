@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { COMPOSER_INPUT_ID } from '@/features/background/mention';
+import { focusComposer, setHandoffDraft } from '@/features/chat/composerDraft';
 import { modelOfHandoff } from '@/features/chat/handoff';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
 import { createSessionInProject, setSessionModel } from '@/lib/sessions';
-import { useChatStore } from '@/stores/chat';
 import './HandoffButton.css';
 
 const HANDOFF_TITLE =
@@ -18,23 +17,6 @@ interface HandoffButtonProps {
   line: string;
   /** Nimmt die angelegte Session in die Liste und wählt sie aus (`handleSessionCreated` in `App`). */
   onSessionCreated: (created: SessionSummary) => void;
-}
-
-/** Leerer Entwurf → die Zeile; enthält er sie schon → unverändert; sonst Zeile, Leerzeile, alter Entwurf. */
-function setHandoffDraft(sessionId: string, line: string): void {
-  const current: string = useChatStore.getState().drafts[sessionId] ?? '';
-  if (current.includes(line)) {
-    return;
-  }
-  const draft: string = current === '' ? line : `${line}\n\n${current}`;
-  useChatStore.getState().setDraft(sessionId, draft);
-}
-
-function focusComposer(): void {
-  // Die neue Session wird gerade erst ausgewählt — das Textfeld gibt es erst im nächsten Frame.
-  window.requestAnimationFrame(() => {
-    document.getElementById(COMPOSER_INPUT_ID)?.focus();
-  });
 }
 
 export function HandoffButton({

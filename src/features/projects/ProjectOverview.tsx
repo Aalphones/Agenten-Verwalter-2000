@@ -9,6 +9,7 @@ import {
 } from '@/features/changes/changesScope';
 import { AddRepositoryMenu } from '@/features/projects/AddRepositoryMenu';
 import { ProjectSessionCard } from '@/features/projects/ProjectSessionCard';
+import { RetroButton } from '@/features/retro/RetroButton';
 import { ProjectTldrCard } from '@/features/tldr/ProjectTldrCard';
 import { useProjectTldr } from '@/features/tldr/useProjectTldr';
 import type { ProjectSessionTldr } from '@/lib/bindings/ProjectSessionTldr';
@@ -132,6 +133,15 @@ export function ProjectOverview({
           loadError={tldrError}
           sessionsWithHistory={sessions.filter(hasHistory).length}
         />
+        {sessions.length > 0 && (
+          <div className="project-overview__retro">
+            <RetroButton
+              projectId={project.id}
+              sessions={sessions}
+              onSessionCreated={onSessionCreated}
+            />
+          </div>
+        )}
         {renderRepositories()}
         <section className="project-overview__sessions">
           <div className="project-overview__sessions-head">

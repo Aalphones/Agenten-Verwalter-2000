@@ -17,6 +17,7 @@ import { useSessionChanges } from '@/features/changes/useSessionChanges';
 import { ProjectOverview } from '@/features/projects/ProjectOverview';
 import { sessionsOf } from '@/features/projects/projectStatus';
 import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
+import { useRetroProgress } from '@/features/retro/useRetroProgress';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
@@ -59,6 +60,7 @@ export function App(): ReactElement {
     reload: reloadSettings,
   } = useSettings();
   useVoiceModel();
+  useRetroProgress();
   // „Neues Vorhaben“ und die Einstellungen ersetzen den Inhalt; Session und Übersicht sind dann nicht sichtbar.
   const isMainReplaced: boolean = showNewSession || showSettings;
 

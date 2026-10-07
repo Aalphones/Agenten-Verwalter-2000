@@ -8,7 +8,7 @@ Ein Knopf „Retro“ unter dem TL;DR eines Vorhabens lässt den Verwalter je Se
 |---|---|---|---|
 | 1 | Core: Retro-Transkript und Verlaufsdateien, Einmal-Aufruf mit wählbarem Modell (Refactor) | standard | complete |
 | 2 | Core: Mini-Retro-Läufe (parallel, Fortschritt), `befunde.md`, Command `retro_run`, ADR 028 | heikel | complete |
-| 3 | Oberfläche: Knopf „Retro“ mit Fortschritt, Session anlegen, Doku | standard | pending |
+| 3 | Oberfläche: Knopf „Retro“ mit Fortschritt, Session anlegen, Doku | standard | complete |
 
 ## Kontrakt (Core ↔ Oberfläche ↔ Skill)
 

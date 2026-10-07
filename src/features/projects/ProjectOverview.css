@@ -13,6 +13,11 @@
     padding: var(--space-4xl) var(--space-5xl);
   }
 
+  &__retro {
+    display: flex;
+    justify-content: center;
+  }
+
   &__repositories {
     display: flex;
     flex-wrap: wrap;
