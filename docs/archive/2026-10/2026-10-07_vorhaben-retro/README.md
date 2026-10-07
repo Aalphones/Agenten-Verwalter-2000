@@ -57,10 +57,22 @@ Danach:
 
 ## Summary
 
+Der Knopf „Retro“ steht unter dem TL;DR der Vorhaben-Übersicht. Er sammelt per Mini-Retro (Sonnet) Befunde aller Sessions in `<Workspace>\.retro\lauf-<Zahl>\`, legt eine neue Session an und setzt `/session-review vorhaben <Ordner>` in deren Entwurf. Das Urteil fällt im Skill des Nutzers. Entscheidung: [ADR 028](../../../decisions/028-vorhaben-retro.md). Smoke offen.
+
 ## Files touched
+
+Core: `src-tauri/src/retro/`, `src-tauri/src/commands/retro.rs`, `src-tauri/src/sessions/registry/retro.rs`, `ask_model` in `src-tauri/src/agents/claude/print.rs`. Oberfläche: `src/features/retro/`, `src/stores/retro.ts`, `src/lib/retro.ts`, `src/features/chat/composerDraft.ts`, `ProjectOverview`, `App`. Doku: Code-Map, Glossar, ADR 028.
 
 ## Commits
 
+`feat(retro): Mini-Retros je Session und Befund-Datei` (Phase 2), `feat(retro): Knopf „Retro“ in der Vorhaben-Übersicht` (Phase 3); Phase 1 davor.
+
 ## Deviations from plan
 
+- `setHandoffDraft` und `focusComposer` aus `HandoffButton` nach `composerDraft.ts` verschoben, damit beide Knöpfe sie teilen.
+- Das Abo auf `retro://progress` liegt als Hook `useRetroProgress` in `src/features/retro/`, in `App` einmal aufgerufen (statt Inline-Abo); Ereignisse für Vorhaben ohne laufenden Eintrag werden verworfen.
+
 ## Follow-ups
+
+- Smoke-Checkliste oben offen, Wackelstelle 1 (Zeitlimit `RETRO_TIMEOUT`) zuerst.
+- Release auf Zuruf (Minor-Version).
