@@ -32,6 +32,7 @@ use verwalter_lib::{
     },
     projects::model::{ProjectCreated, ProjectSummary},
     repositories::model::{KnownRepository, RepositoryKind},
+    retro::model::{RetroExport, RetroProgress},
     review::model::ReviewComment,
     sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
@@ -146,5 +147,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     GitOpenTarget::export_all(&cfg)?;
     GitLogCommit::export_all(&cfg)?;
     GitLog::export_all(&cfg)?;
+    RetroExport::export_all(&cfg)?;
+    RetroProgress::export_all(&cfg)?;
     Ok(())
 }
