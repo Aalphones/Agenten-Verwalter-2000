@@ -1,7 +1,8 @@
 .git-entry-bar {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: var(--space-2xs);
 
   &__branch {

@@ -7,10 +7,11 @@ export interface GitSessionUi {
   /** Nur Abweichungen vom Standard (eigene Dateien an, fremde aus), je Pfad. */
   checked: Record<string, Record<string, boolean>>;
   showForeign: Record<string, boolean>;
-  collapsed: Record<string, boolean>;
+  /** Git-Bedienung der Repository-Zeile aufgeklappt; Standard: zu. */
+  open: Record<string, boolean>;
 }
 
-const EMPTY_UI: GitSessionUi = { messages: {}, checked: {}, showForeign: {}, collapsed: {} };
+const EMPTY_UI: GitSessionUi = { messages: {}, checked: {}, showForeign: {}, open: {} };
 
 interface GitState {
   sessions: Record<string, GitSessionUi>;
@@ -30,7 +31,7 @@ interface GitState {
     value: boolean,
   ) => void;
   toggleForeign: (sessionId: string, entryKey: string) => void;
-  toggleCollapsed: (sessionId: string, entryKey: string) => void;
+  toggleOpen: (sessionId: string, entryKey: string) => void;
   /** Nach einem Commit: Nachricht und Abweichungen des Eintrags verwerfen. */
   clearEntry: (sessionId: string, entryKey: string) => void;
 }
@@ -105,11 +106,11 @@ export const useGitStore = create<GitState>((set) => ({
       })),
     }));
   },
-  toggleCollapsed: (sessionId: string, entryKey: string): void => {
+  toggleOpen: (sessionId: string, entryKey: string): void => {
     set((state: GitState) => ({
       sessions: withUi(state.sessions, sessionId, (ui: GitSessionUi) => ({
         ...ui,
-        collapsed: { ...ui.collapsed, [entryKey]: !(ui.collapsed[entryKey] ?? false) },
+        open: { ...ui.open, [entryKey]: !(ui.open[entryKey] ?? false) },
       })),
     }));
   },

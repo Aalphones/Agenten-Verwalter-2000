@@ -106,8 +106,8 @@ export function ChangesView({
   const setScope = useChangesStore((state) => state.setScope);
   const openFile = useChangesStore((state) => state.openFile);
   const closeFile = useChangesStore((state) => state.closeFile);
-  const collapsed: Readonly<Record<string, boolean>> = useGitStore(
-    (state) => state.sessions[sessionId]?.collapsed ?? NO_FLAGS,
+  const open: Readonly<Record<string, boolean>> = useGitStore(
+    (state) => state.sessions[sessionId]?.open ?? NO_FLAGS,
   );
   const showForeign: Readonly<Record<string, boolean>> = useGitStore(
     (state) => state.sessions[sessionId]?.showForeign ?? NO_FLAGS,
@@ -121,9 +121,9 @@ export function ChangesView({
       return [];
     }
     const gitInput: GitRowsInput | null =
-      gitStatus === null ? null : { status: gitStatus, collapsed, showForeign };
+      gitStatus === null ? null : { status: gitStatus, open, showForeign };
     return buildFileRows(changes, selection.repositoryFilter, selection.scope, gitInput);
-  }, [changes, gitStatus, collapsed, showForeign, selection.repositoryFilter, selection.scope]);
+  }, [changes, gitStatus, open, showForeign, selection.repositoryFilter, selection.scope]);
 
   const openTarget: OpenTarget | null = useMemo(
     () =>

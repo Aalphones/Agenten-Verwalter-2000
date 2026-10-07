@@ -18,7 +18,8 @@ export interface GitRepositoryRow {
   entry: GitEntryStatus;
   /** Alle ungecommitteten Pfade des Eintrags, eigene und fremde. */
   dirtyPaths: readonly string[];
-  isCollapsed: boolean;
+  /** Die Git-Bedienung der Zeile ist aufgeklappt; zu zeigt sie nur Branch und Dateibaum. */
+  isOpen: boolean;
   /** Haupt-Checkout, Ticket-Worktree oder inneres Repository. */
   kindLabel: string;
 }
@@ -26,7 +27,7 @@ export interface GitRepositoryRow {
 /** Der Git-Zustand, aus dem die Session-Reichweite zusätzliche Zeilen baut. */
 export interface GitRowsInput {
   status: GitSessionStatus;
-  collapsed: Readonly<Record<string, boolean>>;
+  open: Readonly<Record<string, boolean>>;
   showForeign: Readonly<Record<string, boolean>>;
 }
 
@@ -95,9 +96,9 @@ export type FileRow =
       change: ChangeKind | null;
     };
 
-/** Die Zeilen des Dateibaums. Ohne `git` (Reichweite Projekt): je Repository Kopf, Branch und der Baum der
- *  Dateien im Blickwinkel. Mit `git`: je Eintrag Kopf mit Git-Leiste, Commit-Feld und die Gruppen
- *  „Uncommitted“ und „Committed“. */
+/** Die Zeilen des Dateibaums. Ohne `git` (Reichweite Projekt) und mit zugeklappter Git-Bedienung: je Repository
+ *  Kopf, Branch und der Baum der Dateien im Blickwinkel. Mit aufgeklappter Git-Bedienung: Git-Leiste, Commit-Feld
+ *  und die Gruppen „Uncommitted“ und „Committed“. */
 export function buildFileRows(
   changes: SessionChanges,
   repositoryFilter: string | null,
@@ -116,7 +117,7 @@ export function buildFileRows(
     if (git !== null && entry !== undefined && entry.error === null) {
       appendGitRepository(rows, repository, entry, scope, git);
     } else {
-      appendRepository(rows, repository, scope);
+      appendRepository(rows, repository, scope, null);
     }
   }
   return rows;
@@ -126,10 +127,11 @@ function appendRepository(
   rows: FileRow[],
   repository: RepositoryChanges,
   scope: ChangeScope,
+  git: GitRepositoryRow | null,
 ): void {
   const { key } = repository;
   if (repository.error !== null) {
-    rows.push(repositoryRow(rows, repository, { added: 0, deleted: 0 }, null));
+    rows.push(repositoryRow(rows, repository, { added: 0, deleted: 0 }, git));
     rows.push({ kind: 'branch', key: `${key}:branch`, branch: repository.branch });
     rows.push({ kind: 'error', key: `${key}:error`, message: repository.error });
     return;
@@ -137,10 +139,11 @@ function appendRepository(
   const visible: FileChange[] = repository.files.filter(
     (file: FileChange) => statOf(file, scope) !== null,
   );
-  if (visible.length === 0) {
+  // Mit Git-Zeile bleibt die Zeile auch ohne Dateien stehen: über ihren Pfeil erreicht man die Git-Bedienung.
+  if (visible.length === 0 && git === null) {
     return;
   }
-  rows.push(repositoryRow(rows, repository, sumLines(repository, scope), null));
+  rows.push(repositoryRow(rows, repository, sumLines(repository, scope), git));
   rows.push({ kind: 'branch', key: `${key}:branch`, branch: repository.branch });
   const files: TreeFile[] = [];
   for (const file of visible) {
@@ -169,18 +172,18 @@ function appendGitRepository(
   );
   const ownPaths: string[] = ownFiles.map((file: FileChange) => file.path);
   const foreignPaths: string[] = entry.foreign.map((file: GitForeignFile) => file.path);
-  const isCollapsed: boolean = git.collapsed[key] ?? false;
-  rows.push(
-    repositoryRow(rows, repository, sumLines(repository, scope), {
-      entry,
-      dirtyPaths: [...ownPaths, ...foreignPaths],
-      isCollapsed,
-      kindLabel: entryKindLabel(repository.key, repository.name),
-    }),
-  );
-  if (isCollapsed) {
+  const isOpen: boolean = git.open[key] ?? false;
+  const gitRow: GitRepositoryRow = {
+    entry,
+    dirtyPaths: [...ownPaths, ...foreignPaths],
+    isOpen,
+    kindLabel: entryKindLabel(repository.key, repository.name),
+  };
+  if (!isOpen) {
+    appendRepository(rows, repository, scope, gitRow);
     return;
   }
+  rows.push(repositoryRow(rows, repository, sumLines(repository, scope), gitRow));
   if (entry.operation !== 'none') {
     rows.push({ kind: 'operation', key: `${key}:operation`, entryKey: key, entry });
   }

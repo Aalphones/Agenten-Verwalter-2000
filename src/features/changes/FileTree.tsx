@@ -33,9 +33,8 @@ const ESTIMATED_HEIGHT: Record<FileRow['kind'], number> = {
   commit: 22,
   commitFile: 24,
 };
-const FIRST_REPOSITORY_HEIGHT = 22;
-const GIT_REPOSITORY_HEIGHT = 30;
-const GIT_SPACED_REPOSITORY_HEIGHT = 41;
+const FIRST_REPOSITORY_HEIGHT = 26;
+const OPEN_REPOSITORY_HEIGHT = 58;
 
 const KIND_LETTER: Record<ChangeKind, { letter: string; title: string }> = {
   added: { letter: 'A', title: 'Neu angelegt' },
@@ -73,7 +72,7 @@ export function FileTree({ rows, scope, openFile, onOpen, git }: FileTreeProps):
   const setChecked = useGitStore((state) => state.setChecked);
   const setAllOwn = useGitStore((state) => state.setAllOwn);
   const toggleForeign = useGitStore((state) => state.toggleForeign);
-  const toggleCollapsed = useGitStore((state) => state.toggleCollapsed);
+  const toggleOpen = useGitStore((state) => state.toggleOpen);
   const isBusy: boolean = git !== null && git.busy.length > 0;
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
@@ -143,9 +142,11 @@ export function FileTree({ rows, scope, openFile, onOpen, git }: FileTreeProps):
 
   function renderRepository(row: FileRowOf<'repository'>): ReactElement {
     const spacing: string = row.isFirst ? '' : ' file-tree__repository--spaced';
-    if (row.git === null || git === null) {
-      return (
-        <div className={`file-tree__repository${spacing}`}>
+    const rowGit = row.git;
+    const isOpen: boolean = rowGit !== null && rowGit.isOpen;
+    return (
+      <div className={`file-tree__repository-block${spacing}`}>
+        <div className="file-tree__repository">
           <svg
             width="14"
             height="14"
@@ -159,37 +160,38 @@ export function FileTree({ rows, scope, openFile, onOpen, git }: FileTreeProps):
           >
             <path d="M2 4.2a1 1 0 0 1 1-1h2.6l1.2 1.3H11a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z" />
           </svg>
-          <span className="file-tree__repository-name">{row.name}</span>
+          <span className="file-tree__repository-name" title={rowGit?.kindLabel}>
+            {row.name}
+          </span>
           <span className="file-tree__added">+{formatCount(row.added)}</span>
           <span className="file-tree__deleted">−{formatCount(row.deleted)}</span>
+          {rowGit !== null && git !== null && (
+            <button
+              type="button"
+              className={`file-tree__caret${isOpen ? ' file-tree__caret--open' : ''}`}
+              aria-expanded={isOpen}
+              title="Git-Werkzeuge"
+              aria-label={`Git-Werkzeuge für ${row.name} ${isOpen ? 'zuklappen' : 'aufklappen'}`}
+              onClick={(): void => {
+                toggleOpen(git.sessionId, row.entryKey);
+              }}
+            >
+              <CaretIcon />
+            </button>
+          )}
         </div>
-      );
-    }
-    const { entry, dirtyPaths, isCollapsed, kindLabel } = row.git;
-    return (
-      <div className={`file-tree__repository file-tree__repository--git${spacing}`}>
-        <button
-          type="button"
-          className={`file-tree__caret${isCollapsed ? ' file-tree__caret--collapsed' : ''}`}
-          aria-expanded={!isCollapsed}
-          aria-label={`${row.name} ${isCollapsed ? 'aufklappen' : 'zuklappen'}`}
-          onClick={(): void => {
-            toggleCollapsed(git.sessionId, row.entryKey);
-          }}
-        >
-          <CaretIcon />
-        </button>
-        <span className="file-tree__repository-name" title={kindLabel}>
-          {row.name}
-        </span>
-        <GitEntryBar
-          sessionId={git.sessionId}
-          entry={entry}
-          entryName={row.name}
-          dirtyPaths={dirtyPaths}
-          isBusy={isBusy}
-          onChanged={git.onChanged}
-        />
+        {isOpen && rowGit !== null && git !== null && (
+          <div className="file-tree__git-bar">
+            <GitEntryBar
+              sessionId={git.sessionId}
+              entry={rowGit.entry}
+              entryName={row.name}
+              dirtyPaths={rowGit.dirtyPaths}
+              isBusy={isBusy}
+              onChanged={git.onChanged}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -414,8 +416,8 @@ function estimateHeight(row: FileRow | undefined): number {
     return ESTIMATED_HEIGHT.file;
   }
   if (row.kind === 'repository') {
-    if (row.git !== null) {
-      return row.isFirst ? GIT_REPOSITORY_HEIGHT : GIT_SPACED_REPOSITORY_HEIGHT;
+    if (row.git?.isOpen === true) {
+      return OPEN_REPOSITORY_HEIGHT;
     }
     if (row.isFirst) {
       return FIRST_REPOSITORY_HEIGHT;
