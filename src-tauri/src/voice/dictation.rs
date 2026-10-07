@@ -35,6 +35,7 @@ pub fn run(
     channels: u16,
     rate: u32,
     base_prompt: String,
+    language: Option<String>,
     cancel: Arc<AtomicBool>,
 ) -> Result<String, CommandError> {
     // Lädt beim ersten Diktat das Modell; die Abschnitte stauen sich derweil im Kanal.
@@ -62,7 +63,7 @@ pub fn run(
             format!("{base_prompt}. {}", prompt_tail(&text))
         };
         let started = Instant::now();
-        match transcriber.transcribe(&mono, &prompt, &cancel) {
+        match transcriber.transcribe(&mono, &prompt, language.as_deref(), &cancel) {
             Ok(part) => {
                 if !text.is_empty() {
                     text.push(' ');

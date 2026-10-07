@@ -21,6 +21,7 @@ const KEY_DEFAULT_EFFORT: &str = "default_effort";
 const KEY_DEFAULT_MODE: &str = "default_mode";
 const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
+const KEY_VOICE_LANGUAGE: &str = "voice_language";
 
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
 const DEFAULT_SETTINGS: Settings = Settings {
@@ -30,6 +31,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     default_mode: Mode::Auto,
     operating_mode: OperatingMode::Claude,
     local_model: None,
+    voice_language: None,
 };
 
 pub fn load(database: &Database) -> Result<Settings, CommandError> {
@@ -46,6 +48,11 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .map(|text: &String| text.trim())
             .filter(|text: &&str| !text.is_empty())
             .map(str::to_owned),
+        voice_language: stored
+            .get(KEY_VOICE_LANGUAGE)
+            .map(|text: &String| text.trim())
+            .filter(|text: &&str| !text.is_empty())
+            .map(str::to_owned),
     })
 }
 
@@ -55,6 +62,13 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
         && value.trim().is_empty()
     {
         return Err(CommandError::Internal("Modellname leer".to_owned()));
+    }
+    if let SettingsChange::VoiceLanguage { value: Some(code) } = &change
+        && whisper_rs::get_lang_id(code).is_none()
+    {
+        return Err(CommandError::Internal(format!(
+            "Unbekannte Sprache für die Spracheingabe: {code}"
+        )));
     }
     database.with(|connection| {
         let transaction = connection.transaction()?;
@@ -74,6 +88,14 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             }
             SettingsChange::LocalModel { value } => {
                 setting_rows::write(&transaction, KEY_LOCAL_MODEL, value.trim())?;
+            }
+            SettingsChange::VoiceLanguage { value } => {
+                // Leer = automatische Erkennung; `load` liest leere Texte als „nicht gesetzt“.
+                setting_rows::write(
+                    &transaction,
+                    KEY_VOICE_LANGUAGE,
+                    value.as_deref().unwrap_or(""),
+                )?;
             }
         }
         transaction.commit()?;

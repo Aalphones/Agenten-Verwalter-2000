@@ -13,4 +13,8 @@ export type Settings = { colorScheme: ColorScheme, defaultModel: ModelId, defaul
 /**
  * Kennung des Modells in LM Studio, z. B. `google/gemma-4-12b-qat`; `None`, solange keins gewählt ist.
  */
-localModel: string | null, };
+localModel: string | null, 
+/**
+ * Sprachcode für die Spracheingabe (z. B. `de`); `None` = Whisper erkennt die Sprache selbst.
+ */
+voiceLanguage: string | null, };

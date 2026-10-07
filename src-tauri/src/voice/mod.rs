@@ -80,7 +80,12 @@ impl VoiceService {
     }
 
     /// Startet Aufnahme und Erkennungs-Thread und kehrt zurück, sobald das Mikrofon läuft.
-    pub fn start(&self, app: AppHandle, repository_names: Vec<String>) -> Result<(), CommandError> {
+    pub fn start(
+        &self,
+        app: AppHandle,
+        repository_names: Vec<String>,
+        language: Option<String>,
+    ) -> Result<(), CommandError> {
         let path = model_path(&app)?;
         let mut inner = self.lock();
         // Eine abgebrochene Erkennung läuft womöglich noch aus (das Modell lässt sich mitten im Rechnen
@@ -105,7 +110,17 @@ impl VoiceService {
         let prompt = base_prompt(&repository_names);
         let spawned = thread::Builder::new()
             .name("voice-transcribe".to_owned())
-            .spawn(move || dictation::run(app, segment_receiver, channels, rate, prompt, cancel));
+            .spawn(move || {
+                dictation::run(
+                    app,
+                    segment_receiver,
+                    channels,
+                    rate,
+                    prompt,
+                    language,
+                    cancel,
+                )
+            });
         match spawned {
             Ok(worker) => {
                 inner.recorder = Some(recorder);

@@ -9,7 +9,6 @@ use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextPar
 
 use crate::error::CommandError;
 
-const LANGUAGE: &str = "de";
 const MAX_THREADS: usize = 8;
 const NO_SPEECH_THRESHOLD: f32 = 0.6;
 /// Bekannte Whisper-Erfindungen bei Stille im Deutschen: Abspänne aus den Untertiteln der
@@ -32,16 +31,18 @@ impl Transcriber {
             })
     }
 
-    /// Erwartet 16 kHz mono. Leeres Ergebnis → `NoSpeech`, abgebrochen → `VoiceCancelled`.
+    /// Erwartet 16 kHz mono. `language` ist ein Whisper-Sprachcode; `None` lässt Whisper die Sprache
+    /// je Abschnitt erkennen. Leeres Ergebnis → `NoSpeech`, abgebrochen → `VoiceCancelled`.
     pub fn transcribe(
         &self,
         audio: &[f32],
         prompt: &str,
+        language: Option<&str>,
         cancel: &Arc<AtomicBool>,
     ) -> Result<String, CommandError> {
         let mut state = self.context.create_state().map_err(whisper_error)?;
         let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-        params.set_language(Some(LANGUAGE));
+        params.set_language(language);
         params.set_translate(false);
         params.set_no_context(true);
         params.set_suppress_blank(true);

@@ -19,7 +19,7 @@ Die Eingabeleiste soll Sprache aufnehmen und den erkannten Text in den Entwurf s
 
 - **Nur CPU.** Keine GPU-Features (`cuda`, `vulkan`): die brauchen CUDA-Toolkit bzw. Vulkan-SDK beim Bau, lokal und in der CI. Ist die Erkennung zu langsam (Abnahme: ein ~10-s-Satz in höchstens 5 s nach dem Stopp), wird Vulkan ein Folgeplan, kein Umbau hier.
 - **Aufnahme im Core mit `cpal`** über WASAPI vom Standard-Eingabegerät, nicht im WebView (`getUserMedia`): so gibt es keinen Rechte-Dialog des WebView, und die Tauri-Grenze trägt keine Audiodaten. Die Umrechnung auf 16 kHz mono schreibt eine eigene kleine Funktion (Mittelwert der Kanäle, dann lineare Interpolation) statt einer Resampling-Crate.
-- **Sprache fest Deutsch.** Als Erkennungshilfe gehen die Repository-Namen der Session plus eine feste Wortliste mit.
+- **Sprache einstellbar** (Einstellungen → Spracheingabe): Automatisch (Standard, Whisper erkennt je Abschnitt), Deutsch oder Englisch; gelesen bei jedem Diktatstart. Als Erkennungshilfe gehen die Repository-Namen der Session plus eine feste Wortliste mit.
 - **Ein Mikrofon, eine Aufnahme:** app-weit höchstens eine Aufnahme oder Erkennung gleichzeitig. Das Modell bleibt nach dem ersten Diktat bis zum App-Ende im Speicher.
 
 ### Text während des Sprechens

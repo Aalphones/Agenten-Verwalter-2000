@@ -13,6 +13,7 @@ import { SelectButton } from '@/features/settings/SelectButton';
 import { SettingRow } from '@/features/settings/SettingRow';
 import { useLocalModels } from '@/features/settings/useLocalModels';
 import { useSettingsUpdate } from '@/features/settings/useSettingsUpdate';
+import { VoiceLanguageSegment } from '@/features/settings/VoiceLanguageSegment';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 import type { Mode } from '@/lib/bindings/Mode';
@@ -247,6 +248,20 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
                 align="start"
               />
             </SelectButton>
+          </SettingRow>
+        </section>
+        <section className="settings-view__section">
+          <h2 className="settings-view__section-title">Spracheingabe</h2>
+          <SettingRow
+            label="Sprache"
+            info="Automatisch: Whisper erkennt die Sprache selbst, je Satz — bei kurzen Sätzen landet es dabei gern im Englischen. Deutsch bzw. Englisch legt sie fest. Gilt ab dem nächsten Diktat."
+          >
+            <VoiceLanguageSegment
+              value={current.voiceLanguage}
+              onChange={(code: string | null): void => {
+                save({ kind: 'voiceLanguage', value: code }).catch(() => undefined);
+              }}
+            />
           </SettingRow>
         </section>
         <section className="settings-view__section">

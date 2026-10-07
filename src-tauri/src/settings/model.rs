@@ -35,6 +35,8 @@ pub struct Settings {
     pub operating_mode: OperatingMode,
     /// Kennung des Modells in LM Studio, z. B. `google/gemma-4-12b-qat`; `None`, solange keins gewählt ist.
     pub local_model: Option<String>,
+    /// Sprachcode für die Spracheingabe (z. B. `de`); `None` = Whisper erkennt die Sprache selbst.
+    pub voice_language: Option<String>,
 }
 
 /// Was die Einstellungsseite zeigt: die Werte und die Ordner, die sie nur anzeigt.
@@ -59,9 +61,24 @@ pub struct SettingsOverview {
     rename_all_fields = "camelCase"
 )]
 pub enum SettingsChange {
-    ColorScheme { value: ColorScheme },
-    DefaultModel { value: ModelId },
-    DefaultMode { mode: Mode, effort: Effort },
-    OperatingMode { value: OperatingMode },
-    LocalModel { value: String },
+    ColorScheme {
+        value: ColorScheme,
+    },
+    DefaultModel {
+        value: ModelId,
+    },
+    DefaultMode {
+        mode: Mode,
+        effort: Effort,
+    },
+    OperatingMode {
+        value: OperatingMode,
+    },
+    LocalModel {
+        value: String,
+    },
+    /// `None` setzt zurück auf automatische Erkennung.
+    VoiceLanguage {
+        value: Option<String>,
+    },
 }
