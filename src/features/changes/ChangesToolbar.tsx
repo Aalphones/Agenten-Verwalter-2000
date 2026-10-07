@@ -140,9 +140,10 @@ function Chip({ label, count, isPressed, onPick }: ChipProps): ReactElement {
       type="button"
       className={`changes-toolbar__chip${isPressed ? ' changes-toolbar__chip--pressed' : ''}`}
       aria-pressed={isPressed}
+      title={label}
       onClick={onPick}
     >
-      {label}
+      <span className="changes-toolbar__chip-label">{label}</span>
       <span className="changes-toolbar__chip-count">{formatCount(count)}</span>
     </button>
   );

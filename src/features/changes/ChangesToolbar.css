@@ -10,6 +10,8 @@
 
   &__chips {
     display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
     gap: var(--space-xs);
   }
 
@@ -17,8 +19,12 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+    flex: 0 1 auto;
+    min-width: 56px;
+    max-width: 240px;
     height: 26px;
     padding: 0 var(--space-lg);
+    white-space: nowrap;
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-md);
     background: transparent;
@@ -39,7 +45,14 @@
     }
   }
 
+  &__chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   &__chip-count {
+    flex-shrink: 0;
     font-size: var(--font-size-2xs);
     color: var(--color-fg-muted);
   }
@@ -50,6 +63,9 @@
 
   &__summary {
     display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
     align-items: center;
     gap: var(--space-lg);
     font-size: var(--font-size-xs);
@@ -73,11 +89,23 @@
   &__base {
     display: flex;
     align-items: center;
+    min-width: 0;
     gap: 5px;
+
+    > svg {
+      flex-shrink: 0;
+    }
+
+    > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   &__segment {
     display: flex;
+    flex-shrink: 0;
     gap: var(--space-2xs);
     padding: var(--space-2xs);
     border: 1px solid var(--color-border-subtle);
