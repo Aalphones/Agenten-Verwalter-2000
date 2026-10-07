@@ -299,4 +299,60 @@
       display: none;
     }
   }
+
+  /* Schmal: zwei Zeilen — Titel oben über die ganze Breite, darunter Tabs links und
+     Werkzeuge rechts. Die Höhe wächst mit dem Inhalt statt ihn zu überlagern. */
+  @media (max-width: 900px) {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'title title'
+      'tabs tools';
+    height: auto;
+    min-height: 48px;
+    padding: var(--space-md) 14px var(--space-md) var(--space-3xl);
+    row-gap: var(--space-md);
+
+    &__title {
+      grid-area: title;
+    }
+
+    &__tabs {
+      grid-area: tabs;
+    }
+
+    &__tools {
+      grid-area: tools;
+      flex-wrap: wrap;
+      row-gap: var(--space-sm);
+    }
+  }
+
+  /* Sehr schmal: drei Zeilen, Tabs und Werkzeuge laufen links bündig; Titelzeile darf umbrechen. */
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'title'
+      'tabs'
+      'tools';
+    padding-left: var(--space-xl);
+
+    &__title {
+      flex-wrap: wrap;
+      row-gap: var(--space-sm);
+    }
+
+    &__name {
+      max-width: 100%;
+    }
+
+    &__tabs {
+      justify-self: start;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    &__tools {
+      justify-content: flex-start;
+    }
+  }
 }
