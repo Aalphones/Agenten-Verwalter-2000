@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::Value;
 
+use super::oem::OutputDecoder;
 use super::{ToolContext, optional_count, optional_flag, optional_string, required_string};
 use crate::processes::hide_console;
 use crate::standalone::tasks::{NewProcess, kill_process_tree, wait_for_readers};
@@ -207,7 +208,8 @@ fn shell_command(kind: ShellKind, command_text: &str) -> Result<Command, String>
 }
 
 /// Je ein Lese-Thread für stdout und stderr, beide in dieselbe Senke — die Reihenfolge der
-/// Ausgabe bleibt grob erhalten. Jeder meldet sein Ende über den Kanal.
+/// Ausgabe bleibt grob erhalten. Die Senke bekommt immer UTF-8 (`OutputDecoder`). Jeder meldet sein
+/// Ende über den Kanal.
 fn spawn_readers(child: &mut Child, sink: &OutputSink) -> Receiver<()> {
     let (done_sender, done_receiver) = mpsc::channel::<()>();
     let streams: Vec<Box<dyn Read + Send>> = [
@@ -227,12 +229,17 @@ fn spawn_readers(child: &mut Child, sink: &OutputSink) -> Receiver<()> {
         let sink = Arc::clone(sink);
         let done_sender = done_sender.clone();
         thread::spawn(move || {
+            let mut decoder = OutputDecoder::default();
             let mut buffer = [0_u8; 8192];
             while let Ok(read) = stream.read(&mut buffer) {
                 if read == 0 {
                     break;
                 }
-                sink(&buffer[..read]);
+                sink(decoder.decode(&buffer[..read]).as_bytes());
+            }
+            let rest = decoder.finish();
+            if !rest.is_empty() {
+                sink(rest.as_bytes());
             }
             let _ = done_sender.send(());
         });

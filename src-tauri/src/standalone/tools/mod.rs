@@ -4,6 +4,7 @@ mod ask;
 mod edit;
 mod glob;
 mod grep;
+mod oem;
 mod read;
 pub mod shell;
 mod skill;
