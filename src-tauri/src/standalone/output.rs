@@ -76,14 +76,36 @@ pub fn assistant(
     })
 }
 
-/// `results` sind fertige `tool_result`-Blöcke.
-pub fn tool_results(session_id: &str, results: Vec<Value>) -> Value {
+/// Antwort eines Subagenten, zugeordnet über seinen `Agent`-Aufruf. Ohne `usage`: die gilt seinem
+/// eigenen Kontext, nicht dem Donut der Session.
+pub fn subagent_assistant(session_id: &str, parent_tool_use_id: &str, blocks: Vec<Value>) -> Value {
     json!({
+        "type": "assistant",
+        "session_id": session_id,
+        "parent_tool_use_id": parent_tool_use_id,
+        "message": { "role": "assistant", "content": blocks },
+    })
+}
+
+/// `results` sind fertige `tool_result`-Blöcke; `parent_tool_use_id` ist bei einem Subagenten die
+/// ID seines `Agent`-Aufrufs. `resolved_model` steht in einer Runde mit `Agent`-Ergebnis — daran
+/// liest der Verwalter das Modell des Subagenten ab.
+pub fn tool_results(
+    session_id: &str,
+    parent_tool_use_id: Option<&str>,
+    results: Vec<Value>,
+    resolved_model: Option<&str>,
+) -> Value {
+    let mut line = json!({
         "type": "user",
         "session_id": session_id,
-        "parent_tool_use_id": null,
+        "parent_tool_use_id": parent_tool_use_id,
         "message": { "role": "user", "content": results },
-    })
+    });
+    if let Some(model) = resolved_model {
+        line["tool_use_result"] = json!({ "resolvedModel": model });
+    }
+    line
 }
 
 pub fn can_use_tool(request_id: &str, tool_name: &str, input: &Value) -> Value {

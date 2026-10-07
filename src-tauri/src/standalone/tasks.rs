@@ -1,12 +1,15 @@
-//! Hintergrundaufgaben einer Session: Prozesse aus `Bash`/`PowerShell` mit `run_in_background`.
-//! Sie laufen bei Esc weiter, enden auf `TaskStop` bzw. `stop_task` und mit dem Agent-Prozess.
+//! Aufgaben einer Session: Prozesse aus `Bash`/`PowerShell` mit `run_in_background` und
+//! Subagenten. Hintergrundprozesse und -subagenten laufen bei Esc weiter, enden auf `TaskStop`
+//! bzw. `stop_task` und mit dem Agent-Prozess.
 //!
 //! Je Prozess wartet ein Überwacher-Thread auf das echte Prozessende (`wait`), nie auf eine Zeit:
 //! eine Ausgabedatei, die eine Weile nicht wächst, heißt nicht, dass der Prozess tot ist. Erst der
-//! Überwacher schreibt `task_notification` und den Hinweis fürs Modell.
+//! Überwacher schreibt `task_notification` und den Hinweis fürs Modell. Ebenso meldet ein Subagent
+//! sein Ende erst, wenn sein Thread zurück ist.
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
@@ -19,22 +22,26 @@ use super::output::Output;
 use crate::processes::hide_console;
 
 const PROCESS_ID_PREFIX: char = 'b';
+const SUBAGENT_ID_PREFIX: char = 'a';
 const ID_HEX_CHARS: usize = 8;
 const TASK_TYPE_PROCESS: &str = "local_bash";
+const TASK_TYPE_SUBAGENT: &str = "local_agent";
+/// So viel vom letzten Text bzw. Fehler eines Subagenten steht in seiner `task_notification`.
+const SUMMARY_CHARS: usize = 200;
 const OUTPUT_EXTENSION: &str = "output";
 /// So lange wartet der Überwacher nach Prozessende auf den Rest der Ausgabe — ein Enkelprozess, der
 /// die Pipe offen hält, soll das Ende nicht aufhalten.
 const READER_GRACE: Duration = Duration::from_secs(1);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TaskStatus {
+pub enum TaskStatus {
     Completed,
     Stopped,
     Failed,
 }
 
 impl TaskStatus {
-    fn as_str(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             TaskStatus::Completed => "completed",
             TaskStatus::Stopped => "stopped",
@@ -43,12 +50,38 @@ impl TaskStatus {
     }
 }
 
+/// Wie eine Aufgabe beendet wird.
+enum TaskControl {
+    Process {
+        pid: u32,
+        output_file: PathBuf,
+    },
+    /// Der Subagent prüft den Schalter vor jeder Modellanfrage und jedem Werkzeug.
+    Subagent {
+        cancel: Arc<AtomicBool>,
+    },
+}
+
 struct Task {
-    pid: u32,
     description: String,
-    output_file: PathBuf,
+    control: TaskControl,
     /// Gesetzt von `stop`, damit der Überwacher „stopped“ statt „failed“ meldet.
     is_stopped: bool,
+}
+
+impl Task {
+    /// Markiert die Aufgabe als gestoppt; bei einem Prozess ist das Ergebnis die PID, deren Baum
+    /// noch beendet werden muss — außerhalb der Sperre, `taskkill` dauert.
+    fn mark_stopped(&mut self) -> Option<u32> {
+        self.is_stopped = true;
+        match &self.control {
+            TaskControl::Process { pid, .. } => Some(*pid),
+            TaskControl::Subagent { cancel } => {
+                cancel.store(true, Ordering::SeqCst);
+                None
+            }
+        }
+    }
 }
 
 /// Ein Hintergrundprozess, der gerade gestartet wurde.
@@ -83,17 +116,66 @@ impl Tasks {
 
     /// Neue Aufgaben-ID und ihre Ausgabedatei `<scratchpad>\tasks\<id>.output`.
     pub fn new_process_slot(&self) -> (String, PathBuf) {
-        let hex: String = Uuid::new_v4()
-            .simple()
-            .to_string()
-            .chars()
-            .take(ID_HEX_CHARS)
-            .collect();
-        let task_id = format!("{PROCESS_ID_PREFIX}{hex}");
+        let task_id = new_task_id(PROCESS_ID_PREFIX);
         let output_file = self
             .output_dir
             .join(format!("{task_id}.{OUTPUT_EXTENSION}"));
         (task_id, output_file)
+    }
+
+    /// Trägt einen Subagenten ein und meldet `task_started`; Rückgabe ist seine Aufgaben-ID.
+    /// Sein Ende meldet `finish_subagent`.
+    pub fn start_subagent(
+        &self,
+        tool_use_id: &str,
+        description: &str,
+        subagent_type: &str,
+        cancel: Arc<AtomicBool>,
+    ) -> String {
+        let task_id = new_task_id(SUBAGENT_ID_PREFIX);
+        self.lock_running().insert(
+            task_id.clone(),
+            Task {
+                description: description.to_owned(),
+                control: TaskControl::Subagent { cancel },
+                is_stopped: false,
+            },
+        );
+        self.output.line(&json!({
+            "type": "system",
+            "subtype": "task_started",
+            "task_id": task_id,
+            "tool_use_id": tool_use_id,
+            "task_type": TASK_TYPE_SUBAGENT,
+            "description": description,
+            "subagent_type": subagent_type,
+        }));
+        task_id
+    }
+
+    /// `tool_uses` ist der Gesamtstand des Subagenten, nicht der Zuwachs seit der letzten Meldung.
+    pub fn report_progress(&self, task_id: &str, tool_uses: u32) {
+        self.output.line(&json!({
+            "type": "system",
+            "subtype": "task_progress",
+            "task_id": task_id,
+            "usage": { "tool_uses": tool_uses },
+        }));
+    }
+
+    /// Meldet das Ende eines Subagenten. Ein Hinweis fürs Modell entfällt: den Bericht eines
+    /// Hintergrund-Subagenten bekommt der Hauptagent als eigene Nachricht.
+    pub fn finish_subagent(&self, task_id: &str, status: TaskStatus, text: &str) {
+        self.lock_running().remove(task_id);
+        let summary: String = text.chars().take(SUMMARY_CHARS).collect();
+        self.output.line(&json!({
+            "type": "system",
+            "subtype": "task_notification",
+            "task_id": task_id,
+            "status": status.as_str(),
+            "summary": summary,
+            "output_file": null,
+        }));
     }
 
     /// Trägt den Prozess ein, meldet `task_started` und startet seinen Überwacher. Startet der
@@ -111,9 +193,8 @@ impl Tasks {
         self.lock_running().insert(
             task_id.clone(),
             Task {
-                pid,
                 description: description.clone(),
-                output_file,
+                control: TaskControl::Process { pid, output_file },
                 is_stopped: false,
             },
         );
@@ -140,29 +221,28 @@ impl Tasks {
         Ok(())
     }
 
-    /// Beendet den Prozessbaum; das Ende meldet der Überwacher.
+    /// Beendet den Prozessbaum bzw. setzt den Abbruch des Subagenten; das Ende meldet der
+    /// Überwacher bzw. der Subagent selbst.
     pub fn stop(&self, task_id: &str) -> Result<(), String> {
         let pid = {
             let mut running = self.lock_running();
             let Some(task) = running.get_mut(task_id) else {
                 return Err(format!("Aufgabe unbekannt: {task_id}"));
             };
-            task.is_stopped = true;
-            task.pid
+            task.mark_stopped()
         };
-        kill_process_tree(pid);
+        if let Some(pid) = pid {
+            kill_process_tree(pid);
+        }
         Ok(())
     }
 
-    /// Beim Ende des Agenten: alle laufenden Prozesse mitnehmen.
+    /// Beim Ende des Agenten: alle laufenden Aufgaben mitnehmen.
     pub fn stop_all(&self) {
         let pids: Vec<u32> = self
             .lock_running()
             .values_mut()
-            .map(|task: &mut Task| {
-                task.is_stopped = true;
-                task.pid
-            })
+            .filter_map(Task::mark_stopped)
             .collect();
         for pid in pids {
             kill_process_tree(pid);
@@ -177,6 +257,9 @@ impl Tasks {
         let Some(task) = self.lock_running().remove(task_id) else {
             return;
         };
+        let TaskControl::Process { output_file, .. } = &task.control else {
+            return;
+        };
         let status = if task.is_stopped {
             TaskStatus::Stopped
         } else if exit_code == 0 {
@@ -184,12 +267,8 @@ impl Tasks {
         } else {
             TaskStatus::Failed
         };
-        self.output.line(&task_notification(
-            task_id,
-            status,
-            exit_code,
-            &task.output_file,
-        ));
+        self.output
+            .line(&task_notification(task_id, status, exit_code, output_file));
         self.notes
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -197,13 +276,24 @@ impl Tasks {
                 "Background task {task_id} ({}) finished: {}, exit code {exit_code}. Output: {}",
                 task.description,
                 status.as_str(),
-                task.output_file.display()
+                output_file.display()
             ));
     }
 
     fn lock_running(&self) -> MutexGuard<'_, HashMap<String, Task>> {
         self.running.lock().unwrap_or_else(PoisonError::into_inner)
     }
+}
+
+/// Präfix plus 8 Hex-Zeichen, wie bei Claude Code (`b…` Prozess, `a…` Subagent).
+fn new_task_id(prefix: char) -> String {
+    let hex: String = Uuid::new_v4()
+        .simple()
+        .to_string()
+        .chars()
+        .take(ID_HEX_CHARS)
+        .collect();
+    format!("{prefix}{hex}")
 }
 
 /// `taskkill /T` nimmt die Kindprozesse mit — `bash -c` startet seine Befehle als eigene Prozesse.

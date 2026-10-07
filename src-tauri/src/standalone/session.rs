@@ -3,7 +3,8 @@
 //! Ein Turn — Modellanfragen und Werkzeuge — läuft in einem Arbeits-Thread (`turn`); die
 //! Hauptschleife bleibt frei, damit ein `interrupt` währenddessen ankommt, und ist die einzige
 //! Stelle, die ins Transkript schreibt. Nachrichten, die während eines Turns eintreffen, warten in
-//! der Schlange und werden danach je als eigener Turn verarbeitet.
+//! der Schlange und werden danach je als eigener Turn verarbeitet — ebenso der Bericht eines
+//! Hintergrund-Subagenten.
 use std::collections::{HashSet, VecDeque};
 use std::env;
 use std::ffi::OsStr;
@@ -24,12 +25,14 @@ use super::hooks::Hooks;
 use super::output::{self, Output};
 use super::paths::{self, Roots};
 use super::prompt::{self, MemoryFile, PromptContext, SystemPrompt};
+use super::subagent::Subagents;
 use super::tasks::Tasks;
 use super::tools::{self, ToolContext};
 use super::transcript::Transcript;
-use super::turn::{self, Outcome, TurnEvent, TurnJob};
-use super::{EXIT_START_FAILED, Environment, content, fallback_scratchpad, home_dir, invocation};
-use crate::agents::event::Mode;
+use super::turn::{self, Answers, Outcome, Role, Shared, TurnEvent, TurnJob};
+use super::{
+    EXIT_START_FAILED, Environment, agents, content, fallback_scratchpad, home_dir, invocation,
+};
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
@@ -40,8 +43,10 @@ const BYTE_ORDER_MARK: char = '\u{feff}';
 /// Unterordner des Scratchpads für die Ausgaben der Hintergrundprozesse.
 const TASKS_DIR: &str = "tasks";
 
-enum Input {
+pub enum Input {
     Line(String),
+    /// Eine Benutzer-Nachricht aus dem Agenten selbst: der Bericht eines Hintergrund-Subagenten.
+    Message(Value),
     Closed,
 }
 
@@ -50,21 +55,15 @@ enum Input {
 struct ActiveTurn {
     cancel: Arc<AtomicBool>,
     events: Receiver<TurnEvent>,
-    /// Antworten auf Rückfragen des Arbeits-Threads.
-    answers: Sender<(String, Value)>,
     is_aborted: bool,
     /// Scheiterte das Schreiben ins Transkript, wird der Turn abgebrochen und endet mit diesem Fehler.
     transcript_error: Option<String>,
 }
 
 struct Session {
-    output: Arc<Output>,
-    session_id: String,
-    base_url: String,
-    context_window: u32,
+    shared: Arc<Shared>,
     /// Ob das geladene Modell Bilder versteht.
     has_vision: bool,
-    cwd: PathBuf,
     home: PathBuf,
     /// Ordner der Repositories (Name, Pfad), in denen Skills gesucht werden.
     skill_roots: Vec<(String, PathBuf)>,
@@ -74,15 +73,11 @@ struct Session {
     /// Letzte Messung des Kontexts; Ausgangspunkt für die Schätzung vor der nächsten Anfrage.
     measure: ContextMeasure,
     model: String,
-    mode: Arc<Mutex<Mode>>,
     tools: Vec<Value>,
     tool_context: Arc<Mutex<ToolContext>>,
-    hooks: Arc<Hooks>,
-    request_counter: Arc<AtomicU64>,
     transcript: Transcript,
     queue: VecDeque<Value>,
     turn: Option<ActiveTurn>,
-    tasks: Arc<Tasks>,
 }
 
 pub fn run(args: AgentArgs) -> i32 {
@@ -118,10 +113,19 @@ pub fn run(args: AgentArgs) -> i32 {
             return EXIT_START_FAILED;
         }
     };
+    let add_dirs: Vec<PathBuf> = args
+        .add_dirs
+        .iter()
+        .map(|dir: &PathBuf| paths::resolve(&cwd, &dir.to_string_lossy()))
+        .collect();
+    let agent_definitions = agents::load(&home, &cwd, &add_dirs);
+    let subagent_tools = tools::definitions();
     let tool_definitions = if args.tools_disabled {
         Vec::new()
     } else {
-        tools::definitions()
+        let mut definitions = subagent_tools.clone();
+        definitions.push(tools::agent::definition(&agent_definitions));
+        definitions
     };
     let output = Arc::new(Output::default());
     output.line(&output::init(
@@ -133,15 +137,10 @@ pub fn run(args: AgentArgs) -> i32 {
     ));
     let tasks = Arc::new(Tasks::new(Arc::clone(&output), scratchpad.join(TASKS_DIR)));
     let (input_sender, input_receiver) = mpsc::channel::<Input>();
-    if let Err(error) = spawn_stdin_reader(input_sender) {
+    if let Err(error) = spawn_stdin_reader(input_sender.clone()) {
         eprintln!("Lese-Thread startet nicht: {error}");
         return EXIT_START_FAILED;
     }
-    let add_dirs: Vec<PathBuf> = args
-        .add_dirs
-        .iter()
-        .map(|dir: &PathBuf| paths::resolve(&cwd, &dir.to_string_lossy()))
-        .collect();
     let skill_roots: Vec<(String, PathBuf)> = add_dirs
         .iter()
         .map(|dir: &PathBuf| skill_root(dir))
@@ -166,32 +165,42 @@ pub fn run(args: AgentArgs) -> i32 {
         appendix: args.append_system_prompt.as_deref(),
     });
     eprintln!("{}", prompt_size_line(&system_prompt));
-    let hooks = Hooks::load(&home, &cwd, &add_dirs);
-    let mut session = Session {
+    let shared = Shared {
         output,
         session_id,
         base_url: environment.base_url,
         context_window: environment.context_window,
-        has_vision: environment.has_vision,
+        mode: Mutex::new(args.mode),
+        hooks: Hooks::load(&home, &cwd, &add_dirs),
+        transcript_path: transcript.path().to_path_buf(),
         cwd,
+        request_counter: AtomicU64::new(0),
+        answers: Answers::default(),
+        tasks,
+        subagents: Subagents {
+            definitions: agent_definitions,
+            system_prompt: system_prompt.text.clone(),
+            tools: subagent_tools,
+            inbox: input_sender,
+        },
+    };
+    let mut session = Session {
+        shared: Arc::new(shared),
+        has_vision: environment.has_vision,
         home,
         skill_roots,
         system_prompt,
         measure: ContextMeasure::default(),
         model: args.model,
-        mode: Arc::new(Mutex::new(args.mode)),
         tools: tool_definitions,
         tool_context: Arc::new(Mutex::new(tool_context)),
-        hooks: Arc::new(hooks),
-        request_counter: Arc::new(AtomicU64::new(0)),
         transcript,
         queue: VecDeque::new(),
         turn: None,
-        tasks,
     };
     session.run_loop(&input_receiver);
     // Ohne Agent hätte niemand mehr ihre Ausgabe gelesen oder sie gestoppt.
-    session.tasks.stop_all();
+    session.shared.tasks.stop_all();
     0
 }
 
@@ -270,6 +279,7 @@ impl Session {
         loop {
             match input.recv_timeout(POLL_INTERVAL) {
                 Ok(Input::Line(line)) => self.handle_line(&line),
+                Ok(Input::Message(content)) => self.queue.push_back(content),
                 Ok(Input::Closed) | Err(RecvTimeoutError::Disconnected) => {
                     if let Some(turn) = &self.turn {
                         turn.cancel.store(true, Ordering::SeqCst);
@@ -305,8 +315,8 @@ impl Session {
         }
     }
 
-    /// Antwort auf eine Rückfrage an den Arbeits-Thread, der auf sie wartet. Ohne laufenden Turn
-    /// wartet niemand mehr — dann verfällt sie.
+    /// Antwort auf eine Rückfrage an den Thread, der auf sie wartet — Hauptagent oder Subagent.
+    /// Wartet niemand mehr, verfällt sie.
     fn forward_answer(&self, value: &Value) {
         let Some(response) = value.get("response") else {
             return;
@@ -319,9 +329,7 @@ impl Session {
             return;
         };
         let answer = response.get("response").cloned().unwrap_or(Value::Null);
-        if let Some(turn) = &self.turn {
-            let _ = turn.answers.send((request_id.to_owned(), answer));
-        }
+        self.shared.answers.deliver(request_id, answer);
     }
 
     fn handle_control(&mut self, value: &Value) {
@@ -345,7 +353,11 @@ impl Session {
                     .and_then(Value::as_str)
                     .and_then(args::mode_from_cli);
                 if let Some(mode) = mode {
-                    *self.mode.lock().unwrap_or_else(PoisonError::into_inner) = mode;
+                    *self
+                        .shared
+                        .mode
+                        .lock()
+                        .unwrap_or_else(PoisonError::into_inner) = mode;
                     self.reply_success(request_id);
                 } else {
                     self.reply_error(request_id, "unbekannter Modus");
@@ -358,11 +370,11 @@ impl Session {
                 }
                 None => self.reply_error(request_id, "model fehlt"),
             },
-            "get_context_usage" => self.output.line(&output::control_success(
+            "get_context_usage" => self.shared.output.line(&output::control_success(
                 request_id,
                 context::usage_report(
                     &self.model,
-                    self.context_window,
+                    self.shared.context_window,
                     &self.system_prompt,
                     &self.tools,
                     &self.transcript.messages,
@@ -373,7 +385,7 @@ impl Session {
                     .get("task_id")
                     .and_then(Value::as_str)
                     .unwrap_or_default();
-                match self.tasks.stop(task_id) {
+                match self.shared.tasks.stop(task_id) {
                     Ok(()) => self.reply_success(request_id),
                     Err(error) => self.reply_error(request_id, &error),
                 }
@@ -383,12 +395,15 @@ impl Session {
     }
 
     fn reply_success(&self, request_id: &str) {
-        self.output
+        self.shared
+            .output
             .line(&output::control_success(request_id, json!({})));
     }
 
     fn reply_error(&self, request_id: &str, error: &str) {
-        self.output.line(&output::control_error(request_id, error));
+        self.shared
+            .output
+            .line(&output::control_error(request_id, error));
     }
 
     /// Meldet den Turn sofort als abgebrochen, statt auf den Arbeits-Thread zu warten: der liest
@@ -403,10 +418,10 @@ impl Session {
             }
             _ => return,
         }
-        self.output.line(&output::result_aborted(
-            &self.session_id,
+        self.shared.output.line(&output::result_aborted(
+            &self.shared.session_id,
             &self.model,
-            self.context_window,
+            self.shared.context_window,
         ));
     }
 
@@ -415,11 +430,11 @@ impl Session {
         let content = invocation::expand_message(content, &self.home, &self.skill_roots);
         let message = content::user_message(&content, self.has_vision);
         if let Err(error) = self.transcript.append(message) {
-            self.output.line(&output::result_error(
-                &self.session_id,
+            self.shared.output.line(&output::result_error(
+                &self.shared.session_id,
                 &error,
                 &self.model,
-                self.context_window,
+                self.shared.context_window,
             ));
             return;
         }
@@ -428,43 +443,34 @@ impl Session {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .cancel = Arc::clone(&cancel);
-        let (answer_sender, answer_receiver) = mpsc::channel::<(String, Value)>();
+        let (event_sender, event_receiver) = mpsc::channel::<TurnEvent>();
         let job = TurnJob {
-            output: Arc::clone(&self.output),
-            session_id: self.session_id.clone(),
-            base_url: self.base_url.clone(),
+            shared: Arc::clone(&self.shared),
+            role: Role::Main {
+                events: event_sender,
+            },
             model: self.model.clone(),
-            context_window: self.context_window,
             measure: self.measure,
             messages: self.request_messages(),
             tools: self.tools.clone(),
             context: Arc::clone(&self.tool_context),
             cancel: Arc::clone(&cancel),
-            mode: Arc::clone(&self.mode),
-            hooks: Arc::clone(&self.hooks),
-            cwd: self.cwd.clone(),
-            transcript_path: self.transcript.path().to_path_buf(),
-            request_counter: Arc::clone(&self.request_counter),
-            answers: answer_receiver,
-            tasks: Arc::clone(&self.tasks),
         };
-        let (event_sender, event_receiver) = mpsc::channel::<TurnEvent>();
         let spawned = thread::Builder::new()
             .name("agent-turn".to_owned())
-            .spawn(move || turn::run(job, &event_sender));
+            .spawn(move || turn::run(job));
         if let Err(error) = spawned {
-            self.output.line(&output::result_error(
-                &self.session_id,
+            self.shared.output.line(&output::result_error(
+                &self.shared.session_id,
                 &format!("Arbeits-Thread startet nicht: {error}"),
                 &self.model,
-                self.context_window,
+                self.shared.context_window,
             ));
             return;
         }
         self.turn = Some(ActiveTurn {
             cancel,
             events: event_receiver,
-            answers: answer_sender,
             is_aborted: false,
             transcript_error: None,
         });
@@ -548,16 +554,24 @@ impl Session {
             return;
         }
         let line = match (turn.transcript_error, outcome) {
-            (Some(error), _) | (None, Outcome::Failed(error)) => {
-                output::result_error(&self.session_id, &error, &self.model, self.context_window)
-            }
-            (None, Outcome::Completed(text)) => {
-                output::result_success(&self.session_id, &text, &self.model, self.context_window)
-            }
-            (None, Outcome::Aborted) => {
-                output::result_aborted(&self.session_id, &self.model, self.context_window)
-            }
+            (Some(error), _) | (None, Outcome::Failed(error)) => output::result_error(
+                &self.shared.session_id,
+                &error,
+                &self.model,
+                self.shared.context_window,
+            ),
+            (None, Outcome::Completed(text)) => output::result_success(
+                &self.shared.session_id,
+                &text,
+                &self.model,
+                self.shared.context_window,
+            ),
+            (None, Outcome::Aborted) => output::result_aborted(
+                &self.shared.session_id,
+                &self.model,
+                self.shared.context_window,
+            ),
         };
-        self.output.line(&line);
+        self.shared.output.line(&line);
     }
 }

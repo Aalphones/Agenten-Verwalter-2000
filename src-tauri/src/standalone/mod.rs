@@ -1,6 +1,7 @@
 //! Der eigene Agent der Betriebsart Autark (ADR 017): spricht den Ausschnitt des Zeilenprotokolls
 //! der Claude-Kommandozeile, den der Verwalter liest, und fragt ein OpenAI-kompatibles Modell
 //! (LM Studio).
+pub mod agents;
 pub mod args;
 pub mod compact;
 pub mod content;
@@ -17,6 +18,7 @@ pub mod prompt;
 pub mod session;
 pub mod settings;
 pub mod style;
+pub mod subagent;
 pub mod tasks;
 pub mod tools;
 pub mod transcript;

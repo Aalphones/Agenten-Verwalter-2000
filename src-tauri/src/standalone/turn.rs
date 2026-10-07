@@ -1,15 +1,18 @@
 //! Ein Turn im Arbeits-Thread: Modellanfrage, Werkzeuge ausführen, Ergebnisse zurück, wiederholen,
-//! bis das Modell ohne Werkzeug antwortet.
+//! bis das Modell ohne Werkzeug antwortet. Dieselbe Schleife treibt Hauptagent und Subagenten.
 //!
 //! Der Thread schreibt seine Zeilen selbst auf stdout (`Output` sperrt), das Transkript aber nie:
-//! jede Runde geht als `TurnEvent::Messages` an die Hauptschleife, die allein schreibt. Nur so
-//! landet der Abbruch-Marker nach Esc hinter den Werkzeug-Ergebnissen der letzten Runde.
+//! jede Runde des Hauptagenten geht als `TurnEvent::Messages` an die Hauptschleife, die allein
+//! schreibt. Nur so landet der Abbruch-Marker nach Esc hinter den Werkzeug-Ergebnissen der letzten
+//! Runde. Subagenten haben kein Transkript.
 //!
 //! Vor jedem Werkzeug: erst die Hooks, dann die Rechte; eine Rückfrage geht als `can_use_tool` an
-//! den Verwalter, die Antwort reicht die Hauptschleife über `answers` herein.
+//! den Verwalter, die Antwort reicht die Hauptschleife über `Answers` an genau den Thread, der sie
+//! gestellt hat — Hauptagent und Subagenten können gleichzeitig warten.
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -23,25 +26,87 @@ use super::llm::{self, ChatRequest, Completion, LlmError, ToolCall};
 use super::output::{self, Output};
 use super::paths::{self, Access};
 use super::permissions::{self, Decision};
+use super::subagent::{self, Subagents};
 use super::tasks::Tasks;
-use super::tools::{self, ASK_USER_TOOL, INTERRUPTED, ToolContext, ToolImage, ToolOutput};
+use super::tools::{
+    self, AGENT_TOOL, ASK_USER_TOOL, INTERRUPTED, ToolContext, ToolImage, ToolOutput,
+};
 use crate::agents::event::Mode;
 
 /// Grenze gegen Endlosschleifen eines Modells, das nie aufhört, Werkzeuge zu rufen.
-const MAX_TOOL_ROUNDS: usize = 50;
+const MAX_TOOL_ROUNDS: u32 = 50;
+const MAX_SUBAGENT_TOOL_ROUNDS: u32 = 30;
 /// Takt beim Warten auf die Antwort einer Rückfrage; dazwischen wird der Abbruch geprüft.
 const ANSWER_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const REQUEST_ID_PREFIX: &str = "agent-";
 const DENIED_PREFIX: &str = "Der Benutzer hat abgelehnt: ";
+const NESTED_AGENT_DENIAL: &str = "Subagenten können keine Subagenten starten.";
 /// So viel von unlesbaren Argumenten zeigt der Fehler dem Modell.
 const ARGUMENTS_EXCERPT_CHARS: usize = 200;
 
-pub struct TurnJob {
+/// Was alle Schleifen einer Session teilen — Hauptagent und Subagenten.
+pub struct Shared {
     pub output: Arc<Output>,
     pub session_id: String,
     pub base_url: String,
-    pub model: String,
     pub context_window: u32,
+    /// Gilt sofort — `set_permission_mode` erreicht auch laufende Turns.
+    pub mode: Mutex<Mode>,
+    pub hooks: Hooks,
+    pub cwd: PathBuf,
+    pub transcript_path: PathBuf,
+    /// Laufende Nummer der Rückfragen, über alle Turns und Subagenten der Session.
+    pub request_counter: AtomicU64,
+    pub answers: Answers,
+    /// Hintergrundprozesse und Subagenten; sie überdauern den Turn, der sie gestartet hat.
+    pub tasks: Arc<Tasks>,
+    pub subagents: Subagents,
+}
+
+/// Rückfragen, auf deren Antwort gerade ein Thread wartet, nach Request-ID.
+#[derive(Default)]
+pub struct Answers {
+    waiting: Mutex<HashMap<String, Sender<Value>>>,
+}
+
+impl Answers {
+    fn expect(&self, request_id: &str) -> Receiver<Value> {
+        let (sender, receiver) = mpsc::channel::<Value>();
+        self.lock().insert(request_id.to_owned(), sender);
+        receiver
+    }
+
+    fn forget(&self, request_id: &str) {
+        self.lock().remove(request_id);
+    }
+
+    /// Stellt die Antwort zu. Wartet niemand mehr (Turn abgebrochen), verfällt sie.
+    pub fn deliver(&self, request_id: &str, answer: Value) {
+        if let Some(sender) = self.lock().remove(request_id) {
+            let _ = sender.send(answer);
+        }
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, Sender<Value>>> {
+        self.waiting.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// Wer die Schleife fährt.
+pub enum Role {
+    /// Meldet seine Runden an die Hauptschleife, die sie ins Transkript schreibt.
+    Main { events: Sender<TurnEvent> },
+    /// Zeilen tragen die ID des `Agent`-Aufrufs; Fortschritt geht als `task_progress` raus.
+    Subagent {
+        parent_tool_use_id: String,
+        task_id: String,
+    },
+}
+
+pub struct TurnJob {
+    pub shared: Arc<Shared>,
+    pub role: Role,
+    pub model: String,
     /// Letzte Messung des Kontexts; der Turn führt sie nach jeder Antwort nach.
     pub measure: ContextMeasure,
     /// Systemprompt und Verlauf bis einschließlich der neuen Benutzer-Nachricht.
@@ -49,17 +114,19 @@ pub struct TurnJob {
     pub tools: Vec<Value>,
     pub context: Arc<Mutex<ToolContext>>,
     pub cancel: Arc<AtomicBool>,
-    /// Gilt sofort — `set_permission_mode` erreicht auch den laufenden Turn.
-    pub mode: Arc<Mutex<Mode>>,
-    pub hooks: Arc<Hooks>,
-    pub cwd: PathBuf,
-    pub transcript_path: PathBuf,
-    /// Laufende Nummer der Rückfragen, über alle Turns der Session.
-    pub request_counter: Arc<AtomicU64>,
-    /// Antworten auf Rückfragen: Request-ID und `response`-Objekt der `control_response`.
-    pub answers: Receiver<(String, Value)>,
-    /// Liefert die Hinweise über inzwischen beendete Hintergrundaufgaben.
-    pub tasks: Arc<Tasks>,
+}
+
+impl TurnJob {
+    /// Nur der Hauptagent meldet an die Hauptschleife; ein Subagent führt alles selbst.
+    fn notify(&self, event: TurnEvent) {
+        if let Role::Main { events } = &self.role {
+            let _ = events.send(event);
+        }
+    }
+
+    pub fn is_main(&self) -> bool {
+        matches!(self.role, Role::Main { .. })
+    }
 }
 
 /// Antwort, die ein Werkzeug statt seiner Ausführung bekommt.
@@ -89,18 +156,27 @@ pub enum TurnEvent {
     Done(Outcome),
 }
 
-pub fn run(mut job: TurnJob, events: &Sender<TurnEvent>) {
-    let outcome = run_rounds(&mut job, events);
-    let _ = events.send(TurnEvent::Done(outcome));
+/// Ein Turn des Hauptagenten.
+pub fn run(mut job: TurnJob) {
+    let outcome = run_rounds(&mut job);
+    job.notify(TurnEvent::Done(outcome));
 }
 
-fn run_rounds(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Outcome {
-    let mut tool_rounds = 0;
+pub fn run_rounds(job: &mut TurnJob) -> Outcome {
+    let max_rounds = if job.is_main() {
+        MAX_TOOL_ROUNDS
+    } else {
+        MAX_SUBAGENT_TOOL_ROUNDS
+    };
+    let mut tool_rounds: u32 = 0;
+    let mut tool_uses: u32 = 0;
     loop {
-        if let Err(outcome) = make_room(job, events) {
+        if let Err(outcome) = make_room(job) {
             return outcome;
         }
-        add_task_notes(job, events);
+        if job.is_main() {
+            add_task_notes(job);
+        }
         let completion = match ask_model(job) {
             Ok(completion) => completion,
             Err(outcome) => return outcome,
@@ -112,38 +188,52 @@ fn run_rounds(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Outcome {
             &job.messages,
             completion.text.chars().count(),
         );
-        let _ = events.send(TurnEvent::Measured(job.measure));
-        // Die Zeile meldet den Kontext nach der Antwort — daran liest der Verwalter den Donut ab.
-        job.output.line(&output::assistant(
-            &job.session_id,
-            assistant_blocks(&completion, &calls),
-            job.measure.tokens,
-            completion.completion_tokens.unwrap_or(0),
-        ));
+        job.notify(TurnEvent::Measured(job.measure));
+        write_answer(job, &completion, &calls);
         if calls.is_empty() {
             let answer = json!({ "role": "assistant", "content": completion.text });
-            let _ = events.send(TurnEvent::Messages(vec![answer]));
+            job.notify(TurnEvent::Messages(vec![answer]));
             return Outcome::Completed(completion.text);
         }
         let round_messages = run_tools(job, &completion, &calls);
         job.messages.extend(round_messages.iter().cloned());
-        let _ = events.send(TurnEvent::Messages(round_messages));
+        job.notify(TurnEvent::Messages(round_messages));
+        if let Role::Subagent { task_id, .. } = &job.role {
+            tool_uses = tool_uses.saturating_add(u32::try_from(calls.len()).unwrap_or(u32::MAX));
+            job.shared.tasks.report_progress(task_id, tool_uses);
+        }
         if job.cancel.load(Ordering::SeqCst) {
             return Outcome::Aborted;
         }
         tool_rounds += 1;
-        if tool_rounds >= MAX_TOOL_ROUNDS {
-            return Outcome::Failed(format!(
-                "Abgebrochen nach {MAX_TOOL_ROUNDS} Werkzeug-Schritten."
-            ));
+        if tool_rounds >= max_rounds {
+            return Outcome::Failed(format!("Abgebrochen nach {max_rounds} Werkzeug-Schritten."));
         }
     }
 }
 
+/// Die `assistant`-Zeile. Beim Hauptagenten meldet sie den Kontext nach der Antwort — daran liest
+/// der Verwalter den Donut ab.
+fn write_answer(job: &TurnJob, completion: &Completion, calls: &[ParsedCall]) {
+    let blocks = assistant_blocks(completion, calls);
+    let line = match &job.role {
+        Role::Main { .. } => output::assistant(
+            &job.shared.session_id,
+            blocks,
+            job.measure.tokens,
+            completion.completion_tokens.unwrap_or(0),
+        ),
+        Role::Subagent {
+            parent_tool_use_id, ..
+        } => output::subagent_assistant(&job.shared.session_id, parent_tool_use_id, blocks),
+    };
+    job.shared.output.line(&line);
+}
+
 /// Verdichtet den Verlauf, bevor er das Fenster sprengt: ab 80 % des Fensters, vor jeder Anfrage —
 /// auch mitten im Turn, denn Werkzeug-Ergebnisse füllen den Kontext schneller als Nachrichten.
-fn make_room(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Result<(), Outcome> {
-    let threshold = context::compact_threshold(job.context_window);
+fn make_room(job: &mut TurnJob) -> Result<(), Outcome> {
+    let threshold = context::compact_threshold(job.shared.context_window);
     let before = job.measure.estimate(&job.messages);
     if before <= threshold {
         return Ok(());
@@ -151,14 +241,13 @@ fn make_room(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Result<(), Outcom
     let Some((system, history)) = job.messages.split_first() else {
         return Ok(());
     };
-    let compacted = compact::compact(&job.base_url, &job.model, history, &job.cancel).map_err(
-        |error: LlmError| match error {
+    let compacted = compact::compact(&job.shared.base_url, &job.model, history, &job.cancel)
+        .map_err(|error: LlmError| match error {
             LlmError::Cancelled => Outcome::Aborted,
             LlmError::Failed(message) => Outcome::Failed(format!(
                 "Kontext voll und Verdichten fehlgeschlagen: {message}"
             )),
-        },
-    )?;
+        })?;
     let mut messages: Vec<Value> = vec![system.clone()];
     messages.extend(compacted.iter().cloned());
     let measure = ContextMeasure::estimated(&messages);
@@ -169,18 +258,20 @@ fn make_room(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Result<(), Outcom
         ));
     }
     eprintln!("Verdichtet: {before} → {} Token", measure.tokens);
-    job.output.line(&output::compact_boundary());
-    let _ = events.send(TurnEvent::Compacted(compacted));
-    let _ = events.send(TurnEvent::Measured(measure));
+    if job.is_main() {
+        job.shared.output.line(&output::compact_boundary());
+    }
+    job.notify(TurnEvent::Compacted(compacted));
+    job.notify(TurnEvent::Measured(measure));
     job.messages = messages;
     job.measure = measure;
     Ok(())
 }
 
-/// Beendete Hintergrundaufgaben erfährt das Modell mit der nächsten Anfrage — einen eigenen Turn
+/// Beendete Hintergrundprozesse erfährt das Modell mit der nächsten Anfrage — einen eigenen Turn
 /// lösen sie nicht aus.
-fn add_task_notes(job: &mut TurnJob, events: &Sender<TurnEvent>) {
-    let notes = job.tasks.take_notes();
+fn add_task_notes(job: &mut TurnJob) {
+    let notes = job.shared.tasks.take_notes();
     if notes.is_empty() {
         return;
     }
@@ -189,12 +280,12 @@ fn add_task_notes(job: &mut TurnJob, events: &Sender<TurnEvent>) {
         "content": format!("<system-reminder>\n{}\n</system-reminder>", notes.join("\n")),
     });
     content::push_merged(&mut job.messages, &reminder);
-    let _ = events.send(TurnEvent::Messages(vec![reminder]));
+    job.notify(TurnEvent::Messages(vec![reminder]));
 }
 
 fn ask_model(job: &TurnJob) -> Result<Completion, Outcome> {
     let request = ChatRequest {
-        base_url: &job.base_url,
+        base_url: &job.shared.base_url,
         model: &job.model,
         messages: &job.messages,
         tools: &job.tools,
@@ -285,8 +376,26 @@ fn run_tools(job: &TurnJob, completion: &Completion, calls: &[ParsedCall]) -> Ve
         let message = content::read_image_message(&image.path, &image.media_type, &image.data);
         content::push_merged(&mut messages, &message);
     }
-    job.output
-        .line(&output::tool_results(&job.session_id, result_blocks));
+    let parent_tool_use_id = match &job.role {
+        Role::Main { .. } => None,
+        Role::Subagent {
+            parent_tool_use_id, ..
+        } => Some(parent_tool_use_id.as_str()),
+    };
+    let has_agent_call = calls
+        .iter()
+        .any(|call: &ParsedCall| call.name == AGENT_TOOL);
+    let resolved_model = if has_agent_call {
+        Some(job.model.as_str())
+    } else {
+        None
+    };
+    job.shared.output.line(&output::tool_results(
+        &job.shared.session_id,
+        parent_tool_use_id,
+        result_blocks,
+        resolved_model,
+    ));
     messages
 }
 
@@ -298,8 +407,13 @@ fn run_tool(job: &TurnJob, call: &ParsedCall) -> ToolOutput {
         return refused(error);
     }
     let access = path_access(job, call);
-    let mode = *job.mode.lock().unwrap_or_else(PoisonError::into_inner);
+    let mode = *job
+        .shared
+        .mode
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
     let decision = match job
+        .shared
         .hooks
         .pre_tool_use(&hook_call(job, call, mode), &job.cancel)
     {
@@ -320,6 +434,13 @@ fn run_tool(job: &TurnJob, call: &ParsedCall) -> ToolOutput {
     if job.cancel.load(Ordering::SeqCst) {
         return refused(INTERRUPTED);
     }
+    // Ein Subagent arbeitet mit eigenem Kontext — der des Hauptagenten bleibt dafür frei.
+    if call.name == AGENT_TOOL {
+        if !job.is_main() {
+            return refused(NESTED_AGENT_DENIAL);
+        }
+        return subagent::run(job, &input, &call.id);
+    }
     let mut context = job.context.lock().unwrap_or_else(PoisonError::into_inner);
     // Bis hierher kommt ein Pfad außerhalb nur mit Erlaubnis des Benutzers oder eines Hooks.
     context.allow_outside = access == Some(Access::Outside);
@@ -336,9 +457,9 @@ fn path_access(job: &TurnJob, call: &ParsedCall) -> Option<Access> {
 
 fn hook_call<'a>(job: &'a TurnJob, call: &'a ParsedCall, mode: Mode) -> HookCall<'a> {
     HookCall {
-        session_id: &job.session_id,
-        transcript_path: &job.transcript_path,
-        cwd: &job.cwd,
+        session_id: &job.shared.session_id,
+        transcript_path: &job.shared.transcript_path,
+        cwd: &job.shared.cwd,
         permission_mode: mode.cli_value(),
         tool_use_id: &call.id,
         tool: &call.name,
@@ -348,20 +469,22 @@ fn hook_call<'a>(job: &'a TurnJob, call: &'a ParsedCall, mode: Mode) -> HookCall
 
 /// Stellt die Rückfrage und wartet auf die Antwort; Ergebnis ist die freigegebene Eingabe.
 fn ask_permission(job: &TurnJob, call: &ParsedCall) -> Result<Value, ToolOutput> {
-    let number = job.request_counter.fetch_add(1, Ordering::SeqCst) + 1;
+    let shared = &job.shared;
+    let number = shared.request_counter.fetch_add(1, Ordering::SeqCst) + 1;
     let request_id = format!("{REQUEST_ID_PREFIX}{number}");
-    job.output
+    // Erst eintragen, dann fragen — sonst könnte die Antwort vor dem Eintrag ankommen.
+    let answer = shared.answers.expect(&request_id);
+    shared
+        .output
         .line(&output::can_use_tool(&request_id, &call.name, &call.input));
     loop {
         if job.cancel.load(Ordering::SeqCst) {
+            shared.answers.forget(&request_id);
             return Err(refused(INTERRUPTED));
         }
-        match job.answers.recv_timeout(ANSWER_POLL_INTERVAL) {
-            Ok((answered_id, response)) if answered_id == request_id => {
-                return permission_answer(&response, &call.input);
-            }
-            // Antwort auf eine ältere Rückfrage, deren Turn schon vorbei ist.
-            Ok(_) | Err(RecvTimeoutError::Timeout) => {}
+        match answer.recv_timeout(ANSWER_POLL_INTERVAL) {
+            Ok(response) => return permission_answer(&response, &call.input),
+            Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => return Err(refused(INTERRUPTED)),
         }
     }

@@ -20,6 +20,7 @@ pub enum Access {
     Outside,
 }
 
+#[derive(Clone)]
 pub struct Roots {
     writable: Vec<PathBuf>,
     readonly: Vec<PathBuf>,

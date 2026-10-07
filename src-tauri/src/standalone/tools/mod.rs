@@ -1,5 +1,6 @@
 //! Werkzeuge, die der Agent dem Modell anbietet — Namen und Parameter wie bei Claude Code, damit
 //! Anweisungen, Hooks und die Übersetzung im Verwalter unverändert greifen.
+pub mod agent;
 mod ask;
 mod edit;
 mod glob;
@@ -34,6 +35,8 @@ pub const POWERSHELL_TOOL: &str = "PowerShell";
 pub const ASK_USER_TOOL: &str = "AskUserQuestion";
 pub const SKILL_TOOL: &str = "Skill";
 pub const TASK_STOP_TOOL: &str = "TaskStop";
+/// Nur der Hauptagent bekommt es angeboten — Subagenten starten keine Subagenten.
+pub const AGENT_TOOL: &str = "Agent";
 
 /// Ergebnis eines Werkzeugs, das wegen Esc nicht (fertig) lief.
 pub const INTERRUPTED: &str = "Vom Benutzer unterbrochen.";
@@ -66,6 +69,23 @@ pub struct ToolContext {
 }
 
 impl ToolContext {
+    /// Eigener Kontext für einen Subagenten: dieselben Grenzen, eigener Abbruch und eine eigene
+    /// Liste gelesener Dateien. Ein eigener, weil der Hauptagent seinen Kontext während eines
+    /// Werkzeugs sperrt — ein geteilter ließe ihn hinter einem langen Befehl des Subagenten warten.
+    pub fn for_subagent(&self, cancel: Arc<AtomicBool>) -> ToolContext {
+        ToolContext {
+            cwd: self.cwd.clone(),
+            roots: self.roots.clone(),
+            read_files: HashSet::new(),
+            cancel,
+            allow_outside: false,
+            home: self.home.clone(),
+            skill_roots: self.skill_roots.clone(),
+            has_vision: self.has_vision,
+            tasks: Arc::clone(&self.tasks),
+        }
+    }
+
     fn remember_read(&mut self, path: &Path) {
         self.read_files.insert(file_key(path));
     }
@@ -80,6 +100,21 @@ pub struct ToolOutput {
     pub is_error: bool,
     /// Ein Bild, das `Read` gelesen hat; es geht als eigene Nachricht hinter die Ergebnisse.
     pub image: Option<ToolImage>,
+}
+
+impl ToolOutput {
+    /// Text oder Fehler, auf die Höchstlänge gekürzt; ohne Bild.
+    pub fn from_result(result: Result<String, String>) -> ToolOutput {
+        let (text, is_error) = match result {
+            Ok(text) => (text, false),
+            Err(text) => (text, true),
+        };
+        ToolOutput {
+            text: shortened(text),
+            is_error,
+            image: None,
+        }
+    }
 }
 
 pub struct ToolImage {
@@ -288,18 +323,11 @@ pub fn run(name: &str, input: &Value, context: &mut ToolContext, tool_use_id: &s
         TASK_STOP_TOOL => task_stop::run(input, context),
         unknown => Err(format!("Unbekanntes Werkzeug: {unknown}")),
     };
-    match result {
-        Ok(text) => ToolOutput {
-            text: shortened(text),
-            is_error: false,
-            image,
-        },
-        Err(text) => ToolOutput {
-            text: shortened(text),
-            is_error: true,
-            image: None,
-        },
+    let mut output = ToolOutput::from_result(result);
+    if !output.is_error {
+        output.image = image;
     }
+    output
 }
 
 fn function(name: &str, description: &str, properties: Value, required: &[&str]) -> Value {

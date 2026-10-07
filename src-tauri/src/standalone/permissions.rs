@@ -3,8 +3,8 @@
 //! nicht — dort laufen Befehle ungefragt.
 use super::paths::Access;
 use super::tools::{
-    ASK_USER_TOOL, BASH_TOOL, EDIT_TOOL, GLOB_TOOL, GREP_TOOL, POWERSHELL_TOOL, READ_TOOL,
-    SKILL_TOOL, TASK_STOP_TOOL, TODO_TOOL, WRITE_TOOL, is_writing,
+    AGENT_TOOL, ASK_USER_TOOL, BASH_TOOL, EDIT_TOOL, GLOB_TOOL, GREP_TOOL, POWERSHELL_TOOL,
+    READ_TOOL, SKILL_TOOL, TASK_STOP_TOOL, TODO_TOOL, WRITE_TOOL, is_writing,
 };
 use crate::agents::event::Mode;
 
@@ -42,6 +42,8 @@ pub fn decide(tool: &str, mode: Mode, access: Option<Access>) -> Decision {
             Mode::Manual | Mode::Edit | Mode::Plan => Decision::Ask,
         },
         ASK_USER_TOOL => Decision::Ask,
+        // Die Werkzeuge des Subagenten fragen selbst.
+        AGENT_TOOL => Decision::Allow,
         // Ein Werkzeug, das hier fehlt, fragt — neue Werkzeuge sind nie stillschweigend frei.
         _ => Decision::Ask,
     }

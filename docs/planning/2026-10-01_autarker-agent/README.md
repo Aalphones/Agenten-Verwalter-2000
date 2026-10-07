@@ -20,7 +20,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 4 | Anweisungen und Skills: Systemprompt, CLAUDE.md mit Einbindungen, Output-Style, Skill-Liste, Skill-Werkzeug, `/name` | [phase-4-anweisungen-skills.md](phase-4-anweisungen-skills.md) | standard | complete |
 | 5 | Kontext, Verdichten, Bilder, Druckmodus für TL;DR, Kontext-Aufschlüsselung | [phase-5-kontext-bilder-druck.md](phase-5-kontext-bilder-druck.md) | standard | complete |
 | 6 | Hintergrundprozesse und Scratchpad: `run_in_background`, `TaskStop`, `stop_task`, Aufgaben-Zeilen | [phase-6-hintergrund.md](phase-6-hintergrund.md) | standard | complete |
-| 7 | Subagenten: Werkzeug `Agent`, Agent-Definitionen, Vorder- und Hintergrund, Schritte im Verwalter | [phase-7-subagenten.md](phase-7-subagenten.md) | heikel | pending |
+| 7 | Subagenten: Werkzeug `Agent`, Agent-Definitionen, Vorder- und Hintergrund, Schritte im Verwalter | [phase-7-subagenten.md](phase-7-subagenten.md) | heikel | complete |
 | 8 | MCP-Server: stdio und HTTP, Konfiguration wie Claude Code, `mcp__…`-Werkzeuge, Steueranfragen des MCP-Dialogs | [phase-8-mcp.md](phase-8-mcp.md) | heikel | pending |
 | 9 | Web: WebFetch und WebSearch (Brave); Doku, Abschluss | [phase-9-web-abschluss.md](phase-9-web-abschluss.md) | standard | pending |
 
@@ -137,7 +137,7 @@ Wackelstellen zuerst:
 6. **Pfadgrenze (AK 4):** im Modus „Auto“ eine Datei unter `C:\Users\<name>\Desktop` lesen lassen → Rückfrage.
 7. **Verdichten (AK 9):** in einer Session mit 32 000 geladenem Kontext mehrere große Dateien lesen lassen, bis der Donut über 80 % steht → nächste Antwort kommt, Donut sinkt, das Modell weiß noch die Aufgabe.
 8. **Kein Anthropic (AK 2):** Netzwerk-Mitschnitt wie in Phase 1 des Vorgängerplans (`artifacts/messung.ps1` dort, Aufruf auf `verwalter.exe agent` angepasst) bei einer Aufgabe ohne Web — keine Verbindung außer Loopback und den MCP-Servern.
-9. Hintergrund-Prozess (AK 11), Anweisungen (AK 6), Bild und TL;DR (AK 10), Web (AK 14), Rückfrage mit Auswahl (`AskUserQuestion`), Aufgabenliste.
+9. Hintergrund-Prozess (AK 11), Anweisungen (AK 6), Bild und TL;DR (AK 10), Web (AK 14), Rückfrage mit Auswahl (`AskUserQuestion`), Aufgabenliste, Umlaute (`ping -n 1 192.0.2.1` in Bash und in PowerShell → Ergebnis zeigt „ü“, kein „�“).
 10. Zurück auf „Claude“ und auf „Claude Code + LM Studio“: Sessions laufen dort weiter wie vorher (der autarke Verlauf geht dabei **nicht** mit — Eintrag „Verlauf nicht übernommen“).
 
 ## Summary
