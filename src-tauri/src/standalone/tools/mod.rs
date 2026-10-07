@@ -55,6 +55,8 @@ pub struct ToolContext {
     /// `.claude\commands` sucht.
     pub home: PathBuf,
     pub skill_roots: Vec<(String, PathBuf)>,
+    /// Ob das geladene Modell Bilder versteht — sonst liest `Read` keine.
+    pub has_vision: bool,
 }
 
 impl ToolContext {
@@ -70,6 +72,15 @@ impl ToolContext {
 pub struct ToolOutput {
     pub text: String,
     pub is_error: bool,
+    /// Ein Bild, das `Read` gelesen hat; es geht als eigene Nachricht hinter die Ergebnisse.
+    pub image: Option<ToolImage>,
+}
+
+pub struct ToolImage {
+    pub path: String,
+    pub media_type: String,
+    /// Base64.
+    pub data: String,
 }
 
 /// Die Werkzeug-Beschreibungen für die Modellanfrage (OpenAI-Format).
@@ -79,7 +90,8 @@ pub fn definitions() -> Vec<Value> {
             READ_TOOL,
             "Reads a text file and returns its lines with line numbers (\"     1\\tline\"). \
              Reads up to 2000 lines from offset (1-based); use offset and limit for longer files. \
-             Use Glob for directories.",
+             Use Glob for directories. Also reads images (png, jpg, gif, webp) when the model \
+             understands images; the image then follows in the next message.",
             json!({
                 "file_path": { "type": "string", "description": "Absolute or relative path of the file" },
                 "offset": { "type": "integer", "description": "First line to read, 1-based" },
@@ -237,8 +249,14 @@ pub fn names(definitions: &[Value]) -> Vec<String> {
 }
 
 pub fn run(name: &str, input: &Value, context: &mut ToolContext) -> ToolOutput {
+    let mut image: Option<ToolImage> = None;
     let result = match name {
-        READ_TOOL => read::run(input, context),
+        READ_TOOL => {
+            read::run(input, context).map(|(text, read_image): (String, Option<ToolImage>)| {
+                image = read_image;
+                text
+            })
+        }
         WRITE_TOOL => write::run(input, context),
         EDIT_TOOL => edit::run(input, context),
         GLOB_TOOL => glob::run(input, context),
@@ -254,10 +272,12 @@ pub fn run(name: &str, input: &Value, context: &mut ToolContext) -> ToolOutput {
         Ok(text) => ToolOutput {
             text: shortened(text),
             is_error: false,
+            image,
         },
         Err(text) => ToolOutput {
             text: shortened(text),
             is_error: true,
+            image: None,
         },
     }
 }

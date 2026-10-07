@@ -5,7 +5,6 @@ import {
   commitButtonLabel,
   commitPlaceholder,
   FAILURE,
-  SUGGEST_AUTARK_TITLE,
   SUGGEST_NOTHING_CHECKED_TITLE,
   SUGGEST_TITLE,
 } from '@/features/git/gitTexts';
@@ -19,7 +18,6 @@ import type { GitEntryStatus } from '@/lib/bindings/GitEntryStatus';
 import { commandErrorText } from '@/lib/errors';
 import { gitCommit, suggestGitMessage } from '@/lib/git';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
-import { useSettingsStore } from '@/stores/settings';
 import { checkedPaths, isPathChecked, useGitStore, type GitSessionUi } from '@/stores/git';
 import './GitCommitBox.css';
 
@@ -52,9 +50,6 @@ export function GitCommitBox({
   const clearEntry = useGitStore((state) => state.clearEntry);
   const reportError = useSessionErrorsStore((state) => state.report);
   const clearError = useSessionErrorsStore((state) => state.clear);
-  const isAutark: boolean = useSettingsStore(
-    (state) => state.settings?.operatingMode === 'standalone',
-  );
   const { run, isRunning } = useGitActions(sessionId, onChanged);
   const push = useGitPush(sessionId, entry, isBusy, onChanged);
 
@@ -108,9 +103,6 @@ export function GitCommitBox({
   }
 
   function suggestTitle(): string {
-    if (isAutark) {
-      return SUGGEST_AUTARK_TITLE;
-    }
     return hasChecked ? SUGGEST_TITLE : SUGGEST_NOTHING_CHECKED_TITLE;
   }
 
@@ -145,7 +137,7 @@ export function GitCommitBox({
           className={`git-commit-box__suggest${isSuggesting ? ' git-commit-box__suggest--running' : ''}`}
           aria-label="Nachricht vorschlagen"
           title={suggestTitle()}
-          disabled={!hasChecked || isAutark || isSuggesting || isWorking}
+          disabled={!hasChecked || isSuggesting || isWorking}
           onClick={(): void => {
             suggest().catch(() => undefined);
           }}

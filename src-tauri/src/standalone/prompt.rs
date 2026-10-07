@@ -45,12 +45,36 @@ pub struct MemoryFile {
     pub tokens: u32,
 }
 
-pub fn system_prompt(context: &PromptContext) -> (String, Vec<MemoryFile>) {
+/// Der fertige Systemprompt und die Größen seiner Teile für die Kontext-Aufschlüsselung.
+pub struct SystemPrompt {
+    pub text: String,
+    pub memory_files: Vec<MemoryFile>,
+    pub skills_tokens: u32,
+}
+
+impl SystemPrompt {
+    /// Grundregeln, Umgebung, Output-Style und Zusatz des Verwalters — alles außer Anweisungsdateien
+    /// und Skill-Liste.
+    pub fn base_tokens(&self) -> u32 {
+        let memory_tokens: u32 = self
+            .memory_files
+            .iter()
+            .map(|file: &MemoryFile| file.tokens)
+            .sum();
+        estimated_tokens(&self.text)
+            .saturating_sub(memory_tokens)
+            .saturating_sub(self.skills_tokens)
+    }
+}
+
+pub fn system_prompt(context: &PromptContext) -> SystemPrompt {
     let mut sections: Vec<String> = vec![BASE_PROMPT.to_owned(), environment(context)];
     if let Some((name, text)) = style::load(context.home, context.cwd, context.add_dirs) {
         sections.push(format!("# Output style: {name}\n\n{text}"));
     }
+    let mut skills_tokens = 0;
     if let Some(list) = skill_list(context) {
+        skills_tokens = estimated_tokens(&list);
         sections.push(list);
     }
     let mut files: Vec<MemoryFile> = Vec::new();
@@ -64,7 +88,11 @@ pub fn system_prompt(context: &PromptContext) -> (String, Vec<MemoryFile>) {
     if let Some(appendix) = context.appendix {
         sections.push(appendix.to_owned());
     }
-    (sections.join("\n\n"), files)
+    SystemPrompt {
+        text: sections.join("\n\n"),
+        memory_files: files,
+        skills_tokens,
+    }
 }
 
 /// Zeichen / 4 — dieselbe Schätzung wie sonst, wo das Modell keine Zahl meldet.

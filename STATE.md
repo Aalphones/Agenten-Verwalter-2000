@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/` (Autark)
-**Phase:** 5/9 — Kontext, Verdichten, Bilder, Druckmodus für TL;DR (pending)
-**Nächster Schritt:** Autark Phase 5 in frischer Session (`phase-5-kontext-bilder-druck.md`, zuerst FINDINGS → Phase 5: TL;DR ruft `find_claude()` vor `ask_haiku`; Systemprompt-Größe aus Phase 4). Phasen 1–4 fertig. Smokes „Git-Werkzeuge“, „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ stehen offen (siehe unten); Phase-4-Persona/Skill-Test mit echtem Modell steht in Smoke 9 der Plan-README.
+**Phase:** 6/9 — Hintergrundprozesse und Scratchpad (pending; Phase 5 complete)
+**Nächster Schritt:** Autark Phase 6 in frischer Session (`phase-6-hintergrund.md`, zuerst FINDINGS → Phase 6: Scratchpad-Pfad kommt per ADR 022, `TaskStop` in die Nur-Lese-Liste). Phasen 1–5 fertig. Phase-5-Smokes (Verdichten, Bild, TL;DR in Autark) mit echtem Modell stehen noch aus; Smokes „Git-Werkzeuge“, „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ weiter offen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -13,7 +13,7 @@
 3. ~~Changes-Review~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_changes-review/`, `v0.12.0`, ADR 015).
 4. ~~Claude Code + LM Studio~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_claude-code-lokal/`, `v0.13.0`, ADR 016).
 4a. ~~Claude-Konto~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_claude-konto.md`, ADR 021); `v0.14.0`.
-5. **Autark** (`autarker-agent`) — Phasen 1–4 fertig, größter Plan (9 Phasen, drei „heikel“).
+5. **Autark** (`autarker-agent`) — Phasen 1–5 fertig, größter Plan (9 Phasen, drei „heikel“).
 6. ~~Dateiverweise im Chat~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_dateiverweise-im-chat.md`, ADR 023), Smoke offen; `v0.15.0` auf Zuruf gesetzt. Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.
 7. ~~MCP-Anmeldung~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_mcp-anmeldung.md`, ADR 024), Smoke offen; `v0.16.0` auf Zuruf gesetzt.
 8. ~~Git-Werkzeuge~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_git-werkzeuge/`, ADR 025), Smoke offen, Release auf Zuruf (Minor-Version).

@@ -99,6 +99,32 @@ pub fn control_error(request_id: &str, error: &str) -> Value {
     })
 }
 
+/// Der Verwalter ignoriert die Zeile; im Protokoll zeigt sie, wo der Verlauf ersetzt wurde.
+pub fn compact_boundary() -> Value {
+    json!({ "type": "system", "subtype": "compact_boundary" })
+}
+
+/// Die einzige Zeile des Druckmodus: `raw` ist der Text des Modells, `structured` sein Inhalt als
+/// JSON-Objekt.
+pub fn print_success(raw: &str, structured: &Value) -> Value {
+    json!({
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "result": raw,
+        "structured_output": structured,
+    })
+}
+
+pub fn print_error(text: &str) -> Value {
+    json!({
+        "type": "result",
+        "subtype": "error_during_execution",
+        "is_error": true,
+        "result": text,
+    })
+}
+
 pub fn result_success(session_id: &str, text: &str, model: &str, context_window: u32) -> Value {
     result(
         session_id,

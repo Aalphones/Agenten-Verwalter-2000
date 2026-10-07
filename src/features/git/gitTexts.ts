@@ -174,6 +174,4 @@ export function syncText(entry: GitEntryStatus): string {
 }
 
 export const SUGGEST_TITLE = 'Nachricht vorschlagen lassen (nach docs/conventions/commits.md)';
-export const SUGGEST_AUTARK_TITLE =
-  'Der Vorschlag folgt in der Betriebsart „Autark“ mit dem Druckmodus.';
 export const SUGGEST_NOTHING_CHECKED_TITLE = 'Erst Dateien ankreuzen';

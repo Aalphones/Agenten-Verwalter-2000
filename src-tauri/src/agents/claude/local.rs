@@ -4,6 +4,7 @@ use std::process::Command;
 
 use crate::error::CommandError;
 use crate::lmstudio;
+use crate::lmstudio::model::LocalModelKind;
 use crate::settings::model::{OperatingMode, Settings};
 use crate::standalone;
 
@@ -23,6 +24,8 @@ pub struct LocalBackend {
     pub model: String,
     pub context_window: u32,
     pub program: LocalProgram,
+    /// Ob das geladene Modell Bilder versteht (nur der eigene Agent wertet es aus).
+    pub has_vision: bool,
 }
 
 /// `Ok(None)` in der Betriebsart Claude. Fragt LM Studio (höchstens 3 s) — nie unter einer
@@ -57,6 +60,7 @@ pub fn resolve(settings: &Settings) -> Result<Option<LocalBackend>, CommandError
             .loaded_context_length
             .unwrap_or(found.max_context_length),
         program,
+        has_vision: found.kind == LocalModelKind::Vlm,
     }))
 }
 
@@ -66,7 +70,11 @@ pub fn apply(command: &mut Command, backend: &LocalBackend) {
     if backend.program == LocalProgram::Standalone {
         command
             .env(standalone::BASE_URL_VARIABLE, &backend.base_url)
-            .env(standalone::CONTEXT_WINDOW_VARIABLE, context_window);
+            .env(standalone::CONTEXT_WINDOW_VARIABLE, context_window)
+            .env(
+                standalone::VISION_VARIABLE,
+                if backend.has_vision { "1" } else { "0" },
+            );
         return;
     }
     command

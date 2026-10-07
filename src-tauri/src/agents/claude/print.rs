@@ -1,6 +1,6 @@
 //! Kurzlebiger `claude.exe` im Druckmodus für eine einzige strukturierte Antwort, unabhängig von jeder Session.
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
@@ -12,7 +12,9 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
 use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
+use crate::agents::claude::locate::find_claude;
 use crate::agents::event::ModelId;
+use crate::agents::standalone;
 use crate::db::Database;
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
@@ -24,35 +26,60 @@ pub struct PrintRequest<'a> {
     pub system_prompt: &'a str,
     pub json_schema: &'a str,
     pub input: &'a str,
-    /// `Some` in der Betriebsart Claude Code + LM Studio.
+    /// `Some` in den Betriebsarten mit LM Studio.
     pub local: Option<&'a LocalBackend>,
+    /// Argumente vor allen anderen — beim eigenen Agenten der Unterbefehl `agent`.
+    pub leading_args: &'a [String],
 }
 
-/// Ein Einmal-Aufruf von Haiku mit der Betriebsart aus den Einstellungen; in „Autark“ gibt es den
-/// Druckmodus noch nicht, dann kommt `autark_message` als Fehler.
+/// Das Programm, das einen Einmal-Aufruf beantwortet, samt der Betriebsart aus den Einstellungen:
+/// die Claude-Kommandozeile, oder in „Autark“ der eigene Agent (ADR 017).
+pub struct PrintProgram {
+    pub exe: PathBuf,
+    pub leading_args: Vec<String>,
+    pub backend: Option<LocalBackend>,
+}
+
+/// Fragt LM Studio (höchstens 3 s), wenn die Betriebsart ein lokales Modell nutzt — nie unter einer
+/// Session-Sperre aufrufen.
+pub fn print_program(app: &AppHandle) -> Result<PrintProgram, CommandError> {
+    let database = app.state::<Arc<Database>>();
+    let settings = settings::load(&database)?;
+    let backend = local::resolve(&settings)?;
+    let is_standalone = backend
+        .as_ref()
+        .is_some_and(|local: &LocalBackend| local.program == LocalProgram::Standalone);
+    let (exe, leading_args) = if is_standalone {
+        (standalone::program()?, standalone::leading_args())
+    } else {
+        (
+            find_claude().ok_or(CommandError::ClaudeNotFound)?,
+            Vec::new(),
+        )
+    };
+    Ok(PrintProgram {
+        exe,
+        leading_args,
+        backend,
+    })
+}
+
+/// Ein Einmal-Aufruf von Haiku bzw. des lokalen Modells.
 pub fn ask_haiku<T: DeserializeOwned>(
     app: &AppHandle,
-    exe: &Path,
+    program: &PrintProgram,
     request: &HaikuRequest<'_>,
 ) -> Result<T, String> {
     let cwd = data_dir(app).map_err(|error: CommandError| error.to_string())?;
-    let database = app.state::<Arc<Database>>();
-    let settings = settings::load(&database).map_err(|error: CommandError| error.to_string())?;
-    let backend = local::resolve(&settings).map_err(|error: CommandError| error.to_string())?;
-    if backend
-        .as_ref()
-        .is_some_and(|local: &LocalBackend| local.program == LocalProgram::Standalone)
-    {
-        return Err(request.autark_message.to_owned());
-    }
     let print_request = PrintRequest {
         model: ModelId::Haiku,
         system_prompt: request.system_prompt,
         json_schema: request.json_schema,
         input: request.input,
-        local: backend.as_ref(),
+        local: program.backend.as_ref(),
+        leading_args: &program.leading_args,
     };
-    let answer = run_print(exe, &cwd, &print_request, request.timeout)?;
+    let answer = run_print(&program.exe, &cwd, &print_request, request.timeout)?;
     serde_json::from_value::<T>(answer)
         .map_err(|error| format!("Antwort von Claude nicht lesbar: {error}"))
 }
@@ -62,8 +89,6 @@ pub struct HaikuRequest<'a> {
     pub json_schema: &'a str,
     pub input: &'a str,
     pub timeout: Duration,
-    /// Fehlertext der Betriebsart „Autark“.
-    pub autark_message: &'a str,
 }
 
 /// Startet `claude.exe`, schickt `input` über die Standardeingabe und liefert `structured_output`.
@@ -90,6 +115,7 @@ pub fn run_print(
 fn print_command(exe: &Path, cwd: &Path, request: &PrintRequest<'_>) -> Command {
     let mut command = Command::new(exe);
     command
+        .args(request.leading_args)
         .current_dir(cwd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

@@ -21,9 +21,6 @@ const SUGGEST_NEW_FILE_LINES: usize = 200;
 pub const SUGGEST_TIMEOUT: Duration = Duration::from_secs(60);
 pub const SUGGEST_SYSTEM_PROMPT: &str = "Schreibe eine Commit-Nachricht für den folgenden Diff. Halte dich an die Konvention, falls angegeben, sonst an Conventional Commits. Betreff im Imperativ, höchstens 72 Zeichen. Einen Body nur, wenn der Betreff nicht reicht; jeder Absatz eine Zeile. Antworte nur mit der Nachricht.";
 pub const SUGGEST_SCHEMA: &str = r#"{"type":"object","properties":{"message":{"type":"string"}},"required":["message"],"additionalProperties":false}"#;
-/// Fehlertext der Betriebsart „Autark“, in der es den Druckmodus noch nicht gibt.
-pub const SUGGEST_AUTARK_MESSAGE: &str =
-    "Der Vorschlag folgt in der Betriebsart „Autark“ mit dem Druckmodus.";
 
 /// Committet genau `paths` (bei `amend`: ergänzt `HEAD` um sie) und gibt die neue `HEAD`-ID zurück.
 pub fn commit(

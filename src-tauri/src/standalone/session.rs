@@ -18,16 +18,15 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use super::args::{self, AgentArgs, Start};
+use super::context::{self, ContextMeasure};
 use super::hooks::Hooks;
 use super::output::{self, Output};
 use super::paths::{self, Roots};
-use super::prompt::{self, MemoryFile, PromptContext};
+use super::prompt::{self, MemoryFile, PromptContext, SystemPrompt};
 use super::tools::{self, ToolContext};
 use super::transcript::Transcript;
 use super::turn::{self, Outcome, TurnEvent, TurnJob};
-use super::{
-    BASE_URL_VARIABLE, CONTEXT_WINDOW_VARIABLE, EXIT_START_FAILED, content, home_dir, invocation,
-};
+use super::{EXIT_START_FAILED, Environment, content, home_dir, invocation};
 use crate::agents::event::Mode;
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
@@ -59,12 +58,17 @@ struct Session {
     session_id: String,
     base_url: String,
     context_window: u32,
+    /// Ob das geladene Modell Bilder versteht.
+    has_vision: bool,
     cwd: PathBuf,
     home: PathBuf,
     /// Ordner der Repositories (Name, Pfad), in denen Skills gesucht werden.
     skill_roots: Vec<(String, PathBuf)>,
-    /// Einmal beim Start gebaut — Anweisungen und Skills ändern sich während einer Session nicht.
-    system_prompt: String,
+    /// Einmal beim Start gebaut — Anweisungen und Skills ändern sich während einer Session nicht,
+    /// und das Verdichten berührt nur den Verlauf.
+    system_prompt: SystemPrompt,
+    /// Letzte Messung des Kontexts; Ausgangspunkt für die Schätzung vor der nächsten Anfrage.
+    measure: ContextMeasure,
     model: String,
     mode: Arc<Mutex<Mode>>,
     tools: Vec<Value>,
@@ -77,8 +81,8 @@ struct Session {
 }
 
 pub fn run(args: AgentArgs) -> i32 {
-    let (base_url, context_window) = match read_environment() {
-        Ok(values) => values,
+    let environment = match Environment::read() {
+        Ok(environment) => environment,
         Err(error) => {
             eprintln!("{error}");
             return EXIT_START_FAILED;
@@ -136,8 +140,9 @@ pub fn run(args: AgentArgs) -> i32 {
         allow_outside: false,
         home: home.clone(),
         skill_roots: skill_roots.clone(),
+        has_vision: environment.has_vision,
     };
-    let (system_prompt, memory_files) = prompt::system_prompt(&PromptContext {
+    let system_prompt = prompt::system_prompt(&PromptContext {
         cwd: &cwd,
         add_dirs: &add_dirs,
         home: &home,
@@ -145,17 +150,19 @@ pub fn run(args: AgentArgs) -> i32 {
         skill_roots: &skill_roots,
         appendix: args.append_system_prompt.as_deref(),
     });
-    eprintln!("{}", prompt_size_line(&system_prompt, &memory_files));
+    eprintln!("{}", prompt_size_line(&system_prompt));
     let hooks = Hooks::load(&home, &cwd, &add_dirs);
     let mut session = Session {
         output,
         session_id,
-        base_url,
-        context_window,
+        base_url: environment.base_url,
+        context_window: environment.context_window,
+        has_vision: environment.has_vision,
         cwd,
         home,
         skill_roots,
         system_prompt,
+        measure: ContextMeasure::default(),
         model: args.model,
         mode: Arc::new(Mutex::new(args.mode)),
         tools: tool_definitions,
@@ -180,8 +187,9 @@ fn skill_root(folder: &Path) -> (String, PathBuf) {
 }
 
 /// Die Größe des Systemprompts fürs Protokoll — der Benutzer sieht, was Tempo und Kontext kostet.
-fn prompt_size_line(system_prompt: &str, files: &[MemoryFile]) -> String {
-    let listed: Vec<String> = files
+fn prompt_size_line(system_prompt: &SystemPrompt) -> String {
+    let listed: Vec<String> = system_prompt
+        .memory_files
         .iter()
         .map(|file: &MemoryFile| format!("{} ({})", file.path.display(), file.tokens))
         .collect();
@@ -192,22 +200,9 @@ fn prompt_size_line(system_prompt: &str, files: &[MemoryFile]) -> String {
     };
     format!(
         "Systemprompt: {} Zeichen, ~{} Token; Dateien: {files_text}",
-        system_prompt.chars().count(),
-        prompt::estimated_tokens(system_prompt)
+        system_prompt.text.chars().count(),
+        prompt::estimated_tokens(&system_prompt.text)
     )
-}
-
-fn read_environment() -> Result<(String, u32), String> {
-    let base_url = env::var(BASE_URL_VARIABLE)
-        .ok()
-        .map(|value: String| value.trim().trim_end_matches('/').to_owned())
-        .filter(|value: &String| !value.is_empty())
-        .ok_or_else(|| format!("{BASE_URL_VARIABLE} fehlt"))?;
-    let context_window = env::var(CONTEXT_WINDOW_VARIABLE)
-        .ok()
-        .and_then(|value: String| value.trim().parse::<u32>().ok())
-        .ok_or_else(|| format!("{CONTEXT_WINDOW_VARIABLE} fehlt oder ist keine Ganzzahl"))?;
-    Ok((base_url, context_window))
 }
 
 fn open_transcript(start: &Start) -> Result<(String, Transcript), String> {
@@ -329,6 +324,16 @@ impl Session {
                 }
                 None => self.reply_error(request_id, "model fehlt"),
             },
+            "get_context_usage" => self.output.line(&output::control_success(
+                request_id,
+                context::usage_report(
+                    &self.model,
+                    self.context_window,
+                    &self.system_prompt,
+                    &self.tools,
+                    &self.transcript.messages,
+                ),
+            )),
             // Hintergrundaufgaben gibt es noch nicht — nichts zu beenden.
             "stop_task" => self.reply_success(request_id),
             other => self.reply_error(request_id, &format!("nicht unterstützt: {other}")),
@@ -366,7 +371,8 @@ impl Session {
     fn start_turn(&mut self, content: &Value) {
         // Ein getipptes `/name` wird zum Inhalt des Skills; ins Transkript geht der ersetzte Text.
         let content = invocation::expand_message(content, &self.home, &self.skill_roots);
-        if let Err(error) = self.transcript.append(content::user_message(&content)) {
+        let message = content::user_message(&content, self.has_vision);
+        if let Err(error) = self.transcript.append(message) {
             self.output.line(&output::result_error(
                 &self.session_id,
                 &error,
@@ -386,6 +392,8 @@ impl Session {
             session_id: self.session_id.clone(),
             base_url: self.base_url.clone(),
             model: self.model.clone(),
+            context_window: self.context_window,
+            measure: self.measure,
             messages: self.request_messages(),
             tools: self.tools.clone(),
             context: Arc::clone(&self.tool_context),
@@ -423,14 +431,9 @@ impl Session {
     /// werden zusammengelegt — manche Chat-Vorlagen lehnen zwei Benutzer-Nachrichten in Folge ab.
     fn request_messages(&self) -> Vec<Value> {
         let mut messages: Vec<Value> = Vec::with_capacity(self.transcript.messages.len() + 1);
-        messages.push(json!({ "role": "system", "content": self.system_prompt }));
+        messages.push(json!({ "role": "system", "content": self.system_prompt.text }));
         for message in &self.transcript.messages {
-            let merged = messages
-                .last_mut()
-                .is_some_and(|previous: &mut Value| content::merge_user(previous, message));
-            if !merged {
-                messages.push(message.clone());
-            }
+            content::push_merged(&mut messages, message);
         }
         messages
     }
@@ -451,6 +454,8 @@ impl Session {
             };
             match event {
                 TurnEvent::Messages(messages) => self.append_round(messages),
+                TurnEvent::Compacted(messages) => self.replace_history(messages),
+                TurnEvent::Measured(measure) => self.measure = measure,
                 TurnEvent::Done(outcome) => {
                     self.finish_turn(outcome);
                     return;
@@ -470,6 +475,18 @@ impl Session {
                 turn.transcript_error.get_or_insert(error);
             }
             return;
+        }
+    }
+
+    /// Der Turn hat den Verlauf verdichtet; die Datei folgt ihm, sonst käme nach einem Neustart
+    /// wieder der volle Verlauf.
+    fn replace_history(&mut self, messages: Vec<Value>) {
+        let Err(error) = self.transcript.rewrite(messages) else {
+            return;
+        };
+        if let Some(turn) = &mut self.turn {
+            turn.cancel.store(true, Ordering::SeqCst);
+            turn.transcript_error.get_or_insert(error);
         }
     }
 

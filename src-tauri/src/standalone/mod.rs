@@ -2,7 +2,9 @@
 //! der Claude-Kommandozeile, den der Verwalter liest, und fragt ein OpenAI-kompatibles Modell
 //! (LM Studio).
 pub mod args;
+pub mod compact;
 pub mod content;
+pub mod context;
 pub mod hooks;
 pub mod invocation;
 pub mod llm;
@@ -10,6 +12,7 @@ pub mod memory;
 pub mod output;
 pub mod paths;
 pub mod permissions;
+pub mod print;
 pub mod prompt;
 pub mod session;
 pub mod settings;
@@ -27,6 +30,8 @@ pub const SUBCOMMAND: &str = "agent";
 /// Umgebung, die der Verwalter setzt (`agents::claude::local::apply`).
 pub const BASE_URL_VARIABLE: &str = "VERWALTER_AGENT_BASE_URL";
 pub const CONTEXT_WINDOW_VARIABLE: &str = "VERWALTER_AGENT_CONTEXT_WINDOW";
+/// `1`, wenn das geladene Modell Bilder versteht, sonst `0`.
+pub const VISION_VARIABLE: &str = "VERWALTER_AGENT_VISION";
 
 /// Exit-Code bei fehlerhaften Argumenten, fehlender Umgebung oder unlesbarem Transkript.
 pub const EXIT_START_FAILED: i32 = 2;
@@ -50,10 +55,37 @@ pub fn run(args: Vec<String>) -> i32 {
         }
     };
     if parsed.print {
-        eprintln!("Druckmodus folgt");
-        return EXIT_START_FAILED;
+        return print::run(&parsed);
     }
     session::run(parsed)
+}
+
+/// Was der Verwalter dem Agenten über die Umgebung mitgibt (`agents::claude::local::apply`).
+pub struct Environment {
+    pub base_url: String,
+    pub context_window: u32,
+    /// Fehlt die Variable, versteht das Modell keine Bilder.
+    pub has_vision: bool,
+}
+
+impl Environment {
+    pub fn read() -> Result<Environment, String> {
+        let base_url = env::var(BASE_URL_VARIABLE)
+            .ok()
+            .map(|value: String| value.trim().trim_end_matches('/').to_owned())
+            .filter(|value: &String| !value.is_empty())
+            .ok_or_else(|| format!("{BASE_URL_VARIABLE} fehlt"))?;
+        let context_window = env::var(CONTEXT_WINDOW_VARIABLE)
+            .ok()
+            .and_then(|value: String| value.trim().parse::<u32>().ok())
+            .ok_or_else(|| format!("{CONTEXT_WINDOW_VARIABLE} fehlt oder ist keine Ganzzahl"))?;
+        let has_vision = env::var(VISION_VARIABLE).is_ok_and(|value: String| value.trim() == "1");
+        Ok(Environment {
+            base_url,
+            context_window,
+            has_vision,
+        })
+    }
 }
 
 fn agent_dir() -> Option<PathBuf> {

@@ -15,13 +15,15 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
+use super::compact;
 use super::content;
+use super::context::{self, ContextMeasure};
 use super::hooks::{HookCall, HookVerdict, Hooks};
 use super::llm::{self, ChatRequest, Completion, LlmError, ToolCall};
 use super::output::{self, Output};
 use super::paths::{self, Access};
 use super::permissions::{self, Decision};
-use super::tools::{self, ASK_USER_TOOL, INTERRUPTED, ToolContext, ToolOutput};
+use super::tools::{self, ASK_USER_TOOL, INTERRUPTED, ToolContext, ToolImage, ToolOutput};
 use crate::agents::event::Mode;
 
 /// Grenze gegen Endlosschleifen eines Modells, das nie aufhört, Werkzeuge zu rufen.
@@ -38,6 +40,9 @@ pub struct TurnJob {
     pub session_id: String,
     pub base_url: String,
     pub model: String,
+    pub context_window: u32,
+    /// Letzte Messung des Kontexts; der Turn führt sie nach jeder Antwort nach.
+    pub measure: ContextMeasure,
     /// Systemprompt und Verlauf bis einschließlich der neuen Benutzer-Nachricht.
     pub messages: Vec<Value>,
     pub tools: Vec<Value>,
@@ -59,6 +64,7 @@ fn refused(text: &str) -> ToolOutput {
     ToolOutput {
         text: text.to_owned(),
         is_error: true,
+        image: None,
     }
 }
 
@@ -72,6 +78,11 @@ pub enum Outcome {
 pub enum TurnEvent {
     /// Fürs Transkript, in dieser Reihenfolge: eine Antwort samt ihren Werkzeug-Ergebnissen.
     Messages(Vec<Value>),
+    /// Der Verlauf ohne Systemprompt nach dem Verdichten — ersetzt das ganze Transkript. Kommt
+    /// hinter allen `Messages`, die der Turn davor geschickt hat.
+    Compacted(Vec<Value>),
+    /// Neue Messung des Kontexts, die der nächste Turn als Ausgangspunkt braucht.
+    Measured(ContextMeasure),
     Done(Outcome),
 }
 
@@ -83,15 +94,26 @@ pub fn run(mut job: TurnJob, events: &Sender<TurnEvent>) {
 fn run_rounds(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Outcome {
     let mut tool_rounds = 0;
     loop {
+        if let Err(outcome) = make_room(job, events) {
+            return outcome;
+        }
         let completion = match ask_model(job) {
             Ok(completion) => completion,
             Err(outcome) => return outcome,
         };
         let calls: Vec<ParsedCall> = completion.tool_calls.iter().map(ParsedCall::from).collect();
+        job.measure = ContextMeasure::after_answer(
+            completion.prompt_tokens,
+            completion.completion_tokens,
+            &job.messages,
+            completion.text.chars().count(),
+        );
+        let _ = events.send(TurnEvent::Measured(job.measure));
+        // Die Zeile meldet den Kontext nach der Antwort — daran liest der Verwalter den Donut ab.
         job.output.line(&output::assistant(
             &job.session_id,
             assistant_blocks(&completion, &calls),
-            input_tokens(&completion, &job.messages),
+            job.measure.tokens,
             completion.completion_tokens.unwrap_or(0),
         ));
         if calls.is_empty() {
@@ -112,6 +134,43 @@ fn run_rounds(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Outcome {
             ));
         }
     }
+}
+
+/// Verdichtet den Verlauf, bevor er das Fenster sprengt: ab 80 % des Fensters, vor jeder Anfrage —
+/// auch mitten im Turn, denn Werkzeug-Ergebnisse füllen den Kontext schneller als Nachrichten.
+fn make_room(job: &mut TurnJob, events: &Sender<TurnEvent>) -> Result<(), Outcome> {
+    let threshold = context::compact_threshold(job.context_window);
+    let before = job.measure.estimate(&job.messages);
+    if before <= threshold {
+        return Ok(());
+    }
+    let Some((system, history)) = job.messages.split_first() else {
+        return Ok(());
+    };
+    let compacted = compact::compact(&job.base_url, &job.model, history, &job.cancel).map_err(
+        |error: LlmError| match error {
+            LlmError::Cancelled => Outcome::Aborted,
+            LlmError::Failed(message) => Outcome::Failed(format!(
+                "Kontext voll und Verdichten fehlgeschlagen: {message}"
+            )),
+        },
+    )?;
+    let mut messages: Vec<Value> = vec![system.clone()];
+    messages.extend(compacted.iter().cloned());
+    let measure = ContextMeasure::estimated(&messages);
+    if measure.tokens > threshold {
+        return Err(Outcome::Failed(
+            "Kontext voll und Verdichten fehlgeschlagen: der laufende Turn füllt das Fenster allein."
+                .to_owned(),
+        ));
+    }
+    eprintln!("Verdichtet: {before} → {} Token", measure.tokens);
+    job.output.line(&output::compact_boundary());
+    let _ = events.send(TurnEvent::Compacted(compacted));
+    let _ = events.send(TurnEvent::Measured(measure));
+    job.messages = messages;
+    job.measure = measure;
+    Ok(())
 }
 
 fn ask_model(job: &TurnJob) -> Result<Completion, Outcome> {
@@ -186,10 +245,12 @@ fn assistant_blocks(completion: &Completion, calls: &[ParsedCall]) -> Vec<Value>
 
 /// Führt die Aufrufe nacheinander aus und gibt die Runde fürs Transkript zurück. Nach Esc bekommt
 /// jeder noch offene Aufruf ein Ergebnis „unterbrochen“ — ein `tool_calls` ohne alle Ergebnisse
-/// direkt dahinter lehnt die Chat-Vorlage beim nächsten Start ab.
+/// direkt dahinter lehnt die Chat-Vorlage beim nächsten Start ab. Gelesene Bilder folgen hinter
+/// allen Ergebnissen als Benutzer-Nachricht: Werkzeug-Nachrichten tragen keine Bilder.
 fn run_tools(job: &TurnJob, completion: &Completion, calls: &[ParsedCall]) -> Vec<Value> {
     let mut messages: Vec<Value> = vec![assistant_message(completion, calls)];
     let mut result_blocks: Vec<Value> = Vec::with_capacity(calls.len());
+    let mut images: Vec<ToolImage> = Vec::new();
     for call in calls {
         let result = run_tool(job, call);
         result_blocks.push(json!({
@@ -199,6 +260,11 @@ fn run_tools(job: &TurnJob, completion: &Completion, calls: &[ParsedCall]) -> Ve
             "content": result.text,
         }));
         messages.push(json!({ "role": "tool", "tool_call_id": call.id, "content": result.text }));
+        images.extend(result.image);
+    }
+    for image in &images {
+        let message = content::read_image_message(&image.path, &image.media_type, &image.data);
+        content::push_merged(&mut messages, &message);
     }
     job.output
         .line(&output::tool_results(&job.session_id, result_blocks));
@@ -319,12 +385,4 @@ fn assistant_message(completion: &Completion, calls: &[ParsedCall]) -> Value {
         })
         .collect();
     json!({ "role": "assistant", "content": content, "tool_calls": tool_calls })
-}
-
-/// `prompt_tokens` der Antwort, sonst Zeichen aller gesendeten Texte / 4 — Bilder zählen nicht.
-fn input_tokens(completion: &Completion, messages: &[Value]) -> u32 {
-    completion.prompt_tokens.unwrap_or_else(|| {
-        let characters: usize = messages.iter().map(content::text_chars).sum();
-        u32::try_from(characters / content::CHARS_PER_TOKEN).unwrap_or(u32::MAX)
-    })
 }

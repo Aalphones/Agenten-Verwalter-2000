@@ -1,7 +1,6 @@
 //! TL;DR-Läufe von Sessions und Vorhaben: der Zustand liegt in der Registry, Haiku läuft in einem
 //! eigenen Thread. Beginn und Ende jedes Laufs melden `tldr://changed`; Laufzustand und Fehler
 //! gibt es nur im Speicher, das Ergebnis auch in der Datenbank.
-use std::path::Path;
 use std::sync::Arc;
 use std::thread;
 
@@ -9,8 +8,7 @@ use serde::de::DeserializeOwned;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{ProjectState, Session, SessionRegistry, SessionState, now_ms, project_not_found};
-use crate::agents::claude::locate::find_claude;
-use crate::agents::claude::print::{HaikuRequest, ask_haiku};
+use crate::agents::claude::print::{HaikuRequest, PrintProgram, ask_haiku, print_program};
 use crate::db::tldr as tldr_rows;
 use crate::error::CommandError;
 use crate::sessions::model::SessionStatus;
@@ -25,7 +23,6 @@ use crate::tldr::transcript::{project_input, session_transcript};
 
 const TLDR_CHANGED_EVENT: &str = "tldr://changed";
 const NO_SESSION_HISTORY: &str = "Diese Session hat noch keinen Verlauf.";
-const AUTARK_UNSUPPORTED: &str = "TL;DR folgt in der Betriebsart „Autark“ mit dem Druckmodus.";
 const NO_PROJECT_HISTORY: &str = "Noch keine Session mit Verlauf.";
 
 impl SessionRegistry {
@@ -82,7 +79,7 @@ impl SessionRegistry {
         app: &AppHandle,
         session_id: &str,
     ) -> Result<(), CommandError> {
-        let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
+        let program = print_program(app)?;
         let session = self.get(session_id)?;
         let (transcript, seq) = {
             let mut state = session.lock_loaded()?;
@@ -99,7 +96,7 @@ impl SessionRegistry {
         let spawned = thread::Builder::new()
             .name("tldr-session".to_owned())
             .spawn(move || {
-                run_session_tldr(&thread_app, &thread_session_id, &exe, &transcript, seq);
+                run_session_tldr(&thread_app, &thread_session_id, &program, &transcript, seq);
             });
         if let Err(error) = spawned {
             let message = format!("TL;DR startet nicht: {error}");
@@ -121,7 +118,7 @@ impl SessionRegistry {
         app: &AppHandle,
         project_id: &str,
     ) -> Result<(), CommandError> {
-        let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
+        let program = print_program(app)?;
         {
             let mut projects = self.lock_projects();
             let project = projects
@@ -138,7 +135,7 @@ impl SessionRegistry {
         let thread_project_id = project_id.to_owned();
         let spawned = thread::Builder::new()
             .name("tldr-project".to_owned())
-            .spawn(move || run_project_tldr(&thread_app, &thread_project_id, &exe));
+            .spawn(move || run_project_tldr(&thread_app, &thread_project_id, &program));
         if let Err(error) = spawned {
             let message = format!("TL;DR startet nicht: {error}");
             self.finish_project_tldr(app, project_id, Err(message.clone()), 0);
@@ -218,9 +215,20 @@ impl SessionState {
 
 /// Läuft im Thread `tldr-session` oder `tldr-project`. Eine inzwischen archivierte Session
 /// bekommt nichts mehr.
-fn run_session_tldr(app: &AppHandle, session_id: &str, exe: &Path, transcript: &str, seq: u32) {
-    let outcome: Result<SessionTldr, String> =
-        ask_tldr(app, exe, SESSION_SYSTEM_PROMPT, SESSION_SCHEMA, transcript);
+fn run_session_tldr(
+    app: &AppHandle,
+    session_id: &str,
+    program: &PrintProgram,
+    transcript: &str,
+    seq: u32,
+) {
+    let outcome: Result<SessionTldr, String> = ask_tldr(
+        app,
+        program,
+        SESSION_SYSTEM_PROMPT,
+        SESSION_SCHEMA,
+        transcript,
+    );
     let registry = app.state::<SessionRegistry>();
     let Ok(session) = registry.get(session_id) else {
         return;
@@ -252,7 +260,7 @@ fn run_session_tldr(app: &AppHandle, session_id: &str, exe: &Path, transcript: &
 
 /// Nacheinander im selben Thread: erst die fehlenden Session-TL;DRs, dann das des Vorhabens aus
 /// allen vorhandenen.
-fn run_project_tldr(app: &AppHandle, project_id: &str, exe: &Path) {
+fn run_project_tldr(app: &AppHandle, project_id: &str, program: &PrintProgram) {
     let registry = app.state::<SessionRegistry>();
     let members = registry.project_members(project_id);
     for member in &members {
@@ -260,7 +268,7 @@ fn run_project_tldr(app: &AppHandle, project_id: &str, exe: &Path) {
             continue;
         };
         emit_tldr_changed(app, project_id, Some(&member.id));
-        run_session_tldr(app, &member.id, exe, &transcript, seq);
+        run_session_tldr(app, &member.id, program, &transcript, seq);
     }
     let sources: Vec<(u32, String, SessionStatus, SessionTldr)> = members
         .iter()
@@ -277,7 +285,7 @@ fn run_project_tldr(app: &AppHandle, project_id: &str, exe: &Path) {
     } else {
         ask_tldr(
             app,
-            exe,
+            program,
             PROJECT_SYSTEM_PROMPT,
             PROJECT_SCHEMA,
             &project_input(&sources),
@@ -313,7 +321,7 @@ fn begin_missing_tldr(app: &AppHandle, session: &Session) -> Option<(String, u32
 /// Der Einmal-Aufruf von Haiku für ein TL;DR.
 fn ask_tldr<T: DeserializeOwned>(
     app: &AppHandle,
-    exe: &Path,
+    program: &PrintProgram,
     system_prompt: &str,
     json_schema: &str,
     input: &str,
@@ -323,9 +331,8 @@ fn ask_tldr<T: DeserializeOwned>(
         json_schema,
         input,
         timeout: TLDR_TIMEOUT,
-        autark_message: AUTARK_UNSUPPORTED,
     };
-    ask_haiku(app, exe, &request)
+    ask_haiku(app, program, &request)
 }
 
 fn tldr_json<T: serde::Serialize>(tldr: &T) -> Result<String, CommandError> {

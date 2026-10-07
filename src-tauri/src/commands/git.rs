@@ -3,8 +3,7 @@ use std::sync::Arc;
 
 use tauri_plugin_opener::OpenerExt;
 
-use crate::agents::claude::locate::find_claude;
-use crate::agents::claude::print::{HaikuRequest, ask_haiku};
+use crate::agents::claude::print::{HaikuRequest, ask_haiku, print_program};
 use crate::changes::{model::ChangesReach, sources};
 use crate::db::{Database, session_commits};
 use crate::error::CommandError;
@@ -309,20 +308,20 @@ pub async fn git_suggest_message(
     key: String,
     paths: Vec<String>,
 ) -> Result<String, CommandError> {
-    let exe = find_claude().ok_or(CommandError::ClaudeNotFound)?;
     let dir = entry_dir(&registry, &session_id, &key)?;
-    // Haiku braucht bis zu einer Minute — nicht auf dem Thread der übrigen Befehle.
+    // Haiku braucht bis zu einer Minute — nicht auf dem Thread der übrigen Befehle; auch die Frage
+    // an LM Studio nach dem Programm (höchstens 3 s) gehört dorthin.
     tauri::async_runtime::spawn_blocking(move || {
+        let program = print_program(&app)?;
         let diff = actions::suggest_input(&dir, &paths)?;
         let request = HaikuRequest {
             system_prompt: actions::SUGGEST_SYSTEM_PROMPT,
             json_schema: actions::SUGGEST_SCHEMA,
             input: &diff,
             timeout: actions::SUGGEST_TIMEOUT,
-            autark_message: actions::SUGGEST_AUTARK_MESSAGE,
         };
         let suggested: SuggestedMessage =
-            ask_haiku(&app, &exe, &request).map_err(CommandError::Internal)?;
+            ask_haiku(&app, &program, &request).map_err(CommandError::Internal)?;
         Ok(suggested.message.trim().to_owned())
     })
     .await
