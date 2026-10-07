@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 
 use super::agents::{self, AgentDefinition, DEFAULT_AGENT_TYPE};
 use super::context::ContextMeasure;
+use super::mcp::{McpAccess, is_mcp_tool};
 use super::session::Input;
 use super::tasks::TaskStatus;
 use super::tools::{INTERRUPTED, ToolOutput};
@@ -80,6 +81,7 @@ pub fn run(parent: &TurnJob, input: &Value, tool_use_id: &str) -> ToolOutput {
             json!({ "role": "user", "content": assignment.prompt }),
         ],
         tools: allowed_tools(&shared.subagents.tools, &assignment.definition),
+        mcp_access: mcp_access(&assignment.definition),
         context: Arc::new(Mutex::new(context)),
         cancel: Arc::clone(&cancel),
     };
@@ -188,6 +190,20 @@ fn allowed_tools(all_tools: &[Value], definition: &AgentDefinition) -> Vec<Value
         })
         .cloned()
         .collect()
+}
+
+/// Eine Definition mit `tools` bekommt nur die MCP-Werkzeuge, deren vollen Namen sie nennt.
+fn mcp_access(definition: &AgentDefinition) -> McpAccess {
+    let Some(allowed) = &definition.tools else {
+        return McpAccess::All;
+    };
+    McpAccess::Only(
+        allowed
+            .iter()
+            .filter(|name: &&String| is_mcp_tool(name))
+            .cloned()
+            .collect(),
+    )
 }
 
 /// Status für `task_notification` und Ergebnis fürs Modell.

@@ -22,6 +22,7 @@ use serde_json::{Value, json};
 use super::args::{self, AgentArgs, Start};
 use super::context::{self, ContextMeasure};
 use super::hooks::Hooks;
+use super::mcp::{self, McpAccess, McpServers};
 use super::output::{self, Output};
 use super::paths::{self, Roots};
 use super::prompt::{self, MemoryFile, PromptContext, SystemPrompt};
@@ -32,6 +33,7 @@ use super::transcript::Transcript;
 use super::turn::{self, Answers, Outcome, Role, Shared, TurnEvent, TurnJob};
 use super::{
     EXIT_START_FAILED, Environment, agents, content, fallback_scratchpad, home_dir, invocation,
+    settings,
 };
 
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
@@ -74,6 +76,7 @@ struct Session {
     measure: ContextMeasure,
     model: String,
     tools: Vec<Value>,
+    mcp_access: McpAccess,
     tool_context: Arc<Mutex<ToolContext>>,
     transcript: Transcript,
     queue: VecDeque<Value>,
@@ -127,6 +130,18 @@ pub fn run(args: AgentArgs) -> i32 {
         definitions.push(tools::agent::definition(&agent_definitions));
         definitions
     };
+    let mcp_access = if args.tools_disabled {
+        McpAccess::None
+    } else {
+        McpAccess::All
+    };
+    let mcp_configs = mcp::config::load(
+        &home,
+        &cwd,
+        &args.mcp_configs,
+        &settings::files(&home, &cwd, &add_dirs),
+    );
+    let mcp_servers = McpServers::start(mcp_configs, &cwd);
     let output = Arc::new(Output::default());
     output.line(&output::init(
         &session_id,
@@ -183,6 +198,7 @@ pub fn run(args: AgentArgs) -> i32 {
             tools: subagent_tools,
             inbox: input_sender,
         },
+        mcp: mcp_servers,
     };
     let mut session = Session {
         shared: Arc::new(shared),
@@ -193,6 +209,7 @@ pub fn run(args: AgentArgs) -> i32 {
         measure: ContextMeasure::default(),
         model: args.model,
         tools: tool_definitions,
+        mcp_access,
         tool_context: Arc::new(Mutex::new(tool_context)),
         transcript,
         queue: VecDeque::new(),
@@ -201,6 +218,7 @@ pub fn run(args: AgentArgs) -> i32 {
     session.run_loop(&input_receiver);
     // Ohne Agent hätte niemand mehr ihre Ausgabe gelesen oder sie gestoppt.
     session.shared.tasks.stop_all();
+    session.shared.mcp.close_all();
     0
 }
 
@@ -370,16 +388,25 @@ impl Session {
                 }
                 None => self.reply_error(request_id, "model fehlt"),
             },
-            "get_context_usage" => self.shared.output.line(&output::control_success(
+            "get_context_usage" => {
+                let mut tools = self.tools.clone();
+                tools.extend(self.mcp_access.definitions(&self.shared.mcp));
+                self.shared.output.line(&output::control_success(
+                    request_id,
+                    context::usage_report(
+                        &self.model,
+                        self.shared.context_window,
+                        &self.system_prompt,
+                        &tools,
+                        &self.transcript.messages,
+                    ),
+                ));
+            }
+            "mcp_status" => self.shared.output.line(&output::control_success(
                 request_id,
-                context::usage_report(
-                    &self.model,
-                    self.shared.context_window,
-                    &self.system_prompt,
-                    &self.tools,
-                    &self.transcript.messages,
-                ),
+                json!({ "mcpServers": self.shared.mcp.status() }),
             )),
+            "mcp_reconnect" | "mcp_toggle" => self.change_mcp_server(request_id, request),
             "stop_task" => {
                 let task_id = request
                     .get("task_id")
@@ -391,6 +418,40 @@ impl Session {
                 }
             }
             other => self.reply_error(request_id, &format!("nicht unterstützt: {other}")),
+        }
+    }
+
+    /// Neu verbinden und Umschalten dauern bis zu 30 s — in einem eigenen Thread, damit die
+    /// Hauptschleife währenddessen Esc und Rückfragen weiter annimmt.
+    fn change_mcp_server(&self, request_id: &str, request: &Value) {
+        let Some(name) = request.get("serverName").and_then(Value::as_str) else {
+            self.reply_error(request_id, "serverName fehlt");
+            return;
+        };
+        let enabled = request.get("enabled").and_then(Value::as_bool);
+        let is_toggle = request.get("subtype").and_then(Value::as_str) == Some("mcp_toggle");
+        if is_toggle && enabled.is_none() {
+            self.reply_error(request_id, "enabled fehlt");
+            return;
+        }
+        let shared = Arc::clone(&self.shared);
+        let name = name.to_owned();
+        let reply_id = request_id.to_owned();
+        let spawned = thread::Builder::new()
+            .name("agent-mcp-control".to_owned())
+            .spawn(move || {
+                let result = match enabled {
+                    Some(is_enabled) if is_toggle => shared.mcp.toggle(&name, is_enabled),
+                    _ => shared.mcp.reconnect(&name),
+                };
+                let line = match result {
+                    Ok(()) => output::control_success(&reply_id, json!({})),
+                    Err(error) => output::control_error(&reply_id, &error),
+                };
+                shared.output.line(&line);
+            });
+        if let Err(error) = spawned {
+            self.reply_error(request_id, &format!("Thread startet nicht: {error}"));
         }
     }
 
@@ -453,6 +514,7 @@ impl Session {
             measure: self.measure,
             messages: self.request_messages(),
             tools: self.tools.clone(),
+            mcp_access: self.mcp_access.clone(),
             context: Arc::clone(&self.tool_context),
             cancel: Arc::clone(&cancel),
         };

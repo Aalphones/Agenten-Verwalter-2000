@@ -15,6 +15,7 @@ use verwalter_lib::{
         ChangeKind, ChangeScope, ChangesReach, DiffLine, DiffLineKind, FileChange, FileDiff,
         LineStat, RepositoryChanges, SessionChanges,
     },
+    cli_update::model::{CliUpdateOutcome, CliVersionStatus},
     commands::app::AppInfo,
     context::model::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
@@ -112,6 +113,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     UsageStatus::export_all(&cfg)?;
     AccountInfo::export_all(&cfg)?;
     AccountStatus::export_all(&cfg)?;
+    CliUpdateOutcome::export_all(&cfg)?;
+    CliVersionStatus::export_all(&cfg)?;
     SessionTldr::export_all(&cfg)?;
     ProjectTldr::export_all(&cfg)?;
     SessionTldrView::export_all(&cfg)?;

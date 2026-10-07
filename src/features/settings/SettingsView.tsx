@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
 import { AccountRow } from '@/features/account/AccountRow';
+import { CliVersionRow } from '@/features/cliupdate/CliVersionRow';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
 import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
@@ -144,6 +145,12 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
           <section className="settings-view__section">
             <h2 className="settings-view__section-title">Konto</h2>
             <AccountRow />
+          </section>
+        )}
+        {current.operatingMode !== 'standalone' && (
+          <section className="settings-view__section">
+            <h2 className="settings-view__section-title">Claude Code</h2>
+            <CliVersionRow />
           </section>
         )}
         <section className="settings-view__section">

@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-01_autarker-agent/` (Autark)
-**Phase:** 8/9 — MCP-Server (pending; Phase 7 complete)
-**Nächster Schritt:** Autark Phase 8 in frischer Session (`phase-8-mcp.md`, zuerst FINDINGS → Phase 8: MCP-Clients in `turn::Shared`, damit Subagenten die Werkzeuge mitbekommen). Phasen 1–7 fertig. Phase-7-Smoke (Subagent vorne und im Hintergrund, Stoppen, Rückfrage aus dem Subagenten, eigene Definition `pruefer.md`, Umlaute aus `ping`) sowie Phase-5- und Phase-6-Smokes (Verdichten, Bild, TL;DR, Hintergrundprozess samt Hinweis/TaskStop/Stoppen im Panel) mit echtem Modell stehen noch aus; Smokes „Git-Werkzeuge“, „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ weiter offen.
+**Phase:** 9/9 — Web und Abschluss (pending; Phase 8 complete)
+**Nächster Schritt:** Autark Phase 9 in frischer Session (`phase-9-web-abschluss.md`, zuerst FINDINGS → Phase 9). Phasen 1–8 fertig. Phase-8-Smoke (MCP: `comfy` verbinden und aufrufen, Rückfrage in „Manuell“, Hook `mcp__comfy__.*`, kaputter Server, Dialog — Wackelstellen im FINDINGS-Eintrag „Smoke (Phase 8)“) und Phase-7-Smoke (Subagent vorne und im Hintergrund, Stoppen, Rückfrage aus dem Subagenten, eigene Definition `pruefer.md`, Umlaute aus `ping`) sowie Phase-5- und Phase-6-Smokes (Verdichten, Bild, TL;DR, Hintergrundprozess samt Hinweis/TaskStop/Stoppen im Panel) mit echtem Modell stehen noch aus; Smokes „Git-Werkzeuge“, „Session-Übergabe“, „Dateiverweise im Chat“ und „Claude-Konto“ weiter offen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -13,7 +13,7 @@
 3. ~~Changes-Review~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_changes-review/`, `v0.12.0`, ADR 015).
 4. ~~Claude Code + LM Studio~~ — erledigt und archiviert (`docs/archive/2026-10/2026-10-01_claude-code-lokal/`, `v0.13.0`, ADR 016).
 4a. ~~Claude-Konto~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_claude-konto.md`, ADR 021); `v0.14.0`.
-5. **Autark** (`autarker-agent`) — Phasen 1–7 fertig, größter Plan (9 Phasen, drei „heikel“).
+5. **Autark** (`autarker-agent`) — Phasen 1–8 fertig, größter Plan (9 Phasen, drei „heikel“).
 6. ~~Dateiverweise im Chat~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_dateiverweise-im-chat.md`, ADR 023), Smoke offen; `v0.15.0` auf Zuruf gesetzt. Prüfprogramm einmal gegen das echte facepass auf dem Arbeitslaptop.
 7. ~~MCP-Anmeldung~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-05_mcp-anmeldung.md`, ADR 024), Smoke offen; `v0.16.0` auf Zuruf gesetzt.
 8. ~~Git-Werkzeuge~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_git-werkzeuge/`, ADR 025), Smoke offen, Release auf Zuruf (Minor-Version).

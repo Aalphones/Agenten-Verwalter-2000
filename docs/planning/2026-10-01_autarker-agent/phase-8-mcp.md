@@ -26,36 +26,47 @@ Ziel: Der Agent verbindet sich mit den MCP-Servern des Benutzers, die ohne Anthr
 
 ### Konfiguration `standalone/mcp/config.rs`
 
-- [ ] `pub enum Transport { Stdio { command: String, args: Vec<String>, env: Vec<(String, String)> }, Http { url: String, headers: Vec<(String, String)> }, Unsupported(String) }`, `pub struct ServerConfig { pub name: String, pub scope: &'static str /* "user" | "local" | "project" */, pub transport: Transport }`.
-- [ ] `pub fn load(home: &Path, cwd: &Path, add_dirs: &[PathBuf], settings_files: &[PathBuf]) -> Vec<ServerConfig>` nach der Annahme im Kontext: Benutzerbereich, Projektbereich (je `cwd`/`add_dir` `.mcp.json`, Freigabe aus den Einstellungsdateien), lokaler Bereich (Schlüssel in `projects`, der `cwd` entspricht — Vergleich ohne Groß-/Kleinschreibung, `/` und `\` gleich). Gleicher Name: lokal vor Projekt vor Benutzer. `type: "sse"` → `Unsupported("SSE-Transport wird nicht unterstützt.")`. Ersetzung `${VAR}`/`${VAR:-vorgabe}` in `command`, `args`, `env`, `url`, `headers`. Unlesbare Datei → stderr-Zeile **ohne Inhalt**.
-- [ ] Ausgeschaltete Server: `%USERPROFILE%\.verwalter\agent\mcp-disabled.json`, Objekt Arbeitsordner (klein geschrieben) → Liste von Namen. `pub fn disabled(cwd) -> HashSet<String>`, `pub fn set_disabled(cwd, name, disabled: bool)` (Datei neu schreiben über `.tmp` + `rename`).
+- [x] `pub enum Transport { Stdio { command: String, args: Vec<String>, env: Vec<(String, String)> }, Http { url: String, headers: Vec<(String, String)> }, Unsupported(String) }`, `pub struct ServerConfig { pub name: String, pub scope: &'static str /* "user" | "local" | "project" */, pub transport: Transport }`.
+- [x] `pub fn load(home: &Path, cwd: &Path, add_dirs: &[PathBuf], settings_files: &[PathBuf]) -> Vec<ServerConfig>` nach der Annahme im Kontext: Benutzerbereich, Projektbereich (je `cwd`/`add_dir` `.mcp.json`, Freigabe aus den Einstellungsdateien), lokaler Bereich (Schlüssel in `projects`, der `cwd` entspricht — Vergleich ohne Groß-/Kleinschreibung, `/` und `\` gleich). Gleicher Name: lokal vor Projekt vor Benutzer. `type: "sse"` → `Unsupported("SSE-Transport wird nicht unterstützt.")`. Ersetzung `${VAR}`/`${VAR:-vorgabe}` in `command`, `args`, `env`, `url`, `headers`. Unlesbare Datei → stderr-Zeile **ohne Inhalt**.
+- [x] Ausgeschaltete Server: `%USERPROFILE%\.verwalter\agent\mcp-disabled.json`, Objekt Arbeitsordner (klein geschrieben) → Liste von Namen. `pub fn disabled(cwd) -> HashSet<String>`, `pub fn set_disabled(cwd, name, disabled: bool)` (Datei neu schreiben über `.tmp` + `rename`).
 
 ### Client `standalone/mcp/client.rs`
 
-- [ ] `pub struct McpClient` mit `fn connect(config: &ServerConfig, cancel: &AtomicBool) -> Result<McpClient, String>`, `fn tools(&self) -> &[McpTool]` (`McpTool { name: String, description: String, input_schema: Value }`), `fn call(&self, tool: &str, arguments: &Value, cancel: &AtomicBool) -> Result<(String, bool), String>` (Text, `isError`), `fn close(self)`.
-- [ ] stdio: Prozess mit `command`/`args`/`env`, `hide_console`, stdin/stdout als Zeilen-JSON, stderr in einen Thread, der nur die letzten 20 Zeilen für Fehlermeldungen behält. Scheitert der Start mit „nicht gefunden“ und hat `command` keine Endung, einmal über `cmd /c <command> <args…>` versuchen (Windows-Starter wie `npx`). Ein Lese-Thread verteilt Antworten nach `id` an wartende Aufrufer; Benachrichtigungen des Servers werden ignoriert.
-- [ ] HTTP: `POST url` mit `Content-Type: application/json`, `Accept: application/json, text/event-stream`, den `headers` und nach `initialize` dem `Mcp-Session-Id` aus der Antwort. Antwort `application/json` → direkt; `text/event-stream` → `data:`-Zeilen lesen, bis die Nachricht mit passender `id` kommt. Status 401/403 → Fehler „Anmeldung (OAuth) wird im autarken Agenten nicht unterstützt.“
-- [ ] Ablauf: `initialize` (`protocolVersion` = Konstante aus der Spezifikation, `capabilities: {}`, `clientInfo: {name: "verwalter", version: <App-Version>}`), dann `notifications/initialized`, dann `tools/list` mit `nextCursor` bis zum Ende. Zeitlimits: Verbindung und `initialize` 30 s, `tools/call` 300 s; `cancel` wird während `call` alle 50 ms geprüft (Abbruch → Fehler „Vom Benutzer unterbrochen.“).
-- [ ] Ergebnis von `tools/call`: alle `content[]` mit `type: "text"` zusammengefügt; Bilder (`type: "image"`) als Satz „[Bild vom MCP-Server, <mimeType>]“ (Weitergabe ans Modell als Bild ist nicht Teil dieses Plans); `isError` übernehmen.
+- [x] `pub struct McpClient` mit `fn connect(config: &ServerConfig, cancel: &AtomicBool) -> Result<McpClient, String>`, `fn tools(&self) -> &[McpTool]` (`McpTool { name: String, description: String, input_schema: Value }`), `fn call(&self, tool: &str, arguments: &Value, cancel: &AtomicBool) -> Result<(String, bool), String>` (Text, `isError`), `fn close(self)`.
+- [x] stdio: Prozess mit `command`/`args`/`env`, `hide_console`, stdin/stdout als Zeilen-JSON, stderr in einen Thread, der nur die letzten 20 Zeilen für Fehlermeldungen behält. Scheitert der Start mit „nicht gefunden“ und hat `command` keine Endung, einmal über `cmd /c <command> <args…>` versuchen (Windows-Starter wie `npx`). Ein Lese-Thread verteilt Antworten nach `id` an wartende Aufrufer; Benachrichtigungen des Servers werden ignoriert.
+- [x] HTTP: `POST url` mit `Content-Type: application/json`, `Accept: application/json, text/event-stream`, den `headers` und nach `initialize` dem `Mcp-Session-Id` aus der Antwort. Antwort `application/json` → direkt; `text/event-stream` → `data:`-Zeilen lesen, bis die Nachricht mit passender `id` kommt. Status 401/403 → Fehler „Anmeldung (OAuth) wird im autarken Agenten nicht unterstützt.“
+- [x] Ablauf: `initialize` (`protocolVersion` = Konstante aus der Spezifikation, `capabilities: {}`, `clientInfo: {name: "verwalter", version: <App-Version>}`), dann `notifications/initialized`, dann `tools/list` mit `nextCursor` bis zum Ende. Zeitlimits: Verbindung und `initialize` 30 s, `tools/call` 300 s; `cancel` wird während `call` alle 50 ms geprüft (Abbruch → Fehler „Vom Benutzer unterbrochen.“).
+- [x] Ergebnis von `tools/call`: alle `content[]` mit `type: "text"` zusammengefügt; Bilder (`type: "image"`) als Satz „[Bild vom MCP-Server, <mimeType>]“ (Weitergabe ans Modell als Bild ist nicht Teil dieses Plans); `isError` übernehmen.
 
 ### Verwaltung `standalone/mcp/mod.rs`
 
-- [ ] `pub struct McpServers` hält je Server Zustand (`Pending`, `Connected(McpClient)`, `Failed(String)`, `Disabled`) hinter einer Sperre. Beim Start des Agenten je nicht ausgeschaltetem Server ein Thread, der verbindet; die Verbindung blockiert den Start nicht.
-- [ ] `pub fn tool_definitions(&self) -> Vec<Value>`: für jeden verbundenen Server je Werkzeug `{"type":"function","function":{"name":"mcp__<server>__<werkzeug>","description":…,"parameters":<input_schema>}}`. Zeichen außer `A–Z a–z 0–9 _ -` in Server- und Werkzeugnamen werden zu `_`; über 64 Zeichen → auf 64 kürzen und in FINDINGS notieren, falls es vorkommt. Wird bei jeder Modellanfrage neu gebaut (spät verbundene Server zählen ab der nächsten Anfrage).
-- [ ] `pub fn call(&self, full_name: &str, input: &Value, cancel) -> ToolOutput` über die Zuordnung Name → (Server, Werkzeug).
-- [ ] `pub fn status(&self) -> Value` im Format aus dem Kontext (`config` nur mit `type`, `command`, `args` bzw. `url`).
-- [ ] `pub fn reconnect(&self, name) -> Result<(), String>` (schließen, neu verbinden, Ergebnis abwarten) und `pub fn toggle(&self, name, enabled: bool) -> Result<(), String>` (aus: schließen, `Disabled`, `set_disabled`; an: `set_disabled(false)`, `Pending`, verbinden im Thread). Unbekannter Name → `Err("Server not found: <name>")` (Wortlaut wie die Claude-Kommandozeile).
+- [x] `pub struct McpServers` hält je Server Zustand (`Pending`, `Connected(McpClient)`, `Failed(String)`, `Disabled`) hinter einer Sperre. Beim Start des Agenten je nicht ausgeschaltetem Server ein Thread, der verbindet; die Verbindung blockiert den Start nicht.
+- [x] `pub fn tool_definitions(&self) -> Vec<Value>`: für jeden verbundenen Server je Werkzeug `{"type":"function","function":{"name":"mcp__<server>__<werkzeug>","description":…,"parameters":<input_schema>}}`. Zeichen außer `A–Z a–z 0–9 _ -` in Server- und Werkzeugnamen werden zu `_`; über 64 Zeichen → auf 64 kürzen und in FINDINGS notieren, falls es vorkommt. Wird bei jeder Modellanfrage neu gebaut (spät verbundene Server zählen ab der nächsten Anfrage).
+- [x] `pub fn call(&self, full_name: &str, input: &Value, cancel) -> ToolOutput` über die Zuordnung Name → (Server, Werkzeug).
+- [x] `pub fn status(&self) -> Value` im Format aus dem Kontext (`config` nur mit `type`, `command`, `args` bzw. `url`).
+- [x] `pub fn reconnect(&self, name) -> Result<(), String>` (schließen, neu verbinden, Ergebnis abwarten) und `pub fn toggle(&self, name, enabled: bool) -> Result<(), String>` (aus: schließen, `Disabled`, `set_disabled`; an: `set_disabled(false)`, `Pending`, verbinden im Thread). Unbekannter Name → `Err("Server not found: <name>")` (Wortlaut wie die Claude-Kommandozeile).
 
 ### Einbindung
 
-- [ ] `tools/mod.rs`: `definitions` hängt `McpServers::tool_definitions()` an (Hauptagent und Subagenten, sofern deren `tools` nicht einschränkt; eine Definition mit `tools` bekommt MCP-Werkzeuge nur, wenn ihr voller Name dort steht). `run` leitet Namen mit Präfix `mcp__` an `McpServers::call`.
-- [ ] `permissions::decide`: Präfix `mcp__` → `Manual` → `Ask`, sonst `Allow`. Hooks laufen mit dem vollen Namen.
-- [ ] `session.rs`: `mcp_status` → `control_success` mit `{"mcpServers": status}`; `mcp_reconnect`/`mcp_toggle` in einem eigenen Thread ausführen und danach `control_success` mit `{}` bzw. `control_error` mit dem Fehlertext. Beim Prozessende alle Clients schließen (stdio-Prozesse beenden).
+- [x] `tools/mod.rs`: `definitions` hängt `McpServers::tool_definitions()` an (Hauptagent und Subagenten, sofern deren `tools` nicht einschränkt; eine Definition mit `tools` bekommt MCP-Werkzeuge nur, wenn ihr voller Name dort steht). `run` leitet Namen mit Präfix `mcp__` an `McpServers::call`.
+- [x] `permissions::decide`: Präfix `mcp__` → `Manual` → `Ask`, sonst `Allow`. Hooks laufen mit dem vollen Namen.
+- [x] `session.rs`: `mcp_status` → `control_success` mit `{"mcpServers": status}`; `mcp_reconnect`/`mcp_toggle` in einem eigenen Thread ausführen und danach `control_success` mit `{}` bzw. `control_error` mit dem Fehlertext. Beim Prozessende alle Clients schließen (stdio-Prozesse beenden).
 
 ### Doku
 
-- [ ] ADR 017, „Konsequenzen“: claude.ai-Connectoren fehlen; OAuth und SSE nicht unterstützt; viele MCP-Werkzeuge vergrößern den Prompt jeder Anfrage (Tempo); ausgeschaltete Server speichert der eigene Agent in eigener Datei, nicht in der Konfiguration von Claude Code.
-- [ ] `docs/code-map.md`, Zeile „Autarker Agent“: `mcp/` (`config`, `client`, `mod`).
-- [ ] Commit `feat(standalone): MCP-Server über stdio und HTTP`.
+- [x] ADR 017, „Konsequenzen“: claude.ai-Connectoren fehlen; OAuth und SSE nicht unterstützt; viele MCP-Werkzeuge vergrößern den Prompt jeder Anfrage (Tempo); ausgeschaltete Server speichert der eigene Agent in eigener Datei, nicht in der Konfiguration von Claude Code.
+- [x] `docs/code-map.md`, Zeile „Autarker Agent“: `mcp/` (`config`, `client`, `mod`).
+- [x] Commit `feat(standalone): MCP-Server über stdio und HTTP`.
 
 ## Report-Back
+
+Umgesetzt in `src-tauri/src/standalone/mcp/` (`config`, `client`, `mod`), eingebunden in `args`, `turn`, `permissions`, `session`, `subagent`. Geprüft nur mit Clippy und `pnpm check`; kein Live-Lauf — die AK dieser Phase stehen als Smoke 3 der README und als Smoke-Eintrag in FINDINGS aus.
+
+Abweichungen vom Plan:
+
+- **`--mcp-config` wird ausgewertet** (stand nicht im Kontrakt): der Verwalter reicht darüber die `.mcp.json` der Repositories nach (`process.rs`, `project_mcp_configs`). Solche Server melden `scope: "dynamic"` wie bei der Claude-Kommandozeile. Rang: lokal vor `dynamic` vor Projekt vor Benutzer. Die `.mcp.json` der `--add-dir`-Ordner liest der Agent deshalb nicht noch einmal selbst.
+- **`.mcp.json` ohne Freigabe:** laut Doku von Claude Code laden `-p`-Läufe Projekt-Server ungefragt; der Verwalter startet Sessions mit `-p`. Deshalb wirkt nur `disabledMcpjsonServers` (aus den Einstellungsdateien und aus `projects[<Ordner>]` in `~/.claude.json`), nicht `enableAllProjectMcpServers`/`enabledMcpjsonServers`.
+- **Lokaler Bereich:** Claude Code schreibt denselben Ordner in mehreren Schreibweisen in `projects` (`C:\…`, `c:/…`, gesehen in `~/.claude.json`); alle passenden Einträge zählen, der erste gewinnt je Name.
+- **Protokollversion `2025-11-25`** statt der aktuellen Spezifikation `2026-07-28`: die neue Fassung hat keinen `initialize`-Handschlag mehr (zustandslos, Version je Anfrage). Der Plan legt `initialize` → `tools/list` → `tools/call` fest; das ist die letzte Fassung mit Handschlag, die auch Server beider Fassungen bedienen. Nur-neue Server erscheinen als `failed` (ADR 017).
+- **`type: "streamable-http"`** gilt wie `http` (Synonym bei Claude Code).
+- Anfragen des Servers an den Client über stdio (`ping`, `roots/list` …) bekommen sofort eine Antwort (`ping` → `{}`, sonst „Method not found“), damit der Server nicht hängt. Ohne Text-Inhalt im Ergebnis geht `structuredContent` als Text ans Modell.

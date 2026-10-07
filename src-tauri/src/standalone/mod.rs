@@ -9,6 +9,7 @@ pub mod context;
 pub mod hooks;
 pub mod invocation;
 pub mod llm;
+pub mod mcp;
 pub mod memory;
 pub mod output;
 pub mod paths;

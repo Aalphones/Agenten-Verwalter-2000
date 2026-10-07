@@ -4,6 +4,7 @@ pub mod artifacts;
 pub mod attachments;
 pub mod background;
 pub mod changes;
+pub mod cli_update;
 pub mod commands;
 pub mod context;
 pub mod db;
@@ -31,6 +32,7 @@ use std::sync::Arc;
 use tauri::Manager;
 
 use account::AccountService;
+use cli_update::CliUpdateService;
 use db::Database;
 use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
@@ -55,6 +57,7 @@ pub fn run() {
             app.manage(database);
             app.manage(UsageService::new());
             app.manage(AccountService::new());
+            app.manage(CliUpdateService::new());
             app.manage(VoiceService::new());
             SessionRegistry::start_reaper(app.handle().clone());
             // Ohne Server fehlen nur die Artefakte; `artifacts_list` meldet das.
@@ -99,6 +102,8 @@ pub fn run() {
             commands::usage::usage_refresh,
             commands::account::account_load,
             commands::account::account_login,
+            commands::cli_update::cli_update_load,
+            commands::cli_update::cli_update_run,
             commands::attachments::attachment_add_files,
             commands::attachments::attachment_add_bytes,
             commands::attachments::attachment_discard,

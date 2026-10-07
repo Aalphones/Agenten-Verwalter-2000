@@ -1,6 +1,7 @@
 //! Rechte je Werkzeug und Modus (ADR 017): was ohne Rückfrage läuft, was der Benutzer erlauben
 //! muss und was abgelehnt wird. Einen Sicherheits-Klassifizierer wie Claude im Modus Auto gibt es
 //! nicht — dort laufen Befehle ungefragt.
+use super::mcp::is_mcp_tool;
 use super::paths::Access;
 use super::tools::{
     AGENT_TOOL, ASK_USER_TOOL, BASH_TOOL, EDIT_TOOL, GLOB_TOOL, GREP_TOOL, POWERSHELL_TOOL,
@@ -44,6 +45,10 @@ pub fn decide(tool: &str, mode: Mode, access: Option<Access>) -> Decision {
         ASK_USER_TOOL => Decision::Ask,
         // Die Werkzeuge des Subagenten fragen selbst.
         AGENT_TOOL => Decision::Allow,
+        name if is_mcp_tool(name) => match mode {
+            Mode::Manual => Decision::Ask,
+            Mode::Edit | Mode::Auto | Mode::Plan => Decision::Allow,
+        },
         // Ein Werkzeug, das hier fehlt, fragt — neue Werkzeuge sind nie stillschweigend frei.
         _ => Decision::Ask,
     }

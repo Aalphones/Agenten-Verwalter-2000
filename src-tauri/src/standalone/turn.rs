@@ -23,6 +23,7 @@ use super::content;
 use super::context::{self, ContextMeasure};
 use super::hooks::{HookCall, HookVerdict, Hooks};
 use super::llm::{self, ChatRequest, Completion, LlmError, ToolCall};
+use super::mcp::{McpAccess, McpServers, is_mcp_tool};
 use super::output::{self, Output};
 use super::paths::{self, Access};
 use super::permissions::{self, Decision};
@@ -61,6 +62,7 @@ pub struct Shared {
     /// Hintergrundprozesse und Subagenten; sie überdauern den Turn, der sie gestartet hat.
     pub tasks: Arc<Tasks>,
     pub subagents: Subagents,
+    pub mcp: Arc<McpServers>,
 }
 
 /// Rückfragen, auf deren Antwort gerade ein Thread wartet, nach Request-ID.
@@ -111,7 +113,9 @@ pub struct TurnJob {
     pub measure: ContextMeasure,
     /// Systemprompt und Verlauf bis einschließlich der neuen Benutzer-Nachricht.
     pub messages: Vec<Value>,
+    /// Die eingebauten Werkzeuge; die MCP-Werkzeuge kommen je Anfrage frisch dazu.
     pub tools: Vec<Value>,
+    pub mcp_access: McpAccess,
     pub context: Arc<Mutex<ToolContext>>,
     pub cancel: Arc<AtomicBool>,
 }
@@ -284,11 +288,14 @@ fn add_task_notes(job: &mut TurnJob) {
 }
 
 fn ask_model(job: &TurnJob) -> Result<Completion, Outcome> {
+    // Neu je Anfrage: ein MCP-Server, der erst während des Turns verbunden ist, zählt sofort.
+    let mut tools = job.tools.clone();
+    tools.extend(job.mcp_access.definitions(&job.shared.mcp));
     let request = ChatRequest {
         base_url: &job.shared.base_url,
         model: &job.model,
         messages: &job.messages,
-        tools: &job.tools,
+        tools: &tools,
         response_format: None,
     };
     match llm::complete(&request, &job.cancel) {
@@ -440,6 +447,13 @@ fn run_tool(job: &TurnJob, call: &ParsedCall) -> ToolOutput {
             return refused(NESTED_AGENT_DENIAL);
         }
         return subagent::run(job, &input, &call.id);
+    }
+    // Ohne den Werkzeug-Kontext: ein langer MCP-Aufruf soll ihn nicht sperren.
+    if is_mcp_tool(&call.name) {
+        if !job.mcp_access.allows(&call.name) {
+            return refused(&format!("Unbekanntes Werkzeug: {}", call.name));
+        }
+        return job.shared.mcp.call(&call.name, &input, &job.cancel);
     }
     let mut context = job.context.lock().unwrap_or_else(PoisonError::into_inner);
     // Bis hierher kommt ein Pfad außerhalb nur mit Erlaubnis des Benutzers oder eines Hooks.

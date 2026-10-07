@@ -5,6 +5,7 @@ pub mod attachments;
 pub mod background;
 pub mod changes;
 pub mod chat;
+pub mod cli_update;
 pub mod context;
 pub mod file_links;
 pub mod git;

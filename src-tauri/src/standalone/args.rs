@@ -22,6 +22,8 @@ pub struct AgentArgs {
     pub start: Start,
     pub add_dirs: Vec<PathBuf>,
     pub allowed_rules: Vec<String>,
+    /// Dateien mit MCP-Servern; der Verwalter reicht darüber die `.mcp.json` der Repositories nach.
+    pub mcp_configs: Vec<PathBuf>,
     pub system_prompt: Option<String>,
     /// Zusatz des Verwalters zum Systemprompt, z. B. die Vorgabe des Scratchpad-Ordners (ADR 022).
     pub append_system_prompt: Option<String>,
@@ -37,6 +39,7 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
     let mut start = Start::None;
     let mut add_dirs: Vec<PathBuf> = Vec::new();
     let mut allowed_rules: Vec<String> = Vec::new();
+    let mut mcp_configs: Vec<PathBuf> = Vec::new();
     let mut system_prompt: Option<String> = None;
     let mut append_system_prompt: Option<String> = None;
     let mut json_schema: Option<String> = None;
@@ -58,15 +61,8 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
             "--session-id" => start = Start::New(session_id(value_of(args, &mut index)?)?),
             "--resume" => start = Start::Resume(session_id(value_of(args, &mut index)?)?),
             "--add-dir" => add_dirs.push(PathBuf::from(value_of(args, &mut index)?)),
-            "--allowedTools" => {
-                while let Some(rule) = args.get(index + 1) {
-                    if rule.starts_with(OPTION_PREFIX) {
-                        break;
-                    }
-                    allowed_rules.push(rule.clone());
-                    index += 1;
-                }
-            }
+            "--allowedTools" => allowed_rules.extend(values_of(args, &mut index)),
+            "--mcp-config" => mcp_configs.extend(values_of(args, &mut index).map(PathBuf::from)),
             "--system-prompt" => system_prompt = Some(value_of(args, &mut index)?),
             "--append-system-prompt" => append_system_prompt = Some(value_of(args, &mut index)?),
             "--json-schema" => json_schema = Some(value_of(args, &mut index)?),
@@ -88,6 +84,7 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
         start,
         add_dirs,
         allowed_rules,
+        mcp_configs,
         system_prompt,
         append_system_prompt,
         json_schema,
@@ -102,6 +99,18 @@ fn value_of(args: &[String], index: &mut usize) -> Result<String, String> {
     args.get(*index)
         .cloned()
         .ok_or_else(|| format!("{option} ohne Wert"))
+}
+
+/// Alle Werte nach der Option an `index` bis zur nächsten `--`-Option; rückt `index` auf den
+/// letzten vor.
+fn values_of<'a>(args: &'a [String], index: &mut usize) -> impl Iterator<Item = String> + 'a {
+    let first = *index + 1;
+    let count = args[first..]
+        .iter()
+        .take_while(|value: &&String| !value.starts_with(OPTION_PREFIX))
+        .count();
+    *index += count;
+    args[first..first + count].iter().cloned()
 }
 
 /// Gegenstück zu `Mode::cli_value`; auch für `set_permission_mode`.
