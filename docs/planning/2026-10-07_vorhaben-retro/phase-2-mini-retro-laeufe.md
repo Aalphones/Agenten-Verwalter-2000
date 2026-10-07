@@ -56,9 +56,9 @@ Leere Liste → eine Zeile `- keine`. Fehlgeschlagene Session: nach der Status-Z
 
 ## Checkliste
 
-- [ ] `retro/prompt.rs` und `retro/findings.rs` wie oben; Modul-Einträge in `retro/mod.rs`.
-- [ ] `ProjectState` in `src-tauri/src/sessions/registry.rs` bekommt `retro_running: bool` (in `ProjectState::new` mit `false`), nur im Speicher.
-- [ ] `src-tauri/src/sessions/registry/retro.rs` (als Untermodul registrieren wie `artifacts`): `pub fn run_retro(&self, app: &AppHandle, project_id: &str) -> Result<RetroExport, CommandError>`:
+- [x] `retro/prompt.rs` und `retro/findings.rs` wie oben; Modul-Einträge in `retro/mod.rs`.
+- [x] `ProjectState` in `src-tauri/src/sessions/registry.rs` bekommt `retro_running: bool` (in `ProjectState::new` mit `false`), nur im Speicher.
+- [x] `src-tauri/src/sessions/registry/retro.rs` (als Untermodul registrieren wie `artifacts`): `pub fn run_retro(&self, app: &AppHandle, project_id: &str) -> Result<RetroExport, CommandError>`:
   1. `print_program(app)?` — vor jeder Sperre.
   2. Unter der Vorhaben-Sperre: Vorhaben holen (sonst `project_not_found`), läuft `retro_running` → Fehler laut Kontrakt, sonst auf `true` setzen und `name` kopieren. Sperre freigeben.
   3. Ab hier jeden Ausgang über eine Hilfsfunktion `finish_retro(project_id)` führen, die `retro_running` wieder auf `false` setzt — auch bei Fehlern (Muster: Ergebnis in einer inneren Funktion berechnen, danach immer zurücksetzen).
@@ -69,8 +69,15 @@ Leere Liste → eine Zeile `- keine`. Fehlgeschlagene Session: nach der Status-Z
   8. Mini-Retros: `std::thread::scope`, Sessions in Blöcken zu `RETRO_PARALLEL`; je Session ein Thread mit `ask_model::<SessionFindings>(app, &program, ModelId::Sonnet, &HaikuRequest { system_prompt: SESSION_SYSTEM_PROMPT, json_schema: SESSION_SCHEMA, input: &transcript, timeout: RETRO_TIMEOUT })`. Nach jedem fertigen Thread `done` erhöhen (`AtomicU32`) und `retro://progress` senden. Keine Sperre der Registry in den Threads.
   9. Alle fehlgeschlagen → Fehler laut Kontrakt (Dateien bleiben). Sonst `befunde.md` mit `findings::render` schreiben (IO-Fehler wie oben).
   10. `RetroExport { folder: format!(".retro/lauf-{zahl}"), session_count, failed_count }`.
-- [ ] `src-tauri/src/commands/retro.rs`: `#[tauri::command] pub async fn retro_run(app: tauri::AppHandle, registry: tauri::State<'_, SessionRegistry>, project_id: String) -> Result<RetroExport, CommandError>` → `registry.run_retro(&app, &project_id)`; in `src-tauri/src/lib.rs` registrieren.
-- [ ] ADR `docs/decisions/028-vorhaben-retro.md` (Format wie ADR 027): Kontext — Retro je Session zu teuer und verstreut, ein Lauf über alle Sessions in einem Kontext sprengt ihn. Optionen — (a) Sessions wieder aufnehmen und dort retro-n: schreibt in fremde Verläufe; (b) Subagenten im Skill lesen die Verläufe: Modellwahl in „Autark“ wirkungslos, Ablauf hängt am Agenten; (c) der Verwalter sammelt per Einmal-Aufruf mit Sonnet, der Skill urteilt — gewählt. Entscheidung: Kontrakt der README; Verwalter enthält nur die Sammel-Anweisung, keine Regeln des Nutzers. Konsequenzen: Ordner `.retro` wächst ohne Aufräumen; Retro-Sessions werden am Skill-Aufruf erkannt; der Lauf kostet je Session einen Sonnet-Aufruf.
-- [ ] `pnpm check`, Commit `feat(retro): Mini-Retros je Session und Befund-Datei`.
+- [x] `src-tauri/src/commands/retro.rs`: `#[tauri::command] pub async fn retro_run(app: tauri::AppHandle, registry: tauri::State<'_, SessionRegistry>, project_id: String) -> Result<RetroExport, CommandError>` → `registry.run_retro(&app, &project_id)`; in `src-tauri/src/lib.rs` registrieren.
+- [x] ADR `docs/decisions/028-vorhaben-retro.md` (Format wie ADR 027): Kontext — Retro je Session zu teuer und verstreut, ein Lauf über alle Sessions in einem Kontext sprengt ihn. Optionen — (a) Sessions wieder aufnehmen und dort retro-n: schreibt in fremde Verläufe; (b) Subagenten im Skill lesen die Verläufe: Modellwahl in „Autark“ wirkungslos, Ablauf hängt am Agenten; (c) der Verwalter sammelt per Einmal-Aufruf mit Sonnet, der Skill urteilt — gewählt. Entscheidung: Kontrakt der README; Verwalter enthält nur die Sammel-Anweisung, keine Regeln des Nutzers. Konsequenzen: Ordner `.retro` wächst ohne Aufräumen; Retro-Sessions werden am Skill-Aufruf erkannt; der Lauf kostet je Session einen Sonnet-Aufruf.
+- [x] `pnpm check`, Commit `feat(retro): Mini-Retros je Session und Befund-Datei`.
 
 ## Report-Back
+
+Umgesetzt wie geplant, `pnpm check` grün. Abweichungen:
+
+- Session mit unlesbarem Verlauf: kein `session-<N>.md`, in `befunde.md` nur der Fehlertext; sie zählt nicht in `total` von `retro://progress` (der Fortschritt zählt nur Sessions, für die eine Mini-Retro läuft).
+- Zitate und Fehlertexte werden in `befunde.md` auf eine Zeile gezogen, damit Zeilenumbrüche aus der Modellantwort keinen Listenpunkt zerreißen.
+- Threads über `thread::Builder::spawn_scoped` statt `scope.spawn` — ein fehlgeschlagener Thread-Start wird zum Fehler der Session statt zum Absturz der App.
+- Scheitern alle Mini-Retros, wird `befunde.md` nicht geschrieben; die `session-<N>.md` bleiben.

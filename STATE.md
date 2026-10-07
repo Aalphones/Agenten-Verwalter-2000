@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-07_vorhaben-retro/`
-**Phase:** 1/3 — Retro-Transkript und Verlaufsdateien (complete); nächste: 2/3 Mini-Retro-Läufe (heikel)
-**Nächster Schritt:** Phase 2 starten (`phase-2-mini-retro-laeufe.md`), Modell `opusplan`; `/clear` vorher.
+**Phase:** 2/3 — Mini-Retro-Läufe (complete); nächste: 3/3 Knopf „Retro“ (standard)
+**Nächster Schritt:** Phase 3 starten (`phase-3-knopf.md`), Modell `sonnet`; `/clear` vorher.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -19,7 +19,7 @@
 8. ~~Git-Werkzeuge~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_git-werkzeuge/`, ADR 025), Smoke offen, Release auf Zuruf (Minor-Version).
 9. ~~Artefakte~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_artefakte/`, `v0.17.0`, ADR 026), Smoke offen.
 10. ~~Session-Übergabe~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_session-uebergabe.md`, ADR 027, Migration 9), Smoke offen.
-11. Vorhaben-Retro — in Umsetzung (`docs/planning/2026-10-07_vorhaben-retro/`, ADR 028 in Phase 2).
+11. Vorhaben-Retro — in Umsetzung (`docs/planning/2026-10-07_vorhaben-retro/`, ADR 028 liegt vor).
 
 ## Offen
 
