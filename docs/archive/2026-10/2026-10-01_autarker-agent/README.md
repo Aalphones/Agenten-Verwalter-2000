@@ -4,7 +4,7 @@ Ziel: Eine dritte Betriebsart „Autark“, in der kein Programm und kein Server
 
 **Der Kniff:** Der eigene Agent spricht nach außen genau den Ausschnitt des Zeilenprotokolls der Claude-Kommandozeile, den der Verwalter heute liest und schreibt ([docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md), `src-tauri/src/agents/claude/protocol.rs` und `translate.rs`). Registry, Übersetzung, Rückfragen, Unterbrechen, Wiederherstellung, Chat und Hintergrund-Panel bleiben dadurch unverändert — im Core ändert sich nur, **welches Programm** mit welchen Argumenten startet.
 
-**Voraussetzung:** Plan [2026-10-01_claude-code-lokal](../../archive/2026-10/2026-10-01_claude-code-lokal/README.md) ist umgesetzt (Betriebsart, `lmstudio`-Modul, `LocalBackend`, Einstellungszeilen, Ausblenden von Kontingent und Denkaufwand). Dieser Plan ergänzt die Betriebsart `Standalone`.
+**Voraussetzung:** Plan [2026-10-01_claude-code-lokal](../2026-10-01_claude-code-lokal/README.md) ist umgesetzt (Betriebsart, `lmstudio`-Modul, `LocalBackend`, Einstellungszeilen, Ausblenden von Kontingent und Denkaufwand). Dieser Plan ergänzt die Betriebsart `Standalone`.
 
 **Grundsätzlich nicht möglich in „Autark“:** die claude.ai-Connectoren (Google Drive, Claude Docs, Alpha Vantage …) — sie laufen über Server von Anthropic. **Nicht enthalten** (Folgepläne, falls gebraucht): Notebook-Werkzeug, Plan-Modus-Werkzeug, Hook-Ereignisse außer PreToolUse, automatisches Gedächtnis (`MEMORY.md`), OAuth-Anmeldung bei MCP-Servern. Der Agent sagt dem Modell im Systemprompt, was es nicht gibt.
 
@@ -22,7 +22,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 6 | Hintergrundprozesse und Scratchpad: `run_in_background`, `TaskStop`, `stop_task`, Aufgaben-Zeilen | [phase-6-hintergrund.md](phase-6-hintergrund.md) | standard | complete |
 | 7 | Subagenten: Werkzeug `Agent`, Agent-Definitionen, Vorder- und Hintergrund, Schritte im Verwalter | [phase-7-subagenten.md](phase-7-subagenten.md) | heikel | complete |
 | 8 | MCP-Server: stdio und HTTP, Konfiguration wie Claude Code, `mcp__…`-Werkzeuge, Steueranfragen des MCP-Dialogs | [phase-8-mcp.md](phase-8-mcp.md) | heikel | complete |
-| 9 | Web: WebFetch und WebSearch (Brave); Doku, Abschluss | [phase-9-web-abschluss.md](phase-9-web-abschluss.md) | standard | pending |
+| 9 | Web: WebFetch und WebSearch (Brave); Doku, Abschluss | [phase-9-web-abschluss.md](phase-9-web-abschluss.md) | standard | complete |
 
 **Reihenfolge:** nach Plan „Claude Code mit lokalem Modell“. Phasen strikt 1 → 9; nach jeder Phase ist die Betriebsart „Autark“ benutzbar, nur mit weniger Fähigkeiten. Phase 8 ist unabhängig vom geparkten Plan „MCP-Dialog“: sie beantwortet dessen Steueranfragen, egal ob der Dialog schon gebaut ist. Umsetzung direkt auf `main`, ein Commit pro Phase, Scope `standalone` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Neue Rust-Abhängigkeiten nur die unter „Festgelegte Entscheidungen“ genannten, hinzugefügt nach `mode-dependencies`. Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen und mitcommitten. Erkenntnisse nach [FINDINGS.md](FINDINGS.md).
 
@@ -142,10 +142,24 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Die Betriebsart „Autark“ hat einen eigenen Agenten: `verwalter.exe agent` spricht den Ausschnitt des Zeilenprotokolls der Claude-Kommandozeile, den der Verwalter liest, und redet mit dem Modell in LM Studio über die OpenAI-kompatible Schnittstelle. Er bringt Datei-, Such- und Shell-Werkzeuge, Rechte und Rückfragen, PreToolUse-Hooks, Anweisungen und Skills, Fortsetzen, Verdichten, Bilder, TL;DR, Hintergrundprozesse, Subagenten, MCP-Server und Web (Abruf und Brave-Suche) mit — ohne Claude-Kommandozeile und ohne Anthropic.
+
 ## Files touched
+
+- `src-tauri/src/standalone/` (neu, gesamte Laufzeit samt `tools/` und `mcp/`), `src-tauri/src/agents/standalone.rs`, `src-tauri/src/main.rs`, Anpassungen in `agents/claude/` (`process.rs`, `local.rs`, Registry) und in den Einstellungen (`src/features/settings/`).
+- Doku: ADR 017, `docs/glossary.md`, `docs/code-map.md`, `docs/PROJECT.md`, `docs/knowledge/claude-stream-json.md`, `AGENTS.md`.
 
 ## Commits
 
+- `646df32` Phase 1 · `016dbc1` Zusatz zum Systemprompt · `4be79f9` Phase 2 · `0ca6880` Phase 3 · `769a45e` Phase 4 · `2a725bd` Phase 5 · `23831a2` Phase 6 · `bd537e2` Umlaute · `2ae4e4c` Phase 7 · `db66d91` Phase 8 · `da097b3` Phase 9
+
 ## Deviations from plan
 
+Je Phase in ihrer Datei unter „Report-Back“. Quer: Die Smokes der Phasen 5–8 mit echtem Modell stehen aus; Phase 9 ist nur über Clippy und `pnpm check` geprüft.
+
 ## Follow-ups
+
+- Smoke-Checkliste oben abarbeiten, Wackelstellen zuerst (Unterbrechen, Subagent, MCP); dazu die offenen Smokes aus FINDINGS („Smoke (Phase 7)“, „Smoke (Phase 8)“) und die Smokes der Phasen 5 und 6.
+- 🟡 `WebFetch` führt kein JavaScript aus; Seiten, die ihren Inhalt im Browser aufbauen, kommen leer an. `WebSearch` ist ungetestet gegen den echten Dienst (kein Schlüssel zur Hand).
+- Offen aus FINDINGS: Werkzeugnamen werden bei MCP auf 64 Zeichen gekürzt (`mcp::tool_name`), Verdeckung bei gleichem Kurznamen ungeprüft.
+- Release auf Zuruf nach `docs/conventions/releases.md`.

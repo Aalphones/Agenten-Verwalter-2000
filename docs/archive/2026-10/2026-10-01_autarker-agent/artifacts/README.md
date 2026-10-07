@@ -19,7 +19,7 @@ $common = @('agent', '-p', '--input-format', 'stream-json', '--output-format', '
 Eine Nachricht, dann Ende der Eingabe (der Agent bricht beim Dateiende eine laufende Antwort ab — deshalb nur die erste Zeile, und die Antwort abwarten, indem die Eingabe offen bleibt, bis sie da ist):
 
 ```powershell
-Get-Content docs\planning\2026-10-01_autarker-agent\artifacts\beispielzeilen.jsonl -TotalCount 1 | & $agent @common --session-id $id
+Get-Content docs\archive\2026-10\2026-10-01_autarker-agent\artifacts\beispielzeilen.jsonl -TotalCount 1 | & $agent @common --session-id $id
 ```
 
 `Get-Content` schließt die Eingabe sofort, also bricht der Agent die Antwort ab. Für einen ganzen Turn die Zeile über einen Prozess mit offener Eingabe schicken, z. B. mit `System.Diagnostics.Process` (`RedirectStandardInput`): Zeile schreiben, auf die `result`-Zeile in der Ausgabe warten, dann die nächste Zeile oder `StandardInput.Close()`.

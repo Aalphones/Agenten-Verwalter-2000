@@ -170,4 +170,4 @@ Gemessen am 2026-10-04 mit Claude Code 2.1.284, LM Studio mit `gemma4-12b-qat-un
 
 ## Nachbau im eigenen Agenten
 
-Der eigene Agent der Betriebsart „Autark“ spricht genau den Ausschnitt dieses Zeilenprotokolls, den der Verwalter liest und schreibt (Kontrakt: `docs/planning/2026-10-01_autarker-agent/README.md` bzw. nach der Archivierung `docs/archive/2026-10/2026-10-01_autarker-agent/README.md`; Code: `src-tauri/src/standalone/`, [ADR 017](../decisions/017-autarker-agent.md)). Wer `translate.rs` oder `protocol.rs` ändert, prüft dort mit: Ausgabezeilen in `standalone/output.rs`, Steueranfragen in `standalone/session.rs`.
+Der eigene Agent der Betriebsart „Autark“ spricht genau den Ausschnitt dieses Zeilenprotokolls, den der Verwalter liest und schreibt (Kontrakt: `docs/archive/2026-10/2026-10-01_autarker-agent/README.md`; Code: `src-tauri/src/standalone/`, [ADR 017](../decisions/017-autarker-agent.md)). Wer `translate.rs` oder `protocol.rs` ändert, prüft dort mit: Ausgabezeilen in `standalone/output.rs`, Steueranfragen in `standalone/session.rs`.
