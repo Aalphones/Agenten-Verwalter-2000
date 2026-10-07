@@ -1,0 +1,14 @@
+//! Anweisung und Antwort-Schema für die Mini-Retro einer Session. Sie sammelt nur Rohbefunde;
+//! das Urteil fällt im Skill des Nutzers (ADR 028).
+use std::time::Duration;
+
+/// Noch nicht gemessen — Smoke 1 der Plan-README prüft es; ein Transkript an der Obergrenze
+/// brauchte mit Haiku 17 s.
+pub const RETRO_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// Höchstens so viele Einmal-Aufrufe laufen gleichzeitig.
+pub const RETRO_PARALLEL: usize = 3;
+
+pub const SESSION_SYSTEM_PROMPT: &str = "Du liest den Verlauf einer Arbeitssitzung zwischen einem Entwickler (Nutzer) und einem Coding-Agenten (Claude) und sammelst Rohbefunde für eine spätere Retrospektive. Du bewertest nichts, ziehst keine Lehren und schlägst nichts vor. Jeder Befund trägt ein wörtliches Kurzzitat aus dem Verlauf (höchstens 200 Zeichen); was du nicht zitieren kannst, lässt du weg. corrections: Stellen, an denen der Nutzer den Agenten korrigiert, zurückgepfiffen oder eine Vorliebe geäußert hat; about = worauf sich das bezog, ein Satz. failures: fehlgeschlagene Werkzeug-Aufrufe, Fehlversuche, Wiederholungen derselben Sache; what = was schiefging, ein Satz. unbackedClaims: Tatsachenbehauptungen des Agenten, für die im Verlauf kein Beleg (Werkzeug-Ergebnis, Zitat aus einer Datei) steht. facts: neue technische Fakten über Werkzeuge, Bibliotheken oder Systeme, die über diese Sitzung hinaus gelten; fact = der Fakt, ein Satz. open: was am Ende offen blieb, je ein Satz. Leere Listen sind erlaubt. Antworte auf Deutsch, erfinde nichts.";
+
+pub const SESSION_SCHEMA: &str = r#"{"type":"object","properties":{"corrections":{"type":"array","items":{"type":"object","properties":{"quote":{"type":"string"},"about":{"type":"string"}},"required":["quote","about"],"additionalProperties":false}},"failures":{"type":"array","items":{"type":"object","properties":{"what":{"type":"string"},"quote":{"type":"string"}},"required":["what","quote"],"additionalProperties":false}},"unbackedClaims":{"type":"array","items":{"type":"object","properties":{"quote":{"type":"string"}},"required":["quote"],"additionalProperties":false}},"facts":{"type":"array","items":{"type":"object","properties":{"fact":{"type":"string"},"quote":{"type":"string"}},"required":["fact","quote"],"additionalProperties":false}},"open":{"type":"array","items":{"type":"string"}}},"required":["corrections","failures","unbackedClaims","facts","open"],"additionalProperties":false}"#;

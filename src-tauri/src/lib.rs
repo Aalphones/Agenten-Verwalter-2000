@@ -149,6 +149,7 @@ pub fn run() {
             commands::tldr::tldr_project_load,
             commands::tldr::tldr_project_create,
             commands::tldr::tldr_set_carry,
+            commands::retro::retro_run,
             commands::settings::settings_load,
             commands::settings::settings_update,
             commands::settings::settings_local_models,

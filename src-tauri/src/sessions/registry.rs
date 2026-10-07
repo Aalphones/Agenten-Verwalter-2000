@@ -66,6 +66,7 @@ use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 mod artifacts;
 mod commit_scan;
 mod mcp;
+mod retro;
 mod tldr;
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
@@ -112,6 +113,8 @@ struct ProjectState {
     /// Laufzustand und Fehler eines TL;DR-Laufs gibt es nur im Speicher.
     tldr_running: bool,
     tldr_error: Option<String>,
+    /// Ein Retro-Lauf (ADR 028) läuft; nur im Speicher.
+    retro_running: bool,
 }
 
 impl ProjectState {
@@ -124,6 +127,7 @@ impl ProjectState {
             tldr_sources: 0,
             tldr_running: false,
             tldr_error: None,
+            retro_running: false,
         }
     }
 
