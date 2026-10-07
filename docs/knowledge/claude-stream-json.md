@@ -167,3 +167,7 @@ Gemessen am 2026-10-04 mit Claude Code 2.1.284, LM Studio mit `gemma4-12b-qat-un
 - **Fortsetzen (`--resume`):** eine mit Claude begonnene Session (`--session-id`) lässt sich mit dem lokalen Modell fortsetzen; das Modell kannte das gemerkte Wort. Der Lauf war langsam (erstes Token nach 224 s) und löste eine Anfrage mit `query_source: compact` aus.
 - **Stderr bei jedem lokalen Lauf:** Hinweis, dass claude.ai-Connectoren abgeschaltet sind, `[claude-code:unrecognized_model]` für den unbekannten Modellnamen (nur Meldung, die Läufe liefen durch) und ein Hinweis zur Abrechnung der Auto-Modus-Prüfung, der für lokale Läufe nichts bewirkt.
 - **Kosten:** `total_cost_usd` ist bei lokalen Läufen ein Rechenwert der Kommandozeile für ein unbekanntes Modell, kein echter Betrag.
+
+## Nachbau im eigenen Agenten
+
+Der eigene Agent der Betriebsart „Autark“ spricht genau den Ausschnitt dieses Zeilenprotokolls, den der Verwalter liest und schreibt (Kontrakt: `docs/planning/2026-10-01_autarker-agent/README.md` bzw. nach der Archivierung `docs/archive/2026-10/2026-10-01_autarker-agent/README.md`; Code: `src-tauri/src/standalone/`, [ADR 017](../decisions/017-autarker-agent.md)). Wer `translate.rs` oder `protocol.rs` ändert, prüft dort mit: Ausgabezeilen in `standalone/output.rs`, Steueranfragen in `standalone/session.rs`.

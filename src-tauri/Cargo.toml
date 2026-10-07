@@ -36,6 +36,7 @@ sha2 = "0.11"
 regex = "1"
 globset = "0.4"
 ignore = "0.4"
+html2text = "0.17.1"
 
 [lints.clippy]
 unwrap_used = "deny"

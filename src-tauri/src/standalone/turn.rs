@@ -458,6 +458,8 @@ fn run_tool(job: &TurnJob, call: &ParsedCall) -> ToolOutput {
     let mut context = job.context.lock().unwrap_or_else(PoisonError::into_inner);
     // Bis hierher kommt ein Pfad außerhalb nur mit Erlaubnis des Benutzers oder eines Hooks.
     context.allow_outside = access == Some(Access::Outside);
+    // `set_model` gilt ab der nächsten Anfrage — `WebFetch` fragt dasselbe Modell wie der Turn.
+    job.model.clone_into(&mut context.model);
     let output = tools::run(&call.name, &input, &mut context, &call.id);
     context.allow_outside = false;
     output

@@ -12,6 +12,8 @@ mod skill;
 mod task_stop;
 mod todo;
 mod walk;
+mod web_fetch;
+mod web_search;
 mod write;
 
 use std::collections::HashSet;
@@ -35,6 +37,8 @@ pub const POWERSHELL_TOOL: &str = "PowerShell";
 pub const ASK_USER_TOOL: &str = "AskUserQuestion";
 pub const SKILL_TOOL: &str = "Skill";
 pub const TASK_STOP_TOOL: &str = "TaskStop";
+pub const WEB_FETCH_TOOL: &str = "WebFetch";
+pub const WEB_SEARCH_TOOL: &str = "WebSearch";
 /// Nur der Hauptagent bekommt es angeboten — Subagenten starten keine Subagenten.
 pub const AGENT_TOOL: &str = "Agent";
 
@@ -66,6 +70,10 @@ pub struct ToolContext {
     pub has_vision: bool,
     /// Hintergrundaufgaben der Session; sie überdauern den Turn, der sie gestartet hat.
     pub tasks: Arc<Tasks>,
+    /// Das Modell und sein Server — `WebFetch` fragt es nach der Seite.
+    pub base_url: String,
+    pub model: String,
+    pub context_window: u32,
 }
 
 impl ToolContext {
@@ -83,6 +91,9 @@ impl ToolContext {
             skill_roots: self.skill_roots.clone(),
             has_vision: self.has_vision,
             tasks: Arc::clone(&self.tasks),
+            base_url: self.base_url.clone(),
+            model: self.model.clone(),
+            context_window: self.context_window,
         }
     }
 
@@ -126,6 +137,33 @@ pub struct ToolImage {
 
 /// Die Werkzeug-Beschreibungen für die Modellanfrage (OpenAI-Format).
 pub fn definitions() -> Vec<Value> {
+    let mut definitions = base_definitions();
+    definitions.push(function(
+        WEB_FETCH_TOOL,
+        "Fetches a web page and answers a question about it. The page is read by the local \
+         model; the result ends with the final URL. Use it for addresses you know or found \
+         with a search.",
+        json!({
+            "url": { "type": "string", "description": "Address starting with http:// or https://" },
+            "prompt": { "type": "string", "description": "What to find out from the page" },
+        }),
+        &["url", "prompt"],
+    ));
+    if web_search::api_key().is_some() {
+        definitions.push(function(
+            WEB_SEARCH_TOOL,
+            "Searches the web and returns up to 10 results as \"title — URL — description\", \
+             one per line. Follow up with WebFetch on a result to read it.",
+            json!({
+                "query": { "type": "string", "description": "The search query" },
+            }),
+            &["query"],
+        ));
+    }
+    definitions
+}
+
+fn base_definitions() -> Vec<Value> {
     vec![
         function(
             READ_TOOL,
@@ -321,6 +359,8 @@ pub fn run(name: &str, input: &Value, context: &mut ToolContext, tool_use_id: &s
         ASK_USER_TOOL => ask::run(input),
         SKILL_TOOL => skill::run(input, context),
         TASK_STOP_TOOL => task_stop::run(input, context),
+        WEB_FETCH_TOOL => web_fetch::run(input, context),
+        WEB_SEARCH_TOOL => web_search::run(input, context),
         unknown => Err(format!("Unbekanntes Werkzeug: {unknown}")),
     };
     let mut output = ToolOutput::from_result(result);

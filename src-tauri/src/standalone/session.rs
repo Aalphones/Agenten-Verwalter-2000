@@ -170,6 +170,9 @@ pub fn run(args: AgentArgs) -> i32 {
         skill_roots: skill_roots.clone(),
         has_vision: environment.has_vision,
         tasks: Arc::clone(&tasks),
+        base_url: environment.base_url.clone(),
+        model: args.model.clone(),
+        context_window: environment.context_window,
     };
     let system_prompt = prompt::system_prompt(&PromptContext {
         cwd: &cwd,

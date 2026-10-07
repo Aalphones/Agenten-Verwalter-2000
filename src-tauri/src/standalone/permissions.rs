@@ -5,7 +5,8 @@ use super::mcp::is_mcp_tool;
 use super::paths::Access;
 use super::tools::{
     AGENT_TOOL, ASK_USER_TOOL, BASH_TOOL, EDIT_TOOL, GLOB_TOOL, GREP_TOOL, POWERSHELL_TOOL,
-    READ_TOOL, SKILL_TOOL, TASK_STOP_TOOL, TODO_TOOL, WRITE_TOOL, is_writing,
+    READ_TOOL, SKILL_TOOL, TASK_STOP_TOOL, TODO_TOOL, WEB_FETCH_TOOL, WEB_SEARCH_TOOL, WRITE_TOOL,
+    is_writing,
 };
 use crate::agents::event::Mode;
 
@@ -16,6 +17,10 @@ pub enum Decision {
     Allow,
     Ask,
     Deny(String),
+}
+
+fn is_web_tool(name: &str) -> bool {
+    matches!(name, WEB_FETCH_TOOL | WEB_SEARCH_TOOL)
 }
 
 /// `access`: Pfadgrenze für den Pfad des Aufrufs, `None` bei Werkzeugen ohne Pfad. Ein Pfad
@@ -45,7 +50,7 @@ pub fn decide(tool: &str, mode: Mode, access: Option<Access>) -> Decision {
         ASK_USER_TOOL => Decision::Ask,
         // Die Werkzeuge des Subagenten fragen selbst.
         AGENT_TOOL => Decision::Allow,
-        name if is_mcp_tool(name) => match mode {
+        name if is_mcp_tool(name) || is_web_tool(name) => match mode {
             Mode::Manual => Decision::Ask,
             Mode::Edit | Mode::Auto | Mode::Plan => Decision::Allow,
         },

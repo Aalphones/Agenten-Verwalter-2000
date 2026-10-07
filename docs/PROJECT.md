@@ -24,11 +24,11 @@ MVP (Version 1):
 - **Hintergrund:** laufende Dev-Server und Subagenten der Session, ausgeführte Skripte samt Ausgabe und der Scratchpad-Ordner der Session sind in einem Seitenpanel der Session sichtbar und einsehbar
 - **Workspace:** mehrere Repositories pro Session, auch Ordner ohne Git (ohne Changes, [ADR 018](decisions/018-ordner-ohne-git.md)); der Agent arbeitet im Haupt-Checkout oder in Ticket-Worktrees daneben, die App zeigt beides in den Changes, Ticket-Worktrees gegen den Standard-Branch ([ADR 010](decisions/010-worktrees-durch-den-agenten.md)); Skills der beteiligten Repositories stehen in der Session zur Verfügung
 - **Changes:** Repository-Filter, geänderte Dateien, Unified Diff, Trennung committed/uncommitted gegen eine konfigurierbare Basis; je Session nur ihre eigenen Änderungen, in der Übersicht des Vorhabens die Summe ([ADR 014](decisions/014-changes-je-session.md)); der Diff zeigt Syntaxfarben, und einzelne Zeilen lassen sich kommentieren — die Kommentare werden in der Eingabeleiste gesammelt und gehen mit der nächsten Nachricht an den Agenten ([ADR 015](decisions/015-changes-review.md))
-- **Agent:** Claude als einziger Provider; Betriebsart Claude Code + LM Studio für ein lokales Modell ([ADR 016](decisions/016-betriebsarten-und-lokales-modell.md))
+- **Agent:** Claude als einziger Provider; Betriebsart Claude Code + LM Studio für ein lokales Modell ([ADR 016](decisions/016-betriebsarten-und-lokales-modell.md)); Betriebsart Autark mit eigenem Agenten ohne Claude-Kommandozeile und ohne Anthropic ([ADR 017](decisions/017-autarker-agent.md))
 - **Persistenz:** SQLite, Session-Wiederherstellung nach App-Neustart
 - **Desktop:** Tauri-App für Windows
 
-Danach (Reihenfolge laut Konzept, Abschnitt 66): OpenCode- und LM-Studio-Provider, feinere Rechte-Oberfläche über die Modi hinaus, Suche, app-weite Command Palette → Multi-Agent, „Ask about this change“, Commit-Automatik → PR-Workflow, Agent-Pipelines, Session-Vorlagen.
+Danach (Reihenfolge laut Konzept, Abschnitt 66): OpenCode-Provider (der LM-Studio-Provider ist durch ADR 016 und ADR 017 erledigt), feinere Rechte-Oberfläche über die Modi hinaus, Suche, app-weite Command Palette → Multi-Agent, „Ask about this change“, Commit-Automatik → PR-Workflow, Agent-Pipelines, Session-Vorlagen.
 
 ## Nicht-Ziele
 
