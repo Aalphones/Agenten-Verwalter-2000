@@ -7,6 +7,7 @@ import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
 import { HandoffButton } from '@/features/chat/HandoffButton';
+import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import {
@@ -131,6 +132,17 @@ export function ChatTimeline({
     () => findOldestOpenQuestion(entries),
     [entries],
   );
+  const lastUserIndex: number = useMemo(() => findLastUserBlockIndex(blocks), [blocks]);
+  const lastUserBlock: ChatBlock | undefined = blocks[lastUserIndex];
+  const lastUserStart: number | null = virtualizer.measurementsCache[lastUserIndex]?.start ?? null;
+  // Sobald die Oberkante der letzten eigenen Nachricht unter die TL;DR rutscht, bleibt eine Kopie dort hängen.
+  const pinnedText: string | null =
+    lastUserBlock?.kind === 'entry' &&
+    lastUserBlock.entry.kind === 'user' &&
+    lastUserStart !== null &&
+    lastUserStart + bottomOffset < (virtualizer.scrollOffset ?? 0) + topInset
+      ? lastUserBlock.entry.text
+      : null;
 
   useEffect(() => {
     const element: HTMLDivElement | null = scrollRef.current;
@@ -214,6 +226,14 @@ export function ChatTimeline({
     if (element.scrollTop < LOAD_OLDER_THRESHOLD) {
       onLoadOlder();
     }
+  }
+
+  function jumpToLastUserMessage(): void {
+    const element: HTMLDivElement | null = scrollRef.current;
+    if (element === null || lastUserStart === null) {
+      return;
+    }
+    element.scrollTop = lastUserStart + bottomOffset - topInset;
   }
 
   function toggleExpanded(key: string): void {
@@ -374,39 +394,54 @@ export function ChatTimeline({
   }
 
   return (
-    <div
-      ref={scrollRef}
-      className="chat-timeline"
-      role="log"
-      aria-live="polite"
-      aria-label="Verlauf"
-      onScroll={handleScroll}
-    >
-      {olderError !== null && (
-        <p className="chat-timeline__older-error" style={{ marginTop: `${String(topInset)}px` }}>
-          {olderError}
-        </p>
+    <>
+      <div
+        ref={scrollRef}
+        className="chat-timeline"
+        role="log"
+        aria-live="polite"
+        aria-label="Verlauf"
+        onScroll={handleScroll}
+      >
+        {olderError !== null && (
+          <p className="chat-timeline__older-error" style={{ marginTop: `${String(topInset)}px` }}>
+            {olderError}
+          </p>
+        )}
+        <FileLinkSessionContext.Provider value={session.id}>
+          <div
+            className="chat-timeline__surface"
+            style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}
+          >
+            {virtualizer.getVirtualItems().map((item: VirtualItem) => (
+              <div
+                key={item.key}
+                ref={virtualizer.measureElement}
+                data-index={item.index}
+                className="chat-timeline__item"
+                style={{ transform: `translateY(${String(item.start + bottomOffset)}px)` }}
+              >
+                <div className="chat-timeline__block">{renderBlock(blocks[item.index])}</div>
+              </div>
+            ))}
+          </div>
+        </FileLinkSessionContext.Provider>
+      </div>
+      {pinnedText !== null && (
+        <PinnedUserMessage text={pinnedText} top={topInset} onJump={jumpToLastUserMessage} />
       )}
-      <FileLinkSessionContext.Provider value={session.id}>
-        <div
-          className="chat-timeline__surface"
-          style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}
-        >
-          {virtualizer.getVirtualItems().map((item: VirtualItem) => (
-            <div
-              key={item.key}
-              ref={virtualizer.measureElement}
-              data-index={item.index}
-              className="chat-timeline__item"
-              style={{ transform: `translateY(${String(item.start + bottomOffset)}px)` }}
-            >
-              <div className="chat-timeline__block">{renderBlock(blocks[item.index])}</div>
-            </div>
-          ))}
-        </div>
-      </FileLinkSessionContext.Provider>
-    </div>
+    </>
   );
+}
+
+function findLastUserBlockIndex(blocks: readonly ChatBlock[]): number {
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    const block: ChatBlock | undefined = blocks[index];
+    if (block?.kind === 'entry' && block.entry.kind === 'user') {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function isTextTarget(target: EventTarget | null): boolean {
