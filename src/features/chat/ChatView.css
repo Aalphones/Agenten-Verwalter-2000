@@ -34,6 +34,20 @@
 
   &__top {
     top: 0;
+
+    /* Verlauf auf Hintergrundfarbe hinter der TL;DR-Karte: Text dahinter tritt zurück, unten läuft er weich aus. */
+    &::before {
+      position: absolute;
+      inset: 0 0 -28px;
+      z-index: -1;
+      background: linear-gradient(
+        to bottom,
+        var(--color-bg-base) calc(100% - 28px),
+        transparent
+      );
+      content: '';
+      pointer-events: none;
+    }
   }
 
   &__bottom {

@@ -8,6 +8,22 @@
   padding: var(--space-md) var(--space-5xl) 0;
   pointer-events: none;
 
+  /* Verlauf auf Hintergrundfarbe hinter der Nachricht; oben geht er in den der TL;DR-Karte über, unten läuft er weich aus. */
+  &::before {
+    position: absolute;
+    inset: -20px 0 -28px;
+    z-index: -1;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--color-bg-base) 20px,
+      var(--color-bg-base) calc(100% - 28px),
+      transparent
+    );
+    content: '';
+    pointer-events: none;
+  }
+
   /* Liegt über dem Verlauf: deckend, sonst scheint der Text dahinter durch. */
   &__box {
     display: block;
