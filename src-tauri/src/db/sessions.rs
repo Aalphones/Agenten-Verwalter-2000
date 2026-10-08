@@ -183,6 +183,23 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
     stored.into_iter().map(StoredRow::into_row).collect()
 }
 
+/// Alle Sessions eines Vorhabens, archiviert oder nicht, nach Nummer.
+pub fn load_for_project(
+    connection: &Connection,
+    project_id: &str,
+) -> Result<Vec<SessionRow>, CommandError> {
+    let mut statement = connection.prepare(
+        "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
+             context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
+             project_id, number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, handoff_line \
+         FROM sessions WHERE project_id = ?1 ORDER BY number",
+    )?;
+    let stored: Vec<StoredRow> = statement
+        .query_map(params![project_id], StoredRow::read)?
+        .collect::<rusqlite::Result<_>>()?;
+    stored.into_iter().map(StoredRow::into_row).collect()
+}
+
 /// Wann die Aufzeichnung für die älteste Session der Auswahl begann; `None`, wenn alle ab Anlegen
 /// aufgezeichnet sind.
 pub fn untracked_before(

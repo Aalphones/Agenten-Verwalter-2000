@@ -1,5 +1,6 @@
 pub mod account;
 pub mod agents;
+pub mod archive;
 pub mod artifacts;
 pub mod attachments;
 pub mod background;
@@ -77,6 +78,8 @@ pub fn run() {
             commands::projects::project_rename,
             commands::projects::project_add_repository,
             commands::projects::project_archive,
+            commands::archive::archive_search,
+            commands::archive::project_restore,
             commands::sessions::session_list,
             commands::sessions::session_create_in_project,
             commands::sessions::session_pause,

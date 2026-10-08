@@ -16,7 +16,7 @@ Die Bedienung orientiert sich an der Claude-Erweiterung für VS Code, damit sich
 
 MVP (Version 1):
 
-- **Navigation:** Vorhaben-Baum in der Sidebar (das zuletzt aktive Vorhaben oben, Ungelesen-Punkt bei Neuem, darunter aufklappbar die Sessions), neues Vorhaben (drei Schritte: Aufgabe mit Anhängen → Repositories → Agent), neue Session im Vorhaben, Übersicht je Vorhaben, Vorhaben und Sessions umbenennen, Vorhaben archivieren
+- **Navigation:** Vorhaben-Baum in der Sidebar (das zuletzt aktive Vorhaben oben, Ungelesen-Punkt bei Neuem, darunter aufklappbar die Sessions), neues Vorhaben (drei Schritte: Aufgabe mit Anhängen → Repositories → Agent), neue Session im Vorhaben, Übersicht je Vorhaben, Vorhaben und Sessions umbenennen, Vorhaben archivieren und im Archiv suchen und wiederherstellen
 - **TL;DR:** Kurzfassung von drei, vier Zeilen an jeder Session und jedem Vorhaben, nur per Knopf von Haiku im Hintergrund erstellt; zeigt, wie viele Einträge seither dazukamen, und geht auf Wunsch mit der ersten Nachricht einer neuen Session mit
 - **Chat:** Nachrichten von User und Agent, Antworten als Markdown mit Code-Blöcken (Syntaxfarben, Kopieren-Knopf), eingeklappte Tool-Aktivität und Gedankengang, Aufgabenliste, Agent-Status, Unterbrechen, Fortsetzen, Rückfragen direkt im Chat beantworten
 - **Eingabe:** Bilder und Dateien anhängen (Knopf, Hineinziehen, Einfügen); Skills und Befehle über `/`-Knopf und `/` im Eingabefeld; Modell und Denkaufwand während der Session wechseln; Modus (Manuell, Automatisch bearbeiten, Planen, Auto)

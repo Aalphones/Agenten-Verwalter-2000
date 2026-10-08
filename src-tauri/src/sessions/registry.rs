@@ -66,6 +66,7 @@ use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 mod artifacts;
 mod commit_scan;
 mod mcp;
+mod restore;
 mod retro;
 mod tldr;
 

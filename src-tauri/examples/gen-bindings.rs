@@ -6,6 +6,7 @@ use verwalter_lib::{
         Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
         QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
     },
+    archive::model::{ArchivePage, ArchiveSnippet, ArchivedProject, ProjectRestored},
     artifacts::model::{Artifact, ArtifactList},
     background::model::{
         BackgroundChangedEvent, BackgroundItem, BackgroundKind, BackgroundState, ScratchpadEntry,
@@ -74,6 +75,10 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ChatEntryEvent::export_all(&cfg)?;
     ProjectSummary::export_all(&cfg)?;
     ProjectCreated::export_all(&cfg)?;
+    ArchiveSnippet::export_all(&cfg)?;
+    ArchivedProject::export_all(&cfg)?;
+    ArchivePage::export_all(&cfg)?;
+    ProjectRestored::export_all(&cfg)?;
     RepositoryKind::export_all(&cfg)?;
     KnownRepository::export_all(&cfg)?;
     ChangeKind::export_all(&cfg)?;

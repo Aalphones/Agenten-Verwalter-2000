@@ -1,4 +1,6 @@
 //! Tabelle `chat_entries`: eine Zeile je Chat-Eintrag, die Nutzlast ist der Eintrag als JSON.
+use std::ops::ControlFlow;
+
 use rusqlite::{Connection, params};
 
 use crate::agents::event::ChatEntry;
@@ -23,6 +25,25 @@ pub fn upsert_all(
         }
     }
     transaction.commit()?;
+    Ok(())
+}
+
+/// Reicht die Nutzlasten der Session nacheinander an `visit`, ohne den Verlauf in den Speicher zu
+/// laden; `ControlFlow::Break` beendet das Lesen.
+pub fn for_each_payload(
+    connection: &Connection,
+    session_id: &str,
+    mut visit: impl FnMut(&str) -> ControlFlow<()>,
+) -> Result<(), CommandError> {
+    let mut statement = connection
+        .prepare("SELECT payload FROM chat_entries WHERE session_id = ?1 ORDER BY seq")?;
+    let mut rows = statement.query(params![session_id])?;
+    while let Some(row) = rows.next()? {
+        let payload: String = row.get(0)?;
+        if visit(&payload).is_break() {
+            break;
+        }
+    }
     Ok(())
 }
 
