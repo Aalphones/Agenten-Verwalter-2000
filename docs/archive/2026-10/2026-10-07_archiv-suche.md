@@ -119,4 +119,10 @@ TS-Seite: `src/lib/archive.ts` mit `searchArchive(query)` und `restoreProject(pr
 - Vault-Fehlerklassen React: Entity nicht gelesen (Pfad `frameworks/react.md` nicht geprüft) — Projekt-`docs/conventions/react.md` galt.
 - Wiederherstellen lässt die Auswahl der Sidebar unverändert; der Ladezustand je Karte (`restoringId`) kam dazu, damit ein Doppelklick nicht zweimal feuert.
 
-(Rest beim Archivieren füllen)
+**Summary:** Dialog „Archiv“ im Sidebar-Fuß listet archivierte Vorhaben seitenweise (20 je Seite), durchsucht Name und Chat-Text und stellt Vorhaben mit allen Sessions wieder her (ADR 029). Release `v0.22.0` auf Zuruf gesetzt, **Smoke nicht abgenommen** — Wackelstelle 1 (Restore mit mehreren Sessions) zuerst; die Oberfläche wurde bisher nur per Lint, Typecheck und Build geprüft, nie im Browser gesehen. Smoke 4 (Suchzeit bei großem Archiv) braucht noch einen Messwert.
+
+**Files touched:** `src-tauri/src/archive/`, `src-tauri/src/commands/archive.rs`, `src-tauri/src/sessions/registry/restore.rs`, `src-tauri/src/db/{projects,sessions,chat_entries}.rs`, `src/features/archive/`, `src/lib/archive.ts`, `src/app/{App,Sidebar}.tsx`, `src/app/Sidebar.css`, `docs/`.
+
+**Commits:** `5f81aab` (build_session), `93029ac` (Core), `fa68b71` (Oberfläche).
+
+**Follow-ups:** Löschen aus dem Archiv und Vorschau des Verlaufs (Backlog); FTS5 nur, falls Smoke 4 spürbare Wartezeit zeigt.
