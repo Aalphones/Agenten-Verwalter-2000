@@ -346,51 +346,19 @@ impl SessionRegistry {
             }
         }
         let mut interrupted: Vec<SessionRow> = Vec::new();
+        let mut built: Vec<Arc<Session>> = Vec::with_capacity(loaded.len());
+        for stored in loaded {
+            let (session, paused_row) = build_session(app, &database, stored)?;
+            built.push(session);
+            interrupted.extend(paused_row);
+        }
         {
             let mut sessions = registry.lock_sessions();
-            for StoredSession {
-                row,
-                repositories,
-                ticket_worktrees,
-            } in loaded
-            {
-                // Ohne Freigabe zeigt der Scratchpad-Reiter keine Bilder; alles andere geht trotzdem.
-                if let Some(dir) = &row.scratchpad_dir {
-                    let _ = app.asset_protocol_scope().allow_directory(dir, true);
-                }
-                let mut state = SessionState::restored(&row);
-                state.ticket_roots = worktrees::ticket_roots(&repositories);
-                state.ticket_worktrees = ticket_worktrees;
-                if state.needs_settling {
-                    interrupted.push(SessionRow {
-                        status: SessionStatus::Paused,
-                        ..row.clone()
-                    });
-                }
-                let workspace =
-                    stored_session_workspace(app, &row.id, row.workspace_dir.as_deref())?;
-                sessions.insert(
-                    row.id.clone(),
-                    Arc::new(Session {
-                        id: row.id,
-                        project_id: row.project_id,
-                        number: row.number,
-                        workspace,
-                        repositories: RwLock::new(repositories),
-                        database: Arc::clone(&database),
-                        state: Mutex::new(state),
-                    }),
-                );
+            for session in built {
+                sessions.insert(session.id.clone(), session);
             }
         }
-        if !interrupted.is_empty() {
-            database.with(|connection| {
-                for row in &interrupted {
-                    session_rows::upsert(connection, row)?;
-                }
-                Ok(())
-            })?;
-        }
+        write_paused(&database, &interrupted)?;
         Ok(registry)
     }
 
@@ -1602,6 +1570,59 @@ fn trimmed_name(name: &str) -> Result<String, CommandError> {
 
 fn project_not_found(project_id: &str) -> CommandError {
     CommandError::Internal(format!("Vorhaben nicht gefunden: {project_id}"))
+}
+
+/// Baut eine Session aus ihrer gespeicherten Zeile, ohne Verlauf und ohne Agenten; steht in noch
+/// keiner Map. Die zweite Hälfte ist die Zeile als „pausiert“, wenn die Session beim Beenden aktiv
+/// war — der Aufrufer schreibt sie mit `write_paused` zurück, nachdem er die Session eingefügt hat.
+fn build_session(
+    app: &AppHandle,
+    database: &Arc<Database>,
+    stored: StoredSession,
+) -> Result<(Arc<Session>, Option<SessionRow>), CommandError> {
+    let StoredSession {
+        row,
+        repositories,
+        ticket_worktrees,
+    } = stored;
+    // Ohne Freigabe zeigt der Scratchpad-Reiter keine Bilder; alles andere geht trotzdem.
+    if let Some(dir) = &row.scratchpad_dir {
+        let _ = app.asset_protocol_scope().allow_directory(dir, true);
+    }
+    let mut state = SessionState::restored(&row);
+    state.ticket_roots = worktrees::ticket_roots(&repositories);
+    state.ticket_worktrees = ticket_worktrees;
+    let paused_row = if state.needs_settling {
+        Some(SessionRow {
+            status: SessionStatus::Paused,
+            ..row.clone()
+        })
+    } else {
+        None
+    };
+    let workspace = stored_session_workspace(app, &row.id, row.workspace_dir.as_deref())?;
+    let session = Arc::new(Session {
+        id: row.id,
+        project_id: row.project_id,
+        number: row.number,
+        workspace,
+        repositories: RwLock::new(repositories),
+        database: Arc::clone(database),
+        state: Mutex::new(state),
+    });
+    Ok((session, paused_row))
+}
+
+fn write_paused(database: &Database, rows: &[SessionRow]) -> Result<(), CommandError> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+    database.with(|connection| {
+        for row in rows {
+            session_rows::upsert(connection, row)?;
+        }
+        Ok(())
+    })
 }
 
 impl Session {
