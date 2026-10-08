@@ -22,7 +22,7 @@ impl ModelId {
             ModelId::Fable => "claude-fable-5-1",
             ModelId::Opus => "claude-opus-5-5",
             ModelId::Sonnet => "claude-sonnet-5-5",
-            ModelId::Haiku => "claude-haiku-4-5-20251001",
+            ModelId::Haiku => "claude-haiku-5-5",
         }
     }
 
