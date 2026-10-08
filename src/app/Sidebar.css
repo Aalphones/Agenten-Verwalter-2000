@@ -110,6 +110,7 @@
     border-top: 1px solid var(--color-border-subtle);
   }
 
+  &__archive,
   &__settings {
     display: flex;
     align-items: center;

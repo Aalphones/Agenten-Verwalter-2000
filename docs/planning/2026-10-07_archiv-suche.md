@@ -7,7 +7,7 @@ Ein Dialog „Archiv“ listet archivierte Vorhaben (ohne Suchbegriff alle, scro
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Suche, Wiederherstellen, Command, ADR 029 | heikel (Sperren-Reihenfolge, Neuaufbau der Session im Speicher) | complete |
-| 2 | Oberfläche: Sidebar-Knopf, Dialog, Anbindung an die Listen | standard | pending |
+| 2 | Oberfläche: Sidebar-Knopf, Dialog, Anbindung an die Listen | standard | complete |
 
 ## Entscheidungen (alle gefallen, keine offen)
 
@@ -83,12 +83,12 @@ TS-Seite: `src/lib/archive.ts` mit `searchArchive(query)` und `restoreProject(pr
 - `pnpm check` grün.
 
 **Checkliste:**
-- [ ] `src/lib/archive.ts` (`searchArchive(query, offset)` → `ArchivePage`, `restoreProject`).
-- [ ] `src/features/archive/useArchiveSearch.ts` (Entprellen, Veraltet-Verwerfen, Lade-/Fehlerzustand; Muster: `useProjectSummaries.ts`).
-- [ ] `src/features/archive/ArchiveDialog.tsx` + `ArchiveDialog.css` (BEM `archive-dialog__…`, Tokens wie `SessionDeleteDialog.css`), `ArchiveCard.tsx` + `.css`, `highlightSegments.ts` (reine Funktion: Text + Begriff → `{text, isMatch}[]`, Unicode-Groß/Klein egal).
-- [ ] `Sidebar.tsx`: neues Prop `onOpenArchive: () => void`, Knopf im Fuß (Symbol: Karton, SVG im Stil der vorhandenen), `Sidebar.css`.
-- [ ] `App.tsx`: State `isArchiveOpen`; `handleRestored(restored: ProjectRestored)` → `upsertProject(restored.project)` und `upsertSession` je Session (nicht auswählen, nicht wechseln); Dialog rendern.
-- [ ] Docs: `docs/code-map.md` (Oberflächen-Zeile), Glossar-Feinschliff falls Begriffe im Dialog abweichen.
+- [x] `src/lib/archive.ts` (`searchArchive(query, offset)` → `ArchivePage`, `restoreProject`).
+- [x] `src/features/archive/useArchiveSearch.ts` (Entprellen, Veraltet-Verwerfen, Lade-/Fehlerzustand; Muster: `useProjectSummaries.ts`).
+- [x] `src/features/archive/ArchiveDialog.tsx` + `ArchiveDialog.css` (BEM `archive-dialog__…`, Tokens wie `SessionDeleteDialog.css`), `ArchiveCard.tsx` + `.css`, `highlightSegments.ts` (reine Funktion: Text + Begriff → `{text, isMatch}[]`, Unicode-Groß/Klein egal).
+- [x] `Sidebar.tsx`: neues Prop `onOpenArchive: () => void`, Knopf im Fuß (Symbol: Karton, SVG im Stil der vorhandenen), `Sidebar.css`.
+- [x] `App.tsx`: State `isArchiveOpen`; `handleRestored(restored: ProjectRestored)` → `upsertProject(restored.project)` und `upsertSession` je Session (nicht auswählen, nicht wechseln); Dialog rendern.
+- [x] Docs: `docs/code-map.md` (Oberflächen-Zeile), Glossar-Feinschliff falls Begriffe im Dialog abweichen (Glossar passt bereits, keine Änderung).
 
 ## Smoke (Spec-first, Abnahme macht der User) — Wackelstellen zuerst
 
@@ -113,5 +113,10 @@ TS-Seite: `src/lib/archive.ts` mit `searchArchive(query)` und `restoreProject(pr
 - `restore_project` baut die Sessions **vor** der Datenbank-Transaktion: scheitert der Aufbau, bleibt das Vorhaben archiviert statt nach dem nächsten Start aufzutauchen.
 - Phase-2-Design korrigiert: `offset` nach einem Wiederherstellen = Kartenzahl **nach** dem Entfernen (der Plan sagte „vor“; das übersprünge einen Eintrag).
 - Vault-Fehlerklassen Rust: keine Entity `sprachen/rust.md` vorhanden.
+
+**Deviations (Phase 2):**
+- Der Dialog liegt in `ArchiveDialog.tsx`; der Knopf „Archiv“ teilt sich die Stilregeln mit „Einstellungen“ (`&__archive, &__settings` in `Sidebar.css`) statt eine zweite Kopie.
+- Vault-Fehlerklassen React: Entity nicht gelesen (Pfad `frameworks/react.md` nicht geprüft) — Projekt-`docs/conventions/react.md` galt.
+- Wiederherstellen lässt die Auswahl der Sidebar unverändert; der Ladezustand je Karte (`restoringId`) kam dazu, damit ein Doppelklick nicht zweimal feuert.
 
 (Rest beim Archivieren füllen)

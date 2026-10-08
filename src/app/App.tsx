@@ -1,9 +1,10 @@
-import { Fragment, useCallback, useEffect, useMemo } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionActionError } from '@/app/SessionActionError';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
+import { ArchiveDialog } from '@/features/archive/ArchiveDialog';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
 import { countRunning, indexByToolUseId } from '@/features/background/backgroundItems';
 import { useSessionBackground } from '@/features/background/useSessionBackground';
@@ -29,6 +30,7 @@ import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
+import type { ProjectRestored } from '@/lib/bindings/ProjectRestored';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { useBackgroundStore } from '@/stores/background';
@@ -52,6 +54,7 @@ export function App(): ReactElement {
   const openNewSession = useSessionsStore((state) => state.openNewSession);
   const closeNewSession = useSessionsStore((state) => state.closeNewSession);
   const openSettings = useSessionsStore((state) => state.openSettings);
+  const [isArchiveOpen, setIsArchiveOpen] = useState<boolean>(false);
   const isBackgroundOpen: boolean = useBackgroundStore((state) => state.isOpen);
   const toggleBackground = useBackgroundStore((state) => state.toggle);
   const {
@@ -149,6 +152,14 @@ export function App(): ReactElement {
     upsertProject(created.project);
     upsertSession(created.session);
     selectSession(created.session.id);
+  }
+
+  // Der Core sendet beim Wiederherstellen keine Änderung — die Rückgabe muss selbst in die Listen; die Auswahl bleibt.
+  function handleRestored(restored: ProjectRestored): void {
+    upsertProject(restored.project);
+    for (const session of restored.sessions) {
+      upsertSession(session);
+    }
   }
 
   function handleArchived(projectId: string): void {
@@ -343,6 +354,9 @@ export function App(): ReactElement {
         onSelectProject={selectProject}
         onNew={openNewSession}
         onOpenSettings={openSettings}
+        onOpenArchive={(): void => {
+          setIsArchiveOpen(true);
+        }}
         onArchived={handleArchived}
         onSessionDeleted={handleSessionDeleted}
       />
@@ -353,6 +367,14 @@ export function App(): ReactElement {
           session={visibleSession}
           background={background}
           error={backgroundError}
+        />
+      )}
+      {isArchiveOpen && (
+        <ArchiveDialog
+          onRestored={handleRestored}
+          onClose={(): void => {
+            setIsArchiveOpen(false);
+          }}
         />
       )}
     </div>

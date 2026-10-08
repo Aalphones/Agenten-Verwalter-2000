@@ -41,6 +41,7 @@ interface SidebarProps {
   onSelectProject: (projectId: string) => void;
   onNew: () => void;
   onOpenSettings: () => void;
+  onOpenArchive: () => void;
   onArchived: (projectId: string) => void;
   onSessionDeleted: (session: SessionSummary, isProjectDeleted: boolean) => void;
 }
@@ -57,6 +58,7 @@ export function Sidebar({
   onSelectProject,
   onNew,
   onOpenSettings,
+  onOpenArchive,
   onArchived,
   onSessionDeleted,
 }: SidebarProps): ReactElement {
@@ -316,6 +318,22 @@ export function Sidebar({
         </p>
       )}
       <div className="sidebar__footer">
+        <button type="button" className="sidebar__archive" onClick={onOpenArchive}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3" />
+          </svg>
+          <span>Archiv</span>
+        </button>
         <button
           type="button"
           className={`sidebar__settings${isSettingsOpen ? ' sidebar__settings--active' : ''}`}

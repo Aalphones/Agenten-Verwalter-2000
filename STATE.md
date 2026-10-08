@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-07_archiv-suche.md`
-**Phase:** 2/2 — Oberfläche: Sidebar-Knopf, Dialog, Anbindung an die Listen (offen)
-**Nächster Schritt:** `src/lib/archive.ts` anlegen, dann Hook und Dialog laut Phase 2 im Plan.
+**Phase:** 2/2 — Oberfläche (complete); Plan-Ende erreicht
+**Nächster Schritt:** Smoke-Checkliste aus dem Plan durch den User (Wackelstelle 1 zuerst), danach Plan archivieren und STATE.md auf den nächsten Plan zeigen lassen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -20,7 +20,7 @@
 9. ~~Artefakte~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_artefakte/`, `v0.17.0`, ADR 026), Smoke offen.
 10. ~~Session-Übergabe~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_session-uebergabe.md`, ADR 027, Migration 9), Smoke offen.
 11. ~~Vorhaben-Retro~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-07_vorhaben-retro/`, ADR 028), Smoke offen, Release auf Zuruf (Minor-Version).
-12. Archiv-Suche — in Arbeit (`docs/planning/2026-10-07_archiv-suche.md`, ADR 029).
+12. Archiv-Suche — umgesetzt, Smoke offen (`docs/planning/2026-10-07_archiv-suche.md`, ADR 029); archivieren nach Abnahme bzw. auf Zuruf.
 
 ## Offen
 
