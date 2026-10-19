@@ -5,7 +5,7 @@ Der User soll einer Session per Schalter erlauben können, seinen echten Chrome-
 | Phase | Inhalt | Komplexität | Status |
 |---|---|---|---|
 | 1 | Core: Zustand speichern, Startargument, Neustart, Befehl | standard | complete |
-| 2 | Oberfläche: Schalter in der Eingabeleiste, `/chrome` im Befehlsmenü, Doku | standard | pending |
+| 2 | Oberfläche: Schalter in der Eingabeleiste, `/chrome` im Befehlsmenü, Doku | standard | complete |
 
 ## Belegte Grundlagen
 
@@ -121,29 +121,42 @@ Fehlerklassen geprüft (`werkzeuge/claude-code`, `frameworks/react`, `sprachen/t
 
 ### Checkliste
 
-- [ ] `src/lib/sessions.ts`: `setSessionChrome(sessionId: string, enabled: boolean): Promise<void>` analog zu `setSessionEffort`, ruft `invoke('session_set_chrome', { sessionId, enabled })`.
-- [ ] `commandMenuRows.ts`: `SessionCommand` um `'chrome'` erweitern. In `SESSION_COMMAND_TEXT` gibt es keinen festen Text dafür. Stattdessen liefert `rowText` für `command === 'chrome'` das Label `'/chrome'` und die Beschreibung abhängig von `session?.chrome`. Der Typ `Record<SessionCommand, RowText>` wird dafür zu `Record<Exclude<SessionCommand, 'chrome'>, RowText>`.
-- [ ] `sessionRows(session, isLocal)`: einen neuen Parameter `isLocal: boolean` einführen und `buildCommandSections` um denselben Parameter erweitern (alle Aufrufer anpassen, in `useCommandMenu` aus `useSettingsStore` wie in `Composer.tsx` Zeile „operatingMode“). Die Zeile `{ kind: 'session', command: 'chrome' }` hinter `mcp` einfügen, wenn `!isLocal`.
-- [ ] `buildCommandSections`: Ist `needle` ohne führendes `/` exakt gleich einem `SessionCommand` und `scope !== 'skills'`, kommt der Abschnitt „Session“ vor „Skills“. Sonst bleibt die Reihenfolge.
-- [ ] `Composer.tsx` `runSessionCommand`: Zweig `command === 'chrome'` vor dem `else`, mit `setErrorMessage(null); setSessionChrome(session.id, !session.chrome).catch(report);`.
-- [ ] `Composer.tsx`: den Knopf in `composer__bar` direkt vor dem `composer__anchor--end`-Block einfügen, nur wenn `!isLocal`: `<button type="button" className={`composer__browser${session.chrome ? ' composer__browser--on' : ''}`} aria-pressed={session.chrome} title={…} onClick={() => runSessionCommand('chrome')}>` mit einem kleinen Globus-Icon (inline-SVG, 14 px, `currentColor`, im Stil der vorhandenen Icons `PlusIcon`/`SlashIcon` in derselben Datei) und dem Text „Browser“.
-- [ ] `Composer.css`: `.composer__browser` übernimmt die Werte von `.composer__mode` (gleiche Höhe, Polsterung, Rahmen, Schrift). `.composer__browser--on` nutzt die Akzentfarbe des Projekts (dasselbe Token, das ein aktiver/markierter Zustand in `Composer.css` oder `CommandMenu.css` schon nutzt — dort nachsehen, kein neues Token). Ein sichtbarer Fokusrahmen wie bei den übrigen Knöpfen.
-- [ ] `pnpm check`.
-- [ ] `docs/glossary.md`: Eintrag „Browser-Zugriff — Schalter pro Session, der den Agenten mit Claude in Chrome startet (`--chrome`); der Agent bedient dann den echten Chrome des Users mit dessen Anmeldungen. Nur im Claude-Betrieb.“
-- [ ] `docs/code-map.md`: In der Zeile zu Sessions/Eingabeleiste ergänzen, dass der Browser-Zugriff als Session-Wert in `src-tauri/src/sessions/` und `src-tauri/src/db/sessions.rs` lebt und sein Schalter in `src/features/chat/Composer.tsx`.
-- [ ] `docs/PROJECT.md`: prüfen, ob ein Nicht-Ziel dem Browser-Zugriff widerspricht. Wenn ja, als 🔴 melden und nicht still ändern.
+- [x] `src/lib/sessions.ts`: `setSessionChrome(sessionId: string, enabled: boolean): Promise<void>` analog zu `setSessionEffort`, ruft `invoke('session_set_chrome', { sessionId, enabled })`.
+- [x] `commandMenuRows.ts`: `SessionCommand` um `'chrome'` erweitern. In `SESSION_COMMAND_TEXT` gibt es keinen festen Text dafür. Stattdessen liefert `rowText` für `command === 'chrome'` das Label `'/chrome'` und die Beschreibung abhängig von `session?.chrome`. Der Typ `Record<SessionCommand, RowText>` wird dafür zu `Record<Exclude<SessionCommand, 'chrome'>, RowText>`.
+- [x] `sessionRows(session, isLocal)`: einen neuen Parameter `isLocal: boolean` einführen und `buildCommandSections` um denselben Parameter erweitern (alle Aufrufer anpassen, in `useCommandMenu` aus `useSettingsStore` wie in `Composer.tsx` Zeile „operatingMode“). Die Zeile `{ kind: 'session', command: 'chrome' }` hinter `mcp` einfügen, wenn `!isLocal`.
+- [x] `buildCommandSections`: Ist `needle` ohne führendes `/` exakt gleich einem `SessionCommand` und `scope !== 'skills'`, kommt der Abschnitt „Session“ vor „Skills“. Sonst bleibt die Reihenfolge.
+- [x] `Composer.tsx` `runSessionCommand`: Zweig `command === 'chrome'` vor dem `else`, mit `setErrorMessage(null); setSessionChrome(session.id, !session.chrome).catch(report);`.
+- [x] `Composer.tsx`: den Knopf in `composer__bar` direkt vor dem `composer__anchor--end`-Block einfügen, nur wenn `!isLocal`: `<button type="button" className={`composer__browser${session.chrome ? ' composer__browser--on' : ''}`} aria-pressed={session.chrome} title={…} onClick={() => runSessionCommand('chrome')}>` mit einem kleinen Globus-Icon (inline-SVG, 14 px, `currentColor`, im Stil der vorhandenen Icons `PlusIcon`/`SlashIcon` in derselben Datei) und dem Text „Browser“.
+- [x] `Composer.css`: `.composer__browser` übernimmt die Werte von `.composer__mode` (gleiche Höhe, Polsterung, Rahmen, Schrift). `.composer__browser--on` nutzt die Akzentfarbe des Projekts (dasselbe Token, das ein aktiver/markierter Zustand in `Composer.css` oder `CommandMenu.css` schon nutzt — dort nachsehen, kein neues Token). Ein sichtbarer Fokusrahmen wie bei den übrigen Knöpfen.
+- [x] `pnpm check`.
+- [x] `docs/glossary.md`: Eintrag „Browser-Zugriff — Schalter pro Session, der den Agenten mit Claude in Chrome startet (`--chrome`); der Agent bedient dann den echten Chrome des Users mit dessen Anmeldungen. Nur im Claude-Betrieb.“
+- [x] `docs/code-map.md`: In der Zeile zu Sessions/Eingabeleiste ergänzen, dass der Browser-Zugriff als Session-Wert in `src-tauri/src/sessions/` und `src-tauri/src/db/sessions.rs` lebt und sein Schalter in `src/features/chat/Composer.tsx`.
+- [x] `docs/PROJECT.md`: prüfen, ob ein Nicht-Ziel dem Browser-Zugriff widerspricht. Wenn ja, als 🔴 melden und nicht still ändern.
 
 ## Report-Back
+
+- Umgesetzt wie geplant; `pnpm check` grün. `PROJECT.md`: kein Nicht-Ziel steht dem Browser-Zugriff entgegen.
+- Die Menü-Reihenfolge gilt für alle Session-Befehle über eine const-assertierte Liste `SESSION_COMMANDS`; ein führendes `/` im Filter des Knopf-Menüs wird dabei ebenfalls ignoriert.
 
 ---
 
 ## Summary
 
+Pro Session gibt es einen Schalter „Browser“ (Claude in Chrome). Er sitzt in der Eingabeleiste und als `/chrome` im Befehlsmenü, wirkt ab dem nächsten Start des Agenten und fehlt in den Betriebsarten LM Studio und Autark. Der Core startet den Agenten immer ausdrücklich mit `--chrome` oder `--no-chrome` (ADR 030).
+
 ## Files touched
+
+- Core (Phase 1): `agents/claude/process.rs`, `sessions/registry.rs`, `sessions/model.rs`, `db/sessions.rs`, `db/migrations.rs` samt Migration 10, `commands/sessions.rs`, `lib.rs`.
+- Oberfläche (Phase 2): `src/lib/sessions.ts`, `src/features/chat/{Composer.tsx,Composer.css,commandMenuRows.ts,useCommandMenu.ts}`.
+- Doku: ADR 030, `docs/knowledge/claude-stream-json.md`, `docs/glossary.md`, `docs/code-map.md`.
 
 ## Commits
 
+- `d39843f` Core. Phase 2 und Archivierung in den folgenden Commits auf `main`.
+
 ## Deviations from plan
+
+- Keine.
 
 ## Follow-ups
 
