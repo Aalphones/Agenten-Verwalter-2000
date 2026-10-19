@@ -111,7 +111,10 @@ export function Popover({
           : 'below'
         : placement;
       const space: number = useOther ? otherSpace : preferredSpace;
-      root.style.setProperty('--popover-max-height', `${String(Math.max(120, Math.floor(space)))}px`);
+      root.style.setProperty(
+        '--popover-max-height',
+        `${String(Math.max(120, Math.floor(space)))}px`,
+      );
       setSide(chosen);
     }
     fit();
