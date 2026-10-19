@@ -12,7 +12,11 @@ status: SessionStatus,
 /**
  * Der Hauptagent hat abgegeben und wartet auf einen laufenden Subagenten; `status` ist dann `Running`.
  */
-awaitingSubagent: boolean, model: ModelId, effort: Effort, mode: Mode, createdAt: number, 
+awaitingSubagent: boolean, model: ModelId, effort: Effort, mode: Mode, 
+/**
+ * Browser-Zugriff gewünscht; wirkt ab dem nächsten Start des Agenten.
+ */
+chrome: boolean, createdAt: number, 
 /**
  * Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
  */

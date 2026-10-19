@@ -92,6 +92,7 @@ pub fn run() {
             commands::sessions::session_set_model,
             commands::sessions::session_set_mode,
             commands::sessions::session_set_effort,
+            commands::sessions::session_set_chrome,
             commands::sessions::session_log,
             commands::chat::chat_history,
             commands::chat::chat_send,

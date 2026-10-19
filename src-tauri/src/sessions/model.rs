@@ -30,6 +30,8 @@ pub struct SessionSummary {
     pub model: ModelId,
     pub effort: Effort,
     pub mode: Mode,
+    /// Browser-Zugriff gewünscht; wirkt ab dem nächsten Start des Agenten.
+    pub chrome: bool,
     pub created_at: f64,
     /// Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
     pub running_ms: f64,

@@ -35,6 +35,8 @@ pub struct SpawnOptions {
     pub scratchpad: Option<PathBuf>,
     /// Ordner `.artefakte` des Vorhabens; der Reiter „Artefakte“ zeigt genau diesen.
     pub artifacts: Option<PathBuf>,
+    /// Browser-Zugriff (Claude in Chrome); nur im Claude-Betrieb wirksam.
+    pub chrome: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +131,13 @@ fn build_command(opts: &SpawnOptions) -> Command {
         command
             .arg("--effort")
             .arg(opts.effort.cli_value())
+            // Ausdrücklich in beide Richtungen: der Schalter der Session gilt, nicht die
+            // Voreinstellung der Kommandozeile.
+            .arg(if opts.chrome {
+                "--chrome"
+            } else {
+                "--no-chrome"
+            })
             // Unter `-p` schaltet die Kommandozeile das Artefakt-Werkzeug sonst ab.
             .env("CLAUDE_CODE_ARTIFACT", "1");
     }

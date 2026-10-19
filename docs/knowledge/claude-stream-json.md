@@ -140,6 +140,15 @@ Gemessen am 2026-10-01 mit der Claude-Kommandozeile im Druckmodus mit `--input-f
 - `{"subtype":"mcp_authenticate","serverName":"<name>"}` (ohne `redirectUri`) → gemessen für claude.ai: `success` mit `response` `{"authUrl":"https://claude.ai/api/organizations/<org>/mcp/start-auth/<server>","requiresUserAction":true,"callbackExpected":false}`; danach verbindet die Kommandozeile **nicht** selbst neu. Unbekannter Name → `error` `"Server not found: <name>"`. Nur aus dem Programmcode gelesen, nicht gemessen: eigene HTTP-Server öffnen den Browser nicht selbst, die Kommandozeile lauscht auf einem lokalen Port und antwortet `{"authUrl":…,"requiresUserAction":true,"callbackExpected":true,"redirectScheme":"localhost","state":…,"callbackPort":…}` und verbindet nach dem Rücksprung selbst; mit gültigem Token `{"requiresUserAction":false,"callbackExpected":false}` ohne `authUrl` ([ADR 024](../decisions/024-mcp-anmeldung.md)).
 - Die Antworten auf `mcp_reconnect`/`mcp_toggle` tragen nur die `request_id`; der Core ordnet sie darüber der Aktion zu ([ADR 013](../decisions/013-mcp-server-im-dialog.md)).
 
+## Claude in Chrome
+
+Gemessen am 2026-10-19 mit Claude Code 2.1.293 ([ADR 030](../decisions/030-browser-zugriff.md)):
+
+- `claude --help` kennt `--chrome` („Enable Claude in Chrome integration“) und `--no-chrome`.
+- `claude -p --chrome --output-format stream-json --verbose` meldet in `system/init` den MCP-Server `claude-in-chrome` (Status `connected`, Herkunft `dynamic`) samt 22 Werkzeugen `mcp__claude-in-chrome__*`. Der Druckmodus trägt die Option also.
+- `/chrome` steht im Druckmodus **nicht** in `slash_commands`: der Befehl ist interaktiv und kommt beim Agenten nicht an.
+- Nicht gemessen: `--resume` zusammen mit `--chrome`, die Freigabe der Browser-Werkzeuge über `--permission-prompt-tool stdio` und der Status des Servers ohne laufendes Chrome.
+
 ## Einmal-Aufruf im Druckmodus (TL;DR)
 
 Für das TL;DR läuft ein eigener, kurzlebiger `claude.exe` ohne Stream-Protokoll, unabhängig vom Agenten der Session (`src-tauri/src/agents/claude/print.rs`):

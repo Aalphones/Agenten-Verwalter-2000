@@ -176,6 +176,10 @@ struct SessionState {
     effort: Effort,
     /// Denkaufwand, mit dem der laufende Prozess gestartet wurde — der lässt sich nur beim Start setzen.
     process_effort: Effort,
+    /// Wert von `chrome`, mit dem der laufende Prozess gestartet wurde.
+    process_chrome: bool,
+    /// Browser-Zugriff (Claude in Chrome) gewünscht; wirkt ab dem nächsten Start des Agenten.
+    chrome: bool,
     /// Modell-Backend, mit dem der laufende Prozess gestartet wurde; `None` = Claude.
     process_backend: Option<LocalBackend>,
     /// Anzahl Repositories, mit denen der laufende Prozess gestartet wurde — `--add-dir` gibt es
@@ -819,14 +823,17 @@ impl SessionRegistry {
                     .clone()
                     .map_err(CommandError::LocalModelUnavailable)?;
                 // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem
-                // bisherigen Verlauf. Ein angehängtes Repository oder ein Wechsel der Betriebsart
-                // startet ihn nur neu, wenn er ruht — ein arbeitender Agent wird nie unterbrochen.
+                // bisherigen Verlauf. Ein angehängtes Repository, ein Wechsel der Betriebsart oder
+                // ein umgelegter Browser-Zugriff startet ihn nur neu, wenn er ruht — ein arbeitender
+                // Agent wird nie unterbrochen.
                 let has_new_repository =
                     session.repositories().len() != state.process_repository_count;
                 let has_new_backend = state.process_backend != backend;
+                let has_new_chrome = state.chrome != state.process_chrome;
                 if state.process.is_none()
                     || state.effort != state.process_effort
-                    || ((has_new_repository || has_new_backend) && state.is_resting())
+                    || ((has_new_repository || has_new_backend || has_new_chrome)
+                        && state.is_resting())
                 {
                     start_process(app, &session, state, outbox, backend.as_ref())?;
                 }
@@ -1116,6 +1123,25 @@ impl SessionRegistry {
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
                 state.effort = effort;
+                outbox.summary_dirty = true;
+                Ok(())
+            },
+        )
+    }
+
+    /// Wirkt erst mit dem nächsten Start — die Kommandozeile kennt keine Steueranfrage dafür.
+    pub fn set_chrome(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        enabled: bool,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.chrome = enabled;
                 outbox.summary_dirty = true;
                 Ok(())
             },
@@ -1670,6 +1696,8 @@ impl SessionState {
             model,
             effort,
             process_effort: effort,
+            process_chrome: false,
+            chrome: false,
             process_backend: None,
             process_repository_count: 0,
             has_agent_history: false,
@@ -1738,6 +1766,8 @@ impl SessionState {
         state.context_used = row.context_used;
         state.context_window = row.context_window;
         state.has_agent_history = row.has_agent_history;
+        state.chrome = row.chrome;
+        state.process_chrome = row.chrome;
         state.scratchpad_dir = row.scratchpad_dir.clone();
         state.idle_since = None;
         state.entries_loaded = false;
@@ -2657,6 +2687,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         last_activity_at: state.last_activity_at,
         seen_at: state.seen_at,
         handoff_line: state.handoff_line.clone(),
+        chrome: state.chrome,
         running_ms: state.running_ms,
         context_used: state.context_used,
         context_window: state.context_window,
@@ -2722,6 +2753,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         model: state.model,
         effort: state.effort,
         mode: state.mode,
+        chrome: state.chrome,
         created_at: state.created_at,
         running_ms: state.running_ms,
         running_since: state.running_since,
@@ -2829,6 +2861,7 @@ fn start_process(
             local: backend.cloned(),
             scratchpad: scratchpad_dir,
             artifacts: artifacts_dir,
+            chrome: state.chrome,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -2836,6 +2869,7 @@ fn start_process(
     )?;
     state.process = Some(Arc::new(process));
     state.process_effort = state.effort;
+    state.process_chrome = state.chrome;
     // Im Claude-Betrieb bleibt der gespeicherte Wert stehen, bis die erste Antwort ihn bestätigt;
     // nur der Wechsel aus dem lokalen Betrieb setzt ihn zurück.
     if let Some(local) = backend {

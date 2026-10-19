@@ -4,7 +4,7 @@ Der User soll einer Session per Schalter erlauben können, seinen echten Chrome-
 
 | Phase | Inhalt | Komplexität | Status |
 |---|---|---|---|
-| 1 | Core: Zustand speichern, Startargument, Neustart, Befehl | standard | pending |
+| 1 | Core: Zustand speichern, Startargument, Neustart, Befehl | standard | complete |
 | 2 | Oberfläche: Schalter in der Eingabeleiste, `/chrome` im Befehlsmenü, Doku | standard | pending |
 
 ## Belegte Grundlagen
@@ -78,22 +78,25 @@ Fehlerklassen geprüft (`werkzeuge/claude-code`, `frameworks/react`, `sprachen/t
 
 ### Checkliste
 
-- [ ] Migration `src-tauri/src/db/migrations/010_session_chrome.sql`: `ALTER TABLE sessions ADD COLUMN chrome INTEGER NOT NULL DEFAULT 0;`. In `migrations.rs` als zehnten Eintrag `include_str!` hinzufügen.
-- [ ] `db/sessions.rs`: `chrome: bool` in `SessionRow` (Doc: „Browser-Zugriff (Claude in Chrome) beim nächsten Start; ADR 030.“) und in `StoredRow`. Die Spalte ans Ende beider `SELECT`-Listen setzen (`row.get(21)`). In `upsert` als `?19` in `INSERT` und `VALUES` und `chrome = excluded.chrome` im `UPDATE` einfügen.
-- [ ] `sessions/registry.rs` `SessionState`: die Felder `chrome: bool` und, direkt hinter `process_effort`, `process_chrome: bool` anlegen (Doc: „Wert von `chrome`, mit dem der laufende Prozess gestartet wurde.“). In `new`: beide `false`. In `restored`: `chrome = row.chrome`, `process_chrome = row.chrome`.
-- [ ] `row_of` und die zweite `SessionRow { … }`-Stelle: `chrome: state.chrome`.
-- [ ] `sessions/model.rs` `SessionSummary`: `pub chrome: bool` hinter `mode` (Doc: „Browser-Zugriff gewünscht; wirkt ab dem nächsten Start des Agenten.“). In `summarize` mit `state.chrome` belegen.
-- [ ] `agents/claude/process.rs` `SpawnOptions`: `pub chrome: bool`. In `build_command` in den vorhandenen Block `if opts.local.is_none() { … }` zusätzlich `.arg(if opts.chrome { "--chrome" } else { "--no-chrome" })` setzen. Kommentar: „Ausdrücklich in beide Richtungen: der Schalter der Session gilt, nicht die Voreinstellung der Kommandozeile.“
-- [ ] `start_process`: `chrome: state.chrome` an `SpawnOptions` übergeben. Nach `state.process_effort = state.effort;` die Zeile `state.process_chrome = state.chrome;` einfügen.
-- [ ] `send`: die Bedingung vor `start_process` erweitern zu `… || ((has_new_repository || has_new_backend || state.chrome != state.process_chrome) && state.is_resting())`. Den Kommentar darüber um „ein umgelegter Browser-Zugriff“ ergänzen.
-- [ ] `SessionRegistry::set_chrome(&self, app, session_id, enabled: bool)` direkt hinter `set_effort` anlegen, im selben Aufbau: `state.chrome = enabled; outbox.summary_dirty = true; Ok(())`. Doc: „Wirkt erst mit dem nächsten Start — die Kommandozeile kennt keine Steueranfrage dafür.“
-- [ ] `commands/sessions.rs`: `session_set_chrome(app, registry, session_id: String, enabled: bool)` analog zu `session_set_effort` anlegen und in `lib.rs` hinter `session_set_effort` registrieren.
-- [ ] Alle übrigen Stellen, die `SpawnOptions { … }` oder `SessionRow { … }` bauen, ergänzen (Compiler-Fehler zeigen sie). Tests und Beispiele setzen `chrome: false`.
-- [ ] `pnpm bindings` laufen lassen, dann `pnpm check`.
-- [ ] ADR `docs/decisions/030-browser-zugriff.md` (Kontext, betrachtete Optionen, Entscheidung, Konsequenzen) mit dem Inhalt des Abschnitts „Entscheidungen“ oben. Als verworfene Option festhalten: „`/chrome` als Text an den Agenten durchreichen — geht im Druckmodus ins Leere“.
-- [ ] `docs/knowledge/claude-stream-json.md`: einen Abschnitt „Claude in Chrome“ mit den drei Messpunkten aus „Belegte Grundlagen“ ergänzen.
+- [x] Migration `src-tauri/src/db/migrations/010_session_chrome.sql`: `ALTER TABLE sessions ADD COLUMN chrome INTEGER NOT NULL DEFAULT 0;`. In `migrations.rs` als zehnten Eintrag `include_str!` hinzufügen.
+- [x] `db/sessions.rs`: `chrome: bool` in `SessionRow` (Doc: „Browser-Zugriff (Claude in Chrome) beim nächsten Start; ADR 030.“) und in `StoredRow`. Die Spalte ans Ende beider `SELECT`-Listen setzen (`row.get(21)`). In `upsert` als `?19` in `INSERT` und `VALUES` und `chrome = excluded.chrome` im `UPDATE` einfügen.
+- [x] `sessions/registry.rs` `SessionState`: die Felder `chrome: bool` und, direkt hinter `process_effort`, `process_chrome: bool` anlegen (Doc: „Wert von `chrome`, mit dem der laufende Prozess gestartet wurde.“). In `new`: beide `false`. In `restored`: `chrome = row.chrome`, `process_chrome = row.chrome`.
+- [x] `row_of` und die zweite `SessionRow { … }`-Stelle: `chrome: state.chrome`.
+- [x] `sessions/model.rs` `SessionSummary`: `pub chrome: bool` hinter `mode` (Doc: „Browser-Zugriff gewünscht; wirkt ab dem nächsten Start des Agenten.“). In `summarize` mit `state.chrome` belegen.
+- [x] `agents/claude/process.rs` `SpawnOptions`: `pub chrome: bool`. In `build_command` in den vorhandenen Block `if opts.local.is_none() { … }` zusätzlich `.arg(if opts.chrome { "--chrome" } else { "--no-chrome" })` setzen. Kommentar: „Ausdrücklich in beide Richtungen: der Schalter der Session gilt, nicht die Voreinstellung der Kommandozeile.“
+- [x] `start_process`: `chrome: state.chrome` an `SpawnOptions` übergeben. Nach `state.process_effort = state.effort;` die Zeile `state.process_chrome = state.chrome;` einfügen.
+- [x] `send`: die Bedingung vor `start_process` erweitern zu `… || ((has_new_repository || has_new_backend || state.chrome != state.process_chrome) && state.is_resting())`. Den Kommentar darüber um „ein umgelegter Browser-Zugriff“ ergänzen.
+- [x] `SessionRegistry::set_chrome(&self, app, session_id, enabled: bool)` direkt hinter `set_effort` anlegen, im selben Aufbau: `state.chrome = enabled; outbox.summary_dirty = true; Ok(())`. Doc: „Wirkt erst mit dem nächsten Start — die Kommandozeile kennt keine Steueranfrage dafür.“
+- [x] `commands/sessions.rs`: `session_set_chrome(app, registry, session_id: String, enabled: bool)` analog zu `session_set_effort` anlegen und in `lib.rs` hinter `session_set_effort` registrieren.
+- [x] Alle übrigen Stellen, die `SpawnOptions { … }` oder `SessionRow { … }` bauen, ergänzen (Compiler-Fehler zeigen sie). Tests und Beispiele setzen `chrome: false`.
+- [x] `pnpm bindings` laufen lassen, dann `pnpm check`.
+- [x] ADR `docs/decisions/030-browser-zugriff.md` (Kontext, betrachtete Optionen, Entscheidung, Konsequenzen) mit dem Inhalt des Abschnitts „Entscheidungen“ oben. Als verworfene Option festhalten: „`/chrome` als Text an den Agenten durchreichen — geht im Druckmodus ins Leere“.
+- [x] `docs/knowledge/claude-stream-json.md`: einen Abschnitt „Claude in Chrome“ mit den drei Messpunkten aus „Belegte Grundlagen“ ergänzen.
 
 ## Report-Back
+
+- Umgesetzt wie geplant; `pnpm check` grün. Die zweite `SessionRow { … }`-Stelle (Pausieren beim Laden) baut per `..row.clone()` und brauchte keine Änderung; Tests und Beispiele bauen weder `SpawnOptions` noch `SessionRow`.
+- Nebenbei: `src/components/Popover.tsx` war seit dem letzten Commit nicht Prettier-sauber und ließ `pnpm check` scheitern — als eigener `style`-Commit formatiert (nur Zeilenumbruch).
 
 ---
 

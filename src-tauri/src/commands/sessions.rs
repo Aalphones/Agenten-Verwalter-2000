@@ -116,6 +116,16 @@ pub async fn session_set_effort(
 }
 
 #[tauri::command]
+pub async fn session_set_chrome(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    enabled: bool,
+) -> Result<(), CommandError> {
+    registry.set_chrome(&app, &session_id, enabled)
+}
+
+#[tauri::command]
 pub async fn session_log(
     registry: tauri::State<'_, SessionRegistry>,
     session_id: String,
