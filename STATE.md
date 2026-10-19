@@ -2,7 +2,7 @@
 
 **Aktiver Plan:** (kein aktiver Plan)
 **Phase:** —
-**Nächster Schritt:** Smoke „Archiv-Suche“ durch den User (Wackelstelle 1 zuerst); neuer Plan auf Zuruf.
+**Nächster Schritt:** Plan „Browser-Zugriff“ (`docs/planning/2026-10-19_browser-zugriff.md`) freigegeben und geparkt — Umsetzung per `/implement`; Smoke „Archiv-Suche“ durch den User weiter offen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -21,6 +21,7 @@
 10. ~~Session-Übergabe~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-05_session-uebergabe.md`, ADR 027, Migration 9), Smoke offen.
 11. ~~Vorhaben-Retro~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-07_vorhaben-retro/`, ADR 028), Smoke offen, Release auf Zuruf (Minor-Version).
 12. ~~Archiv-Suche~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-07_archiv-suche.md`, ADR 029), Smoke offen; `v0.22.0` auf Zuruf gesetzt.
+13. Browser-Zugriff — freigegeben, geparkt (`docs/planning/2026-10-19_browser-zugriff.md`, ADR 030 reserviert).
 
 ## Offen
 
