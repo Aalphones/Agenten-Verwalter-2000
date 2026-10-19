@@ -31,7 +31,7 @@
   &__list {
     display: flex;
     flex-direction: column;
-    max-height: 470px;
+    max-height: min(470px, calc(var(--popover-max-height, 470px) - 56px));
     padding: var(--space-xs) var(--space-xs) var(--space-sm);
     overflow-y: auto;
   }

@@ -1,7 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { FOCUSABLE_SELECTOR } from '@/lib/focus';
 import './Popover.css';
+
+/** Mindestabstand des Menüs zum Fensterrand in px. */
+const VIEWPORT_MARGIN = 8;
 
 interface PopoverProps {
   label: string;
@@ -79,9 +82,51 @@ export function Popover({
     };
   }, []);
 
+  const [side, setSide] = useState<'above' | 'below'>(placement);
+
+  // Das Menü hängt am Auslöser und weiß nichts vom Fenster: Reicht der Platz auf der gewünschten
+  // Seite nicht, klappt es auf die andere, und die Höhe wird auf den verfügbaren Platz begrenzt.
+  useLayoutEffect(() => {
+    const root: HTMLDivElement | null = rootRef.current;
+    const anchor: HTMLElement | null = root?.parentElement ?? null;
+    if (root === null || anchor === null) {
+      return undefined;
+    }
+    function fit(): void {
+      if (root === null || anchor === null) {
+        return;
+      }
+      root.style.removeProperty('--popover-max-height');
+      const anchorRect: DOMRect = anchor.getBoundingClientRect();
+      const gap: number = parseFloat(getComputedStyle(root).getPropertyValue('--space-md')) || 8;
+      const spaceBelow: number = window.innerHeight - anchorRect.bottom - gap - VIEWPORT_MARGIN;
+      const spaceAbove: number = anchorRect.top - gap - VIEWPORT_MARGIN;
+      const height: number = root.offsetHeight;
+      const preferredSpace: number = placement === 'below' ? spaceBelow : spaceAbove;
+      const otherSpace: number = placement === 'below' ? spaceAbove : spaceBelow;
+      const useOther: boolean = height > preferredSpace && otherSpace > preferredSpace;
+      const chosen: 'above' | 'below' = useOther
+        ? placement === 'below'
+          ? 'above'
+          : 'below'
+        : placement;
+      const space: number = useOther ? otherSpace : preferredSpace;
+      root.style.setProperty('--popover-max-height', `${String(Math.max(120, Math.floor(space)))}px`);
+      setSide(chosen);
+    }
+    fit();
+    const observer: ResizeObserver = new ResizeObserver(fit);
+    observer.observe(root);
+    window.addEventListener('resize', fit);
+    return (): void => {
+      observer.disconnect();
+      window.removeEventListener('resize', fit);
+    };
+  }, [placement]);
+
   const classNames: string = [
     'popover',
-    `popover--${placement}`,
+    `popover--${side}`,
     `popover--${align}`,
     width === 'anchor' ? 'popover--anchor' : '',
     className ?? '',
