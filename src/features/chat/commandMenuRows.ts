@@ -5,7 +5,8 @@ import { modelName } from '@/lib/labels';
 
 /** `full`: Knopf `/` in der Eingabeleiste · `slash`: `/` am Feldanfang · `skills`: nur Skills („Neue Session“). */
 export type CommandScope = 'full' | 'slash' | 'skills';
-export type SessionCommand = 'rename' | 'changes' | 'mcp' | 'pause';
+const SESSION_COMMANDS = ['rename', 'changes', 'mcp', 'pause', 'chrome'] as const;
+export type SessionCommand = (typeof SESSION_COMMANDS)[number];
 export type CommandRow =
   | { kind: 'attach' }
   | { kind: 'model' }
@@ -25,7 +26,7 @@ interface RowText {
 
 const PAUSABLE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiting'];
 
-const SESSION_COMMAND_TEXT: Record<SessionCommand, RowText> = {
+const SESSION_COMMAND_TEXT: Record<Exclude<SessionCommand, 'chrome'>, RowText> = {
   rename: { label: '/rename', description: 'Session umbenennen' },
   changes: { label: '/changes', description: 'Changes-Ansicht öffnen' },
   mcp: { label: '/mcp', description: 'MCP-Server anzeigen, ausschalten, neu verbinden' },
@@ -46,6 +47,15 @@ export function rowText(row: CommandRow, session: SessionSummary | null): RowTex
     case 'skill':
       return { label: `/${row.skill.name}`, description: row.skill.description };
     case 'session':
+      if (row.command === 'chrome') {
+        return {
+          label: '/chrome',
+          description:
+            session?.chrome === true
+              ? 'Browser-Zugriff ausschalten'
+              : 'Browser-Zugriff einschalten',
+        };
+      }
       return SESSION_COMMAND_TEXT[row.command];
   }
 }
@@ -70,6 +80,7 @@ export function buildCommandSections(
   filter: string,
   skills: readonly SkillInfo[],
   session: SessionSummary | null,
+  isLocal: boolean,
 ): CommandSection[] {
   const needle: string = filter.trim().toLowerCase();
 
@@ -88,8 +99,17 @@ export function buildCommandSections(
       title: 'Skills',
       rows: skills.map((skill: SkillInfo): CommandRow => ({ kind: 'skill', skill })),
     },
-    { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session) },
+    { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session, isLocal) },
   ];
+
+  // Ein exakt getippter Session-Befehl gewinnt gegen Skills, die den Namen nur enthalten.
+  const typedName: string = needle.replace(/^\//, '');
+  if (scope !== 'skills' && SESSION_COMMANDS.some((command: string) => command === typedName)) {
+    sections.sort(
+      (first: CommandSection, second: CommandSection) =>
+        Number(second.title === 'Session') - Number(first.title === 'Session'),
+    );
+  }
 
   return sections
     .map((section: CommandSection): CommandSection => ({
@@ -99,7 +119,7 @@ export function buildCommandSections(
     .filter((section: CommandSection) => section.rows.length > 0);
 }
 
-function sessionRows(session: SessionSummary | null): CommandRow[] {
+function sessionRows(session: SessionSummary | null, isLocal: boolean): CommandRow[] {
   if (session === null) {
     return [];
   }
@@ -108,6 +128,9 @@ function sessionRows(session: SessionSummary | null): CommandRow[] {
     rows.push({ kind: 'session', command: 'changes' });
   }
   rows.push({ kind: 'session', command: 'mcp' });
+  if (!isLocal) {
+    rows.push({ kind: 'session', command: 'chrome' });
+  }
   if (PAUSABLE_STATUSES.includes(session.status)) {
     rows.push({ kind: 'session', command: 'pause' });
   }

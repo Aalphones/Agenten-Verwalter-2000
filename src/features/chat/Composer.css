@@ -97,7 +97,8 @@
   }
 
   &__model,
-  &__mode {
+  &__mode,
+  &__browser {
     display: flex;
     align-items: center;
     border: 0;
@@ -145,6 +146,26 @@
     border-radius: var(--radius-md);
     color: var(--color-fg-secondary);
     font-size: var(--font-size-sm);
+  }
+
+  &__browser {
+    gap: var(--space-sm);
+    height: 30px;
+    margin-left: auto;
+    padding: 0 var(--space-lg);
+    border-radius: var(--radius-md);
+    color: var(--color-fg-secondary);
+    font-size: var(--font-size-sm);
+
+    &--on {
+      background: var(--color-accent-subtle);
+      color: var(--color-accent);
+    }
+  }
+
+  /* Der Browser-Knopf schiebt sich und den Modus-Knopf nach rechts; im lokalen Betrieb übernimmt der Anker das. */
+  &__browser + &__anchor--end {
+    margin-left: 0;
   }
 
   &__mode-icon {

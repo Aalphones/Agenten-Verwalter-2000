@@ -10,6 +10,7 @@ import type { CommandRow, CommandScope, CommandSection } from '@/features/chat/c
 import { useSkills } from '@/features/skills/useSkills';
 import type { SkillSource } from '@/features/skills/useSkills';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { useSettingsStore } from '@/stores/settings';
 
 const SLASH_AT_START = /^\/(\S*)$/;
 
@@ -62,6 +63,9 @@ export function useCommandMenu({
   const [buttonFilter, setButtonFilter] = useState<string>('');
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const [isSlashDismissed, setIsSlashDismissed] = useState<boolean>(false);
+  const isLocal: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') !== 'claude',
+  );
 
   const slashMatch: RegExpExecArray | null = SLASH_AT_START.exec(draft);
   if (slashMatch === null && isSlashDismissed) {
@@ -74,7 +78,7 @@ export function useCommandMenu({
   const filter: string = isButtonOpen ? buttonFilter : (slashMatch?.[1] ?? '');
 
   const { skills } = useSkills(skillSource, isOpen);
-  const sections: CommandSection[] = buildCommandSections(scope, filter, skills, session);
+  const sections: CommandSection[] = buildCommandSections(scope, filter, skills, session, isLocal);
   const rows: CommandRow[] = pickableRows(sections);
   // Ohne (noch gültige) Markierung gilt die erste wählbare Zeile als markiert.
   const highlighted: CommandRow | null =

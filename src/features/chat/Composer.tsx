@@ -23,7 +23,13 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { sendMessage } from '@/lib/chat';
 import { MODE_OPTIONS, effortLabel, localModelLabel, modeOption, modelName } from '@/lib/labels';
 import type { ModeOption } from '@/lib/labels';
-import { pauseSession, setSessionEffort, setSessionMode, setSessionModel } from '@/lib/sessions';
+import {
+  pauseSession,
+  setSessionChrome,
+  setSessionEffort,
+  setSessionMode,
+  setSessionModel,
+} from '@/lib/sessions';
 import { useAttachmentsStore } from '@/stores/attachments';
 import { useChatStore } from '@/stores/chat';
 import { NO_COMMENTS, useReviewStore } from '@/stores/review';
@@ -40,6 +46,10 @@ const LOCAL_MODEL_PICK_HINT =
 const NOTE_WHILE_ACTIVE =
   'Gilt ab der nächsten Nachricht an den Agenten. Der bisherige Verlauf bleibt erhalten.';
 const NOTE_WHILE_IDLE = 'Gilt ab der nächsten Nachricht in dieser Session.';
+const BROWSER_TITLE_ON =
+  'Browser-Zugriff an — der Agent darf deinen Chrome bedienen (Erweiterung „Claude in Chrome“ nötig). Klicken schaltet ab.';
+const BROWSER_TITLE_OFF =
+  'Browser-Zugriff aus — klicken erlaubt dem Agenten, deinen Chrome zu bedienen (Erweiterung „Claude in Chrome“ nötig).';
 const ATTACH_TITLE = 'Bilder und Dateien hinzufügen';
 const ATTACH_TITLE_WHILE_WAITING = 'Anhänge gehen erst, wenn die Rückfrage beantwortet ist';
 
@@ -188,6 +198,9 @@ export function Composer({ session }: ComposerProps): ReactElement {
       showView('changes');
     } else if (command === 'mcp') {
       setOpenMenu('mcp');
+    } else if (command === 'chrome') {
+      setErrorMessage(null);
+      setSessionChrome(session.id, !session.chrome).catch(report);
     } else {
       setErrorMessage(null);
       pauseSession(session.id).catch(report);
@@ -351,6 +364,20 @@ export function Composer({ session }: ComposerProps): ReactElement {
               )}
             </div>
           )}
+          {!isLocal && (
+            <button
+              type="button"
+              className={`composer__browser${session.chrome ? ' composer__browser--on' : ''}`}
+              aria-pressed={session.chrome}
+              title={`${session.chrome ? BROWSER_TITLE_ON : BROWSER_TITLE_OFF} ${modelNote}`}
+              onClick={(): void => {
+                runSessionCommand('chrome');
+              }}
+            >
+              <GlobeIcon />
+              <span>Browser</span>
+            </button>
+          )}
           <div className="composer__anchor composer__anchor--end">
             <button
               type="button"
@@ -503,6 +530,24 @@ function SlashIcon(): ReactElement {
     >
       <rect x="1.5" y="1.5" width="11" height="11" rx="2" />
       <path d="M8.6 4 5.4 10" />
+    </svg>
+  );
+}
+
+function GlobeIcon(): ReactElement {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="7" cy="7" r="5.5" />
+      <path d="M1.5 7h11M7 1.5c1.6 1.6 2.4 3.4 2.4 5.5S8.6 10.9 7 12.5C5.4 10.9 4.6 9.1 4.6 7S5.4 3.1 7 1.5Z" />
     </svg>
   );
 }

@@ -80,6 +80,11 @@ export async function setSessionEffort(sessionId: string, effort: Effort): Promi
   await invoke('session_set_effort', { sessionId, effort });
 }
 
+/** Schaltet den Browser-Zugriff (Claude in Chrome) der Session; wirkt ab dem nächsten Start des Agenten. */
+export async function setSessionChrome(sessionId: string, enabled: boolean): Promise<void> {
+  await invoke('session_set_chrome', { sessionId, enabled });
+}
+
 /** Die letzten Zeilen der Fehlerausgabe und unverstandene Zeilen des Agenten (höchstens 300).
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
 export function getSessionLog(sessionId: string): Promise<string[]> {

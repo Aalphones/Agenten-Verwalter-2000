@@ -7,6 +7,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Vorhaben** | Eine Aufgabe (z. B. „Plan XYZ umsetzen“) mit ihren Repositories, ihrem Workspace und ihren Sessions. Die zentrale Einheit der App. Im Code `project` ([ADR 011](decisions/011-vorhaben-und-sessions.md)). |
 | **Übersicht (Vorhaben)** | Hauptansicht eines Vorhabens: TL;DR, Repositories, Sessions, „Neue Session“; Reiter „Übersicht · Changes“. |
 | **Session** | Eine Claude-Session innerhalb eines Vorhabens, mit eigenem Agenten, Chat, Kontext und Events; im Vorhaben durchnummeriert (#1, #2 …). Ihre ID ist die Session-ID der Claude-Kommandozeile. |
+| **Browser-Zugriff** | Schalter pro Session, der den Agenten mit Claude in Chrome startet (`--chrome`); der Agent bedient dann den echten Chrome des Users mit dessen Anmeldungen. Nur im Claude-Betrieb. Im Code `chrome` ([ADR 030](decisions/030-browser-zugriff.md)). |
 | **TL;DR** | Kurzfassung einer Session bzw. eines Vorhabens in drei, vier Zeilen, per Knopf von Haiku erstellt; zeigt, wie viele Einträge seither dazugekommen sind. Im Code `tldr` ([ADR 011](decisions/011-vorhaben-und-sessions.md)). |
 | **Retro** | Rückblick über alle Sessions eines Vorhabens: der Verwalter sammelt je Session Befunde (Mini-Retro), der Skill `session-review` wertet sie in einer neuen Session aus. Im Code `retro` ([ADR 028](decisions/028-vorhaben-retro.md)). |
 | **Mini-Retro** | Rohbefunde einer Session aus einem Einmal-Aufruf mit Sonnet, ohne Bewertung; alle zusammen ergeben `befunde.md` im Retro-Ordner des Workspace. |
