@@ -12,6 +12,7 @@ use crate::skills::model::SkillRef;
 pub enum ModelId {
     Fable,
     Opus,
+    Opusplan,
     Sonnet,
     Haiku,
 }
@@ -21,6 +22,7 @@ impl ModelId {
         match self {
             ModelId::Fable => "claude-fable-5-1",
             ModelId::Opus => "claude-opus-5-5",
+            ModelId::Opusplan => "opusplan",
             ModelId::Sonnet => "claude-sonnet-5-5",
             ModelId::Haiku => "claude-haiku-5-5",
         }
@@ -29,7 +31,7 @@ impl ModelId {
     /// Kontextfenster bis zum ersten abgeschlossenen Turn; danach meldet die CLI den echten Wert.
     pub fn initial_context_window(self) -> u32 {
         match self {
-            ModelId::Fable | ModelId::Opus | ModelId::Sonnet => 1_000_000,
+            ModelId::Fable | ModelId::Opus | ModelId::Opusplan | ModelId::Sonnet => 1_000_000,
             ModelId::Haiku => 200_000,
         }
     }

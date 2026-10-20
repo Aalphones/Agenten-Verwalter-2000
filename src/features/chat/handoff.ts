@@ -1,7 +1,7 @@
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { ModelId } from '@/lib/bindings/ModelId';
 
-const HANDOFF_MODEL_PATTERN = /\bModell\s+(fable|opus|sonnet|haiku)\b/i;
+const HANDOFF_MODEL_PATTERN = /\bModell\s+(fable|opusplan|opus|sonnet|haiku)\b/i;
 
 /** `seq` der letzten Textantwort, wenn nach ihr keine Nutzernachricht steht; sonst `null`. */
 export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null {
@@ -26,6 +26,8 @@ export function modelOfHandoff(line: string): ModelId | null {
       return 'fable';
     case 'opus':
       return 'opus';
+    case 'opusplan':
+      return 'opusplan';
     case 'sonnet':
       return 'sonnet';
     case 'haiku':

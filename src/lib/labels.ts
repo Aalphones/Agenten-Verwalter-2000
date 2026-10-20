@@ -37,6 +37,7 @@ export const OPERATING_MODE_OPTIONS: readonly OperatingModeOption[] = [
 export const MODEL_OPTIONS: readonly ModelOption[] = [
   { id: 'fable', name: 'Fable 5.1', hint: 'Am stärksten, für Planung und Architektur' },
   { id: 'opus', name: 'Opus 5.5', hint: 'Gründlich, für schwierige Umsetzung' },
+  { id: 'opusplan', name: 'Opus Plan', hint: 'Opus plant, Sonnet setzt um' },
   { id: 'sonnet', name: 'Sonnet 5.5', hint: 'Schnell und ausgewogen' },
   { id: 'haiku', name: 'Haiku 5.5', hint: 'Am schnellsten, für Kleinkram' },
 ] as const;
