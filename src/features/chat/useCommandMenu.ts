@@ -68,6 +68,11 @@ export function useCommandMenu({
     (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
   );
 
+  // Codex nutzt seine eigenen MCP-Server aus `~/.codex/config.toml`; der Dialog zeigt nur die der Claude-Kommandozeile.
+  const hasMcp: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') !== 'codex',
+  );
+
   const slashMatch: RegExpExecArray | null = SLASH_AT_START.exec(draft);
   if (slashMatch === null && isSlashDismissed) {
     setIsSlashDismissed(false);
@@ -85,6 +90,7 @@ export function useCommandMenu({
     skills,
     session,
     hasBrowser,
+    hasMcp,
   );
   const rows: CommandRow[] = pickableRows(sections);
   // Ohne (noch gültige) Markierung gilt die erste wählbare Zeile als markiert.

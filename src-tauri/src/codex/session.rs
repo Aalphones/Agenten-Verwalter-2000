@@ -3,7 +3,7 @@
 //! Alles läuft auf einem Thread: Codex arbeitet den Turn selbst ab und meldet ihn über
 //! Benachrichtigungen, die Hauptschleife übersetzt sie nur. Nachrichten, die während eines Turns
 //! eintreffen, warten in der Schlange und werden danach je als eigener Turn verarbeitet.
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::env;
 use std::ffi::OsString;
 use std::fs;
@@ -15,8 +15,9 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
+use super::approvals::{self, Answer, Approvals};
 use super::rpc::{Incoming, RpcClient};
-use super::thread_file;
+use super::{items, policy, thread_file};
 use crate::agents::event::Mode;
 use crate::standalone::args::{self, AgentArgs, Start};
 use crate::standalone::output::{self, Output};
@@ -29,15 +30,25 @@ const BYTE_ORDER_MARK: char = '\u{feff}';
 const UNKNOWN_FAILURE: &str = "Codex hat den Turn ohne Fehlermeldung abgebrochen.";
 const CODEX_CLOSED: &str = "Codex wurde beendet.";
 
-/// Codex-Werte der Freigaben (`AskForApproval`) und der Sandbox (`SandboxMode`).
-const APPROVAL_ON_REQUEST: &str = "on-request";
-const SANDBOX_READ_ONLY: &str = "read-only";
-const SANDBOX_WORKSPACE_WRITE: &str = "workspace-write";
-/// Freigabe-Anfragen, deren Antwort `{"decision": …}` ist.
-const APPROVAL_METHODS: [&str; 2] = [
-    "item/commandExecution/requestApproval",
-    "item/fileChange/requestApproval",
+const AGENT_MESSAGE: &str = "agentMessage";
+const FILE_CHANGE: &str = "fileChange";
+/// Benachrichtigungen, die der Verwalter nicht braucht: Stück-für-Stück-Ausgaben (er zeigt fertige
+/// Blöcke), Statusmeldungen und die Token-Zählung (kommt mit Phase 4).
+const SILENT_NOTIFICATIONS: [&str; 10] = [
+    "item/autoApprovalReview/started",
+    "item/autoApprovalReview/completed",
+    "guardianWarning",
+    "mcpServer/startupStatus/updated",
+    "thread/status/changed",
+    "turn/started",
+    "thread/tokenUsage/updated",
+    "turn/diff/updated",
+    "item/mcpToolCall/progress",
+    "item/fileChange/patchUpdated",
 ];
+/// So enden die Stück-für-Stück-Benachrichtigungen (`item/reasoning/textDelta`,
+/// `item/agentMessage/delta`).
+const DELTA_SUFFIXES: [&str; 2] = ["Delta", "/delta"];
 
 enum Input {
     Line(String),
@@ -65,9 +76,20 @@ struct Session {
     /// Mit `set_model` gewählt; gilt ab dem nächsten `turn/start`.
     requested_model: Option<String>,
     mode: Mode,
+    cwd: PathBuf,
+    add_dirs: Vec<PathBuf>,
+    scratchpad: PathBuf,
+    /// Muster der Ticket-Worktrees aus `--allowedTools`; sie bestimmen mit, wohin Codex schreiben darf.
+    allowed_rules: Vec<String>,
     queue: VecDeque<Value>,
     turn: Option<ActiveTurn>,
-    /// Benachrichtigungen, die schon einmal als unbekannt gemeldet wurden.
+    approvals: Approvals,
+    /// Dateien eines `fileChange`-Elements nach Element-ID, bis sein Turn endet: die Freigabe-Anfrage
+    /// nennt sie nicht selbst.
+    changed_files: HashMap<String, Vec<String>>,
+    /// Zählt die `TodoWrite`-Aufrufe aus Plan-Änderungen, damit jeder eine eigene ID hat.
+    plan_updates: u64,
+    /// Benachrichtigungen und Elemente, die schon einmal als unbekannt gemeldet wurden.
     reported_methods: HashSet<String>,
 }
 
@@ -105,13 +127,8 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
         return EXIT_START_FAILED;
     }
     let output = Output::default();
-    output.line(&output::init(
-        &session_id,
-        &model,
-        &cwd,
-        &[],
-        &scratchpad(&session_id),
-    ));
+    let scratchpad = scratchpad(&session_id);
+    output.line(&output::init(&session_id, &model, &cwd, &[], &scratchpad));
     let mut session = Session {
         output,
         rpc,
@@ -120,8 +137,15 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
         model,
         requested_model: None,
         mode: args.mode,
+        cwd,
+        add_dirs: args.add_dirs,
+        scratchpad,
+        allowed_rules: args.allowed_rules,
         queue: VecDeque::new(),
         turn: None,
+        approvals: Approvals::default(),
+        changed_files: HashMap::new(),
+        plan_updates: 0,
         reported_methods: HashSet::new(),
     };
     let exit_code = session.run_loop(&receiver);
@@ -159,8 +183,9 @@ fn open_thread(
             }
             let mut params = json!({
                 "cwd": cwd_text,
-                "approvalPolicy": APPROVAL_ON_REQUEST,
-                "sandbox": sandbox_of(args.mode),
+                "approvalPolicy": policy::approval_policy(args.mode),
+                "approvalsReviewer": policy::approvals_reviewer(args.mode),
+                "sandbox": policy::sandbox_mode(args.mode),
             });
             if !args.model.is_empty() {
                 params["model"] = json!(args.model);
@@ -194,14 +219,6 @@ fn model_of(result: &Value) -> String {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned()
-}
-
-fn sandbox_of(mode: Mode) -> &'static str {
-    if mode == Mode::Plan {
-        SANDBOX_READ_ONLY
-    } else {
-        SANDBOX_WORKSPACE_WRITE
-    }
 }
 
 fn write_thread_file(file: &Path, thread_id: &str) -> Result<(), String> {
@@ -289,8 +306,8 @@ impl Session {
                 Input::Codex(Incoming::Notification { method, params }) => {
                     self.handle_notification(&method, &params);
                 }
-                Input::Codex(Incoming::Request { id, method, .. }) => {
-                    self.decline_request(&id, &method);
+                Input::Codex(Incoming::Request { id, method, params }) => {
+                    self.handle_request(&id, &method, &params);
                 }
                 Input::Codex(Incoming::Closed) => {
                     self.fail_turn(CODEX_CLOSED);
@@ -320,7 +337,7 @@ impl Session {
                 None => eprintln!("user-Zeile ohne message.content, überlesen"),
             },
             Some("control_request") => self.handle_control(&value),
-            Some("control_response") => eprintln!("Antwort auf Rückfrage, überlesen"),
+            Some("control_response") => self.handle_answer(&value),
             other => eprintln!("Unbekannte Zeile, überlesen: {other:?}"),
         }
     }
@@ -374,17 +391,60 @@ impl Session {
         self.output.line(&output::control_error(request_id, error));
     }
 
-    /// Freigaben laufen erst mit den Rückfragen des Verwalters (Phase 2); bis dahin lehnt der
-    /// Übersetzer ab, damit Codex nicht auf eine Antwort wartet, die nie kommt.
-    fn decline_request(&self, id: &Value, method: &str) {
+    /// Eine Freigabe oder Frage von Codex geht als Rückfrage an den Verwalter; alles andere
+    /// beantwortet der Übersetzer mit einem Fehler, damit Codex nicht auf eine Antwort wartet, die
+    /// nie kommt.
+    fn handle_request(&mut self, id: &Value, method: &str, params: &Value) {
+        // Planen ändert nichts: Codex fragt dort nur, um die read-only-Sandbox zu verlassen.
+        if self.mode == Mode::Plan && approvals::is_change_request(method) {
+            self.send_answer(&Answer {
+                rpc_id: id.clone(),
+                result: approvals::declined(),
+            });
+            return;
+        }
+        let item_id = params.get("itemId").and_then(Value::as_str);
+        let changed_files: &[String] = item_id
+            .and_then(|item_id: &str| self.changed_files.get(item_id))
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        if let Some(line) = self.approvals.ask(id, method, params, changed_files) {
+            self.output.line(&line);
+            return;
+        }
         eprintln!("Anfrage von Codex abgelehnt: {method}");
-        let answered = if APPROVAL_METHODS.contains(&method) {
-            self.rpc.respond(id, json!({ "decision": "decline" }))
-        } else {
-            self.rpc
-                .respond_error(id, &format!("nicht unterstützt: {method}"))
-        };
+        let answered = self
+            .rpc
+            .respond_error(id, &format!("nicht unterstützt: {method}"));
         if let Err(error) = answered {
+            eprintln!("Antwort an Codex gescheitert: {error}");
+        }
+    }
+
+    /// Die Antwort des Verwalters auf eine Rückfrage geht an Codex weiter.
+    fn handle_answer(&mut self, value: &Value) {
+        let Some(response) = value.get("response") else {
+            return;
+        };
+        let request_id = response
+            .get("request_id")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let is_success = response.get("subtype").and_then(Value::as_str) == Some("success");
+        // Eine Antwort mit Fehler gilt als Absage: Codex soll weiterarbeiten können.
+        let body = if is_success {
+            response.get("response").cloned().unwrap_or(Value::Null)
+        } else {
+            Value::Null
+        };
+        match self.approvals.answer(request_id, &body) {
+            Some(answer) => self.send_answer(&answer),
+            None => eprintln!("Antwort auf unbekannte Rückfrage, überlesen: {request_id}"),
+        }
+    }
+
+    fn send_answer(&self, answer: &Answer) {
+        if let Err(error) = self.rpc.respond(&answer.rpc_id, answer.result.clone()) {
             eprintln!("Antwort an Codex gescheitert: {error}");
         }
     }
@@ -393,8 +453,19 @@ impl Session {
         let mut params = json!({
             "threadId": self.thread_id,
             "input": [{ "type": "text", "text": text_of(content) }],
-            "approvalPolicy": APPROVAL_ON_REQUEST,
         });
+        let turn_policy = policy::turn_policy(
+            self.mode,
+            &self.cwd,
+            &self.add_dirs,
+            &self.scratchpad,
+            &self.allowed_rules,
+        );
+        if let (Some(fields), Some(policy_fields)) =
+            (params.as_object_mut(), turn_policy.as_object())
+        {
+            fields.extend(policy_fields.clone());
+        }
         if let Some(model) = &self.requested_model {
             params["model"] = json!(model);
         }
@@ -437,6 +508,10 @@ impl Session {
         }
         turn.is_aborted = true;
         let params = json!({ "threadId": self.thread_id, "turnId": turn.id });
+        // Offene Rückfragen zuerst abbrechen: Codex wartet sonst auf Antworten, die nie kommen.
+        for answer in self.approvals.cancel_all() {
+            self.send_answer(&answer);
+        }
         if let Err(error) = self.rpc.call("turn/interrupt", params, CALL_TIMEOUT) {
             eprintln!("{error}");
         }
@@ -452,7 +527,14 @@ impl Session {
             return;
         }
         match method {
+            "item/started" => self.item_started(params.get("item").unwrap_or(&Value::Null)),
             "item/completed" => self.item_completed(params.get("item").unwrap_or(&Value::Null)),
+            "turn/plan/updated" => self.plan_updated(params),
+            "serverRequest/resolved" => {
+                if let Some(request_id) = params.get("requestId") {
+                    self.approvals.forget(request_id);
+                }
+            }
             "turn/completed" => self.turn_completed(params.get("turn").unwrap_or(&Value::Null)),
             "error" => {
                 let will_retry = params
@@ -465,20 +547,64 @@ impl Session {
                 }
             }
             other => {
-                if self.reported_methods.insert(other.to_owned()) {
-                    eprintln!("Benachrichtigung von Codex noch nicht übersetzt: {other}");
+                let is_silent = SILENT_NOTIFICATIONS.contains(&other)
+                    || DELTA_SUFFIXES
+                        .iter()
+                        .any(|suffix: &&str| other.ends_with(suffix));
+                if !is_silent {
+                    self.report_once(other, "Benachrichtigung von Codex noch nicht übersetzt");
                 }
             }
         }
     }
 
+    /// Meldet `name` einmal auf stderr, danach nicht mehr.
+    fn report_once(&mut self, name: &str, text: &str) {
+        if self.reported_methods.insert(name.to_owned()) {
+            eprintln!("{text}: {name}");
+        }
+    }
+
+    /// Ein Element zählt nur im laufenden, nicht abgebrochenen Turn.
+    fn is_turn_open(&self) -> bool {
+        self.turn
+            .as_ref()
+            .is_some_and(|turn: &ActiveTurn| !turn.is_aborted)
+    }
+
+    fn item_started(&mut self, item: &Value) {
+        if !self.is_turn_open() {
+            return;
+        }
+        if item.get("type").and_then(Value::as_str) == Some(FILE_CHANGE) {
+            let item_id = item.get("id").and_then(Value::as_str).unwrap_or_default();
+            self.changed_files
+                .insert(item_id.to_owned(), items::change_paths(&self.cwd, item));
+        }
+        match items::started(&self.session_id, &self.cwd, item) {
+            Some(lines) => self.write_lines(&lines),
+            None => self.report_unknown_item(item),
+        }
+    }
+
     fn item_completed(&mut self, item: &Value) {
+        if !self.is_turn_open() {
+            return;
+        }
+        if item.get("type").and_then(Value::as_str) == Some(AGENT_MESSAGE) {
+            self.agent_message(item);
+            return;
+        }
+        match items::completed(&self.session_id, &self.cwd, item) {
+            Some(lines) => self.write_lines(&lines),
+            None => self.report_unknown_item(item),
+        }
+    }
+
+    fn agent_message(&mut self, item: &Value) {
         let Some(turn) = &mut self.turn else {
             return;
         };
-        if turn.is_aborted || item.get("type").and_then(Value::as_str) != Some("agentMessage") {
-            return;
-        }
         let text = item.get("text").and_then(Value::as_str).unwrap_or_default();
         text.clone_into(&mut turn.last_text);
         self.output.line(&output::assistant(
@@ -489,10 +615,34 @@ impl Session {
         ));
     }
 
+    fn plan_updated(&mut self, params: &Value) {
+        if !self.is_turn_open() {
+            return;
+        }
+        self.plan_updates += 1;
+        let call_id = format!("plan-{}", self.plan_updates);
+        self.write_lines(&items::plan_update(&self.session_id, &call_id, params));
+    }
+
+    fn write_lines(&self, lines: &[Value]) {
+        for line in lines {
+            self.output.line(line);
+        }
+    }
+
+    fn report_unknown_item(&mut self, item: &Value) {
+        let item_type = item.get("type").and_then(Value::as_str).unwrap_or_default();
+        self.report_once(
+            &format!("item:{item_type}"),
+            "Element von Codex noch nicht übersetzt",
+        );
+    }
+
     fn turn_completed(&mut self, finished: &Value) {
         let Some(turn) = self.turn.take() else {
             return;
         };
+        self.end_turn_state();
         if turn.is_aborted {
             // Der Verwalter hat `result` schon bei Esc bekommen.
             return;
@@ -520,6 +670,7 @@ impl Session {
         let Some(turn) = self.turn.take() else {
             return;
         };
+        self.end_turn_state();
         if turn.is_aborted {
             return;
         }
@@ -529,5 +680,13 @@ impl Session {
             &self.model,
             0,
         )));
+    }
+
+    /// Was nur für den Turn galt: Rückfragen, die Codex nicht mehr stellt, und die Dateiliste.
+    fn end_turn_state(&mut self) {
+        self.changed_files.clear();
+        for answer in self.approvals.cancel_all() {
+            self.send_answer(&answer);
+        }
     }
 }

@@ -1,5 +1,6 @@
 //! Pfadgrenze der Datei-Werkzeuge: Arbeitsordner, `--add-dir`-Ordner und Scratchpad zum Schreiben,
 //! die Ticket-Worktrees aus `--allowedTools` ebenso, `~/.claude` nur zum Lesen (Skills, Anweisungen).
+use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
@@ -12,6 +13,9 @@ const PATTERN_RULE_PREFIXES: [&str; 2] = ["Edit(", "Read("];
 const RULE_SUFFIX: char = ')';
 /// So beginnt ein absoluter Pfad in einer Regel der Claude-Kommandozeile: `//c/Users/…`.
 const RULE_ABSOLUTE_PREFIX: &str = "//";
+/// Ein Worktree-Muster endet auf `<Name>/**`; ohne `**` ist kein Ordner gemeint.
+const WORKTREE_PATTERN_SUFFIX: &str = "/**";
+const GLOB_CHARACTERS: [char; 4] = ['*', '?', '[', '{'];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Access {
@@ -81,6 +85,51 @@ impl Roots {
                 .ticket_patterns
                 .is_match(format!("{}/x", slashed.trim_end_matches('/')))
     }
+}
+
+/// Die Ticket-Worktrees, die zu den Mustern aus `--allowedTools` passen und schon existieren — für
+/// eine Sandbox, die ihre beschreibbaren Ordner als Liste braucht statt als Muster. Nur Muster der
+/// Form `<Ordner>/<Name mit *>/**` lassen sich auflisten.
+pub fn existing_ticket_worktrees(allowed_rules: &[String]) -> Vec<PathBuf> {
+    let mut found: Vec<PathBuf> = Vec::new();
+    for rule in allowed_rules {
+        let Some(pattern) = rule_pattern(rule) else {
+            continue;
+        };
+        let Some((parent, name_pattern)) = pattern
+            .strip_suffix(WORKTREE_PATTERN_SUFFIX)
+            .and_then(|folder: &str| folder.rsplit_once('/'))
+        else {
+            continue;
+        };
+        if parent.contains(GLOB_CHARACTERS) {
+            continue;
+        }
+        let Ok(glob) = GlobBuilder::new(name_pattern)
+            .case_insensitive(true)
+            .literal_separator(true)
+            .build()
+        else {
+            continue;
+        };
+        let matcher = glob.compile_matcher();
+        let Ok(entries) = fs::read_dir(parent) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let is_match = entry
+                .file_name()
+                .to_str()
+                .is_some_and(|name: &str| matcher.is_match(name));
+            if is_match && entry.path().is_dir() {
+                let worktree = resolve(Path::new(""), &entry.path().to_string_lossy());
+                if !found.contains(&worktree) {
+                    found.push(worktree);
+                }
+            }
+        }
+    }
+    found
 }
 
 /// Relative Pfade gegen `cwd`; `/` und `\` gleichwertig; `.` und `..` rein lexikalisch — ohne

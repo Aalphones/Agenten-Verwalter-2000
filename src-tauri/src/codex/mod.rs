@@ -1,6 +1,9 @@
 //! Der Übersetzer der Betriebsart Codex (ADR 031): spricht nach außen den Ausschnitt des
 //! Zeilenprotokolls der Claude-Kommandozeile, den der Verwalter liest (Kontrakt aus ADR 017), und
 //! nach innen JSON-RPC mit `codex app-server`.
+pub mod approvals;
+pub mod items;
+pub mod policy;
 pub mod rpc;
 pub mod session;
 

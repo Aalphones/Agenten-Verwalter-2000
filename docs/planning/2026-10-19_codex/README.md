@@ -13,7 +13,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Gerüst: Betriebsart „Codex“, `codex.exe` finden, Unterbefehl `codex`, Thread anlegen/fortsetzen, Text-Chat, Unterbrechen | [phase-1-geruest.md](phase-1-geruest.md) | heikel | complete |
-| 2 | Werkzeuge, Rechte, Rückfragen: Befehle, Dateiänderungen, MCP, Web, Plan als Aufgabenliste; Freigaben und Sandbox je Modus | [phase-2-werkzeuge-rechte.md](phase-2-werkzeuge-rechte.md) | heikel | pending |
+| 2 | Werkzeuge, Rechte, Rückfragen: Befehle, Dateiänderungen, MCP, Web, Plan als Aufgabenliste; Freigaben und Sandbox je Modus | [phase-2-werkzeuge-rechte.md](phase-2-werkzeuge-rechte.md) | heikel | complete |
 | 3 | Anweisungen, Skills, Anhänge: Repository-`AGENTS.md`, Verwalter-Vorgaben, `/name`, Bilder; `/`-Menü in „Codex“ | [phase-3-anweisungen-skills.md](phase-3-anweisungen-skills.md) | standard | pending |
 | 4 | Modelle und Kontext: Codex-Modell je Session, Modellwechsel in der Eingabeleiste, Denkaufwand, Kontext-Donut | [phase-4-modelle-kontext.md](phase-4-modelle-kontext.md) | heikel | pending |
 | 5 | Konto und Kontingent: Zeile „Codex-Konto“ mit Anmelden, Kontingent oben aus Codex | [phase-5-konto-kontingent.md](phase-5-konto-kontingent.md) | standard | pending |

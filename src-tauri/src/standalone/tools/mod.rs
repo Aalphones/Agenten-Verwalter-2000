@@ -381,7 +381,7 @@ fn function(name: &str, description: &str, properties: Value, required: &[&str])
     })
 }
 
-fn shortened(text: String) -> String {
+pub fn shortened(text: String) -> String {
     let length = text.chars().count();
     if length <= OUTPUT_MAX_CHARS {
         return text;

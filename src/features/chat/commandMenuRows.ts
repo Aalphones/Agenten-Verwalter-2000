@@ -81,6 +81,7 @@ export function buildCommandSections(
   skills: readonly SkillInfo[],
   session: SessionSummary | null,
   hasBrowser: boolean,
+  hasMcp: boolean,
 ): CommandSection[] {
   const needle: string = filter.trim().toLowerCase();
 
@@ -99,7 +100,7 @@ export function buildCommandSections(
       title: 'Skills',
       rows: skills.map((skill: SkillInfo): CommandRow => ({ kind: 'skill', skill })),
     },
-    { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session, hasBrowser) },
+    { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session, hasBrowser, hasMcp) },
   ];
 
   // Ein exakt getippter Session-Befehl gewinnt gegen Skills, die den Namen nur enthalten.
@@ -119,7 +120,11 @@ export function buildCommandSections(
     .filter((section: CommandSection) => section.rows.length > 0);
 }
 
-function sessionRows(session: SessionSummary | null, hasBrowser: boolean): CommandRow[] {
+function sessionRows(
+  session: SessionSummary | null,
+  hasBrowser: boolean,
+  hasMcp: boolean,
+): CommandRow[] {
   if (session === null) {
     return [];
   }
@@ -127,7 +132,9 @@ function sessionRows(session: SessionSummary | null, hasBrowser: boolean): Comma
   if (session.repositoryCount > 0) {
     rows.push({ kind: 'session', command: 'changes' });
   }
-  rows.push({ kind: 'session', command: 'mcp' });
+  if (hasMcp) {
+    rows.push({ kind: 'session', command: 'mcp' });
+  }
   if (hasBrowser) {
     rows.push({ kind: 'session', command: 'chrome' });
   }
