@@ -24,6 +24,7 @@ export function createProject(
   attachmentIds: string[],
   repositoryIds: string[],
   model: ModelId,
+  codexModel: string | null,
   effort: Effort,
   mode: Mode,
 ): Promise<ProjectCreated> {
@@ -32,6 +33,7 @@ export function createProject(
     attachmentIds,
     repositoryIds,
     model,
+    codexModel,
     effort,
     mode,
   });

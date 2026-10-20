@@ -68,6 +68,13 @@ export async function setSessionModel(sessionId: string, model: ModelId): Promis
   await invoke('session_set_model', { sessionId, model });
 }
 
+/** Das Modell der Session in der Betriebsart Codex; `null` wählt das Standardmodell. Wirkt ab der
+ *  nächsten Nachricht, ohne Neustart.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `agentStopped` */
+export async function setSessionCodexModel(sessionId: string, model: string | null): Promise<void> {
+  await invoke('session_set_codex_model', { sessionId, model });
+}
+
 /** Wirkt sofort.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `agentStopped` */
 export async function setSessionMode(sessionId: string, mode: Mode): Promise<void> {

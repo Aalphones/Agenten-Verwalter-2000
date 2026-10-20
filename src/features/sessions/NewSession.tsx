@@ -9,10 +9,19 @@ import { CommandMenu } from '@/features/chat/CommandMenu';
 import { applySkillToDraft } from '@/features/chat/commandMenuRows';
 import type { CommandRow } from '@/features/chat/commandMenuRows';
 import { useCommandMenu } from '@/features/chat/useCommandMenu';
+import {
+  codexEffort,
+  codexEfforts,
+  codexModelLabel,
+  codexModelOptions,
+  selectedCodexModel,
+} from '@/features/codex/codexModels';
+import { useCodexModels } from '@/features/codex/useCodexModels';
 import { RepositoryPicker } from '@/features/repositories/RepositoryPicker';
 import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
+import type { CodexModel } from '@/lib/bindings/CodexModel';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
@@ -23,6 +32,7 @@ import {
   effortLabel,
   isLocalOperatingMode,
   localModelLabel,
+  MODEL_OPTIONS,
   modeOption,
   modelName,
   repositoryCountLabel,
@@ -40,6 +50,7 @@ const GIT_NOT_FOUND_MESSAGE =
   'Git nicht gefunden. Installiere Git für Windows und starte die App neu.';
 
 const NO_ATTACHMENTS: Attachment[] = [];
+const NO_CODEX_MODELS: readonly CodexModel[] = [];
 
 type OpenMenu = 'model' | 'mode' | 'plus' | 'command' | null;
 
@@ -53,6 +64,9 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   // Startwerte aus den Einstellungen; sind sie noch nicht geladen, gelten die eingebauten Standardwerte.
   const [model, setModel] = useState<ModelId>(
     () => useSettingsStore.getState().settings?.defaultModel ?? 'sonnet',
+  );
+  const [codexModel, setCodexModel] = useState<string | null>(
+    () => useSettingsStore.getState().settings?.defaultCodexModel ?? null,
   );
   const [effort, setEffort] = useState<Effort>(
     () => useSettingsStore.getState().settings?.defaultEffort ?? 'high',
@@ -72,6 +86,18 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   const operatingMode = useSettingsStore((state) => state.settings?.operatingMode ?? 'claude');
   const localModel: string | null = useSettingsStore((state) => state.settings?.localModel ?? null);
   const isLocal: boolean = isLocalOperatingMode(operatingMode);
+  const isCodex: boolean = operatingMode === 'codex';
+  const codexModels = useCodexModels(isCodex);
+  const codexList: readonly CodexModel[] = codexModels.models?.models ?? NO_CODEX_MODELS;
+  const chosenCodexModel: CodexModel | null = selectedCodexModel(codexList, codexModel);
+  const codexEmptyText: string =
+    codexModels.models === null
+      ? 'Modelle werden geladen …'
+      : (codexModels.models.error ?? 'Keine Modelle verfügbar.');
+  const modelText: string = isCodex
+    ? `Codex · ${codexModelLabel(codexList, codexModel)}`
+    : `Claude · ${modelName(model)}`;
+  const shownEffort: Effort = isCodex ? codexEffort(chosenCodexModel, effort) : effort;
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Starten würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -133,7 +159,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
     setIsStarting(true);
     setErrorMessage(null);
     const attachmentIds: string[] = pending.map((attachment: Attachment) => attachment.id);
-    createProject(text.trim(), attachmentIds, repositoryIds, model, effort, mode)
+    createProject(text.trim(), attachmentIds, repositoryIds, model, codexModel, effort, mode)
       .then((created: ProjectCreated) => {
         // Die Dateien liegen jetzt im Workspace des Vorhabens.
         useAttachmentsStore.getState().clear(NEW_SESSION_KEY);
@@ -303,16 +329,28 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
                   className="new-session__model"
                   aria-haspopup="dialog"
                   aria-expanded={openMenu === 'model'}
-                  aria-label={`Modell: ${modelName(model)}, Denkaufwand ${effortLabel(effort)}`}
+                  aria-label={`Modell: ${modelText}, Denkaufwand ${effortLabel(shownEffort)}`}
                   onClick={(): void => {
                     toggleMenu('model');
                   }}
                 >
-                  Claude · {modelName(model)}{' '}
-                  <span className="new-session__effort">{effortLabel(effort)}</span>
+                  {modelText}{' '}
+                  <span className="new-session__effort">{effortLabel(shownEffort)}</span>
                 </button>
-                {openMenu === 'model' && (
+                {openMenu === 'model' && isCodex && (
                   <ModelMenu
+                    options={codexModelOptions(codexList)}
+                    value={chosenCodexModel?.id ?? ''}
+                    onChange={setCodexModel}
+                    onClose={closeMenu}
+                    placement="below"
+                    note="Gilt für den Start dieser Session. Später im Chat änderbar."
+                    emptyText={codexEmptyText}
+                  />
+                )}
+                {openMenu === 'model' && !isCodex && (
+                  <ModelMenu
+                    options={MODEL_OPTIONS}
                     value={model}
                     onChange={setModel}
                     onClose={closeMenu}
@@ -345,6 +383,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
                   onClose={closeMenu}
                   placement="below"
                   showEffort={!isLocal}
+                  efforts={isCodex ? codexEfforts(chosenCodexModel) : undefined}
                 />
               )}
             </div>
@@ -360,7 +399,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
           <span className="new-session__summary">
             {isStarting && repositoryIds.length > 0
               ? 'Session wird angelegt …'
-              : `${repositoryCountLabel(repositoryIds.length)} · ${isLocal ? localModelLabel(localModel) : modelName(model)} · ${currentMode.label}`}
+              : `${repositoryCountLabel(repositoryIds.length)} · ${isLocal ? localModelLabel(localModel) : modelText} · ${currentMode.label}`}
           </span>
         </div>
         {errorMessage !== null && (

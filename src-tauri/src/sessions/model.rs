@@ -32,6 +32,8 @@ pub struct SessionSummary {
     pub mode: Mode,
     /// Browser-Zugriff gewünscht; wirkt ab dem nächsten Start des Agenten.
     pub chrome: bool,
+    /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex.
+    pub codex_model: Option<String>,
     pub created_at: f64,
     /// Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
     pub running_ms: f64,

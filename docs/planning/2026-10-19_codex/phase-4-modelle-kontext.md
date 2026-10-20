@@ -26,23 +26,34 @@ Fehlerklassen geprüft: keine einschlägig.
 
 **Core**
 
-- [ ] Migration 11: `ALTER TABLE sessions ADD COLUMN codex_model TEXT` (NULL erlaubt). Laden/Speichern in `db/sessions.rs`; `SessionState.codex_model: Option<String>`; `SessionSummary.codex_model`.
-- [ ] `settings`: `default_codex_model: Option<String>` mit Standard `None`, `SettingsChange::DefaultCodexModel(Option<String>)`; `create_project`/`create_in_project` übernehmen ihn in die neue Session.
-- [ ] `codex/models.rs` + `src-tauri/src/commands/codex.rs`: `codex_models()` startet `codex app-server` über den Hilfsweg aus Phase 5 (bis dahin: eigener kurzer Start mit `rpc.rs`: `initialize`, `model/list`, beenden); Ergebnis `Vec<CodexModel>`; Zwischenspeicher in einem `CodexService` (State im Tauri-Setup, Muster `UsageService`). `efforts` = `supportedReasoningEfforts` geschnitten mit den `Effort`-Werten, `default_effort` aus `defaultReasoningEffort` (unbekannt → `Medium`).
-- [ ] `session_set_codex_model(session_id, model)` in `commands/sessions.rs` → Registry: speichern, `summary_dirty`, `send_control(set_model {model: <id oder leer>})`.
-- [ ] `set_effort` in der Registry: in „Codex“ zusätzlich `send_control({"subtype":"set_effort","effort":<cli_value>})` (Betriebsart über `settings::load` vor der Sperre lesen; in den anderen Betriebsarten unverändert kein Steuerbefehl).
-- [ ] `build_command`: in „Codex“ `--model <codex_model>` (leer → Option weglassen) statt `cli_id()`; `--effort` wie bisher. `SpawnOptions` dafür um `codex_model: Option<String>` ergänzen.
-- [ ] Übersetzer: `set_model`/`set_effort` merken, beim nächsten `turn/start` als `model`/`effort` senden; nicht angebotener Effort → `defaultReasoningEffort` des Modells (Liste beim Start einmal mit `model/list` holen). Die `init`-Zeile meldet das tatsächliche Modell.
-- [ ] Übersetzer: `thread/tokenUsage/updated` merken; `assistant`-Zeile bekommt `usage.input_tokens` = `last.inputTokens`, `output_tokens` = `last.outputTokens`; `result` bekommt `modelUsage {<model>: {contextWindow: modelContextWindow}}`; `get_context_usage` beantworten in der Form, die `agents/claude/stats.rs` liest (Felder dort nachsehen, eine Kategorie „Verlauf“ mit der belegten Zahl).
-- [ ] `pnpm bindings`.
+- [x] Migration 11: `ALTER TABLE sessions ADD COLUMN codex_model TEXT` (NULL erlaubt). Laden/Speichern in `db/sessions.rs`; `SessionState.codex_model: Option<String>`; `SessionSummary.codex_model`.
+- [x] `settings`: `default_codex_model: Option<String>` mit Standard `None`, `SettingsChange::DefaultCodexModel(Option<String>)`; `create_project`/`create_in_project` übernehmen ihn in die neue Session.
+- [x] `codex/models.rs` + `src-tauri/src/commands/codex.rs`: `codex_models()` startet `codex app-server` über den Hilfsweg aus Phase 5 (bis dahin: eigener kurzer Start mit `rpc.rs`: `initialize`, `model/list`, beenden); Ergebnis `Vec<CodexModel>`; Zwischenspeicher in einem `CodexService` (State im Tauri-Setup, Muster `UsageService`). `efforts` = `supportedReasoningEfforts` geschnitten mit den `Effort`-Werten, `default_effort` aus `defaultReasoningEffort` (unbekannt → `Medium`).
+- [x] `session_set_codex_model(session_id, model)` in `commands/sessions.rs` → Registry: speichern, `summary_dirty`, `send_control(set_model {model: <id oder leer>})`.
+- [x] `set_effort` in der Registry: in „Codex“ zusätzlich `send_control({"subtype":"set_effort","effort":<cli_value>})` (Betriebsart über `settings::load` vor der Sperre lesen; in den anderen Betriebsarten unverändert kein Steuerbefehl).
+- [x] `build_command`: in „Codex“ `--model <codex_model>` (leer → Option weglassen) statt `cli_id()`; `--effort` wie bisher. `SpawnOptions` dafür um `codex_model: Option<String>` ergänzen.
+- [x] Übersetzer: `set_model`/`set_effort` merken, beim nächsten `turn/start` als `model`/`effort` senden; nicht angebotener Effort → `defaultReasoningEffort` des Modells (Liste beim Start einmal mit `model/list` holen). Die `init`-Zeile meldet das tatsächliche Modell.
+- [x] Übersetzer: `thread/tokenUsage/updated` merken; `assistant`-Zeile bekommt `usage.input_tokens` = `last.inputTokens`, `output_tokens` = `last.outputTokens`; `result` bekommt `modelUsage {<model>: {contextWindow: modelContextWindow}}`; `get_context_usage` beantworten in der Form, die `agents/claude/stats.rs` liest (Felder dort nachsehen, eine Kategorie „Verlauf“ mit der belegten Zahl).
+- [x] `pnpm bindings`.
 
 **Oberfläche**
 
-- [ ] `src/features/codex/useCodexModels.ts` (Muster `useLocalModels`) und Wrapper `src/lib/codex.ts`.
-- [ ] `ModelMenu` bekommt einen zweiten Datenweg: Prop `options: readonly {id: string; label: string; hint?: string}[]` + `value: string` (generisch) — bestehende Claude-Aufrufer übergeben die Claude-Liste aus `labels.ts`; in „Codex“ übergeben Composer, NewSession und SettingsView die Codex-Liste. Kein zweites Menü-Bauteil.
-- [ ] `ModeMenu` bekommt `efforts?: readonly Effort[]` (fehlt → alle); in „Codex“ die `efforts` des gewählten Modells.
-- [ ] `SessionHeader`: Modell-Anzeige (falls dort gezeigt) in „Codex“ = Codex-Modell.
-- [ ] `docs/code-map.md`: Zeile „Codex“ um Modelle/Kontext; Persistenz-Zeile um Migration 11.
-- [ ] ADR 031: Abschnitt Modelle/Kontext.
+- [x] `src/features/codex/useCodexModels.ts` (Muster `useLocalModels`) und Wrapper `src/lib/codex.ts`.
+- [x] `ModelMenu` bekommt einen zweiten Datenweg: Prop `options: readonly {id: string; label: string; hint?: string}[]` + `value: string` (generisch) — bestehende Claude-Aufrufer übergeben die Claude-Liste aus `labels.ts`; in „Codex“ übergeben Composer, NewSession und SettingsView die Codex-Liste. Kein zweites Menü-Bauteil.
+- [x] `ModeMenu` bekommt `efforts?: readonly Effort[]` (fehlt → alle); in „Codex“ die `efforts` des gewählten Modells.
+- [x] `SessionHeader`: Modell-Anzeige (falls dort gezeigt) in „Codex“ = Codex-Modell.
+- [x] `docs/code-map.md`: Zeile „Codex“ um Modelle/Kontext; Persistenz-Zeile um Migration 11.
+- [x] ADR 031: Abschnitt Modelle/Kontext.
 
 ## Report-Back
+
+Umgesetzt wie geplant, mit vier Abweichungen:
+
+- **`codex_models` liefert `CodexModels { models, error }`** statt `Vec<CodexModel>` (Muster `LocalModels`): ein Fehler ist dann ein Satz im Ergebnis, den die Menüs zeigen, und kein Throw.
+- **Startwert „Neues Vorhaben“ kommt aus der Oberfläche:** `project_create` nimmt `codex_model` als Parameter (Startwert `default_codex_model` aus den Einstellungen), der Core liest die Einstellung nicht selbst. `create_in_project` übernimmt wie beim Claude-Modell das der letzten Session.
+- **Hilfsweg aus Phase 5 nicht abgewartet:** `CodexService` startet für die Modellliste selbst einen kurzen `codex app-server` (`models::fetch`); `RpcClient::initialize` ist dafür aus `session.rs` nach `rpc.rs` gewandert und steht Phase 5 zur Verfügung.
+- **Jede `assistant`-Zeile trägt die Zählung:** Der Verwalter setzt den Kontext-Balken bei jeder `assistant`-Zeile mit `usage`; die Zeilen für Werkzeuge und Denken trugen 0 und hätten ihn ständig zurückgesetzt. `session.rs` ergänzt die letzte Zählung deshalb in `write_line` an allen Hauptagent-Zeilen und lässt `usage` weg, solange Codex nichts gezählt hat.
+
+Probe gegen `codex-cli` der VS-Code-Erweiterung 26.1007.21434 (Übersetzer-Lauf, Skript im Scratchpad): `model/list` liefert drei Modelle; Turn 1 mit `gpt-6-luna` → `assistant` mit `input_tokens: 18315`, `result` mit Fenster 258400; `set_model` auf `gpt-5.6-terra` und `set_effort` `low` → beide `success`, Turn 2 meldet `gpt-5.6-terra`, `get_context_usage` → Kategorie „Verlauf“, 22455 von 258400; `set_effort` mit unbekanntem Wert → Fehler. Nicht geprüft: ob `effort` im Turn tatsächlich wirkt (Codex bestätigt ihn nicht), und die Oberfläche (nur Lint, Typecheck, Build).
+
+Offen für den Smoke: Smoke 4 (Modellwechsel, Denkaufwand-Menü, Antwort passt) und der Kontext-Donut in der Kopfzeile.

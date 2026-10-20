@@ -37,6 +37,8 @@ pub struct Settings {
     pub operating_mode: OperatingMode,
     /// Kennung des Modells in LM Studio, z. B. `google/gemma-4-12b-qat`; `None`, solange keins gewählt ist.
     pub local_model: Option<String>,
+    /// Modell für neue Vorhaben in der Betriebsart Codex; `None` = Standardmodell von Codex.
+    pub default_codex_model: Option<String>,
     /// Sprachcode für die Spracheingabe (z. B. `de`); `None` = Whisper erkennt die Sprache selbst.
     pub voice_language: Option<String>,
 }
@@ -78,6 +80,10 @@ pub enum SettingsChange {
     },
     LocalModel {
         value: String,
+    },
+    /// `None` setzt zurück auf das Standardmodell von Codex.
+    DefaultCodexModel {
+        value: Option<String>,
     },
     /// `None` setzt zurück auf automatische Erkennung.
     VoiceLanguage {

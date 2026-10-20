@@ -17,6 +17,7 @@ use crate::processes::hide_console;
 
 /// Zeit, die `codex app-server` nach dem Schließen seiner Standardeingabe zum Beenden bekommt.
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(3);
+const INITIALIZE_TIMEOUT: Duration = Duration::from_secs(20);
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Fehlercode für Server-Anfragen, die der Übersetzer nicht beantworten kann.
 const METHOD_NOT_FOUND: i64 = -32601;
@@ -120,6 +121,19 @@ impl RpcClient {
             }
             Err(RecvTimeoutError::Disconnected) => Err(format!("{method}: Codex wurde beendet")),
         }
+    }
+
+    /// Die Begrüßung, ohne die Codex keine weitere Anfrage annimmt.
+    pub fn initialize(&self) -> Result<(), String> {
+        self.call(
+            "initialize",
+            json!({
+                "clientInfo": { "name": "verwalter", "version": env!("CARGO_PKG_VERSION") },
+            }),
+            INITIALIZE_TIMEOUT,
+        )?;
+        self.notify("initialized")
+            .map_err(|error: io::Error| format!("initialized: {error}"))
     }
 
     pub fn notify(&self, method: &str) -> io::Result<()> {

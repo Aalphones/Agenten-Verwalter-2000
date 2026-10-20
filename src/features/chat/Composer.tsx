@@ -9,12 +9,21 @@ import { CommandMenu } from '@/features/chat/CommandMenu';
 import { applySkillToDraft } from '@/features/chat/commandMenuRows';
 import type { CommandRow, SessionCommand } from '@/features/chat/commandMenuRows';
 import { useCommandMenu } from '@/features/chat/useCommandMenu';
+import {
+  codexEffort,
+  codexEfforts,
+  codexModelLabel,
+  codexModelOptions,
+  selectedCodexModel,
+} from '@/features/codex/codexModels';
+import { useCodexModels } from '@/features/codex/useCodexModels';
 import { McpDialog } from '@/features/mcp/McpDialog';
 import { McpProblemChip } from '@/features/mcp/McpProblemChip';
 import { ReviewCommentList } from '@/features/review/ReviewCommentList';
 import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { CommandError } from '@/lib/bindings/CommandError';
+import type { CodexModel } from '@/lib/bindings/CodexModel';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
@@ -23,6 +32,7 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { sendMessage } from '@/lib/chat';
 import {
   CODEX_NOT_FOUND_MESSAGE,
+  MODEL_OPTIONS,
   MODE_OPTIONS,
   effortLabel,
   isLocalOperatingMode,
@@ -34,6 +44,7 @@ import type { ModeOption } from '@/lib/labels';
 import {
   pauseSession,
   setSessionChrome,
+  setSessionCodexModel,
   setSessionEffort,
   setSessionMode,
   setSessionModel,
@@ -46,6 +57,8 @@ import { useSessionsStore } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
 import { useVoiceStore } from '@/stores/voice';
 import './Composer.css';
+
+const NO_CODEX_MODELS: readonly CodexModel[] = [];
 
 const LOCAL_MODEL_TITLE =
   'Modell der Betriebsart „Claude Code + LM Studio“ — ändern in den Einstellungen';
@@ -94,6 +107,10 @@ export function Composer({ session }: ComposerProps): ReactElement {
   const hasBrowser: boolean = operatingMode === 'claude';
   // Codex nutzt seine eigenen MCP-Server aus `~/.codex/config.toml`; die Hinweise gelten nur für die der Claude-Kommandozeile.
   const hasMcp: boolean = operatingMode !== 'codex';
+  const isCodex: boolean = operatingMode === 'codex';
+  const codexModels = useCodexModels(isCodex);
+  const codexList: readonly CodexModel[] = codexModels.models?.models ?? NO_CODEX_MODELS;
+  const sessionCodexModel: CodexModel | null = selectedCodexModel(codexList, session.codexModel);
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Senden würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -105,6 +122,16 @@ export function Composer({ session }: ComposerProps): ReactElement {
   const hasContent: boolean = draft.trim() !== '' || pending.length > 0 || collected.length > 0;
   const canSend: boolean = hasContent && !isSending && !isLocked && !isDictating;
   const currentMode = modeOption(session.mode);
+  const modelLabel: string = isCodex
+    ? codexModelLabel(codexList, session.codexModel)
+    : modelName(session.model);
+  const effortText: string = effortLabel(
+    isCodex ? codexEffort(sessionCodexModel, session.effort) : session.effort,
+  );
+  const codexEmptyText: string =
+    codexModels.models === null
+      ? 'Modelle werden geladen …'
+      : (codexModels.models.error ?? 'Keine Modelle verfügbar.');
   const modelNote: string = ACTIVE_STATUSES.includes(session.status)
     ? NOTE_WHILE_ACTIVE
     : NOTE_WHILE_IDLE;
@@ -180,6 +207,12 @@ export function Composer({ session }: ComposerProps): ReactElement {
     closeMenu();
     setErrorMessage(null);
     setSessionModel(session.id, model).catch(report);
+  }
+
+  function changeCodexModel(model: string): void {
+    closeMenu();
+    setErrorMessage(null);
+    setSessionCodexModel(session.id, model).catch(report);
   }
 
   function changeMode(mode: Mode): void {
@@ -357,21 +390,33 @@ export function Composer({ session }: ComposerProps): ReactElement {
                 className="composer__model"
                 aria-haspopup="dialog"
                 aria-expanded={openMenu === 'model'}
-                aria-label={`Modell: ${modelName(session.model)}, Denkaufwand ${effortLabel(session.effort)}`}
+                aria-label={`Modell: ${modelLabel}, Denkaufwand ${effortText}`}
                 onClick={(): void => {
                   toggleMenu('model');
                 }}
               >
-                <span>{modelName(session.model)}</span>
-                <span className="composer__effort">{effortLabel(session.effort)}</span>
+                <span>{modelLabel}</span>
+                <span className="composer__effort">{effortText}</span>
               </button>
-              {openMenu === 'model' && (
+              {openMenu === 'model' && !isCodex && (
                 <ModelMenu
+                  options={MODEL_OPTIONS}
                   value={session.model}
                   onChange={changeModel}
                   onClose={closeMenu}
                   placement="above"
                   note={modelNote}
+                />
+              )}
+              {openMenu === 'model' && isCodex && (
+                <ModelMenu
+                  options={codexModelOptions(codexList)}
+                  value={sessionCodexModel?.id ?? ''}
+                  onChange={changeCodexModel}
+                  onClose={closeMenu}
+                  placement="above"
+                  note={modelNote}
+                  emptyText={codexEmptyText}
                 />
               )}
             </div>
@@ -413,6 +458,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
                 onClose={closeMenu}
                 placement="above"
                 showEffort={!isLocal}
+                efforts={isCodex ? codexEfforts(sessionCodexModel) : undefined}
               />
             )}
           </div>

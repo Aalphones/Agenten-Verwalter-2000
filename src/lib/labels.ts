@@ -10,8 +10,8 @@ export interface OperatingModeOption {
   readonly label: string;
 }
 
-export interface ModelOption {
-  readonly id: ModelId;
+export interface ModelOption<Id extends string = ModelId> {
+  readonly id: Id;
   readonly name: string;
   readonly hint: string;
 }

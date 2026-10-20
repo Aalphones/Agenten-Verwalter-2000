@@ -36,6 +36,7 @@ use tauri::Manager;
 
 use account::AccountService;
 use cli_update::CliUpdateService;
+use codex::models::CodexService;
 use db::Database;
 use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
@@ -59,6 +60,7 @@ pub fn run() {
             app.manage(registry);
             app.manage(database);
             app.manage(UsageService::new());
+            app.manage(CodexService::new());
             app.manage(AccountService::new());
             app.manage(CliUpdateService::new());
             app.manage(VoiceService::new());
@@ -94,6 +96,7 @@ pub fn run() {
             commands::sessions::session_set_mode,
             commands::sessions::session_set_effort,
             commands::sessions::session_set_chrome,
+            commands::sessions::session_set_codex_model,
             commands::sessions::session_log,
             commands::chat::chat_history,
             commands::chat::chat_send,
@@ -158,6 +161,7 @@ pub fn run() {
             commands::settings::settings_load,
             commands::settings::settings_update,
             commands::settings::settings_local_models,
+            commands::codex::codex_models,
             commands::voice::voice_model_status,
             commands::voice::voice_model_download,
             commands::voice::voice_model_cancel_download,

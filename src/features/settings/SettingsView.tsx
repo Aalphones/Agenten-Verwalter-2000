@@ -5,6 +5,13 @@ import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
 import { AccountRow } from '@/features/account/AccountRow';
 import { CliVersionRow } from '@/features/cliupdate/CliVersionRow';
+import {
+  codexEfforts,
+  codexModelLabel,
+  codexModelOptions,
+  selectedCodexModel,
+} from '@/features/codex/codexModels';
+import { useCodexModels } from '@/features/codex/useCodexModels';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
 import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
@@ -14,6 +21,7 @@ import { SettingRow } from '@/features/settings/SettingRow';
 import { useLocalModels } from '@/features/settings/useLocalModels';
 import { useSettingsUpdate } from '@/features/settings/useSettingsUpdate';
 import { VoiceLanguageSegment } from '@/features/settings/VoiceLanguageSegment';
+import type { CodexModel } from '@/lib/bindings/CodexModel';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 import type { Mode } from '@/lib/bindings/Mode';
@@ -26,11 +34,14 @@ import {
   effortLabel,
   isLocalOperatingMode,
   localModelLabel,
+  MODEL_OPTIONS,
   modeOption,
   modelName,
 } from '@/lib/labels';
 import { useSettingsStore } from '@/stores/settings';
 import './SettingsView.css';
+
+const NO_CODEX_MODELS: readonly CodexModel[] = [];
 
 type OpenMenu = 'model' | 'mode' | 'localModel' | null;
 
@@ -51,6 +62,7 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
   const isLocalOperation: boolean =
     settings !== null && isLocalOperatingMode(settings.operatingMode);
   const localModels = useLocalModels(isLocalOperation);
+  const codexModels = useCodexModels(settings?.operatingMode === 'codex');
 
   function toggleMenu(menu: Exclude<OpenMenu, null>): void {
     setOpenMenu(openMenu === menu ? null : menu);
@@ -80,6 +92,10 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
 
   function saveDefaultModel(model: ModelId): void {
     save({ kind: 'defaultModel', value: model }).catch(() => undefined);
+  }
+
+  function saveDefaultCodexModel(model: string): void {
+    save({ kind: 'defaultCodexModel', value: model }).catch(() => undefined);
   }
 
   function saveDefaultMode(mode: Mode, effort: Effort): void {
@@ -147,6 +163,16 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
 
   function renderSections(current: Settings, loaded: SettingsOverview): ReactElement {
     const currentMode = modeOption(current.defaultMode);
+    const isCodex: boolean = current.operatingMode === 'codex';
+    const codexList: readonly CodexModel[] = codexModels.models?.models ?? NO_CODEX_MODELS;
+    const defaultCodexModel: CodexModel | null = selectedCodexModel(
+      codexList,
+      current.defaultCodexModel,
+    );
+    const codexEmptyText: string =
+      codexModels.models === null
+        ? 'Modelle werden geladen …'
+        : (codexModels.models.error ?? 'Keine Modelle verfügbar.');
     return (
       <>
         {current.operatingMode !== 'standalone' && (
@@ -213,20 +239,38 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
           >
             <SelectButton
               label="Standardmodell"
-              value={modelName(current.defaultModel)}
+              value={
+                isCodex
+                  ? codexModelLabel(codexList, current.defaultCodexModel)
+                  : modelName(current.defaultModel)
+              }
               isOpen={openMenu === 'model'}
               onToggle={(): void => {
                 toggleMenu('model');
               }}
             >
-              <ModelMenu
-                value={current.defaultModel}
-                onChange={saveDefaultModel}
-                onClose={closeMenu}
-                placement="below"
-                title="Modell für neue Vorhaben"
-                note="Gilt ab dem nächsten neuen Vorhaben."
-              />
+              {isCodex ? (
+                <ModelMenu
+                  options={codexModelOptions(codexList)}
+                  value={defaultCodexModel?.id ?? ''}
+                  onChange={saveDefaultCodexModel}
+                  onClose={closeMenu}
+                  placement="below"
+                  title="Modell für neue Vorhaben"
+                  note="Gilt ab dem nächsten neuen Vorhaben."
+                  emptyText={codexEmptyText}
+                />
+              ) : (
+                <ModelMenu
+                  options={MODEL_OPTIONS}
+                  value={current.defaultModel}
+                  onChange={saveDefaultModel}
+                  onClose={closeMenu}
+                  placement="below"
+                  title="Modell für neue Vorhaben"
+                  note="Gilt ab dem nächsten neuen Vorhaben."
+                />
+              )}
             </SelectButton>
           </SettingRow>
           <SettingRow
@@ -253,6 +297,7 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
                 onClose={closeMenu}
                 placement="below"
                 align="start"
+                efforts={isCodex ? codexEfforts(defaultCodexModel) : undefined}
               />
             </SelectButton>
           </SettingRow>

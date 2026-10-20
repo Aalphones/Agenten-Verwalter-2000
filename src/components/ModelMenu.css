@@ -55,4 +55,10 @@
     font-size: var(--font-size-xs);
     color: var(--color-fg-muted);
   }
+
+  &__empty {
+    padding: var(--space-sm) var(--space-lg);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
 }

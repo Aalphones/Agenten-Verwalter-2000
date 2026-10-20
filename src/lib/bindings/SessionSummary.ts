@@ -16,7 +16,11 @@ awaitingSubagent: boolean, model: ModelId, effort: Effort, mode: Mode,
 /**
  * Browser-Zugriff gewünscht; wirkt ab dem nächsten Start des Agenten.
  */
-chrome: boolean, createdAt: number, 
+chrome: boolean, 
+/**
+ * Modell in der Betriebsart Codex; `None` = Standardmodell von Codex.
+ */
+codexModel: string | null, createdAt: number, 
 /**
  * Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
  */

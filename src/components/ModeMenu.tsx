@@ -19,6 +19,8 @@ interface ModeMenuProps {
   align?: 'start' | 'end';
   /** `false` in der Betriebsart Claude Code + LM Studio: dort gibt es keinen Denkaufwand. */
   showEffort?: boolean;
+  /** Die Stufen, die das Modell kennt; fehlt die Angabe, gelten alle. */
+  efforts?: readonly Effort[] | undefined;
 }
 
 export function ModeMenu({
@@ -30,6 +32,7 @@ export function ModeMenu({
   placement,
   align = 'end',
   showEffort = true,
+  efforts,
 }: ModeMenuProps): ReactElement {
   return (
     <Popover
@@ -67,7 +70,7 @@ export function ModeMenu({
       })}
       {showEffort && (
         <div className="mode-menu__foot">
-          <EffortDots value={effort} onChange={onEffortChange} />
+          <EffortDots value={effort} onChange={onEffortChange} efforts={efforts} />
         </div>
       )}
     </Popover>

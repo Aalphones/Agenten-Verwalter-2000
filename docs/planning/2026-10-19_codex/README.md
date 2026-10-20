@@ -15,7 +15,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | Gerüst: Betriebsart „Codex“, `codex.exe` finden, Unterbefehl `codex`, Thread anlegen/fortsetzen, Text-Chat, Unterbrechen | [phase-1-geruest.md](phase-1-geruest.md) | heikel | complete |
 | 2 | Werkzeuge, Rechte, Rückfragen: Befehle, Dateiänderungen, MCP, Web, Plan als Aufgabenliste; Freigaben und Sandbox je Modus | [phase-2-werkzeuge-rechte.md](phase-2-werkzeuge-rechte.md) | heikel | complete |
 | 3 | Anweisungen, Skills, Anhänge: Repository-`AGENTS.md`, Verwalter-Vorgaben, `/name`, Bilder; `/`-Menü in „Codex“ | [phase-3-anweisungen-skills.md](phase-3-anweisungen-skills.md) | standard | complete |
-| 4 | Modelle und Kontext: Codex-Modell je Session, Modellwechsel in der Eingabeleiste, Denkaufwand, Kontext-Donut | [phase-4-modelle-kontext.md](phase-4-modelle-kontext.md) | heikel | pending |
+| 4 | Modelle und Kontext: Codex-Modell je Session, Modellwechsel in der Eingabeleiste, Denkaufwand, Kontext-Donut | [phase-4-modelle-kontext.md](phase-4-modelle-kontext.md) | heikel | complete |
 | 5 | Konto und Kontingent: Zeile „Codex-Konto“ mit Anmelden, Kontingent oben aus Codex | [phase-5-konto-kontingent.md](phase-5-konto-kontingent.md) | standard | pending |
 | 6 | Druckmodus (TL;DR, Retro, Commit-Vorschlag) und Abschluss: Doku, ADR, Wissen | [phase-6-druck-abschluss.md](phase-6-druck-abschluss.md) | standard | pending |
 
@@ -61,7 +61,7 @@ Umgebung: `VERWALTER_CODEX_EXE` (Pfad zu `codex.exe`, gesetzt vom Verwalter; feh
 | `set_permission_mode` | Modus für den nächsten `turn/start`; `success` |
 | `set_model` | Modell für den nächsten `turn/start`; `success` |
 | `set_effort` (neu, nur Codex) `{"subtype":"set_effort","effort":E}` | Denkaufwand für den nächsten `turn/start`; `success` |
-| `get_context_usage` | `success` mit `{"totalTokens":T,"maxTokens":W,"categories":[{"name":"Verlauf","tokens":T}]}` (Feldnamen nach `agents/claude/stats.rs` angleichen, Phase 4) |
+| `get_context_usage` | `success` mit `{"model":M,"totalTokens":T,"maxTokens":W,"categories":[{"name":"Verlauf","tokens":T,"kind":"used"}]}`; vor der ersten Zählung `error` |
 | `stop_task`, `mcp_status`, `mcp_reconnect`, `mcp_toggle`, jede andere | `error` „nicht unterstützt: <subtype>“ |
 | `control_response` auf `can_use_tool` | Antwort an Codex auf die gemerkte JSON-RPC-Anfrage (`accept`/`decline`) |
 
@@ -93,7 +93,7 @@ Werkzeug-IDs: `item.id` von Codex (bei `fileChange` `<item.id>-<n>`).
 - `OperatingMode` bekommt `Codex` (TS `'codex'`).
 - `Settings.default_codex_model: Option<String>`, `SettingsChange::DefaultCodexModel(Option<String>)`.
 - `SessionSummary.codex_model: Option<String>` (bzw. wo `model` heute steht).
-- `CodexModel { id: String, display_name: String, efforts: Vec<Effort>, default_effort: Effort, is_default: bool }`; Command `codex_models() -> Vec<CodexModel>`; `session_set_codex_model(session_id, model: Option<String>)`.
+- `CodexModel { id: String, display_name: String, efforts: Vec<Effort>, default_effort: Effort, is_default: bool }`; Command `codex_models() -> CodexModels { models: Vec<CodexModel>, error: Option<String> }`; `session_set_codex_model(session_id, model: Option<String>)`; `project_create` nimmt zusätzlich `codex_model: Option<String>`.
 - `UsageLimit.window_minutes: Option<u32>`.
 - Codex-Konto: dieselben Typen `AccountStatus`/`AccountInfo`; Commands `codex_account_load`, `codex_account_login`; Ereignis `codex-account://changed`.
 

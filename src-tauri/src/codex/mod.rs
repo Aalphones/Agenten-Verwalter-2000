@@ -5,9 +5,11 @@ pub mod approvals;
 pub mod input;
 pub mod instructions;
 pub mod items;
+pub mod models;
 pub mod policy;
 pub mod rpc;
 pub mod session;
+pub mod tokens;
 
 use std::env;
 use std::ffi::OsString;

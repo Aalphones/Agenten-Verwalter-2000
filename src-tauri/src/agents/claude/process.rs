@@ -21,6 +21,8 @@ pub struct SpawnOptions {
     pub session_id: String,
     pub resume: bool,
     pub model: ModelId,
+    /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex.
+    pub codex_model: Option<String>,
     pub effort: Effort,
     pub mode: Mode,
     /// Ordner der Session-Repositories (Haupt-Checkout oder App-Worktree): ohne `--add-dir` findet
@@ -202,11 +204,11 @@ fn build_command(opts: &SpawnOptions) -> Command {
     command
 }
 
-/// In „Codex“ leer: der Übersetzer nimmt dann das Standardmodell von Codex — das Claude-Modell der
-/// Session gilt erst nach dem Zurückschalten wieder.
+/// In „Codex“ das Codex-Modell der Session, leer = Standardmodell von Codex; das Claude-Modell gilt
+/// erst nach dem Zurückschalten wieder.
 fn model_arg(opts: &SpawnOptions) -> &str {
     if opts.codex_exe.is_some() {
-        return "";
+        return opts.codex_model.as_deref().unwrap_or_default();
     }
     match &opts.local {
         Some(backend) => backend.model.as_str(),

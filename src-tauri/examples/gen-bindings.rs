@@ -17,6 +17,7 @@ use verwalter_lib::{
         LineStat, RepositoryChanges, SessionChanges,
     },
     cli_update::model::{CliUpdateOutcome, CliVersionStatus},
+    codex::models::{CodexModel, CodexModels},
     commands::app::AppInfo,
     context::model::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
@@ -132,6 +133,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     LocalModelKind::export_all(&cfg)?;
     LocalModel::export_all(&cfg)?;
     LocalModels::export_all(&cfg)?;
+    CodexModel::export_all(&cfg)?;
+    CodexModels::export_all(&cfg)?;
     Settings::export_all(&cfg)?;
     SettingsOverview::export_all(&cfg)?;
     SettingsChange::export_all(&cfg)?;

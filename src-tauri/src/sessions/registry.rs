@@ -175,6 +175,9 @@ struct SessionState {
     name: String,
     status: SessionStatus,
     model: ModelId,
+    /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex. Das Claude-Modell darüber
+    /// bleibt davon unberührt und gilt nach dem Zurückschalten.
+    codex_model: Option<String>,
     effort: Effort,
     /// Denkaufwand, mit dem der laufende Prozess gestartet wurde — der lässt sich nur beim Start setzen.
     process_effort: Effort,
@@ -272,6 +275,8 @@ pub struct NewSession<'a> {
     pub attachment_ids: &'a [String],
     pub repository_ids: &'a [String],
     pub model: ModelId,
+    /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex.
+    pub codex_model: Option<String>,
     pub effort: Effort,
     pub mode: Mode,
 }
@@ -393,6 +398,7 @@ impl SessionRegistry {
             attachment_ids,
             repository_ids,
             model,
+            codex_model,
             effort,
             mode,
         } = request;
@@ -430,6 +436,7 @@ impl SessionRegistry {
             skills::match_invocation(task, &skills::collect(&home, &repository_roots))
         });
         let mut state = SessionState::new(name.clone(), model, effort, mode);
+        state.codex_model = codex_model;
         state.ticket_roots = worktrees::ticket_roots(&repositories);
         let project = ProjectState::new(name, state.created_at);
         let session = Arc::new(Session {
@@ -518,13 +525,19 @@ impl SessionRegistry {
                 return Ok(summarize(member, &state));
             }
         }
-        let (model, effort, mode) = {
+        let (model, codex_model, effort, mode) = {
             let state = latest.lock();
-            (state.model, state.effort, state.mode)
+            (
+                state.model,
+                state.codex_model.clone(),
+                state.effort,
+                state.mode,
+            )
         };
         let number = latest.number + 1;
         let id = uuid::Uuid::new_v4().to_string();
         let mut state = SessionState::new(format!("Session {number}"), model, effort, mode);
+        state.codex_model = codex_model;
         state.status = SessionStatus::New;
         // Die Vorhaben-Sperre hält ein gleichzeitiges `add_repository` an, bis die neue Session in
         // der Map steht — sonst verpasste sie das angehängte Repository. Die Sperre der neuen
@@ -1124,6 +1137,35 @@ impl SessionRegistry {
         )
     }
 
+    /// `None` wählt das Standardmodell von Codex. Ein laufender Übersetzer bekommt die Wahl für den
+    /// nächsten Turn; ein Prozess einer anderen Betriebsart kennt die Kennung nicht.
+    pub fn set_codex_model(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        codex_model: Option<String>,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.codex_model = codex_model.clone();
+                outbox.summary_dirty = true;
+                if state.process_mode != OperatingMode::Codex {
+                    return Ok(());
+                }
+                state.send_control(
+                    outbox,
+                    json!({
+                        "subtype": "set_model",
+                        "model": codex_model.as_deref().unwrap_or_default(),
+                    }),
+                )
+            },
+        )
+    }
+
     pub fn set_mode(
         &self,
         app: &AppHandle,
@@ -1145,7 +1187,8 @@ impl SessionRegistry {
         )
     }
 
-    /// Wirkt erst mit dem nächsten Prozessstart — der Agent kennt keine Steueranfrage dafür.
+    /// Wirkt in „Claude“ erst mit dem nächsten Prozessstart — die Kommandozeile kennt keine
+    /// Steueranfrage dafür. Der Übersetzer von „Codex“ nimmt sie ab dem nächsten Turn an.
     pub fn set_effort(
         &self,
         app: &AppHandle,
@@ -1159,7 +1202,15 @@ impl SessionRegistry {
             |state: &mut SessionState, outbox: &mut Outbox| {
                 state.effort = effort;
                 outbox.summary_dirty = true;
-                Ok(())
+                if state.process_mode != OperatingMode::Codex {
+                    return Ok(());
+                }
+                // Kein Neustart nötig: der Übersetzer hat den neuen Wert.
+                state.process_effort = effort;
+                state.send_control(
+                    outbox,
+                    json!({ "subtype": "set_effort", "effort": effort.cli_value() }),
+                )
             },
         )
     }
@@ -1729,6 +1780,7 @@ impl SessionState {
             name,
             status: SessionStatus::Starting,
             model,
+            codex_model: None,
             effort,
             process_effort: effort,
             process_chrome: false,
@@ -1803,6 +1855,7 @@ impl SessionState {
         state.context_window = row.context_window;
         state.has_agent_history = row.has_agent_history;
         state.chrome = row.chrome;
+        state.codex_model = row.codex_model.clone();
         state.process_chrome = row.chrome;
         state.scratchpad_dir = row.scratchpad_dir.clone();
         state.idle_since = None;
@@ -2717,6 +2770,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         name: state.name.clone(),
         status: state.status,
         model: state.model,
+        codex_model: state.codex_model.clone(),
         effort: state.effort,
         mode: state.mode,
         created_at: state.created_at,
@@ -2787,6 +2841,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         },
         awaiting_subagent,
         model: state.model,
+        codex_model: state.codex_model.clone(),
         effort: state.effort,
         mode: state.mode,
         chrome: state.chrome,
@@ -2902,6 +2957,7 @@ fn start_process(
             session_id: session.id.clone(),
             resume,
             model: state.model,
+            codex_model: state.codex_model.clone(),
             effort: state.effort,
             mode: state.mode,
             add_dirs,

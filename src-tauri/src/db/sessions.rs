@@ -39,6 +39,8 @@ pub struct SessionRow {
     pub handoff_line: Option<String>,
     /// Browser-Zugriff (Claude in Chrome) beim nächsten Start; ADR 030.
     pub chrome: bool,
+    /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex.
+    pub codex_model: Option<String>,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -66,6 +68,7 @@ struct StoredRow {
     seen_at: f64,
     handoff_line: Option<String>,
     chrome: bool,
+    codex_model: Option<String>,
 }
 
 impl StoredRow {
@@ -93,6 +96,7 @@ impl StoredRow {
             seen_at: row.get(19)?,
             handoff_line: row.get(20)?,
             chrome: row.get(21)?,
+            codex_model: row.get(22)?,
         })
     }
 
@@ -120,6 +124,7 @@ impl StoredRow {
             seen_at: self.seen_at,
             handoff_line: self.handoff_line,
             chrome: self.chrome,
+            codex_model: self.codex_model,
         })
     }
 }
@@ -132,9 +137,9 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
-             project_id, number, last_activity_at, seen_at, handoff_line, chrome) \
+             project_id, number, last_activity_at, seen_at, handoff_line, chrome, codex_model) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19) \
+             ?19, ?20) \
          ON CONFLICT(id) DO UPDATE SET \
              name = excluded.name, \
              status = excluded.status, \
@@ -149,7 +154,8 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
              last_activity_at = excluded.last_activity_at, \
              seen_at = excluded.seen_at, \
              handoff_line = excluded.handoff_line, \
-             chrome = excluded.chrome",
+             chrome = excluded.chrome, \
+             codex_model = excluded.codex_model",
         params![
             row.id,
             row.name,
@@ -170,6 +176,7 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
             row.seen_at,
             row.handoff_line,
             row.chrome,
+            row.codex_model,
         ],
     )?;
     Ok(())
@@ -182,7 +189,7 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, \
-             handoff_line, chrome \
+             handoff_line, chrome, codex_model \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
@@ -200,7 +207,7 @@ pub fn load_for_project(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              project_id, number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, handoff_line, \
-             chrome \
+             chrome, codex_model \
          FROM sessions WHERE project_id = ?1 ORDER BY number",
     )?;
     let stored: Vec<StoredRow> = statement

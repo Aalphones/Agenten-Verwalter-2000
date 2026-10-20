@@ -21,6 +21,7 @@ const KEY_DEFAULT_EFFORT: &str = "default_effort";
 const KEY_DEFAULT_MODE: &str = "default_mode";
 const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
+const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
 const KEY_VOICE_LANGUAGE: &str = "voice_language";
 
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     default_mode: Mode::Auto,
     operating_mode: OperatingMode::Claude,
     local_model: None,
+    default_codex_model: None,
     voice_language: None,
 };
 
@@ -45,6 +47,11 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
         operating_mode: stored_or(&stored, KEY_OPERATING_MODE, DEFAULT_SETTINGS.operating_mode),
         local_model: stored
             .get(KEY_LOCAL_MODEL)
+            .map(|text: &String| text.trim())
+            .filter(|text: &&str| !text.is_empty())
+            .map(str::to_owned),
+        default_codex_model: stored
+            .get(KEY_DEFAULT_CODEX_MODEL)
             .map(|text: &String| text.trim())
             .filter(|text: &&str| !text.is_empty())
             .map(str::to_owned),
@@ -88,6 +95,14 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             }
             SettingsChange::LocalModel { value } => {
                 setting_rows::write(&transaction, KEY_LOCAL_MODEL, value.trim())?;
+            }
+            SettingsChange::DefaultCodexModel { value } => {
+                // Leer = Standardmodell; `load` liest leere Texte als „nicht gesetzt“.
+                setting_rows::write(
+                    &transaction,
+                    KEY_DEFAULT_CODEX_MODEL,
+                    value.as_deref().map_or("", str::trim),
+                )?;
             }
             SettingsChange::VoiceLanguage { value } => {
                 // Leer = automatische Erkennung; `load` liest leere Texte als „nicht gesetzt“.

@@ -132,3 +132,14 @@ pub async fn session_log(
 ) -> Result<Vec<String>, CommandError> {
     registry.log(&session_id)
 }
+
+/// `None` wählt das Standardmodell von Codex.
+#[tauri::command]
+pub async fn session_set_codex_model(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    model: Option<String>,
+) -> Result<(), CommandError> {
+    registry.set_codex_model(&app, &session_id, model)
+}

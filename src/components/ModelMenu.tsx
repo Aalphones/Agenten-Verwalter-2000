@@ -1,29 +1,32 @@
 import type { ReactElement } from 'react';
-import type { ModelId } from '@/lib/bindings/ModelId';
-import { MODEL_OPTIONS } from '@/lib/labels';
 import type { ModelOption } from '@/lib/labels';
 import { Popover } from '@/components/Popover';
 import './ModelMenu.css';
 
 const MODEL_MENU_WIDTH = 340;
 
-interface ModelMenuProps {
-  value: ModelId;
-  onChange: (model: ModelId) => void;
+interface ModelMenuProps<Id extends string> {
+  options: readonly ModelOption<Id>[];
+  value: Id;
+  onChange: (model: Id) => void;
   onClose: () => void;
   placement: 'above' | 'below';
   note: string;
   title?: string;
+  /** Steht statt der Zeilen, wenn `options` leer ist (Codex nicht erreichbar, Liste lädt noch). */
+  emptyText?: string;
 }
 
-export function ModelMenu({
+export function ModelMenu<Id extends string>({
+  options,
   value,
   onChange,
   onClose,
   placement,
   note,
   title = 'Modell für diese Session',
-}: ModelMenuProps): ReactElement {
+  emptyText = 'Keine Modelle verfügbar.',
+}: ModelMenuProps<Id>): ReactElement {
   return (
     <Popover
       label="Modell"
@@ -33,7 +36,8 @@ export function ModelMenu({
       onClose={onClose}
     >
       <div className="model-menu__head">{title}</div>
-      {MODEL_OPTIONS.map((option: ModelOption) => {
+      {options.length === 0 && <div className="model-menu__empty">{emptyText}</div>}
+      {options.map((option: ModelOption<Id>) => {
         const isChecked: boolean = option.id === value;
         return (
           <button

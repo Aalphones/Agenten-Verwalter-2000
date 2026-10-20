@@ -22,6 +22,7 @@ pub async fn project_create(
     attachment_ids: Vec<String>,
     repository_ids: Vec<String>,
     model: ModelId,
+    codex_model: Option<String>,
     effort: Effort,
     mode: Mode,
 ) -> Result<ProjectCreated, CommandError> {
@@ -32,6 +33,7 @@ pub async fn project_create(
             attachment_ids: &attachment_ids,
             repository_ids: &repository_ids,
             model,
+            codex_model,
             effort,
             mode,
         },

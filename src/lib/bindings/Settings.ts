@@ -15,6 +15,10 @@ export type Settings = { colorScheme: ColorScheme, defaultModel: ModelId, defaul
  */
 localModel: string | null, 
 /**
+ * Modell für neue Vorhaben in der Betriebsart Codex; `None` = Standardmodell von Codex.
+ */
+defaultCodexModel: string | null, 
+/**
  * Sprachcode für die Spracheingabe (z. B. `de`); `None` = Whisper erkennt die Sprache selbst.
  */
 voiceLanguage: string | null, };

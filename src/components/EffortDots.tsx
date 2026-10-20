@@ -7,16 +7,22 @@ import './EffortDots.css';
 interface EffortDotsProps {
   value: Effort;
   onChange: (effort: Effort) => void;
+  /** Die Stufen, die das Modell kennt; fehlt die Angabe, gelten alle. */
+  efforts?: readonly Effort[] | undefined;
 }
 
-export function EffortDots({ value, onChange }: EffortDotsProps): ReactElement {
+export function EffortDots({ value, onChange, efforts }: EffortDotsProps): ReactElement {
+  const offered: readonly EffortOption[] =
+    efforts === undefined
+      ? EFFORT_OPTIONS
+      : EFFORT_OPTIONS.filter((option: EffortOption) => efforts.includes(option.id));
   return (
     <div className="effort-dots">
       <span className="effort-dots__title">
         Denkaufwand <span className="effort-dots__value">({effortLabel(value)})</span>
       </span>
       <div className="effort-dots__group" role="group" aria-label="Denkaufwand">
-        {EFFORT_OPTIONS.map((option: EffortOption) => {
+        {offered.map((option: EffortOption) => {
           const isSelected: boolean = option.id === value;
           const isMax: boolean = option.id === 'max';
           const dotClass: string = [

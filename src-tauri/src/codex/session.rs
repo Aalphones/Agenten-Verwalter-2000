@@ -16,15 +16,16 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use super::approvals::{self, Answer, Approvals};
+use super::models::{self, CodexModel};
 use super::rpc::{Incoming, RpcClient};
+use super::tokens::{self, TokenCount};
 use super::{input, instructions, items, policy, thread_file};
-use crate::agents::event::Mode;
+use crate::agents::event::{Effort, Mode};
 use crate::standalone::args::{self, AgentArgs, Start};
 use crate::standalone::output::{self, Output};
 use crate::standalone::session::skill_root;
 use crate::standalone::{EXIT_START_FAILED, SCRATCHPAD_VARIABLE, fallback_scratchpad, home_dir};
 
-const INITIALIZE_TIMEOUT: Duration = Duration::from_secs(20);
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 const BYTE_ORDER_MARK: char = '\u{feff}';
 /// Steht statt eines Fehlersatzes, wenn Codex einen Turn ohne Begründung scheitern lässt.
@@ -35,15 +36,14 @@ const EMPTY_MESSAGE: &str = "Die Nachricht enthält nichts, das Codex bekommen k
 const AGENT_MESSAGE: &str = "agentMessage";
 const FILE_CHANGE: &str = "fileChange";
 /// Benachrichtigungen, die der Verwalter nicht braucht: Stück-für-Stück-Ausgaben (er zeigt fertige
-/// Blöcke), Statusmeldungen und die Token-Zählung (kommt mit Phase 4).
-const SILENT_NOTIFICATIONS: [&str; 10] = [
+/// Blöcke) und Statusmeldungen.
+const SILENT_NOTIFICATIONS: [&str; 9] = [
     "item/autoApprovalReview/started",
     "item/autoApprovalReview/completed",
     "guardianWarning",
     "mcpServer/startupStatus/updated",
     "thread/status/changed",
     "turn/started",
-    "thread/tokenUsage/updated",
     "turn/diff/updated",
     "item/mcpToolCall/progress",
     "item/fileChange/patchUpdated",
@@ -77,6 +77,12 @@ struct Session {
     model: String,
     /// Mit `set_model` gewählt; gilt ab dem nächsten `turn/start`.
     requested_model: Option<String>,
+    /// Mit `--effort` oder `set_effort` gewählt; gilt ab dem nächsten `turn/start`.
+    requested_effort: Option<Effort>,
+    /// Die Modelle, die Codex anbietet; leer, wenn `model/list` scheiterte.
+    models: Vec<CodexModel>,
+    /// Letzte Token-Zählung des Threads; `None`, bis Codex die erste meldet.
+    tokens: Option<TokenCount>,
     mode: Mode,
     cwd: PathBuf,
     add_dirs: Vec<PathBuf>,
@@ -117,7 +123,9 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
             return EXIT_START_FAILED;
         }
     };
-    let started = initialize(&rpc).and_then(|()| open_thread(&rpc, &args, &cwd));
+    let started = rpc
+        .initialize()
+        .and_then(|()| open_thread(&rpc, &args, &cwd));
     let (session_id, thread_id, model) = match started {
         Ok(opened) => opened,
         Err(error) => {
@@ -131,6 +139,10 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
         rpc.shutdown();
         return EXIT_START_FAILED;
     }
+    let models = models::list(&rpc).unwrap_or_else(|error: String| {
+        eprintln!("Modelle von Codex nicht lesbar: {error}");
+        Vec::new()
+    });
     let output = Output::default();
     let scratchpad = scratchpad(&session_id);
     output.line(&output::init(&session_id, &model, &cwd, &[], &scratchpad));
@@ -140,7 +152,10 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
         session_id,
         thread_id,
         model,
-        requested_model: None,
+        requested_model: Some(args.model.clone()).filter(|id: &String| !id.is_empty()),
+        requested_effort: args.effort,
+        models,
+        tokens: None,
         mode: args.mode,
         cwd,
         skill_roots: args
@@ -162,18 +177,6 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
     let exit_code = session.run_loop(&receiver);
     session.rpc.shutdown();
     exit_code
-}
-
-fn initialize(rpc: &RpcClient) -> Result<(), String> {
-    rpc.call(
-        "initialize",
-        json!({
-            "clientInfo": { "name": "verwalter", "version": env!("CARGO_PKG_VERSION") },
-        }),
-        INITIALIZE_TIMEOUT,
-    )?;
-    rpc.notify("initialized")
-        .map_err(|error: io::Error| format!("initialized: {error}"))
 }
 
 /// Legt den Thread an bzw. setzt ihn fort; Rückgabe Session-ID, Thread-ID und Modell.
@@ -291,15 +294,6 @@ fn spawn_stdin_reader(sender: Sender<Input>) -> io::Result<()> {
     Ok(())
 }
 
-/// Codex meldet das Kontextfenster erst mit der Token-Zählung (Phase 4); bis dahin fehlt
-/// `modelUsage`, statt ein Fenster von 0 zu behaupten.
-fn without_window(mut line: Value) -> Value {
-    if let Some(fields) = line.as_object_mut() {
-        fields.remove("modelUsage");
-    }
-    line
-}
-
 impl Session {
     fn run_loop(&mut self, input: &Receiver<Input>) -> i32 {
         loop {
@@ -383,6 +377,26 @@ impl Session {
                 }
                 None => self.reply_error(request_id, "model fehlt"),
             },
+            "set_effort" => {
+                match request
+                    .get("effort")
+                    .and_then(Value::as_str)
+                    .and_then(args::effort_from_cli)
+                {
+                    Some(effort) => {
+                        self.requested_effort = Some(effort);
+                        self.reply_success(request_id);
+                    }
+                    None => self.reply_error(request_id, "unbekannter Denkaufwand"),
+                }
+            }
+            "get_context_usage" => match self.tokens {
+                Some(count) => self.output.line(&output::control_success(
+                    request_id,
+                    count.context_usage(&self.model),
+                )),
+                None => self.reply_error(request_id, "Codex hat noch keine Token gezählt"),
+            },
             other => self.reply_error(request_id, &format!("nicht unterstützt: {other}")),
         }
     }
@@ -457,12 +471,7 @@ impl Session {
     fn start_turn(&mut self, content: &Value) {
         let entries = input::user_input(content, &self.home, &self.skill_roots);
         if entries.is_empty() {
-            self.output.line(&without_window(output::result_error(
-                &self.session_id,
-                EMPTY_MESSAGE,
-                &self.model,
-                0,
-            )));
+            self.output.line(&self.result_error(EMPTY_MESSAGE));
             return;
         }
         let mut params = json!({ "threadId": self.thread_id, "input": entries });
@@ -480,6 +489,9 @@ impl Session {
         }
         if let Some(model) = &self.requested_model {
             params["model"] = json!(model);
+        }
+        if let Some(effort) = self.turn_effort() {
+            params["effort"] = json!(effort.cli_value());
         }
         let started = self.rpc.call("turn/start", params, CALL_TIMEOUT);
         let turn_id = started.and_then(|result: Value| {
@@ -501,12 +513,7 @@ impl Session {
                     is_aborted: false,
                 });
             }
-            Err(error) => self.output.line(&without_window(output::result_error(
-                &self.session_id,
-                &error,
-                &self.model,
-                0,
-            ))),
+            Err(error) => self.output.line(&self.result_error(&error)),
         }
     }
 
@@ -527,11 +534,7 @@ impl Session {
         if let Err(error) = self.rpc.call("turn/interrupt", params, CALL_TIMEOUT) {
             eprintln!("{error}");
         }
-        self.output.line(&without_window(output::result_aborted(
-            &self.session_id,
-            &self.model,
-            0,
-        )));
+        self.output.line(&self.result_aborted());
     }
 
     fn handle_notification(&mut self, method: &str, params: &Value) {
@@ -542,6 +545,7 @@ impl Session {
             "item/started" => self.item_started(params.get("item").unwrap_or(&Value::Null)),
             "item/completed" => self.item_completed(params.get("item").unwrap_or(&Value::Null)),
             "turn/plan/updated" => self.plan_updated(params),
+            "thread/tokenUsage/updated" => self.token_usage_updated(params),
             "serverRequest/resolved" => {
                 if let Some(request_id) = params.get("requestId") {
                     self.approvals.forget(request_id);
@@ -619,7 +623,7 @@ impl Session {
         };
         let text = item.get("text").and_then(Value::as_str).unwrap_or_default();
         text.clone_into(&mut turn.last_text);
-        self.output.line(&output::assistant(
+        self.write_line(output::assistant(
             &self.session_id,
             vec![json!({ "type": "text", "text": text })],
             0,
@@ -636,9 +640,86 @@ impl Session {
         self.write_lines(&items::plan_update(&self.session_id, &call_id, params));
     }
 
+    /// Jede `assistant`-Zeile trägt die letzte Token-Zählung: der Verwalter liest den Balken des
+    /// Kontexts aus ihr und setzte ihn bei einer Zeile mit 0 zurück.
+    fn write_line(&self, mut line: Value) {
+        tokens::apply_to_assistant(&mut line, self.tokens);
+        self.output.line(&line);
+    }
+
     fn write_lines(&self, lines: &[Value]) {
         for line in lines {
-            self.output.line(line);
+            self.write_line(line.clone());
+        }
+    }
+
+    fn window(&self) -> u32 {
+        let window = self.tokens.and_then(|count: TokenCount| count.window);
+        u32::try_from(window.unwrap_or(0)).unwrap_or(u32::MAX)
+    }
+
+    /// Ohne bekanntes Fenster fehlt `modelUsage`, statt ein Fenster von 0 zu behaupten.
+    fn without_unknown_window(&self, mut line: Value) -> Value {
+        if self.window() == 0
+            && let Some(fields) = line.as_object_mut()
+        {
+            fields.remove("modelUsage");
+        }
+        line
+    }
+
+    fn result_success(&self, text: &str) -> Value {
+        self.without_unknown_window(output::result_success(
+            &self.session_id,
+            text,
+            &self.model,
+            self.window(),
+        ))
+    }
+
+    fn result_error(&self, text: &str) -> Value {
+        self.without_unknown_window(output::result_error(
+            &self.session_id,
+            text,
+            &self.model,
+            self.window(),
+        ))
+    }
+
+    fn result_aborted(&self) -> Value {
+        self.without_unknown_window(output::result_aborted(
+            &self.session_id,
+            &self.model,
+            self.window(),
+        ))
+    }
+
+    /// Der Denkaufwand für den nächsten Turn: der gewählte, wenn das Modell ihn anbietet, sonst der
+    /// Standard des Modells. Kennt der Übersetzer die Modelle nicht, geht die Wahl unverändert hin.
+    fn turn_effort(&self) -> Option<Effort> {
+        let requested = self.requested_effort?;
+        let model_id = self.requested_model.as_deref().unwrap_or(&self.model);
+        let Some(model) = self
+            .models
+            .iter()
+            .find(|candidate: &&CodexModel| candidate.id == model_id)
+        else {
+            return Some(requested);
+        };
+        if model.efforts.contains(&requested) {
+            return Some(requested);
+        }
+        Some(model.default_effort)
+    }
+
+    fn token_usage_updated(&mut self, params: &Value) {
+        let Some(count) = TokenCount::from_notification(params) else {
+            return;
+        };
+        self.tokens = Some(count);
+        // Eine leere Zeile genügt: die Zählung selbst setzt `write_line`.
+        if self.is_turn_open() {
+            self.write_line(output::assistant(&self.session_id, Vec::new(), 0, 0));
         }
     }
 
@@ -660,10 +741,8 @@ impl Session {
             return;
         }
         let line = match finished.get("status").and_then(Value::as_str) {
-            Some("completed") => {
-                output::result_success(&self.session_id, &turn.last_text, &self.model, 0)
-            }
-            Some("interrupted") => output::result_aborted(&self.session_id, &self.model, 0),
+            Some("completed") => self.result_success(&turn.last_text),
+            Some("interrupted") => self.result_aborted(),
             _ => {
                 let error = finished
                     .pointer("/error/message")
@@ -671,10 +750,10 @@ impl Session {
                     .map(str::to_owned)
                     .or(turn.error)
                     .unwrap_or_else(|| UNKNOWN_FAILURE.to_owned());
-                output::result_error(&self.session_id, &error, &self.model, 0)
+                self.result_error(&error)
             }
         };
-        self.output.line(&without_window(line));
+        self.output.line(&line);
     }
 
     /// Codex ist weg: ein laufender Turn endet für den Verwalter mit einem Fehler.
@@ -686,12 +765,7 @@ impl Session {
         if turn.is_aborted {
             return;
         }
-        self.output.line(&without_window(output::result_error(
-            &self.session_id,
-            error,
-            &self.model,
-            0,
-        )));
+        self.output.line(&self.result_error(error));
     }
 
     /// Was nur für den Turn galt: Rückfragen, die Codex nicht mehr stellt, und die Dateiliste.
