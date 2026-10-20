@@ -30,6 +30,8 @@
   --color-slate-100: #e4e6f1;
   --color-blue-400: #5b9dff;
   --color-blue-600: #2563eb;
+  --color-violet-400: #a78bfa;
+  --color-violet-600: #7c3aed;
   --color-amber-400: #f2b33d;
   --color-amber-700: #a86a00;
   --color-orange-300: #eea283;
@@ -134,6 +136,7 @@
   --color-status-paused: var(--color-neutral-500);
   --color-status-completed: var(--color-green-700);
   --color-status-handoff: var(--color-accent);
+  --color-status-script: var(--color-violet-600);
   --color-diff-add-bg: var(--color-green-50);
   --color-diff-del-bg: var(--color-red-50);
   --color-diff-add-fg: var(--color-green-700);
@@ -189,6 +192,7 @@
     --color-status-paused: var(--color-neutral-400);
     --color-status-completed: var(--color-green-400);
     --color-status-handoff: var(--color-accent);
+    --color-status-script: var(--color-violet-400);
     --color-diff-add-bg: color-mix(in srgb, var(--color-green-400) 11%, transparent);
     --color-diff-del-bg: color-mix(in srgb, var(--color-red-400) 11%, transparent);
     --color-diff-add-fg: var(--color-green-400);
@@ -242,6 +246,7 @@
   --color-status-paused: var(--color-neutral-400);
   --color-status-completed: var(--color-green-400);
   --color-status-handoff: var(--color-accent);
+  --color-status-script: var(--color-violet-400);
   --color-diff-add-bg: color-mix(in srgb, var(--color-green-400) 11%, transparent);
   --color-diff-del-bg: color-mix(in srgb, var(--color-red-400) 11%, transparent);
   --color-diff-add-fg: var(--color-green-400);

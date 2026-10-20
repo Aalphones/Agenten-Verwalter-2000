@@ -37,6 +37,17 @@ function renderShape(status: DisplayStatus): ReactElement {
           />
         </>
       );
+    case 'script':
+      return (
+        <path
+          d="M3.5 1.5h5M3.5 10.5h5M4 1.5c0 2.6 4 2.4 4 4.5S4 7.9 4 10.5M8 1.5c0 2.6-4 2.4-4 4.5s4 1.9 4 4.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      );
     case 'starting':
     case 'running':
       return (

@@ -5,7 +5,8 @@ import { formatCount } from '@/features/changes/changesScope';
 import { ContextDonut } from '@/features/context/ContextDonut';
 import { ContextPopover } from '@/features/context/ContextPopover';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
-import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
+import { useNow } from '@/features/background/useNow';
+import { headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import { UsageButton } from '@/features/usage/UsageButton';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
@@ -80,6 +81,7 @@ export function SessionHeader({
     const operatingMode: string = state.settings?.operatingMode ?? 'claude';
     return operatingMode === 'claude' || operatingMode === 'codex';
   });
+  const scriptNow: number = useNow(session.awaitedScript !== null);
   const isTicking: boolean = session.runningSince !== null;
 
   // Wechselt die Betriebsart bei offenem Kontingent-Fenster, schließt es mit.
@@ -230,9 +232,12 @@ export function SessionHeader({
         </svg>
         <span className="session-header__number">#{session.number}</span>
         <h1 className="session-header__name">{session.name}</h1>
-        <span className={`session-header__status session-header__status--${session.status}`}>
-          <StatusIcon status={session.status} size={10} />
-          <span>{STATUS_LABEL[session.status]}</span>
+        <span
+          className={`session-header__status session-header__status--${headerStatus(session)}`}
+          title={session.awaitedScript?.title}
+        >
+          <StatusIcon status={headerStatus(session)} size={10} />
+          <span>{headerStatusLabel(session, scriptNow)}</span>
         </span>
         <GitBranchPill
           status={gitStatus}

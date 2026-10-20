@@ -3,8 +3,9 @@ import type { ReactElement } from 'react';
 import { formatRuntime } from '@/app/SessionHeader';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
+import { useNow } from '@/features/background/useNow';
 import { mostUrgent } from '@/features/projects/projectStatus';
-import { STATUS_LABEL } from '@/features/sessions/sessionStatus';
+import { headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { PROJECT_VIEWS, type ProjectView } from '@/stores/sessions';
@@ -38,6 +39,8 @@ export function ProjectHeader({
   onShowView,
 }: ProjectHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
+  const urgent: SessionSummary | null = mostUrgent(sessions);
+  const scriptNow: number = useNow(urgent !== null && urgent.awaitedScript !== null);
   const isTicking: boolean = sessions.some(
     (session: SessionSummary) => session.runningSince !== null,
   );
@@ -58,7 +61,6 @@ export function ProjectHeader({
     };
   }, [isTicking]);
 
-  const urgent: SessionSummary | null = mostUrgent(sessions);
   const totalRuntimeMs: number = sessions.reduce(
     (sum: number, session: SessionSummary) =>
       sum +
@@ -81,9 +83,12 @@ export function ProjectHeader({
       <div className="session-header__title">
         <h1 className="session-header__name">{project.name}</h1>
         {urgent !== null && (
-          <span className={`session-header__status session-header__status--${urgent.status}`}>
-            <StatusIcon status={urgent.status} size={10} />
-            <span>{STATUS_LABEL[urgent.status]}</span>
+          <span
+            className={`session-header__status session-header__status--${headerStatus(urgent)}`}
+            title={urgent.awaitedScript?.title}
+          >
+            <StatusIcon status={headerStatus(urgent)} size={10} />
+            <span>{headerStatusLabel(urgent, scriptNow)}</span>
           </span>
         )}
       </div>

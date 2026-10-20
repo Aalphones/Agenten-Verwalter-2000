@@ -26,6 +26,10 @@
     color: var(--color-status-handoff);
   }
 
+  &--script {
+    color: var(--color-status-script);
+  }
+
   &--cancelled,
   &--new {
     color: var(--color-fg-muted);

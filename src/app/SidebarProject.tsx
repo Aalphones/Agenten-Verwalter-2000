@@ -3,6 +3,7 @@ import type { MouseEvent, ReactElement } from 'react';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import { RenameField } from '@/app/SidebarItem';
+import { useNow } from '@/features/background/useNow';
 import { hasUnread, mostUrgent, projectMetaLine } from '@/features/projects/projectStatus';
 import {
   displayStatus,
@@ -48,6 +49,10 @@ export function SidebarProject({
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const isRenamingProject: boolean =
     renaming !== null && renaming.kind === 'project' && renaming.id === project.id;
+  const urgent: SessionSummary | null = mostUrgent(sessions);
+  const urgentStatus: DisplayStatus =
+    urgent === null ? 'completed' : displayStatus(urgent, sessions);
+  const now: number = useNow(urgentStatus === 'script');
 
   function renderRow(): ReactElement {
     if (isRenamingProject) {
@@ -62,10 +67,7 @@ export function SidebarProject({
         />
       );
     }
-    const urgent: SessionSummary | null = mostUrgent(sessions);
-    const meta: string | null = projectMetaLine(sessions);
-    const urgentStatus: DisplayStatus =
-      urgent === null ? 'completed' : displayStatus(urgent, sessions);
+    const meta: string | null = projectMetaLine(sessions, now);
     const isDone: boolean = urgentStatus === 'completed' || urgentStatus === 'cancelled';
     const isUnread: boolean = hasUnread(sessions);
     const metaClass = `sidebar-project__meta${

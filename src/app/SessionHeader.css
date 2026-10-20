@@ -95,6 +95,10 @@
       color: var(--color-status-paused);
     }
 
+    &--script {
+      color: var(--color-status-script);
+    }
+
     &--completed {
       color: var(--color-status-completed);
     }

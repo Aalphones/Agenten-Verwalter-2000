@@ -60,6 +60,18 @@
     font-weight: 600;
   }
 
+  &__clock {
+    flex-shrink: 0;
+    margin-left: auto;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__clock + &__unread {
+    margin-left: 0;
+  }
+
   &__unread {
     flex-shrink: 0;
     width: 6px;

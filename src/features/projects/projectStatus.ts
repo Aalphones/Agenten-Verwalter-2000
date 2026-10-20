@@ -2,6 +2,7 @@ import {
   displayStatus,
   HANDOFF_LABEL,
   metaLine,
+  scriptLabel,
   type DisplayStatus,
 } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
@@ -13,6 +14,7 @@ export const URGENCY: readonly DisplayStatus[] = [
   'error',
   'running',
   'starting',
+  'script',
   'paused',
   'handoff',
   'new',
@@ -25,6 +27,7 @@ const SHORT_STATUS: Record<DisplayStatus, string> = {
   starting: 'startet',
   running: 'läuft',
   waiting: 'wartet auf dich',
+  script: 'wartet auf Skript',
   paused: 'pausiert',
   new: 'neu',
   error: 'Fehler',
@@ -88,13 +91,16 @@ export function mostUrgent(sessions: readonly SessionSummary[]): SessionSummary 
 }
 
 /** Zweite Zeile eines Vorhabens in der Sidebar; `null`, wenn es nichts Nützliches zu sagen gibt. */
-export function projectMetaLine(sessions: readonly SessionSummary[]): string | null {
+export function projectMetaLine(sessions: readonly SessionSummary[], now: number): string | null {
   const urgent: SessionSummary | null = mostUrgent(sessions);
   if (urgent === null) {
     return null;
   }
   const status: DisplayStatus = displayStatus(urgent, sessions);
   if (sessions.length === 1) {
+    if (status === 'script' && urgent.awaitedScript !== null) {
+      return scriptLabel(urgent.awaitedScript, now);
+    }
     return status === 'handoff' ? HANDOFF_LABEL : metaLine(urgent);
   }
   if (status === 'completed' || status === 'cancelled') {

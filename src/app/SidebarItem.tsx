@@ -3,6 +3,8 @@ import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent, ReactElement }
 import { SessionDeleteDialog } from '@/app/SessionDeleteDialog';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
+import { formatDuration } from '@/features/background/backgroundLabels';
+import { useNow } from '@/features/background/useNow';
 import type { DisplayStatus } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import './SidebarItem.css';
@@ -38,6 +40,7 @@ export function SidebarItem({
 }: SidebarItemProps): ReactElement {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
+  const now: number = useNow(status === 'script');
 
   if (isRenaming) {
     return (
@@ -74,6 +77,11 @@ export function SidebarItem({
         >
           {session.name}
         </span>
+        {status === 'script' && session.awaitedScript !== null && (
+          <span className="sidebar-item__clock" title={session.awaitedScript.title}>
+            {formatDuration(now - session.awaitedScript.startedAt)}
+          </span>
+        )}
         {session.unread && (
           <span
             className="sidebar-item__unread"
