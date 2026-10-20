@@ -8,6 +8,7 @@ pub mod instructions;
 pub mod items;
 pub mod models;
 pub mod policy;
+pub mod print;
 pub mod rate_limits;
 pub mod rpc;
 pub mod session;
@@ -47,10 +48,6 @@ pub fn run(raw_args: Vec<String>) -> i32 {
             return EXIT_START_FAILED;
         }
     };
-    if parsed.print {
-        eprintln!("Der Druckmodus ist in der Betriebsart Codex noch nicht verfügbar");
-        return EXIT_START_FAILED;
-    }
     let Some(exe) = env::var_os(EXE_VARIABLE)
         .filter(|value: &OsString| !value.is_empty())
         .map(PathBuf::from)
@@ -58,5 +55,8 @@ pub fn run(raw_args: Vec<String>) -> i32 {
         eprintln!("{EXE_VARIABLE} fehlt");
         return EXIT_START_FAILED;
     };
+    if parsed.print {
+        return print::run(&parsed, &exe);
+    }
     session::run(parsed, &exe)
 }

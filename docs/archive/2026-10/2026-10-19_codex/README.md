@@ -17,7 +17,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 3 | Anweisungen, Skills, Anhänge: Repository-`AGENTS.md`, Verwalter-Vorgaben, `/name`, Bilder; `/`-Menü in „Codex“ | [phase-3-anweisungen-skills.md](phase-3-anweisungen-skills.md) | standard | complete |
 | 4 | Modelle und Kontext: Codex-Modell je Session, Modellwechsel in der Eingabeleiste, Denkaufwand, Kontext-Donut | [phase-4-modelle-kontext.md](phase-4-modelle-kontext.md) | heikel | complete |
 | 5 | Konto und Kontingent: Zeile „Codex-Konto“ mit Anmelden, Kontingent oben aus Codex | [phase-5-konto-kontingent.md](phase-5-konto-kontingent.md) | standard | complete |
-| 6 | Druckmodus (TL;DR, Retro, Commit-Vorschlag) und Abschluss: Doku, ADR, Wissen | [phase-6-druck-abschluss.md](phase-6-druck-abschluss.md) | standard | pending |
+| 6 | Druckmodus (TL;DR, Retro, Commit-Vorschlag) und Abschluss: Doku, ADR, Wissen | [phase-6-druck-abschluss.md](phase-6-druck-abschluss.md) | standard | complete |
 
 **Reihenfolge:** strikt 1 → 6; nach jeder Phase ist „Codex“ benutzbar, nur mit weniger Fähigkeiten. Umsetzung direkt auf `main`, ein Commit pro Phase, Scope `codex` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach). Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Rust-Abhängigkeiten (JSON über `serde_json`, Prozesse über `std::process`). Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Erkenntnisse nach [FINDINGS.md](FINDINGS.md).
 
@@ -126,10 +126,26 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Vierte Betriebsart „Codex“: Der Übersetzer `verwalter.exe codex …` spricht nach außen das Zeilenprotokoll der Claude-Kommandozeile und nach innen JSON-RPC mit `codex app-server`. Chat, Werkzeug-Aktivität, Rückfragen und Changes, Anweisungen und Skills, Codex-Modell und Denkaufwand je Session, Kontext-Donut, Codex-Konto mit Anmeldung, Kontingent und Druckmodus (TL;DR, Retro, Commit-Vorschlag) laufen darüber. Entscheidungen und Protokoll: [ADR 031](../../decisions/031-codex.md), [docs/knowledge/codex-app-server.md](../../knowledge/codex-app-server.md).
+
 ## Files touched
+
+`src-tauri/src/codex/` (neu: `rpc`, `session`, `policy`, `items`, `approvals`, `instructions`, `input`, `models`, `tokens`, `helper`, `rate_limits`, `print`), `src-tauri/src/agents/codex.rs`, `src-tauri/src/agents/claude/print.rs` und `process.rs`, `src-tauri/src/codex_account/`, Registry, Einstellungen, Datenbank (Migration 11), Oberfläche (Einstellungen, Eingabeleiste, Neues Vorhaben, Kopfzeile), `docs/`.
 
 ## Commits
 
+Ein Commit je Phase, Scope `codex` (Phase 1–5 auf `main`; Phase 6 mit diesem Plan archiviert).
+
 ## Deviations from plan
 
+- Der Druckmodus übergibt dem Übersetzer `--model ""`, wenn kein Codex-Modell eingestellt ist: dessen Argument-Parser verlangt die Option, der Wert „leer“ bedeutet Standardmodell.
+
 ## Follow-ups
+
+- Rückfrage-Karte lautet in „Codex“ „Claude möchte Bash ausführen: …“ (`permission_question` in `agents/claude/translate.rs`); Befehle erscheinen mit dem Wrapper `powershell.exe -Command '…'`.
+- Anzeigen außerhalb von Eingabeleiste, „Neues Vorhaben“ und Einstellungen zeigen in „Codex“ noch das Claude-Modell der Session: `modelName(session.model)` in `sessionStatus.ts`, `ProjectSessionCard.tsx`, `ProjectOverview.tsx`, Zeile „Modell wechseln …“ in `commandMenuRows.ts`.
+- Hilfetexte zu „Codex“ nennen noch nicht: Skills müssen nach `~/.codex/skills` gespiegelt sein, der Anmelde-Weg läuft über die Zeile „Codex-Konto“, im Modus Auto entscheidet Codex' Prüfer.
+- Der Kontext-Balken hinkt in „Codex“ um eine Zeile (Codex meldet die Zählung nach der `agentMessage`).
+- Nicht live geprüft: `turn/plan/updated`, `mcpToolCall`, `item/tool/requestUserInput`, `account/login/start`, `effort` in `turn/start` (Smoke 4 und 6).
+- Skills aus `/mode-planning` gegen echtes Codex nach dem Pfad-Fix erneut proben (Smoke 7).
+- Release auf Zuruf (Minor-Version, [releases.md](../../conventions/releases.md)).

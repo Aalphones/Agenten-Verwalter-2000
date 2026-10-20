@@ -13,6 +13,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
 use crate::agents::claude::locate::find_claude;
+use crate::agents::codex::{self, find_codex};
 use crate::agents::event::ModelId;
 use crate::agents::standalone;
 use crate::db::Database;
@@ -20,6 +21,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 use crate::processes::hide_console;
 use crate::settings;
+use crate::settings::model::OperatingMode;
 
 pub struct PrintRequest<'a> {
     pub model: ModelId,
@@ -28,16 +30,28 @@ pub struct PrintRequest<'a> {
     pub input: &'a str,
     /// `Some` in den Betriebsarten mit LM Studio.
     pub local: Option<&'a LocalBackend>,
-    /// Argumente vor allen anderen — beim eigenen Agenten der Unterbefehl `agent`.
+    /// Argumente vor allen anderen — beim eigenen Agenten der Unterbefehl `agent`, in „Codex“ `codex`.
     pub leading_args: &'a [String],
+    /// `Some` in der Betriebsart Codex.
+    pub codex: Option<&'a CodexTarget>,
+}
+
+/// Wohin der Übersetzer der Betriebsart Codex den Einmal-Aufruf schickt.
+pub struct CodexTarget {
+    /// Die `codex.exe`, die der Übersetzer startet.
+    pub exe: PathBuf,
+    /// Leer: das Standardmodell von Codex.
+    pub model: Option<String>,
 }
 
 /// Das Programm, das einen Einmal-Aufruf beantwortet, samt der Betriebsart aus den Einstellungen:
-/// die Claude-Kommandozeile, oder in „Autark“ der eigene Agent (ADR 017).
+/// die Claude-Kommandozeile, in „Autark“ der eigene Agent (ADR 017), in „Codex“ der Übersetzer
+/// (ADR 031).
 pub struct PrintProgram {
     pub exe: PathBuf,
     pub leading_args: Vec<String>,
     pub backend: Option<LocalBackend>,
+    pub codex: Option<CodexTarget>,
 }
 
 /// Fragt LM Studio (höchstens 3 s), wenn die Betriebsart ein lokales Modell nutzt — nie unter einer
@@ -45,6 +59,19 @@ pub struct PrintProgram {
 pub fn print_program(app: &AppHandle) -> Result<PrintProgram, CommandError> {
     let database = app.state::<Arc<Database>>();
     let settings = settings::load(&database)?;
+    if settings.operating_mode == OperatingMode::Codex {
+        return Ok(PrintProgram {
+            exe: codex::program()?,
+            leading_args: codex::leading_args(),
+            backend: None,
+            codex: Some(CodexTarget {
+                exe: find_codex().ok_or(CommandError::CodexNotFound)?,
+                model: settings
+                    .default_codex_model
+                    .filter(|id: &String| !id.is_empty()),
+            }),
+        });
+    }
     let backend = local::resolve(&settings)?;
     let is_standalone = backend
         .as_ref()
@@ -61,6 +88,7 @@ pub fn print_program(app: &AppHandle) -> Result<PrintProgram, CommandError> {
         exe,
         leading_args,
         backend,
+        codex: None,
     })
 }
 
@@ -89,6 +117,7 @@ pub fn ask_model<T: DeserializeOwned>(
         input: request.input,
         local: program.backend.as_ref(),
         leading_args: &program.leading_args,
+        codex: program.codex.as_ref(),
     };
     let answer = run_print(&program.exe, &cwd, &print_request, request.timeout)?;
     serde_json::from_value::<T>(answer)
@@ -131,12 +160,23 @@ fn print_command(exe: &Path, cwd: &Path, request: &PrintRequest<'_>) -> Command 
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .arg("-p")
-        .arg("--model")
-        .arg(match request.local {
-            Some(backend) => backend.model.as_str(),
-            None => request.model.cli_id(),
-        })
+        .arg("-p");
+    match request.codex {
+        Some(target) => {
+            command.env(crate::codex::EXE_VARIABLE, &target.exe);
+            // Der Übersetzer verlangt die Option; leer heißt: Standardmodell von Codex.
+            command
+                .arg("--model")
+                .arg(target.model.as_deref().unwrap_or_default());
+        }
+        None => {
+            command.arg("--model").arg(match request.local {
+                Some(backend) => backend.model.as_str(),
+                None => request.model.cli_id(),
+            });
+        }
+    }
+    command
         // `--tools` nimmt mehrere Werte: der leere schaltet alle ab, `--safe-mode` beendet die Liste.
         .arg("--tools")
         .arg("")
