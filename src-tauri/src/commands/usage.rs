@@ -16,8 +16,9 @@ pub async fn usage_load(
     Ok(service.status())
 }
 
-/// Startet einen Abruf im Hintergrund; das Ergebnis meldet `usage://changed`. In einer lokalen
-/// Betriebsart fragt der Verwalter Anthropic nicht (ADR 016).
+/// Startet einen Abruf im Hintergrund; das Ergebnis meldet `usage://changed`. Nur „Claude“ und
+/// „Codex“ haben ein Abo-Kontingent; in einer lokalen Betriebsart fragt der Verwalter Anthropic nicht
+/// (ADR 016).
 #[tauri::command]
 pub async fn usage_refresh(
     app: tauri::AppHandle,
@@ -25,7 +26,8 @@ pub async fn usage_refresh(
     database: tauri::State<'_, Arc<Database>>,
     force: bool,
 ) -> Result<(), CommandError> {
-    if settings::load(&database)?.operating_mode != OperatingMode::Claude {
+    let operating_mode = settings::load(&database)?.operating_mode;
+    if !matches!(operating_mode, OperatingMode::Claude | OperatingMode::Codex) {
         return Ok(());
     }
     service.refresh(&app, force);

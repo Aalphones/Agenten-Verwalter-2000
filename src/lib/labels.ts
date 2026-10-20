@@ -109,9 +109,17 @@ export function effortLabel(id: Effort): string {
   return option === undefined ? id : option.label;
 }
 
-/** Abo-Name aus der Kommandozeile (`pro`) für die Anzeige (`Pro`). */
+/** Codex-Abos, die sich nicht durch Großschreibung des ersten Buchstabens lesen lassen. */
+const PLAN_LABEL: Readonly<Record<string, string>> = {
+  prolite: 'Pro Lite',
+  promax: 'Pro Max',
+  edu_plus: 'Edu Plus',
+  edu_pro: 'Edu Pro',
+};
+
+/** Abo-Name aus der Kommandozeile (`pro`) für die Anzeige (`Pro`); Unbekanntes bleibt lesbar. */
 export function planLabel(plan: string): string {
-  return plan.charAt(0).toUpperCase() + plan.slice(1);
+  return PLAN_LABEL[plan] ?? plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
 export function repositoryCountLabel(count: number): string {

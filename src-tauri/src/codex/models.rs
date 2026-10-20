@@ -1,5 +1,4 @@
 //! Die Modelle von Codex (`model/list`) und der Zwischenspeicher, aus dem die Oberfläche sie liest.
-use std::path::Path;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -7,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ts_rs::TS;
 
-use super::rpc::{Incoming, RpcClient};
+use super::helper::with_server;
+use super::rpc::RpcClient;
 use crate::agents::event::Effort;
 use crate::standalone::args::effort_from_cli;
 
@@ -93,14 +93,14 @@ impl CodexService {
     }
 
     /// Blockiert, solange ein frischer Start nötig ist — vom Aufrufer auf einem Arbeits-Thread.
-    pub fn models(&self, exe: &Path) -> CodexModels {
+    pub fn models(&self) -> CodexModels {
         if let Some(models) = self.cached() {
             return CodexModels {
                 models,
                 error: None,
             };
         }
-        match fetch(exe) {
+        match with_server(list) {
             Ok(models) => {
                 *self.lock() = Some((Instant::now(), models.clone()));
                 CodexModels {
@@ -124,14 +124,4 @@ impl CodexService {
     fn lock(&self) -> MutexGuard<'_, Option<(Instant, Vec<CodexModel>)>> {
         self.cache.lock().unwrap_or_else(PoisonError::into_inner)
     }
-}
-
-/// Startet `codex app-server` nur für diese eine Frage.
-fn fetch(exe: &Path) -> Result<Vec<CodexModel>, String> {
-    let workdir = std::env::temp_dir();
-    let rpc = RpcClient::start(exe, &workdir, |_: Incoming| {})
-        .map_err(|error: std::io::Error| format!("Codex startet nicht: {error}"))?;
-    let listed = rpc.initialize().and_then(|()| list(&rpc));
-    rpc.shutdown();
-    listed
 }

@@ -22,13 +22,21 @@ Fehlerklassen geprüft: keine einschlägig.
 
 ## Checkliste
 
-- [ ] `codex/helper.rs`: `fn with_server<T>(f: impl FnOnce(&Rpc) -> Result<T, String>) -> Result<T, String>` — `find_codex`, `codex app-server` starten (Arbeitsordner `%USERPROFILE%\.verwalter`), `initialize`/`initialized`, `f`, beenden; Gesamtzeitlimit 20 s. Phase 4 `codex_models` darauf umstellen.
-- [ ] `src-tauri/src/codex_account/` (eigenes Feature, Muster `account/`): `CodexAccountService` mit `load` (`account/read` → `AccountInfo {logged_in: account != null, email, plan: planType, org_name: None, auth_method: Some("chatgpt"|"apiKey")}`), `login(app)`: eigener Thread, Server bleibt bis zum Ende offen, `account/login/start {type:"chatgpt"}` → `authUrl` öffnen, auf Benachrichtigung `account/login/completed` warten (10 min), Ergebnis wie `finish_login`; Ereignis `codex-account://changed`. Commands `codex_account_load`, `codex_account_login` in `commands/codex_account.rs`, registrieren in `lib.rs`, State im Setup.
-- [ ] `usage/model.rs`: `UsageLimit.window_minutes: Option<u32>` (Claude: `None`). `usage/mod.rs` `fetch`: Betriebsart lesen; „Codex“ → `codex::helper::with_server` + `account/rateLimits/read` → `UsageSnapshot {plan: planType, limits: [primary, secondary] vorhandene je `UsageLimit {kind: "codex", percent: usedPercent, severity: "normal", resets_at: resetsAt (Sekunden) als ISO-8601 UTC, window_minutes}`, day/week: None}`. Der Zwischenspeicher gilt je Betriebsart: beim Wechsel der Betriebsart (`settings::update` mit `OperatingMode`) Kontingent mit `force` neu abrufen.
-- [ ] `pnpm bindings`.
-- [ ] Oberfläche: `src/features/codexaccount/` (`CodexAccountRow`, `useCodexAccount`) nach Muster `AccountRow`/`useAccount`, Wrapper `src/lib/codexAccount.ts`; in `SettingsView` direkt unter „Claude-Konto“.
-- [ ] `usageTexts.ts`: Bezeichnung aus `windowMinutes` gemäß AK 3, wenn gesetzt; `SessionHeader`: Kontingent bei `claude` und `codex`.
-- [ ] `docs/code-map.md`: Zeile „Codex-Konto“, Zeile Kontingent um den Codex-Zweig.
-- [ ] ADR 031: Abschnitt Konto/Kontingent.
+- [x] `codex/helper.rs`: `fn with_server<T>(f: impl FnOnce(&Rpc) -> Result<T, String>) -> Result<T, String>` — `find_codex`, `codex app-server` starten (Arbeitsordner `%USERPROFILE%\.verwalter`), `initialize`/`initialized`, `f`, beenden; Gesamtzeitlimit 20 s. Phase 4 `codex_models` darauf umstellen.
+- [x] `src-tauri/src/codex_account/` (eigenes Feature, Muster `account/`): `CodexAccountService` mit `load` (`account/read` → `AccountInfo {logged_in: account != null, email, plan: planType, org_name: None, auth_method: Some("chatgpt"|"apiKey")}`), `login(app)`: eigener Thread, Server bleibt bis zum Ende offen, `account/login/start {type:"chatgpt"}` → `authUrl` öffnen, auf Benachrichtigung `account/login/completed` warten (10 min), Ergebnis wie `finish_login`; Ereignis `codex-account://changed`. Commands `codex_account_load`, `codex_account_login` in `commands/codex_account.rs`, registrieren in `lib.rs`, State im Setup.
+- [x] `usage/model.rs`: `UsageLimit.window_minutes: Option<u32>` (Claude: `None`). `usage/mod.rs` `fetch`: Betriebsart lesen; „Codex“ → `codex::helper::with_server` + `account/rateLimits/read` → `UsageSnapshot {plan: planType, limits: [primary, secondary] vorhandene je `UsageLimit {kind: "codex", percent: usedPercent, severity: "normal", resets_at: resetsAt (Sekunden) als ISO-8601 UTC, window_minutes}`, day/week: None}`. Der Zwischenspeicher gilt je Betriebsart: beim Wechsel der Betriebsart (`settings::update` mit `OperatingMode`) Kontingent mit `force` neu abrufen.
+- [x] `pnpm bindings`.
+- [x] Oberfläche: `src/features/codexaccount/` (`CodexAccountRow`, `useCodexAccount`) nach Muster `AccountRow`/`useAccount`, Wrapper `src/lib/codexAccount.ts`; in `SettingsView` direkt unter „Claude-Konto“.
+- [x] `usageTexts.ts`: Bezeichnung aus `windowMinutes` gemäß AK 3, wenn gesetzt; `SessionHeader`: Kontingent bei `claude` und `codex`.
+- [x] `docs/code-map.md`: Zeile „Codex-Konto“, Zeile Kontingent um den Codex-Zweig.
+- [x] ADR 031: Abschnitt Konto/Kontingent.
 
 ## Report-Back
+
+Status: complete. `pnpm check` grün; `account/read` und `account/rateLimits/read` gegen das echte Codex (`0.162.0-alpha.2`, Erweiterung 26.1007) gelesen, Formen stimmen mit den Parsern überein (`primary` 43 200 Minuten, `secondary: null`, `planType: go`). Der Anmelde-Rundlauf (`account/login/start` → Browser → `account/login/completed`) ist nur gegen das Schema gebaut, nicht live gelaufen — Smoke 6.
+
+Abweichungen:
+- `UsageLimit.kind` heißt `codex_primary`/`codex_secondary` statt zweimal `codex`: die Oberfläche nutzt `kind` als React-Schlüssel, und die Bezeichnung kommt ohnehin aus `windowMinutes`.
+- `UsageService` bekommt einen Zähler für Wechsel der Betriebsart (`restart`), damit ein Abruf, der vor dem Wechsel begann, den Stand der neuen Betriebsart nicht überschreibt; `settings_update` ruft ihn bei einem Wechsel nach „Claude“ oder „Codex“.
+- `useAccount` und `AccountRow` sind in `useAccountSource`/`AccountRowView` aufgeteilt, die Claude- und Codex-Zeile teilen.
+- `with_listening_server` neben `with_server`: die Anmeldung braucht Benachrichtigungen und mehr als 20 s.

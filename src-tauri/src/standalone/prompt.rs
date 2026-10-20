@@ -148,7 +148,7 @@ fn today() -> String {
 
 /// Tage seit 1970-01-01 → (Jahr, Monat, Tag) im gregorianischen Kalender; Verfahren nach
 /// Howard Hinnant („civil_from_days“), hier nur für Tage ab 1970.
-fn civil_from_days(days: u64) -> (u64, u64, u64) {
+pub(crate) fn civil_from_days(days: u64) -> (u64, u64, u64) {
     let shifted = days + 719_468;
     let era = shifted / 146_097;
     let day_of_era = shifted - era * 146_097;

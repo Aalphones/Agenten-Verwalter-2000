@@ -8,6 +8,7 @@ pub mod changes;
 pub mod chat;
 pub mod cli_update;
 pub mod codex;
+pub mod codex_account;
 pub mod context;
 pub mod file_links;
 pub mod git;

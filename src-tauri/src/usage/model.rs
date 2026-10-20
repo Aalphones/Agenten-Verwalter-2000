@@ -13,6 +13,8 @@ pub struct UsageLimit {
     pub severity: String,
     /// ISO-8601 mit Zeitzone, unverändert von der Kommandozeile.
     pub resets_at: Option<String>,
+    /// Dauer des Fensters in Minuten; nur Codex nennt sie (Claude benennt das Fenster über `kind`).
+    pub window_minutes: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]

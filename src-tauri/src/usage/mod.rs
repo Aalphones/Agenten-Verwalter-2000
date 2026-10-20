@@ -1,7 +1,8 @@
-//! Kontingent des Claude-Abos: Zwischenspeicher und Abruf über einen Hilfsprozess.
+//! Kontingent des Abos der Betriebsart (Claude oder Codex): Zwischenspeicher und Abruf über einen
+//! Hilfsprozess.
 pub mod model;
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -11,7 +12,10 @@ use crate::agents::claude::helper;
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::protocol::get_usage;
 use crate::agents::claude::stats;
+use crate::codex::rate_limits;
+use crate::db::Database;
 use crate::filesystem::workspace::data_dir;
+use crate::settings::{self, model::OperatingMode};
 use model::{UsageSnapshot, UsageStatus};
 
 const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
@@ -30,6 +34,8 @@ struct UsageCache {
     error: Option<String>,
     is_loading: bool,
     last_started: Option<Instant>,
+    /// Zählt die Wechsel der Betriebsart; ein Abruf, der vor einem Wechsel begann, wird verworfen.
+    epoch: u64,
 }
 
 impl Default for UsageService {
@@ -46,6 +52,7 @@ impl UsageService {
                 error: None,
                 is_loading: false,
                 last_started: None,
+                epoch: 0,
             }),
         }
     }
@@ -62,7 +69,7 @@ impl UsageService {
     /// Startet einen Abruf im Hintergrund und kehrt sofort zurück. Nie zwei Abrufe gleichzeitig;
     /// ohne `force` höchstens einer je `MIN_REFRESH_INTERVAL`.
     pub fn refresh(&self, app: &AppHandle, force: bool) {
-        {
+        let epoch: u64 = {
             let mut cache = self.lock();
             if cache.is_loading {
                 return;
@@ -75,7 +82,8 @@ impl UsageService {
             }
             cache.is_loading = true;
             cache.last_started = Some(Instant::now());
-        }
+            cache.epoch
+        };
         emit_changed(app);
         let worker_app = app.clone();
         let spawned = thread::Builder::new()
@@ -84,16 +92,19 @@ impl UsageService {
                 let result = fetch(&worker_app);
                 worker_app
                     .state::<UsageService>()
-                    .finish(&worker_app, result);
+                    .finish(&worker_app, epoch, result);
             });
         if let Err(error) = spawned {
-            self.finish(app, Err(format!("Abruf startet nicht: {error}")));
+            self.finish(app, epoch, Err(format!("Abruf startet nicht: {error}")));
         }
     }
 
-    fn finish(&self, app: &AppHandle, result: Result<UsageSnapshot, String>) {
+    fn finish(&self, app: &AppHandle, epoch: u64, result: Result<UsageSnapshot, String>) {
         {
             let mut cache = self.lock();
+            if cache.epoch != epoch {
+                return;
+            }
             match result {
                 Ok(snapshot) => {
                     cache.snapshot = Some(snapshot);
@@ -106,19 +117,42 @@ impl UsageService {
         emit_changed(app);
     }
 
+    /// Das Kontingent gehört zur Betriebsart: beim Wechsel fällt der Stand der alten weg und ein
+    /// frischer Abruf beginnt.
+    pub fn restart(&self, app: &AppHandle) {
+        {
+            let mut cache = self.lock();
+            cache.epoch += 1;
+            cache.snapshot = None;
+            cache.error = None;
+            cache.is_loading = false;
+        }
+        self.refresh(app, true);
+    }
+
     fn lock(&self) -> MutexGuard<'_, UsageCache> {
         self.cache.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
 
 fn fetch(app: &AppHandle) -> Result<UsageSnapshot, String> {
+    let database = app.state::<Arc<Database>>();
+    let operating_mode = settings::load(&database)
+        .map_err(|error| error.to_string())?
+        .operating_mode;
+    let mut snapshot = match operating_mode {
+        OperatingMode::Codex => rate_limits::fetch()?,
+        _ => fetch_claude(app)?,
+    };
+    snapshot.fetched_at = now_ms();
+    Ok(snapshot)
+}
+
+fn fetch_claude(app: &AppHandle) -> Result<UsageSnapshot, String> {
     let exe = find_claude().ok_or_else(|| "Claude-Kommandozeile nicht gefunden".to_owned())?;
     let dir = data_dir(app).map_err(|error| error.to_string())?;
     let body = helper::ask_once(&exe, &dir, get_usage(), HELPER_TIMEOUT)?;
-    let mut snapshot =
-        stats::usage_snapshot(&body).ok_or_else(|| "Antwort von Claude unlesbar".to_owned())?;
-    snapshot.fetched_at = now_ms();
-    Ok(snapshot)
+    stats::usage_snapshot(&body).ok_or_else(|| "Antwort von Claude unlesbar".to_owned())
 }
 
 fn emit_changed(app: &AppHandle) {

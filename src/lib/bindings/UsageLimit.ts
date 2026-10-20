@@ -16,4 +16,8 @@ severity: string,
 /**
  * ISO-8601 mit Zeitzone, unverändert von der Kommandozeile.
  */
-resetsAt: string | null, };
+resetsAt: string | null, 
+/**
+ * Dauer des Fensters in Minuten; nur Codex nennt sie (Claude benennt das Fenster über `kind`).
+ */
+windowMinutes: number | null, };

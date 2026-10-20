@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-19_codex/`
-**Phase:** 5/6 — Konto und Kontingent (pending; Phasen 1–4 complete)
-**Nächster Schritt:** Phase 5 starten (`phase-5-konto-kontingent.md`, FINDINGS mit Tag → Phase 5; Modell `sonnet`, Phase ist standard). Daneben offen: Smoke „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
+**Phase:** 6/6 — Druckmodus und Abschluss (pending; Phasen 1–5 complete)
+**Nächster Schritt:** Phase 6 starten (`phase-6-druck-abschluss.md`, FINDINGS mit Tag → Phase 6; Modell `sonnet`, Phase ist standard). Daneben offen: Smoke „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -22,7 +22,7 @@
 11. ~~Vorhaben-Retro~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-07_vorhaben-retro/`, ADR 028), Smoke offen, Release auf Zuruf (Minor-Version).
 12. ~~Archiv-Suche~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-07_archiv-suche.md`, ADR 029), Smoke offen; `v0.22.0` auf Zuruf gesetzt.
 13. ~~Browser-Zugriff~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_browser-zugriff.md`, ADR 030, Migration 10), Smoke offen, Release auf Zuruf.
-14. Codex als Betriebsart — in Umsetzung (`docs/planning/2026-10-19_codex/`, ADR 031 angelegt, Migration 11 reserviert), Phasen 1–4 fertig, weiter mit Phase 5.
+14. Codex als Betriebsart — in Umsetzung (`docs/planning/2026-10-19_codex/`, ADR 031 angelegt, Migration 11 reserviert), Phasen 1–5 fertig, weiter mit Phase 6.
 15. Wartet auf Skript — freigegeben und geparkt (`docs/planning/2026-10-20_wartet-auf-skript.md`, ADR 032 reserviert), Start mit Phase 1.
 
 ## Offen

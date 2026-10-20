@@ -7,6 +7,7 @@ pub mod background;
 pub mod changes;
 pub mod cli_update;
 pub mod codex;
+pub mod codex_account;
 pub mod commands;
 pub mod context;
 pub mod db;
@@ -37,6 +38,7 @@ use tauri::Manager;
 use account::AccountService;
 use cli_update::CliUpdateService;
 use codex::models::CodexService;
+use codex_account::CodexAccountService;
 use db::Database;
 use filesystem::workspace::data_dir;
 use sessions::registry::SessionRegistry;
@@ -62,6 +64,7 @@ pub fn run() {
             app.manage(UsageService::new());
             app.manage(CodexService::new());
             app.manage(AccountService::new());
+            app.manage(CodexAccountService::new());
             app.manage(CliUpdateService::new());
             app.manage(VoiceService::new());
             SessionRegistry::start_reaper(app.handle().clone());
@@ -162,6 +165,8 @@ pub fn run() {
             commands::settings::settings_update,
             commands::settings::settings_local_models,
             commands::codex::codex_models,
+            commands::codex_account::codex_account_load,
+            commands::codex_account::codex_account_login,
             commands::voice::voice_model_status,
             commands::voice::voice_model_download,
             commands::voice::voice_model_cancel_download,

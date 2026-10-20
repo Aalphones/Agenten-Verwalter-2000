@@ -191,6 +191,7 @@ fn limit(raw: RawLimit) -> Option<UsageLimit> {
         percent: clamped_percent(raw.percent?),
         severity: raw.severity.unwrap_or_else(|| DEFAULT_SEVERITY.to_owned()),
         resets_at: raw.resets_at,
+        window_minutes: None,
     })
 }
 

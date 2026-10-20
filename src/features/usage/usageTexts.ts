@@ -1,6 +1,10 @@
 import { formatClock, formatPercent } from '@/features/context/formatTokens';
 
 const MS_PER_DAY = 86_400_000;
+const MINUTES_PER_HOUR = 60;
+const MINUTES_PER_DAY = 1_440;
+const FIVE_HOUR_MINUTES = 300;
+const WEEK_MINUTES = 10_080;
 
 const LIMIT_LABEL: Readonly<Record<string, string>> = {
   session: 'Session (5 Std.)',
@@ -15,9 +19,27 @@ export interface BehaviorText {
   explanation: string | null;
 }
 
-/** Bezeichnung eines Kontingents; ein unbekannter `kind` bleibt, wie er ist. */
-export function limitLabel(kind: string): string {
+/** Bezeichnung eines Kontingents; mit Fensterdauer (Codex) heißt es nach ihr, ein unbekannter
+ *  `kind` bleibt, wie er ist. */
+export function limitLabel(kind: string, windowMinutes: number | null): string {
+  if (windowMinutes !== null) {
+    return windowLabel(windowMinutes);
+  }
   return LIMIT_LABEL[kind] ?? kind;
+}
+
+/** 300 min → „5-Stunden-Fenster“, 10 080 → „Wochenfenster“, ganze Tage → „30-Tage-Fenster“. */
+function windowLabel(minutes: number): string {
+  if (minutes === FIVE_HOUR_MINUTES) {
+    return '5-Stunden-Fenster';
+  }
+  if (minutes === WEEK_MINUTES) {
+    return 'Wochenfenster';
+  }
+  if (minutes % MINUTES_PER_DAY === 0) {
+    return `${String(minutes / MINUTES_PER_DAY)}-Tage-Fenster`;
+  }
+  return `${String(Math.max(1, Math.round(minutes / MINUTES_PER_HOUR)))}-Stunden-Fenster`;
 }
 
 /** Überschrift und Erklärung eines Verbrauchstreibers („Was treibt den Verbrauch?“). */

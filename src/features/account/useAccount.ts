@@ -3,6 +3,19 @@ import type { UnlistenFn } from '@tauri-apps/api/event';
 import { loadAccount, onAccountChanged, startAccountLogin } from '@/lib/account';
 import type { AccountStatus } from '@/lib/bindings/AccountStatus';
 
+/** Woher ein Konto kommt: lesen, Anmeldung starten, auf Änderungen hören. */
+export interface AccountSource {
+  load: () => Promise<AccountStatus>;
+  startLogin: () => Promise<void>;
+  onChanged: (callback: () => void) => Promise<UnlistenFn>;
+}
+
+const CLAUDE_SOURCE: AccountSource = {
+  load: loadAccount,
+  startLogin: startAccountLogin,
+  onChanged: onAccountChanged,
+};
+
 interface AccountView {
   /** `null`, bis der erste Lesevorgang zurück ist. */
   status: AccountStatus | null;
@@ -10,9 +23,14 @@ interface AccountView {
   login: () => void;
 }
 
-/** Das Konto der Claude-Kommandozeile: beim Einhängen gelesen, bei jedem `account://changed`
- *  (Anfang und Ende einer Anmeldung) neu gelesen. */
+/** Das Konto der Claude-Kommandozeile. */
 export function useAccount(): AccountView {
+  return useAccountSource(CLAUDE_SOURCE);
+}
+
+/** Ein Konto: beim Einhängen gelesen, bei jedem Änderungsereignis der Quelle (Anfang und Ende
+ *  einer Anmeldung) neu gelesen. `source` muss über Renderings stabil sein. */
+export function useAccountSource(source: AccountSource): AccountView {
   const [status, setStatus] = useState<AccountStatus | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const requestRef = useRef<number>(0);
@@ -21,12 +39,13 @@ export function useAccount(): AccountView {
     const controller = new AbortController();
     let unlisten: UnlistenFn | null = null;
 
-    // Nur die jüngste Antwort zählt: das Lesen dauert bis zu 15 s, Ereignisse überlappen es.
+    // Nur die jüngste Antwort zählt: das Lesen dauert Sekunden, Ereignisse überlappen es.
     function load(): void {
       requestRef.current += 1;
       const request: number = requestRef.current;
       setIsLoading(true);
-      loadAccount()
+      source
+        .load()
         .then((loaded: AccountStatus) => {
           if (!controller.signal.aborted && requestRef.current === request) {
             setStatus(loaded);
@@ -42,7 +61,8 @@ export function useAccount(): AccountView {
     }
 
     // Erst abonnieren, dann laden: das Ende der Anmeldung käme sonst womöglich vor dem Abo.
-    onAccountChanged(load)
+    source
+      .onChanged(load)
       .then((stop: UnlistenFn) => {
         if (controller.signal.aborted) {
           stop();
@@ -61,10 +81,10 @@ export function useAccount(): AccountView {
         unlisten();
       }
     };
-  }, []);
+  }, [source]);
 
   function login(): void {
-    startAccountLogin().catch((reason: unknown) => {
+    source.startLogin().catch((reason: unknown) => {
       console.error('Anmeldung nicht gestartet', reason);
     });
   }

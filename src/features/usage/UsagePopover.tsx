@@ -13,6 +13,7 @@ import { planLabel } from '@/lib/labels';
 import { severityOf } from '@/lib/severity';
 import type { Severity } from '@/lib/severity';
 import { refreshUsage } from '@/lib/usage';
+import { useSettingsStore } from '@/stores/settings';
 import './UsagePopover.css';
 
 const USAGE_POPOVER_WIDTH = 380;
@@ -28,6 +29,7 @@ const SKILL_EXPLANATION =
   'Aufwendige Skills lassen sich eingrenzen oder per Frontmatter auf ein günstigeres Modell legen.';
 const NO_LIMITS_TEXT =
   'Für dieses Konto meldet Claude kein Kontingent (zum Beispiel bei Anmeldung per API-Schlüssel).';
+const NO_CODEX_LIMITS_TEXT = 'Für dieses Konto meldet Codex kein Kontingent.';
 
 interface UsagePopoverProps {
   status: UsageStatus | null;
@@ -38,6 +40,7 @@ export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactEleme
   const [period, setPeriod] = useState<Period>('day');
   // Das Fenster wird bei jedem Öffnen neu eingehängt; so bleibt der Reset-Zeitpunkt beim Rendern stabil.
   const [now] = useState<number>(() => Date.now());
+  const isCodex: boolean = useSettingsStore((state) => state.settings?.operatingMode === 'codex');
   const snapshot: UsageSnapshot | null = status?.snapshot ?? null;
   const hasBreakdown: boolean =
     snapshot !== null && (snapshot.day !== null || snapshot.week !== null);
@@ -50,7 +53,9 @@ export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactEleme
 
   function renderLimits(loaded: UsageSnapshot): ReactElement {
     if (loaded.limits.length === 0) {
-      return <p className="usage-popover__hint">{NO_LIMITS_TEXT}</p>;
+      return (
+        <p className="usage-popover__hint">{isCodex ? NO_CODEX_LIMITS_TEXT : NO_LIMITS_TEXT}</p>
+      );
     }
     return (
       <ul className="usage-popover__limits">
@@ -140,7 +145,7 @@ function renderLimit(limit: UsageLimit, now: number): ReactElement {
       <div className="usage-popover__limit-head">
         <span className="usage-popover__limit-name">
           <SeverityIcon severity={severity} />
-          {limitLabel(limit.kind)}
+          {limitLabel(limit.kind, limit.windowMinutes)}
         </span>
         <span className="usage-popover__percent">{formatPercent(limit.percent, 0)}</span>
       </div>

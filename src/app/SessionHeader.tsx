@@ -75,10 +75,11 @@ export function SessionHeader({
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const reviewCount: number = useReviewStore((state) => state.collected[session.id]?.length ?? 0);
-  // Das Kontingent gehört zum Claude-Abo; im lokalen Betrieb gibt es nichts anzuzeigen.
-  const hasUsage: boolean = useSettingsStore(
-    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
-  );
+  // Das Kontingent gehört zum Abo von Claude bzw. Codex; im lokalen Betrieb gibt es nichts anzuzeigen.
+  const hasUsage: boolean = useSettingsStore((state) => {
+    const operatingMode: string = state.settings?.operatingMode ?? 'claude';
+    return operatingMode === 'claude' || operatingMode === 'codex';
+  });
   const isTicking: boolean = session.runningSince !== null;
 
   // Wechselt die Betriebsart bei offenem Kontingent-Fenster, schließt es mit.

@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
 import { AccountRow } from '@/features/account/AccountRow';
+import { CodexAccountRow } from '@/features/codexaccount/CodexAccountRow';
 import { CliVersionRow } from '@/features/cliupdate/CliVersionRow';
 import {
   codexEfforts,
@@ -175,12 +176,11 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
         : (codexModels.models.error ?? 'Keine Modelle verfügbar.');
     return (
       <>
-        {current.operatingMode !== 'standalone' && (
-          <section className="settings-view__section">
-            <h2 className="settings-view__section-title">Konto</h2>
-            <AccountRow />
-          </section>
-        )}
+        <section className="settings-view__section">
+          <h2 className="settings-view__section-title">Konto</h2>
+          {current.operatingMode !== 'standalone' && <AccountRow />}
+          <CodexAccountRow />
+        </section>
         {current.operatingMode !== 'standalone' && (
           <section className="settings-view__section">
             <h2 className="settings-view__section-title">Claude Code</h2>
