@@ -2,7 +2,7 @@
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | Core: `SessionSummary.awaitedScript` ermitteln und bei jeder Änderung melden | standard | pending |
+| 1 | Core: `SessionSummary.awaitedScript` ermitteln und bei jeder Änderung melden | standard | complete |
 | 2 | Oberfläche: Anzeige-Status „wartet auf Skript“ mit eigenem Symbol, eigener Farbe und laufender Uhr | standard | pending |
 
 ## Ziel
@@ -82,8 +82,8 @@ Wackelstellen zuerst:
 
 ### Checkliste
 
-- [ ] `model.rs`: Struct `AwaitedScript` wie im Kontrakt, Feld `awaited_script: Option<AwaitedScript>` hinter `handoff_line` in `SessionSummary`.
-- [ ] `registry.rs`: neue Methode an `SessionState` direkt unter `is_awaiting_subagent`:
+- [x] `model.rs`: Struct `AwaitedScript` wie im Kontrakt, Feld `awaited_script: Option<AwaitedScript>` hinter `handoff_line` in `SessionSummary`.
+- [x] `registry.rs`: neue Methode an `SessionState` direkt unter `is_awaiting_subagent`:
   ```rust
   /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch: der Agent setzt
   /// fort, sobald er endet (ADR 032). Ein Dev-Server mit Adresse zählt nicht.
@@ -102,14 +102,14 @@ Wackelstellen zuerst:
   }
   ```
   (`is_awaiting_subagent` prüft bereits `Completed`; die doppelte Prüfung ist Absicht für die Lesbarkeit — Clippy-Warnungen dazu nicht unterdrücken, sondern die Prüfung dann weglassen.)
-- [ ] `touch_background`: `if item.kind == BackgroundKind::Subagent` → `if matches!(item.kind, BackgroundKind::Subagent | BackgroundKind::Process)`.
-- [ ] `summarize`: `awaited_script: state.awaited_script(),` hinter `handoff_line`.
-- [ ] Prüfen, dass jede Stelle, die `url`, `state` oder `ended_at` eines `Process` ändert, über `touch_background` läuft (Grep `self.background[` in `registry.rs`); eine Stelle ohne → dort `touch_background(outbox, index)` ergänzen.
-- [ ] Alle übrigen Stellen, die `SessionSummary { … }` bauen (Grep `SessionSummary {` in `src-tauri/`), bekommen `awaited_script: None`.
-- [ ] `pnpm bindings`, dann `pnpm check`.
-- [ ] `docs/decisions/032-wartet-auf-skript.md` (10 Zeilen: Kontext / Optionen „jeder Hintergrund-Befehl“ vs. „ohne Adresse“, Restzeit aus Historie vs. Ausgabe lesen vs. nur Uhr / Entscheidung / Konsequenz: Dev-Server ohne Adressausgabe hält die Sanduhr).
-- [ ] `docs/glossary.md`: Eintrag „Wartet auf Skript“ hinter „Waiting“ — Anzeige-Status der Sidebar, kein Session-Status; Regel wie oben, ADR 032.
-- [ ] Commit `feat(sessions): Session mit laufendem Hintergrund-Befehl als „wartet auf Skript“ melden`.
+- [x] `touch_background`: `if item.kind == BackgroundKind::Subagent` → `if matches!(item.kind, BackgroundKind::Subagent | BackgroundKind::Process)`.
+- [x] `summarize`: `awaited_script: state.awaited_script(),` hinter `handoff_line`.
+- [x] Prüfen, dass jede Stelle, die `url`, `state` oder `ended_at` eines `Process` ändert, über `touch_background` läuft (Grep `self.background[` in `registry.rs`); eine Stelle ohne → dort `touch_background(outbox, index)` ergänzen.
+- [x] Alle übrigen Stellen, die `SessionSummary { … }` bauen (Grep `SessionSummary {` in `src-tauri/`), bekommen `awaited_script: None`.
+- [x] `pnpm bindings`, dann `pnpm check`.
+- [x] `docs/decisions/032-wartet-auf-skript.md` (10 Zeilen: Kontext / Optionen „jeder Hintergrund-Befehl“ vs. „ohne Adresse“, Restzeit aus Historie vs. Ausgabe lesen vs. nur Uhr / Entscheidung / Konsequenz: Dev-Server ohne Adressausgabe hält die Sanduhr).
+- [x] `docs/glossary.md`: Eintrag „Wartet auf Skript“ hinter „Waiting“ — Anzeige-Status der Sidebar, kein Session-Status; Regel wie oben, ADR 032.
+- [x] Commit `feat(sessions): Session mit laufendem Hintergrund-Befehl als „wartet auf Skript“ melden`.
 
 ## Phase 2 — Oberfläche
 
@@ -153,5 +153,7 @@ Finale AK 1–6. Uhr-Format über `formatDuration` (unter einer Minute `12,3 s`,
 ## Commits
 
 ## Deviations from plan
+
+- Phase 1: `AwaitedScript` zusätzlich in `examples/gen-bindings.rs` eingetragen (Konvention für neue Grenz-Typen); die doppelte `Completed`-Prüfung in `awaited_script` hat Clippy nicht bemängelt und bleibt.
 
 ## Follow-ups

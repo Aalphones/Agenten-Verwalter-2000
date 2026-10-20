@@ -52,6 +52,19 @@ pub struct SessionSummary {
     pub unread: bool,
     /// Einstiegszeile der letzten Antwort („Weiter: …“, ADR 027); `None` ohne oder nach einer neueren Nutzernachricht.
     pub handoff_line: Option<String>,
+    /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
+    pub awaited_script: Option<AwaitedScript>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AwaitedScript {
+    /// Befehl des ältesten laufenden Eintrags.
+    pub title: String,
+    /// `started_at` des ältesten laufenden Eintrags, ms seit der Epoche.
+    pub started_at: f64,
+    /// Zahl der laufenden Einträge, ab 1.
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

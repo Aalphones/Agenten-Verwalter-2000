@@ -56,7 +56,9 @@ use crate::git::model::GitBusySession;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::review::{self, model::ReviewComment};
-use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
+use crate::sessions::model::{
+    AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary,
+};
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
 use crate::settings::model::OperatingMode;
@@ -1944,7 +1946,10 @@ impl SessionState {
     /// Jede Änderung eines Hintergrund-Eintrags geht hierüber: speichern und die Oberfläche benachrichtigen.
     fn touch_background(&self, outbox: &mut Outbox, index: usize) {
         if let Some(item) = self.background.get(index) {
-            if item.kind == BackgroundKind::Subagent {
+            if matches!(
+                item.kind,
+                BackgroundKind::Subagent | BackgroundKind::Process
+            ) {
                 outbox.summary_dirty = true;
             }
             outbox.background.push(item.clone());
@@ -1959,6 +1964,34 @@ impl SessionState {
             && self.background.iter().any(|item: &BackgroundItem| {
                 item.kind == BackgroundKind::Subagent && item.is_running()
             })
+    }
+
+    /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch: der Agent setzt
+    /// fort, sobald er endet (ADR 032). Ein Dev-Server mit Adresse zählt nicht.
+    fn awaited_script(&self) -> Option<AwaitedScript> {
+        if self.status != SessionStatus::Completed || self.is_awaiting_subagent() {
+            return None;
+        }
+        let mut waiting = self.background.iter().filter(|item: &&BackgroundItem| {
+            item.kind == BackgroundKind::Process && item.is_running() && item.url.is_none()
+        });
+        let first = waiting.next()?;
+        let (oldest, count) = waiting.fold(
+            (first, 1_u32),
+            |(oldest, count): (&BackgroundItem, u32), item: &BackgroundItem| {
+                let older = if item.started_at < oldest.started_at {
+                    item
+                } else {
+                    oldest
+                };
+                (older, count.saturating_add(1))
+            },
+        );
+        Some(AwaitedScript {
+            title: oldest.title.clone(),
+            started_at: oldest.started_at,
+            count,
+        })
     }
 
     fn has_running_background(&self) -> bool {
@@ -2857,6 +2890,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         last_activity_at: state.last_activity_at,
         unread: state.last_activity_at > state.seen_at,
         handoff_line: state.handoff_line.clone(),
+        awaited_script: state.awaited_script(),
     }
 }
 
