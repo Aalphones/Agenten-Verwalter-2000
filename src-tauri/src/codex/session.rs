@@ -17,11 +17,12 @@ use serde_json::{Value, json};
 
 use super::approvals::{self, Answer, Approvals};
 use super::rpc::{Incoming, RpcClient};
-use super::{items, policy, thread_file};
+use super::{input, instructions, items, policy, thread_file};
 use crate::agents::event::Mode;
 use crate::standalone::args::{self, AgentArgs, Start};
 use crate::standalone::output::{self, Output};
-use crate::standalone::{EXIT_START_FAILED, SCRATCHPAD_VARIABLE, fallback_scratchpad};
+use crate::standalone::session::skill_root;
+use crate::standalone::{EXIT_START_FAILED, SCRATCHPAD_VARIABLE, fallback_scratchpad, home_dir};
 
 const INITIALIZE_TIMEOUT: Duration = Duration::from_secs(20);
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
@@ -29,6 +30,7 @@ const BYTE_ORDER_MARK: char = '\u{feff}';
 /// Steht statt eines Fehlersatzes, wenn Codex einen Turn ohne Begründung scheitern lässt.
 const UNKNOWN_FAILURE: &str = "Codex hat den Turn ohne Fehlermeldung abgebrochen.";
 const CODEX_CLOSED: &str = "Codex wurde beendet.";
+const EMPTY_MESSAGE: &str = "Die Nachricht enthält nichts, das Codex bekommen könnte.";
 
 const AGENT_MESSAGE: &str = "agentMessage";
 const FILE_CHANGE: &str = "fileChange";
@@ -78,6 +80,9 @@ struct Session {
     mode: Mode,
     cwd: PathBuf,
     add_dirs: Vec<PathBuf>,
+    /// Benutzerordner und Repositories, in denen `/name` Skills und Befehle sucht.
+    home: PathBuf,
+    skill_roots: Vec<(String, PathBuf)>,
     scratchpad: PathBuf,
     /// Muster der Ticket-Worktrees aus `--allowedTools`; sie bestimmen mit, wohin Codex schreiben darf.
     allowed_rules: Vec<String>,
@@ -138,7 +143,13 @@ pub fn run(args: AgentArgs, exe: &Path) -> i32 {
         requested_model: None,
         mode: args.mode,
         cwd,
+        skill_roots: args
+            .add_dirs
+            .iter()
+            .map(|folder: &PathBuf| skill_root(folder))
+            .collect(),
         add_dirs: args.add_dirs,
+        home: home_dir().unwrap_or_default(),
         scratchpad,
         allowed_rules: args.allowed_rules,
         queue: VecDeque::new(),
@@ -190,6 +201,7 @@ fn open_thread(
             if !args.model.is_empty() {
                 params["model"] = json!(args.model);
             }
+            add_instructions(&mut params, args, cwd);
             let result = rpc.call("thread/start", params, CALL_TIMEOUT)?;
             let thread_id = result
                 .pointer("/thread/id")
@@ -202,14 +214,25 @@ fn open_thread(
         Start::Resume(session_id) => {
             let file = thread_file(session_id).ok_or("Benutzerordner unbekannt")?;
             let thread_id = read_thread_file(&file)?;
-            let result = rpc.call(
-                "thread/resume",
-                json!({ "threadId": thread_id, "cwd": cwd_text }),
-                CALL_TIMEOUT,
-            )?;
+            let mut params = json!({ "threadId": thread_id, "cwd": cwd_text });
+            add_instructions(&mut params, args, cwd);
+            let result = rpc.call("thread/resume", params, CALL_TIMEOUT)?;
             Ok((session_id.clone(), thread_id, model_of(&result)))
         }
         Start::None => Err("--session-id oder --resume fehlt".to_owned()),
+    }
+}
+
+/// Setzt `developerInstructions` — beim Fortsetzen neu, damit ein geändertes Scratchpad oder eine
+/// neue `AGENTS.md` gilt.
+fn add_instructions(params: &mut Value, args: &AgentArgs, cwd: &Path) {
+    let instructions = instructions::developer_instructions(
+        args.append_system_prompt.as_deref(),
+        cwd,
+        &args.add_dirs,
+    );
+    if let Some(text) = instructions {
+        params["developerInstructions"] = json!(text);
     }
 }
 
@@ -240,8 +263,8 @@ fn read_thread_file(file: &Path) -> Result<String, String> {
         .ok_or_else(|| format!("{} enthält keine threadId", file.display()))
 }
 
-/// Der Ordner, den der Verwalter vorgibt, sonst der Ersatz unter `.verwalter\agent`. Steht nur in
-/// der `init`-Zeile; die Vorgabe an Codex kommt über den Systemprompt-Zusatz (Phase 3).
+/// Der Ordner, den der Verwalter vorgibt, sonst der Ersatz unter `.verwalter\agent`. Steht in
+/// der `init`-Zeile; Codex bekommt ihn über den Systemprompt-Zusatz (`developerInstructions`).
 fn scratchpad(session_id: &str) -> PathBuf {
     env::var_os(SCRATCHPAD_VARIABLE)
         .filter(|value: &OsString| !value.is_empty())
@@ -266,24 +289,6 @@ fn spawn_stdin_reader(sender: Sender<Input>) -> io::Result<()> {
             let _ = sender.send(Input::StdinClosed);
         })?;
     Ok(())
-}
-
-/// Der Text einer `user`-Zeile: `message.content` als Zeichenkette oder die `text`-Blöcke.
-fn text_of(content: &Value) -> String {
-    if let Some(text) = content.as_str() {
-        return text.to_owned();
-    }
-    content
-        .as_array()
-        .map(|blocks: &Vec<Value>| {
-            blocks
-                .iter()
-                .filter(|block: &&Value| block.get("type").and_then(Value::as_str) == Some("text"))
-                .filter_map(|block: &Value| block.get("text").and_then(Value::as_str))
-                .collect::<Vec<&str>>()
-                .join("\n\n")
-        })
-        .unwrap_or_default()
 }
 
 /// Codex meldet das Kontextfenster erst mit der Token-Zählung (Phase 4); bis dahin fehlt
@@ -450,10 +455,17 @@ impl Session {
     }
 
     fn start_turn(&mut self, content: &Value) {
-        let mut params = json!({
-            "threadId": self.thread_id,
-            "input": [{ "type": "text", "text": text_of(content) }],
-        });
+        let entries = input::user_input(content, &self.home, &self.skill_roots);
+        if entries.is_empty() {
+            self.output.line(&without_window(output::result_error(
+                &self.session_id,
+                EMPTY_MESSAGE,
+                &self.model,
+                0,
+            )));
+            return;
+        }
+        let mut params = json!({ "threadId": self.thread_id, "input": entries });
         let turn_policy = policy::turn_policy(
             self.mode,
             &self.cwd,

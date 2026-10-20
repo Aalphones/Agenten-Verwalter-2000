@@ -92,6 +92,8 @@ export function Composer({ session }: ComposerProps): ReactElement {
   const isLocal: boolean = isLocalOperatingMode(operatingMode);
   // Claude in Chrome gibt es nur mit der Claude-Kommandozeile und dem Claude-Abo.
   const hasBrowser: boolean = operatingMode === 'claude';
+  // Codex nutzt seine eigenen MCP-Server aus `~/.codex/config.toml`; die Hinweise gelten nur für die der Claude-Kommandozeile.
+  const hasMcp: boolean = operatingMode !== 'codex';
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Senden würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -414,7 +416,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
               />
             )}
           </div>
-          {session.mcpProblems > 0 && (
+          {hasMcp && session.mcpProblems > 0 && (
             <McpProblemChip
               count={session.mcpProblems}
               onOpen={(): void => {

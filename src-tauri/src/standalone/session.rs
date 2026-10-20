@@ -242,7 +242,7 @@ fn prepare_scratchpad(given: Option<PathBuf>, session_id: &str) -> Result<PathBu
 }
 
 /// Ein Repository-Ordner für die Skill-Suche, benannt nach seinem Ordnernamen.
-fn skill_root(folder: &Path) -> (String, PathBuf) {
+pub fn skill_root(folder: &Path) -> (String, PathBuf) {
     let name = folder.file_name().map_or_else(
         || folder.display().to_string(),
         |name: &OsStr| name.to_string_lossy().into_owned(),

@@ -2,6 +2,8 @@
 //! Zeilenprotokolls der Claude-Kommandozeile, den der Verwalter liest (Kontrakt aus ADR 017), und
 //! nach innen JSON-RPC mit `codex app-server`.
 pub mod approvals;
+pub mod input;
+pub mod instructions;
 pub mod items;
 pub mod policy;
 pub mod rpc;

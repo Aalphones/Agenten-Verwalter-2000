@@ -22,11 +22,19 @@ Fehlerklassen geprüft: keine einschlägig.
 
 ## Checkliste
 
-- [ ] `codex/instructions.rs`: `fn developer_instructions(append: Option<&str>, add_dirs: &[PathBuf]) -> Option<String>` gemäß AK 1; in `session.rs` an `thread/start`/`thread/resume` übergeben.
-- [ ] `codex/input.rs`: `fn user_input(content: &Value, home: &Path, roots: &[(String, PathBuf)]) -> Vec<Value>`: erste Text-Zeile auf `/name` prüfen (gleiche Erkennung wie `invocation::expand_message`, Skill-Wurzeln wie Standalone sie aus `add_dirs` und Benutzerordner bildet); Skill → `skill`-Eintrag + verbleibender Text; Befehl → gerenderter Text; Bilder → Data-URL. Leere Textblöcke weglassen.
-- [ ] `useCommandMenu.ts`/`commandMenuRows.ts`: in „Codex“ dieselben Ausblendungen wie in den lokalen Betriebsarten und zusätzlich `/mcp`; `/chrome` ausgeblendet.
-- [ ] `Composer.tsx`: Browser-Schalter (`composer__browser`) in „Codex“ ausblenden (Claude in Chrome gibt es dort nicht); MCP-Hinweis (`McpProblemChip`) in „Codex“ nicht zeigen.
-- [ ] Probe: Session in einem Repository mit `AGENTS.md`, Frage „Was steht in den Projektregeln?“; `/mode-planning` und `/plan` aufrufen. Ergebnis in FINDINGS.
-- [ ] ADR 031: Abschnitt Anweisungen/Skills/MCP ergänzen.
+- [x] `codex/instructions.rs`: `fn developer_instructions(append: Option<&str>, cwd: &Path, add_dirs: &[PathBuf]) -> Option<String>` gemäß AK 1 (der Arbeitsordner zählt nicht, Codex lädt dessen `AGENTS.md` selbst); in `session.rs` an `thread/start`/`thread/resume` übergeben.
+- [x] `codex/input.rs`: `fn user_input(content: &Value, home: &Path, roots: &[(String, PathBuf)]) -> Vec<Value>`: erste Text-Zeile auf `/name` prüfen (gleiche Erkennung wie `invocation::expand_message`, Skill-Wurzeln wie Standalone sie aus `add_dirs` und Benutzerordner bildet); Skill → `skill`-Eintrag + verbleibender Text (nur mit Katalog-Pfad, s. Report-Back); Befehl → gerenderter Text; Bilder → Data-URL. Leere Textblöcke weglassen.
+- [x] `useCommandMenu.ts`/`commandMenuRows.ts`: in „Codex“ dieselben Ausblendungen wie in den lokalen Betriebsarten und zusätzlich `/mcp`; `/chrome` ausgeblendet (stand schon seit Phase 2).
+- [x] `Composer.tsx`: Browser-Schalter in „Codex“ ausgeblendet (stand schon); MCP-Hinweis (`McpProblemChip`) in „Codex“ nicht gezeigt.
+- [x] Probe gegen `codex-cli` der VS-Code-Erweiterung 26.1007.21434: `AGENTS.md` aus `--add-dir` und Scratchpad-Pfad kommen an; `/plan` (Befehl) wirkt; `/mode-planning` wirkt mit Katalog-Pfad (`<skill>`-Block im Verlauf); Bild-Data-URL → „Rot“ für ein rotes Bild.
+- [x] ADR 031: Abschnitte Anweisungen, Skills und Befehle, MCP ergänzt.
 
 ## Report-Back
+
+Umgesetzt wie geplant, mit drei Abweichungen:
+
+- **Skill-Pfad:** Codex verwirft einen `skill`-Eintrag ohne Meldung, wenn dessen Pfad nicht in seinem Katalog `~/.codex/skills` liegt (Probe: mit `~/.claude/skills/…` kam kein `<skill>`-Block im Verlauf, das Modell antwortete falsch). Der Übersetzer sendet deshalb für einen gespiegelten Skill den Katalog-Pfad; Skills aus Repositories oder ohne Spiegel gehen als gerenderter Text (`invocation::render`), wie ein Befehl.
+- **PDF-Anhänge:** Codex nimmt nur Bilder an; ein PDF-Block wird durch den Hinweissatz „[PDF-Anhang nicht übertragen: Codex nimmt nur Bilder an.]“ ersetzt, statt stumm zu verschwinden.
+- **Leere Nachricht:** Ergibt die Eingabe keinen Eintrag, antwortet der Übersetzer mit einem `result`-Fehler statt `turn/start` ohne Eingabe.
+
+Offen für den Smoke: `/mode-planning` in der echten Oberfläche (Skills mit `WORK.md`/Anhängen laufen als Katalog-Eintrag, Codex liest die Nebendateien selbst).
