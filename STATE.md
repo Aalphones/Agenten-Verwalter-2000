@@ -23,6 +23,7 @@
 12. ~~Archiv-Suche~~ — auf Zuruf archiviert (`docs/archive/2026-10/2026-10-07_archiv-suche.md`, ADR 029), Smoke offen; `v0.22.0` auf Zuruf gesetzt.
 13. ~~Browser-Zugriff~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_browser-zugriff.md`, ADR 030, Migration 10), Smoke offen, Release auf Zuruf.
 14. Codex als Betriebsart — freigegeben und geparkt (`docs/planning/2026-10-19_codex/`, ADR 031 und Migration 11 reserviert), Start mit Phase 1.
+15. Wartet auf Skript — freigegeben und geparkt (`docs/planning/2026-10-20_wartet-auf-skript.md`, ADR 032 reserviert), Start mit Phase 1.
 
 ## Offen
 
