@@ -2,7 +2,7 @@
 //! der Agent wertet aus, was er braucht, und überliest den Rest.
 use std::path::PathBuf;
 
-use crate::agents::event::Mode;
+use crate::agents::event::{Effort, Mode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Start {
@@ -29,6 +29,8 @@ pub struct AgentArgs {
     pub append_system_prompt: Option<String>,
     pub json_schema: Option<String>,
     pub tools_disabled: bool,
+    /// Nur der Übersetzer der Betriebsart Codex wertet ihn aus; der eigene Agent überliest ihn.
+    pub effort: Option<Effort>,
 }
 
 const OPTION_PREFIX: &str = "--";
@@ -44,6 +46,7 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
     let mut append_system_prompt: Option<String> = None;
     let mut json_schema: Option<String> = None;
     let mut tools_disabled = false;
+    let mut effort: Option<Effort> = None;
     let mut index = 0;
     while index < args.len() {
         let option = args[index].as_str();
@@ -52,10 +55,13 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
             | "--verbose"
             | "--safe-mode"
             | "--strict-mcp-config"
-            | "--no-session-persistence" => {}
-            "--input-format" | "--output-format" | "--permission-prompt-tool" | "--effort" => {
+            | "--no-session-persistence"
+            | "--chrome"
+            | "--no-chrome" => {}
+            "--input-format" | "--output-format" | "--permission-prompt-tool" => {
                 value_of(args, &mut index)?;
             }
+            "--effort" => effort = effort_from_cli(&value_of(args, &mut index)?),
             "--model" => model = Some(value_of(args, &mut index)?),
             "--permission-mode" => mode = parse_mode(&value_of(args, &mut index)?)?,
             "--session-id" => start = Start::New(session_id(value_of(args, &mut index)?)?),
@@ -89,7 +95,20 @@ pub fn parse(args: &[String]) -> Result<AgentArgs, String> {
         append_system_prompt,
         json_schema,
         tools_disabled,
+        effort,
     })
+}
+
+/// Gegenstück zu `Effort::cli_value`; ein unbekannter Wert gilt als nicht angegeben.
+pub fn effort_from_cli(value: &str) -> Option<Effort> {
+    match value {
+        "low" => Some(Effort::Low),
+        "medium" => Some(Effort::Medium),
+        "high" => Some(Effort::High),
+        "xhigh" => Some(Effort::Xhigh),
+        "max" => Some(Effort::Max),
+        _ => None,
+    }
 }
 
 /// Der Wert nach der Option an `index`; rückt `index` auf ihn vor.

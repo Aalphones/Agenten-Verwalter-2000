@@ -9,7 +9,7 @@ use std::time::Duration;
 use crate::agents::claude::local::{self, LocalBackend, LocalProgram};
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::processes::hide_console;
-use crate::standalone;
+use crate::{codex, standalone};
 
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
@@ -37,6 +37,8 @@ pub struct SpawnOptions {
     pub artifacts: Option<PathBuf>,
     /// Browser-Zugriff (Claude in Chrome); nur im Claude-Betrieb wirksam.
     pub chrome: bool,
+    /// `Some` in der Betriebsart Codex: die `codex.exe`, die der Übersetzer startet.
+    pub codex_exe: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -122,10 +124,7 @@ fn build_command(opts: &SpawnOptions) -> Command {
         .arg("--permission-prompt-tool")
         .arg("stdio")
         .arg("--model")
-        .arg(match &opts.local {
-            Some(backend) => backend.model.as_str(),
-            None => opts.model.cli_id(),
-        });
+        .arg(model_arg(opts));
     // Das lokale Modell kennt keinen Denkaufwand, und Artefakte veröffentlicht nur Anthropic.
     if opts.local.is_none() {
         command
@@ -156,6 +155,12 @@ fn build_command(opts: &SpawnOptions) -> Command {
             command.env(standalone::SCRATCHPAD_VARIABLE, dir);
         }
     }
+    if let Some(codex_exe) = &opts.codex_exe {
+        command.env(codex::EXE_VARIABLE, codex_exe);
+        if let Some(dir) = &opts.scratchpad {
+            command.env(standalone::SCRATCHPAD_VARIABLE, dir);
+        }
+    }
     // Ein gemeinsamer Text: der autarke Agent liest nur ein `--append-system-prompt`, ein zweites
     // überschriebe das erste.
     let mut prompts: Vec<String> = Vec::new();
@@ -163,7 +168,10 @@ fn build_command(opts: &SpawnOptions) -> Command {
         prompts.push(scratchpad_prompt(dir));
     }
     if let Some(dir) = &opts.artifacts {
-        prompts.push(artifacts_prompt(dir, opts.local.is_none()));
+        prompts.push(artifacts_prompt(
+            dir,
+            opts.local.is_none() && opts.codex_exe.is_none(),
+        ));
     }
     if !prompts.is_empty() {
         command
@@ -192,6 +200,18 @@ fn build_command(opts: &SpawnOptions) -> Command {
     command.arg(&opts.session_id);
     hide_console(&mut command);
     command
+}
+
+/// In „Codex“ leer: der Übersetzer nimmt dann das Standardmodell von Codex — das Claude-Modell der
+/// Session gilt erst nach dem Zurückschalten wieder.
+fn model_arg(opts: &SpawnOptions) -> &str {
+    if opts.codex_exe.is_some() {
+        return "";
+    }
+    match &opts.local {
+        Some(backend) => backend.model.as_str(),
+        None => opts.model.cli_id(),
+    }
 }
 
 /// Ohne die Vorgabe erfindet jeder Agent seine eigene Ablage (`%TEMP%\<ticket>`, `_scratch\` im

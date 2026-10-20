@@ -21,7 +21,15 @@ import type { ModelId } from '@/lib/bindings/ModelId';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { sendMessage } from '@/lib/chat';
-import { MODE_OPTIONS, effortLabel, localModelLabel, modeOption, modelName } from '@/lib/labels';
+import {
+  CODEX_NOT_FOUND_MESSAGE,
+  MODE_OPTIONS,
+  effortLabel,
+  isLocalOperatingMode,
+  localModelLabel,
+  modeOption,
+  modelName,
+} from '@/lib/labels';
 import type { ModeOption } from '@/lib/labels';
 import {
   pauseSession,
@@ -81,7 +89,9 @@ export function Composer({ session }: ComposerProps): ReactElement {
   const startRename = useSessionsStore((state) => state.startRename);
   const operatingMode = useSettingsStore((state) => state.settings?.operatingMode ?? 'claude');
   const localModel: string | null = useSettingsStore((state) => state.settings?.localModel ?? null);
-  const isLocal: boolean = operatingMode !== 'claude';
+  const isLocal: boolean = isLocalOperatingMode(operatingMode);
+  // Claude in Chrome gibt es nur mit der Claude-Kommandozeile und dem Claude-Abo.
+  const hasBrowser: boolean = operatingMode === 'claude';
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Senden würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -364,7 +374,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
               )}
             </div>
           )}
-          {!isLocal && (
+          {hasBrowser && (
             <button
               type="button"
               className={`composer__browser${session.chrome ? ' composer__browser--on' : ''}`}
@@ -485,6 +495,9 @@ function describeError(reason: unknown): string {
     }
     if (reason.kind === 'claudeNotFound') {
       return 'Claude-Kommandozeile nicht gefunden.';
+    }
+    if (reason.kind === 'codexNotFound') {
+      return CODEX_NOT_FOUND_MESSAGE;
     }
     if (reason.kind === 'attachmentsWhileWaiting') {
       return 'Anhänge gehen erst, wenn die Rückfrage beantwortet ist.';

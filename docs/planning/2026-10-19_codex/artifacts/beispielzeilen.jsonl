@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Antworte nur mit dem Wort Hallo."}]}}
+{"type":"control_request","request_id":"probe-1","request":{"subtype":"interrupt"}}

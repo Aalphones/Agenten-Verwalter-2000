@@ -6,5 +6,8 @@ fn main() {
     if args.get(1).map(String::as_str) == Some(verwalter_lib::standalone::SUBCOMMAND) {
         std::process::exit(verwalter_lib::standalone::run(args[2..].to_vec()));
     }
+    if args.get(1).map(String::as_str) == Some(verwalter_lib::codex::SUBCOMMAND) {
+        std::process::exit(verwalter_lib::codex::run(args[2..].to_vec()));
+    }
     verwalter_lib::run()
 }

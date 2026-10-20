@@ -28,11 +28,11 @@ pub struct LocalBackend {
     pub has_vision: bool,
 }
 
-/// `Ok(None)` in der Betriebsart Claude. Fragt LM Studio (höchstens 3 s) — nie unter einer
+/// `Ok(None)` in den Betriebsarten Claude und Codex. Fragt LM Studio (höchstens 3 s) — nie unter einer
 /// Session-Sperre aufrufen.
 pub fn resolve(settings: &Settings) -> Result<Option<LocalBackend>, CommandError> {
     let program = match settings.operating_mode {
-        OperatingMode::Claude => return Ok(None),
+        OperatingMode::Claude | OperatingMode::Codex => return Ok(None),
         OperatingMode::ClaudeCodeLocal => LocalProgram::ClaudeCode,
         OperatingMode::Standalone => LocalProgram::Standalone,
     };

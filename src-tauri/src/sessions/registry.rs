@@ -23,6 +23,7 @@ use crate::agents::claude::protocol::{
     user_message_content,
 };
 use crate::agents::claude::translate::Translator;
+use crate::agents::codex::{self, find_codex};
 use crate::agents::event::{
     AgentEvent, Attachment, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
     QuestionKind, TaskEnd, TaskKind, TodoItem, ToolState, TurnEnd,
@@ -58,6 +59,7 @@ use crate::review::{self, model::ReviewComment};
 use crate::sessions::model::{ChatEntryEvent, ChatPage, SessionStatus, SessionSummary};
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
+use crate::settings::model::OperatingMode;
 use crate::skills::{self, model::SkillRef};
 use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
@@ -182,6 +184,9 @@ struct SessionState {
     chrome: bool,
     /// Modell-Backend, mit dem der laufende Prozess gestartet wurde; `None` = Claude.
     process_backend: Option<LocalBackend>,
+    /// Betriebsart, in der der laufende Prozess gestartet wurde — Claude und Codex haben beide kein
+    /// lokales Backend, ein Wechsel zwischen ihnen zeigt sich nur hier.
+    process_mode: OperatingMode,
     /// Anzahl Repositories, mit denen der laufende Prozess gestartet wurde — `--add-dir` gibt es
     /// nur beim Start, ein angehängtes Repository braucht einen neuen Prozess.
     process_repository_count: usize,
@@ -369,8 +374,9 @@ impl SessionRegistry {
 
     /// Fragt in der lokalen Betriebsart LM Studio — nie unter einer Session- oder Vorhaben-Sperre
     /// aufrufen.
-    fn agent_backend(&self) -> Result<Option<LocalBackend>, CommandError> {
-        local::resolve(&settings::load(&self.database)?)
+    fn agent_backend(&self) -> Result<(OperatingMode, Option<LocalBackend>), CommandError> {
+        let settings = settings::load(&self.database)?;
+        Ok((settings.operating_mode, local::resolve(&settings)?))
     }
 
     /// Legt ein Vorhaben mit seiner Session `#1` an: Workspace, Basis jedes Repositorys, beide
@@ -391,8 +397,10 @@ impl SessionRegistry {
             mode,
         } = request;
         // Vor dem Workspace: ein Fehler (LM Studio aus) lässt nichts zurück.
-        let backend = self.agent_backend()?;
-        if !is_standalone(backend.as_ref()) {
+        let (operating_mode, backend) = self.agent_backend()?;
+        if operating_mode == OperatingMode::Codex {
+            find_codex().ok_or(CommandError::CodexNotFound)?;
+        } else if !is_standalone(backend.as_ref()) {
             find_claude().ok_or(CommandError::ClaudeNotFound)?;
         }
         let rows = self
@@ -461,7 +469,14 @@ impl SessionRegistry {
             |state: &mut SessionState, outbox: &mut Outbox| {
                 // Ohne diese Zeile bekäme die neue Session nie ihre Datenbankzeile.
                 outbox.summary_dirty = true;
-                start_process(app, &session, state, outbox, backend.as_ref())?;
+                start_process(
+                    app,
+                    &session,
+                    state,
+                    outbox,
+                    operating_mode,
+                    backend.as_ref(),
+                )?;
                 let line = message_line(task, &task_attachments)?;
                 state.push_user(outbox, task, task_attachments, task_skill, Vec::new());
                 outbox.write(state, line)?;
@@ -779,7 +794,7 @@ impl SessionRegistry {
     ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
         // Vor `update`: die Abfrage bei LM Studio gehört nicht unter die Session-Sperre.
-        let backend_result: Result<Option<LocalBackend>, String> = self
+        let backend_result: Result<(OperatingMode, Option<LocalBackend>), String> = self
             .agent_backend()
             .map_err(|error: CommandError| error.to_string());
         review::validate(comments)?;
@@ -819,7 +834,7 @@ impl SessionRegistry {
                 }
                 // Erst nach dem Zweig für Rückfragen: eine offene Rückfrage lässt sich auch dann
                 // beantworten, wenn LM Studio gerade aus ist.
-                let backend = backend_result
+                let (operating_mode, backend) = backend_result
                     .clone()
                     .map_err(CommandError::LocalModelUnavailable)?;
                 // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem
@@ -828,14 +843,22 @@ impl SessionRegistry {
                 // Agent wird nie unterbrochen.
                 let has_new_repository =
                     session.repositories().len() != state.process_repository_count;
-                let has_new_backend = state.process_backend != backend;
+                let has_new_backend =
+                    state.process_backend != backend || state.process_mode != operating_mode;
                 let has_new_chrome = state.chrome != state.process_chrome;
                 if state.process.is_none()
                     || state.effort != state.process_effort
                     || ((has_new_repository || has_new_backend || has_new_chrome)
                         && state.is_resting())
                 {
-                    start_process(app, &session, state, outbox, backend.as_ref())?;
+                    start_process(
+                        app,
+                        &session,
+                        state,
+                        outbox,
+                        operating_mode,
+                        backend.as_ref(),
+                    )?;
                 }
                 // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
                 let sent_attachments =
@@ -1051,7 +1074,7 @@ impl SessionRegistry {
 
     pub fn restart(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
-        let backend = self.agent_backend()?;
+        let (operating_mode, backend) = self.agent_backend()?;
         update(
             app,
             &session,
@@ -1059,7 +1082,14 @@ impl SessionRegistry {
                 if state.status != SessionStatus::Error {
                     return Ok(());
                 }
-                start_process(app, &session, state, outbox, backend.as_ref())?;
+                start_process(
+                    app,
+                    &session,
+                    state,
+                    outbox,
+                    operating_mode,
+                    backend.as_ref(),
+                )?;
                 state.pause_requested = false;
                 state.set_status(outbox, SessionStatus::Paused);
                 Ok(())
@@ -1079,8 +1109,13 @@ impl SessionRegistry {
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
                 state.model = model;
-                state.context_window = model.initial_context_window();
                 outbox.summary_dirty = true;
+                // Das Claude-Modell gilt in „Codex“ erst nach dem Zurückschalten; der Übersetzer
+                // kennt die Kennung nicht.
+                if state.process_mode == OperatingMode::Codex {
+                    return Ok(());
+                }
+                state.context_window = model.initial_context_window();
                 state.send_control(
                     outbox,
                     json!({ "subtype": "set_model", "model": model.cli_id() }),
@@ -1699,6 +1734,7 @@ impl SessionState {
             process_chrome: false,
             chrome: false,
             process_backend: None,
+            process_mode: OperatingMode::Claude,
             process_repository_count: 0,
             has_agent_history: false,
             mode,
@@ -2793,9 +2829,21 @@ fn start_process(
     session: &Arc<Session>,
     state: &mut SessionState,
     outbox: &mut Outbox,
+    operating_mode: OperatingMode,
     backend: Option<&LocalBackend>,
 ) -> Result<(), CommandError> {
-    let (exe, leading_args, has_transcript) = if is_standalone(backend) {
+    let codex_exe: Option<PathBuf> = if operating_mode == OperatingMode::Codex {
+        Some(find_codex().ok_or(CommandError::CodexNotFound)?)
+    } else {
+        None
+    };
+    let (exe, leading_args, has_transcript) = if codex_exe.is_some() {
+        (
+            codex::program()?,
+            codex::leading_args(),
+            codex::has_thread(&session.id),
+        )
+    } else if is_standalone(backend) {
         let has_transcript = crate::standalone::transcript_path(&session.id)
             .is_some_and(|path: PathBuf| path.exists());
         (
@@ -2862,6 +2910,7 @@ fn start_process(
             scratchpad: scratchpad_dir,
             artifacts: artifacts_dir,
             chrome: state.chrome,
+            codex_exe,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
@@ -2880,6 +2929,7 @@ fn start_process(
         outbox.summary_dirty = true;
     }
     state.process_backend = backend.cloned();
+    state.process_mode = operating_mode;
     state.process_repository_count = repositories.len();
     state.translator = Translator::default();
     Ok(())

@@ -6,6 +6,7 @@ pub mod attachments;
 pub mod background;
 pub mod changes;
 pub mod cli_update;
+pub mod codex;
 pub mod commands;
 pub mod context;
 pub mod db;

@@ -63,8 +63,9 @@ export function useCommandMenu({
   const [buttonFilter, setButtonFilter] = useState<string>('');
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const [isSlashDismissed, setIsSlashDismissed] = useState<boolean>(false);
-  const isLocal: boolean = useSettingsStore(
-    (state) => (state.settings?.operatingMode ?? 'claude') !== 'claude',
+  // Claude in Chrome gibt es nur mit der Claude-Kommandozeile und dem Claude-Abo.
+  const hasBrowser: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
   );
 
   const slashMatch: RegExpExecArray | null = SLASH_AT_START.exec(draft);
@@ -78,7 +79,13 @@ export function useCommandMenu({
   const filter: string = isButtonOpen ? buttonFilter : (slashMatch?.[1] ?? '');
 
   const { skills } = useSkills(skillSource, isOpen);
-  const sections: CommandSection[] = buildCommandSections(scope, filter, skills, session, isLocal);
+  const sections: CommandSection[] = buildCommandSections(
+    scope,
+    filter,
+    skills,
+    session,
+    hasBrowser,
+  );
   const rows: CommandRow[] = pickableRows(sections);
   // Ohne (noch gültige) Markierung gilt die erste wählbare Zeile als markiert.
   const highlighted: CommandRow | null =

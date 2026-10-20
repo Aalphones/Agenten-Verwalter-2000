@@ -80,7 +80,7 @@ export function buildCommandSections(
   filter: string,
   skills: readonly SkillInfo[],
   session: SessionSummary | null,
-  isLocal: boolean,
+  hasBrowser: boolean,
 ): CommandSection[] {
   const needle: string = filter.trim().toLowerCase();
 
@@ -99,7 +99,7 @@ export function buildCommandSections(
       title: 'Skills',
       rows: skills.map((skill: SkillInfo): CommandRow => ({ kind: 'skill', skill })),
     },
-    { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session, isLocal) },
+    { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session, hasBrowser) },
   ];
 
   // Ein exakt getippter Session-Befehl gewinnt gegen Skills, die den Namen nur enthalten.
@@ -119,7 +119,7 @@ export function buildCommandSections(
     .filter((section: CommandSection) => section.rows.length > 0);
 }
 
-function sessionRows(session: SessionSummary | null, isLocal: boolean): CommandRow[] {
+function sessionRows(session: SessionSummary | null, hasBrowser: boolean): CommandRow[] {
   if (session === null) {
     return [];
   }
@@ -128,7 +128,7 @@ function sessionRows(session: SessionSummary | null, isLocal: boolean): CommandR
     rows.push({ kind: 'session', command: 'changes' });
   }
   rows.push({ kind: 'session', command: 'mcp' });
-  if (!isLocal) {
+  if (hasBrowser) {
     rows.push({ kind: 'session', command: 'chrome' });
   }
   if (PAUSABLE_STATUSES.includes(session.status)) {

@@ -22,7 +22,13 @@ import type { OperatingMode } from '@/lib/bindings/OperatingMode';
 import type { Settings } from '@/lib/bindings/Settings';
 import type { SettingsOverview } from '@/lib/bindings/SettingsOverview';
 import { commandErrorText } from '@/lib/errors';
-import { effortLabel, localModelLabel, modeOption, modelName } from '@/lib/labels';
+import {
+  effortLabel,
+  isLocalOperatingMode,
+  localModelLabel,
+  modeOption,
+  modelName,
+} from '@/lib/labels';
 import { useSettingsStore } from '@/stores/settings';
 import './SettingsView.css';
 
@@ -42,7 +48,8 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
   const { save, error: saveError } = useSettingsUpdate();
 
   const settings: Settings | null = storedSettings ?? overview?.settings ?? null;
-  const isLocalOperation: boolean = settings !== null && settings.operatingMode !== 'claude';
+  const isLocalOperation: boolean =
+    settings !== null && isLocalOperatingMode(settings.operatingMode);
   const localModels = useLocalModels(isLocalOperation);
 
   function toggleMenu(menu: Exclude<OpenMenu, null>): void {
@@ -172,11 +179,11 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
           <h2 className="settings-view__section-title">Agent</h2>
           <SettingRow
             label="Betriebsart"
-            info="Claude: Modellanfragen gehen an dein Claude-Abo. Claude Code + LM Studio: dieselbe Claude-Kommandozeile mit Werkzeugen, Skills und Anweisungen, aber das Modell läuft lokal in LM Studio — für die Zeit, in der das Kontingent aufgebraucht ist. Autark: ohne Claude-Kommandozeile und ohne Anthropic — ein eigener, kleinerer Agent des Verwalters mit dem lokalen Modell. Gilt ab der nächsten Nachricht jeder Session."
+            info="Claude: Modellanfragen gehen an dein Claude-Abo. Claude Code + LM Studio: dieselbe Claude-Kommandozeile mit Werkzeugen, Skills und Anweisungen, aber das Modell läuft lokal in LM Studio — für die Zeit, in der das Kontingent aufgebraucht ist. Autark: ohne Claude-Kommandozeile und ohne Anthropic — ein eigener, kleinerer Agent des Verwalters mit dem lokalen Modell. Codex: Sessions arbeiten mit OpenAI Codex und deinem ChatGPT-Konto. Gilt ab der nächsten Nachricht jeder Session."
           >
             <OperatingModeSegment value={current.operatingMode} onChange={saveOperatingMode} />
           </SettingRow>
-          {current.operatingMode !== 'claude' && (
+          {isLocalOperatingMode(current.operatingMode) && (
             <SettingRow
               label="Lokales Modell"
               info="Ein in LM Studio geladenes Modell. Die Kontextlänge, mit der es dort geladen ist, gilt als Kontextfenster der Sessions. Adresse des Servers: Umgebungsvariable VERWALTER_LMSTUDIO_URL, sonst http://localhost:1234."

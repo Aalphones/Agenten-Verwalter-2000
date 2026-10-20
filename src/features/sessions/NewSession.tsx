@@ -19,7 +19,9 @@ import type { ModelId } from '@/lib/bindings/ModelId';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import { discardAttachment } from '@/lib/attachments';
 import {
+  CODEX_NOT_FOUND_MESSAGE,
   effortLabel,
+  isLocalOperatingMode,
   localModelLabel,
   modeOption,
   modelName,
@@ -69,7 +71,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   const removeAttachment = useAttachmentsStore((state) => state.remove);
   const operatingMode = useSettingsStore((state) => state.settings?.operatingMode ?? 'claude');
   const localModel: string | null = useSettingsStore((state) => state.settings?.localModel ?? null);
-  const isLocal: boolean = operatingMode !== 'claude';
+  const isLocal: boolean = isLocalOperatingMode(operatingMode);
 
   // Während des Diktats wächst der Text an der Stelle des Cursors: Tippen und Starten würden sie verschieben.
   const isDictating: boolean = useVoiceStore(
@@ -380,6 +382,8 @@ function describeStartError(reason: unknown): string {
     switch (reason.kind) {
       case 'claudeNotFound':
         return CLAUDE_NOT_FOUND_MESSAGE;
+      case 'codexNotFound':
+        return CODEX_NOT_FOUND_MESSAGE;
       case 'gitNotFound':
         return GIT_NOT_FOUND_MESSAGE;
       case 'repositoryMissing':

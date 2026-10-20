@@ -12,6 +12,10 @@ pub enum CommandError {
     SessionNotFound(String),
     #[error("Claude-Kommandozeile nicht gefunden")]
     ClaudeNotFound,
+    #[error(
+        "Codex nicht gefunden — installiere die Codex-Erweiterung für VS Code oder setze VERWALTER_CODEX_PATH."
+    )]
+    CodexNotFound,
     #[error("Session ist abgebrochen")]
     SessionClosed,
     #[error("Agent läuft nicht")]

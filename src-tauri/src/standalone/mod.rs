@@ -112,7 +112,7 @@ fn agent_dir() -> Option<PathBuf> {
     Some(home_dir()?.join(DATA_DIR).join(AGENT_DIR))
 }
 
-fn home_dir() -> Option<PathBuf> {
+pub(crate) fn home_dir() -> Option<PathBuf> {
     // `HOME` für die Builds unter macOS und Linux, die kein `USERPROFILE` kennen.
     env::var_os("USERPROFILE")
         .or_else(|| env::var_os("HOME"))

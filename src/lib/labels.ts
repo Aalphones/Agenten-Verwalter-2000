@@ -32,7 +32,17 @@ export const OPERATING_MODE_OPTIONS: readonly OperatingModeOption[] = [
   { id: 'claude', label: 'Claude' },
   { id: 'claudeCodeLocal', label: 'Claude Code + LM Studio' },
   { id: 'standalone', label: 'Autark' },
+  { id: 'codex', label: 'Codex' },
 ] as const;
+
+/** Text zu `CommandError` `codexNotFound` — die Variante trägt keine eigene Meldung. */
+export const CODEX_NOT_FOUND_MESSAGE =
+  'Codex nicht gefunden — installiere die Codex-Erweiterung für VS Code oder setze VERWALTER_CODEX_PATH.';
+
+/** Betriebsarten, deren Modell in LM Studio läuft — dort gelten „Lokales Modell“ und dessen Wege. */
+export function isLocalOperatingMode(mode: OperatingMode): boolean {
+  return mode === 'claudeCodeLocal' || mode === 'standalone';
+}
 
 export const MODEL_OPTIONS: readonly ModelOption[] = [
   { id: 'fable', name: 'Fable 5.1', hint: 'Am stärksten, für Planung und Architektur' },
