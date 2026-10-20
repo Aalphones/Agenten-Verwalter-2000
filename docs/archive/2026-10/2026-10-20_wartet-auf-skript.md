@@ -3,7 +3,7 @@
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
 | 1 | Core: `SessionSummary.awaitedScript` ermitteln und bei jeder Änderung melden | standard | complete |
-| 2 | Oberfläche: Anzeige-Status „wartet auf Skript“ mit eigenem Symbol, eigener Farbe und laufender Uhr | standard | pending |
+| 2 | Oberfläche: Anzeige-Status „wartet auf Skript“ mit eigenem Symbol, eigener Farbe und laufender Uhr | standard | complete |
 
 ## Ziel
 
@@ -129,31 +129,38 @@ Finale AK 1–6. Uhr-Format über `formatDuration` (unter einer Minute `12,3 s`,
 
 ### Checkliste
 
-- [ ] `theme.css`: Primitive `--color-violet-400: #a78bfa;` und `--color-violet-600: #7c3aed;` neben den Blau-Primitiven; Token `--color-status-script` hinter `--color-status-handoff` in allen drei Blöcken (hell `var(--color-violet-600)`, beide dunklen `var(--color-violet-400)`).
-- [ ] `sessionStatus.ts`:
+- [x] `theme.css`: Primitive `--color-violet-400: #a78bfa;` und `--color-violet-600: #7c3aed;` neben den Blau-Primitiven; Token `--color-status-script` hinter `--color-status-handoff` in allen drei Blöcken (hell `var(--color-violet-600)`, beide dunklen `var(--color-violet-400)`).
+- [x] `sessionStatus.ts`:
   - `DisplayStatus = SessionStatus | 'handoff' | 'script'`.
   - `displayStatus`: als erste Zeile `if (session.awaitedScript !== null) { return 'script'; }` (der Core liefert das Feld nur bei `completed`).
   - `export function scriptLabel(script: AwaitedScript, now: number): string` → `wartet auf Skript · <Dauer>` bzw. `wartet auf <count> Skripte · <Dauer>`, Dauer = `formatDuration(now - script.startedAt)`.
   - `metaLine` bleibt unverändert (bekommt keine Uhr; die Uhr läuft über `scriptLabel`).
-- [ ] `StatusIcon.tsx`: `case 'script'` mit Sanduhr-Pfad, Strich 1.4 wie `handoff`: `<path d="M3.5 1.5h5M3.5 10.5h5M4 1.5c0 2.6 4 2.4 4 4.5S4 7.9 4 10.5M8 1.5c0 2.6-4 2.4-4 4.5s4 1.9 4 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />`. `StatusIcon.css`: `&--script { color: var(--color-status-script); }`.
-- [ ] `projectStatus.ts`: `'script'` in `URGENCY` direkt hinter `'starting'`; `SHORT_STATUS.script = 'wartet auf Skript'`; `projectMetaLine(sessions, now)` bekommt den Parameter `now: number`; bei einer Session und `status === 'script'` → `scriptLabel(urgent.awaitedScript, now)` (Nicht-null-Wächter statt `!`).
-- [ ] `SidebarProject.tsx`: `const now = useNow(urgentStatus === 'script')` und an `projectMetaLine` geben; `isMetaHighlighted` bleibt beim Session-Status (Meta der Script-Zeile erscheint gedämpft wie bei `running`).
-- [ ] `SidebarItem.tsx`: bei `status === 'script'` und `session.awaitedScript !== null` hinter dem Namen `<span className="sidebar-item__clock" title={session.awaitedScript.title}>{formatDuration(now - …startedAt)}</span>`, `now = useNow(status === 'script')`. CSS `sidebar-item__clock`: `margin-left: auto`, Schriftgröße und Farbe wie die gedämpfte Meta-Zeile (`var(--color-fg-muted)`), `font-variant-numeric: tabular-nums`.
-- [ ] `SessionHeader.tsx`: liegt `session.awaitedScript` vor → `StatusIcon status="script"`, Text `scriptLabel(...)` mit großem Anfangsbuchstaben („Wartet auf Skript · 2:14“), `title` = Befehl, Klasse `session-header__status--script` (in `SessionHeader.css` unter `&__status` ein Modifier `&--script { color: var(--color-status-script); }` wie `&--waiting`), `now = useNow(session.awaitedScript !== null)`; sonst wie bisher.
-- [ ] `ProjectHeader.tsx`: dieselbe Weiche für `urgent` (nutzt die Klassen aus `SessionHeader.css`, kein eigenes CSS); `now = useNow(urgent?.awaitedScript != null)`.
-- [ ] `projectMetaLine` hat nur den einen Aufrufer `SidebarProject.tsx` (Stand 2026-10-20) — nach der Signaturänderung Typecheck als Beleg.
-- [ ] `pnpm check` grün.
-- [ ] `docs/code-map.md`: Zeile „Sessions“ um „Anzeige-Status `script` (ADR 032)“ ergänzen.
-- [ ] Commit `feat(sessions): „wartet auf Skript“ mit Sanduhr und laufender Uhr in Sidebar und Kopfzeile`.
+- [x] `StatusIcon.tsx`: `case 'script'` mit Sanduhr-Pfad, Strich 1.4 wie `handoff`: `<path d="M3.5 1.5h5M3.5 10.5h5M4 1.5c0 2.6 4 2.4 4 4.5S4 7.9 4 10.5M8 1.5c0 2.6-4 2.4-4 4.5s4 1.9 4 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />`. `StatusIcon.css`: `&--script { color: var(--color-status-script); }`.
+- [x] `projectStatus.ts`: `'script'` in `URGENCY` direkt hinter `'starting'`; `SHORT_STATUS.script = 'wartet auf Skript'`; `projectMetaLine(sessions, now)` bekommt den Parameter `now: number`; bei einer Session und `status === 'script'` → `scriptLabel(urgent.awaitedScript, now)` (Nicht-null-Wächter statt `!`).
+- [x] `SidebarProject.tsx`: `const now = useNow(urgentStatus === 'script')` und an `projectMetaLine` geben; `isMetaHighlighted` bleibt beim Session-Status (Meta der Script-Zeile erscheint gedämpft wie bei `running`).
+- [x] `SidebarItem.tsx`: bei `status === 'script'` und `session.awaitedScript !== null` hinter dem Namen `<span className="sidebar-item__clock" title={session.awaitedScript.title}>{formatDuration(now - …startedAt)}</span>`, `now = useNow(status === 'script')`. CSS `sidebar-item__clock`: `margin-left: auto`, Schriftgröße und Farbe wie die gedämpfte Meta-Zeile (`var(--color-fg-muted)`), `font-variant-numeric: tabular-nums`.
+- [x] `SessionHeader.tsx`: liegt `session.awaitedScript` vor → `StatusIcon status="script"`, Text `scriptLabel(...)` mit großem Anfangsbuchstaben („Wartet auf Skript · 2:14“), `title` = Befehl, Klasse `session-header__status--script` (in `SessionHeader.css` unter `&__status` ein Modifier `&--script { color: var(--color-status-script); }` wie `&--waiting`), `now = useNow(session.awaitedScript !== null)`; sonst wie bisher.
+- [x] `ProjectHeader.tsx`: dieselbe Weiche für `urgent` (nutzt die Klassen aus `SessionHeader.css`, kein eigenes CSS); `now = useNow(urgent?.awaitedScript != null)`.
+- [x] `projectMetaLine` hat nur den einen Aufrufer `SidebarProject.tsx` (Stand 2026-10-20) — nach der Signaturänderung Typecheck als Beleg.
+- [x] `pnpm check` grün.
+- [x] `docs/code-map.md`: Zeile „Sessions“ um „Anzeige-Status `script` (ADR 032)“ ergänzen.
+- [x] Commit `feat(sessions): „wartet auf Skript“ mit Sanduhr und laufender Uhr in Sidebar und Kopfzeile`.
 
 ## Summary
 
+Abgeschlossene Sessions mit laufendem Hintergrund-Befehl ohne Adresse zeigen „wartet auf Skript“: violette Sanduhr, Uhr des ältesten Befehls in Sidebar-Zeile, vereinfachte Vorhaben-Zeile und beiden Kopfzeilen. Core meldet `awaitedScript` (Phase 1), die Oberfläche leitet daraus den Anzeige-Status `script` ab (Phase 2).
+
 ## Files touched
+
+Core: `sessions/model.rs`, `sessions/registry.rs`, `examples/gen-bindings.rs`. Oberfläche: `styles/theme.css`, `features/sessions/sessionStatus.ts`, `features/projects/projectStatus.ts`, `components/StatusIcon.tsx` + `.css`, `app/SidebarItem.tsx` + `.css`, `app/SidebarProject.tsx`, `app/SessionHeader.tsx` + `.css`, `app/ProjectHeader.tsx`. Doku: ADR 032, Glossar, `code-map.md`.
 
 ## Commits
 
+`6b48ca0` (Core), `d4e2e92` (Oberfläche).
+
 ## Deviations from plan
 
+- Phase 2: Die Kopfzeilen-Weiche steht einmal in `sessionStatus.ts` (`headerStatus`, `headerStatusLabel`) statt doppelt in `SessionHeader` und `ProjectHeader`. In `SidebarProject` wandert die Berechnung von `urgent`/`urgentStatus` aus `renderRow` nach oben, weil `useNow` sonst hinter dem frühen Return der Umbenennen-Zeile läge. Die Uhr in der Sidebar-Zeile steht links vom Ungelesen-Punkt (`.sidebar-item__clock + .sidebar-item__unread` ohne eigenes `margin-left: auto`).
 - Phase 1: `AwaitedScript` zusätzlich in `examples/gen-bindings.rs` eingetragen (Konvention für neue Grenz-Typen); die doppelte `Completed`-Prüfung in `awaited_script` hat Clippy nicht bemängelt und bleibt.
 
 ## Follow-ups
