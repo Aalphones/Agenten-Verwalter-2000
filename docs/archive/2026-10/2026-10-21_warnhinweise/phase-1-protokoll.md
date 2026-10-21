@@ -2,7 +2,7 @@
 
 ## Kontext
 
-Lesen: [README.md](README.md) (Abschnitt „Belegt“, Kontrakt „Neue `AgentEvent`s“), [docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md), [artifacts/beispielzeilen.jsonl](artifacts/beispielzeilen.jsonl) (echte Zeilen vom 2026-10-21).
+Lesen: [README.md](README.md) (Abschnitt „Belegt“, Kontrakt „Neue `AgentEvent`s“), [docs/knowledge/claude-stream-json.md](../../../knowledge/claude-stream-json.md), [artifacts/beispielzeilen.jsonl](artifacts/beispielzeilen.jsonl) (echte Zeilen vom 2026-10-21).
 
 Code-Stellen:
 

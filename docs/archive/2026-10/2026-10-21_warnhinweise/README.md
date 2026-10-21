@@ -13,7 +13,7 @@ Design: [artifacts/warnhinweise-entwurf.html](artifacts/warnhinweise-entwurf.htm
 - **Nur aus dem Code der VS-Code-Erweiterung 2.1.301, nicht gemessen:** `rate_limit_info.status` außer `allowed` (`allowed_warning`, `rejected`); `system`/`model_refusal_fallback` (`original_model`, `fallback_model`, `direction` `retry`/`revert`/`sticky`, `content`); `system`/`informational` (`content`); `compact_metadata.trigger` `auto`. Form eines Eintrags in `permission_denials` aus dem Agent SDK: `tool_name`, `tool_use_id`, `tool_input` — Phase 1 misst ihn.
 - Die Erweiterung rechnet den Cache-Zustand selbst: Anker = Eingang der letzten Antwort des Hauptagenten mit Cache-Angaben, Haltedauer aus `cache_creation`, „kalt“ nach Ablauf oder nach einer Zusammenfassung; neu zu schreiben = `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` dieser Antwort.
 
-Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 003](../../decisions/003-claude-anbindung.md), [ADR 008](../../decisions/008-kontext-und-kontingent.md), [ADR 016](../../decisions/016-betriebsarten-und-lokales-modell.md), [docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md). ADR 033 entsteht in Phase 2.
+Kontext für jeden Umsetzer: [AGENTS.md](../../../../AGENTS.md), [docs/code-map.md](../../../code-map.md), [docs/glossary.md](../../../glossary.md), die Konventionen unter [docs/conventions/](../../../conventions/), [ADR 003](../../../decisions/003-claude-anbindung.md), [ADR 008](../../../decisions/008-kontext-und-kontingent.md), [ADR 016](../../../decisions/016-betriebsarten-und-lokales-modell.md), [docs/knowledge/claude-stream-json.md](../../../knowledge/claude-stream-json.md). ADR 033 entsteht in Phase 2.
 
 ## Phasen
 
@@ -26,11 +26,11 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 5 | Kontingent live (5): Werte aus `rate_limit_event`, Leiste unter der Kopfzeile | [phase-5-kontingent-live.md](phase-5-kontingent-live.md) | standard | complete |
 | 6 | Verlauf Teil 2: Modell-Ausweichen (6), Hinweise und Moduswechsel (7), abgelehnte Aufrufe (8), Kosten (9); Abschluss der Doku | [phase-6-verlauf-weitere.md](phase-6-verlauf-weitere.md) | standard | complete |
 
-**Reihenfolge:** strikt 1 → 6. Nach Phase 4 ist das Paket 1 aus dem Entwurf (Hinweise 1–4) fertig und benutzbar. Umsetzung direkt auf `main`, ein Commit pro Phase, Scope `notices` (Phase 1 trägt ihn in [commits.md](../../conventions/commits.md) nach; Phase 5 committet mit Scope `usage`). Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten. Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Keine automatisierten Tests (Profil des Projekts). Erkenntnisse nach [FINDINGS.md](FINDINGS.md).
+**Reihenfolge:** strikt 1 → 6. Nach Phase 4 ist das Paket 1 aus dem Entwurf (Hinweise 1–4) fertig und benutzbar. Umsetzung direkt auf `main`, ein Commit pro Phase, Scope `notices` (Phase 1 trägt ihn in [commits.md](../../../conventions/commits.md) nach; Phase 5 committet mit Scope `usage`). Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten. Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Keine automatisierten Tests (Profil des Projekts). Erkenntnisse nach [FINDINGS.md](FINDINGS.md).
 
 ## Festgelegte Entscheidungen
 
-Phase 2 schreibt daraus [ADR 033](../../decisions/033-warnhinweise.md) „Warnhinweise“ (Kontext / Optionen / Entscheidung / Konsequenzen); Phasen 3–6 ergänzen ihre Punkte.
+Phase 2 schreibt daraus [ADR 033](../../../decisions/033-warnhinweise.md) „Warnhinweise“ (Kontext / Optionen / Entscheidung / Konsequenzen); Phasen 3–6 ergänzen ihre Punkte.
 
 - **Nur Betriebsart „Claude“.** Cache, Kosten, Kontingent live und Modell-Ausweichen gibt es nur, wenn der laufende Prozess die Claude-Kommandozeile mit dem Claude-Abo ist: `process_mode == OperatingMode::Claude && process_backend.is_none()` (neue Methode `SessionState::is_claude_process`). In „Claude Code + LM Studio“, „Autark“ und „Codex“ bleiben diese Werte leer und die Oberfläche zeigt nichts davon. Zusammenfassung, Hinweise, Moduswechsel und abgelehnte Aufrufe gelten in jeder Betriebsart, die die Zeilen liefert. Verworfen: Cache-Anzeige für LM Studio — dessen Wiederverwendung des Prompt-Anfangs hat keine Haltedauer und kostet nichts.
 - **Der Cache-Zustand wird im Core festgehalten, die Uhr läuft in der Oberfläche.** Der Core speichert je Session einen `PromptCache` (Anker, Haltedauer, Token, Modell, Zeitpunkt einer Zusammenfassung) und schickt ihn in `SessionSummary.prompt_cache`; die Oberfläche rechnet daraus mit der aktuellen Uhrzeit „warm / kalt / neu“ (`promptCacheState`). Verworfen: Zustand im Core mit Zeitgeber — ein Zeitgeber je Session für eine reine Anzeige; verworfen: nur in der Oberfläche — nach einem App-Neustart wäre die Warnung genau dann weg, wenn sie am meisten zählt (Session vom Vortag).
@@ -150,10 +150,27 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Der Verwalter zeigt jetzt neun Hinweise, die die Claude-Kommandozeile liefert oder die er selbst ausrechnet: Cache-Pille, Hinweis vor einer teuren Nachricht und Warnung im Modell-Menü, Zusammenfassung und Modellwechsel im Verlauf, Kontingent live mit roter Leiste, Modell-Ausweichen mit Ersatz-Anzeige, Hinweise von Claude Code, Moduswechsel, abgelehnte Aufrufe und Kosten je Antwort. Alle Hinweise im Verlauf werden gespeichert; der Cache-Zustand steht in der Session-Zeile (Migration 12). Nur die Betriebsart „Claude“ zeigt Cache und Kosten.
+
 ## Files touched
+
+- Core: `src-tauri/src/prompt_cache/`, `src-tauri/src/notices/`, `src-tauri/src/sessions/registry.rs`, `src-tauri/src/agents/event.rs`, `src-tauri/src/agents/claude/` (`protocol.rs`, `translate.rs`), `src-tauri/src/usage/`, `src-tauri/src/db/` (Migration 12).
+- Oberfläche: `src/features/notices/`, `src/features/promptcache/`, `src/features/chat/` (`Composer`, `ChatTimeline`, `SessionHeader`-Anschluss), `src/features/usage/`, `src/lib/labels.ts`, generierte Typen in `src/lib/bindings/`.
+- Doku: ADR 033, Code-Map, Glossar, `docs/knowledge/claude-stream-json.md`, `commits.md` (Scope `notices`).
 
 ## Commits
 
+`c5bec45` Protokoll · `c453e0e` Cache im Core · `2aefde2` Cache-Oberfläche · `fda920f` Zusammenfassung und Modellwechsel · `e559601` Kontingent live · `5f63642` Modell-Ausweichen, Hinweise, Moduswechsel, Antwort-Abschluss.
+
 ## Deviations from plan
 
+- Leiste „Kontingent“ ohne Knopf „Details“ (Phase 5, in den Entscheidungen vermerkt).
+- Phase 6: `Mode::from_cli_value` statt `mode_of_cli`; der Knopf „Mit <Original> weiter“ steht nur, solange das Ersatzmodell gilt; die Liste der abgelehnten Aufrufe klappt über den Zustand der Zeitleiste auf statt über `<details>`.
+- `pnpm check` lief wegen der fremden `codex-probe.cjs` des Nachbarplans nicht als Ganzes, sondern Schritt für Schritt (ESLint nur auf `src`) — alle Schritte grün.
+
 ## Follow-ups
+
+- Smoke-Checkliste oben durch den User, Wackelstellen 1–3 zuerst; Smoke 8 klärt, ob ein über `can_use_tool` abgelehnter Aufruf in `permission_denials` landet (FINDINGS, Phase 6).
+- Fehlt die Ablehnung dort: `system`/`permission_denied` mitlesen und zählen.
+- Zu laute Hinweise von Claude Code: Filter auf `tag`.
+- Release auf Zuruf (Minor-Version, Regel in `docs/conventions/releases.md`).

@@ -2,7 +2,7 @@
 
 ## Kontext
 
-Lesen: [README.md](README.md) (Entscheidungen „Nur Betriebsart Claude“, „Der Cache-Zustand wird im Core festgehalten“, „Gespeichert als JSON“, „Anker“, „Kalt“; Kontrakt `PromptCache`), [ADR 008](../../decisions/008-kontext-und-kontingent.md), [ADR 016](../../decisions/016-betriebsarten-und-lokales-modell.md), [ADR 032](../../decisions/032-wartet-auf-skript.md) (Form eines ADR).
+Lesen: [README.md](README.md) (Entscheidungen „Nur Betriebsart Claude“, „Der Cache-Zustand wird im Core festgehalten“, „Gespeichert als JSON“, „Anker“, „Kalt“; Kontrakt `PromptCache`), [ADR 008](../../../decisions/008-kontext-und-kontingent.md), [ADR 016](../../../decisions/016-betriebsarten-und-lokales-modell.md), [ADR 032](../../../decisions/032-wartet-auf-skript.md) (Form eines ADR).
 
 Code-Stellen:
 

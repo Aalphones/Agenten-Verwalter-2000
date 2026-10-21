@@ -2,7 +2,7 @@
 
 ## Kontext
 
-Lesen: [README.md](README.md) (Abschnitt „Belegt“ zu `rate_limit_event`; Entscheidungen „Kontingent live“, „Leiste ohne Knopf Details“; Kontrakt `RateLimitInfo`, `UsageAlert`; AK 5), Entwurf [artifacts/warnhinweise-entwurf.html](artifacts/warnhinweise-entwurf.html) (Fall „Kontingent knapp“, Markierung 5), [ADR 008](../../decisions/008-kontext-und-kontingent.md).
+Lesen: [README.md](README.md) (Abschnitt „Belegt“ zu `rate_limit_event`; Entscheidungen „Kontingent live“, „Leiste ohne Knopf Details“; Kontrakt `RateLimitInfo`, `UsageAlert`; AK 5), Entwurf [artifacts/warnhinweise-entwurf.html](artifacts/warnhinweise-entwurf.html) (Fall „Kontingent knapp“, Markierung 5), [ADR 008](../../../decisions/008-kontext-und-kontingent.md).
 
 Code-Stellen:
 
@@ -30,7 +30,7 @@ Code-Stellen:
 - [x] `src/features/usage/UsageAlertBar.tsx` + `.css` (BEM `usage-alert-bar`): laut AK 2/3; Schlüssel `${status}:${limitKind ?? ''}:${resetsAt ?? ''}`; `role="status"`; Texte in `usageTexts.ts` (`alertText(alert, now)`, Fensternamen).
 - [x] `App.tsx`: direkt nach `<SessionActionError … />` `{isClaude && <UsageAlertBar />}` (Betriebsart aus `useSettingsStore`).
 - [x] `docs/code-map.md`: Zeile „Kontingent“ um `apply_rate_limit` (Werte aus `rate_limit_event`), `UsageAlertBar`, `useUsageAlert`, `src/stores/usage.ts`.
-- [x] ADR 033: Abschnitt Kontingent live; [ADR 008](../../decisions/008-kontext-und-kontingent.md) bekommt unter „Konsequenzen“ einen Satz mit Verweis auf ADR 033 (Werte kommen zusätzlich live aus den Antworten).
+- [x] ADR 033: Abschnitt Kontingent live; [ADR 008](../../../decisions/008-kontext-und-kontingent.md) bekommt unter „Konsequenzen“ einen Satz mit Verweis auf ADR 033 (Werte kommen zusätzlich live aus den Antworten).
 - [x] `pnpm check` grün; Commit `feat(usage): Kontingent live aus jeder Antwort, Leiste bei Warnung`.
 
 ## Report-Back

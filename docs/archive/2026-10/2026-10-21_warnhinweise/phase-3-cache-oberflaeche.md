@@ -2,7 +2,7 @@
 
 ## Kontext
 
-Lesen: [README.md](README.md) (Entscheidungen „Kalt“, „Schwelle“, „In neuer Session weiter“; AK 1–3), Entwurf [artifacts/warnhinweise-entwurf.html](artifacts/warnhinweise-entwurf.html) (Fälle „Cache warm“, „Cache kalt“, „Modellwechsel“; Markierungen 1, 2, 3) und [artifacts/README.md](artifacts/README.md), [docs/conventions/react.md](../../conventions/react.md), [docs/conventions/tailwind.md](../../conventions/tailwind.md).
+Lesen: [README.md](README.md) (Entscheidungen „Kalt“, „Schwelle“, „In neuer Session weiter“; AK 1–3), Entwurf [artifacts/warnhinweise-entwurf.html](artifacts/warnhinweise-entwurf.html) (Fälle „Cache warm“, „Cache kalt“, „Modellwechsel“; Markierungen 1, 2, 3) und [artifacts/README.md](artifacts/README.md), [docs/conventions/react.md](../../../conventions/react.md), [docs/conventions/tailwind.md](../../../conventions/tailwind.md).
 
 Code-Stellen:
 
