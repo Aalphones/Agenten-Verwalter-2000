@@ -4,6 +4,7 @@ use ts_rs::TS;
 
 use crate::context::model::ContextBreakdown;
 use crate::mcp::model::McpServer;
+use crate::notices::model::Denial;
 use crate::review::model::ReviewComment;
 use crate::skills::model::SkillRef;
 
@@ -245,6 +246,21 @@ pub enum QuestionAnswer {
     },
 }
 
+/// Stand des Kontingents aus `rate_limit_event`; bleibt im Core.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RateLimitInfo {
+    /// `"allowed"`, sonst Warnung oder Sperre — wie geliefert.
+    pub status: String,
+    /// `"five_hour"`, `"seven_day"`, … wie geliefert.
+    pub rate_limit_type: Option<String>,
+    /// Sekunden seit 1970.
+    pub resets_at: Option<i64>,
+    /// Anteil 0–1.
+    pub five_hour: Option<f64>,
+    /// Anteil 0–1.
+    pub seven_day: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TurnEnd {
     Completed,
@@ -297,9 +313,40 @@ pub enum AgentEvent {
         input: serde_json::Value,
     },
     ContextUsed(u32),
+    /// Cache-Angaben einer Zeile des Hauptagenten. `tokens` = input + cache_creation + cache_read;
+    /// `written_5m`/`written_1h` = neu geschriebene Token je Haltedauer (fehlend = 0).
+    CacheUsed {
+        message_id: Option<String>,
+        tokens: u32,
+        written_5m: u32,
+        written_1h: u32,
+    },
+    /// `system/compact_boundary`; ohne `compact_metadata` alles `None`.
+    Compacted {
+        trigger: Option<String>,
+        pre_tokens: Option<u32>,
+        post_tokens: Option<u32>,
+    },
+    /// Text der Zusammenfassung (erste synthetische `user`-Zeile nach `Compacted`).
+    CompactSummary(String),
+    RateLimit(RateLimitInfo),
+    /// Claude hat für eine Antwort auf ein anderes Modell ausweichen müssen.
+    ModelFallback {
+        original_model: String,
+        fallback_model: String,
+        direction: String,
+        text: Option<String>,
+    },
+    /// Allgemeiner Hinweis der Kommandozeile (`system/informational`).
+    Info(String),
+    /// `permissionMode` aus `system/status`, roh.
+    PermissionMode(String),
     TurnEnded {
         end: TurnEnd,
         context_window: Option<u32>,
+        denials: Vec<Denial>,
+        /// Über alle Antworten des Prozesses aufsummiert.
+        total_cost_usd: Option<f64>,
     },
     /// Antwort auf `get_context_usage`.
     ContextBreakdown(ContextBreakdown),

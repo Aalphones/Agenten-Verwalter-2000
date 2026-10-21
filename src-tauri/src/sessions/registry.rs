@@ -2302,7 +2302,16 @@ impl SessionState {
             AgentEvent::TurnEnded {
                 end,
                 context_window,
+                ..
             } => self.end_turn(outbox, end, context_window),
+            // Warnhinweise, Phasen 2–6.
+            AgentEvent::CacheUsed { .. }
+            | AgentEvent::Compacted { .. }
+            | AgentEvent::CompactSummary(_)
+            | AgentEvent::RateLimit(_)
+            | AgentEvent::ModelFallback { .. }
+            | AgentEvent::Info(_)
+            | AgentEvent::PermissionMode(_) => {}
             // Ohne `wake_if_idle`: die Antwort auf eine Abfrage ist keine Arbeit des Agenten.
             AgentEvent::ContextBreakdown(mut breakdown) => {
                 breakdown.fetched_at = now_ms();

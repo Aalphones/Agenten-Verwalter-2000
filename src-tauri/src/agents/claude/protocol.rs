@@ -10,8 +10,9 @@ use serde_json::{Value, json};
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum Incoming {
+    /// Geboxt: `SystemLine` trägt die Felder aller Subtypen und ist mit Abstand die größte Variante.
     #[serde(rename = "system")]
-    System(SystemLine),
+    System(Box<SystemLine>),
     #[serde(rename = "assistant")]
     Assistant(MessageLine<AssistantMessage>),
     #[serde(rename = "user")]
@@ -22,6 +23,8 @@ pub enum Incoming {
     Result(ResultLine),
     #[serde(rename = "control_response")]
     ControlResponse(ControlResponseLine),
+    #[serde(rename = "rate_limit_event")]
+    RateLimitEvent(RateLimitLine),
     #[serde(other)]
     Other,
 }
@@ -53,11 +56,69 @@ pub struct SystemLine {
     pub output_file: Option<String>,
     #[serde(default, deserialize_with = "lenient")]
     pub usage: Option<TaskUsage>,
+    /// Ab hier: `compact_boundary`, `status`, `informational` und `model_refusal_fallback`.
+    #[serde(default, deserialize_with = "lenient")]
+    pub compact_metadata: Option<CompactMetadata>,
+    #[serde(default, deserialize_with = "lenient", rename = "permissionMode")]
+    pub permission_mode: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub content: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub original_model: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub fallback_model: Option<String>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub direction: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct TaskUsage {
     pub tool_uses: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CompactMetadata {
+    #[serde(default)]
+    pub trigger: Option<String>,
+    #[serde(default)]
+    pub pre_tokens: Option<u32>,
+    #[serde(default)]
+    pub post_tokens: Option<u32>,
+}
+
+/// Kommt nach jeder Antwort, auch ohne Warnung (`status: "allowed"`).
+#[derive(Debug, Deserialize)]
+pub struct RateLimitLine {
+    #[serde(default, deserialize_with = "lenient")]
+    pub rate_limit_info: Option<RateLimitInfoLine>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RateLimitInfoLine {
+    #[serde(default, deserialize_with = "lenient")]
+    pub status: Option<String>,
+    #[serde(default, deserialize_with = "lenient", rename = "rateLimitType")]
+    pub rate_limit_type: Option<String>,
+    /// Sekunden seit 1970.
+    #[serde(default, deserialize_with = "lenient", rename = "resetsAt")]
+    pub resets_at: Option<i64>,
+    #[serde(default, deserialize_with = "lenient", rename = "unifiedWindows")]
+    pub unified_windows: Option<UnifiedWindows>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnifiedWindows {
+    #[serde(default, deserialize_with = "lenient")]
+    pub five_hour: Option<WindowLine>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub seven_day: Option<WindowLine>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WindowLine {
+    /// Anteil 0–1.
+    #[serde(default, deserialize_with = "lenient")]
+    pub utilization: Option<f64>,
 }
 
 /// Ein Feld, dessen Wert nicht zum erwarteten Typ passt, wird `None`.
@@ -78,10 +139,16 @@ pub struct MessageLine<M> {
     /// An `user`-Zeilen mit Werkzeug-Ergebnis: Zusatzangaben der Kommandozeile, z.B. `resolvedModel`
     /// beim Werkzeug `Agent`. Mal Objekt, mal String — deshalb roh.
     pub tool_use_result: Option<Value>,
+    /// Von der Kommandozeile selbst erzeugte `user`-Zeile, z.B. die Zusammenfassung nach `compact_boundary`.
+    #[serde(rename = "isSynthetic", default)]
+    pub is_synthetic: bool,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct AssistantMessage {
+    /// Eine Antwort kommt in mehreren `assistant`-Zeilen mit derselben `id`.
+    #[serde(default, deserialize_with = "lenient")]
+    pub id: Option<String>,
     pub content: Vec<ContentBlock>,
     pub usage: Option<Usage>,
 }
@@ -127,6 +194,17 @@ pub struct Usage {
     pub input_tokens: Option<u64>,
     pub cache_creation_input_tokens: Option<u64>,
     pub cache_read_input_tokens: Option<u64>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub cache_creation: Option<CacheCreation>,
+}
+
+/// Neu geschriebene Cache-Token nach Haltedauer.
+#[derive(Debug, Deserialize)]
+pub struct CacheCreation {
+    #[serde(default)]
+    pub ephemeral_5m_input_tokens: Option<u64>,
+    #[serde(default)]
+    pub ephemeral_1h_input_tokens: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -168,6 +246,20 @@ pub struct ResultLine {
     pub result: Option<String>,
     #[serde(rename = "modelUsage")]
     pub model_usage: Option<HashMap<String, ModelUsage>>,
+    /// Über alle Antworten des Prozesses aufsummiert, nicht je Antwort.
+    #[serde(default, deserialize_with = "lenient")]
+    pub total_cost_usd: Option<f64>,
+    /// Abgelehnte Werkzeugaufrufe dieser Antwort — von Regeln wie vom User.
+    #[serde(default, deserialize_with = "lenient")]
+    pub permission_denials: Option<Vec<PermissionDenialLine>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PermissionDenialLine {
+    #[serde(default)]
+    pub tool_name: Option<String>,
+    #[serde(default)]
+    pub tool_input: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]

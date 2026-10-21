@@ -19,7 +19,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Protokoll: neue Felder und Zeilen lesen, neue `AgentEvent`s, Messung der abgelehnten Aufrufe | [phase-1-protokoll.md](phase-1-protokoll.md) | standard | pending |
+| 1 | Protokoll: neue Felder und Zeilen lesen, neue `AgentEvent`s, Messung der abgelehnten Aufrufe | [phase-1-protokoll.md](phase-1-protokoll.md) | standard | complete |
 | 2 | Prompt-Cache im Core: Zustand je Session, Speichern (Migration 12), in `SessionSummary`; ADR 033 | [phase-2-cache-core.md](phase-2-cache-core.md) | heikel | pending |
 | 3 | Cache in der Oberfläche: Pille in der Kopfzeile (1), Hinweis in der Eingabeleiste (2), Hinweis im Modell-Menü (3) | [phase-3-cache-oberflaeche.md](phase-3-cache-oberflaeche.md) | standard | pending |
 | 4 | Verlauf Teil 1: Eintragsart „Hinweis“, Zusammenfassung (4), Modellwechsel-Zeile (3) | [phase-4-verlauf-zusammenfassung.md](phase-4-verlauf-zusammenfassung.md) | standard | pending |

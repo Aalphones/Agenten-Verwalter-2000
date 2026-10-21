@@ -52,14 +52,28 @@ Belegt am 2026-09-28 mit Claude Code 2.1.220. Der Agent startet im Session-Works
 |---|---|
 | `system` / `init` | Nach jedem Start und vor jeder Antwort. Felder u.a. `session_id`, `cwd`, `model`, `permissionMode`, `tools`, `slash_commands`, `skills`, `agents`, `claude_code_version`, `scratchpad_path` (siehe „Scratchpad“). |
 | `system` / `thinking_tokens` | Laufender Zähler, solange das Modell nachdenkt. Viele Zeilen, kein Inhalt. |
-| `system` / `status` | Z.B. nach Moduswechsel, Feld `permissionMode`. |
+| `system` / `status` | Z.B. nach Moduswechsel, Feld `permissionMode`. Während einer Zusammenfassung `status: "compacting"`, danach `status: null` mit `compact_result: "success"`. |
+| `system` / `compact_boundary` | Grenze einer Zusammenfassung, mit `compact_metadata` (`trigger`, `pre_tokens`, `post_tokens`); siehe „Cache, Kontingent, Zusammenfassung, Kosten“. |
+| `system` / `permission_denied` | Ein Werkzeugaufruf wurde abgelehnt: `tool_name`, `tool_use_id`, `message`. Kommt vor dem `tool_result` mit `is_error`. |
+| `system` / `informational` | Allgemeiner Hinweis, Feld `content` (nur aus dem Code der VS-Code-Erweiterung 2.1.301, nicht gemessen). |
+| `system` / `model_refusal_fallback` | Claude weicht auf ein anderes Modell aus: `original_model`, `fallback_model`, `direction` (`retry`, `revert`, `sticky`), `content` (nur aus dem Code der VS-Code-Erweiterung 2.1.301, nicht gemessen). |
 | `system` / `background_tasks_changed`, `task_started`, `task_progress`, `task_updated`, `task_notification` | Hintergrundprozesse (`task_type: "local_bash"`) und Subagenten (`task_type: "local_agent"`), Felder siehe „Hintergrundprozesse und Subagenten“. |
-| `rate_limit_event` | Kontingent-Information. |
+| `rate_limit_event` | Kontingent nach jeder Antwort: `rate_limit_info` mit `status`, `rateLimitType`, `resetsAt`, `unifiedWindows.five_hour.utilization`, `unifiedWindows.seven_day.utilization`, `overageStatus`. |
 | `assistant` | Eine Zeile pro Inhaltsblock: `message.content` ist ein Array mit genau einem Block `thinking` (Feld `thinking`), `text` (Feld `text`) oder `tool_use` (`id`, `name`, `input`). `message.usage` trägt `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`. `parent_tool_use_id` ist bei Nachrichten eines Subagenten gesetzt, sonst `null`. |
 | `user` | Werkzeug-Ergebnisse: `message.content` = Array mit `tool_result` (`tool_use_id`, `content`, `is_error`). Oder Text-Inhalt als String (lokale Befehlsausgabe) bzw. `[{"type":"text","text":"[Request interrupted by user]"}]` nach einer Unterbrechung. |
 | `control_request` / `can_use_tool` | Der Agent will ein Werkzeug benutzen und fragt nach: `request.tool_name`, `request.input`, `request.tool_use_id`, `request_id`. Kommt auch für `AskUserQuestion`. |
 | `control_response` | Antwort auf eine eigene Steueranfrage. |
 | `result` | Ende einer Antwort. `subtype` `success` bzw. `error_during_execution`, `is_error`, `stop_reason`, `terminal_reason` (`completed`, nach Unterbrechung `aborted_streaming`), `result` (Text), `modelUsage.<modell>.contextWindow` (z.B. 200000), `usage`, `total_cost_usd`, `permission_denials`. |
+
+## Cache, Kontingent, Zusammenfassung, Kosten
+
+Gemessen am 2026-10-21 mit Claude Code 2.1.293, `-p --input-format stream-json --output-format stream-json --verbose --model claude-sonnet-5-5` (Grundlage für [ADR 033](../decisions/033-warnhinweise.md); Beispielzeilen im Plan „Warnhinweise“ unter `artifacts/beispielzeilen.jsonl`).
+
+- **Cache:** jede `assistant`-Zeile trägt `message.id` (eine Antwort kommt in mehreren Zeilen mit derselben `id`) und `message.usage.cache_creation` mit `ephemeral_5m_input_tokens` und `ephemeral_1h_input_tokens`. Gemessen war nur `ephemeral_1h_input_tokens` > 0, die Kommandozeile schreibt also mit 1 Stunde Haltedauer. Grundlast einer frischen Session: rund 64 000 Token (17 509 geschrieben + 46 720 gelesen).
+- **Kontingent:** `rate_limit_event` kommt nach jeder Antwort. Gemessen nur `status: "allowed"`, `rateLimitType: "five_hour"`, `resetsAt` in Sekunden seit 1970, `unifiedWindows.five_hour.utilization` und `unifiedWindows.seven_day.utilization` als Anteil 0–1 (gemessen 0.51 und 0.28). Nur aus dem Code der VS-Code-Erweiterung 2.1.301, nicht gemessen: `status` `allowed_warning` und `rejected`.
+- **Kosten:** `result.total_cost_usd` ist **über den Prozess aufsummiert**, nicht je Antwort: zwei Antworten in einem Prozess meldeten 0.0794 und 0.159.
+- **Zusammenfassung (`/compact` als Nachricht):** `system`/`status` mit `status: "compacting"`, danach `status: null` mit `compact_result: "success"`, dann `system`/`compact_boundary` mit `compact_metadata` (`trigger: "manual"`, `pre_tokens: 64301`, `post_tokens: 3888`), danach eine `user`-Zeile mit `isSynthetic: true`, deren Text-Inhalt die Zusammenfassung ist (beginnt mit „This session is being continued from a previous conversation“), dann eine `user`-Zeile `<local-command-stdout>Compacted </local-command-stdout>` und `result` mit `num_turns: 0`. Nur aus dem Code der Erweiterung: `trigger: "auto"` bei der automatischen Zusammenfassung. Der Agent „Autark“ schickt `compact_boundary` ohne `compact_metadata`.
+- **Abgelehnte Aufrufe:** gemessen mit `--model claude-haiku-5-5 --strict-mcp-config --permission-mode default` ohne `--permission-prompt-tool` (dann lehnt die Kommandozeile jede Rechte-Abfrage selbst ab) und dem Auftrag, mit `Write` eine Datei anzulegen. Es kommen `system`/`permission_denied` (`tool_name`, `tool_use_id`, `message`), das `tool_result` mit `is_error: true` und demselben Text, und in `result` steht `permission_denials` als Liste mit je `tool_name`, `tool_use_id` und `tool_input` (der vollständigen Eingabe des Werkzeugs, hier `file_path` und `content`). Ob die Liste auch Aufrufe enthält, die der User über `can_use_tool` mit `deny` beantwortet hat, ist nicht gemessen.
 
 ## Rückfragen und Rechte-Abfragen beantworten
 

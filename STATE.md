@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Phase:** —
-**Nächster Schritt:** Smoke „Wartet auf Skript“ durch den User (Plan unter `docs/archive/2026-10/2026-10-20_wartet-auf-skript.md`, Wackelstellen 1–3 zuerst). Daneben offen: Smoke „Codex“ (README unter `docs/archive/2026-10/2026-10-19_codex/`, Wackelstellen 1–3 zuerst, Release auf Zuruf), „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
+**Aktiver Plan:** `docs/planning/2026-10-21_warnhinweise/`
+**Phase:** 2/6 — Prompt-Cache im Core (pending; Phase 1 complete)
+**Nächster Schritt:** Phase 2 starten (`phase-2-cache-core.md`, Rating heikel → `/model opusplan`); FINDINGS-Einträge „→ Phase 2“ lesen. Daneben offen: Smoke „Wartet auf Skript“, „Codex“, „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -24,7 +24,7 @@
 13. ~~Browser-Zugriff~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_browser-zugriff.md`, ADR 030, Migration 10), Smoke offen, Release auf Zuruf.
 14. ~~Codex als Betriebsart~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_codex/`, ADR 031, Migration 11), Smoke offen, Release auf Zuruf (Minor-Version).
 15. ~~Wartet auf Skript~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-20_wartet-auf-skript.md`, ADR 032), Smoke offen, Release auf Zuruf.
-16. **Warnhinweise** — freigegeben am 2026-10-21, geparkt (`docs/planning/2026-10-21_warnhinweise/`, 6 Phasen, ADR 033 und Migration 12 reserviert); Start mit `/implement`.
+16. **Warnhinweise** — in Umsetzung (`docs/planning/2026-10-21_warnhinweise/`, 6 Phasen, ADR 033 und Migration 12 reserviert); Phase 1 committet.
 
 ## Offen
 

@@ -5,14 +5,16 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde_json::{Map, Value};
 
 use super::protocol::{
-    AssistantMessage, ContentBlock, ControlRequestLine, ControlResponseLine, Incoming, MessageLine,
-    ModelUsage, ResultLine, SystemLine, Usage, UserContent, UserMessage,
+    AssistantMessage, CacheCreation, ContentBlock, ControlRequestLine, ControlResponseLine,
+    Incoming, MessageLine, ModelUsage, PermissionDenialLine, RateLimitLine, ResultLine, SystemLine,
+    Usage, UserContent, UserMessage, WindowLine,
 };
 use super::{mcp, stats};
 use crate::agents::event::{
-    AgentEvent, Question, QuestionKind, QuestionOption, TaskEnd, TaskKind, TodoItem, TodoState,
-    TurnEnd,
+    AgentEvent, Question, QuestionKind, QuestionOption, RateLimitInfo, TaskEnd, TaskKind, TodoItem,
+    TodoState, TurnEnd,
 };
+use crate::notices::model::Denial;
 
 const ASK_USER_TOOL: &str = "AskUserQuestion";
 const TODO_TOOL: &str = "TodoWrite";
@@ -59,6 +61,8 @@ pub struct Translator {
     /// Vordergrund) nach `tool_use_id` → Eingang in ms; ihr Ergebnis schließt das Zeitfenster für
     /// die Commit-Suche (ADR 014).
     git_calls: HashMap<String, f64>,
+    /// Nach `compact_boundary`: die nächste synthetische `user`-Zeile ist die Zusammenfassung.
+    awaiting_compact_summary: bool,
 }
 
 #[derive(Debug)]
@@ -73,12 +77,13 @@ impl Translator {
             return vec![AgentEvent::Unknown(line.to_owned())];
         };
         match incoming {
-            Incoming::System(system) => self.handle_system(system),
+            Incoming::System(system) => self.handle_system(*system),
             Incoming::Assistant(assistant) => self.handle_assistant(assistant),
             Incoming::User(user) => self.handle_user(user),
             Incoming::ControlRequest(request) => handle_control_request(request, line),
             Incoming::Result(result) => vec![turn_ended(result)],
             Incoming::ControlResponse(line) => control_answered(line),
+            Incoming::RateLimitEvent(line) => rate_limit(line).into_iter().collect(),
             Incoming::Other => Vec::new(),
         }
     }
@@ -101,6 +106,22 @@ impl Translator {
             "task_started" => self.task_started(system),
             "task_progress" => task_progress(system).into_iter().collect(),
             "task_notification" => task_ended(system).into_iter().collect(),
+            "compact_boundary" => {
+                self.awaiting_compact_summary = true;
+                vec![compacted(system)]
+            }
+            "status" => system
+                .permission_mode
+                .map(AgentEvent::PermissionMode)
+                .into_iter()
+                .collect(),
+            "informational" => system
+                .content
+                .filter(|content: &String| !content.trim().is_empty())
+                .map(AgentEvent::Info)
+                .into_iter()
+                .collect(),
+            "model_refusal_fallback" => model_fallback(system).into_iter().collect(),
             _ => Vec::new(),
         }
     }
@@ -164,6 +185,7 @@ impl Translator {
         let mut events: Vec<AgentEvent> = Vec::new();
         if let Some(usage) = line.message.usage {
             events.push(AgentEvent::ContextUsed(context_used(&usage)));
+            events.extend(cache_used(line.message.id, &usage));
         }
         for block in line.message.content {
             let command_started = self.remember_bash(&block);
@@ -240,6 +262,14 @@ impl Translator {
 
     /// Werkzeug-Ergebnisse des Hauptagenten; die eines Subagenten zeigt nur dessen Schrittliste.
     fn handle_user(&mut self, line: MessageLine<UserMessage>) -> Vec<AgentEvent> {
+        if self.awaiting_compact_summary
+            && line.is_synthetic
+            && line.parent_tool_use_id.is_none()
+            && let UserContent::Text(text) = &line.message.content
+        {
+            self.awaiting_compact_summary = false;
+            return vec![AgentEvent::CompactSummary(text.clone())];
+        }
         let resolved_model: Option<String> = line
             .tool_use_result
             .as_ref()
@@ -351,6 +381,72 @@ fn context_used(usage: &Usage) -> u32 {
         + usage.cache_creation_input_tokens.unwrap_or(0)
         + usage.cache_read_input_tokens.unwrap_or(0);
     u32::try_from(total).unwrap_or(u32::MAX)
+}
+
+/// Nur wenn die Antwort den Cache gelesen oder geschrieben hat.
+fn cache_used(message_id: Option<String>, usage: &Usage) -> Option<AgentEvent> {
+    let cached =
+        usage.cache_creation_input_tokens.unwrap_or(0) + usage.cache_read_input_tokens.unwrap_or(0);
+    if cached == 0 {
+        return None;
+    }
+    let creation = usage.cache_creation.as_ref();
+    let written = |tokens: Option<u64>| u32::try_from(tokens.unwrap_or(0)).unwrap_or(u32::MAX);
+    Some(AgentEvent::CacheUsed {
+        message_id,
+        tokens: context_used(usage),
+        written_5m: written(
+            creation.and_then(|cache: &CacheCreation| cache.ephemeral_5m_input_tokens),
+        ),
+        written_1h: written(
+            creation.and_then(|cache: &CacheCreation| cache.ephemeral_1h_input_tokens),
+        ),
+    })
+}
+
+/// Der Agent „Autark“ schickt `compact_boundary` ohne `compact_metadata`.
+fn compacted(system: SystemLine) -> AgentEvent {
+    let Some(metadata) = system.compact_metadata else {
+        return AgentEvent::Compacted {
+            trigger: None,
+            pre_tokens: None,
+            post_tokens: None,
+        };
+    };
+    AgentEvent::Compacted {
+        trigger: metadata.trigger,
+        pre_tokens: metadata.pre_tokens,
+        post_tokens: metadata.post_tokens,
+    }
+}
+
+fn model_fallback(system: SystemLine) -> Option<AgentEvent> {
+    Some(AgentEvent::ModelFallback {
+        original_model: system.original_model?,
+        fallback_model: system.fallback_model?,
+        direction: system.direction.unwrap_or_default(),
+        text: system.content,
+    })
+}
+
+fn rate_limit(line: RateLimitLine) -> Option<AgentEvent> {
+    let info = line.rate_limit_info?;
+    let utilization =
+        |window: Option<WindowLine>| window.and_then(|line: WindowLine| line.utilization);
+    let (five_hour, seven_day) = match info.unified_windows {
+        Some(windows) => (
+            utilization(windows.five_hour),
+            utilization(windows.seven_day),
+        ),
+        None => (None, None),
+    };
+    Some(AgentEvent::RateLimit(RateLimitInfo {
+        status: info.status?,
+        rate_limit_type: info.rate_limit_type,
+        resets_at: info.resets_at,
+        five_hour,
+        seven_day,
+    }))
 }
 
 fn translate_tool_use(id: String, name: String, input: &Value) -> Option<AgentEvent> {
@@ -627,9 +723,26 @@ fn turn_ended(result: ResultLine) -> AgentEvent {
     } else {
         TurnEnd::Completed
     };
+    let denials = result
+        .permission_denials
+        .unwrap_or_default()
+        .into_iter()
+        .map(denial)
+        .collect();
     AgentEvent::TurnEnded {
         end,
         context_window,
+        denials,
+        total_cost_usd: result.total_cost_usd,
+    }
+}
+
+fn denial(line: PermissionDenialLine) -> Denial {
+    let tool = line.tool_name.unwrap_or_default();
+    let input = line.tool_input.unwrap_or_else(|| Value::Object(Map::new()));
+    Denial {
+        target: target_of(&tool, &input),
+        tool,
     }
 }
 

@@ -17,6 +17,7 @@ pub mod filesystem;
 pub mod git;
 pub mod lmstudio;
 pub mod mcp;
+pub mod notices;
 pub mod processes;
 pub mod projects;
 pub mod repositories;
