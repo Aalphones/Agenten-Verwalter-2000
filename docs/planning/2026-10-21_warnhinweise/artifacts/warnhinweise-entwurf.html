@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warnhinweise im Verwalter</title>
+<style>
+/* Layout: Steuerleiste · App-Attrappe im eigenen Scrollrahmen · Legende nach den drei Orten Kopfzeile, Eingabeleiste, Verlauf.
+   Farben = semantische Tokens aus src/styles/theme.css, Schrift = Segoe/Cascadia wie die App. */
+:root {
+  --page: #e7e7ea; --bg-base: #ffffff; --bg-sidebar: #f8f8f8; --bg-surface: #ffffff; --bg-popover: #ffffff;
+  --bg-hover: #f0f0f0; --bg-selected: #e4e6f1; --border-subtle: #e5e5e5; --border: #cecece;
+  --fg: #3c3c3c; --fg2: #555555; --muted: #6e6e6e;
+  --accent: #c4572f; --on-accent: #ffffff; --accent-subtle: rgb(196 87 47 / 0.10); --accent-text: #a8461f;
+  --running: #2563eb; --running-subtle: rgb(37 99 235 / 0.08);
+  --waiting: #a86a00; --waiting-subtle: rgb(168 106 0 / 0.09);
+  --error: #d23b33; --error-subtle: #fdeceb;
+  --ok: #16803c; --ok-subtle: rgb(22 128 60 / 0.09);
+  --cold: #3d6fa8; --cold-subtle: rgb(61 111 168 / 0.09);
+  --shadow: 0 10px 30px rgb(0 0 0 / 0.14);
+  --sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0f0f11; --bg-base: #1f1f1f; --bg-sidebar: #181818; --bg-surface: #252526; --bg-popover: #252526;
+    --bg-hover: #2e2e30; --bg-selected: #37373d; --border-subtle: #2b2b2b; --border: #3c3c3c;
+    --fg: #d4d4d4; --fg2: #b0b0b0; --muted: #8f8f8f;
+    --accent: #e0825c; --on-accent: #1d130e; --accent-subtle: rgb(224 130 92 / 0.16); --accent-text: #eea283;
+    --running: #5b9dff; --running-subtle: rgb(91 157 255 / 0.12);
+    --waiting: #f2b33d; --waiting-subtle: rgb(242 179 61 / 0.11);
+    --error: #f47067; --error-subtle: rgb(244 112 103 / 0.11);
+    --ok: #4cc38a; --ok-subtle: rgb(76 195 138 / 0.11);
+    --cold: #8ab8ea; --cold-subtle: rgb(138 184 234 / 0.11);
+    --shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0f0f11; --bg-base: #1f1f1f; --bg-sidebar: #181818; --bg-surface: #252526; --bg-popover: #252526;
+  --bg-hover: #2e2e30; --bg-selected: #37373d; --border-subtle: #2b2b2b; --border: #3c3c3c;
+  --fg: #d4d4d4; --fg2: #b0b0b0; --muted: #8f8f8f;
+  --accent: #e0825c; --on-accent: #1d130e; --accent-subtle: rgb(224 130 92 / 0.16); --accent-text: #eea283;
+  --running: #5b9dff; --running-subtle: rgb(91 157 255 / 0.12);
+  --waiting: #f2b33d; --waiting-subtle: rgb(242 179 61 / 0.11);
+  --error: #f47067; --error-subtle: rgb(244 112 103 / 0.11);
+  --ok: #4cc38a; --ok-subtle: rgb(76 195 138 / 0.11);
+  --cold: #8ab8ea; --cold-subtle: rgb(138 184 234 / 0.11);
+  --shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; padding-inline: 16px; padding-block: 0 48px; font: 13px/1.45 var(--sans); background: var(--page); color: var(--fg); }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+svg { display: block; flex: none; }
+.mono { font-family: var(--mono); font-size: 12px; }
+[hidden] { display: none !important; }
+
+/* ---------- Kopf der Entwurfsseite ---------- */
+.intro { max-width: 1200px; margin: 0 auto; padding-block: 28px 14px; display: grid; gap: 6px; }
+.intro .eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); font-weight: 600; }
+.intro h1 { margin: 0; font: 600 26px/1.15 var(--display); text-wrap: balance; }
+.intro p { margin: 0; max-width: 68ch; color: var(--fg2); }
+.rule { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 8px; font-size: 12.5px; }
+.rule span { display: inline-flex; align-items: center; gap: 7px; }
+.rule i { font-style: normal; width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--bg-base); border: 1px solid var(--border); font-size: 11px; color: var(--fg2); }
+.rule b { font-weight: 600; }
+
+.ctl { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-base); box-shadow: var(--shadow); font-size: 12px; color: var(--fg2); }
+.ctl .grp { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.seg button { padding: 3px 10px; color: var(--fg2); }
+.seg button + button { border-left: 1px solid var(--border-subtle); }
+.seg button:hover { background: var(--bg-hover); color: var(--fg); }
+.seg button.on { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- Markierungen „neu“ ---------- */
+.mk { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: 600 10.5px/1 var(--sans); font-variant-numeric: tabular-nums; flex: none; }
+.new { outline: 1px dashed var(--accent); outline-offset: 2px; }
+body.nomarks .mk { display: none; }
+body.nomarks .new { outline: none; }
+
+/* ---------- App-Attrappe ---------- */
+.frame { max-width: 1200px; margin: 14px auto 0; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+.app { min-width: 1080px; height: 720px; display: grid; grid-template-columns: 240px minmax(0, 1fr); background: var(--bg-base); position: relative; }
+
+.sidebar { background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; font-size: 12.5px; padding-bottom: 10px; }
+.sb-head { height: 48px; display: flex; align-items: center; padding: 0 14px; font-weight: 600; }
+.sb-new { margin: 0 10px 10px; height: 30px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+.sb-new .k { margin-left: auto; font: 11px var(--mono); color: var(--muted); }
+.sb-p { display: flex; align-items: center; gap: 8px; padding: 5px 14px; font-weight: 600; }
+.sb-p .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.sb-s { display: flex; align-items: center; gap: 8px; margin: 1px 10px 1px 30px; padding: 4px 8px; border-radius: 6px; color: var(--fg2); }
+.sb-s.sel { background: var(--bg-selected); color: var(--fg); }
+.sb-s .n { color: var(--muted); font-size: 11px; }
+.sb-foot { margin-top: auto; padding: 8px 14px 0; color: var(--muted); font-size: 12px; display: flex; gap: 14px; }
+
+.main { display: grid; grid-template-rows: 48px auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; position: relative; }
+.hdr { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 12px 0 22px; border-bottom: 1px solid var(--border-subtle); }
+.hdr-l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.crumb, .hnum { color: var(--muted); white-space: nowrap; }
+.hname { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.status { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; color: var(--ok); background: var(--ok-subtle); white-space: nowrap; }
+.tabs { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg-sidebar); border: 1px solid var(--border-subtle); }
+.tab { padding: 4px 14px; border-radius: 6px; color: var(--fg2); }
+.tab.on { background: var(--bg-selected); color: var(--fg); font-weight: 600; }
+.hdr-r { display: flex; justify-content: flex-end; align-items: center; gap: 10px; white-space: nowrap; color: var(--fg2); font-size: 12px; }
+.bgbtn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+.donut { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(var(--fg2) 0 var(--p, 71%), var(--border) var(--p, 71%) 100%); -webkit-mask: radial-gradient(circle, transparent 5px, #000 6px); mask: radial-gradient(circle, transparent 5px, #000 6px); }
+.usage { display: inline-flex; align-items: center; gap: 6px; font: 11.5px var(--mono); color: var(--waiting); padding: 3px 6px; border-radius: 6px; }
+.usage .bar { width: 24px; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.usage .bar i { display: block; height: 100%; width: var(--u, 64%); background: currentColor; }
+.usage.hot { color: var(--error); background: var(--error-subtle); }
+
+/* Cache-Pille (1) */
+.cache { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 7px; border-radius: 999px; font-size: 11.5px; white-space: nowrap; }
+.cache:hover { filter: brightness(1.06); }
+.cache.warm { color: var(--ok); background: var(--ok-subtle); }
+.cache.cold { color: var(--cold); background: var(--cold-subtle); }
+.cache.fresh { color: var(--muted); background: var(--bg-hover); }
+.cache .ring { width: 12px; height: 12px; border-radius: 50%; background: conic-gradient(currentColor 0 var(--left, 68%), transparent var(--left, 68%) 100%); box-shadow: inset 0 0 0 1.5px currentColor; }
+.cache b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Leiste unter der Kopfzeile (5) */
+.banner { display: flex; align-items: center; gap: 10px; padding: 7px 22px; font-size: 12.5px; background: var(--error-subtle); color: var(--fg); border-bottom: 1px solid var(--border-subtle); }
+.banner svg { color: var(--error); }
+.banner .sp { flex: 1; }
+.banner .lnk { color: var(--fg2); font-size: 12px; }
+.banner .lnk:hover { color: var(--fg); }
+
+/* Verlauf */
+.chat { overflow: auto; padding: 22px 32px 10px; }
+.col { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.umsg { align-self: flex-end; max-width: 70%; padding: 8px 12px; border-radius: 10px; background: var(--bg-selected); }
+.tool { display: flex; gap: 8px; font: 12px var(--mono); color: var(--muted); }
+.tool b { font: 600 12px var(--sans); color: var(--fg2); }
+.amsg { color: var(--fg); max-width: 68ch; }
+.amsg code { font: 12px var(--mono); padding: 1px 4px; border-radius: 4px; background: var(--bg-hover); }
+
+.tl { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--fg2); padding: 6px 10px; border-radius: 7px; }
+.tl svg { margin-top: 2px; }
+.tl .txt { min-width: 0; flex: 1; }
+.tl .txt b { color: var(--fg); font-weight: 600; }
+.tl .act { flex: none; font-size: 12px; color: var(--accent-text); white-space: nowrap; }
+.tl .act:hover { text-decoration: underline; }
+.tl.info { background: var(--bg-sidebar); }
+.tl.warn { background: var(--waiting-subtle); }
+.tl.warn svg { color: var(--waiting); }
+.tl.model svg { color: var(--cold); }
+
+.divider { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); margin: 6px 0; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.divider .mid { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-base); white-space: nowrap; }
+.divider .mid b { color: var(--fg); font-weight: 600; }
+.divider .mid button { color: var(--accent-text); }
+
+.turnend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 11.5px; color: var(--muted); }
+.turnend details { position: relative; }
+.turnend summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; color: var(--waiting); }
+.turnend summary::-webkit-details-marker { display: none; }
+.turnend details ul { margin: 6px 0 0; padding: 8px 10px 8px 26px; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--bg-sidebar); color: var(--fg2); font-size: 12px; display: grid; gap: 4px; }
+.turnend details li span { color: var(--muted); }
+
+/* Eingabeleiste */
+.cwrap { padding: 8px 32px 16px; }
+.composer { max-width: 760px; margin: 0 auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-surface); position: relative; }
+.chint { display: flex; align-items: flex-start; gap: 9px; padding: 9px 12px; border-bottom: 1px solid var(--border-subtle); background: var(--cold-subtle); border-radius: 10px 10px 0 0; font-size: 12.5px; color: var(--fg2); }
+.chint svg { color: var(--cold); margin-top: 2px; }
+.chint .txt { flex: 1; min-width: 0; }
+.chint .txt b { color: var(--fg); font-weight: 600; }
+.chint .ghost { flex: none; height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: var(--bg-base); white-space: nowrap; }
+.chint .ghost:hover { background: var(--bg-hover); }
+.cinput { padding: 12px 12px 6px; color: var(--muted); min-height: 46px; }
+.cbar { display: flex; align-items: center; gap: 6px; padding: 4px 8px 8px; font-size: 12px; color: var(--fg2); }
+.cbtn { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: 6px; white-space: nowrap; }
+.cbtn:hover { background: var(--bg-hover); color: var(--fg); }
+.cbtn .eff { color: var(--muted); }
+.cbtn.fallback { color: var(--waiting); }
+.cbar .sp { flex: 1; }
+.send { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }
+
+/* Popover */
+.pop { position: absolute; z-index: 20; background: var(--bg-popover); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; font-size: 12.5px; }
+.pop .it { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 6px; text-align: left; }
+.pop .it:hover { background: var(--bg-hover); }
+.pop .it .sub { margin-left: auto; font-size: 11px; color: var(--muted); }
+.pop .it .chk { width: 14px; color: var(--accent); }
+.pop .warnbox { margin: 6px 2px 2px; padding: 8px 10px; border-radius: 7px; background: var(--cold-subtle); color: var(--fg2); font-size: 12px; display: flex; gap: 8px; }
+.pop .warnbox svg { color: var(--cold); margin-top: 2px; }
+.pop .warnbox b { color: var(--fg); font-weight: 600; }
+.modelpop { width: 330px; left: 8px; bottom: calc(100% + 6px); }
+.cachepop { width: 300px; right: 150px; top: 44px; padding: 12px 14px; }
+.cachepop h4 { margin: 0 0 8px; font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+.cachepop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12px; }
+.cachepop dt { color: var(--muted); }
+.cachepop dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.cachepop p { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--border-subtle); font-size: 11.5px; color: var(--muted); }
+
+/* ---------- Legende ---------- */
+.legend { max-width: 1200px; margin: 30px auto 0; display: grid; gap: 14px; }
+.legend > h2 { margin: 0; font: 600 18px/1.2 var(--display); }
+.legend > p { margin: 0; max-width: 72ch; color: var(--fg2); }
+.places { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .places { grid-template-columns: minmax(0, 1fr); } }
+.place { background: var(--bg-base); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.place > header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border-subtle); }
+.place > header h3 { margin: 0; font: 600 14px/1.2 var(--display); }
+.place > header p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+.item { padding: 12px 14px; display: grid; gap: 6px; }
+.item + .item { border-top: 1px solid var(--border-subtle); }
+.item .ttl { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.item .ttl .mk { outline: none; }
+body.nomarks .item .mk { display: inline-grid; }
+.item p { margin: 0; color: var(--fg2); font-size: 12.5px; }
+.item .row { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 2px 10px; font-size: 12px; }
+.item .row dt { color: var(--muted); }
+.item .row dd { margin: 0; color: var(--fg2); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--fg2); white-space: nowrap; }
+.tag.p1 { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.tag.later { color: var(--muted); }
+.tag.edge { border-style: dashed; color: var(--waiting); border-color: var(--waiting); }
+.tag.src-ok { color: var(--ok); border-color: currentColor; }
+.tag.src-own { color: var(--running); border-color: currentColor; }
+.tag.src-probe { color: var(--waiting); border-color: currentColor; }
+.jump { justify-self: start; font-size: 12px; color: var(--accent-text); }
+.jump:hover { text-decoration: underline; }
+
+.nots { background: var(--bg-base); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.nots h3 { margin: 0; font: 600 14px/1.2 var(--display); }
+.nots ul { margin: 0; padding-left: 18px; color: var(--fg2); display: grid; gap: 3px; }
+.foot { max-width: 1200px; margin: 18px auto 0; font-size: 11.5px; color: var(--muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .flash { animation: flash 1.2s var(--ease, ease-out) 1; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 0 var(--accent); } 40% { box-shadow: 0 0 0 4px var(--accent-subtle); } 100% { box-shadow: 0 0 0 0 transparent; } }
+}
+</style>
+</head>
+<body>
+
+<section class="intro">
+  <span class="eyebrow">Entwurf · Agenten Verwalter 2000</span>
+  <h1>Warnhinweise: wo sie stehen und wie sie aussehen</h1>
+  <p>Neun Hinweise, die Claude Code heute schon liefert oder die der Verwalter selbst ausrechnen kann. Jeder bekommt genau einen Ort. Die Regel dafür ist kurz:</p>
+  <div class="rule">
+    <span><i>▭</i><b>Kopfzeile</b> zeigt einen Zustand, der gerade gilt.</span>
+    <span><i>✎</i><b>Eingabeleiste</b> warnt vor den Folgen deiner nächsten Nachricht.</span>
+    <span><i>≡</i><b>Verlauf</b> hält fest, was passiert ist.</span>
+  </div>
+</section>
+
+<div class="ctl" role="toolbar" aria-label="Entwurf steuern">
+  <span class="grp">Fall
+    <span class="seg" id="ctlScene">
+      <button data-v="all" class="on">Alle auf einmal</button>
+      <button data-v="warm">Cache warm</button>
+      <button data-v="cold">Cache kalt</button>
+      <button data-v="model">Modellwechsel</button>
+      <button data-v="compact">Zusammenfassung</button>
+      <button data-v="limit">Kontingent knapp</button>
+      <button data-v="fallback">Modell-Ausweichen</button>
+      <button data-v="more">Weitere Hinweise</button>
+    </span>
+  </span>
+  <span class="grp">Farbschema
+    <span class="seg" id="ctlTheme"><button data-v="system" class="on">System</button><button data-v="light">hell</button><button data-v="dark">dunkel</button></span>
+  </span>
+  <span class="grp">Neues markieren
+    <span class="seg" id="ctlMarks"><button data-v="on" class="on">an</button><button data-v="off">aus</button></span>
+  </span>
+</div>
+
+<div class="frame">
+<div class="app">
+  <aside class="sidebar" aria-label="Sidebar (unverändert)">
+    <div class="sb-head">Agenten Verwalter 2000</div>
+    <div class="sb-new">+ Neues Vorhaben <span class="k">Ctrl N</span></div>
+    <div class="sb-p"><span class="dot"></span>V2000 Warnhinweise</div>
+    <div class="sb-s"><span class="n">#1</span>Meldungen der Kommandozeile …</div>
+    <div class="sb-s sel"><span class="n">#2</span>Cache-Anzeige bauen</div>
+    <div class="sb-p"><span class="dot"></span>V2000 Wartet auf Skript</div>
+    <div class="sb-p"><span class="dot"></span>Homechat</div>
+    <div class="sb-p"><span class="dot"></span>Photofant</div>
+    <div class="sb-foot"><span>Archiv</span><span>Einstellungen</span></div>
+  </aside>
+
+  <section class="main">
+    <header class="hdr">
+      <div class="hdr-l">
+        <span class="crumb">V2000 Warnhinweise ›</span><span class="hnum">#2</span>
+        <span class="hname">Cache-Anzeige bauen</span>
+        <span class="status">✓ Bereit</span>
+      </div>
+      <nav class="tabs"><span class="tab on">Chat</span><span class="tab">Changes</span><span class="tab">Artefakte</span></nav>
+      <div class="hdr-r">
+        <span class="bgbtn">▣ Hintergrund</span>
+        <span class="mk" data-n="1">1</span>
+        <button class="cache warm new" data-show="warm model fallback more limit" id="pillWarm" aria-haspopup="dialog" title="Prompt-Cache warm, noch 41 Minuten">
+          <span class="ring" style="--left:68%"></span>Cache <b>41 min</b>
+        </button>
+        <button class="cache cold new" data-show="all cold" id="pillCold" aria-haspopup="dialog" title="Prompt-Cache abgelaufen">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5M6.2 2.6 8 4l1.8-1.4M6.2 13.4 8 12l1.8 1.4"/></svg>Cache <b>kalt</b>
+        </button>
+        <button class="cache fresh new" data-show="compact" id="pillFresh" aria-haspopup="dialog" title="Verlauf wurde zusammengefasst, der Cache wird mit der nächsten Nachricht neu aufgebaut">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13.5 8A5.5 5.5 0 1 1 11.6 3.8M13.5 2v3.5H10"/></svg>Cache <b>neu</b>
+        </button>
+        <span class="donut" id="donut" title="Kontext"></span>
+        <span class="mk" data-n="5">5</span>
+        <span class="usage new" id="usage" title="Kontingent des Abos">⚠ <span class="bar"><i></i></span> <span id="usageVal">64 %</span></span>
+      </div>
+    </header>
+
+    <div class="banner new" data-show="all limit" role="status">
+      <span class="mk">5</span>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.8 15 14H1z"/><path d="M8 6.2v3.6M8 11.7v.4" stroke-linecap="round"/></svg>
+      <span><b>Kontingent fast aufgebraucht:</b> 92 % des 5-Stunden-Fensters. Es setzt sich um 18:40 Uhr zurück.</span>
+      <span class="sp"></span>
+      <button class="lnk">Details</button>
+      <button class="lnk">Ausblenden</button>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="col">
+        <div class="umsg">Zeig in der Kopfzeile an, wann der Cache abläuft.</div>
+        <div class="tool"><b>Read</b> src-tauri/src/agents/claude/protocol.rs</div>
+        <div class="tool"><b>Edit</b> src-tauri/src/agents/claude/translate.rs</div>
+
+        <div class="tl info new" data-show="all more">
+          <span class="mk">7</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6.3"/><path d="M8 7.2v4M8 4.8v.4" stroke-linecap="round"/></svg>
+          <span class="txt"><b>Hinweis von Claude Code:</b> hier steht der Text, den die Kommandozeile als Hinweis schickt. <span style="color:var(--muted)">(Platzhalter, der echte Wortlaut kommt von Claude Code)</span></span>
+        </div>
+
+        <div class="amsg">Die Cache-Dauer steht in jeder Antwort mit. Ich lese sie in <code>protocol.rs</code> zusätzlich aus und rechne den Ablauf in der Oberfläche aus, ohne neue Anfrage an Claude.</div>
+
+        <div class="turnend new" data-show="all more">
+          <span class="mk">8</span>
+          <details>
+            <summary><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.2"/><path d="M3.6 12.4l8.8-8.8"/></svg>2 Aufrufe von Regeln blockiert ▸</summary>
+            <ul>
+              <li><b>Bash</b> git push origin main <span>· abgelehnt durch eine Regel in settings.json</span></li>
+              <li><b>WebFetch</b> registry.npmjs.org <span>· nicht freigegeben</span></li>
+            </ul>
+          </details>
+          <span class="mk">9</span>
+          <span class="new" title="Rechenwert der Kommandozeile, beim Abo kein echter Betrag">≈ 0,42 $ Rechenwert</span>
+        </div>
+
+        <div class="tl info new" data-show="all more">
+          <span class="mk">7</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="7" width="11" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>
+          <span class="txt"><b>Modus geändert:</b> von Auto auf Manuell. Claude fragt ab jetzt vor jeder Änderung nach.</span>
+        </div>
+
+        <div class="divider new" data-show="all compact">
+          <span class="mid"><span class="mk">4</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3l3.5 3.5M13 3 9.5 6.5M3 13l3.5-3.5M13 13 9.5 9.5"/></svg>
+            <b>Verlauf zusammengefasst</b> · automatisch bei 167k von 200k Token · Cache wird neu aufgebaut · <button>Zusammenfassung ansehen</button>
+          </span>
+        </div>
+
+        <div class="tl model new" data-show="all model">
+          <span class="mk">3</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 5.5h10l-2.5-2.5M13.5 10.5h-10l2.5 2.5"/></svg>
+          <span class="txt"><b>Modell gewechselt:</b> Sonnet 5.5 → Opus 5.5. Die nächste Antwort hat den Cache neu geschrieben, rund 142k Token.</span>
+        </div>
+
+        <div class="tl warn new" data-show="all fallback">
+          <span class="mk">6</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.6 13.5 3.6v4.2c0 3.2-2.4 5.5-5.5 6.6-3.1-1.1-5.5-3.4-5.5-6.6V3.6z"/><path d="M8 5.5v3M8 10.6v.3" stroke-linecap="round"/></svg>
+          <span class="txt"><b>Sicherheitsfilter hat deine letzte Nachricht markiert.</b> Claude antwortet ab hier mit Sonnet 5.5 statt Opus 5.5.</span>
+          <button class="act">Mit Opus 5.5 weiter</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cwrap">
+      <div class="composer" id="composer">
+        <div class="chint new" data-show="all cold" role="status">
+          <span class="mk">2</span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5M6.2 2.6 8 4l1.8-1.4M6.2 13.4 8 12l1.8 1.4"/></svg>
+          <span class="txt"><b>1 h 12 min Pause, der Cache ist abgelaufen.</b> Deine nächste Nachricht schreibt rund 142k Token neu in den Cache, statt sie günstig daraus zu lesen.</span>
+          <button class="ghost">In neuer Session weiter</button>
+        </div>
+        <div class="cinput">Nachricht an Claude …</div>
+        <div class="cbar">
+          <span class="cbtn" title="Anhang">＋</span>
+          <span class="mk" data-n="3">3</span>
+          <button class="cbtn new" id="modelBtn" aria-haspopup="menu" aria-expanded="false">
+            <span id="modelLabel">Opus 5.5</span><span class="eff">· hoch</span>
+          </button>
+          <span class="cbtn">Auto</span>
+          <span class="sp"></span>
+          <span class="cbtn" title="Diktieren">🎙</span>
+          <span class="send" aria-label="Senden">↑</span>
+        </div>
+
+        <div class="pop modelpop" id="modelPop" role="menu" hidden>
+          <button class="it" role="menuitem"><span class="chk"></span>Fable 5.1<span class="sub">Planung</span></button>
+          <button class="it" role="menuitem"><span class="chk">✓</span>Opus 5.5<span class="sub">aktuell</span></button>
+          <button class="it" role="menuitem"><span class="chk"></span>Sonnet 5.5</button>
+          <button class="it" role="menuitem"><span class="chk"></span>Haiku 5.5</button>
+          <div class="warnbox new">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5"/></svg>
+            <span><b>Der Cache gilt nur für Opus 5.5</b> und hält noch 41 min. Mit einem anderen Modell schreibt die nächste Nachricht rund 142k Token neu.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pop cachepop" id="cachePop" role="dialog" aria-label="Prompt-Cache" hidden>
+      <h4 id="cpTitle">Prompt-Cache</h4>
+      <dl id="cpRows"></dl>
+      <p>Jede Antwort setzt die Uhr zurück. Ein Modellwechsel oder das Zusammenfassen des Verlaufs macht den Cache sofort kalt.</p>
+    </div>
+  </section>
+</div>
+</div>
+
+<section class="legend" aria-labelledby="legendTitle">
+  <h2 id="legendTitle">Was wo erscheint</h2>
+  <p>Die Nummern entsprechen den Markierungen oben. „Paket 1“ ist der Vorschlag für den ersten Plan, der Rest folgt später. Die Herkunft sagt, wie sicher die Meldung bei uns ankommt.</p>
+
+  <div class="places">
+    <article class="place">
+      <header><h3>Kopfzeile</h3><p>Zustand, der gerade gilt. Ein Blick, kein Lesen.</p></header>
+      <div class="item">
+        <div class="ttl"><span class="mk">1</span>Cache-Anzeige</div>
+        <p>Pille neben dem Kontext-Donut. Grün mit Restzeit, solange der Cache warm ist; blau mit Schneeflocke, wenn er abgelaufen ist; grau „neu“ nach einer Zusammenfassung. Ein Klick zeigt gecachte Token, Haltedauer und die letzte Antwort.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Jede Antwort von Claude, danach läuft die Uhr im Verwalter</dd></dl>
+        <div class="tags"><span class="tag p1">Paket 1</span><span class="tag src-ok">Tokenzahlen gemessen</span><span class="tag src-probe">Haltedauer: Probe offen</span></div>
+        <button class="jump" data-go="cold">Im Entwurf zeigen</button>
+      </div>
+      <div class="item">
+        <div class="ttl"><span class="mk">5</span>Kontingent, live</div>
+        <p>Die bestehende Anzeige springt sofort auf den neuen Wert, statt auf die nächste Abfrage zu warten. Meldet Claude eine Warnung oder die Überschreitung, erscheint eine schmale Leiste unter der Kopfzeile. Sie lässt sich ausblenden.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Kontingent-Meldung von Claude während einer Antwort</dd></dl>
+        <div class="tags"><span class="tag later">später</span><span class="tag src-ok">Meldung gemessen</span><span class="tag src-probe">Felder: Probe offen</span></div>
+        <button class="jump" data-go="limit">Im Entwurf zeigen</button>
+      </div>
+    </article>
+
+    <article class="place">
+      <header><h3>Eingabeleiste</h3><p>Folgen deiner nächsten Nachricht, bevor du sie abschickst.</p></header>
+      <div class="item">
+        <div class="ttl"><span class="mk">2</span>Cache abgelaufen</div>
+        <p>Eine Zeile über dem Eingabefeld: wie lange die Pause war und wie viele Token neu geschrieben werden. Daneben der Knopf, mit dem du stattdessen in einer frischen Session weitermachst. Verschwindet nach dem Senden.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Cache abgelaufen und Kontext groß, Schwelle festzulegen</dd></dl>
+        <div class="tags"><span class="tag p1">Paket 1</span><span class="tag src-own">rechnet der Verwalter</span></div>
+        <button class="jump" data-go="cold">Im Entwurf zeigen</button>
+      </div>
+      <div class="item">
+        <div class="ttl"><span class="mk">3</span>Modellwechsel</div>
+        <p>Im Modell-Menü steht unter der Liste, dass der Cache nur für das aktuelle Modell gilt und wie viel ein Wechsel neu schreibt. Nach dem Wechsel hält eine Zeile im Verlauf ihn fest.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Modell-Menü öffnen, solange der Cache warm ist</dd></dl>
+        <div class="tags"><span class="tag p1">Paket 1</span><span class="tag src-own">weiß der Verwalter selbst</span></div>
+        <button class="jump" data-go="model">Im Entwurf zeigen</button>
+      </div>
+    </article>
+
+    <article class="place">
+      <header><h3>Verlauf</h3><p>Was passiert ist, an der Stelle, an der es passiert ist.</p></header>
+      <div class="item">
+        <div class="ttl"><span class="mk">4</span>Verlauf zusammengefasst</div>
+        <p>Trennlinie quer durch den Verlauf mit dem Tokenstand vorher. Die Zusammenfassung lässt sich aufklappen. Gleichzeitig fällt der Kontext-Donut und die Cache-Pille zeigt „neu“.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Claude fasst den Verlauf automatisch zusammen</dd></dl>
+        <div class="tags"><span class="tag p1">Paket 1</span><span class="tag src-probe">aus VS-Code-Erweiterung, Probe offen</span></div>
+        <button class="jump" data-go="compact">Im Entwurf zeigen</button>
+      </div>
+      <div class="item">
+        <div class="ttl"><span class="mk">6</span>Modell-Ausweichen</div>
+        <p>Gelbe Zeile: der Sicherheitsfilter hat eine Nachricht markiert und Claude ist auf ein anderes Modell gewechselt. Der Modell-Knopf zeigt das Ersatzmodell, ein Knopf führt zurück.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Ausweich-Meldung von Claude</dd></dl>
+        <div class="tags"><span class="tag later">später</span><span class="tag src-probe">aus VS-Code-Erweiterung, Probe offen</span></div>
+        <button class="jump" data-go="fallback">Im Entwurf zeigen</button>
+      </div>
+      <div class="item">
+        <div class="ttl"><span class="mk">7</span>Hinweise und Moduswechsel</div>
+        <p>Graue Zeilen für allgemeine Hinweise von Claude Code und für einen Wechsel des Modus, den du nicht selbst ausgelöst hast.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Hinweis- bzw. Status-Meldung von Claude</dd></dl>
+        <div class="tags"><span class="tag later">später</span><span class="tag src-ok">Modus gemessen</span><span class="tag src-probe">Hinweise: Probe offen</span></div>
+        <button class="jump" data-go="more">Im Entwurf zeigen</button>
+      </div>
+      <div class="item">
+        <div class="ttl"><span class="mk">8</span>Blockierte Aufrufe</div>
+        <p>Am Ende einer Antwort, aufklappbar: welche Werkzeugaufrufe eine Regel abgelehnt hat und welche Regel das war.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Liste im Abschluss jeder Antwort</dd></dl>
+        <div class="tags"><span class="tag later">später</span><span class="tag src-ok">Feld dokumentiert</span></div>
+        <button class="jump" data-go="more">Im Entwurf zeigen</button>
+      </div>
+      <div class="item">
+        <div class="ttl"><span class="mk">9</span>Kosten je Antwort</div>
+        <p>Grauer Betrag am Ende einer Antwort. Beim Abo ist das ein Rechenwert der Kommandozeile, kein echter Betrag; deshalb nur als Grenzfall.</p>
+        <dl class="row"><dt>Auslöser</dt><dd>Abschluss jeder Antwort</dd></dl>
+        <div class="tags"><span class="tag edge">Grenzfall, deine Entscheidung</span><span class="tag src-ok">Feld dokumentiert</span></div>
+        <button class="jump" data-go="more">Im Entwurf zeigen</button>
+      </div>
+    </article>
+  </div>
+
+  <div class="nots">
+    <h3>Bewusst nicht</h3>
+    <ul>
+      <li>Keine Pop-ups und keine Toasts: ein Hinweis, der von selbst verschwindet, ist weg, wenn du zurückkommst.</li>
+      <li>Die Sidebar bleibt ruhig. Ob der Cache einer Session warm ist, zählt erst, wenn du in ihr weiterschreibst.</li>
+      <li>Nichts blinkt oder pulsiert, auch nicht bei knappem Kontingent.</li>
+      <li>Kein Countdown in Sekunden. Die Pille zählt in Minuten, das reicht für die Entscheidung „jetzt weiter oder später“.</li>
+    </ul>
+  </div>
+</section>
+
+<p class="foot">Zahlen im Entwurf sind Beispiele. Die Rechenweise des Caches folgt der VS-Code-Erweiterung von Claude Code (Version 2.1.301): Haltedauer 5 Minuten oder 1 Stunde aus der letzten Antwort, Restzeit ab ihrem Eingang.</p>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var scene = 'all';
+
+  var CACHE = {
+    warm:  { title: 'Prompt-Cache warm', rows: [['Zustand', 'warm, noch 41 min'], ['Gecacht', '142 100 Token'], ['Haltedauer', '1 Stunde (laut letzter Antwort)'], ['Letzte Antwort', '16:21 Uhr'], ['Modell', 'Opus 5.5']] },
+    cold:  { title: 'Prompt-Cache abgelaufen', rows: [['Zustand', 'kalt seit 17:21 Uhr'], ['Pause', '1 h 12 min'], ['Neu zu schreiben', 'rund 142 100 Token'], ['Haltedauer', '1 Stunde (laut letzter Antwort)'], ['Modell', 'Opus 5.5']] },
+    fresh: { title: 'Cache nach Zusammenfassung', rows: [['Zustand', 'wird neu aufgebaut'], ['Kontext jetzt', 'rund 31 000 Token'], ['Vorher', '167 000 Token'], ['Modell', 'Opus 5.5']] }
+  };
+
+  function setSeg(id, value) {
+    document.querySelectorAll('#' + id + ' button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === value); });
+  }
+
+  function closePops() {
+    document.getElementById('cachePop').hidden = true;
+    document.getElementById('modelPop').hidden = true;
+    document.getElementById('modelBtn').setAttribute('aria-expanded', 'false');
+  }
+
+  function render() {
+    document.querySelectorAll('[data-show]').forEach(function (el) {
+      el.hidden = el.dataset.show.split(' ').indexOf(scene) === -1;
+    });
+    var limit = scene === 'all' || scene === 'limit';
+    var usage = document.getElementById('usage');
+    usage.classList.toggle('hot', limit);
+    usage.style.setProperty('--u', limit ? '92%' : '64%');
+    document.getElementById('usageVal').textContent = limit ? '92 %' : '64 %';
+    document.getElementById('donut').style.setProperty('--p', scene === 'compact' ? '16%' : '71%');
+    var fallback = scene === 'all' || scene === 'fallback';
+    var modelBtn = document.getElementById('modelBtn');
+    modelBtn.classList.toggle('fallback', fallback);
+    document.getElementById('modelLabel').textContent = fallback ? 'Sonnet 5.5 · Ersatz' : 'Opus 5.5';
+    closePops();
+    if (scene === 'model') {
+      document.getElementById('modelPop').hidden = false;
+      modelBtn.setAttribute('aria-expanded', 'true');
+    }
+    if (scene === 'more') {
+      var d = document.querySelector('.turnend details');
+      if (d) d.open = true;
+    }
+  }
+
+  function openCache(kind) {
+    var pop = document.getElementById('cachePop');
+    var data = CACHE[kind];
+    document.getElementById('cpTitle').textContent = data.title;
+    var dl = document.getElementById('cpRows');
+    dl.textContent = '';
+    data.rows.forEach(function (r) {
+      var dt = document.createElement('dt'); dt.textContent = r[0];
+      var dd = document.createElement('dd'); dd.textContent = r[1];
+      dl.appendChild(dt); dl.appendChild(dd);
+    });
+    document.getElementById('modelPop').hidden = true;
+    pop.hidden = !pop.hidden || pop.dataset.kind !== kind ? false : true;
+    pop.dataset.kind = kind;
+  }
+
+  document.getElementById('ctlScene').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    scene = b.dataset.v; setSeg('ctlScene', scene); render();
+  });
+  document.getElementById('ctlTheme').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.v === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', b.dataset.v);
+    setSeg('ctlTheme', b.dataset.v);
+  });
+  document.getElementById('ctlMarks').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    document.body.classList.toggle('nomarks', b.dataset.v === 'off');
+    setSeg('ctlMarks', b.dataset.v);
+  });
+  document.getElementById('pillWarm').addEventListener('click', function (e) { e.stopPropagation(); openCache('warm'); });
+  document.getElementById('pillCold').addEventListener('click', function (e) { e.stopPropagation(); openCache('cold'); });
+  document.getElementById('pillFresh').addEventListener('click', function (e) { e.stopPropagation(); openCache('fresh'); });
+  document.getElementById('modelBtn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var pop = document.getElementById('modelPop');
+    document.getElementById('cachePop').hidden = true;
+    pop.hidden = !pop.hidden;
+    this.setAttribute('aria-expanded', String(!pop.hidden));
+  });
+  document.querySelectorAll('.pop').forEach(function (p) { p.addEventListener('click', function (e) { e.stopPropagation(); }); });
+  document.addEventListener('click', closePopsOutside);
+  function closePopsOutside() { if (scene !== 'model') closePops(); else document.getElementById('cachePop').hidden = true; }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePops(); });
+
+  document.querySelectorAll('.jump').forEach(function (b) {
+    b.addEventListener('click', function () {
+      scene = b.dataset.go; setSeg('ctlScene', scene); render();
+      var frame = document.querySelector('.frame');
+      frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      frame.classList.remove('flash'); void frame.offsetWidth; frame.classList.add('flash');
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
