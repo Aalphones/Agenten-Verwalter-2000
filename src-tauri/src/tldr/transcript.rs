@@ -83,7 +83,8 @@ pub(crate) fn entry_block(entry: &ChatEntry) -> Option<Block> {
         ChatEntry::Thinking { .. }
         | ChatEntry::Tool { .. }
         | ChatEntry::Todos { .. }
-        | ChatEntry::Artifact { .. } => {
+        | ChatEntry::Artifact { .. }
+        | ChatEntry::Notice { .. } => {
             return None;
         }
     };

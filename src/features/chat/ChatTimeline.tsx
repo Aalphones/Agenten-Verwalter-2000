@@ -10,6 +10,7 @@ import { HandoffButton } from '@/features/chat/HandoffButton';
 import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
+import { NoticeBlock } from '@/features/notices/NoticeBlock';
 import {
   digitQuestionIndex,
   emptyDraft,
@@ -37,6 +38,7 @@ import { commandErrorText } from '@/lib/errors';
 import { useArtifactsStore } from '@/stores/artifacts';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { useSessionsStore } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import './ChatTimeline.css';
 
 const ESTIMATED_BLOCK_HEIGHT = 40;
@@ -95,6 +97,9 @@ export function ChatTimeline({
     () => new Map<string, QuestionDraft>(),
   );
   const [sendingIds, setSendingIds] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const isClaude: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
+  );
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -354,6 +359,17 @@ export function ChatTimeline({
             onSubmit={(answer: QuestionAnswer): void => {
               submit(entry, answer);
             }}
+          />
+        );
+      case 'notice':
+        return (
+          <NoticeBlock
+            notice={entry.notice}
+            isExpanded={expandedKeys.has(key)}
+            onToggle={(): void => {
+              toggleExpanded(key);
+            }}
+            isClaude={isClaude}
           />
         );
       case 'error':

@@ -32,6 +32,7 @@ use verwalter_lib::{
         McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer, McpServerStatus,
         SessionMcp,
     },
+    notices::model::{Denial, Notice},
     projects::model::{ProjectCreated, ProjectSummary},
     prompt_cache::model::PromptCache,
     repositories::model::{KnownRepository, RepositoryKind},
@@ -69,6 +70,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     SkillKind::export_all(&cfg)?;
     SkillInfo::export_all(&cfg)?;
     SkillRef::export_all(&cfg)?;
+    Denial::export_all(&cfg)?;
+    Notice::export_all(&cfg)?;
     ChatEntry::export_all(&cfg)?;
     QuestionAnswer::export_all(&cfg)?;
     SessionStatus::export_all(&cfg)?;

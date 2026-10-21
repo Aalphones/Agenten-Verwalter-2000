@@ -23,22 +23,31 @@ Code-Stellen:
 
 ## Checkliste
 
-- [ ] `notices/model.rs`: `Notice` mit den Varianten `Compacted { trigger: Option<String>, pre_tokens: Option<u32>, post_tokens: Option<u32>, summary: Option<String> }` und `ModelSwitched { from: ModelId, to: ModelId, recache_tokens: u32 }`; `#[derive(Debug, Clone, Serialize, Deserialize, TS)] #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]`. Die übrigen Varianten kommen in Phase 6 (sonst meldet Clippy nie gebaute Varianten).
-- [ ] `agents/event.rs`: `ChatEntry::Notice { seq: u32, notice: Notice }` (Doc-Kommentar „Hinweis im Verlauf, ADR 033“), Zweig in `seq()`.
-- [ ] Jeder vom Compiler gemeldete `match`: `ChatEntry::Notice { .. }` wie `ChatEntry::Artifact { .. }` behandeln (nicht durchsuchbar, nicht im TL;DR-/Retro-Text).
-- [ ] `SessionState`: `compact_seq: Option<u32>` (nur Speicher).
-- [ ] `apply_event`, Zweig `Compacted { trigger, pre_tokens, post_tokens }`: zusätzlich zum Cache-Teil aus Phase 2 `self.compact_seq = Some(self.push_entry(outbox, |seq| ChatEntry::Notice { seq, notice: Notice::Compacted { trigger, pre_tokens, post_tokens, summary: None } }))`. Zweig `CompactSummary(text)`: `if let Some(seq) = self.compact_seq.take()` und der Eintrag an `seq` ist `Notice::Compacted` → Kopie mit `summary: Some(text)` über `replace_entry`.
-- [ ] `set_model`: das bisherige Modell vor der Zuweisung merken (`let previous = state.model;`); **nach** dem Codex-Rücksprung: `if previous != model && state.is_claude_process() && let Some(cache) = &state.prompt_cache` → `push_entry` mit `Notice::ModelSwitched { from: previous, to: model, recache_tokens: cache.tokens }`.
-- [ ] `gen-bindings.rs`: `Notice`, `Denial` exportieren; `pnpm bindings`.
-- [ ] Oberfläche `src/features/notices/`:
+- [x] `notices/model.rs`: `Notice` mit den Varianten `Compacted { trigger: Option<String>, pre_tokens: Option<u32>, post_tokens: Option<u32>, summary: Option<String> }` und `ModelSwitched { from: ModelId, to: ModelId, recache_tokens: u32 }`; `#[derive(Debug, Clone, Serialize, Deserialize, TS)] #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]`. Die übrigen Varianten kommen in Phase 6 (sonst meldet Clippy nie gebaute Varianten).
+- [x] `agents/event.rs`: `ChatEntry::Notice { seq: u32, notice: Notice }` (Doc-Kommentar „Hinweis im Verlauf, ADR 033“), Zweig in `seq()`.
+- [x] Jeder vom Compiler gemeldete `match`: `ChatEntry::Notice { .. }` wie `ChatEntry::Artifact { .. }` behandeln (nicht durchsuchbar, nicht im TL;DR-/Retro-Text).
+- [x] `SessionState`: `compact_seq: Option<u32>` (nur Speicher).
+- [x] `apply_event`, Zweig `Compacted { trigger, pre_tokens, post_tokens }`: zusätzlich zum Cache-Teil aus Phase 2 `self.compact_seq = Some(self.push_entry(outbox, |seq| ChatEntry::Notice { seq, notice: Notice::Compacted { trigger, pre_tokens, post_tokens, summary: None } }))`. Zweig `CompactSummary(text)`: `if let Some(seq) = self.compact_seq.take()` und der Eintrag an `seq` ist `Notice::Compacted` → Kopie mit `summary: Some(text)` über `replace_entry`.
+- [x] `set_model`: das bisherige Modell vor der Zuweisung merken (`let previous = state.model;`); **nach** dem Codex-Rücksprung: `if previous != model && state.is_claude_process() && let Some(cache) = &state.prompt_cache` → `push_entry` mit `Notice::ModelSwitched { from: previous, to: model, recache_tokens: cache.tokens }`.
+- [x] `gen-bindings.rs`: `Notice`, `Denial` exportieren; `pnpm bindings`.
+- [x] Oberfläche `src/features/notices/`:
   - `NoticeBlock.tsx` — Props `notice: Notice`, `isExpanded: boolean`, `onToggle: () => void`, `isClaude: boolean`; `switch (notice.kind)` → `CompactDivider` bzw. `NoticeLine`.
   - `NoticeLine.tsx` + `.css` (BEM `notice-line`, Modifikatoren `--info`, `--warn`, `--model`): Symbol-Slot 14 px, Text mit fettem Anfang (`lead`) und Rest (`text`), optional `action?: { label: string; onClick: () => void }` rechts in `--color-accent-text`. Schrift 12.5 px `--color-fg-secondary`, Innenabstand 6 px 10 px, Radius 7 px; `--info` Hintergrund `--color-bg-sidebar`, `--warn` `color-mix(in srgb, var(--color-status-waiting) 10%, transparent)` mit Symbol in `--color-status-waiting`, `--model` ohne Hintergrund mit Symbol in `--color-cache-cold`.
   - `CompactDivider.tsx` + `.css` (BEM `compact-divider`) laut AK 2/3; Texte: `trigger === 'manual'` → „von Hand“, `'auto'` → „automatisch“, sonst weglassen; Token über `formatThousands`. „· Cache wird neu aufgebaut“ nur bei `isClaude`.
   - `noticeTexts.ts` — alle festen Sätze dieser Phase als Konstanten bzw. kleine Funktionen.
-- [ ] `ChatTimeline.tsx` `renderEntry`: `case 'notice':` → `<NoticeBlock notice={entry.notice} isExpanded={expandedKeys.has(key)} onToggle={() => toggleExpanded(key)} isClaude={…} />` (`isClaude` aus `useSettingsStore`, Betriebsart `'claude'`).
-- [ ] `docs/code-map.md`: Feature `notices` in die Liste; Tabellenzeile „Hinweise im Verlauf“ (Oberfläche `src/features/notices/`, Anschluss `ChatTimeline`; Core `src-tauri/src/notices/`, `ChatEntry::Notice`, Zweige in `apply_event`, `set_model`).
-- [ ] `docs/glossary.md`: „**Hinweis (Verlauf)** — Zeile im Chat-Verlauf, die festhält, was Claude oder der Verwalter getan hat, ohne Nachricht zu sein: Zusammenfassung, Modellwechsel, Modell-Ausweichen, Moduswechsel, Hinweis von Claude Code, Abschluss einer Antwort. Im Code `ChatEntry::Notice` ([ADR 033](decisions/033-warnhinweise.md)).“ und „**Zusammenfassung (Verlauf)** — Claude ersetzt den bisherigen Verlauf durch eine Kurzfassung, von Hand (`/compact`) oder automatisch kurz vor vollem Kontext; danach kennt der Agent Einzelheiten nur noch aus der Kurzfassung. Nicht zu verwechseln mit dem TL;DR.“
-- [ ] ADR 033: Abschnitt Hinweis-Einträge.
-- [ ] `pnpm check` grün; Commit `feat(notices): Zusammenfassung und Modellwechsel im Verlauf`.
+- [x] `ChatTimeline.tsx` `renderEntry`: `case 'notice':` → `<NoticeBlock notice={entry.notice} isExpanded={expandedKeys.has(key)} onToggle={() => toggleExpanded(key)} isClaude={…} />` (`isClaude` aus `useSettingsStore`, Betriebsart `'claude'`).
+- [x] `docs/code-map.md`: Feature `notices` in die Liste; Tabellenzeile „Hinweise im Verlauf“ (Oberfläche `src/features/notices/`, Anschluss `ChatTimeline`; Core `src-tauri/src/notices/`, `ChatEntry::Notice`, Zweige in `apply_event`, `set_model`).
+- [x] `docs/glossary.md`: „**Hinweis (Verlauf)** — Zeile im Chat-Verlauf, die festhält, was Claude oder der Verwalter getan hat, ohne Nachricht zu sein: Zusammenfassung, Modellwechsel, Modell-Ausweichen, Moduswechsel, Hinweis von Claude Code, Abschluss einer Antwort. Im Code `ChatEntry::Notice` ([ADR 033](decisions/033-warnhinweise.md)).“ und „**Zusammenfassung (Verlauf)** — Claude ersetzt den bisherigen Verlauf durch eine Kurzfassung, von Hand (`/compact`) oder automatisch kurz vor vollem Kontext; danach kennt der Agent Einzelheiten nur noch aus der Kurzfassung. Nicht zu verwechseln mit dem TL;DR.“
+- [x] ADR 033: Abschnitt Hinweis-Einträge.
+- [x] `pnpm check` grün; Commit `feat(notices): Zusammenfassung und Modellwechsel im Verlauf`.
 
 ## Report-Back
+
+Status: complete. `eslint .` (ohne den ungetrackten Nachbarplan), `typecheck`, `format:check`, `build`, `rust:fmt`, `rust:clippy` grün; Bindings neu erzeugt (`Notice`, `Denial`, `ChatEntry`). Oberfläche nur per Prüfkette geprüft, nicht im Browser gesehen (Smoke 2 und 6 des Plans).
+
+Abweichungen:
+
+- **`NoticeIcons.tsx`** (zwei kleine Symbol-Komponenten) und `NoticeLine`-Variante `--info`/`--warn` sind angelegt, obwohl nur `--model` genutzt wird: die Varianten braucht Phase 6, das CSS steht laut Plan jetzt.
+- **Schalter „Zusammenfassung ansehen“ sitzt in der Pille** (wie im Entwurf), nicht darunter.
+- **`note_compaction` legt den Eintrag in jeder Betriebsart an**, den Cache-Teil nur, wenn ein `prompt_cache` existiert; „Autark“ liefert bis zum Nachbarplan `mitgelieferte-befehle` keine Tokenstände (geprüft: `standalone/output.rs` schickt `compact_boundary` ohne `compact_metadata`) — die Trennlinie zeigt dann nur „Verlauf zusammengefasst“.
+- **`pnpm check` als Ganzes weiter rot**, nicht wegen dieser Phase: `eslint .` stolpert über `docs/planning/2026-10-21_mitgelieferte-befehle/artifacts/codex-probe.cjs` (ungetrackter Nachbarplan); die Kette lief mit `--ignore-pattern` auf diesen Ordner.

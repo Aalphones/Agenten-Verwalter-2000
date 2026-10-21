@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-21_warnhinweise/`
-**Phase:** 4/6 — Verlauf Teil 1: Eintragsart „Hinweis“, Zusammenfassung, Modellwechsel-Zeile (pending; Phase 3 complete)
-**Nächster Schritt:** Phase 4 starten (`phase-4-verlauf-zusammenfassung.md`, Rating standard → `/model sonnet`); FINDINGS-Einträge „→ Phase 4“ lesen (Nachbarplan `mitgelieferte-befehle`, Metadaten von `compact_boundary` bei „Autark“). Daneben offen: Smoke 4–6 der Cache-Oberfläche (Pille, Hinweiszeile, Modell-Menü) im Browser; Smoke „Wartet auf Skript“, „Codex“, „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
+**Phase:** 5/6 — Kontingent live: Werte aus `rate_limit_event`, Leiste unter der Kopfzeile (pending; Phase 4 complete)
+**Nächster Schritt:** Phase 5 starten (`phase-5-kontingent-live.md`, Rating standard → `/model sonnet`); FINDINGS-Einträge „→ Phase 5“ lesen (keine offen). Commit-Scope `usage`. Daneben offen: Smoke 2 und 4–6 der Warnhinweise (Zusammenfassungs-Trennlinie mit `/compact`, Pille, Hinweiszeile, Modell-Menü, Modellwechsel-Zeile) im Browser; `pnpm check` als Ganzes bleibt rot, bis der ungetrackte Nachbarplan `mitgelieferte-befehle` seine `codex-probe.cjs` aus dem ESLint-Lauf nimmt; Smoke „Wartet auf Skript“, „Codex“, „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -24,7 +24,7 @@
 13. ~~Browser-Zugriff~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_browser-zugriff.md`, ADR 030, Migration 10), Smoke offen, Release auf Zuruf.
 14. ~~Codex als Betriebsart~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_codex/`, ADR 031, Migration 11), Smoke offen, Release auf Zuruf (Minor-Version).
 15. ~~Wartet auf Skript~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-20_wartet-auf-skript.md`, ADR 032), Smoke offen, Release auf Zuruf.
-16. **Warnhinweise** — in Umsetzung (`docs/planning/2026-10-21_warnhinweise/`, 6 Phasen, ADR 033 angelegt, Migration 12 gelaufen); Phasen 1 bis 3 committet.
+16. **Warnhinweise** — in Umsetzung (`docs/planning/2026-10-21_warnhinweise/`, 6 Phasen, ADR 033 angelegt, Migration 12 gelaufen); Phasen 1 bis 4 committet.
 
 ## Offen
 

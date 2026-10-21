@@ -54,6 +54,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
+use crate::notices::model::Notice;
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::prompt_cache::model::PromptCache;
 use crate::prompt_cache::{TTL_1H_MS, TTL_5M_MS};
@@ -218,6 +219,8 @@ struct SessionState {
     prompt_cache: Option<PromptCache>,
     /// `message.id` der Antwort, die den Anker von `prompt_cache` gesetzt hat; nur im Speicher.
     cache_message_id: Option<String>,
+    /// `seq` des Hinweises „Verlauf zusammengefasst“, bis die Kurzfassung eintrifft; nur im Speicher.
+    compact_seq: Option<u32>,
     /// Letzte Aufschlüsselung des Kontexts; nur im Speicher, nach einem App-Neustart leer (ADR 008).
     context_breakdown: Option<ContextBreakdown>,
     /// Letzte Antwort auf `mcp_status`; nur im Speicher und nur, solange der Prozess lebt (ADR 013).
@@ -1129,12 +1132,30 @@ impl SessionRegistry {
             app,
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
+                let previous: ModelId = state.model;
                 state.model = model;
                 outbox.summary_dirty = true;
                 // Das Claude-Modell gilt in „Codex“ erst nach dem Zurückschalten; der Übersetzer
                 // kennt die Kennung nicht.
                 if state.process_mode == OperatingMode::Codex {
                     return Ok(());
+                }
+                let recache_tokens: Option<u32> = state
+                    .prompt_cache
+                    .as_ref()
+                    .map(|cache: &PromptCache| cache.tokens);
+                if previous != model
+                    && state.is_claude_process()
+                    && let Some(tokens) = recache_tokens
+                {
+                    state.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+                        seq,
+                        notice: Notice::ModelSwitched {
+                            from: previous,
+                            to: model,
+                            recache_tokens: tokens,
+                        },
+                    });
                 }
                 state.context_window = model.initial_context_window();
                 state.send_control(
@@ -1809,6 +1830,7 @@ impl SessionState {
             context_window: model.initial_context_window(),
             prompt_cache: None,
             cache_message_id: None,
+            compact_seq: None,
             context_breakdown: None,
             mcp_servers: None,
             mcp_fetched_at: None,
@@ -2022,14 +2044,57 @@ impl SessionState {
         }
     }
 
-    /// Nach einer Zusammenfassung ist der Cache „neu“, bis die nächste Antwort ihn beschreibt.
-    /// Den Agenten „Autark“ gibt es ohne `prompt_cache`: dort bleibt die Zeile ohne Wirkung.
-    fn note_compaction(&mut self, outbox: &mut Outbox) {
+    /// Hält die Zusammenfassung im Verlauf fest. Nach ihr ist der Cache „neu“, bis die nächste
+    /// Antwort ihn beschreibt; den Agenten „Autark“ gibt es ohne `prompt_cache`, dort bleibt nur
+    /// die Trennlinie.
+    fn note_compaction(
+        &mut self,
+        outbox: &mut Outbox,
+        trigger: Option<String>,
+        pre_tokens: Option<u32>,
+        post_tokens: Option<u32>,
+    ) {
+        self.compact_seq = Some(self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+            seq,
+            notice: Notice::Compacted {
+                trigger,
+                pre_tokens,
+                post_tokens,
+                summary: None,
+            },
+        }));
         let Some(cache) = self.prompt_cache.as_mut() else {
             return;
         };
         cache.compacted_at = Some(now_ms());
         outbox.summary_dirty = true;
+    }
+
+    /// Schreibt die Kurzfassung in die Trennlinie, die `note_compaction` angelegt hat.
+    fn note_compact_summary(&mut self, outbox: &mut Outbox, text: String) {
+        let Some(seq) = self.compact_seq.take() else {
+            return;
+        };
+        let Some(ChatEntry::Notice {
+            notice:
+                Notice::Compacted {
+                    trigger,
+                    pre_tokens,
+                    post_tokens,
+                    ..
+                },
+            ..
+        }) = self.entries.get(seq as usize)
+        else {
+            return;
+        };
+        let notice = Notice::Compacted {
+            trigger: trigger.clone(),
+            pre_tokens: *pre_tokens,
+            post_tokens: *post_tokens,
+            summary: Some(text),
+        };
+        self.replace_entry(outbox, ChatEntry::Notice { seq, notice });
     }
 
     /// Die Antwort des Hauptagenten ist abgegeben, ein Subagent arbeitet aber noch: der Agent
@@ -2385,10 +2450,14 @@ impl SessionState {
                 written_5m,
                 written_1h,
             } => self.note_prompt_cache(outbox, message_id, tokens, written_5m, written_1h),
-            AgentEvent::Compacted { .. } => self.note_compaction(outbox),
-            // Warnhinweise, Phasen 4–6.
-            AgentEvent::CompactSummary(_)
-            | AgentEvent::RateLimit(_)
+            AgentEvent::Compacted {
+                trigger,
+                pre_tokens,
+                post_tokens,
+            } => self.note_compaction(outbox, trigger, pre_tokens, post_tokens),
+            AgentEvent::CompactSummary(text) => self.note_compact_summary(outbox, text),
+            // Warnhinweise, Phasen 5–6.
+            AgentEvent::RateLimit(_)
             | AgentEvent::ModelFallback { .. }
             | AgentEvent::Info(_)
             | AgentEvent::PermissionMode(_) => {}

@@ -4,7 +4,7 @@ use ts_rs::TS;
 
 use crate::context::model::ContextBreakdown;
 use crate::mcp::model::McpServer;
-use crate::notices::model::Denial;
+use crate::notices::model::{Denial, Notice};
 use crate::review::model::ReviewComment;
 use crate::skills::model::SkillRef;
 
@@ -212,6 +212,11 @@ pub enum ChatEntry {
         title: String,
         text: String,
     },
+    /// Hinweis im Verlauf, ADR 033.
+    Notice {
+        seq: u32,
+        notice: Notice,
+    },
 }
 
 impl ChatEntry {
@@ -224,7 +229,8 @@ impl ChatEntry {
             | ChatEntry::Todos { seq, .. }
             | ChatEntry::Artifact { seq, .. }
             | ChatEntry::Question { seq, .. }
-            | ChatEntry::Error { seq, .. } => *seq,
+            | ChatEntry::Error { seq, .. }
+            | ChatEntry::Notice { seq, .. } => *seq,
         }
     }
 }

@@ -131,7 +131,8 @@ fn searchable_text(entry: &ChatEntry) -> Option<&str> {
         ChatEntry::Thinking { .. }
         | ChatEntry::Tool { .. }
         | ChatEntry::Todos { .. }
-        | ChatEntry::Artifact { .. } => None,
+        | ChatEntry::Artifact { .. }
+        | ChatEntry::Notice { .. } => None,
     }
 }
 
