@@ -94,6 +94,11 @@ export function modelName(id: ModelId): string {
   return option === undefined ? id : option.name;
 }
 
+/** Anzeigename eines Modells, das die Kommandozeile gemeldet hat; eine fremde Kennung bleibt roh. */
+export function reportedModelName(id: ModelId | null, rawId: string): string {
+  return id === null ? rawId : modelName(id);
+}
+
 /** Der Teil der LM-Studio-Kennung nach dem letzten `/`; `null` heißt: kein Modell gewählt. */
 export function localModelLabel(id: string | null): string {
   if (id === null) {

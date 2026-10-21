@@ -22,22 +22,29 @@ Code-Stellen:
 
 ## Checkliste
 
-- [ ] `agents/event.rs`: `impl ModelId { pub fn from_cli_id(id: &str) -> Option<ModelId> }` über alle Varianten und `cli_id()`.
-- [ ] `notices/model.rs`: Varianten `ModelFallback { original_model, original_id, fallback_model, fallback_id, direction, text }`, `Info { text }`, `ModeChanged { from: Mode, to: Mode }`, `TurnSummary { denials: Vec<Denial>, cost_usd: Option<f64> }` (Kontrakt).
-- [ ] `SessionState`: `fallback_model: Option<String>`, `last_total_cost: f64` (beide nur Speicher). `start_process`: beide zurücksetzen (`None`, `0.0`). `set_model`: `fallback_model = None`. `SessionSummary`: `fallback_model`, `fallback_model_id` (`fallback_model.as_deref().and_then(ModelId::from_cli_id)`), `summarize` setzt beide.
-- [ ] `apply_event`:
+- [x] `agents/event.rs`: `impl ModelId { pub fn from_cli_id(id: &str) -> Option<ModelId> }` über alle Varianten und `cli_id()`.
+- [x] `notices/model.rs`: Varianten `ModelFallback { original_model, original_id, fallback_model, fallback_id, direction, text }`, `Info { text }`, `ModeChanged { from: Mode, to: Mode }`, `TurnSummary { denials: Vec<Denial>, cost_usd: Option<f64> }` (Kontrakt).
+- [x] `SessionState`: `fallback_model: Option<String>`, `last_total_cost: f64` (beide nur Speicher). `start_process`: beide zurücksetzen (`None`, `0.0`). `set_model`: `fallback_model = None`. `SessionSummary`: `fallback_model`, `fallback_model_id` (`fallback_model.as_deref().and_then(ModelId::from_cli_id)`), `summarize` setzt beide.
+- [x] `apply_event`:
   - `ModelFallback { original_model, fallback_model, direction, text }` → `push_entry` mit `Notice::ModelFallback` (IDs über `from_cli_id`); `direction` `"retry"`/`"sticky"` → `self.fallback_model = Some(fallback_model)`, `"revert"` → `None`; `summary_dirty`.
   - `Info(text)` → `push_entry` mit `Notice::Info { text }`.
   - `PermissionMode(raw)` → `mode_of_cli(&raw)` (neue Funktion: `default`→`Manual`, `acceptEdits`→`Edit`, `plan`→`Plan`, `auto`→`Auto`, sonst `None`); bei `Some(mode)` und `mode != self.mode`: `push_entry` mit `Notice::ModeChanged { from: self.mode, to: mode }`, `self.mode = mode`, `summary_dirty`.
   - `TurnEnded { end, context_window, denials, total_cost_usd }` → `end_turn(outbox, end, context_window, denials, total_cost_usd)`.
-- [ ] `end_turn`: nach der Prüfung `if self.cancel_requested { return; }` und vor dem `match end`: `cost_usd` nur bei `is_claude_process()`: `let delta = match total_cost_usd { Some(total) if total >= self.last_total_cost => total - self.last_total_cost, Some(total) => total, None => 0.0 };` dann `if let Some(total) = total_cost_usd { self.last_total_cost = total; }`, `cost_usd = (delta > 0.0).then_some(delta)`. Gibt es `denials` oder `cost_usd`, `push_entry` mit `Notice::TurnSummary`.
-- [ ] `gen-bindings.rs` unverändert (Varianten hängen an `Notice`); `pnpm bindings`.
-- [ ] Oberfläche `src/features/notices/`: `NoticeBlock` um die vier Varianten; `TurnSummaryLine.tsx` + `.css` (BEM `turn-summary`, `<details>`/`<summary>` für die Liste); Knopf „Mit <Original> weiter“ ruft `setSessionModel(sessionId, originalId)`, Fehler über `useSessionErrorsStore.report` (Muster `ErrorBlock`); `NoticeBlock` bekommt dafür `sessionId`. Texte in `noticeTexts.ts`; Betrag mit `Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`.
-- [ ] `Composer.tsx`: im Claude-Zweig (`!isCodex && !isLocal`) bei `session.fallbackModel !== null` Label `${fallbackModelId ? modelName(fallbackModelId) : fallbackModel} · Ersatz`, Klasse `composer__model--fallback` (Farbe `--color-status-waiting`), `title` laut AK 1.
-- [ ] `docs/code-map.md`: Zeile „Hinweise im Verlauf“ um die neuen Varianten, `fallback_model`, `last_total_cost`, `mode_of_cli`, `TurnSummaryLine`.
-- [ ] `docs/glossary.md`: „**Modell-Ausweichen** — Claude wechselt nach einer Markierung durch den Sicherheitsfilter selbst auf ein anderes Modell; die Eingabeleiste zeigt das Ersatzmodell, bis der User ein Modell wählt oder der Agent neu startet.“
-- [ ] `docs/knowledge/claude-stream-json.md`: Messwerte aus den Smoke-Läufen nachtragen, soweit vorhanden.
-- [ ] ADR 033 vervollständigen (Abschnitte Modell-Ausweichen, Moduswechsel, Hinweise, Antwort-Abschluss).
-- [ ] `pnpm check` grün; Commit `feat(notices): Modell-Ausweichen, Hinweise, Moduswechsel und Antwort-Abschluss im Verlauf`.
+- [x] `end_turn`: nach der Prüfung `if self.cancel_requested { return; }` und vor dem `match end`: `cost_usd` nur bei `is_claude_process()`: `let delta = match total_cost_usd { Some(total) if total >= self.last_total_cost => total - self.last_total_cost, Some(total) => total, None => 0.0 };` dann `if let Some(total) = total_cost_usd { self.last_total_cost = total; }`, `cost_usd = (delta > 0.0).then_some(delta)`. Gibt es `denials` oder `cost_usd`, `push_entry` mit `Notice::TurnSummary`.
+- [x] `gen-bindings.rs` unverändert (Varianten hängen an `Notice`); `pnpm bindings`.
+- [x] Oberfläche `src/features/notices/`: `NoticeBlock` um die vier Varianten; `TurnSummaryLine.tsx` + `.css` (BEM `turn-summary`, `<details>`/`<summary>` für die Liste); Knopf „Mit <Original> weiter“ ruft `setSessionModel(sessionId, originalId)`, Fehler über `useSessionErrorsStore.report` (Muster `ErrorBlock`); `NoticeBlock` bekommt dafür `sessionId`. Texte in `noticeTexts.ts`; Betrag mit `Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`.
+- [x] `Composer.tsx`: im Claude-Zweig (`!isCodex && !isLocal`) bei `session.fallbackModel !== null` Label `${fallbackModelId ? modelName(fallbackModelId) : fallbackModel} · Ersatz`, Klasse `composer__model--fallback` (Farbe `--color-status-waiting`), `title` laut AK 1.
+- [x] `docs/code-map.md`: Zeile „Hinweise im Verlauf“ um die neuen Varianten, `fallback_model`, `last_total_cost`, `mode_of_cli`, `TurnSummaryLine`.
+- [x] `docs/glossary.md`: „**Modell-Ausweichen** — Claude wechselt nach einer Markierung durch den Sicherheitsfilter selbst auf ein anderes Modell; die Eingabeleiste zeigt das Ersatzmodell, bis der User ein Modell wählt oder der Agent neu startet.“
+- [x] `docs/knowledge/claude-stream-json.md`: Messwerte aus den Smoke-Läufen nachtragen, soweit vorhanden — es liegen keine vor (Smoke 8 steht aus), nichts nachzutragen.
+- [x] ADR 033 vervollständigen (Abschnitte Modell-Ausweichen, Moduswechsel, Hinweise, Antwort-Abschluss).
+- [x] `pnpm check` grün; Commit `feat(notices): Modell-Ausweichen, Hinweise, Moduswechsel und Antwort-Abschluss im Verlauf`.
 
 ## Report-Back
+
+Umgesetzt wie geplant, `pnpm check` Schritt für Schritt grün (ESLint nur auf `src`, siehe Abweichungen).
+
+- `Mode::from_cli_value` statt freier Funktion `mode_of_cli`: neben seinem Gegenstück `cli_value`.
+- Der Knopf „Mit <Original> weiter“ steht nur, solange `SessionSummary.fallback_model` gesetzt ist (nicht nur bei bekannter Original-ID): ein alter Eintrag im Verlauf bietet sonst nach dem Zurückwechseln oder einem Neustart einen wirkungslosen Knopf an.
+- `TurnSummaryLine` klappt über den Zustand der Zeitleiste (`expandedKeys`) statt über `<details>` auf: ein Eintrag verlässt beim Scrollen das DOM, `<details>` hätte dabei zugeklappt.
+- Offen bleibt, ob ein über `can_use_tool` abgelehnter Aufruf in `permission_denials` steht (Smoke 8); die Zeile `system`/`permission_denied` wird weiter nicht gelesen.

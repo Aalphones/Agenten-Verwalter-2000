@@ -364,12 +364,14 @@ export function ChatTimeline({
       case 'notice':
         return (
           <NoticeBlock
+            sessionId={session.id}
             notice={entry.notice}
             isExpanded={expandedKeys.has(key)}
             onToggle={(): void => {
               toggleExpanded(key);
             }}
             isClaude={isClaude}
+            isFallbackActive={session.fallbackModel !== null}
           />
         );
       case 'error':

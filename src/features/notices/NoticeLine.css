@@ -16,17 +16,26 @@
     height: 1.5em;
   }
 
-  &__text {
+  &__body {
     flex: 1;
     min-width: 0;
+  }
+
+  &__text,
+  &__detail {
     margin: 0;
     line-height: 1.5;
     overflow-wrap: anywhere;
+  }
 
-    & strong {
-      color: var(--color-fg-primary);
-      font-weight: 600;
-    }
+  &__text strong {
+    color: var(--color-fg-primary);
+    font-weight: 600;
+  }
+
+  &__detail {
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-xs);
   }
 
   &__action {

@@ -14,16 +14,28 @@ interface NoticeLineProps {
   /** Fetter Anfang der Zeile. */
   lead: string;
   text: string;
-  action?: NoticeLineAction;
+  /** Kleiner Zusatz unter der Zeile. */
+  detail?: string | undefined;
+  action?: NoticeLineAction | undefined;
 }
 
-export function NoticeLine({ variant, icon, lead, text, action }: NoticeLineProps): ReactElement {
+export function NoticeLine({
+  variant,
+  icon,
+  lead,
+  text,
+  detail,
+  action,
+}: NoticeLineProps): ReactElement {
   return (
     <div className={`notice-line notice-line--${variant}`} role="note">
       <span className="notice-line__icon">{icon}</span>
-      <p className="notice-line__text">
-        <strong>{lead}</strong> {text}
-      </p>
+      <div className="notice-line__body">
+        <p className="notice-line__text">
+          <strong>{lead}</strong> {text}
+        </p>
+        {detail !== undefined && <p className="notice-line__detail">{detail}</p>}
+      </div>
       {action !== undefined && (
         <button type="button" className="notice-line__action" onClick={action.onClick}>
           {action.label}

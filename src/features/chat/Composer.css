@@ -133,6 +133,10 @@
         background: transparent;
       }
     }
+
+    &--fallback {
+      color: var(--color-status-waiting);
+    }
   }
 
   &__effort {

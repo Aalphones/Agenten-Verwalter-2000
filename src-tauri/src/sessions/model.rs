@@ -43,6 +43,11 @@ pub struct SessionSummary {
     pub context_window: u32,
     /// Zustand des Prompt-Caches (ADR 033); `None` vor der ersten Antwort und außerhalb der Betriebsart Claude.
     pub prompt_cache: Option<PromptCache>,
+    /// Modell, auf das Claude nach einer Markierung durch den Sicherheitsfilter ausgewichen ist,
+    /// wie die Kommandozeile es meldet; `None` ohne Ausweichen (ADR 033).
+    pub fallback_model: Option<String>,
+    /// `fallback_model` als bekanntes Modell; `None`, wenn die Kennung dem Verwalter fremd ist.
+    pub fallback_model_id: Option<ModelId>,
     pub repository_count: u32,
     pub project_id: String,
     /// Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.

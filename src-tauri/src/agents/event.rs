@@ -29,6 +29,21 @@ impl ModelId {
         }
     }
 
+    const ALL: [ModelId; 5] = [
+        ModelId::Fable,
+        ModelId::Opus,
+        ModelId::Opusplan,
+        ModelId::Sonnet,
+        ModelId::Haiku,
+    ];
+
+    /// Das Modell zu einer Kennung, wie die Kommandozeile sie meldet; `None` bei einer fremden.
+    pub fn from_cli_id(id: &str) -> Option<ModelId> {
+        ModelId::ALL
+            .into_iter()
+            .find(|model: &ModelId| model.cli_id() == id)
+    }
+
     /// Kontextfenster bis zum ersten abgeschlossenen Turn; danach meldet die CLI den echten Wert.
     pub fn initial_context_window(self) -> u32 {
         match self {
@@ -76,6 +91,17 @@ impl Mode {
             Mode::Edit => "acceptEdits",
             Mode::Plan => "plan",
             Mode::Auto => "auto",
+        }
+    }
+
+    /// Der Modus zu einem `permissionMode` der Kommandozeile; `None` bei einem unbekannten Wert.
+    pub fn from_cli_value(value: &str) -> Option<Mode> {
+        match value {
+            "default" => Some(Mode::Manual),
+            "acceptEdits" => Some(Mode::Edit),
+            "plan" => Some(Mode::Plan),
+            "auto" => Some(Mode::Auto),
+            _ => None,
         }
     }
 }

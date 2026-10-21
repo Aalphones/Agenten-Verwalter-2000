@@ -54,7 +54,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
-use crate::notices::model::Notice;
+use crate::notices::model::{Denial, Notice};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::prompt_cache::model::PromptCache;
 use crate::prompt_cache::{TTL_1H_MS, TTL_5M_MS};
@@ -222,6 +222,12 @@ struct SessionState {
     cache_message_id: Option<String>,
     /// `seq` des Hinweises „Verlauf zusammengefasst“, bis die Kurzfassung eintrifft; nur im Speicher.
     compact_seq: Option<u32>,
+    /// Modell, auf das Claude ausgewichen ist, bis der User wählt oder der Agent neu startet;
+    /// nur im Speicher.
+    fallback_model: Option<String>,
+    /// `total_cost_usd` der letzten Antwort dieses Prozesses; der Wert ist über den Prozess
+    /// aufsummiert, die Kosten einer Antwort sind der Zuwachs. Nur im Speicher.
+    last_total_cost: f64,
     /// Letzte Aufschlüsselung des Kontexts; nur im Speicher, nach einem App-Neustart leer (ADR 008).
     context_breakdown: Option<ContextBreakdown>,
     /// Letzte Antwort auf `mcp_status`; nur im Speicher und nur, solange der Prozess lebt (ADR 013).
@@ -1137,6 +1143,7 @@ impl SessionRegistry {
             |state: &mut SessionState, outbox: &mut Outbox| {
                 let previous: ModelId = state.model;
                 state.model = model;
+                state.fallback_model = None;
                 outbox.summary_dirty = true;
                 // Das Claude-Modell gilt in „Codex“ erst nach dem Zurückschalten; der Übersetzer
                 // kennt die Kennung nicht.
@@ -1834,6 +1841,8 @@ impl SessionState {
             prompt_cache: None,
             cache_message_id: None,
             compact_seq: None,
+            fallback_model: None,
+            last_total_cost: 0.0,
             context_breakdown: None,
             mcp_servers: None,
             mcp_fetched_at: None,
@@ -2098,6 +2107,62 @@ impl SessionState {
             summary: Some(text),
         };
         self.replace_entry(outbox, ChatEntry::Notice { seq, notice });
+    }
+
+    /// Hält ein Ausweichen auf ein anderes Modell fest. Bei `retry` und `sticky` antwortet Claude
+    /// mit dem Ersatzmodell, bis der User wählt; `revert` hebt das auf.
+    fn note_model_fallback(
+        &mut self,
+        outbox: &mut Outbox,
+        original_model: String,
+        fallback_model: String,
+        direction: String,
+        text: Option<String>,
+    ) {
+        let next_fallback: Option<String> = if direction == "revert" {
+            None
+        } else {
+            Some(fallback_model.clone())
+        };
+        let original_id: Option<ModelId> = ModelId::from_cli_id(&original_model);
+        let fallback_id: Option<ModelId> = ModelId::from_cli_id(&fallback_model);
+        self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+            seq,
+            notice: Notice::ModelFallback {
+                original_model,
+                original_id,
+                fallback_model,
+                fallback_id,
+                direction,
+                text,
+            },
+        });
+        if self.fallback_model != next_fallback {
+            self.fallback_model = next_fallback;
+            outbox.summary_dirty = true;
+        }
+    }
+
+    /// Übernimmt einen Moduswechsel, den die Kommandozeile meldet. Ein Wechsel, den der User
+    /// selbst ausgelöst hat, steht schon in `mode` und erzeugt keinen Hinweis; ein unbekannter
+    /// Wert wird übergangen.
+    fn note_permission_mode(&mut self, outbox: &mut Outbox, raw: &str) {
+        let Some(mode) = Mode::from_cli_value(raw) else {
+            return;
+        };
+        if mode == self.mode {
+            return;
+        }
+        let previous: Mode = self.mode;
+        self.mode = mode;
+        outbox.summary_dirty = true;
+        self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+            seq,
+            notice: Notice::ModeChanged {
+                from: previous,
+                to: mode,
+            },
+        });
     }
 
     /// Die Antwort des Hauptagenten ist abgegeben, ein Subagent arbeitet aber noch: der Agent
@@ -2445,8 +2510,9 @@ impl SessionState {
             AgentEvent::TurnEnded {
                 end,
                 context_window,
-                ..
-            } => self.end_turn(outbox, end, context_window),
+                denials,
+                total_cost_usd,
+            } => self.end_turn(outbox, end, context_window, denials, total_cost_usd),
             AgentEvent::CacheUsed {
                 message_id,
                 tokens,
@@ -2465,10 +2531,19 @@ impl SessionState {
                     outbox.rate_limit = Some(info);
                 }
             }
-            // Warnhinweise, Phase 6.
-            AgentEvent::ModelFallback { .. }
-            | AgentEvent::Info(_)
-            | AgentEvent::PermissionMode(_) => {}
+            AgentEvent::ModelFallback {
+                original_model,
+                fallback_model,
+                direction,
+                text,
+            } => self.note_model_fallback(outbox, original_model, fallback_model, direction, text),
+            AgentEvent::Info(text) => {
+                self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+                    seq,
+                    notice: Notice::Info { text },
+                });
+            }
+            AgentEvent::PermissionMode(raw) => self.note_permission_mode(outbox, &raw),
             // Ohne `wake_if_idle`: die Antwort auf eine Abfrage ist keine Arbeit des Agenten.
             AgentEvent::ContextBreakdown(mut breakdown) => {
                 breakdown.fetched_at = now_ms();
@@ -2776,7 +2851,14 @@ impl SessionState {
         self.set_status(outbox, SessionStatus::Waiting);
     }
 
-    fn end_turn(&mut self, outbox: &mut Outbox, end: TurnEnd, context_window: Option<u32>) {
+    fn end_turn(
+        &mut self,
+        outbox: &mut Outbox,
+        end: TurnEnd,
+        context_window: Option<u32>,
+        denials: Vec<Denial>,
+        total_cost_usd: Option<f64>,
+    ) {
         if let Some(window) = context_window
             && window != self.context_window
         {
@@ -2787,6 +2869,7 @@ impl SessionState {
         if self.cancel_requested {
             return;
         }
+        self.note_turn_summary(outbox, denials, total_cost_usd);
         // Aufschlüsselung und MCP-Liste sind Beiwerk: ein Fehler beim Einreihen darf das Ende der Antwort nicht stören.
         let _ = self.send_control(outbox, get_context_usage());
         let _ = self.send_control(outbox, mcp_status());
@@ -2805,6 +2888,36 @@ impl SessionState {
             }
             TurnEnd::Completed => self.set_status(outbox, SessionStatus::Completed),
         }
+    }
+
+    /// Schließt eine Antwort mit ihren abgelehnten Aufrufen und ihren Kosten ab. `total_cost_usd`
+    /// ist über den Prozess aufsummiert: die Kosten dieser Antwort sind der Zuwachs; ein kleinerer
+    /// Wert als der letzte kann nur von einem neuen Zähler kommen und gilt selbst.
+    fn note_turn_summary(
+        &mut self,
+        outbox: &mut Outbox,
+        denials: Vec<Denial>,
+        total_cost_usd: Option<f64>,
+    ) {
+        let mut cost_usd: Option<f64> = None;
+        if self.is_claude_process()
+            && let Some(total) = total_cost_usd
+        {
+            let delta: f64 = if total >= self.last_total_cost {
+                total - self.last_total_cost
+            } else {
+                total
+            };
+            self.last_total_cost = total;
+            cost_usd = (delta > 0.0).then_some(delta);
+        }
+        if denials.is_empty() && cost_usd.is_none() {
+            return;
+        }
+        self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+            seq,
+            notice: Notice::TurnSummary { denials, cost_usd },
+        });
     }
 
     fn pause_after_interrupt(&mut self, outbox: &mut Outbox) {
@@ -3054,6 +3167,11 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         context_used: state.context_used,
         context_window: state.context_window,
         prompt_cache: state.prompt_cache.clone(),
+        fallback_model: state.fallback_model.clone(),
+        fallback_model_id: state
+            .fallback_model
+            .as_deref()
+            .and_then(ModelId::from_cli_id),
         repository_count: u32::try_from(session.repositories().len()).unwrap_or(u32::MAX),
         project_id: session.project_id.clone(),
         number: session.number,
@@ -3195,6 +3313,11 @@ fn start_process(
     state.translator = Translator::default();
     // Die erste Zeile des neuen Prozesses setzt den Anker neu, auch bei gleicher `message.id`.
     state.cache_message_id = None;
+    // Ein neuer Prozess läuft mit dem Modell der Session und zählt seine Kosten von null an.
+    if state.fallback_model.take().is_some() {
+        outbox.summary_dirty = true;
+    }
+    state.last_total_cost = 0.0;
     Ok(())
 }
 

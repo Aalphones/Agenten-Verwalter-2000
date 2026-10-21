@@ -30,7 +30,16 @@ runningMs: number, runningSince: number | null, contextUsed: number, contextWind
 /**
  * Zustand des Prompt-Caches (ADR 033); `None` vor der ersten Antwort und außerhalb der Betriebsart Claude.
  */
-promptCache: PromptCache | null, repositoryCount: number, projectId: string, 
+promptCache: PromptCache | null, 
+/**
+ * Modell, auf das Claude nach einer Markierung durch den Sicherheitsfilter ausgewichen ist,
+ * wie die Kommandozeile es meldet; `None` ohne Ausweichen (ADR 033).
+ */
+fallbackModel: string | null, 
+/**
+ * `fallback_model` als bekanntes Modell; `None`, wenn die Kennung dem Verwalter fremd ist.
+ */
+fallbackModelId: ModelId | null, repositoryCount: number, projectId: string, 
 /**
  * Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.
  */

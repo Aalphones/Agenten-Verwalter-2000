@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::agents::event::ModelId;
+use crate::agents::event::{Mode, ModelId};
 
 /// Ein abgelehnter Werkzeugaufruf — von einer Regel oder vom User.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -36,5 +36,27 @@ pub enum Notice {
         to: ModelId,
         /// Token, die die nächste Nachricht neu schreibt.
         recache_tokens: u32,
+    },
+    /// Claude ist nach einer Markierung durch den Sicherheitsfilter auf ein anderes Modell
+    /// ausgewichen oder zum ursprünglichen zurückgekehrt. Die IDs sind `None` bei einer
+    /// Kennung, die der Verwalter nicht kennt; `direction` ist `retry`, `sticky` oder `revert`.
+    ModelFallback {
+        original_model: String,
+        original_id: Option<ModelId>,
+        fallback_model: String,
+        fallback_id: Option<ModelId>,
+        direction: String,
+        text: Option<String>,
+    },
+    /// Allgemeiner Hinweis der Kommandozeile.
+    Info { text: String },
+    /// Der Modus der Session hat sich ohne Zutun des Users geändert, etwa durch einen
+    /// angenommenen Plan.
+    ModeChanged { from: Mode, to: Mode },
+    /// Ende einer Antwort mit abgelehnten Aufrufen oder Kosten.
+    TurnSummary {
+        denials: Vec<Denial>,
+        /// Rechenwert dieser Antwort in US-Dollar, nur in der Betriebsart Claude.
+        cost_usd: Option<f64>,
     },
 }

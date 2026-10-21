@@ -40,6 +40,7 @@ import {
   localModelLabel,
   modeOption,
   modelName,
+  reportedModelName,
 } from '@/lib/labels';
 import type { ModeOption } from '@/lib/labels';
 import {
@@ -63,6 +64,8 @@ const NO_CODEX_MODELS: readonly CodexModel[] = [];
 
 const LOCAL_MODEL_TITLE =
   'Modell der Betriebsart „Claude Code + LM Studio“ — ändern in den Einstellungen';
+const FALLBACK_MODEL_TITLE =
+  'Claude ist nach einer Markierung durch den Sicherheitsfilter auf dieses Modell ausgewichen. Wähle ein Modell, um zurückzuwechseln.';
 const LOCAL_MODEL_PICK_HINT =
   'Das Modell wählst du in der Betriebsart „Claude Code + LM Studio“ in den Einstellungen.';
 const NOTE_WHILE_ACTIVE =
@@ -125,9 +128,14 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
   const hasContent: boolean = draft.trim() !== '' || pending.length > 0 || collected.length > 0;
   const canSend: boolean = hasContent && !isSending && !isLocked && !isDictating;
   const currentMode = modeOption(session.mode);
-  const modelLabel: string = isCodex
-    ? codexModelLabel(codexList, session.codexModel)
-    : modelName(session.model);
+  // Nach einer Markierung durch den Sicherheitsfilter antwortet nur die Claude-Kommandozeile mit einem Ersatzmodell.
+  const fallbackModel: string | null = isCodex || isLocal ? null : session.fallbackModel;
+  let modelLabel: string = modelName(session.model);
+  if (isCodex) {
+    modelLabel = codexModelLabel(codexList, session.codexModel);
+  } else if (fallbackModel !== null) {
+    modelLabel = `${reportedModelName(session.fallbackModelId, fallbackModel)} · Ersatz`;
+  }
   const effortText: string = effortLabel(
     isCodex ? codexEffort(sessionCodexModel, session.effort) : session.effort,
   );
@@ -391,7 +399,12 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
             <div className="composer__anchor">
               <button
                 type="button"
-                className="composer__model"
+                className={
+                  fallbackModel === null
+                    ? 'composer__model'
+                    : 'composer__model composer__model--fallback'
+                }
+                title={fallbackModel === null ? undefined : FALLBACK_MODEL_TITLE}
                 aria-haspopup="dialog"
                 aria-expanded={openMenu === 'model'}
                 aria-label={`Modell: ${modelLabel}, Denkaufwand ${effortText}`}
