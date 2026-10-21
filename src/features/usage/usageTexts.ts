@@ -1,4 +1,5 @@
 import { formatClock, formatPercent } from '@/features/context/formatTokens';
+import type { UsageAlert } from '@/lib/bindings/UsageAlert';
 
 const MS_PER_DAY = 86_400_000;
 const MINUTES_PER_HOUR = 60;
@@ -12,6 +13,20 @@ const LIMIT_LABEL: Readonly<Record<string, string>> = {
   weekly_opus: 'Woche (Opus)',
   weekly_sonnet: 'Woche (Sonnet)',
 };
+
+const STATUS_REJECTED = 'rejected';
+
+/** Fenster einer Kontingent-Warnung in beiden Fällen, die der Satz braucht („des 5-Stunden-Fensters“). */
+const ALERT_WINDOW: Readonly<Record<string, { nominative: string; genitive: string }>> = {
+  five_hour: { nominative: '5-Stunden-Fenster', genitive: '5-Stunden-Fensters' },
+  seven_day: { nominative: 'Wochenfenster', genitive: 'Wochenfensters' },
+};
+
+export interface AlertText {
+  /** Fett gesetzt. */
+  headline: string;
+  detail: string;
+}
 
 export interface BehaviorText {
   headline: string;
@@ -66,6 +81,38 @@ export function behaviorText(key: string, percent: number): BehaviorText {
     default:
       return { headline: `${share} · ${key}`, explanation: null };
   }
+}
+
+/** Dieselbe Warnung → derselbe Schlüssel; eine neue (anderer Status, anderes Fenster, andere
+ *  Rücksetzzeit) hat einen anderen und erscheint nach „Ausblenden“ wieder. */
+export function alertKey(alert: UsageAlert): string {
+  return `${alert.status}:${alert.limitKind ?? ''}:${alert.resetsAt ?? ''}`;
+}
+
+/** Text der Leiste: Teile ohne Wert (Prozent, Fenster, Rücksetzzeit) entfallen. */
+export function alertText(alert: UsageAlert, now: number): AlertText {
+  const rawWindow: string | null = alert.limitKind;
+  const names = rawWindow === null ? undefined : ALERT_WINDOW[rawWindow];
+  const isRejected: boolean = alert.status === STATUS_REJECTED;
+  const parts: string[] = [];
+  if (rawWindow !== null) {
+    if (!isRejected && alert.percent !== null) {
+      parts.push(`${formatPercent(alert.percent, 0)} des ${names?.genitive ?? rawWindow}.`);
+    } else {
+      parts.push(`${names?.nominative ?? rawWindow}.`);
+    }
+  }
+  if (alert.resetsAt !== null) {
+    const resetText: string | null = formatResetAt(alert.resetsAt, now);
+    if (resetText !== null) {
+      parts.push(`Es setzt sich ${resetText} zurück.`);
+    }
+  }
+  let headline = 'Kontingent fast aufgebraucht:';
+  if (isRejected) {
+    headline = 'Kontingent aufgebraucht:';
+  }
+  return { headline, detail: parts.join(' ') };
 }
 
 /** Wochentag ohne Datum: „Fr.“, „Mo.“. */

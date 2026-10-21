@@ -223,7 +223,7 @@ fn share(key: Option<String>, pct: Option<f64>) -> Option<UsageShare> {
 }
 
 /// Die Kommandozeile liefert Zahlen, womöglich mit Nachkommastellen; gezeigt werden ganze Prozent.
-fn clamped_percent(value: f64) -> u32 {
+pub(crate) fn clamped_percent(value: f64) -> u32 {
     // Nach `clamp` liegt der Wert in 0..=100 und passt verlustfrei in `u32`.
     value.round().clamp(0.0, MAX_PERCENT) as u32
 }

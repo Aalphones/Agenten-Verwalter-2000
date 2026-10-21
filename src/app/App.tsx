@@ -25,6 +25,7 @@ import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
 import { useViewedSession } from '@/features/sessions/useViewedSession';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
+import { UsageAlertBar } from '@/features/usage/UsageAlertBar';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
@@ -35,6 +36,7 @@ import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { useBackgroundStore } from '@/stores/background';
 import { useSessionsStore, type ProjectView, type SessionView } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import './App.css';
 
 export function App(): ReactElement {
@@ -62,6 +64,10 @@ export function App(): ReactElement {
     error: settingsError,
     reload: reloadSettings,
   } = useSettings();
+  // Kontingent-Warnungen kommen nur von der Claude-Kommandozeile mit dem Claude-Abo.
+  const isClaude: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
+  );
   useVoiceModel();
   useRetroProgress();
   // „Neues Vorhaben“ und die Einstellungen ersetzen den Inhalt; Session und Übersicht sind dann nicht sichtbar.
@@ -333,6 +339,7 @@ export function App(): ReactElement {
             }}
           />
           <SessionActionError sessionId={currentSession.id} />
+          {isClaude && <UsageAlertBar />}
           {renderSessionBody(currentSession)}
         </Fragment>
       );

@@ -12,14 +12,21 @@ use crate::agents::claude::helper;
 use crate::agents::claude::locate::find_claude;
 use crate::agents::claude::protocol::get_usage;
 use crate::agents::claude::stats;
+use crate::agents::event::RateLimitInfo;
 use crate::codex::rate_limits;
 use crate::db::Database;
 use crate::filesystem::workspace::data_dir;
 use crate::settings::{self, model::OperatingMode};
-use model::{UsageSnapshot, UsageStatus};
+use model::{UsageAlert, UsageSnapshot, UsageStatus};
 
 const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
 const HELPER_TIMEOUT: Duration = Duration::from_secs(20);
+const STATUS_ALLOWED: &str = "allowed";
+const KIND_SESSION: &str = "session";
+const KIND_WEEKLY: &str = "weekly_all";
+const WINDOW_FIVE_HOUR: &str = "five_hour";
+const WINDOW_SEVEN_DAY: &str = "seven_day";
+const PERCENT_PER_SHARE: f64 = 100.0;
 pub const USAGE_CHANGED_EVENT: &str = "usage://changed";
 
 /// Das Kontingent kommt von einem eigenen kurzlebigen `claude.exe`, nicht vom Agenten einer
@@ -31,6 +38,7 @@ pub struct UsageService {
 
 struct UsageCache {
     snapshot: Option<UsageSnapshot>,
+    alert: Option<UsageAlert>,
     error: Option<String>,
     is_loading: bool,
     last_started: Option<Instant>,
@@ -49,6 +57,7 @@ impl UsageService {
         UsageService {
             cache: Mutex::new(UsageCache {
                 snapshot: None,
+                alert: None,
                 error: None,
                 is_loading: false,
                 last_started: None,
@@ -61,9 +70,24 @@ impl UsageService {
         let cache = self.lock();
         UsageStatus {
             snapshot: cache.snapshot.clone(),
+            alert: cache.alert.clone(),
             error: cache.error.clone(),
             is_loading: cache.is_loading,
         }
+    }
+
+    /// Übernimmt den Stand aus dem `rate_limit_event` einer Antwort sofort, ohne Hilfsprozess:
+    /// Prozentwerte eines vorhandenen Stands und die Warnung. Ohne Stand bleibt nur die Warnung.
+    pub fn apply_rate_limit(&self, app: &AppHandle, info: &RateLimitInfo) {
+        {
+            let mut cache = self.lock();
+            if let Some(snapshot) = cache.snapshot.as_mut() {
+                set_percent(snapshot, KIND_SESSION, info.five_hour);
+                set_percent(snapshot, KIND_WEEKLY, info.seven_day);
+            }
+            cache.alert = alert_of(info);
+        }
+        emit_changed(app);
     }
 
     /// Startet einen Abruf im Hintergrund und kehrt sofort zurück. Nie zwei Abrufe gleichzeitig;
@@ -124,6 +148,7 @@ impl UsageService {
             let mut cache = self.lock();
             cache.epoch += 1;
             cache.snapshot = None;
+            cache.alert = None;
             cache.error = None;
             cache.is_loading = false;
         }
@@ -153,6 +178,40 @@ fn fetch_claude(app: &AppHandle) -> Result<UsageSnapshot, String> {
     let dir = data_dir(app).map_err(|error| error.to_string())?;
     let body = helper::ask_once(&exe, &dir, get_usage(), HELPER_TIMEOUT)?;
     stats::usage_snapshot(&body).ok_or_else(|| "Antwort von Claude unlesbar".to_owned())
+}
+
+/// Ohne Anteil bleibt der Wert des Eintrags, wie er ist.
+fn set_percent(snapshot: &mut UsageSnapshot, kind: &str, share: Option<f64>) {
+    let Some(share) = share else {
+        return;
+    };
+    if let Some(limit) = snapshot
+        .limits
+        .iter_mut()
+        .find(|limit: &&mut model::UsageLimit| limit.kind == kind)
+    {
+        limit.percent = stats::clamped_percent(share * PERCENT_PER_SHARE);
+    }
+}
+
+fn alert_of(info: &RateLimitInfo) -> Option<UsageAlert> {
+    if info.status == STATUS_ALLOWED {
+        return None;
+    }
+    let share = match info.rate_limit_type.as_deref() {
+        Some(WINDOW_FIVE_HOUR) => info.five_hour,
+        Some(WINDOW_SEVEN_DAY) => info.seven_day,
+        _ => None,
+    };
+    Some(UsageAlert {
+        status: info.status.clone(),
+        limit_kind: info.rate_limit_type.clone(),
+        percent: share.map(|value: f64| stats::clamped_percent(value * PERCENT_PER_SHARE)),
+        resets_at: info
+            .resets_at
+            .and_then(|seconds: i64| u64::try_from(seconds).ok())
+            .map(rate_limits::iso_utc),
+    })
 }
 
 fn emit_changed(app: &AppHandle) {

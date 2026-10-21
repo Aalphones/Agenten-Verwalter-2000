@@ -45,7 +45,9 @@ use verwalter_lib::{
         ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
         TldrChangedEvent,
     },
-    usage::model::{UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot, UsageStatus},
+    usage::model::{
+        UsageAlert, UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot, UsageStatus,
+    },
     voice::model::{VoiceLevelEvent, VoiceModelEvent, VoiceModelState, VoicePartialEvent},
 };
 
@@ -119,6 +121,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     McpAuthWait::export_all(&cfg)?;
     SessionMcp::export_all(&cfg)?;
     McpChangedEvent::export_all(&cfg)?;
+    UsageAlert::export_all(&cfg)?;
     UsageLimit::export_all(&cfg)?;
     UsageShare::export_all(&cfg)?;
     UsageBreakdown::export_all(&cfg)?;

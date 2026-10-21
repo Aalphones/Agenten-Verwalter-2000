@@ -26,7 +26,7 @@ use crate::agents::claude::translate::Translator;
 use crate::agents::codex::{self, find_codex};
 use crate::agents::event::{
     AgentEvent, Attachment, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
-    QuestionKind, TaskEnd, TaskKind, TodoItem, ToolState, TurnEnd,
+    QuestionKind, RateLimitInfo, TaskEnd, TaskKind, TodoItem, ToolState, TurnEnd,
 };
 use crate::agents::standalone;
 use crate::attachments;
@@ -68,6 +68,7 @@ use crate::settings::model::OperatingMode;
 use crate::skills::{self, model::SkillRef};
 use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
+use crate::usage::UsageService;
 use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
 mod artifacts;
@@ -319,6 +320,8 @@ struct Outbox {
     commit_windows: Vec<(f64, f64)>,
     /// Adressen, die nach dem Freigeben der Sperre im Browser geöffnet werden (MCP-Anmeldung).
     open_urls: Vec<String>,
+    /// Jüngster Kontingent-Stand aus einer Antwort des Claude-Abos.
+    rate_limit: Option<RateLimitInfo>,
 }
 
 impl SessionRegistry {
@@ -2456,9 +2459,14 @@ impl SessionState {
                 post_tokens,
             } => self.note_compaction(outbox, trigger, pre_tokens, post_tokens),
             AgentEvent::CompactSummary(text) => self.note_compact_summary(outbox, text),
-            // Warnhinweise, Phasen 5–6.
-            AgentEvent::RateLimit(_)
-            | AgentEvent::ModelFallback { .. }
+            // Ohne `wake_if_idle`: der Stand des Kontingents ist keine Arbeit des Agenten.
+            AgentEvent::RateLimit(info) => {
+                if self.is_claude_process() {
+                    outbox.rate_limit = Some(info);
+                }
+            }
+            // Warnhinweise, Phase 6.
+            AgentEvent::ModelFallback { .. }
             | AgentEvent::Info(_)
             | AgentEvent::PermissionMode(_) => {}
             // Ohne `wake_if_idle`: die Antwort auf eine Abfrage ist keine Arbeit des Agenten.
@@ -2883,6 +2891,9 @@ impl Outbox {
             if let Err(error) = app.emit(mcp::MCP_CHANGED_EVENT, event) {
                 session.log_line(format!("MCP-Ereignis nicht gesendet: {error}"));
             }
+        }
+        if let Some(info) = &self.rate_limit {
+            app.state::<UsageService>().apply_rate_limit(app, info);
         }
         for url in &self.open_urls {
             if let Err(error) = app.opener().open_url(url, None::<&str>) {

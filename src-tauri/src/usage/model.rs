@@ -47,11 +47,27 @@ pub struct UsageSnapshot {
     pub fetched_at: f64,
 }
 
+/// Warnung oder Sperre aus dem `rate_limit_event` der letzten Antwort.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct UsageAlert {
+    /// Wie geliefert, nie `allowed`.
+    pub status: String,
+    /// `rateLimitType` wie geliefert (`five_hour`, `seven_day`, …).
+    pub limit_kind: Option<String>,
+    /// 0–100 aus dem Fenster `limit_kind`; fehlt bei einem unbekannten Fenster.
+    pub percent: Option<u32>,
+    /// ISO-8601 UTC.
+    pub resets_at: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageStatus {
     /// Der letzte erfolgreiche Stand; ein fehlgeschlagener Abruf lässt ihn stehen.
     pub snapshot: Option<UsageSnapshot>,
+    /// Die Warnung der letzten Antwort; `None` bei `allowed` und nach einem Wechsel der Betriebsart.
+    pub alert: Option<UsageAlert>,
     /// Fehler des letzten Abrufs, `None` nach einem Erfolg.
     pub error: Option<String>,
     pub is_loading: bool,

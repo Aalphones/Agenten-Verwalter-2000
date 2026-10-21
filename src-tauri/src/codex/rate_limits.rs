@@ -63,7 +63,7 @@ fn limit(kind: &str, window: &Value) -> Option<UsageLimit> {
 }
 
 /// Sekunden seit 1970 → `YYYY-MM-DDTHH:MM:SSZ`, wie die Oberfläche es für `resetsAt` erwartet.
-fn iso_utc(seconds: u64) -> String {
+pub(crate) fn iso_utc(seconds: u64) -> String {
     let (year, month, day) = civil_from_days(seconds / SECONDS_PER_DAY);
     let time_of_day = seconds % SECONDS_PER_DAY;
     let hour = time_of_day / SECONDS_PER_HOUR;

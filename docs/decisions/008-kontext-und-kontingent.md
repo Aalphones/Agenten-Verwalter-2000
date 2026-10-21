@@ -26,3 +26,4 @@ Die Session-Kopfzeile zeigt bisher nur einen Kontext-Balken (belegt / Fenster). 
 - Der Hilfsprozess kostet rund 1,4 s und einen kurzlebigen Prozess je Abruf; die Oberfläche fragt deshalb nur beim Einblenden der Kopfzeile, beim Öffnen des Fensters und alle 5 Minuten bei sichtbarem App-Fenster.
 - Die Aufschlüsselung überlebt keinen Neustart.
 - In einer lokalen Betriebsart keine Kontingent-Abfrage ([ADR 016](016-betriebsarten-und-lokales-modell.md)).
+- Die Prozentwerte kommen zusätzlich live aus jeder Antwort in „Claude“ (`rate_limit_event`), samt Warnung bei knappem Kontingent ([ADR 033](033-warnhinweise.md)); der Hilfsprozess liefert weiter Plan, Aufschlüsselung und alle übrigen Fenster.
