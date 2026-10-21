@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::agents::event::{ChatEntry, Effort, Mode, ModelId};
+use crate::prompt_cache::model::PromptCache;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -40,6 +41,8 @@ pub struct SessionSummary {
     pub running_since: Option<f64>,
     pub context_used: u32,
     pub context_window: u32,
+    /// Zustand des Prompt-Caches (ADR 033); `None` vor der ersten Antwort und außerhalb der Betriebsart Claude.
+    pub prompt_cache: Option<PromptCache>,
     pub repository_count: u32,
     pub project_id: String,
     /// Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.

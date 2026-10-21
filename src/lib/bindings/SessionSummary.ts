@@ -3,6 +3,7 @@ import type { AwaitedScript } from "./AwaitedScript";
 import type { Effort } from "./Effort";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
+import type { PromptCache } from "./PromptCache";
 import type { SessionStatus } from "./SessionStatus";
 
 export type SessionSummary = { id: string, name: string, 
@@ -25,7 +26,11 @@ codexModel: string | null, createdAt: number,
 /**
  * Summe der abgeschlossenen Laufzeiten; ein laufender Abschnitt kommt über `running_since` dazu.
  */
-runningMs: number, runningSince: number | null, contextUsed: number, contextWindow: number, repositoryCount: number, projectId: string, 
+runningMs: number, runningSince: number | null, contextUsed: number, contextWindow: number, 
+/**
+ * Zustand des Prompt-Caches (ADR 033); `None` vor der ersten Antwort und außerhalb der Betriebsart Claude.
+ */
+promptCache: PromptCache | null, repositoryCount: number, projectId: string, 
 /**
  * Laufende Nummer im Vorhaben, ab 1; angezeigt als `#N`.
  */

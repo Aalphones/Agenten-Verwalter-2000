@@ -4,6 +4,7 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::db::{enum_from_text, enum_to_text};
 use crate::error::CommandError;
+use crate::prompt_cache::model::PromptCache;
 use crate::sessions::model::SessionStatus;
 
 #[derive(Debug, Clone)]
@@ -41,6 +42,8 @@ pub struct SessionRow {
     pub chrome: bool,
     /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex.
     pub codex_model: Option<String>,
+    /// Zustand des Prompt-Caches als JSON gespeichert (ADR 033); unlesbar gilt als nicht vorhanden.
+    pub prompt_cache: Option<PromptCache>,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -69,6 +72,7 @@ struct StoredRow {
     handoff_line: Option<String>,
     chrome: bool,
     codex_model: Option<String>,
+    prompt_cache: Option<String>,
 }
 
 impl StoredRow {
@@ -97,6 +101,7 @@ impl StoredRow {
             handoff_line: row.get(20)?,
             chrome: row.get(21)?,
             codex_model: row.get(22)?,
+            prompt_cache: row.get(23)?,
         })
     }
 
@@ -125,6 +130,10 @@ impl StoredRow {
             handoff_line: self.handoff_line,
             chrome: self.chrome,
             codex_model: self.codex_model,
+            prompt_cache: self
+                .prompt_cache
+                .as_deref()
+                .and_then(|json: &str| serde_json::from_str(json).ok()),
         })
     }
 }
@@ -137,9 +146,10 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
-             project_id, number, last_activity_at, seen_at, handoff_line, chrome, codex_model) \
+             project_id, number, last_activity_at, seen_at, handoff_line, chrome, codex_model, \
+             prompt_cache) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20) \
+             ?19, ?20, ?21) \
          ON CONFLICT(id) DO UPDATE SET \
              name = excluded.name, \
              status = excluded.status, \
@@ -155,7 +165,8 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
              seen_at = excluded.seen_at, \
              handoff_line = excluded.handoff_line, \
              chrome = excluded.chrome, \
-             codex_model = excluded.codex_model",
+             codex_model = excluded.codex_model, \
+             prompt_cache = excluded.prompt_cache",
         params![
             row.id,
             row.name,
@@ -177,6 +188,9 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
             row.handoff_line,
             row.chrome,
             row.codex_model,
+            row.prompt_cache
+                .as_ref()
+                .and_then(|cache: &PromptCache| serde_json::to_string(cache).ok()),
         ],
     )?;
     Ok(())
@@ -189,7 +203,7 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, \
-             handoff_line, chrome, codex_model \
+             handoff_line, chrome, codex_model, prompt_cache \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
@@ -207,7 +221,7 @@ pub fn load_for_project(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              project_id, number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, handoff_line, \
-             chrome, codex_model \
+             chrome, codex_model, prompt_cache \
          FROM sessions WHERE project_id = ?1 ORDER BY number",
     )?;
     let stored: Vec<StoredRow> = statement

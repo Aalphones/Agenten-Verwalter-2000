@@ -20,6 +20,7 @@ pub mod mcp;
 pub mod notices;
 pub mod processes;
 pub mod projects;
+pub mod prompt_cache;
 pub mod repositories;
 pub mod retro;
 pub mod review;

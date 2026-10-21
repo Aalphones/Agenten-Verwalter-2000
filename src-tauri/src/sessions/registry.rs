@@ -55,6 +55,8 @@ use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_sessi
 use crate::git::model::GitBusySession;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
+use crate::prompt_cache::model::PromptCache;
+use crate::prompt_cache::{TTL_1H_MS, TTL_5M_MS};
 use crate::review::{self, model::ReviewComment};
 use crate::sessions::model::{
     AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary,
@@ -212,6 +214,10 @@ struct SessionState {
     running_since: Option<f64>,
     context_used: u32,
     context_window: u32,
+    /// Zustand des Prompt-Caches, nur in der Betriebsart Claude (ADR 033); gespeichert.
+    prompt_cache: Option<PromptCache>,
+    /// `message.id` der Antwort, die den Anker von `prompt_cache` gesetzt hat; nur im Speicher.
+    cache_message_id: Option<String>,
     /// Letzte Aufschlüsselung des Kontexts; nur im Speicher, nach einem App-Neustart leer (ADR 008).
     context_breakdown: Option<ContextBreakdown>,
     /// Letzte Antwort auf `mcp_status`; nur im Speicher und nur, solange der Prozess lebt (ADR 013).
@@ -1801,6 +1807,8 @@ impl SessionState {
             running_since: None,
             context_used: 0,
             context_window: model.initial_context_window(),
+            prompt_cache: None,
+            cache_message_id: None,
             context_breakdown: None,
             mcp_servers: None,
             mcp_fetched_at: None,
@@ -1855,6 +1863,7 @@ impl SessionState {
         state.running_ms = row.running_ms;
         state.context_used = row.context_used;
         state.context_window = row.context_window;
+        state.prompt_cache = row.prompt_cache.clone();
         state.has_agent_history = row.has_agent_history;
         state.chrome = row.chrome;
         state.codex_model = row.codex_model.clone();
@@ -1955,6 +1964,72 @@ impl SessionState {
             outbox.background.push(item.clone());
             outbox.background_changed = true;
         }
+    }
+
+    /// Der laufende Prozess ist die Claude-Kommandozeile mit dem Claude-Abo. Prompt-Cache, Kosten,
+    /// Kontingent live und Modell-Ausweichen gibt es nur hier (ADR 033).
+    fn is_claude_process(&self) -> bool {
+        self.process_mode == OperatingMode::Claude && self.process_backend.is_none()
+    }
+
+    /// Hält fest, wann der Cache zuletzt beschrieben oder gelesen wurde. Eine Antwort kommt in
+    /// mehreren Zeilen; nur die erste einer neuen `message.id` setzt den Anker.
+    fn note_prompt_cache(
+        &mut self,
+        outbox: &mut Outbox,
+        message_id: Option<String>,
+        tokens: u32,
+        written_5m: u32,
+        written_1h: u32,
+    ) {
+        if !self.is_claude_process() {
+            return;
+        }
+        let previous_ttl: Option<u32> = self
+            .prompt_cache
+            .as_ref()
+            .map(|cache: &PromptCache| cache.ttl_ms);
+        // Ohne Angabe gilt die kürzere Dauer als vorsichtige Annahme.
+        let ttl_ms: u32 = if written_1h > 0 {
+            TTL_1H_MS
+        } else if written_5m > 0 {
+            TTL_5M_MS
+        } else {
+            previous_ttl.unwrap_or(TTL_5M_MS)
+        };
+        let is_new_message: bool = message_id.is_none() || message_id != self.cache_message_id;
+        let previous_anchor: Option<f64> = self
+            .prompt_cache
+            .as_ref()
+            .map(|cache: &PromptCache| cache.anchor_at);
+        let anchor_at: f64 = match previous_anchor {
+            Some(anchor) if !is_new_message => anchor,
+            _ => now_ms(),
+        };
+        if is_new_message {
+            self.cache_message_id = message_id;
+        }
+        let next = PromptCache {
+            anchor_at,
+            ttl_ms,
+            tokens,
+            model: self.model,
+            compacted_at: None,
+        };
+        if Some(&next) != self.prompt_cache.as_ref() {
+            self.prompt_cache = Some(next);
+            outbox.summary_dirty = true;
+        }
+    }
+
+    /// Nach einer Zusammenfassung ist der Cache „neu“, bis die nächste Antwort ihn beschreibt.
+    /// Den Agenten „Autark“ gibt es ohne `prompt_cache`: dort bleibt die Zeile ohne Wirkung.
+    fn note_compaction(&mut self, outbox: &mut Outbox) {
+        let Some(cache) = self.prompt_cache.as_mut() else {
+            return;
+        };
+        cache.compacted_at = Some(now_ms());
+        outbox.summary_dirty = true;
     }
 
     /// Die Antwort des Hauptagenten ist abgegeben, ein Subagent arbeitet aber noch: der Agent
@@ -2304,10 +2379,15 @@ impl SessionState {
                 context_window,
                 ..
             } => self.end_turn(outbox, end, context_window),
-            // Warnhinweise, Phasen 2–6.
-            AgentEvent::CacheUsed { .. }
-            | AgentEvent::Compacted { .. }
-            | AgentEvent::CompactSummary(_)
+            AgentEvent::CacheUsed {
+                message_id,
+                tokens,
+                written_5m,
+                written_1h,
+            } => self.note_prompt_cache(outbox, message_id, tokens, written_5m, written_1h),
+            AgentEvent::Compacted { .. } => self.note_compaction(outbox),
+            // Warnhinweise, Phasen 4–6.
+            AgentEvent::CompactSummary(_)
             | AgentEvent::RateLimit(_)
             | AgentEvent::ModelFallback { .. }
             | AgentEvent::Info(_)
@@ -2813,6 +2893,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         status: state.status,
         model: state.model,
         codex_model: state.codex_model.clone(),
+        prompt_cache: state.prompt_cache.clone(),
         effort: state.effort,
         mode: state.mode,
         created_at: state.created_at,
@@ -2892,6 +2973,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         running_since: state.running_since,
         context_used: state.context_used,
         context_window: state.context_window,
+        prompt_cache: state.prompt_cache.clone(),
         repository_count: u32::try_from(session.repositories().len()).unwrap_or(u32::MAX),
         project_id: session.project_id.clone(),
         number: session.number,
@@ -3031,6 +3113,8 @@ fn start_process(
     state.process_mode = operating_mode;
     state.process_repository_count = repositories.len();
     state.translator = Translator::default();
+    // Die erste Zeile des neuen Prozesses setzt den Anker neu, auch bei gleicher `message.id`.
+    state.cache_message_id = None;
     Ok(())
 }
 

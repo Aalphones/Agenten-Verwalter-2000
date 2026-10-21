@@ -33,6 +33,7 @@ use verwalter_lib::{
         SessionMcp,
     },
     projects::model::{ProjectCreated, ProjectSummary},
+    prompt_cache::model::PromptCache,
     repositories::model::{KnownRepository, RepositoryKind},
     retro::model::{RetroExport, RetroProgress},
     review::model::ReviewComment,
@@ -72,6 +73,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     QuestionAnswer::export_all(&cfg)?;
     SessionStatus::export_all(&cfg)?;
     AwaitedScript::export_all(&cfg)?;
+    PromptCache::export_all(&cfg)?;
     SessionSummary::export_all(&cfg)?;
     ChatPage::export_all(&cfg)?;
     ChatEntryEvent::export_all(&cfg)?;
