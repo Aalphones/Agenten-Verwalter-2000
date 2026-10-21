@@ -6,6 +6,10 @@ import { ContextDonut } from '@/features/context/ContextDonut';
 import { ContextPopover } from '@/features/context/ContextPopover';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { useNow } from '@/features/background/useNow';
+import { PromptCachePill } from '@/features/promptcache/PromptCachePill';
+import { PromptCachePopover } from '@/features/promptcache/PromptCachePopover';
+import { promptCacheState } from '@/features/promptcache/promptCacheState';
+import type { PromptCacheState } from '@/features/promptcache/promptCacheState';
 import { headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import { UsageButton } from '@/features/usage/UsageButton';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
@@ -35,7 +39,7 @@ const VIEW_LABEL: Record<SessionView, string> = {
   artifacts: 'Artefakte',
 };
 
-type OpenPanel = 'context' | 'usage';
+type OpenPanel = 'context' | 'usage' | 'cache';
 
 interface SessionHeaderProps {
   session: SessionSummary;
@@ -81,11 +85,24 @@ export function SessionHeader({
     const operatingMode: string = state.settings?.operatingMode ?? 'claude';
     return operatingMode === 'claude' || operatingMode === 'codex';
   });
+  // Den Prompt-Cache mit Haltedauer gibt es nur mit der Claude-Kommandozeile und dem Claude-Abo.
+  const hasPromptCache: boolean = useSettingsStore(
+    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
+  );
   const scriptNow: number = useNow(session.awaitedScript !== null);
+  const cacheNow: number = useNow(hasPromptCache && session.promptCache !== null);
   const isTicking: boolean = session.runningSince !== null;
+  const cacheState: PromptCacheState = promptCacheState(
+    session.promptCache,
+    session.model,
+    cacheNow,
+  );
 
-  // Wechselt die Betriebsart bei offenem Kontingent-Fenster, schließt es mit.
+  // Wechselt die Betriebsart bei offenem Kontingent- oder Cache-Fenster, schließt es mit.
   if (!hasUsage && openPanel === 'usage') {
+    setOpenPanel(null);
+  }
+  if (!hasPromptCache && openPanel === 'cache') {
     setOpenPanel(null);
   }
 
@@ -146,6 +163,31 @@ export function SessionHeader({
         console.error('Session-Aktion fehlgeschlagen', reason);
         reportSessionError(session.id, `Aktion fehlgeschlagen: ${commandErrorText(reason)}`);
       });
+  }
+
+  function renderPromptCache(): ReactElement | null {
+    if (!hasPromptCache || session.promptCache === null || cacheState.kind === 'unknown') {
+      return null;
+    }
+    return (
+      <div className="session-header__anchor">
+        <PromptCachePill
+          state={cacheState}
+          isOpen={openPanel === 'cache'}
+          onToggle={(): void => {
+            togglePanel('cache');
+          }}
+        />
+        {openPanel === 'cache' && (
+          <PromptCachePopover
+            cache={session.promptCache}
+            state={cacheState}
+            sessionModel={session.model}
+            onClose={closePanel}
+          />
+        )}
+      </div>
+    );
   }
 
   function renderControls(): ReactElement | null {
@@ -312,6 +354,7 @@ export function SessionHeader({
           </svg>
           <span className="session-header__background-label">{backgroundLabel}</span>
         </button>
+        {renderPromptCache()}
         <div className="session-header__anchor">
           <button
             type="button"

@@ -21,7 +21,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Protokoll: neue Felder und Zeilen lesen, neue `AgentEvent`s, Messung der abgelehnten Aufrufe | [phase-1-protokoll.md](phase-1-protokoll.md) | standard | complete |
 | 2 | Prompt-Cache im Core: Zustand je Session, Speichern (Migration 12), in `SessionSummary`; ADR 033 | [phase-2-cache-core.md](phase-2-cache-core.md) | heikel | complete |
-| 3 | Cache in der Oberfläche: Pille in der Kopfzeile (1), Hinweis in der Eingabeleiste (2), Hinweis im Modell-Menü (3) | [phase-3-cache-oberflaeche.md](phase-3-cache-oberflaeche.md) | standard | pending |
+| 3 | Cache in der Oberfläche: Pille in der Kopfzeile (1), Hinweis in der Eingabeleiste (2), Hinweis im Modell-Menü (3) | [phase-3-cache-oberflaeche.md](phase-3-cache-oberflaeche.md) | standard | complete |
 | 4 | Verlauf Teil 1: Eintragsart „Hinweis“, Zusammenfassung (4), Modellwechsel-Zeile (3) | [phase-4-verlauf-zusammenfassung.md](phase-4-verlauf-zusammenfassung.md) | standard | pending |
 | 5 | Kontingent live (5): Werte aus `rate_limit_event`, Leiste unter der Kopfzeile | [phase-5-kontingent-live.md](phase-5-kontingent-live.md) | standard | pending |
 | 6 | Verlauf Teil 2: Modell-Ausweichen (6), Hinweise und Moduswechsel (7), abgelehnte Aufrufe (8), Kosten (9); Abschluss der Doku | [phase-6-verlauf-weitere.md](phase-6-verlauf-weitere.md) | standard | pending |

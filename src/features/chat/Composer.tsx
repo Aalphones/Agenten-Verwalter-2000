@@ -19,6 +19,8 @@ import {
 import { useCodexModels } from '@/features/codex/useCodexModels';
 import { McpDialog } from '@/features/mcp/McpDialog';
 import { McpProblemChip } from '@/features/mcp/McpProblemChip';
+import { CacheAwareModelMenu } from '@/features/promptcache/CacheAwareModelMenu';
+import { CacheColdHint } from '@/features/promptcache/CacheColdHint';
 import { ReviewCommentList } from '@/features/review/ReviewCommentList';
 import { VoiceButton } from '@/features/voice/VoiceButton';
 import type { Attachment } from '@/lib/bindings/Attachment';
@@ -32,7 +34,6 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { sendMessage } from '@/lib/chat';
 import {
   CODEX_NOT_FOUND_MESSAGE,
-  MODEL_OPTIONS,
   MODE_OPTIONS,
   effortLabel,
   isLocalOperatingMode,
@@ -81,9 +82,11 @@ type OpenMenu = 'model' | 'mode' | 'plus' | 'command' | 'mcp' | null;
 
 interface ComposerProps {
   session: SessionSummary;
+  /** Nimmt eine aus der Eingabeleiste angelegte Session in die Liste und wählt sie aus. */
+  onSessionCreated: (created: SessionSummary) => void;
 }
 
-export function Composer({ session }: ComposerProps): ReactElement {
+export function Composer({ session, onSessionCreated }: ComposerProps): ReactElement {
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -305,6 +308,7 @@ export function Composer({ session }: ComposerProps): ReactElement {
   return (
     <div className="composer">
       <div className={boxClass}>
+        <CacheColdHint session={session} onSessionCreated={onSessionCreated} />
         <ReviewCommentList sessionId={session.id} />
         {pending.length > 0 && (
           <AttachmentRow
@@ -399,12 +403,10 @@ export function Composer({ session }: ComposerProps): ReactElement {
                 <span className="composer__effort">{effortText}</span>
               </button>
               {openMenu === 'model' && !isCodex && (
-                <ModelMenu
-                  options={MODEL_OPTIONS}
-                  value={session.model}
+                <CacheAwareModelMenu
+                  session={session}
                   onChange={changeModel}
                   onClose={closeMenu}
-                  placement="above"
                   note={modelNote}
                 />
               )}

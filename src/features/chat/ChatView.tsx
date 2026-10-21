@@ -149,7 +149,7 @@ export function ChatView({
         <SessionTldrCard session={session} entryCount={entryCount(entries)} />
       </div>
       <div ref={bottomRef} className="chat-view__bottom">
-        <Composer session={session} />
+        <Composer session={session} onSessionCreated={onSessionCreated} />
       </div>
     </div>
   );

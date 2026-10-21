@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-21_warnhinweise/`
-**Phase:** 3/6 — Cache in der Oberfläche (pending; Phase 2 complete)
-**Nächster Schritt:** Phase 3 starten (`phase-3-cache-oberflaeche.md`, Rating standard → `/model sonnet`); FINDINGS-Einträge „→ Phase 3“ lesen (Betriebsart-Bindung der Pille). Daneben offen: Smoke „Wartet auf Skript“, „Codex“, „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
+**Phase:** 4/6 — Verlauf Teil 1: Eintragsart „Hinweis“, Zusammenfassung, Modellwechsel-Zeile (pending; Phase 3 complete)
+**Nächster Schritt:** Phase 4 starten (`phase-4-verlauf-zusammenfassung.md`, Rating standard → `/model sonnet`); FINDINGS-Einträge „→ Phase 4“ lesen (Nachbarplan `mitgelieferte-befehle`, Metadaten von `compact_boundary` bei „Autark“). Daneben offen: Smoke 4–6 der Cache-Oberfläche (Pille, Hinweiszeile, Modell-Menü) im Browser; Smoke „Wartet auf Skript“, „Codex“, „Browser-Zugriff“ und „Archiv-Suche“ durch den User.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 
@@ -24,7 +24,7 @@
 13. ~~Browser-Zugriff~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_browser-zugriff.md`, ADR 030, Migration 10), Smoke offen, Release auf Zuruf.
 14. ~~Codex als Betriebsart~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-19_codex/`, ADR 031, Migration 11), Smoke offen, Release auf Zuruf (Minor-Version).
 15. ~~Wartet auf Skript~~ — umgesetzt und archiviert (`docs/archive/2026-10/2026-10-20_wartet-auf-skript.md`, ADR 032), Smoke offen, Release auf Zuruf.
-16. **Warnhinweise** — in Umsetzung (`docs/planning/2026-10-21_warnhinweise/`, 6 Phasen, ADR 033 angelegt, Migration 12 gelaufen); Phasen 1 und 2 committet.
+16. **Warnhinweise** — in Umsetzung (`docs/planning/2026-10-21_warnhinweise/`, 6 Phasen, ADR 033 angelegt, Migration 12 gelaufen); Phasen 1 bis 3 committet.
 
 ## Offen
 

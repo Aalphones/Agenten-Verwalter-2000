@@ -1,9 +1,17 @@
 import type { ReactElement } from 'react';
 import type { ModelOption } from '@/lib/labels';
 import { Popover } from '@/components/Popover';
+import { SnowflakeIcon } from '@/components/SnowflakeIcon';
 import './ModelMenu.css';
 
 const MODEL_MENU_WIDTH = 340;
+const WARNING_ICON_SIZE = 14;
+
+/** Kasten über der Fußzeile: `lead` fett, dahinter `text`. */
+export interface ModelMenuWarning {
+  lead: string;
+  text: string;
+}
 
 interface ModelMenuProps<Id extends string> {
   options: readonly ModelOption<Id>[];
@@ -15,6 +23,8 @@ interface ModelMenuProps<Id extends string> {
   title?: string;
   /** Steht statt der Zeilen, wenn `options` leer ist (Codex nicht erreichbar, Liste lädt noch). */
   emptyText?: string;
+  /** Warnt vor den Folgen eines Wechsels (Prompt-Cache); fehlt sie, steht kein Kasten da. */
+  warning?: ModelMenuWarning | undefined;
 }
 
 export function ModelMenu<Id extends string>({
@@ -26,6 +36,7 @@ export function ModelMenu<Id extends string>({
   note,
   title = 'Modell für diese Session',
   emptyText = 'Keine Modelle verfügbar.',
+  warning,
 }: ModelMenuProps<Id>): ReactElement {
   return (
     <Popover
@@ -58,6 +69,16 @@ export function ModelMenu<Id extends string>({
           </button>
         );
       })}
+      {warning !== undefined && (
+        <div className="model-menu__warning" role="note">
+          <span className="model-menu__warning-icon">
+            <SnowflakeIcon size={WARNING_ICON_SIZE} />
+          </span>
+          <span>
+            <strong>{warning.lead}</strong> {warning.text}
+          </span>
+        </div>
+      )}
       <div className="model-menu__foot">{note}</div>
     </Popover>
   );
