@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | Core: Aufrufe je Skill aus dem Verlauf zählen, Command; ADR 039 | mechanisch | pending |
+| 1 | Core: Aufrufe je Skill aus dem Verlauf zählen, Command; ADR 039 | mechanisch | complete |
 | 2 | Oberfläche: Sortierung, Zahl, eingeklappte Gruppe; Doku-Abschluss | standard | pending |
 
 **Rahmen:** strikt 1 → 2, direkt auf `main`, ein Commit pro Phase, Scope `skills`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten, Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).

@@ -14,6 +14,7 @@ pub mod session_repositories;
 pub mod session_ticket_worktrees;
 pub mod sessions;
 pub mod settings;
+pub mod skill_uses;
 pub mod tldr;
 
 use std::fs;

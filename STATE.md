@@ -1,7 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Nächster Schritt:** Nächsten geparkten Plan wählen, empfohlen `2026-10-22_skill-kassensturz` (ADR 039).
+**Aktiver Plan:** `docs/planning/2026-10-22_skill-kassensturz/`
+**Phase:** 2/2 — Oberfläche (pending; Phase 1 committet)
+**Nächster Schritt:** Phase 2 laut Plan-README; `listSkillUses` in `src/lib/skills.ts` und Binding `SkillUse` stehen bereits, `skillUseKey` fehlt noch.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_ohne-fundstelle/` (ADR 036), Release `v0.29.0`.
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 037–039 für die drei Pläne; keiner braucht eine Migration.

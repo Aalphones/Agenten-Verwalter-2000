@@ -125,6 +125,7 @@ pub fn run() {
             commands::attachments::attachment_discard,
             commands::skills::skill_list_for_session,
             commands::skills::skill_list_for_repositories,
+            commands::skills::skill_uses,
             commands::background::background_load,
             commands::background::background_output,
             commands::background::background_stop,

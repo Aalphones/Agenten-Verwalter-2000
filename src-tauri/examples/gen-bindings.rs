@@ -40,7 +40,7 @@ use verwalter_lib::{
     review::model::{CommentTarget, ReviewComment},
     sessions::model::{AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
-    skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
+    skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
     tldr::model::{
         ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
         TldrChangedEvent,
@@ -73,6 +73,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     SkillKind::export_all(&cfg)?;
     SkillInfo::export_all(&cfg)?;
     SkillRef::export_all(&cfg)?;
+    SkillUse::export_all(&cfg)?;
     Denial::export_all(&cfg)?;
     Notice::export_all(&cfg)?;
     ChatEntry::export_all(&cfg)?;

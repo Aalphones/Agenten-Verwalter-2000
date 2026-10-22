@@ -30,6 +30,14 @@ pub struct SkillInfo {
     pub origin: SkillOrigin,
 }
 
+/// Wie oft ein Skill in den letzten 30 Tagen aufgerufen wurde; `key` ist Herkunft + Name.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillUse {
+    pub key: String,
+    pub count: u32,
+}
+
 /// Der Skill, den eine gesendete Nachricht aufruft; hängt am Chat-Eintrag.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
