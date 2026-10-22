@@ -517,7 +517,8 @@ pub fn is_folder_character(character: char) -> bool {
     character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
 }
 
-/// `C:\Users\x\develop` → `//c/Users/x/develop`, die Pfadschreibweise der Claude-Freigaben.
+/// `C:\Users\x\develop` → `//c/Users/x/develop` und `/home/x/develop` → `//home/x/develop`, die
+/// Pfadschreibweise der Claude-Freigaben: ein einzelnes `/` am Anfang gilt dort als relativ.
 fn rule_path(dir: &Path) -> String {
     let slashed = dir.to_string_lossy().replace('\\', "/");
     let mut characters = slashed.chars();
@@ -527,6 +528,7 @@ fn rule_path(dir: &Path) -> String {
             let rest = characters.as_str().trim_end_matches('/');
             format!("//{}{rest}", drive.to_ascii_lowercase())
         }
+        _ if slashed.starts_with('/') && !slashed.starts_with("//") => format!("/{slashed}"),
         _ => slashed,
     }
 }

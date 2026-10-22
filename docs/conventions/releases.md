@@ -33,7 +33,7 @@ Dazu gehört der nachgezogene Eintrag in `src-tauri/Cargo.lock`.
 - Ein gepushter Tag wird **nie verschoben oder gelöscht** ohne ausdrückliche Anweisung des Users. Schlägt der Release-Lauf wegen abweichender Versionen fehl, ist das eine Rückfrage, keine eigenmächtige Reparatur.
 - Kein Tag ohne den `chore(release)`-Commit darunter — der Tag zeigt immer auf den Stand, dessen Dateien die Version tragen.
 - Das Release ist ohne Code-Signatur: Windows SmartScreen warnt beim Start der heruntergeladenen Datei. macOS meldet die App als „beschädigt"; nach dem Kopieren nach Programme hilft `xattr -dr com.apple.quarantine "/Applications/Agenten Verwalter 2000.app"`. Das ist bekannt und kein Fehler des Laufs.
-- macOS und Linux sind ungetestet: Pfade werden im Core noch auf Windows-Trenner umgeschrieben, Worktrees und Changes funktionieren dort nicht verlässlich.
+- macOS und Linux sind nicht vollständig getestet: Git-, Changes- und Artefaktpfade behalten dort ihre `/`, aber es gab noch keinen Lauf auf diesen Systemen. Die Betriebsart „Autark“ ruft weiter Windows-Programme (`taskkill`, `powershell.exe`, `cmd`) auf.
 
 ## Critical Rules
 

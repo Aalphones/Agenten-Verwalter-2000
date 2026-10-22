@@ -19,6 +19,7 @@ use tauri::{AppHandle, Manager};
 
 use super::resolve;
 use crate::error::CommandError;
+use crate::filesystem::native_path;
 use crate::sessions::registry::SessionRegistry;
 
 const MAX_REQUEST_BYTES: usize = 16 * 1024;
@@ -137,7 +138,7 @@ impl Connection {
         let Ok(dir) = registry.artifacts_dir(&session_id) else {
             return not_found();
         };
-        let target = match resolve(&dir, &relative.replace('/', "\\")) {
+        let target = match resolve(&dir, &native_path(&relative).to_string_lossy()) {
             Ok(target) => target,
             Err(CommandError::FileNotFound(_)) => return not_found(),
             Err(_) => return text_reply(403, "Forbidden", "Nicht erlaubt"),

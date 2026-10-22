@@ -43,6 +43,7 @@ src-tauri/src/
 
 - Sessions überleben die UI (Datenbank, `--resume`); der Agent-Prozess endet mit der App und wird bei Bedarf neu gestartet — nicht der Prozess, sondern die Session ist die Einheit, die einen Absturz überlebt.
 - Windows zuerst: Beenden ohne POSIX-Signale, Pfade mit Laufwerksbuchstaben, Pfadlänge beachten. Plattformunterschiede gekapselt in `processes/` und `filesystem/`.
+- Ein Pfad, der mit `/` aus Git-Ausgabe oder URL kommt, wird mit `filesystem::native_path` zum Dateisystempfad — nie mit einem eigenen `replace('/', "\\")`. Unter Linux und macOS ist `\` ein gültiges Zeichen im Dateinamen. Reine Vergleichsschlüssel (`normalized_dir`, `attribution::normalize_path`) bleiben davon ausgenommen: sie werden nie geöffnet.
 
 ## Datenbank
 

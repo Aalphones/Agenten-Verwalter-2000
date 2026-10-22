@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use crate::changes;
 use crate::error::CommandError;
+use crate::filesystem::native_path;
 use crate::processes::hide_console;
 
 const MAX_ERROR_CHARS: usize = 500;
@@ -27,7 +28,7 @@ const LOCAL_BRANCH_PREFIX: &str = "refs/heads/";
 /// Wird geprüft, wenn `origin/HEAD` keinen Standard-Branch nennt — in dieser Reihenfolge.
 const FALLBACK_DEFAULT_BRANCHES: [&str; 2] = ["main", "master"];
 
-/// Ein Eintrag aus `git worktree list --porcelain`; `path` mit Backslashes, `branch` ohne
+/// Ein Eintrag aus `git worktree list --porcelain`; `path` mit den Trennern des Systems, `branch` ohne
 /// `refs/heads/`, `None` bei losgelöstem HEAD.
 #[derive(Debug, Clone)]
 pub struct WorktreeEntry {
@@ -39,7 +40,7 @@ pub struct WorktreeEntry {
 /// Wurzelordner des Repositorys, in dem `dir` liegt (Backslashes unter Windows).
 pub fn toplevel(dir: &Path) -> Result<PathBuf, CommandError> {
     let output = run(dir, &args(&["rev-parse", "--show-toplevel"]))?;
-    Ok(PathBuf::from(output.replace('/', "\\")))
+    Ok(native_path(&output))
 }
 
 pub fn head_commit(repo: &Path) -> Result<String, CommandError> {
@@ -137,7 +138,7 @@ fn parse_worktree_block(block: &str) -> Option<WorktreeEntry> {
     for line in block.lines() {
         let line = line.trim_end_matches('\r');
         if let Some(value) = line.strip_prefix("worktree ") {
-            path = Some(PathBuf::from(value.replace('/', "\\")));
+            path = Some(native_path(value));
         } else if let Some(value) = line.strip_prefix("HEAD ") {
             value.clone_into(&mut head);
         } else if let Some(value) = line.strip_prefix("branch ") {
@@ -387,7 +388,7 @@ pub fn unpushed(dir: &Path, upstream: &str) -> Result<HashSet<String>, CommandEr
 pub fn git_path_exists(dir: &Path, name: &str) -> Result<bool, CommandError> {
     let output = run(dir, &args(&["rev-parse", "--git-path", name]))?;
     // Git nennt den Pfad relativ zu `dir`, wenn er darunter liegt, sonst absolut; `join` deckt beides.
-    Ok(dir.join(output.replace('/', "\\")).exists())
+    Ok(dir.join(native_path(&output)).exists())
 }
 
 /// Dateien mit ungelösten Konflikten. `diff-files` statt `diff`: Plumbing, nimmt keine Sperre.

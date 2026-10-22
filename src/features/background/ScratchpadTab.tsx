@@ -33,6 +33,8 @@ const BINARY_NOTICE = 'Keine Textvorschau';
 const ROW_INDENT_BASE = 8;
 const ROW_INDENT_PER_LEVEL = 18;
 const ESTIMATED_ROW_HEIGHT = 26;
+/** Laufwerksbuchstabe (`C:`) oder UNC-Pfad (`\\`) am Anfang: der Core liefert dann Pfade mit `\`. */
+const WINDOWS_PATH_PATTERN = /^(?:[A-Za-z]:|\\\\)/;
 
 interface ScratchpadTabProps {
   session: SessionSummary;
@@ -196,9 +198,10 @@ function rowIcon(row: ScratchpadRow): string {
   return row.isImage ? '▣' : '≡';
 }
 
-/** Der volle Pfad: Scratchpad-Ordner plus relativer Pfad, mit Windows-Trennern. */
+/** Der volle Pfad: Scratchpad-Ordner plus relativer Pfad, mit dem Trenner, den der Ordnerpfad selbst trägt. */
 function fullPath(folder: string, relativePath: string): string {
-  return `${folder}\\${relativePath.split('/').join('\\')}`;
+  const separator: string = WINDOWS_PATH_PATTERN.test(folder) ? '\\' : '/';
+  return `${folder}${separator}${relativePath.split('/').join(separator)}`;
 }
 
 function previewNotice(preview: TextPreview | null): string | null {

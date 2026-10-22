@@ -21,6 +21,7 @@ use crate::changes::model::{
 };
 use crate::changes::sources::Source;
 use crate::error::CommandError;
+use crate::filesystem::native_path;
 use crate::git;
 use crate::worktrees::{self, RepositoryCheckout, SessionRepository, TicketRoot, TicketWorktree};
 
@@ -301,7 +302,7 @@ fn dirty_stats(worktree: &Path) -> Result<BTreeMap<String, LineStat>, CommandErr
         &git::diff_index_numstat(worktree, HEAD)?,
     );
     for path in parse::paths(&git::untracked_files(worktree)?) {
-        let stat = untracked_stat(&worktree.join(path.replace('/', "\\")));
+        let stat = untracked_stat(&worktree.join(native_path(&path)));
         dirty.insert(path, stat);
     }
     Ok(dirty)
@@ -317,7 +318,7 @@ fn open_uncommitted(
     dirty
         .iter()
         .filter(|(path, _): &(&String, &LineStat)| {
-            let absolute = worktree.join(path.replace('/', "\\"));
+            let absolute = worktree.join(native_path(path));
             let key = attribution::normalize_path(&absolute.to_string_lossy());
             own.touched.get(&key).is_some_and(|touched_at: &f64| {
                 attribution::is_open(*touched_at, path, commits, &own.commits)
@@ -455,7 +456,7 @@ pub fn file_diff(
         && raw.trim().is_empty()
         && git::is_untracked(&worktree, path)?
     {
-        return Ok(untracked_diff(&worktree.join(path.replace('/', "\\"))));
+        return Ok(untracked_diff(&worktree.join(native_path(path))));
     }
     Ok(parse::unified(&raw))
 }

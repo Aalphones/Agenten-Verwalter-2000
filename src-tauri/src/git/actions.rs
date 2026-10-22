@@ -250,10 +250,17 @@ pub fn create_ticket_worktree(main_dir: &Path, name: &str) -> Result<String, Com
     Ok(folder)
 }
 
-/// `code <dir>` über `cmd`: unter Windows ist `code` ein `.cmd`-Skript, das ein direkter Start nicht findet.
+/// `code <dir>`; unter Windows über `cmd`, weil `code` dort ein `.cmd`-Skript ist, das ein direkter
+/// Start nicht findet.
 pub fn open_in_vs_code(dir: &Path) -> Result<(), CommandError> {
-    let mut command = Command::new("cmd");
-    command.args(["/C", "code"]).arg(dir).stdin(Stdio::null());
+    let mut command = if cfg!(windows) {
+        let mut through_cmd = Command::new("cmd");
+        through_cmd.args(["/C", "code"]);
+        through_cmd
+    } else {
+        Command::new("code")
+    };
+    command.arg(dir).stdin(Stdio::null());
     hide_console(&mut command);
     let output = command.output()?;
     if output.status.success() {

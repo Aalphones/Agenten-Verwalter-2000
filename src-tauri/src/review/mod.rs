@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::changes::model::DiffLineKind;
 use crate::error::CommandError;
+use crate::filesystem::native_path;
 use crate::review::model::{CommentTarget, ReviewComment};
 
 const MIN_FENCE_LENGTH: usize = 3;
@@ -85,7 +86,7 @@ pub fn agent_text(text: &str, comments: &[ReviewComment], folders: &[Option<Path
                 }
                 CommentTarget::Artifact { file, selector, .. } => {
                     let location = match folder {
-                        Some(folder) => folder.join(file.replace('/', "\\")).display().to_string(),
+                        Some(folder) => folder.join(native_path(file)).display().to_string(),
                         None => format!("Artefakt {file}"),
                     };
                     let fence = fence(&comment.code);
