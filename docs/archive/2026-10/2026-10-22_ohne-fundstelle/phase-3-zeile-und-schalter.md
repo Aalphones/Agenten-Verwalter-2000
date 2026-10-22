@@ -16,7 +16,7 @@ Lesen: [README.md](README.md) (Kontrakt `TurnSummary.unsourced`, Einstellung), E
 - [x] Die Zählung N braucht die Einträge: `ChatTimeline` gibt `NoticeBlock` eine Funktion `markCount(seqs) -> number | null` mit, die aus den geladenen Einträgen summiert und `null` liefert, wenn einer fehlt.
 - [x] `SettingsView.tsx`: Zeile nach AK 3 mit `save({ kind: 'markUnsourced', value })`.
 - [x] Doc: `docs/glossary.md` neuer Eintrag **Ohne Fundstelle**: „Angabe in einer Antwort des Agenten (Pfad, Datei:Zeile, Zahl ab zwei Ziffern), die in keiner Werkzeug-Ausgabe derselben Antwort und nicht in der Nachricht des Nutzers vorkommt; im Verlauf gepunktet unterstrichen (ADR 036).“ `docs/code-map.md` Zeile „Einstellungen“ um den Schalter ergänzen.
-- [ ] Plan-Abschluss: README-Bottom-Sektionen, Archiv, STATE.md, Versions-Tag.
+- [x] Plan-Abschluss: README-Bottom-Sektionen, Archiv, STATE.md, Versions-Tag.
 - [x] `pnpm check` grün, Commit `feat(settings): Schalter für Angaben ohne Fundstelle, Sprung aus der Abschlusszeile`.
 
 ## Report-Back

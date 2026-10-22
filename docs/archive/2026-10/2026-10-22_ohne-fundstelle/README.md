@@ -42,10 +42,20 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 ## Summary
 
+Nach jeder Antwort gleicht der Core Pfade, Datei:Zeile und Zahlen ab zwei Ziffern mit den Werkzeug-Ausgaben derselben Antwort und der Nachricht des Users ab. Unbelegtes steht im Antworttext gepunktet unterstrichen, mit Erklärung beim Überfahren oder Fokussieren; die Abschlusszeile zählt die Stellen und springt der Reihe nach dorthin. Ein Schalter in den Einstellungen (Standard an) blendet Markierung und Zählung aus.
+
 ## Files touched
+
+Core: `src-tauri/src/sourcing/` (Quellen sammeln, Angaben ermitteln), `agents/event.rs` (`ToolOutput`, `unsourced` am Text-Eintrag), `notices/model.rs`, `src-tauri/src/settings/`. Oberfläche: `src/features/sourcing/` (`rehypeUnsourced`, Erklärung), `src/components/Markdown.tsx`, `src/features/chat/` (`TextBlock`, `ChatTimeline`), `src/features/notices/` (`TurnSummaryLine`, `NoticeBlock`, `noticeTexts`), `src/features/settings/SettingsView.tsx`. Doku: ADR 036, `docs/code-map.md`, `docs/glossary.md`.
 
 ## Commits
 
+`c237cbd` Core · `30ed680` Markierung · `5dd0710` Zeile und Schalter.
+
 ## Deviations from plan
 
+Die Farbe ist `--color-status-waiting` (so heißt das Token im Code). Die Erklärung der Marke erscheint bei Fokus statt nur bei `:focus-visible`, weil der Sprung aus der Abschlusszeile den Fokus per Skript nach einem Mausklick setzt. `bool` wird als `true`/`false` gespeichert, nicht über die Enum-Helfer.
+
 ## Follow-ups
+
+Ist ein markierter Text nicht im geladenen Verlauf, tut der Sprung dorthin nichts (die Zählung weicht dann auf „Antwortteile“ aus). Nachladen bis zur Stelle gibt es nicht.
