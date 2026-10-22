@@ -60,7 +60,7 @@ Keine IDE, kein VS-Code-Ersatz, kein vollständiger Git-Client, kein Ticket-Syst
 - **Sicherheit:** Der Session-Workspace ist die Sicherheitsgrenze; Agenten bekommen nicht standardmäßig das ganze Benutzerverzeichnis.
 - **Absturzfestigkeit:** Ein UI-Absturz darf keine Session und keinen Worktree verlieren; der Agent-Prozess wird danach neu gestartet.
 - **Team:** Einzelentwickler, keine Deadline.
-- **Qualitätssicherung:** keine automatisierten Tests; abgesichert wird über strenge Typen, Lint, Build und eine manuelle Abnahme-Checkliste pro Plan.
+- **Qualitätssicherung:** keine automatisierten Tests; abgesichert wird über strenge Typen, Lint und Build; getestet wird im laufenden Betrieb, ohne Abnahme-Checkliste.
 
 ## Meilensteine
 

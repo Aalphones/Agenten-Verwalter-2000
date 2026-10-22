@@ -4,7 +4,7 @@
 
 ## Wann getaggt wird
 
-Genau dann, wenn ein Plan **vollständig** abgeschlossen ist und archiviert wird — alle Phasen `complete`, Smoke-Checkliste vom User abgenommen, Doc-Abgleich erledigt. Nicht nach einzelnen Phasen, nicht bei offener Abnahme, nicht bei roter Prüfkette.
+Genau dann, wenn ein Plan **vollständig** abgeschlossen ist und archiviert wird — alle Phasen `complete`, Doc-Abgleich erledigt, Prüfkette grün. Getestet wird danach im laufenden Betrieb, nicht vorher per Checkliste. Nicht nach einzelnen Phasen, nicht bei roter Prüfkette.
 
 ## Versionsnummer
 
@@ -37,5 +37,5 @@ Dazu gehört der nachgezogene Eintrag in `src-tauri/Cargo.lock`.
 
 ## Critical Rules
 
-1. **Getaggt wird nur ein abgeschlossener, abgenommener Plan** — ein Release ist für Dritte sichtbar und gilt als fertiger Stand.
+1. **Getaggt wird nur ein abgeschlossener Plan mit grüner Prüfkette** — ein Release ist für Dritte sichtbar und gilt als fertiger Stand.
 2. **Tag, `package.json`, `tauri.conf.json` und `Cargo.toml` tragen dieselbe Version** — sonst trägt der Installer eine andere Nummer als das Release.
