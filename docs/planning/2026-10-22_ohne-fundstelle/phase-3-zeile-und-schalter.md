@@ -10,13 +10,13 @@ Lesen: [README.md](README.md) (Kontrakt `TurnSummary.unsourced`, Einstellung), E
 
 ## Checkliste
 
-- [ ] Core: `Settings.mark_unsourced: bool`, `DEFAULT_SETTINGS` mit `true`, `KEY_MARK_UNSOURCED = "mark_unsourced"`, Lesen in `load` über `stored_or` (bool als JSON-Text `true`/`false`), `SettingsChange::MarkUnsourced { value: bool }` mit Zweig in `update`; `pnpm bindings`.
-- [ ] `noticeTexts.ts`: `unsourcedText(count: number): string`, `unsourcedPartsText(count: number): string`.
-- [ ] `TurnSummaryLine.tsx`: Props `unsourced: readonly number[]` und `onJump: (seq: number) => void`; Knopf nach AK 1 mit eigenem Index-Zustand für AK 2. `NoticeBlock.tsx` reicht `notice.unsourced` und einen Sprung-Rückruf durch, den `ChatTimeline` bereitstellt (dieselbe Mechanik wie der Sprung von `PinnedUserMessage`; danach `querySelector('[data-seq="<seq>"] .unsourced')?.focus()` — trägt das Eintrags-Element kein `data-seq`, dort ergänzen).
-- [ ] Die Zählung N braucht die Einträge: `ChatTimeline` gibt `NoticeBlock` eine Funktion `markCount(seqs) -> number | null` mit, die aus den geladenen Einträgen summiert und `null` liefert, wenn einer fehlt.
-- [ ] `SettingsView.tsx`: Zeile nach AK 3 mit `save({ kind: 'markUnsourced', value })`.
-- [ ] Doc: `docs/glossary.md` neuer Eintrag **Ohne Fundstelle**: „Angabe in einer Antwort des Agenten (Pfad, Datei:Zeile, Zahl ab zwei Ziffern), die in keiner Werkzeug-Ausgabe derselben Antwort und nicht in der Nachricht des Nutzers vorkommt; im Verlauf gepunktet unterstrichen (ADR 036).“ `docs/code-map.md` Zeile „Einstellungen“ um den Schalter ergänzen.
+- [x] Core: `Settings.mark_unsourced: bool`, `DEFAULT_SETTINGS` mit `true`, `KEY_MARK_UNSOURCED = "mark_unsourced"`, Lesen in `load` über `stored_or` (bool als JSON-Text `true`/`false`), `SettingsChange::MarkUnsourced { value: bool }` mit Zweig in `update`; `pnpm bindings`.
+- [x] `noticeTexts.ts`: `unsourcedText(count: number): string`, `unsourcedPartsText(count: number): string`.
+- [x] `TurnSummaryLine.tsx`: Props `unsourced: readonly number[]` und `onJump: (seq: number) => void`; Knopf nach AK 1 mit eigenem Index-Zustand für AK 2. `NoticeBlock.tsx` reicht `notice.unsourced` und einen Sprung-Rückruf durch, den `ChatTimeline` bereitstellt (dieselbe Mechanik wie der Sprung von `PinnedUserMessage`; danach `querySelector('[data-seq="<seq>"] .unsourced')?.focus()` — trägt das Eintrags-Element kein `data-seq`, dort ergänzen).
+- [x] Die Zählung N braucht die Einträge: `ChatTimeline` gibt `NoticeBlock` eine Funktion `markCount(seqs) -> number | null` mit, die aus den geladenen Einträgen summiert und `null` liefert, wenn einer fehlt.
+- [x] `SettingsView.tsx`: Zeile nach AK 3 mit `save({ kind: 'markUnsourced', value })`.
+- [x] Doc: `docs/glossary.md` neuer Eintrag **Ohne Fundstelle**: „Angabe in einer Antwort des Agenten (Pfad, Datei:Zeile, Zahl ab zwei Ziffern), die in keiner Werkzeug-Ausgabe derselben Antwort und nicht in der Nachricht des Nutzers vorkommt; im Verlauf gepunktet unterstrichen (ADR 036).“ `docs/code-map.md` Zeile „Einstellungen“ um den Schalter ergänzen.
 - [ ] Plan-Abschluss: README-Bottom-Sektionen, Archiv, STATE.md, Versions-Tag.
-- [ ] `pnpm check` grün, Commit `feat(settings): Schalter für Angaben ohne Fundstelle, Sprung aus der Abschlusszeile`.
+- [x] `pnpm check` grün, Commit `feat(settings): Schalter für Angaben ohne Fundstelle, Sprung aus der Abschlusszeile`.
 
 ## Report-Back

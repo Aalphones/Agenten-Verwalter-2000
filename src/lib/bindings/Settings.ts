@@ -21,4 +21,8 @@ defaultCodexModel: string | null,
 /**
  * Sprachcode für die Spracheingabe (z. B. `de`); `None` = Whisper erkennt die Sprache selbst.
  */
-voiceLanguage: string | null, };
+voiceLanguage: string | null, 
+/**
+ * Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
+ */
+markUnsourced: boolean, };

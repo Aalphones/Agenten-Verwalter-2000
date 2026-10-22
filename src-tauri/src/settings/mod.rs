@@ -23,6 +23,7 @@ const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
 const KEY_VOICE_LANGUAGE: &str = "voice_language";
+const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
 
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
 const DEFAULT_SETTINGS: Settings = Settings {
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     local_model: None,
     default_codex_model: None,
     voice_language: None,
+    mark_unsourced: true,
 };
 
 pub fn load(database: &Database) -> Result<Settings, CommandError> {
@@ -60,6 +62,10 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .map(|text: &String| text.trim())
             .filter(|text: &&str| !text.is_empty())
             .map(str::to_owned),
+        mark_unsourced: stored
+            .get(KEY_MARK_UNSOURCED)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.mark_unsourced),
     })
 }
 
@@ -111,6 +117,9 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
                     KEY_VOICE_LANGUAGE,
                     value.as_deref().unwrap_or(""),
                 )?;
+            }
+            SettingsChange::MarkUnsourced { value } => {
+                setting_rows::write(&transaction, KEY_MARK_UNSOURCED, &value.to_string())?;
             }
         }
         transaction.commit()?;

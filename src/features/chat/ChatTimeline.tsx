@@ -43,6 +43,7 @@ import './ChatTimeline.css';
 
 const ESTIMATED_BLOCK_HEIGHT = 40;
 const OVERSCAN = 8;
+const FOCUS_ATTEMPTS = 30;
 const SURFACE_PADDING_TOP = 20;
 const SURFACE_PADDING_BOTTOM = 12;
 const STICK_TO_BOTTOM_TOLERANCE = 24;
@@ -123,6 +124,7 @@ export function ChatTimeline({
     overscan: OVERSCAN,
     paddingStart: SURFACE_PADDING_TOP + topInset,
     paddingEnd: SURFACE_PADDING_BOTTOM + bottomInset,
+    scrollPaddingStart: topInset,
   });
   const totalSize: number = virtualizer.getTotalSize();
   // Wenig Inhalt klebt unten: alle Blöcke rücken um den freien Platz nach unten.
@@ -239,6 +241,32 @@ export function ChatTimeline({
       return;
     }
     element.scrollTop = lastUserStart + bottomOffset - topInset;
+  }
+
+  function jumpToEntry(seq: number): void {
+    const blockIndex: number = blocks.findIndex(
+      (block: ChatBlock) => block.kind === 'entry' && block.entry.seq === seq,
+    );
+    if (blockIndex === -1) {
+      return;
+    }
+    virtualizer.scrollToIndex(blockIndex, { align: 'start' });
+    focusFirstMark(scrollRef.current, seq, FOCUS_ATTEMPTS);
+  }
+
+  /** `null`, sobald ein Text der Antwort nicht im geladenen Verlauf steht (Nachladen holt ihn später). */
+  function countUnsourced(seqs: readonly number[]): number | null {
+    let total = 0;
+    for (const seq of seqs) {
+      const entry: ChatEntry | undefined = entries.find(
+        (candidate: ChatEntry) => candidate.seq === seq,
+      );
+      if (entry?.kind !== 'text') {
+        return null;
+      }
+      total += entry.unsourced.length;
+    }
+    return total;
   }
 
   function toggleExpanded(key: string): void {
@@ -373,6 +401,8 @@ export function ChatTimeline({
             }}
             isClaude={isClaude}
             isFallbackActive={session.fallbackModel !== null}
+            onJumpToEntry={jumpToEntry}
+            countUnsourced={countUnsourced}
           />
         );
       case 'error':
@@ -440,7 +470,9 @@ export function ChatTimeline({
                 className="chat-timeline__item"
                 style={{ transform: `translateY(${String(item.start + bottomOffset)}px)` }}
               >
-                <div className="chat-timeline__block">{renderBlock(blocks[item.index])}</div>
+                <div className="chat-timeline__block" data-seq={blockSeq(blocks[item.index])}>
+                  {renderBlock(blocks[item.index])}
+                </div>
               </div>
             ))}
           </div>
@@ -451,6 +483,26 @@ export function ChatTimeline({
       )}
     </>
   );
+}
+
+function blockSeq(block: ChatBlock | undefined): number | undefined {
+  return block?.kind === 'entry' ? block.entry.seq : undefined;
+}
+
+/** Der Text wird erst nach dem Scrollen gerendert (virtualisierte Liste); darum ein paar Frames lang suchen. */
+function focusFirstMark(root: HTMLElement | null, seq: number, attemptsLeft: number): void {
+  const mark: HTMLElement | null | undefined = root?.querySelector<HTMLElement>(
+    `[data-seq="${String(seq)}"] .unsourced`,
+  );
+  if (mark !== null && mark !== undefined) {
+    mark.focus({ preventScroll: true });
+    return;
+  }
+  if (attemptsLeft > 0) {
+    requestAnimationFrame((): void => {
+      focusFirstMark(root, seq, attemptsLeft - 1);
+    });
+  }
 }
 
 function findLastUserBlockIndex(blocks: readonly ChatBlock[]): number {

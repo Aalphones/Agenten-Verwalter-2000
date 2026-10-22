@@ -85,6 +85,17 @@ export function deniedCallsText(count: number): string {
   return count === 1 ? '1 Aufruf abgelehnt' : `${String(count)} Aufrufe abgelehnt`;
 }
 
+export function unsourcedText(count: number): string {
+  return count === 1 ? '1 Angabe ohne Fundstelle' : `${String(count)} Angaben ohne Fundstelle`;
+}
+
+/** Fehlt ein markierter Text im geladenen Verlauf, lässt sich die Zahl der Angaben nicht summieren. */
+export function unsourcedPartsText(count: number): string {
+  return count === 1
+    ? '1 Antwortteil mit Angaben ohne Fundstelle'
+    : `${String(count)} Antwortteile mit Angaben ohne Fundstelle`;
+}
+
 /** „≈ 0,08 $ Rechenwert“; unter einem Cent „< 0,01 $ Rechenwert“. */
 export function costText(costUsd: number): string {
   if (costUsd < MIN_SHOWN_COST_USD) {

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
+import { Switch } from '@/components/Switch';
 import { AccountRow } from '@/features/account/AccountRow';
 import { CodexAccountRow } from '@/features/codexaccount/CodexAccountRow';
 import { CliVersionRow } from '@/features/cliupdate/CliVersionRow';
@@ -300,6 +301,18 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
                 efforts={isCodex ? codexEfforts(defaultCodexModel) : undefined}
               />
             </SelectButton>
+          </SettingRow>
+          <SettingRow
+            label="Angaben ohne Fundstelle"
+            info="Unterstreicht Pfade, Datei:Zeile und Zahlen ab zwei Ziffern, die in keiner Werkzeug-Ausgabe derselben Antwort vorkommen."
+          >
+            <Switch
+              checked={current.markUnsourced}
+              label="markieren"
+              onChange={(checked: boolean): void => {
+                save({ kind: 'markUnsourced', value: checked }).catch(() => undefined);
+              }}
+            />
           </SettingRow>
         </section>
         <section className="settings-view__section">

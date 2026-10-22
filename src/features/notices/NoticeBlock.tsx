@@ -20,8 +20,10 @@ import { commandErrorText } from '@/lib/errors';
 import { reportedModelName } from '@/lib/labels';
 import { setSessionModel } from '@/lib/sessions';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
+import { useSettingsStore } from '@/stores/settings';
 
 const ICON_SIZE = 14;
+const NO_SEQS: readonly number[] = [];
 
 interface NoticeBlockProps {
   sessionId: string;
@@ -32,6 +34,10 @@ interface NoticeBlockProps {
   isClaude: boolean;
   /** Die Session antwortet gerade mit einem Ersatzmodell; nur dann führt der Knopf zurück. */
   isFallbackActive: boolean;
+  /** Scrollt zum Text mit dieser `seq` und setzt den Fokus auf seine erste Angabe ohne Fundstelle. */
+  onJumpToEntry: (seq: number) => void;
+  /** Summe der Angaben in den Texten mit diesen `seq`; `null`, wenn einer davon nicht geladen ist. */
+  countUnsourced: (seqs: readonly number[]) => number | null;
 }
 
 export function NoticeBlock({
@@ -41,8 +47,13 @@ export function NoticeBlock({
   onToggle,
   isClaude,
   isFallbackActive,
+  onJumpToEntry,
+  countUnsourced,
 }: NoticeBlockProps): ReactElement {
   const reportSessionError = useSessionErrorsStore((state) => state.report);
+  const marksUnsourced: boolean = useSettingsStore(
+    (state) => state.settings?.markUnsourced ?? true,
+  );
 
   switch (notice.kind) {
     case 'compacted':
@@ -112,14 +123,19 @@ export function NoticeBlock({
           text={modeChangedText(notice.from, notice.to)}
         />
       );
-    case 'turnSummary':
+    case 'turnSummary': {
+      const unsourcedSeqs: readonly number[] = marksUnsourced ? notice.unsourced : NO_SEQS;
       return (
         <TurnSummaryLine
           denials={notice.denials}
           costUsd={notice.costUsd}
+          unsourced={unsourcedSeqs}
+          unsourcedCount={countUnsourced(unsourcedSeqs)}
+          onJump={onJumpToEntry}
           isExpanded={isExpanded}
           onToggle={onToggle}
         />
       );
+    }
   }
 }
