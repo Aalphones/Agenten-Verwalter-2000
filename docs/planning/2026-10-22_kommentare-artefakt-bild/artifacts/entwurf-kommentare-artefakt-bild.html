@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entwurf Kommentare an Artefakt und Bild</title>
+<link rel="stylesheet" href="entwuerfe/app.css">
+<style>
+.stagewrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 520px; }
+.alist { border-right: 1px solid var(--border-subtle); padding: 10px 0; font-size: 12.5px; }
+.alist .hd { padding: 0 14px 8px; color: var(--muted); font-size: 12px; }
+.alist .e { padding: 7px 14px; display: grid; gap: 2px; }
+.alist .e.sel { background: var(--bg-selected); }
+.alist .e span { color: var(--muted); font-size: 11.5px; }
+.prev { display: flex; flex-direction: column; min-width: 0; }
+.phead { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); }
+.phead .t { flex: 1; min-width: 0; }
+.phead .t b { display: block; }
+.phead .t span { color: var(--muted); font-size: 11.5px; }
+.hintline { display: flex; gap: 8px; align-items: center; padding: 6px 16px; font-size: 12px; background: var(--accent-subtle); color: var(--fg); }
+.hintline .sp { flex: 1; }
+.stage { flex: 1; background: #fff; color: #1d1d1f; padding: 22px 26px; position: relative; font: 14px/1.5 system-ui, sans-serif; cursor: crosshair; }
+.stage h3 { margin: 0 0 4px; font-size: 20px; }
+.stage .sub { color: #5f6368; margin: 0 0 16px; }
+.acard { border: 1px solid #e2e0da; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; max-width: 560px; position: relative; }
+.acard h4 { margin: 0 0 4px; font-size: 15px; }
+.acard p { margin: 0; color: #444; font-size: 13px; }
+.hov { outline: 2px solid #c4572f; outline-offset: 2px; background: rgb(196 87 47 / 0.06); }
+.tagname { position: absolute; top: -20px; left: 0; font: 11px var(--mono); background: #c4572f; color: #fff; padding: 1px 6px; border-radius: 4px; }
+.pin { position: absolute; top: -9px; right: -9px; width: 20px; height: 20px; border-radius: 50%; background: #c4572f; color: #fff; display: grid; place-items: center; font: 600 11px var(--sans); box-shadow: 0 2px 6px rgb(0 0 0 / .25); }
+.anchor { position: absolute; left: 330px; top: 196px; }
+.viewer { background: rgb(0 0 0 / 0.55); padding: 28px; display: grid; place-items: center; min-height: 560px; }
+.vbox { width: 880px; max-width: 100%; border-radius: 12px; background: var(--bg-base); box-shadow: var(--shadow); overflow: hidden; }
+.vhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+.vhead .t { flex: 1; }
+.vhead .t span { color: var(--muted); font-size: 11.5px; margin-left: 6px; }
+.vimg { position: relative; margin: 14px; height: 400px; border-radius: 6px; background: linear-gradient(160deg, #dfe8f3 0 30%, #f6f7f9 30%); overflow: hidden; cursor: crosshair; }
+.vimg .fake1 { position: absolute; left: 30px; top: 22px; width: 220px; height: 14px; border-radius: 4px; background: #9fb3cc; }
+.vimg .fake2 { position: absolute; left: 30px; top: 150px; width: 520px; height: 120px; border-radius: 8px; background: #fff; border: 1px solid #d5dbe3; }
+.vimg .fake3 { position: absolute; left: 580px; top: 150px; width: 230px; height: 200px; border-radius: 8px; background: #fff; border: 1px solid #d5dbe3; }
+.rect { position: absolute; left: 570px; top: 140px; width: 252px; height: 220px; border: 2px solid #c4572f; background: rgb(196 87 47 / 0.10); border-radius: 3px; }
+.rect .sz { position: absolute; bottom: -22px; right: 0; font: 11px var(--mono); background: #c4572f; color: #fff; padding: 1px 6px; border-radius: 4px; }
+.rect2 { position: absolute; left: 24px; top: 14px; width: 236px; height: 30px; border: 2px solid #c4572f; border-radius: 3px; }
+.rect2 .pin { top: -10px; right: -10px; }
+.vcbx { position: absolute; right: 24px; top: 24px; }
+.th.big { width: 56px; height: 34px; border-radius: 4px; background: linear-gradient(160deg, #dfe8f3 0 30%, #f6f7f9 30%); position: relative; flex: none; }
+.th.big i { position: absolute; left: 36px; top: 12px; width: 16px; height: 18px; border: 1.5px solid #c4572f; }
+pre.agent { max-width: 1200px; margin: 0 auto; padding: 14px 16px; border-radius: 10px; background: var(--bg-base); border: 1px solid var(--border); font: 12px/1.5 var(--mono); white-space: pre-wrap; color: var(--fg2); }
+</style>
+</head>
+<body>
+<header class="intro">
+  <span class="eyebrow">Entwurf 1 von 5 · Verwalter</span>
+  <h1>Kommentare an Artefakt und Bild</h1>
+  <p>Wie bei den Review-Kommentaren im Diff: markieren, kommentieren, in der Eingabeleiste sammeln, mit der nächsten Nachricht senden. Neu sind zwei Stellen, an denen man markieren kann: ein Element im Artefakt und ein Bereich auf einem Bild. Gestrichelt umrandet = neu.</p>
+</header>
+
+<section class="state">
+  <h2><span class="mk">1</span>Artefakt kommentieren</h2>
+  <p>Neuer Knopf „Kommentieren“ in der Kopfzeile der Vorschau. Ist er an, hebt die Seite das Element unter der Maus hervor; ein Klick öffnet das Kommentarfeld daneben. Schon kommentierte Elemente tragen ihre Nummer. Links in der Seite folgen ist in diesem Modus aus.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p"><span class="dot run"></span>Verwalter Ideen</div>
+      <div class="sb-s sel"><span class="grow">Feature-Vorschläge</span><span class="n">#1</span></div>
+    </aside>
+    <div class="main">
+      <div class="hdr">
+        <div class="hdr-l"><span class="crumb">Verwalter Ideen ›</span><span class="crumb">#1</span><span class="hname">Feature-Vorschläge</span><span class="status">Läuft</span></div>
+        <div class="tabs"><span class="tab">Chat</span><span class="tab">Changes</span><span class="tab on">Artefakte 6</span></div>
+        <div class="hdr-r"><span class="btn">Hintergrund</span></div>
+      </div>
+      <div class="stagewrap">
+        <nav class="alist">
+          <div class="hd">Artefakte des Vorhabens, neueste zuerst</div>
+          <div class="e sel"><b>Verwalter Feature-Vorschläge</b><span>diese Session · 14:02</span></div>
+          <div class="e"><b>Entwurf Ohne Fundstelle</b><span>diese Session · 14:20</span></div>
+        </nav>
+        <section class="prev">
+          <div class="phead">
+            <div class="t"><b>Verwalter Feature-Vorschläge</b><span>verwalter-feature-vorschlaege.html · 14:02</span></div>
+            <span class="btn">↻</span><span class="btn">⛶</span>
+            <span class="btn on new">✎ Kommentieren · 1</span>
+            <span class="btn">Im Chat besprechen</span><span class="btn">Im Browser öffnen ↗</span>
+          </div>
+          <div class="hintline new"><span>Element anklicken, um es zu kommentieren · Esc beendet</span><span class="sp"></span><button class="lnk">Fertig</button></div>
+          <div class="stage">
+            <h3 style="position:relative">Was dem Verwalter fehlt<span class="pin">1</span></h3>
+            <p class="sub">Fünf Vorschläge, sortiert nach erwartetem Nutzen.</p>
+            <div class="acard hov"><span class="tagname">h4 · div.card</span><h4>Kommentare direkt am Artefakt und am Screenshot</h4><p>Im Diff kannst du Zeilen kommentieren, in einem Artefakt nicht.</p></div>
+            <div class="acard"><h4>Markierung „ohne Fundstelle“ im Chat-Text</h4><p>Der Beleg-Hook greift nur an Writes.</p></div>
+            <div class="anchor"><div class="cbx new">
+              <div class="head">Kommentar zu „Kommentare direkt am Artefakt …“ (div.card)</div>
+              <div class="ta">Was soll der Agent hier ändern oder erklären?</div>
+              <div class="foot"><span class="hint">Strg+Enter hinzufügen · Esc abbrechen</span><button class="btn">Abbrechen</button><button class="btn primary">Zum Chat hinzufügen</button></div>
+            </div></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">2</span>Bild kommentieren</h2>
+  <p>Ein Klick auf das Vorschaubild eines Anhangs (in der Eingabeleiste und in gesendeten Nachrichten) öffnet die neue Bildansicht. Dort zieht man mit der Maus einen Bereich auf; beim Loslassen öffnet sich das Kommentarfeld. Mehrere Bereiche pro Bild gehen, jeder ist ein eigener Kommentar.</p>
+  <div class="frame"><div class="viewer">
+    <div class="vbox new">
+      <div class="vhead"><div class="t"><b>screenshot-sidebar.png</b><span>1920 × 1080 · Bereich aufziehen, um ihn zu kommentieren</span></div><span class="btn">Originalgröße</span><span class="btn">Schließen</span></div>
+      <div class="vimg">
+        <span class="fake1"></span><span class="fake2"></span><span class="fake3"></span>
+        <div class="rect2"><span class="pin">1</span></div>
+        <div class="rect"><span class="sz">604 × 528 bei 1368, 336</span></div>
+        <div class="vcbx"><div class="cbx">
+          <div class="head">Kommentar zu screenshot-sidebar.png · Bereich 2</div>
+          <div class="ta">Was soll der Agent hier ändern oder erklären?</div>
+          <div class="foot"><span class="hint">Strg+Enter hinzufügen · Esc abbrechen</span><button class="btn">Abbrechen</button><button class="btn primary">Zum Chat hinzufügen</button></div>
+        </div></div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">3</span>Gesammelt in der Eingabeleiste</h2>
+  <p>Alle Kommentare landen in derselben Liste wie die Diff-Kommentare. Eine kleine Marke sagt, woher sie kommen. Die Zahl am Reiter „Chat“ zählt alle drei Arten.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar"><div class="sb-head">Agenten Verwalter 2000</div><div class="sb-p"><span class="dot run"></span>Verwalter Ideen</div><div class="sb-s sel"><span class="grow">Feature-Vorschläge</span><span class="n">#1</span></div></aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="crumb">Verwalter Ideen ›</span><span class="hname">Feature-Vorschläge</span></div><div class="tabs"><span class="tab on">Chat 3</span><span class="tab">Changes</span><span class="tab">Artefakte 6</span></div><div class="hdr-r"></div></div>
+      <div class="cwrap" style="padding-top:22px">
+        <div class="cbox">
+          <div class="rlist">
+            <div class="rhead"><b>Review-Kommentare</b><span>3 · gehen mit der nächsten Nachricht raus</span><button class="lnk">Alle entfernen</button></div>
+            <div class="rcard"><div class="where"><span class="kind">Diff</span><span class="grow">verwalter / src/app/Sidebar.tsx · Zeile 88</span>✎ ✕</div><div class="code">+ const rows = buildSidebarRows(projects, expanded)</div><div class="txt">Hier fehlt die Sortierung nach Aktivität.</div></div>
+            <div class="rcard new"><div class="where"><span class="kind">Artefakt</span><span class="grow">verwalter-feature-vorschlaege.html · div.card „Kommentare direkt am Artefakt …“</span>✎ ✕</div><div class="code">&lt;div class="card"&gt;&lt;h2&gt;&lt;span class="rank"&gt;1&lt;/span&gt;Kommentare direkt am Artefakt …</div><div class="txt">Diese Karte nach oben, die ist wichtiger.</div></div>
+            <div class="rcard new"><div class="where"><span class="kind">Bild</span><span class="grow">screenshot-sidebar.png · Bereich 604 × 528 bei 1368, 336</span>✎ ✕</div><div class="crop"><span class="th big"><i></i></span><span>Bereich auf dem Bild markiert · das Bild geht mit</span></div><div class="txt">Das Panel rechts überlappt die Liste.</div></div>
+          </div>
+          <div class="attrow"><span class="chip new" title="Klick öffnet die Bildansicht"><span class="th"></span><b>screenshot-sidebar.png</b><span>1920×1080</span>×</span></div>
+          <div class="cfield">Nachricht zu den Kommentaren (optional) …</div>
+          <div class="cfoot"><span>＋</span><span>/</span><span class="sp"></span><span>Sonnet 5.5 · Auto</span><span class="send">↑</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">4</span>Was beim Agenten ankommt</h2>
+  <p>Format wie die heutigen Review-Kommentare, um zwei Ortsangaben erweitert. Beim Artefakt nennt der Ort Datei, CSS-Pfad und den Anfang des Elements, damit der Agent die Stelle im HTML findet. Beim Bild nennt er Pfad und Pixel-Bereich; das Bild selbst geht als Bild mit, auch wenn es aus einer früheren Nachricht stammt.</p>
+  <pre class="agent">Review-Kommentare zu den Changes (3):
+
+1. C:\Users\sasch\develop\verwalter\src\app\Sidebar.tsx:88
+```
++ const rows = buildSidebarRows(projects, expanded)
+```
+Hier fehlt die Sortierung nach Aktivität.
+
+2. Artefakt C:\…\.artefakte\verwalter-feature-vorschlaege.html — Element main > div.card:nth-of-type(1)
+```
+&lt;div class="card"&gt;&lt;h2&gt;&lt;span class="rank"&gt;1&lt;/span&gt;Kommentare direkt am Artefakt …
+```
+Diese Karte nach oben, die ist wichtiger.
+
+3. Bild C:\…\.anhaenge\a1b2\screenshot-sidebar.png — Bereich x 1368, y 336, 604 × 528 Pixel (Bild 1920 × 1080)
+Das Panel rechts überlappt die Liste.</pre>
+</section>
+
+<ul class="legend">
+  <li><span class="mk">1</span><span><b>Element statt Pixel:</b> beim Artefakt zählt das HTML-Element, weil der Agent HTML ändert, nicht ein Bild davon. Der Verwalter liefert dafür ein kleines Skript in jede Artefakt-Seite aus, das den Klick an den Verwalter meldet.</span></li>
+  <li><span class="mk">2</span><span><b>Bereich in Bild-Pixeln:</b> die Koordinaten beziehen sich auf das Originalbild, nicht auf die verkleinerte Anzeige.</span></li>
+  <li><span class="mk">3</span><span><b>Eine Liste für alles:</b> Diff-, Artefakt- und Bild-Kommentare teilen Liste, Zähler, Bearbeiten und Entfernen.</span></li>
+</ul>
+</body>
+</html>

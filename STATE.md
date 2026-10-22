@@ -2,7 +2,9 @@
 
 **Aktiver Plan:** (kein aktiver Plan)
 **Phase:** —
-**Nächster Schritt:** Plan `mitgelieferte-befehle` (ungetrackt in `docs/planning/`) übernehmen oder verwerfen. `pnpm check` als Ganzes bleibt rot, bis er seine `codex-probe.cjs` aus dem ESLint-Lauf nimmt; seine README verweist noch auf `../2026-10-21_warnhinweise/` (jetzt im Archiv). Keine Smoke-Checklisten mehr: getestet wird im laufenden Betrieb, Releases folgen dem Plan-Abschluss ohne Abnahme.
+**Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036), `2026-10-22_kommentare-artefakt-bild` (ADR 035). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 035–039 für diese fünf; keiner braucht eine Migration.
+
+**Außerdem offen:** Plan `mitgelieferte-befehle` (ungetrackt in `docs/planning/`) übernehmen oder verwerfen. `pnpm check` als Ganzes bleibt rot, bis er seine `codex-probe.cjs` aus dem ESLint-Lauf nimmt; seine README verweist noch auf `../2026-10-21_warnhinweise/` (jetzt im Archiv). Keine Smoke-Checklisten mehr: getestet wird im laufenden Betrieb, Releases folgen dem Plan-Abschluss ohne Abnahme.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

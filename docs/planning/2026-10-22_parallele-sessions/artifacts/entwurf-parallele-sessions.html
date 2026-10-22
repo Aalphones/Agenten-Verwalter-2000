@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entwurf Parallele Sessions</title>
+<link rel="stylesheet" href="entwuerfe/app.css">
+<style>
+.twin { width: 14px; height: 14px; color: var(--waiting); }
+.sb-s .twin { margin-left: -2px; }
+.chint { display: flex; gap: 8px; align-items: center; padding: 6px 12px; font-size: 12px; background: var(--waiting-subtle); border-bottom: 1px solid var(--border-subtle); border-radius: 12px 12px 0 0; }
+.chint p { margin: 0; flex: 1; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="twin" viewBox="0 0 16 16"><rect x="1.5" y="3.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="6.5" y="1.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol></svg>
+<header class="intro">
+  <span class="eyebrow">Entwurf 3 von 5 · Verwalter</span>
+  <h1>Parallele Sessions im selben Ordner</h1>
+  <p>Schreiben zwei Sessions mit laufendem Agenten im selben Ordner — im selben Ticket-Worktree oder beide direkt im Haupt-Checkout —, zeigt der Verwalter das an, bevor die Änderungen sich vermischen. Auch über Vorhaben hinweg. Sessions auf getrennten Worktrees desselben Repositorys lösen nichts aus. Gestrichelt umrandet = neu.</p>
+</header>
+
+<section class="state">
+  <h2><span class="mk">1</span>Leiste unter der Kopfzeile, Marke in der Sidebar</h2>
+  <p>Die Leiste nennt die andere Session und den gemeinsamen Ordner. „Zur Session“ springt hin, „Ausblenden“ blendet sie aus, bis sich die Lage ändert. In der Sidebar tragen beide Sessions die Marke mit den zwei Rechtecken.</p>
+  <div class="frame"><div class="app tall">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p"><span class="dot run"></span>Sidebar-Umbau</div>
+      <div class="sb-s sel"><span class="grow">Sortierung</span><svg class="twin new"><use href="#twin"/></svg><span class="n">#2</span></div>
+      <div class="sb-p"><span class="dot run"></span>Hotfix Archiv</div>
+      <div class="sb-s"><span class="grow">Suche reparieren</span><svg class="twin new"><use href="#twin"/></svg><span class="n">#1</span></div>
+      <div class="sb-p"><span class="dot"></span>Photofant Tags</div>
+      <div class="sb-s"><span class="grow">Tag-Seite</span><span class="n">#4</span></div>
+    </aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="crumb">Sidebar-Umbau ›</span><span class="crumb">#2</span><span class="hname">Sortierung</span><span class="status">Läuft</span><span class="pill">main</span></div><div class="tabs"><span class="tab on">Chat</span><span class="tab">Changes 4</span></div><div class="hdr-r"><span class="btn">Hintergrund</span><span class="btn">Pause</span><span class="btn">Abbrechen</span></div></div>
+      <div class="bar warn new">
+        <svg width="14" height="14"><use href="#twin"/></svg>
+        <p><strong>Gleicher Ordner:</strong> #1 „Suche reparieren“ im Vorhaben „Hotfix Archiv“ arbeitet gerade auch in <span class="mono">C:\Users\sasch\develop\verwalter</span>.</p>
+        <button class="lnk">Zur Session</button><button class="lnk" style="color:var(--fg2)">Ausblenden</button>
+      </div>
+      <div class="chat"><div class="col">
+        <div class="umsg">Sortier die Sidebar nach letzter Aktivität.</div>
+        <div class="tool"><b>Edit</b> src/app/Sidebar.tsx</div>
+        <div class="amsg"><p>Ich stelle die Sortierung um …</p></div>
+      </div></div>
+      <div class="cwrap"><div class="cbox"><div class="cfield">Nachricht an Claude … (/ für Skills)</div><div class="cfoot"><span>＋</span><span>/</span><span class="sp"></span><span class="send">↑</span></div></div></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">2</span>Hinweis an den Agenten</h2>
+  <p>Beim Senden geht ein Satz mit, solange die Lage besteht und sich seit dem letzten Senden geändert hat. Er steht nicht im Verlauf, nur in der Nachricht an den Agenten. So greift die Regel „vor dem ersten Schreiben prüfen“ ohne Raten.</p>
+  <pre class="mono" style="max-width:1200px;margin:0 auto;padding:14px 16px;border-radius:10px;background:var(--bg-base);border:1px solid var(--border);white-space:pre-wrap;color:var(--fg2)">Hinweis des Verwalters: Eine andere Session arbeitet gerade im selben Ordner (C:\Users\sasch\develop\verwalter, Session „Suche reparieren“). Ihre uncommitteten Änderungen dort sind nicht deine.</pre>
+</section>
+
+<ul class="legend">
+  <li><span class="mk">1</span><span><b>Wann es zählt:</b> beide Sessions haben einen laufenden Agenten (Status Startet, Läuft oder Wartet) und <b>schreiben</b> im selben Ordner — derselbe Ticket-Worktree, oder beide haben im Haupt-Checkout selbst Dateien geändert. Dass zwei Sessions dasselbe Repository angehängt haben, zählt nicht: mehrere Sessions auf eigenen Worktrees desselben Repositorys bleiben still. Ruhende oder abgeschlossene Sessions zählen nicht.</span></li>
+  <li><span class="mk">2</span><span><b>Mehr als zwei:</b> die Leiste nennt die erste andere Session und „und N weitere“.</span></li>
+  <li><span class="mk">3</span><span><b>Kein Sperren:</b> der Verwalter warnt nur, er hält niemanden an.</span></li>
+</ul>
+</body>
+</html>

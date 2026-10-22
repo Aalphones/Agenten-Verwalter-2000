@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entwurf Skill-Kassensturz</title>
+<link rel="stylesheet" href="entwuerfe/app.css">
+<style>
+.menuwrap { padding: 22px 32px 16px; }
+.menuwrap .menu { max-width: 760px; margin: 0 auto 8px; }
+.cnt { font: 11px var(--mono); color: var(--muted); min-width: 34px; text-align: right; }
+.fold { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 12px; color: var(--fg2); font-size: 12px; border-top: 1px solid var(--border-subtle); }
+.fold .sp { flex: 1; }
+.dim .name { color: var(--muted); }
+</style>
+</head>
+<body>
+<header class="intro">
+  <span class="eyebrow">Entwurf 5 von 5 · Verwalter</span>
+  <h1>Skill-Kassensturz im /-Menü</h1>
+  <p>Die Gruppe „Skills“ sortiert nach Gebrauch statt alphabetisch: oft genutzte Skills oben, rechts die Zahl der Aufrufe in den letzten 30 Tagen. Was seit 30 Tagen keiner aufgerufen hat, liegt eingeklappt am Ende der Gruppe. Gestrichelt umrandet = neu.</p>
+</header>
+
+<section class="state">
+  <h2><span class="mk">1</span>Menü über den Knopf „/“</h2>
+  <p>Gezählt wird über alle Sessions, auch archivierte. Gleich oft genutzte Skills bleiben in der heutigen Reihenfolge.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar"><div class="sb-head">Agenten Verwalter 2000</div><div class="sb-p"><span class="dot"></span>Verwalter</div><div class="sb-s sel"><span class="grow">Kassensturz</span><span class="n">#5</span></div></aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="crumb">Verwalter ›</span><span class="hname">Kassensturz</span></div><div class="tabs"><span class="tab on">Chat</span></div><div class="hdr-r"></div></div>
+      <div class="menuwrap">
+        <div class="menu">
+          <div class="filter">Filtern …</div>
+          <div class="sect"><div class="title">Kontext</div><div class="mrow"><span class="desc" style="color:var(--fg)">Datei oder Bild anhängen …</span><span class="origin">Ctrl U</span></div></div>
+          <div class="sect new">
+            <div class="title">Skills</div>
+            <div class="mrow hl"><span class="name">/implement</span><span class="desc">Resume or start implementing a parked plan</span><span class="origin">Benutzer</span><span class="cnt">14×</span></div>
+            <div class="mrow"><span class="name">/plan</span><span class="desc">Start a new phased plan</span><span class="origin">Benutzer</span><span class="cnt">9×</span></div>
+            <div class="mrow"><span class="name">/review</span><span class="desc">Run a comprehensive 3-phase code review</span><span class="origin">Benutzer</span><span class="cnt">3×</span></div>
+            <div class="mrow"><span class="name">/news</span><span class="desc">Täglicher News-Feed zu deinem Stack</span><span class="origin">Benutzer</span><span class="cnt">1×</span></div>
+            <div class="fold"><span>▸</span><span>Seit 30 Tagen nicht benutzt</span><span class="sp"></span><span class="cnt">12</span></div>
+          </div>
+          <div class="sect"><div class="title">Session</div><div class="mrow"><span class="name">/rename</span><span class="desc">Session umbenennen</span></div></div>
+        </div>
+        <div class="cbox"><div class="cfield">Nachricht an Claude … (/ für Skills)</div></div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">2</span>Aufgeklappt und beim Filtern</h2>
+  <p>Ein Klick auf die Zeile klappt die ungenutzten Skills auf, ausgegraut und ohne Zahl. Wer filtert oder „/“ ins Feld tippt, sieht alle Treffer in einer Liste, die ungenutzten unten — eingeklappt wird dann nichts, damit kein Treffer versteckt bleibt.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar"><div class="sb-head">Agenten Verwalter 2000</div></aside>
+    <div class="main">
+      <div class="menuwrap">
+        <div class="menu">
+          <div class="filter" style="color:var(--fg)">re</div>
+          <div class="sect new">
+            <div class="title">Skills</div>
+            <div class="mrow hl"><span class="name">/review</span><span class="desc">Run a comprehensive 3-phase code review</span><span class="origin">Benutzer</span><span class="cnt">3×</span></div>
+            <div class="mrow dim"><span class="name">/research</span><span class="desc">Externe Best Practices sammeln</span><span class="origin">Benutzer</span><span class="cnt">—</span></div>
+            <div class="mrow dim"><span class="name">/session-review</span><span class="desc">Run a structured retrospective</span><span class="origin">Benutzer</span><span class="cnt">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<ul class="legend">
+  <li><span class="mk">1</span><span><b>Zählweise:</b> eine gesendete Nachricht, die mit „/name“ beginnt und einen bekannten Skill oder Befehl trifft, zählt einmal. Skills mit gleichem Namen aus Benutzer- und Repository-Ordner zählen getrennt.</span></li>
+  <li><span class="mk">2</span><span><b>Nur in der Gruppe „Skills“:</b> Kontext, Modell und Session behalten ihre feste Reihenfolge.</span></li>
+  <li><span class="mk">3</span><span><b>Keine Statistik-Seite:</b> die Zahl steht nur im Menü.</span></li>
+</ul>
+</body>
+</html>
