@@ -4,9 +4,11 @@ import { ReviewCommentCard } from '@/features/review/ReviewCommentCard';
 import type { Attachment } from '@/lib/bindings/Attachment';
 import type { ReviewComment } from '@/lib/bindings/ReviewComment';
 import type { SkillRef } from '@/lib/bindings/SkillRef';
+import { useAttachmentsStore } from '@/stores/attachments';
 import './UserMessage.css';
 
 interface UserMessageProps {
+  sessionId: string;
   text: string;
   attachments: readonly Attachment[];
   skill: SkillRef | null;
@@ -14,11 +16,13 @@ interface UserMessageProps {
 }
 
 export function UserMessage({
+  sessionId,
   text,
   attachments,
   skill,
   comments,
 }: UserMessageProps): ReactElement {
+  const openViewer = useAttachmentsStore((state) => state.openViewer);
   const hasComments: boolean = comments.length > 0;
   const boxClass = `user-message__box${hasComments ? ' user-message__box--with-comments' : ''}`;
   const commentCount: string =
@@ -32,7 +36,15 @@ export function UserMessage({
   return (
     <div className="user-message">
       <div className={boxClass}>
-        {attachments.length > 0 && <AttachmentRow attachments={attachments} size="sent" />}
+        {attachments.length > 0 && (
+          <AttachmentRow
+            attachments={attachments}
+            size="sent"
+            onOpen={(attachment: Attachment): void => {
+              openViewer(sessionId, attachment);
+            }}
+          />
+        )}
         {(hasMark || body !== '') && (
           <p className="user-message__text">
             {hasMark && <span className="user-message__mark">{skillMark}</span>}

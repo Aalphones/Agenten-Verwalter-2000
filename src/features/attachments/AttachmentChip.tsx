@@ -10,6 +10,8 @@ interface AttachmentChipProps {
   /** `input`: Chip über dem Eingabefeld (mit ×); `sent`: Chip in einer gesendeten Nachricht. */
   size: 'input' | 'sent';
   onRemove?: (() => void) | undefined;
+  /** Öffnet die Bildansicht; nur bei Bild-Anhängen wirksam. */
+  onOpen?: (() => void) | undefined;
 }
 
 interface Dimensions {
@@ -17,7 +19,12 @@ interface Dimensions {
   height: number;
 }
 
-export function AttachmentChip({ attachment, size, onRemove }: AttachmentChipProps): ReactElement {
+export function AttachmentChip({
+  attachment,
+  size,
+  onRemove,
+  onOpen,
+}: AttachmentChipProps): ReactElement {
   // Die Abmessungen kennt nur das geladene Bild; bis dahin steht die Größe da.
   const [dimensions, setDimensions] = useState<Dimensions | null>(null);
   const isImage: boolean = attachment.kind === 'image';
@@ -26,23 +33,42 @@ export function AttachmentChip({ attachment, size, onRemove }: AttachmentChipPro
       ? `${String(dimensions.width)}×${String(dimensions.height)}`
       : formatBytes(attachment.sizeBytes);
 
+  function renderLeading(): ReactElement {
+    if (!isImage) {
+      return <FileIcon />;
+    }
+    const thumb: ReactElement = (
+      <img
+        className="attachment-chip__thumb"
+        src={convertFileSrc(attachment.path)}
+        alt=""
+        onLoad={(event): void => {
+          setDimensions({
+            width: event.currentTarget.naturalWidth,
+            height: event.currentTarget.naturalHeight,
+          });
+        }}
+      />
+    );
+    if (onOpen === undefined) {
+      return thumb;
+    }
+    return (
+      <button
+        type="button"
+        className="attachment-chip__open"
+        title="Bild ansehen und kommentieren"
+        aria-label={`${attachment.name} ansehen und kommentieren`}
+        onClick={onOpen}
+      >
+        {thumb}
+      </button>
+    );
+  }
+
   return (
     <span className={`attachment-chip attachment-chip--${size}`}>
-      {isImage ? (
-        <img
-          className="attachment-chip__thumb"
-          src={convertFileSrc(attachment.path)}
-          alt=""
-          onLoad={(event): void => {
-            setDimensions({
-              width: event.currentTarget.naturalWidth,
-              height: event.currentTarget.naturalHeight,
-            });
-          }}
-        />
-      ) : (
-        <FileIcon />
-      )}
+      {renderLeading()}
       <span className="attachment-chip__name" title={attachment.name}>
         {attachment.name}
       </span>

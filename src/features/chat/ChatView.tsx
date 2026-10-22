@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
+import { SessionImageViewer } from '@/features/attachments/ImageViewer';
 import { ChatTimeline } from '@/features/chat/ChatTimeline';
 import { Composer } from '@/features/chat/Composer';
 import { useChatEntries } from '@/features/chat/useChatEntries';
@@ -151,6 +152,7 @@ export function ChatView({
       <div ref={bottomRef} className="chat-view__bottom">
         <Composer session={session} onSessionCreated={onSessionCreated} />
       </div>
+      <SessionImageViewer sessionId={session.id} />
     </div>
   );
 }

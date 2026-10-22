@@ -299,6 +299,7 @@ export function ChatTimeline({
       case 'user':
         return (
           <UserMessage
+            sessionId={session.id}
             text={entry.text}
             attachments={entry.attachments}
             skill={entry.skill}

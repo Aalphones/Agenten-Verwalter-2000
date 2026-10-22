@@ -101,6 +101,7 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
     (state) => state.pending[session.id] ?? NO_ATTACHMENTS,
   );
   const removeAttachment = useAttachmentsStore((state) => state.remove);
+  const openViewer = useAttachmentsStore((state) => state.openViewer);
   const collected: readonly CollectedComment[] = useReviewStore(
     (state) => state.collected[session.id] ?? NO_COMMENTS,
   );
@@ -324,6 +325,9 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
             size="input"
             onRemove={(attachmentId: string): void => {
               removeAttachment(session.id, attachmentId);
+            }}
+            onOpen={(attachment: Attachment): void => {
+              openViewer(session.id, attachment);
             }}
           />
         )}

@@ -7,9 +7,16 @@ interface AttachmentRowProps {
   attachments: readonly Attachment[];
   size: 'input' | 'sent';
   onRemove?: (attachmentId: string) => void;
+  /** Öffnet die Bildansicht für einen Bild-Anhang. */
+  onOpen?: (attachment: Attachment) => void;
 }
 
-export function AttachmentRow({ attachments, size, onRemove }: AttachmentRowProps): ReactElement {
+export function AttachmentRow({
+  attachments,
+  size,
+  onRemove,
+  onOpen,
+}: AttachmentRowProps): ReactElement {
   return (
     <div className={`attachment-row attachment-row--${size}`}>
       {attachments.map((attachment: Attachment) => (
@@ -22,6 +29,13 @@ export function AttachmentRow({ attachments, size, onRemove }: AttachmentRowProp
               ? undefined
               : (): void => {
                   onRemove(attachment.id);
+                }
+          }
+          onOpen={
+            onOpen === undefined
+              ? undefined
+              : (): void => {
+                  onOpen(attachment);
                 }
           }
         />
