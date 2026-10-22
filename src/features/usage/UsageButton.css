@@ -1,16 +1,17 @@
 .usage-button {
   position: relative;
-  flex-shrink: 0;
 
   &__trigger {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
+    gap: var(--space-md);
+    width: 100%;
+    height: 30px;
+    padding: 0 var(--space-md);
     border: 0;
     border-radius: var(--radius-md);
     background: transparent;
-    color: var(--color-fg-muted);
+    color: var(--color-fg-secondary);
     font: inherit;
     white-space: nowrap;
     cursor: pointer;
@@ -23,6 +24,15 @@
       outline: 2px solid var(--color-accent);
       outline-offset: 2px;
     }
+
+    &[aria-expanded='true'] {
+      background: var(--color-bg-selected);
+    }
+  }
+
+  &__name {
+    flex-grow: 1;
+    text-align: left;
   }
 
   &__bar {
@@ -40,8 +50,10 @@
   }
 
   &__label {
+    min-width: 34px;
     font-family: var(--font-mono);
     font-size: 11.5px;
+    text-align: right;
     color: var(--severity-color, inherit);
   }
 }

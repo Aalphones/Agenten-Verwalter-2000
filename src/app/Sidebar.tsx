@@ -7,6 +7,7 @@ import { SidebarItem } from '@/app/SidebarItem';
 import { SidebarProject } from '@/app/SidebarProject';
 import { projectActivity, sessionsByActivity } from '@/features/projects/projectStatus';
 import { displayStatus } from '@/features/sessions/sessionStatus';
+import { UsageButton } from '@/features/usage/UsageButton';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveProject, renameProject } from '@/lib/projects';
@@ -14,6 +15,7 @@ import { deleteSession, renameSession } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
 import { useSessionsStore } from '@/stores/sessions';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import './Sidebar.css';
 
 const OVERSCAN = 12;
@@ -67,6 +69,11 @@ export function Sidebar({
   const startRename = useSessionsStore((state) => state.startRename);
   const stopRename = useSessionsStore((state) => state.stopRename);
   const setExpanded = useSessionsStore((state) => state.setExpanded);
+  // Das Kontingent gehört zum Abo von Claude bzw. Codex; im lokalen Betrieb gibt es nichts anzuzeigen.
+  const hasUsage: boolean = useSettingsStore((state) => {
+    const operatingMode: string = state.settings?.operatingMode ?? 'claude';
+    return operatingMode === 'claude' || operatingMode === 'codex';
+  });
   const { error: actionError, run } = useActionError('sidebar');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -318,6 +325,7 @@ export function Sidebar({
         </p>
       )}
       <div className="sidebar__footer">
+        {hasUsage && <UsageButton />}
         <button type="button" className="sidebar__archive" onClick={onOpenArchive}>
           <svg
             width="14"

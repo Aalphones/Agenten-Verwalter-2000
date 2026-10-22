@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
+import { SessionGauge } from '@/app/SessionGauge';
+import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
-import { ContextDonut } from '@/features/context/ContextDonut';
-import { ContextPopover } from '@/features/context/ContextPopover';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { useNow } from '@/features/background/useNow';
-import { PromptCachePill } from '@/features/promptcache/PromptCachePill';
-import { PromptCachePopover } from '@/features/promptcache/PromptCachePopover';
-import { promptCacheState } from '@/features/promptcache/promptCacheState';
-import type { PromptCacheState } from '@/features/promptcache/promptCacheState';
 import { headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
-import { UsageButton } from '@/features/usage/UsageButton';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -20,7 +15,6 @@ import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
 import { useReviewStore } from '@/stores/review';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
-import { useSettingsStore } from '@/stores/settings';
 import './SessionHeader.css';
 
 const MS_PER_SECOND = 1000;
@@ -31,15 +25,13 @@ const BACKGROUND_LABEL = 'Hintergrund';
 const BACKGROUND_TITLE =
   'Dev-Server, Subagenten, ausgeführte Skripte und Scratchpad dieser Session';
 
-const CONTEXT_TITLE = 'Kontext dieser Session — Klick zeigt, was ihn belegt';
+const MORE_MENU_WIDTH = 200;
 
 const VIEW_LABEL: Record<SessionView, string> = {
   chat: 'Chat',
   changes: 'Changes',
   artifacts: 'Artefakte',
 };
-
-type OpenPanel = 'context' | 'usage' | 'cache';
 
 interface SessionHeaderProps {
   session: SessionSummary;
@@ -76,35 +68,12 @@ export function SessionHeader({
   onOpenProject,
 }: SessionHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
-  const [openPanel, setOpenPanel] = useState<OpenPanel | null>(null);
+  const [isMoreOpen, setIsMoreOpen] = useState<boolean>(false);
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const reviewCount: number = useReviewStore((state) => state.collected[session.id]?.length ?? 0);
-  // Das Kontingent gehört zum Abo von Claude bzw. Codex; im lokalen Betrieb gibt es nichts anzuzeigen.
-  const hasUsage: boolean = useSettingsStore((state) => {
-    const operatingMode: string = state.settings?.operatingMode ?? 'claude';
-    return operatingMode === 'claude' || operatingMode === 'codex';
-  });
-  // Den Prompt-Cache mit Haltedauer gibt es nur mit der Claude-Kommandozeile und dem Claude-Abo.
-  const hasPromptCache: boolean = useSettingsStore(
-    (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
-  );
   const scriptNow: number = useNow(session.awaitedScript !== null);
-  const cacheNow: number = useNow(hasPromptCache && session.promptCache !== null);
   const isTicking: boolean = session.runningSince !== null;
-  const cacheState: PromptCacheState = promptCacheState(
-    session.promptCache,
-    session.model,
-    cacheNow,
-  );
-
-  // Wechselt die Betriebsart bei offenem Kontingent- oder Cache-Fenster, schließt es mit.
-  if (!hasUsage && openPanel === 'usage') {
-    setOpenPanel(null);
-  }
-  if (!hasPromptCache && openPanel === 'cache') {
-    setOpenPanel(null);
-  }
 
   useEffect(() => {
     if (!isTicking) {
@@ -126,8 +95,6 @@ export function SessionHeader({
     session.runningSince === null
       ? session.runningMs
       : session.runningMs + Math.max(0, now - session.runningSince);
-  const contextPercent: number =
-    session.contextWindow === 0 ? 0 : (session.contextUsed / session.contextWindow) * 100;
   // „Changes“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
   const views: readonly SessionView[] = SESSION_VIEWS.filter(
     (view: SessionView) =>
@@ -145,14 +112,7 @@ export function SessionHeader({
     runningBackgroundCount > 0
       ? `${String(runningBackgroundCount)} im Hintergrund`
       : BACKGROUND_LABEL;
-
-  function togglePanel(panel: OpenPanel): void {
-    setOpenPanel((current: OpenPanel | null) => (current === panel ? null : panel));
-  }
-
-  function closePanel(): void {
-    setOpenPanel(null);
-  }
+  const statusLabel: string = headerStatusLabel(session, scriptNow);
 
   function runAction(action: (sessionId: string) => Promise<void>): void {
     action(session.id)
@@ -165,26 +125,49 @@ export function SessionHeader({
       });
   }
 
-  function renderPromptCache(): ReactElement | null {
-    if (!hasPromptCache || session.promptCache === null || cacheState.kind === 'unknown') {
-      return null;
-    }
+  function renderMoreMenu(): ReactElement {
     return (
       <div className="session-header__anchor">
-        <PromptCachePill
-          state={cacheState}
-          isOpen={openPanel === 'cache'}
-          onToggle={(): void => {
-            togglePanel('cache');
+        <button
+          type="button"
+          className="session-header__button session-header__button--icon"
+          aria-expanded={isMoreOpen}
+          aria-label="Weitere Aktionen"
+          title="Weitere Aktionen"
+          onClick={(): void => {
+            setIsMoreOpen((current: boolean) => !current);
           }}
-        />
-        {openPanel === 'cache' && (
-          <PromptCachePopover
-            cache={session.promptCache}
-            state={cacheState}
-            sessionModel={session.model}
-            onClose={closePanel}
-          />
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <circle cx="2.2" cy="6" r="1.1" fill="currentColor" />
+            <circle cx="6" cy="6" r="1.1" fill="currentColor" />
+            <circle cx="9.8" cy="6" r="1.1" fill="currentColor" />
+          </svg>
+        </button>
+        {isMoreOpen && (
+          <Popover
+            label="Weitere Aktionen"
+            placement="below"
+            align="end"
+            width={MORE_MENU_WIDTH}
+            onClose={(): void => {
+              setIsMoreOpen(false);
+            }}
+          >
+            <button
+              type="button"
+              className="session-header__menu-item session-header__menu-item--danger"
+              onClick={(): void => {
+                setIsMoreOpen(false);
+                runAction(cancelSession);
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="2.5" y="2.5" width="7" height="7" rx="1.2" fill="currentColor" />
+              </svg>
+              Session abbrechen
+            </button>
+          </Popover>
         )}
       </div>
     );
@@ -199,7 +182,9 @@ export function SessionHeader({
           <div className="session-header__controls">
             <button
               type="button"
-              className="session-header__button"
+              className="session-header__button session-header__button--icon"
+              aria-label="Pause"
+              title="Pause"
               onClick={(): void => {
                 runAction(pauseSession);
               }}
@@ -208,20 +193,8 @@ export function SessionHeader({
                 <rect x="2.8" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor" />
                 <rect x="7" y="2.2" width="2.2" height="7.6" rx="0.6" fill="currentColor" />
               </svg>
-              Pause
             </button>
-            <button
-              type="button"
-              className="session-header__button"
-              onClick={(): void => {
-                runAction(cancelSession);
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-                <rect x="2.5" y="2.5" width="7" height="7" rx="1.2" fill="currentColor" />
-              </svg>
-              Abbrechen
-            </button>
+            {renderMoreMenu()}
           </div>
         );
       case 'paused':
@@ -276,10 +249,10 @@ export function SessionHeader({
         <h1 className="session-header__name">{session.name}</h1>
         <span
           className={`session-header__status session-header__status--${headerStatus(session)}`}
-          title={session.awaitedScript?.title}
+          title={session.awaitedScript?.title ?? statusLabel}
         >
           <StatusIcon status={headerStatus(session)} size={10} />
-          <span>{headerStatusLabel(session, scriptNow)}</span>
+          <span className="session-header__status-label">{statusLabel}</span>
         </span>
         <GitBranchPill
           status={gitStatus}
@@ -323,7 +296,7 @@ export function SessionHeader({
           className={`session-header__background${isBackgroundOpen ? ' session-header__background--active' : ''}`}
           aria-pressed={isBackgroundOpen}
           aria-label={`Hintergrund: ${backgroundLabel}`}
-          title={BACKGROUND_TITLE}
+          title={`${backgroundLabel} — ${BACKGROUND_TITLE}`}
           onClick={onToggleBackground}
         >
           {runningBackgroundCount > 0 && (
@@ -352,49 +325,16 @@ export function SessionHeader({
             <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
             <path d="M4 5.5 6 7 4 8.5M7.5 9h2.5" />
           </svg>
-          <span className="session-header__background-label">{backgroundLabel}</span>
+          {runningBackgroundCount > 0 && (
+            <span className="session-header__background-count">
+              {String(runningBackgroundCount)}
+            </span>
+          )}
+          <span className="session-header__background-label">
+            {runningBackgroundCount > 0 ? 'im Hintergrund' : BACKGROUND_LABEL}
+          </span>
         </button>
-        {renderPromptCache()}
-        <div className="session-header__anchor">
-          <button
-            type="button"
-            className="session-header__context"
-            aria-expanded={openPanel === 'context'}
-            aria-label="Kontext"
-            title={CONTEXT_TITLE}
-            onClick={(): void => {
-              togglePanel('context');
-            }}
-          >
-            <ContextDonut percent={contextPercent} />
-          </button>
-          {openPanel === 'context' && <ContextPopover session={session} onClose={closePanel} />}
-        </div>
-        {hasUsage && (
-          <UsageButton
-            isOpen={openPanel === 'usage'}
-            onToggle={(): void => {
-              togglePanel('usage');
-            }}
-            onClose={closePanel}
-          />
-        )}
-        <span className="session-header__runtime session-header__mono" title="Laufzeit der Session">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <circle cx="7" cy="7" r="5.5" />
-            <path d="M7 4v3.2l2 1.3" />
-          </svg>
-          {formatRuntime(runningMs)}
-        </span>
+        <SessionGauge session={session} runtime={formatRuntime(runningMs)} />
         {renderControls()}
       </div>
     </header>

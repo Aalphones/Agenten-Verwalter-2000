@@ -104,8 +104,8 @@ export function UsagePopover({ status, onClose }: UsagePopoverProps): ReactEleme
   return (
     <Popover
       label="Kontingent"
-      placement="below"
-      align="end"
+      placement="above"
+      align="start"
       width={USAGE_POPOVER_WIDTH}
       onClose={onClose}
     >

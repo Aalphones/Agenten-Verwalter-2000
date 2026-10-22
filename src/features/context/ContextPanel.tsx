@@ -1,5 +1,4 @@
 import type { ReactElement } from 'react';
-import { Popover } from '@/components/Popover';
 import { categoryLabel } from '@/features/context/categoryLabels';
 import { ContextDonut } from '@/features/context/ContextDonut';
 import { contextSeverity } from '@/features/context/contextSeverity';
@@ -19,9 +18,8 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { sendMessage } from '@/lib/chat';
 import { refreshContext } from '@/lib/context';
 import type { Severity } from '@/lib/severity';
-import './ContextPopover.css';
+import './ContextPanel.css';
 
-const CONTEXT_POPOVER_WIDTH = 360;
 const CHART_COLOR_COUNT = 7;
 const PATH_MAX_LENGTH = 48;
 const PERCENT_FACTOR = 100;
@@ -36,8 +34,9 @@ const COMPACT_BLOCKED_TITLE =
 /** Nur hier ist der Agent untätig und wartet nicht auf eine Antwort — sonst würde „/compact“ eine Rückfrage beantworten. */
 const COMPACTABLE_STATUSES: readonly SessionStatus[] = ['completed', 'paused'];
 
-interface ContextPopoverProps {
+interface ContextPanelProps {
   session: SessionSummary;
+  /** Schließt das umgebende Fenster, nachdem „Compact“ abgeschickt ist. */
   onClose: () => void;
 }
 
@@ -47,7 +46,7 @@ interface CategoryRow {
   colorIndex: number | null;
 }
 
-export function ContextPopover({ session, onClose }: ContextPopoverProps): ReactElement {
+export function ContextPanel({ session, onClose }: ContextPanelProps): ReactElement {
   const context: SessionContext | null = useSessionContext(session.id, true);
 
   function refresh(): void {
@@ -84,7 +83,7 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
           usedPercent,
           `${formatThousands(session.contextUsed)} von ${formatThousands(session.contextWindow)} Tokens belegt`,
         )}
-        <p className="context-popover__hint">{hint}</p>
+        <p className="context-panel__hint">{hint}</p>
       </>
     );
   }
@@ -93,20 +92,20 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
     const isRunning: boolean = context?.isAgentRunning ?? false;
     const canCompact: boolean = COMPACTABLE_STATUSES.includes(session.status);
     return (
-      <div className="context-popover__foot">
+      <div className="context-panel__foot">
         <span>
           {fetchedAt !== null && `Stand ${formatClock(fetchedAt)}`}
           {fetchedAt !== null && !isRunning && ' · Agent ruht'}
         </span>
-        <span className="context-popover__actions">
+        <span className="context-panel__actions">
           {isRunning && (
-            <button type="button" className="context-popover__button" onClick={refresh}>
+            <button type="button" className="context-panel__button" onClick={refresh}>
               Aktualisieren
             </button>
           )}
           <button
             type="button"
-            className="context-popover__button context-popover__button--primary"
+            className="context-panel__button context-panel__button--primary"
             disabled={!canCompact}
             title={canCompact ? COMPACT_BUTTON_TITLE : COMPACT_BLOCKED_TITLE}
             onClick={compact}
@@ -119,19 +118,11 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
   }
 
   return (
-    <Popover
-      label="Kontext"
-      placement="below"
-      align="end"
-      width={CONTEXT_POPOVER_WIDTH}
-      onClose={onClose}
-    >
-      <div className="context-popover">
-        <h2 className="context-popover__title">Kontext</h2>
-        {renderBody()}
-        {renderFoot(context?.breakdown?.fetchedAt ?? null)}
-      </div>
-    </Popover>
+    <section className="context-panel" aria-label="Kontext">
+      <h2 className="context-panel__title">Kontext</h2>
+      {renderBody()}
+      {renderFoot(context?.breakdown?.fetchedAt ?? null)}
+    </section>
   );
 }
 
@@ -139,11 +130,11 @@ export function ContextPopover({ session, onClose }: ContextPopoverProps): React
 function renderGauge(usedPercent: number, summary: string, model?: string): ReactElement {
   const severity: Severity = contextSeverity(usedPercent);
   return (
-    <div className={`context-popover__gauge severity severity--${severity}`}>
+    <div className={`context-panel__gauge severity severity--${severity}`}>
       <ContextDonut percent={usedPercent} size={DONUT_SIZE} />
-      <div className="context-popover__gauge-text">
-        <p className="context-popover__summary">{summary}</p>
-        {model !== undefined && <p className="context-popover__model">{model}</p>}
+      <div className="context-panel__gauge-text">
+        <p className="context-panel__summary">{summary}</p>
+        {model !== undefined && <p className="context-panel__model">{model}</p>}
       </div>
     </div>
   );
@@ -163,7 +154,7 @@ function renderBreakdown(breakdown: ContextBreakdown): ReactElement {
       {renderStack(breakdown, rows)}
       {renderTable(breakdown, rows)}
       {breakdown.autoCompactThreshold !== null && (
-        <p className="context-popover__compact" title={COMPACT_TITLE}>
+        <p className="context-panel__compact" title={COMPACT_TITLE}>
           <InfoIcon />
           Automatisches Zusammenfassen ab {formatTokens(breakdown.autoCompactThreshold)} Tokens
         </p>
@@ -175,7 +166,7 @@ function renderBreakdown(breakdown: ContextBreakdown): ReactElement {
 
 function renderStack(breakdown: ContextBreakdown, rows: readonly CategoryRow[]): ReactElement {
   return (
-    <div className="context-popover__stack" aria-hidden="true">
+    <div className="context-panel__stack" aria-hidden="true">
       {rows.map((row: CategoryRow) => {
         if (row.colorIndex === null) {
           return null;
@@ -183,7 +174,7 @@ function renderStack(breakdown: ContextBreakdown, rows: readonly CategoryRow[]):
         return (
           <span
             key={row.category.name}
-            className={`context-popover__segment context-popover__chart--${String(row.colorIndex)}`}
+            className={`context-panel__segment context-panel__chart--${String(row.colorIndex)}`}
             style={{
               width: `${String(
                 Math.min(shareOfWindow(row.category.tokens, breakdown.maxTokens), PERCENT_FACTOR),
@@ -194,7 +185,7 @@ function renderStack(breakdown: ContextBreakdown, rows: readonly CategoryRow[]):
       })}
       {breakdown.autoCompactThreshold !== null && (
         <span
-          className="context-popover__threshold"
+          className="context-panel__threshold"
           style={{
             left: `${String(shareOfWindow(breakdown.autoCompactThreshold, breakdown.maxTokens))}%`,
           }}
@@ -206,14 +197,14 @@ function renderStack(breakdown: ContextBreakdown, rows: readonly CategoryRow[]):
 
 function renderTable(breakdown: ContextBreakdown, rows: readonly CategoryRow[]): ReactElement {
   return (
-    <table className="context-popover__table">
+    <table className="context-panel__table">
       <thead>
         <tr>
           <th scope="col">Kategorie</th>
-          <th scope="col" className="context-popover__number">
+          <th scope="col" className="context-panel__number">
             Tokens
           </th>
-          <th scope="col" className="context-popover__number">
+          <th scope="col" className="context-panel__number">
             Anteil
           </th>
         </tr>
@@ -223,16 +214,16 @@ function renderTable(breakdown: ContextBreakdown, rows: readonly CategoryRow[]):
           <tr key={row.category.name}>
             <td>
               <span
-                className={`context-popover__dot${
+                className={`context-panel__dot${
                   row.colorIndex === null
-                    ? ' context-popover__dot--free'
-                    : ` context-popover__chart--${String(row.colorIndex)}`
+                    ? ' context-panel__dot--free'
+                    : ` context-panel__chart--${String(row.colorIndex)}`
                 }`}
               />
               {categoryLabel(row.category.name)}
             </td>
-            <td className="context-popover__number">{formatTokens(row.category.tokens)}</td>
-            <td className="context-popover__number">
+            <td className="context-panel__number">{formatTokens(row.category.tokens)}</td>
+            <td className="context-panel__number">
               {formatPercent(shareOfWindow(row.category.tokens, breakdown.maxTokens), 1)}
             </td>
           </tr>
@@ -244,15 +235,15 @@ function renderTable(breakdown: ContextBreakdown, rows: readonly CategoryRow[]):
 
 function renderMemoryFiles(files: readonly ContextFile[]): ReactElement {
   return (
-    <section className="context-popover__files">
-      <h3 className="context-popover__subtitle">Memory-Dateien</h3>
-      <ul className="context-popover__file-list">
+    <section className="context-panel__files">
+      <h3 className="context-panel__subtitle">Memory-Dateien</h3>
+      <ul className="context-panel__file-list">
         {files.map((file: ContextFile) => (
-          <li key={file.path} className="context-popover__file">
-            <span className="context-popover__path" title={file.path}>
+          <li key={file.path} className="context-panel__file">
+            <span className="context-panel__path" title={file.path}>
               {shortenPath(file.path)}
             </span>
-            <span className="context-popover__number">{formatTokens(file.tokens)}</span>
+            <span className="context-panel__number">{formatTokens(file.tokens)}</span>
           </li>
         ))}
       </ul>

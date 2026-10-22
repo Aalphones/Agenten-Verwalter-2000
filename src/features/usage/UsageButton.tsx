@@ -12,15 +12,11 @@ import './UsageButton.css';
 
 const SESSION_LIMIT_KIND = 'session';
 const FULL_PERCENT = 100;
-const BUTTON_TITLE = 'Kontingent deines Claude-Abos (5-Stunden-Fenster) — Klick für Details';
+const BUTTON_TITLE = 'Kontingent deines Abos (5-Stunden-Fenster) — Klick für Details';
 
-interface UsageButtonProps {
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-}
-
-export function UsageButton({ isOpen, onToggle, onClose }: UsageButtonProps): ReactElement {
+/** Kontingent des Abos als Zeile im Fuß der Seitenleiste; es gilt dem Konto, nicht einer Session. */
+export function UsageButton(): ReactElement {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const status: UsageStatus | null = useUsage(isOpen);
   // Beim Einhängen festgehalten; der Reset-Zeitpunkt im Tooltip braucht keine Sekundengenauigkeit.
   const [now] = useState<number>(() => Date.now());
@@ -33,16 +29,6 @@ export function UsageButton({ isOpen, onToggle, onClose }: UsageButtonProps): Re
   const title: string =
     resetAt === null ? BUTTON_TITLE : `${BUTTON_TITLE}\nZurückgesetzt ${resetAt}`;
 
-  function renderLabel(): string {
-    if (status?.snapshot == null) {
-      return '';
-    }
-    if (sessionLimit === undefined) {
-      return 'Kontingent';
-    }
-    return `${String(sessionLimit.percent)} %`;
-  }
-
   return (
     <div className="usage-button">
       <button
@@ -50,18 +36,45 @@ export function UsageButton({ isOpen, onToggle, onClose }: UsageButtonProps): Re
         className={`usage-button__trigger severity severity--${sessionLimit === undefined ? 'none' : severity}`}
         aria-expanded={isOpen}
         title={title}
-        onClick={onToggle}
+        onClick={(): void => {
+          setIsOpen((current: boolean) => !current);
+        }}
       >
-        {sessionLimit !== undefined && <SeverityIcon severity={severity} />}
-        <span className="usage-button__bar">
-          <span
-            className="usage-button__fill"
-            style={{ width: `${String(Math.min(sessionLimit?.percent ?? 0, FULL_PERCENT))}%` }}
-          />
-        </span>
-        <span className="usage-button__label">{renderLabel()}</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M2 10.5a5 5 0 1 1 10 0" />
+          <path d="M7 10.5 9.2 6.8" />
+        </svg>
+        <span className="usage-button__name">Kontingent</span>
+        {sessionLimit !== undefined && (
+          <>
+            <SeverityIcon severity={severity} />
+            <span className="usage-button__bar">
+              <span
+                className="usage-button__fill"
+                style={{ width: `${String(Math.min(sessionLimit.percent, FULL_PERCENT))}%` }}
+              />
+            </span>
+            <span className="usage-button__label">{`${String(sessionLimit.percent)} %`}</span>
+          </>
+        )}
       </button>
-      {isOpen && <UsagePopover status={status} onClose={onClose} />}
+      {isOpen && (
+        <UsagePopover
+          status={status}
+          onClose={(): void => {
+            setIsOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

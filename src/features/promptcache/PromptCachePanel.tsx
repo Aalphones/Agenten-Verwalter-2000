@@ -1,24 +1,20 @@
 import type { ReactElement } from 'react';
-import { Popover } from '@/components/Popover';
 import { formatClock, formatTokens } from '@/features/context/formatTokens';
 import { cacheTtlLabel } from '@/features/promptcache/promptCacheState';
 import type { KnownPromptCacheState } from '@/features/promptcache/promptCacheState';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { PromptCache } from '@/lib/bindings/PromptCache';
 import { modelName } from '@/lib/labels';
-import './PromptCachePopover.css';
-
-const PROMPT_CACHE_POPOVER_WIDTH = 300;
+import './PromptCachePanel.css';
 
 const EXPLANATION =
   'Jede Antwort setzt die Uhr zurück. Ein Modellwechsel oder das Zusammenfassen des Verlaufs macht den Cache sofort kalt.';
 
-interface PromptCachePopoverProps {
+interface PromptCachePanelProps {
   cache: PromptCache;
   state: KnownPromptCacheState;
   /** Das Modell, das die Session jetzt gewählt hat; kann vom Modell des Caches abweichen. */
   sessionModel: ModelId;
-  onClose: () => void;
 }
 
 interface Headline {
@@ -26,33 +22,24 @@ interface Headline {
   status: string;
 }
 
-export function PromptCachePopover({
+export function PromptCachePanel({
   cache,
   state,
   sessionModel,
-  onClose,
-}: PromptCachePopoverProps): ReactElement {
+}: PromptCachePanelProps): ReactElement {
   const headline: Headline = headlineFor(state, sessionModel);
   return (
-    <Popover
-      label="Prompt-Cache"
-      placement="below"
-      align="end"
-      width={PROMPT_CACHE_POPOVER_WIDTH}
-      onClose={onClose}
-    >
-      <div className="prompt-cache-popover">
-        <h2 className="prompt-cache-popover__title">{headline.title}</h2>
-        <dl className="prompt-cache-popover__rows">
-          {renderRow('Zustand', headline.status)}
-          {renderRow('Im Cache', `${formatTokens(cache.tokens)} Token`)}
-          {renderRow('Haltedauer', `${cacheTtlLabel(cache.ttlMs)} (laut letzter Antwort)`)}
-          {renderRow('Letzte Antwort', `${formatClock(cache.anchorAt)} Uhr`)}
-          {renderRow('Modell', modelName(cache.model))}
-        </dl>
-        <p className="prompt-cache-popover__note">{EXPLANATION}</p>
-      </div>
-    </Popover>
+    <section className="prompt-cache-panel" aria-label="Prompt-Cache">
+      <h2 className="prompt-cache-panel__title">{headline.title}</h2>
+      <dl className="prompt-cache-panel__rows">
+        {renderRow('Zustand', headline.status)}
+        {renderRow('Im Cache', `${formatTokens(cache.tokens)} Token`)}
+        {renderRow('Haltedauer', `${cacheTtlLabel(cache.ttlMs)} (laut letzter Antwort)`)}
+        {renderRow('Letzte Antwort', `${formatClock(cache.anchorAt)} Uhr`)}
+        {renderRow('Modell', modelName(cache.model))}
+      </dl>
+      <p className="prompt-cache-panel__note">{EXPLANATION}</p>
+    </section>
   );
 }
 
@@ -83,9 +70,9 @@ function headlineFor(state: KnownPromptCacheState, sessionModel: ModelId): Headl
 
 function renderRow(label: string, value: string): ReactElement {
   return (
-    <div className="prompt-cache-popover__row">
-      <dt className="prompt-cache-popover__label">{label}</dt>
-      <dd className="prompt-cache-popover__value">{value}</dd>
+    <div className="prompt-cache-panel__row">
+      <dt className="prompt-cache-panel__label">{label}</dt>
+      <dd className="prompt-cache-panel__value">{value}</dd>
     </div>
   );
 }

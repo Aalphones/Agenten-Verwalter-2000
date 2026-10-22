@@ -1,7 +1,9 @@
 .git-branch-pill {
   display: inline-flex;
   align-items: center;
-  flex-shrink: 0;
+  /* Gibt in einer engen Titelzeile nach (Branch-Name mit Ellipse), statt über die Tabs zu laufen. */
+  flex-shrink: 1;
+  min-width: 0;
   gap: 5px;
   box-sizing: border-box;
   height: 22px;
@@ -25,7 +27,15 @@
     outline-offset: 2px;
   }
 
+  & > svg,
+  &__sync,
+  &__dirty,
+  &__more {
+    flex-shrink: 0;
+  }
+
   &__branch {
+    min-width: 0;
     max-width: 180px;
     overflow: hidden;
     color: var(--color-fg-primary);

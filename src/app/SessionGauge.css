@@ -1,0 +1,57 @@
+.session-gauge {
+  position: relative;
+  flex-shrink: 0;
+
+  &__trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    height: 28px;
+    padding: 0 var(--space-md);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-fg-muted);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    &[aria-expanded='true'] {
+      background: var(--color-bg-selected);
+    }
+  }
+
+  &__runtime {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+
+  &__divider {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  &__foot {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__foot-value {
+    font-family: var(--font-mono);
+    color: var(--color-fg-secondary);
+  }
+}

@@ -7,10 +7,13 @@
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
 
+  /* Container für die Umbruchstufen der Kopfzeile: sie richten sich nach der Breite neben der
+     Seitenleiste, nicht nach dem Fenster. */
   &__main {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
     min-width: 0;
+    container: main / inline-size;
   }
 }
