@@ -1,0 +1,54 @@
+.unsourced {
+  position: relative;
+  text-decoration: underline dotted var(--color-status-waiting) 1.5px;
+  text-underline-offset: 3px;
+  cursor: help;
+
+  &::before,
+  &::after {
+    position: absolute;
+    left: 0;
+    z-index: 20;
+    display: none;
+    width: 330px;
+    padding: 0 var(--space-lg);
+    background: var(--color-bg-popover);
+    border-inline: 1px solid var(--color-border);
+    box-shadow: var(--shadow-popover);
+    color: var(--color-fg-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm);
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    white-space: normal;
+    pointer-events: none;
+  }
+
+  &::before {
+    content: 'Ohne Fundstelle';
+    top: calc(100% + var(--space-sm));
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    color: var(--color-fg-primary);
+    font-weight: 600;
+  }
+
+  /* Die Überschrift ist einzeilig (Höhe 1.5 × 12.5px + Innenabstand); die Erklärung hängt darunter. */
+  &::after {
+    content: attr(data-tip);
+    top: calc(100% + var(--space-sm) + 1.5em + var(--space-md));
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+
+  &:hover::before,
+  &:hover::after,
+  &:focus-visible::before,
+  &:focus-visible::after {
+    display: block;
+  }
+}

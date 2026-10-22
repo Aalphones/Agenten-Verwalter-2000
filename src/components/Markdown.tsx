@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { isValidElement, useContext, useMemo } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import type { Components, Options } from 'react-markdown';
@@ -10,11 +10,15 @@ import { CodeBlock } from '@/components/CodeBlock';
 import { ExternalLink } from '@/components/ExternalLink';
 import { FileLink } from '@/components/FileLink';
 import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
+import { rehypeUnsourced } from '@/features/sourcing/rehypeUnsourced';
 import { filePathOf } from '@/lib/fileLinks';
+import '@/features/sourcing/Unsourced.css';
 import './Markdown.css';
 
 interface MarkdownProps {
   text: string;
+  /** Angaben, die als „ohne Fundstelle“ markiert werden; leer = keine Markierung. */
+  unsourced?: readonly string[];
 }
 
 interface ScrollableTableProps {
@@ -42,6 +46,8 @@ const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [
   [rehypeHighlight, { detect: false, languages: { ...common, powershell } }],
 ];
 
+const NO_NEEDLES: readonly string[] = [];
+
 // Breite Tabellen scrollen in einer eigenen Hülle, statt den Chat aufzuweiten.
 function ScrollableTable({ children }: ScrollableTableProps): ReactElement {
   return (
@@ -51,15 +57,32 @@ function ScrollableTable({ children }: ScrollableTableProps): ReactElement {
   );
 }
 
+// Der Text eines Inline-Codes; eine Marke teilt ihn in Strings und `span`-Elemente. `null`, sobald
+// etwas anderes darin steckt.
+function plainTextOf(node: ReactNode): string | null {
+  if (typeof node === 'string') {
+    return node;
+  }
+  if (Array.isArray(node)) {
+    const parts: (string | null)[] = node.map((part: ReactNode) => plainTextOf(part));
+    return parts.includes(null) ? null : parts.join('');
+  }
+  if (isValidElement<{ children?: ReactNode }>(node) && node.type === 'span') {
+    return plainTextOf(node.props.children);
+  }
+  return null;
+}
+
 // Läuft auch für das `code` in Codeblöcken: deren Text endet immer auf `\n` (oder ist nach der
 // Färbung kein einzelner String mehr) und wird so nie zum Dateiverweis.
 function InlineCode({ className, children }: InlineCodeProps): ReactElement {
   const sessionId: string | null = useContext(FileLinkSessionContext);
   const code: ReactElement = <code className={className}>{children}</code>;
-  if (sessionId === null || typeof children !== 'string' || children.endsWith('\n')) {
+  const text: string | null = plainTextOf(children);
+  if (sessionId === null || text === null || text.endsWith('\n')) {
     return code;
   }
-  const path: string | null = filePathOf(children);
+  const path: string | null = filePathOf(text);
   if (path === null) {
     return code;
   }
@@ -108,12 +131,19 @@ const COMPONENTS: Components = {
   table: ScrollableTable,
 };
 
-export function Markdown({ text }: MarkdownProps): ReactElement {
+export function Markdown({ text, unsourced = NO_NEEDLES }: MarkdownProps): ReactElement {
+  const rehypePlugins: NonNullable<Options['rehypePlugins']> = useMemo(
+    () =>
+      unsourced.length === 0
+        ? REHYPE_PLUGINS
+        : [[rehypeUnsourced, { needles: unsourced }], ...REHYPE_PLUGINS],
+    [unsourced],
+  );
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={REMARK_PLUGINS}
-        rehypePlugins={REHYPE_PLUGINS}
+        rehypePlugins={rehypePlugins}
         components={COMPONENTS}
         urlTransform={transformUrl}
       >

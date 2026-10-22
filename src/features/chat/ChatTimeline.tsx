@@ -309,7 +309,7 @@ export function ChatTimeline({
       case 'text':
         return (
           <>
-            <TextBlock text={entry.text} />
+            <TextBlock text={entry.text} unsourced={entry.unsourced} />
             {showsHandoff && session.handoffLine !== null && entry.seq === answerSeq && (
               <HandoffButton
                 projectId={session.projectId}
