@@ -5,7 +5,14 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'src-tauri', 'src/lib/bindings'] },
+  {
+    ignores: [
+      'dist',
+      'src-tauri',
+      'src/lib/bindings',
+      'docs/planning/2026-10-21_mitgelieferte-befehle/artifacts/codex-probe.cjs',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   {

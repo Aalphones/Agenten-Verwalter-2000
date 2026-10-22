@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Kommentar-Ziel im Typ, Prüfung, Text an den Agenten, Bild erneut mitsenden; ADR 035 | [phase-1-core.md](phase-1-core.md) | standard | pending |
+| 1 | Core: Kommentar-Ziel im Typ, Prüfung, Text an den Agenten, Bild erneut mitsenden; ADR 035 | [phase-1-core.md](phase-1-core.md) | standard | complete |
 | 2 | Oberfläche: Karten, Liste und Store für alle drei Arten | [phase-2-karten.md](phase-2-karten.md) | standard | pending |
 | 3 | Artefakt: Skript-Brücke im Server, Knopf „Kommentieren“, Markierung und Kommentarfeld | [phase-3-artefakt.md](phase-3-artefakt.md) | heikel | pending |
 | 4 | Bild: Bildansicht mit Bereich aufziehen, Einstieg über die Anhang-Chips; Doku-Abschluss | [phase-4-bild.md](phase-4-bild.md) | standard | pending |

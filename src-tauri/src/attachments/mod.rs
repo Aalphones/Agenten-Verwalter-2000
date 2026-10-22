@@ -144,6 +144,35 @@ pub fn take_for_workspace(
     Ok(taken)
 }
 
+/// Reuses an image already stored in this session's workspace for a later review message.
+/// Canonical path comparison keeps a crafted comment from attaching an arbitrary file.
+pub fn reattach(path: &Path, workspace: &Path) -> Result<Attachment, CommandError> {
+    let canonical_workspace = workspace.canonicalize()?;
+    let attachment_root = canonical_workspace.join(WORKSPACE_FOLDER).canonicalize()?;
+    let canonical_path = path.canonicalize()?;
+    if !canonical_path.starts_with(&attachment_root) || !canonical_path.is_file() {
+        return Err(CommandError::Internal(
+            "Das kommentierte Bild liegt auÃŸerhalb der AnhÃ¤nge dieses Vorhabens".to_owned(),
+        ));
+    }
+    let name = canonical_path
+        .file_name()
+        .map(|name: &std::ffi::OsStr| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| FALLBACK_NAME.to_owned());
+    if kind_of(&name) != AttachmentKind::Image {
+        return Err(CommandError::Internal(
+            "Der Review-Kommentar verweist nicht auf ein Bild".to_owned(),
+        ));
+    }
+    Ok(Attachment {
+        id: uuid::Uuid::new_v4().to_string(),
+        kind: AttachmentKind::Image,
+        size_bytes: fs::metadata(&canonical_path)?.len(),
+        name,
+        path: canonical_path.to_string_lossy().into_owned(),
+    })
+}
+
 /// Inhaltsblöcke einer Nachricht mit Anhängen: zuerst der Text — ein `/skill` am Anfang wirkt nur
 /// im ersten Block —, dann Bilder und PDFs als Base64. Was dafür zu groß ist oder eine andere Art
 /// hat, nennt der Text als Pfad; der Agent liest es selbst.

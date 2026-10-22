@@ -129,6 +129,7 @@ export function DiffView({
 
   function submitComment(target: CommentTarget, text: string): void {
     upsert(sessionId, target.lineId, {
+      target: { kind: 'diff' },
       repositoryKey: repository.key,
       repositoryName: repository.name,
       path: file.path,

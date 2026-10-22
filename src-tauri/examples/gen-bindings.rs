@@ -37,7 +37,7 @@ use verwalter_lib::{
     prompt_cache::model::PromptCache,
     repositories::model::{KnownRepository, RepositoryKind},
     retro::model::{RetroExport, RetroProgress},
-    review::model::ReviewComment,
+    review::model::{CommentTarget, ReviewComment},
     sessions::model::{AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef},
@@ -67,6 +67,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     QuestionKind::export_all(&cfg)?;
     AttachmentKind::export_all(&cfg)?;
     Attachment::export_all(&cfg)?;
+    CommentTarget::export_all(&cfg)?;
     ReviewComment::export_all(&cfg)?;
     SkillOrigin::export_all(&cfg)?;
     SkillKind::export_all(&cfg)?;

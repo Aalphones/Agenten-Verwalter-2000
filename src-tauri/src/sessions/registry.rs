@@ -58,7 +58,10 @@ use crate::notices::model::{Denial, Notice};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::prompt_cache::model::PromptCache;
 use crate::prompt_cache::{TTL_1H_MS, TTL_5M_MS};
-use crate::review::{self, model::ReviewComment};
+use crate::review::{
+    self,
+    model::{CommentTarget, ReviewComment},
+};
 use crate::sessions::model::{
     AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary,
 };
@@ -896,6 +899,36 @@ impl SessionRegistry {
                 // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
                 let sent_attachments =
                     attachments::take_for_workspace(app, attachment_ids, &session.workspace)?;
+                let mut comments = comments.to_vec();
+                let mut extra_attachments: Vec<Attachment> = Vec::new();
+                for comment in &mut comments {
+                    let CommentTarget::Image {
+                        attachment_id,
+                        path,
+                        ..
+                    } = &mut comment.target
+                    else {
+                        continue;
+                    };
+                    if let Some(attachment) = sent_attachments
+                        .iter()
+                        .find(|attachment: &&Attachment| attachment.id == *attachment_id)
+                    {
+                        *path = attachment.path.clone();
+                        continue;
+                    }
+                    let attachment = attachments::reattach(Path::new(path), &session.workspace)?;
+                    *path = attachment.path.clone();
+                    if !sent_attachments
+                        .iter()
+                        .chain(extra_attachments.iter())
+                        .any(|existing: &Attachment| existing.path == attachment.path)
+                    {
+                        extra_attachments.push(attachment);
+                    }
+                }
+                let mut agent_attachments = sent_attachments.clone();
+                agent_attachments.extend(extra_attachments);
                 // Der Chat zeigt die Nachricht so, wie sie an den Agenten geht.
                 let sent_text: &str = match &carried {
                     Some(with_tldr)
@@ -905,8 +938,8 @@ impl SessionRegistry {
                     }
                     _ => text,
                 };
-                let agent_text = review::agent_text(sent_text, comments, &folders);
-                let line = message_line(&agent_text, &sent_attachments)?;
+                let agent_text = review::agent_text(sent_text, &comments, &folders);
+                let line = message_line(&agent_text, &agent_attachments)?;
                 // Erst nach allen Schritten, die scheitern können: ein Fehlstart lässt den Namen
                 // stehen. Der Name kommt aus dem getippten Text, nicht aus dem Stand des Vorhabens.
                 if state.status == SessionStatus::New
@@ -915,13 +948,7 @@ impl SessionRegistry {
                     state.name = name_from_task(text);
                     outbox.summary_dirty = true;
                 }
-                state.push_user(
-                    outbox,
-                    sent_text,
-                    sent_attachments,
-                    skill,
-                    comments.to_vec(),
-                );
+                state.push_user(outbox, sent_text, sent_attachments, skill, comments);
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
             },
@@ -1345,19 +1372,28 @@ impl SessionRegistry {
         if comments.is_empty() {
             return Vec::new();
         }
-        let Ok(input) = self.changes_input(session_id, ChangesReach::Session) else {
-            return vec![None; comments.len()];
+        let entries: Vec<sources::Source> = if comments
+            .iter()
+            .any(|comment: &ReviewComment| matches!(&comment.target, CommentTarget::Diff))
+        {
+            let Ok(input) = self.changes_input(session_id, ChangesReach::Session) else {
+                return vec![None; comments.len()];
+            };
+            sources::sources(&input)
+        } else {
+            Vec::new()
         };
-        let entries: Vec<sources::Source> = sources::sources(&input);
         comments
             .iter()
-            .map(|comment: &ReviewComment| {
-                entries
+            .map(|comment: &ReviewComment| match &comment.target {
+                CommentTarget::Artifact { .. } => self.artifacts_dir(session_id).ok(),
+                CommentTarget::Image { .. } => None,
+                CommentTarget::Diff => entries
                     .iter()
                     .find(|entry: &&sources::Source| {
                         entry.key.eq_ignore_ascii_case(&comment.repository_key)
                     })
-                    .map(|entry: &sources::Source| entry.dir.clone())
+                    .map(|entry: &sources::Source| entry.dir.clone()),
             })
             .collect()
     }

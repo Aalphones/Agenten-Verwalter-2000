@@ -2,7 +2,7 @@
 //! Vorhabens und der Stand des Vorhabens, den die erste Nachricht einer neuen Session mitnimmt.
 use crate::agents::event::{Attachment, ChatEntry, Question, TodoItem, TodoState};
 use crate::changes::model::DiffLineKind;
-use crate::review::model::ReviewComment;
+use crate::review::model::{CommentTarget, ReviewComment};
 use crate::sessions::model::SessionStatus;
 use crate::tldr::model::{ProjectTldr, SessionTldr};
 
@@ -56,12 +56,21 @@ pub(crate) fn entry_block(entry: &ChatEntry) -> Option<Block> {
                 format!("Nutzer: {text} [Anhänge: {}]", names.join(", "))
             };
             for comment in comments {
-                block.push_str(&format!(
-                    "\n  Review-Kommentar zu {} {}: {}",
-                    comment.path,
-                    line_label(comment),
-                    comment.text
-                ));
+                match &comment.target {
+                    CommentTarget::Diff => block.push_str(&format!(
+                        "\n  Review-Kommentar zu {} {}: {}",
+                        comment.path,
+                        line_label(comment),
+                        comment.text
+                    )),
+                    CommentTarget::Artifact { file, .. } => block.push_str(&format!(
+                        "\n  Kommentar zu Artefakt {file}: {}",
+                        comment.text
+                    )),
+                    CommentTarget::Image { name, .. } => {
+                        block.push_str(&format!("\n  Kommentar zu Bild {name}: {}", comment.text))
+                    }
+                }
             }
             block
         }

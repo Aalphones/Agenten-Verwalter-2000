@@ -6,19 +6,51 @@ use std::path::PathBuf;
 
 use crate::changes::model::DiffLineKind;
 use crate::error::CommandError;
-use crate::review::model::ReviewComment;
+use crate::review::model::{CommentTarget, ReviewComment};
 
 const MIN_FENCE_LENGTH: usize = 3;
 const FENCE_CHARACTER: char = '`';
+const MAX_SELECTOR_CHARS: usize = 300;
 
 /// Ein Kommentar auf einem Abschnittskopf oder ohne Text kann die Oberfläche nicht erzeugen —
 /// kommt er an, ist etwas kaputt, und es wird nichts gesendet.
 pub fn validate(comments: &[ReviewComment]) -> Result<(), CommandError> {
     for comment in comments {
-        if comment.kind == DiffLineKind::Hunk {
-            return Err(CommandError::Internal(
-                "Review-Kommentar auf einem Abschnittskopf".to_owned(),
-            ));
+        match &comment.target {
+            CommentTarget::Diff if comment.kind == DiffLineKind::Hunk => {
+                return Err(CommandError::Internal(
+                    "Review-Kommentar auf einem Abschnittskopf".to_owned(),
+                ));
+            }
+            CommentTarget::Artifact { file, selector, .. }
+                if file.trim().is_empty()
+                    || selector.trim().is_empty()
+                    || selector.chars().count() > MAX_SELECTOR_CHARS =>
+            {
+                return Err(CommandError::Internal(
+                    "UngÃ¼ltiges Ziel fÃ¼r Artefakt-Kommentar".to_owned(),
+                ));
+            }
+            CommentTarget::Image {
+                x,
+                y,
+                width,
+                height,
+                image_width,
+                image_height,
+                ..
+            } if *width == 0
+                || *height == 0
+                || x.checked_add(*width)
+                    .is_none_or(|right| right > *image_width)
+                || y.checked_add(*height)
+                    .is_none_or(|bottom| bottom > *image_height) =>
+            {
+                return Err(CommandError::Internal(
+                    "UngÃ¼ltiger Bildbereich im Review-Kommentar".to_owned(),
+                ));
+            }
+            _ => {}
         }
         if comment.text.trim().is_empty() {
             return Err(CommandError::Internal("Leerer Review-Kommentar".to_owned()));
@@ -39,15 +71,46 @@ pub fn agent_text(text: &str, comments: &[ReviewComment], folders: &[Option<Path
         .enumerate()
         .map(|(index, comment): (usize, &ReviewComment)| {
             let folder: Option<&PathBuf> = folders.get(index).and_then(Option::as_ref);
-            let fence = fence(&comment.code);
-            format!(
-                "{}. {}\n{fence}\n{}{}\n{fence}\n{}",
-                index + 1,
-                location(comment, folder),
-                sign(comment.kind),
-                comment.code,
-                comment.text,
-            )
+            match &comment.target {
+                CommentTarget::Diff => {
+                    let fence = fence(&comment.code);
+                    format!(
+                        "{}. {}\n{fence}\n{}{}\n{fence}\n{}",
+                        index + 1,
+                        location(comment, folder),
+                        sign(comment.kind),
+                        comment.code,
+                        comment.text,
+                    )
+                }
+                CommentTarget::Artifact { file, selector, .. } => {
+                    let location = match folder {
+                        Some(folder) => folder.join(file.replace('/', "\\")).display().to_string(),
+                        None => format!("Artefakt {file}"),
+                    };
+                    let fence = fence(&comment.code);
+                    format!(
+                        "{}. {location} — Element {selector}\n{fence}\n{}\n{fence}\n{}",
+                        index + 1,
+                        comment.code,
+                        comment.text,
+                    )
+                }
+                CommentTarget::Image {
+                    path,
+                    x,
+                    y,
+                    width,
+                    height,
+                    image_width,
+                    image_height,
+                    ..
+                } => format!(
+                    "{}. Bild {path} — Bereich x {x}, y {y}, {width} × {height} Pixel (Bild {image_width} × {image_height})\n{}",
+                    index + 1,
+                    comment.text,
+                ),
+            }
         })
         .collect();
     let mut result = String::new();
@@ -56,8 +119,16 @@ pub fn agent_text(text: &str, comments: &[ReviewComment], folders: &[Option<Path
         result.push_str(text);
         result.push_str("\n\n");
     }
+    let heading = if comments
+        .iter()
+        .all(|comment| comment.target == CommentTarget::Diff)
+    {
+        "Review-Kommentare zu den Changes"
+    } else {
+        "Review-Kommentare"
+    };
     result.push_str(&format!(
-        "Review-Kommentare zu den Changes ({}):\n\n{}",
+        "{heading} ({}):\n\n{}",
         comments.len(),
         items.join("\n\n")
     ));
