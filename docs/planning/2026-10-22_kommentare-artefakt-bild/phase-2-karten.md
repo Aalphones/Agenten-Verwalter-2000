@@ -1,4 +1,4 @@
-# Phase 2 — Oberfläche: Karten, Liste und Store für alle drei Arten
+# Phase 2 — Oberfläche: Karten, Liste und Store für alle drei Arten (complete)
 
 Lesen: [README.md](README.md) (Kontrakt, Schlüssel), Entwurf [artifacts/entwurf-kommentare-artefakt-bild.html](artifacts/entwurf-kommentare-artefakt-bild.html) Abschnitt 3, `src/stores/review.ts`, `src/features/review/` (`ReviewCommentCard.tsx` + `.css`, `reviewLabels.ts`, `ReviewCommentList.tsx`), `src/features/chat/UserMessage.tsx`, `src/features/changes/DiffView.tsx` (Aufruf von `upsert`), [docs/conventions/react.md](../../conventions/react.md), [typescript.md](../../conventions/typescript.md), [tailwind.md](../../conventions/tailwind.md).
 
@@ -12,12 +12,14 @@ Lesen: [README.md](README.md) (Kontrakt, Schlüssel), Entwurf [artifacts/entwurf
 
 ## Checkliste
 
-- [ ] `src/stores/review.ts`: `artifactLineId` und `imageLineId` nach Kontrakt exportieren (Typ `ImageTarget` = `Extract<CommentTarget, { kind: 'image' }>`; `ArtifactTarget` analog). Keine Änderung an `upsert`.
-- [ ] `DiffView.tsx`: beim Bauen des `ReviewComment` `target: { kind: 'diff' }` ergänzen.
-- [ ] `reviewLabels.ts`: `whereLabel` mit `switch (comment.target.kind)`; neue Funktion `kindLabel(target: CommentTarget): string` → `'Diff' | 'Artefakt' | 'Bild'`; neue Funktion `selectorTail(selector: string): string`.
-- [ ] `ReviewCommentCard.tsx`: Marke vor `__where`; den Code-Block in eine Render-Funktion `renderBody(comment)` mit drei Zweigen nach AK 3 ziehen (React-Konvention: Bedingung über mehrere Zweige in eine Render-Funktion). CSS in `ReviewCommentCard.css`: `&__kind`, `&__code--element`, `&__crop`, `&__crop-thumb`, `&__crop-frame`.
-- [ ] Für das Rechteck auf dem Vorschaubild: Container 56 × 34 px `position: relative; overflow: hidden`, Bild mit `width: 100%; height: 100%; object-fit: contain`, Rahmen absolut positioniert mit `left = x / image_width * 100 %` usw. (contain statt cover, damit die Prozentwerte stimmen; Hintergrund `bg-sidebar`).
-- [ ] Doc: `docs/code-map.md` Zeile „Review-Kommentare“ um `artifactLineId`/`imageLineId`, `kindLabel`, `CommentTarget` (Core `review/model.rs`) ergänzen; `docs/glossary.md` Eintrag **Review-Kommentar**: „Kommentar zu einer Diff-Zeile, einem Element eines Artefakts oder einem Bereich auf einem Bild …“.
-- [ ] `pnpm check` grün, Commit `feat(review): Karten für Artefakt- und Bild-Kommentare`.
+- [x] `src/stores/review.ts`: `artifactLineId` und `imageLineId` nach Kontrakt exportieren (Typ `ImageTarget` = `Extract<CommentTarget, { kind: 'image' }>`; `ArtifactTarget` analog). Keine Änderung an `upsert`.
+- [x] `DiffView.tsx`: beim Bauen des `ReviewComment` `target: { kind: 'diff' }` ergänzen.
+- [x] `reviewLabels.ts`: `whereLabel` mit `switch (comment.target.kind)`; neue Funktion `kindLabel(target: CommentTarget): string` → `'Diff' | 'Artefakt' | 'Bild'`; neue Funktion `selectorTail(selector: string): string`.
+- [x] `ReviewCommentCard.tsx`: Marke vor `__where`; den Code-Block in eine Render-Funktion `renderBody(comment)` mit drei Zweigen nach AK 3 ziehen (React-Konvention: Bedingung über mehrere Zweige in eine Render-Funktion). CSS in `ReviewCommentCard.css`: `&__kind`, `&__code--element`, `&__crop`, `&__crop-thumb`, `&__crop-frame`.
+- [x] Für das Rechteck auf dem Vorschaubild: Container 56 × 34 px `position: relative; overflow: hidden`, Bild mit `width: 100%; height: 100%; object-fit: contain`, Rahmen absolut positioniert mit `left = x / image_width * 100 %` usw. (contain statt cover, damit die Prozentwerte stimmen; Hintergrund `bg-sidebar`).
+- [x] Doc: `docs/code-map.md` Zeile „Review-Kommentare“ um `artifactLineId`/`imageLineId`, `kindLabel`, `CommentTarget` (Core `review/model.rs`) ergänzen; `docs/glossary.md` Eintrag **Review-Kommentar** aktualisieren.
+- [x] `pnpm check` grün.
 
 ## Report-Back
+
+Umgesetzt: Kommentar-Karten zeigen Art und Zielort; Artefakt-Code und Bildausschnitt haben eigene Darstellungen. Die Diff-Ansicht setzt den expliziten Diff-Zieltyp bereits. Referenzdokumente sind aktualisiert. Prüfkette vollständig grün.

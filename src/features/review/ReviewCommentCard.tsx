@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
-import { whereLabel } from '@/features/review/reviewLabels';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { kindLabel, whereLabel } from '@/features/review/reviewLabels';
+import type { CommentTarget } from '@/lib/bindings/CommentTarget';
 import type { DiffLineKind } from '@/lib/bindings/DiffLineKind';
 import type { ReviewComment } from '@/lib/bindings/ReviewComment';
 import { highlightLine, languageOf } from '@/lib/syntax';
@@ -27,6 +29,7 @@ export function ReviewCommentCard({
     [comment.code, comment.path],
   );
   const where: string = whereLabel(comment);
+  const kind: string = kindLabel(comment.target);
   const isEmpty: boolean = editText.trim() === '';
 
   useEffect(() => {
@@ -95,9 +98,76 @@ export function ReviewCommentCard({
     );
   }
 
+  function renderBody(target: CommentTarget): ReactElement {
+    if (target.kind === 'artifact') {
+      return (
+        <div className="review-card__code review-card__code--element" title={comment.code}>
+          {comment.code}
+        </div>
+      );
+    }
+    if (target.kind === 'image') {
+      const scale: number = Math.min(56 / target.imageWidth, 34 / target.imageHeight);
+      const imageWidth: number = target.imageWidth * scale;
+      const imageHeight: number = target.imageHeight * scale;
+      const offsetX: number = (56 - imageWidth) / 2;
+      const offsetY: number = (34 - imageHeight) / 2;
+      const left: number = (target.x / target.imageWidth) * 100;
+      const top: number = (target.y / target.imageHeight) * 100;
+      const width: number = (target.width / target.imageWidth) * 100;
+      const height: number = (target.height / target.imageHeight) * 100;
+      return (
+        <div className="review-card__crop">
+          <span className="review-card__crop-thumb">
+            <span
+              className="review-card__crop-image"
+              style={{
+                left: `${String(offsetX)}px`,
+                top: `${String(offsetY)}px`,
+                width: `${String(imageWidth)}px`,
+                height: `${String(imageHeight)}px`,
+              }}
+            >
+              <img src={convertFileSrc(target.path)} alt="" />
+              <span
+                className="review-card__crop-frame"
+                style={{
+                  left: `${String(left)}%`,
+                  top: `${String(top)}%`,
+                  width: `${String(width)}%`,
+                  height: `${String(height)}%`,
+                }}
+              />
+            </span>
+          </span>
+          <span>Bereich auf dem Bild markiert · das Bild geht mit</span>
+        </div>
+      );
+    }
+    return (
+      <div className={`review-card__code review-card__code--${comment.kind}`}>
+        <span className={`review-card__sign review-card__sign--${comment.kind}`}>
+          {signOf(comment.kind)}
+        </span>
+        <span className="review-card__code-text">
+          {codeLine.map((segment: SyntaxSegment, index: number) =>
+            segment.className === null ? (
+              segment.text
+            ) : (
+              <span key={index} className={segment.className}>
+                {segment.text}
+              </span>
+            ),
+          )}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="review-card">
       <div className="review-card__head">
+        <span className="review-card__kind">{kind}</span>
         <span className="review-card__where" title={where}>
           {where}
         </span>
@@ -124,22 +194,7 @@ export function ReviewCommentCard({
           </button>
         )}
       </div>
-      <div className={`review-card__code review-card__code--${comment.kind}`}>
-        <span className={`review-card__sign review-card__sign--${comment.kind}`}>
-          {signOf(comment.kind)}
-        </span>
-        <span className="review-card__code-text">
-          {codeLine.map((segment: SyntaxSegment, index: number) =>
-            segment.className === null ? (
-              segment.text
-            ) : (
-              <span key={index} className={segment.className}>
-                {segment.text}
-              </span>
-            ),
-          )}
-        </span>
-      </div>
+      {renderBody(comment.target)}
       {isEditing ? renderEditor() : <p className="review-card__text">{comment.text}</p>}
     </div>
   );

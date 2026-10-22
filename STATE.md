@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-22_kommentare-artefakt-bild/`
-**Phase:** 2/4 — Oberfläche (pending)
-**Nächster Schritt:** Phase 2 gemäß Kontext-Diät lesen und Karten, Liste sowie Review-Store für alle drei Kommentararten umsetzen.
+**Phase:** 3/4 — Artefakt (pending)
+**Nächster Schritt:** Phase 3 gemäß Kontext-Diät lesen und die postMessage-Brücke sowie Kommentiermodus in der Artefakt-Ansicht umsetzen.
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036), `2026-10-22_kommentare-artefakt-bild` (ADR 035). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 035–039 für diese fünf; keiner braucht eine Migration.
 

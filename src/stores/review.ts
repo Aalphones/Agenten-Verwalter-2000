@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
+import type { CommentTarget } from '@/lib/bindings/CommentTarget';
 import type { DiffLineKind } from '@/lib/bindings/DiffLineKind';
 import type { ReviewComment } from '@/lib/bindings/ReviewComment';
 
@@ -17,6 +18,17 @@ export interface OpenCommentBox {
 
 /** Stabiler Leerwert für Selektoren, damit eine Session ohne Kommentare keinen neuen Array erzeugt. */
 export const NO_COMMENTS: readonly CollectedComment[] = [];
+
+export type ArtifactTarget = Extract<CommentTarget, { kind: 'artifact' }>;
+export type ImageTarget = Extract<CommentTarget, { kind: 'image' }>;
+
+export function artifactLineId(file: string, selector: string): string {
+  return `artifact|${file}|${selector}`;
+}
+
+export function imageLineId(target: ImageTarget): string {
+  return `image|${target.attachmentId}|${String(target.x)},${String(target.y)},${String(target.width)},${String(target.height)}`;
+}
 
 /**
  * Kennung einer Diff-Zeile. Der Blickwinkel gehört dazu: „Committed“ zeigt auf der neuen Seite den letzten
