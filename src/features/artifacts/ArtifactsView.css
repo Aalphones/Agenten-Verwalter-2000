@@ -176,9 +176,37 @@
       width: 28px;
       padding: 0;
     }
+
+    &--commenting {
+      border-color: var(--color-accent);
+      background: var(--color-accent);
+      color: var(--color-fg-on-accent);
+    }
+  }
+
+  &__hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    padding: var(--space-sm) var(--space-3xl);
+    border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-accent-subtle);
+    color: var(--color-fg-secondary);
+    font-size: var(--font-size-sm);
+
+    button {
+      border: 0;
+      background: transparent;
+      color: var(--color-accent-text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
   }
 
   &__stage {
+    position: relative;
     display: flex;
     flex-grow: 1;
     min-height: 0;
@@ -191,5 +219,15 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--artifact-stage-bg);
+  }
+
+  &__comment {
+    position: absolute;
+    z-index: var(--z-overlay);
+    width: min(420px, calc(100% - var(--space-3xl) * 2));
+
+    .comment-box {
+      margin: 0;
+    }
   }
 }

@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Core: Kommentar-Ziel im Typ, Prüfung, Text an den Agenten, Bild erneut mitsenden; ADR 035 | [phase-1-core.md](phase-1-core.md) | standard | complete |
 | 2 | Oberfläche: Karten, Liste und Store für alle drei Arten | [phase-2-karten.md](phase-2-karten.md) | standard | complete |
-| 3 | Artefakt: Skript-Brücke im Server, Knopf „Kommentieren“, Markierung und Kommentarfeld | [phase-3-artefakt.md](phase-3-artefakt.md) | heikel | pending |
+| 3 | Artefakt: Skript-Brücke im Server, Knopf „Kommentieren“, Markierung und Kommentarfeld | [phase-3-artefakt.md](phase-3-artefakt.md) | heikel | complete |
 | 4 | Bild: Bildansicht mit Bereich aufziehen, Einstieg über die Anhang-Chips; Doku-Abschluss | [phase-4-bild.md](phase-4-bild.md) | standard | pending |
 
 **Reihenfolge:** strikt 1 → 4. Umsetzung direkt auf `main`, ein Commit pro Phase; Scope `review` (Phase 3 `artifacts`, Phase 4 `attachments`). Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten. Nach Änderungen an Typen über die Tauri-Grenze `pnpm bindings` und mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Erkenntnisse nach [FINDINGS.md](FINDINGS.md). Planabschluss mit Versions-Tag (Minor-Version) nach [releases.md](../../conventions/releases.md).

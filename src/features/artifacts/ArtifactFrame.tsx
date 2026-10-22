@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, Ref } from 'react';
 import type { Artifact } from '@/lib/bindings/Artifact';
 import { artifactUrl } from '@/lib/artifacts';
 
@@ -10,6 +10,7 @@ interface ArtifactFrameProps {
   reloadToken: number;
   /** Vorschau und Vollbild gestalten den Rahmen verschieden. */
   className?: string;
+  frameRef?: Ref<HTMLIFrameElement>;
 }
 
 // Ohne `allow-same-origin`, `allow-popups` und `allow-top-navigation`: die Seite läuft als eigene, leere
@@ -21,10 +22,12 @@ export function ArtifactFrame({
   item,
   reloadToken,
   className = 'artifacts__frame',
+  frameRef,
 }: ArtifactFrameProps): ReactElement {
   return (
     <iframe
       key={`${item.file}:${String(reloadToken)}`}
+      ref={frameRef}
       className={className}
       src={artifactUrl(baseUrl, item.file, item.modifiedAt)}
       sandbox={FRAME_SANDBOX}

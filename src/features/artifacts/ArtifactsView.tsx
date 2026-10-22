@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ArtifactFrame } from '@/features/artifacts/ArtifactFrame';
 import { ArtifactFullscreen } from '@/features/artifacts/ArtifactFullscreen';
+import type { ArtifactMark, ArtifactPick } from '@/features/artifacts/artifactBridge';
+import { useArtifactPicker } from '@/features/artifacts/useArtifactPicker';
 import {
   ARTIFACTS_HEADING,
   ARTIFACTS_INFO,
@@ -14,7 +16,10 @@ import { openArtifactInBrowser } from '@/lib/artifacts';
 import type { Artifact } from '@/lib/bindings/Artifact';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import { commandErrorText } from '@/lib/errors';
+import { CommentBox } from '@/features/review/CommentBox';
+import { selectorTail } from '@/features/review/reviewLabels';
 import { useArtifactsStore } from '@/stores/artifacts';
+import { artifactLineId, NO_COMMENTS, useReviewStore } from '@/stores/review';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import './ArtifactsView.css';
 
@@ -37,6 +42,10 @@ export function ArtifactsView({
 }: ArtifactsViewProps): ReactElement | null {
   const [reloadToken, setReloadToken] = useState<number>(0);
   const [isJustUpdated, setIsJustUpdated] = useState<boolean>(false);
+  const [isCommenting, setIsCommenting] = useState<boolean>(false);
+  const [pick, setPick] = useState<ArtifactPick | null>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const lastModified = useRef<Record<string, number>>({});
   const selectedFile: string | undefined = useArtifactsStore((state) => state.selected[projectId]);
   const select = useArtifactsStore((state) => state.select);
@@ -44,12 +53,61 @@ export function ArtifactsView({
   const setFullscreen = useArtifactsStore((state) => state.setFullscreen);
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
+  const collected =
+    useReviewStore((state) => state.collected[currentSessionId ?? '']) ?? NO_COMMENTS;
+  const box = useReviewStore((state) => state.boxes[currentSessionId ?? '']) ?? null;
+  const openBox = useReviewStore((state) => state.openBox);
+  const setBoxText = useReviewStore((state) => state.setBoxText);
+  const closeBox = useReviewStore((state) => state.closeBox);
+  const upsert = useReviewStore((state) => state.upsert);
 
   // Verschwindet das gewählte Artefakt, gilt das neueste.
   const selected: Artifact | undefined =
     list.items.find((item: Artifact) => item.file === selectedFile) ?? list.items[0];
   const selectedKey: string | undefined = selected?.file;
   const selectedModifiedAt: number | undefined = selected?.modifiedAt;
+  const artifactComments = collected.filter(
+    (entry) =>
+      entry.comment.target.kind === 'artifact' && entry.comment.target.file === selectedKey,
+  );
+  const marks: readonly ArtifactMark[] = artifactComments.map((entry, index) => {
+    const target = entry.comment.target;
+    return target.kind === 'artifact'
+      ? { n: index + 1, selector: target.selector }
+      : { n: index + 1, selector: '' };
+  });
+
+  function handlePick(nextPick: ArtifactPick): void {
+    if (currentSessionId === null || selectedKey === undefined) return;
+    const existing = artifactComments.find(
+      (entry) => entry.lineId === artifactLineId(selectedKey, nextPick.selector),
+    );
+    const stageRect = stageRef.current?.getBoundingClientRect();
+    const frameRect = frameRef.current?.getBoundingClientRect();
+    const relativeX =
+      stageRect === undefined || frameRect === undefined
+        ? nextPick.rect.x
+        : frameRect.left - stageRect.left + nextPick.rect.x;
+    const relativeY =
+      stageRect === undefined || frameRect === undefined
+        ? nextPick.rect.y
+        : frameRect.top - stageRect.top + nextPick.rect.y;
+    const maxX = Math.max(0, (stageRef.current?.clientWidth ?? 0) - 420);
+    setPick({
+      ...nextPick,
+      rect: {
+        ...nextPick.rect,
+        x: Math.max(0, Math.min(relativeX, maxX)),
+        y: Math.max(0, relativeY),
+      },
+    });
+    openBox(currentSessionId, {
+      lineId: artifactLineId(selectedKey, nextPick.selector),
+      text: existing?.comment.text ?? '',
+    });
+  }
+
+  useArtifactPicker(frameRef, isCommenting, marks, handlePick);
 
   useEffect(() => {
     if (selectedKey === undefined || selectedModifiedAt === undefined) {
@@ -76,6 +134,25 @@ export function ArtifactsView({
       setFullscreen(false);
     };
   }, [setFullscreen]);
+
+  useEffect(() => {
+    if (currentSessionId === null) return undefined;
+    function stopOnEscape(event: KeyboardEvent): void {
+      if (event.key === 'Escape' && box === null) setIsCommenting(false);
+    }
+    window.addEventListener('keydown', stopOnEscape);
+    return (): void => {
+      window.removeEventListener('keydown', stopOnEscape);
+    };
+  }, [box, currentSessionId]);
+
+  useEffect(() => {
+    return (): void => {
+      setIsCommenting(false);
+      setPick(null);
+      if (currentSessionId !== null) closeBox(currentSessionId);
+    };
+  }, [closeBox, currentSessionId, reloadToken, selectedKey]);
 
   if (selected === undefined) {
     return null;
@@ -125,6 +202,9 @@ export function ArtifactsView({
             className={`artifacts__entry${item.file === selected.file ? ' artifacts__entry--selected' : ''}`}
             aria-current={item.file === selected.file ? 'true' : undefined}
             onClick={(): void => {
+              setIsCommenting(false);
+              setPick(null);
+              if (currentSessionId !== null) closeBox(currentSessionId);
               select(projectId, item.file);
             }}
           >
@@ -174,6 +254,9 @@ export function ArtifactsView({
               title="Neu laden"
               aria-label="Neu laden"
               onClick={(): void => {
+                setIsCommenting(false);
+                setPick(null);
+                if (currentSessionId !== null) closeBox(currentSessionId);
                 setReloadToken((token: number) => token + 1);
               }}
             >
@@ -215,6 +298,33 @@ export function ArtifactsView({
                 <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />
               </svg>
             </button>
+            {currentSessionId !== null ? (
+              <button
+                type="button"
+                className={`artifacts__button${isCommenting ? ' artifacts__button--commenting' : ''}`}
+                onClick={(): void => {
+                  setIsCommenting((value: boolean) => !value);
+                  if (isCommenting) {
+                    setPick(null);
+                    closeBox(currentSessionId);
+                  }
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="m3 11.8 1-.2 7.3-7.3a1.5 1.5 0 0 0-2.1-2.1L1.9 9.5 1.7 10.6 3 11.8Z" />
+                  <path d="m8.2 3.2 2.1 2.1" />
+                </svg>
+                Kommentieren{isCommenting ? ` · ${String(artifactComments.length)}` : ''}
+              </button>
+            ) : null}
             {renderDiscussButton(selected)}
             <button
               type="button"
@@ -240,8 +350,67 @@ export function ArtifactsView({
             </button>
           </div>
         </header>
-        <div className="artifacts__stage">
-          <ArtifactFrame baseUrl={list.baseUrl} item={selected} reloadToken={reloadToken} />
+        {isCommenting ? (
+          <div className="artifacts__hint">
+            <span>Element anklicken, um es zu kommentieren · Esc beendet</span>
+            <button
+              type="button"
+              onClick={(): void => {
+                setIsCommenting(false);
+              }}
+            >
+              Fertig
+            </button>
+          </div>
+        ) : null}
+        <div ref={stageRef} className="artifacts__stage">
+          <ArtifactFrame
+            baseUrl={list.baseUrl}
+            item={selected}
+            reloadToken={reloadToken}
+            frameRef={frameRef}
+          />
+          {currentSessionId !== null && pick !== null && box !== null ? (
+            <div
+              className="artifacts__comment"
+              style={{ left: pick.rect.x, top: pick.rect.y + pick.rect.height }}
+            >
+              <CommentBox
+                fileLabel={pick.label === '' ? pick.selector : `„${pick.label}“`}
+                lineLabel={selectorTail(pick.selector)}
+                text={box.text}
+                isEditing={artifactComments.some((entry) => entry.lineId === box.lineId)}
+                shouldReveal={false}
+                onRevealed={(): void => {}}
+                onChange={(text: string): void => {
+                  setBoxText(currentSessionId, text);
+                }}
+                onSubmit={(): void => {
+                  upsert(currentSessionId, box.lineId, {
+                    target: {
+                      kind: 'artifact',
+                      file: selected.file,
+                      selector: pick.selector,
+                      label: pick.label,
+                    },
+                    repositoryKey: '',
+                    repositoryName: '',
+                    path: selected.file,
+                    kind: 'context',
+                    line: 0,
+                    code: pick.snippet,
+                    text: box.text.trim(),
+                  });
+                  closeBox(currentSessionId);
+                  setPick(null);
+                }}
+                onCancel={(): void => {
+                  closeBox(currentSessionId);
+                  setPick(null);
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       </section>
       {isFullscreen ? (

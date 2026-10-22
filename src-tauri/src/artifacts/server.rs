@@ -24,6 +24,7 @@ use crate::sessions::registry::SessionRegistry;
 const MAX_REQUEST_BYTES: usize = 16 * 1024;
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const TEXT_PLAIN: &str = "text/plain; charset=utf-8";
+const BRIDGE_SCRIPT: &str = include_str!("bridge.js");
 
 /// Der laufende Server; als Tauri-State verwaltet.
 pub struct ArtifactServer {
@@ -144,6 +145,12 @@ impl Connection {
         let Ok(body) = fs::read(&target) else {
             return not_found();
         };
+        let content_type = content_type(&target);
+        let body = if content_type.starts_with("text/html") {
+            with_bridge(body)
+        } else {
+            body
+        };
         // Aus der geprüften Session-ID neu kodiert, nie aus dem Anfragetext: der landet sonst in der CSP.
         let scope = format!(
             "{}/{}/{}/",
@@ -154,10 +161,31 @@ impl Connection {
         Reply {
             status: 200,
             reason: "OK",
-            content_type: content_type(&target),
+            content_type,
             body,
             csp: Some(artifact_csp(&scope)),
         }
+    }
+}
+
+/// Hängt die passive Kommentar-Brücke an HTML an, ohne Binärdaten oder ungültiges UTF-8 anzutasten.
+fn with_bridge(body: Vec<u8>) -> Vec<u8> {
+    let html = match String::from_utf8(body) {
+        Ok(html) => html,
+        Err(error) => return error.into_bytes(),
+    };
+    let bridge = format!("<script>{BRIDGE_SCRIPT}</script>");
+    let lower = html.to_ascii_lowercase();
+    if let Some(index) = lower.rfind("</body>") {
+        let mut result = String::with_capacity(html.len() + bridge.len());
+        result.push_str(&html[..index]);
+        result.push_str(&bridge);
+        result.push_str(&html[index..]);
+        result.into_bytes()
+    } else {
+        let mut result = html;
+        result.push_str(&bridge);
+        result.into_bytes()
     }
 }
 
