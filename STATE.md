@@ -1,8 +1,9 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
+**Aktiver Plan:** `docs/planning/2026-10-22_ohne-fundstelle/` (ADR 036)
+**Phase:** 1/3 — Core (complete, committet); 2/3 — Markierung (pending)
+**Nächster Schritt:** Phase 2 (`phase-2-markierung.md`), Rating standard → `/model sonnet`.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_linux-pfade.md` (ohne ADR), Release `v0.28.1`.
-**Nächster Schritt:** nächsten geparkten Plan wählen (Empfehlung: `2026-10-22_skill-kassensturz`).
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 036–039 für die vier Pläne; keiner braucht eine Migration.
 

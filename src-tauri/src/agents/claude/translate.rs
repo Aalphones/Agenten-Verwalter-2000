@@ -324,6 +324,9 @@ impl Translator {
                 };
                 self.push_task_detail(&tool_use_id, event, &mut events);
             }
+            if !text.is_empty() {
+                events.push(AgentEvent::ToolOutput { text });
+            }
         }
         events
     }

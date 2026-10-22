@@ -58,5 +58,9 @@ pub enum Notice {
         denials: Vec<Denial>,
         /// Rechenwert dieser Antwort in US-Dollar, nur in der Betriebsart Claude.
         cost_usd: Option<f64>,
+        /// `seq` der Text-Einträge dieser Antwort mit Angaben ohne Fundstelle, in Reihenfolge
+        /// (ADR 036); Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        unsourced: Vec<u32>,
     },
 }

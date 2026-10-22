@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Core: Werkzeug-Ausgaben je Antwort sammeln, Angaben ohne Fundstelle ermitteln, an Text und Abschlusszeile hängen; ADR 036 | [phase-1-core.md](phase-1-core.md) | heikel | pending |
+| 1 | Core: Werkzeug-Ausgaben je Antwort sammeln, Angaben ohne Fundstelle ermitteln, an Text und Abschlusszeile hängen; ADR 036 | [phase-1-core.md](phase-1-core.md) | heikel | complete |
 | 2 | Oberfläche: Markierung im Antworttext mit Erklärung | [phase-2-markierung.md](phase-2-markierung.md) | standard | pending |
 | 3 | Abschlusszeile mit Sprung, Schalter in den Einstellungen; Doku-Abschluss | [phase-3-zeile-und-schalter.md](phase-3-zeile-und-schalter.md) | standard | pending |
 

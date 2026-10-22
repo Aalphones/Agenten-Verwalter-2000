@@ -27,6 +27,7 @@ pub mod review;
 pub mod sessions;
 pub mod settings;
 pub mod skills;
+pub mod sourcing;
 pub mod standalone;
 pub mod tldr;
 pub mod usage;

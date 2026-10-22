@@ -202,6 +202,10 @@ pub enum ChatEntry {
     Text {
         seq: u32,
         text: String,
+        /// Pfade, Datei:Zeile-Angaben und Zahlen des Textes ohne Fundstelle (ADR 036), so
+        /// geschrieben wie im Text; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        unsourced: Vec<String>,
     },
     Thinking {
         seq: u32,
@@ -336,6 +340,10 @@ pub enum AgentEvent {
     ToolFinished {
         tool_use_id: String,
         failed: bool,
+    },
+    /// Ausgabe eines Werkzeugs des Hauptagenten; Quelle für den Abgleich der Antwort (ADR 036).
+    ToolOutput {
+        text: String,
     },
     Todos(Vec<TodoItem>),
     QuestionAsked {

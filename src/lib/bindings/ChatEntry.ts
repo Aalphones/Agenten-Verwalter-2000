@@ -24,7 +24,12 @@ skill: SkillRef | null,
 /**
  * Review-Kommentare aus der Changes-Ansicht; Einträge von vorher haben das Feld nicht.
  */
-comments: Array<ReviewComment>, } | { "kind": "text", seq: number, text: string, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "artifact", seq: number, 
+comments: Array<ReviewComment>, } | { "kind": "text", seq: number, text: string, 
+/**
+ * Pfade, Datei:Zeile-Angaben und Zahlen des Textes ohne Fundstelle (ADR 036), so
+ * geschrieben wie im Text; Einträge von vorher haben das Feld nicht.
+ */
+unsourced: Array<string>, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "artifact", seq: number, 
 /**
  * Ungekürzt, wie das Werkzeug ihn nannte.
  */

@@ -69,6 +69,7 @@ use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
 use crate::settings::model::OperatingMode;
 use crate::skills::{self, model::SkillRef};
+use crate::sourcing::{self, Sources};
 use crate::tldr::model::{ProjectTldr, SessionTldr};
 use crate::tldr::transcript::with_project_tldr;
 use crate::usage::UsageService;
@@ -250,6 +251,10 @@ struct SessionState {
     needs_settling: bool,
     entries: Vec<ChatEntry>,
     tool_seqs: HashMap<String, u32>,
+    /// Was die laufende Antwort belegen kann (ADR 036); nur im Speicher, leer zwischen Antworten.
+    turn_sources: Sources,
+    /// `seq` der Text-Einträge der laufenden Antwort.
+    turn_texts: Vec<u32>,
     todos_seq: Option<u32>,
     /// Offene Rückfragen und Rechte-Abfragen als (request_id, Anfrage), älteste zuerst.
     pending: Vec<(String, PendingRequest)>,
@@ -865,6 +870,8 @@ impl SessionRegistry {
                         return Err(CommandError::AttachmentsWhileWaiting);
                     }
                     answer_oldest_with_text(state, outbox, text)?;
+                    // Die Antwort läuft weiter: der Text des Users ist eine Quelle mehr.
+                    state.turn_sources.push_text(text);
                     state.push_user(outbox, text, Vec::new(), skill, Vec::new());
                     return Ok(());
                 }
@@ -948,6 +955,7 @@ impl SessionRegistry {
                     state.name = name_from_task(text);
                     outbox.summary_dirty = true;
                 }
+                state.begin_sourcing(&agent_text);
                 state.push_user(outbox, sent_text, sent_attachments, skill, comments);
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
@@ -1890,6 +1898,8 @@ impl SessionState {
             needs_settling: false,
             entries: Vec::new(),
             tool_seqs: HashMap::new(),
+            turn_sources: Sources::default(),
+            turn_texts: Vec::new(),
             todos_seq: None,
             pending: Vec::new(),
             process: None,
@@ -2490,7 +2500,12 @@ impl SessionState {
                     self.handoff_line = handoff;
                     outbox.summary_dirty = true;
                 }
-                self.push_entry(outbox, |seq: u32| ChatEntry::Text { seq, text });
+                let seq: u32 = self.push_entry(outbox, |seq: u32| ChatEntry::Text {
+                    seq,
+                    text,
+                    unsourced: Vec::new(),
+                });
+                self.turn_texts.push(seq);
             }
             AgentEvent::Thinking { text, seconds } => {
                 self.wake_if_idle(outbox);
@@ -2509,6 +2524,9 @@ impl SessionState {
                 self.wake_if_idle(outbox);
                 self.note_ticket_worktrees(outbox, &used_paths);
                 self.note_touched_files(outbox, &tool, &used_paths);
+                for path in &used_paths {
+                    self.turn_sources.push_path(path);
+                }
                 let is_write: bool = tool == "Write";
                 let entry_tool_use_id = tool_use_id.clone();
                 let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Tool {
@@ -2527,6 +2545,7 @@ impl SessionState {
                 tool_use_id,
                 failed,
             } => self.finish_tool(outbox, &tool_use_id, failed),
+            AgentEvent::ToolOutput { text } => self.turn_sources.push_text(&text),
             AgentEvent::Todos(items) => {
                 self.wake_if_idle(outbox);
                 self.update_todos(outbox, items);
@@ -2903,9 +2922,11 @@ impl SessionState {
         }
         self.todos_seq = None;
         if self.cancel_requested {
+            self.end_sourcing();
             return;
         }
-        self.note_turn_summary(outbox, denials, total_cost_usd);
+        let unsourced: Vec<u32> = self.note_unsourced(outbox);
+        self.note_turn_summary(outbox, denials, total_cost_usd, unsourced);
         // Aufschlüsselung und MCP-Liste sind Beiwerk: ein Fehler beim Einreihen darf das Ende der Antwort nicht stören.
         let _ = self.send_control(outbox, get_context_usage());
         let _ = self.send_control(outbox, mcp_status());
@@ -2926,6 +2947,43 @@ impl SessionState {
         }
     }
 
+    /// Eine neue Antwort beginnt: sie wird gegen die Nachricht des Users und alles, was die
+    /// Werkzeuge danach liefern, abgeglichen (ADR 036).
+    fn begin_sourcing(&mut self, user_text: &str) {
+        self.end_sourcing();
+        self.turn_sources.push_text(user_text);
+    }
+
+    fn end_sourcing(&mut self) {
+        self.turn_sources = Sources::default();
+        self.turn_texts.clear();
+    }
+
+    /// Gleicht die Text-Einträge der Antwort mit ihren Quellen ab und schreibt die Angaben ohne
+    /// Fundstelle in die Einträge. Gibt die `seq` der Einträge mit Treffern zurück.
+    fn note_unsourced(&mut self, outbox: &mut Outbox) -> Vec<u32> {
+        let sources: Sources = std::mem::take(&mut self.turn_sources);
+        let text_seqs: Vec<u32> = std::mem::take(&mut self.turn_texts);
+        let mut marked: Vec<u32> = Vec::new();
+        for seq in text_seqs {
+            let Some(ChatEntry::Text { text, .. }) = self.entries.get(seq as usize) else {
+                continue;
+            };
+            let unsourced: Vec<String> = sourcing::unsourced(text, &sources);
+            if unsourced.is_empty() {
+                continue;
+            }
+            let entry = ChatEntry::Text {
+                seq,
+                text: text.clone(),
+                unsourced,
+            };
+            self.replace_entry(outbox, entry);
+            marked.push(seq);
+        }
+        marked
+    }
+
     /// Schließt eine Antwort mit ihren abgelehnten Aufrufen und ihren Kosten ab. `total_cost_usd`
     /// ist über den Prozess aufsummiert: die Kosten dieser Antwort sind der Zuwachs; ein kleinerer
     /// Wert als der letzte kann nur von einem neuen Zähler kommen und gilt selbst.
@@ -2934,6 +2992,7 @@ impl SessionState {
         outbox: &mut Outbox,
         denials: Vec<Denial>,
         total_cost_usd: Option<f64>,
+        unsourced: Vec<u32>,
     ) {
         let mut cost_usd: Option<f64> = None;
         if self.is_claude_process()
@@ -2947,12 +3006,16 @@ impl SessionState {
             self.last_total_cost = total;
             cost_usd = (delta > 0.0).then_some(delta);
         }
-        if denials.is_empty() && cost_usd.is_none() {
+        if denials.is_empty() && cost_usd.is_none() && unsourced.is_empty() {
             return;
         }
         self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
             seq,
-            notice: Notice::TurnSummary { denials, cost_usd },
+            notice: Notice::TurnSummary {
+                denials,
+                cost_usd,
+                unsourced,
+            },
         });
     }
 

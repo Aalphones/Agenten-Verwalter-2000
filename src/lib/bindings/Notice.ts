@@ -18,4 +18,9 @@ recacheTokens: number, } | { "kind": "modelFallback", originalModel: string, ori
 /**
  * Rechenwert dieser Antwort in US-Dollar, nur in der Betriebsart Claude.
  */
-costUsd: number | null, };
+costUsd: number | null, 
+/**
+ * `seq` der Text-Einträge dieser Antwort mit Angaben ohne Fundstelle, in Reihenfolge
+ * (ADR 036); Einträge von vorher haben das Feld nicht.
+ */
+unsourced: Array<number>, };
