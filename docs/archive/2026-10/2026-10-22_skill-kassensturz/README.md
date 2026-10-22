@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Aufrufe je Skill aus dem Verlauf zählen, Command; ADR 039 | mechanisch | complete |
-| 2 | Oberfläche: Sortierung, Zahl, eingeklappte Gruppe; Doku-Abschluss | standard | pending |
+| 2 | Oberfläche: Sortierung, Zahl, eingeklappte Gruppe; Doku-Abschluss | standard | complete |
 
 **Rahmen:** strikt 1 → 2, direkt auf `main`, ein Commit pro Phase, Scope `skills`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten, Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).
 
@@ -76,10 +76,23 @@ AK:
 
 ## Summary
 
+Das `/`-Menü sortiert die Gruppe „Skills“ nach Aufrufen der letzten 30 Tage und zeigt rechts die Zahl. Ungenutzte Skills liegen im Knopf-Menü ohne Filter hinter der Zeile „Seit 30 Tagen nicht benutzt“; mit Filter oder im Feldmenü stehen sie unten in der Liste, ausgegraut. Fehlt die Zählung, bleibt das Menü wie vorher. Die Zahl kommt aus `chat_entries` (ADR 039), ohne Migration.
+
 ## Files touched
+
+Core: `skills/model.rs`, `db/skill_uses.rs`, `commands/skills.rs`, `docs/decisions/039-skill-kassensturz.md`. Oberfläche: `features/skills/skillUses.ts`, `useSkills.ts`, `features/chat/commandMenuRows.ts`, `CommandMenu.tsx` + `.css`, `useCommandMenu.ts`, `Composer.tsx`, `sessions/NewSession.tsx`. Docs: `code-map.md`, `glossary.md`.
 
 ## Commits
 
+`feat(skills): Aufrufe je Skill zählen` · `feat(skills): Skills im Menü nach Gebrauch sortieren`
+
 ## Deviations from plan
 
+- `buildCommandSections` bekommt `isUnusedOpen: boolean | null` statt `boolean`; `null` heißt „nicht einklappbar“ (Filter oder Feldmenü), die Entscheidung trifft `useCommandMenu`.
+- Die Skill-Zeile trägt `count: number | null` selbst, das Menü braucht die Zählung deshalb nicht als Parameter.
+- `isUnused` entfällt (Prüfung ist `count === 0`); neu `usesByKey` und `useCount` in `skillUses.ts`.
+- Die Klapp-Zeile wird über `commandMenu.pick` abgefangen, `Composer` und `NewSession` reichen ihren `pickRow` dahinter durch.
+
 ## Follow-ups
+
+Kein Gegenstück in `mitgelieferte-befehle`: kommt dort eine neue Herkunft dazu, braucht `skillUseKey` einen eigenen Fall.
