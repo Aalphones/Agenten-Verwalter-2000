@@ -11,7 +11,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | Core: Kommentar-Ziel im Typ, Prüfung, Text an den Agenten, Bild erneut mitsenden; ADR 035 | [phase-1-core.md](phase-1-core.md) | standard | complete |
 | 2 | Oberfläche: Karten, Liste und Store für alle drei Arten | [phase-2-karten.md](phase-2-karten.md) | standard | complete |
 | 3 | Artefakt: Skript-Brücke im Server, Knopf „Kommentieren“, Markierung und Kommentarfeld | [phase-3-artefakt.md](phase-3-artefakt.md) | heikel | complete |
-| 4 | Bild: Bildansicht mit Bereich aufziehen, Einstieg über die Anhang-Chips; Doku-Abschluss | [phase-4-bild.md](phase-4-bild.md) | standard | pending |
+| 4 | Bild: Bildansicht mit Bereich aufziehen, Einstieg über die Anhang-Chips; Doku-Abschluss | [phase-4-bild.md](phase-4-bild.md) | standard | complete |
 
 **Reihenfolge:** strikt 1 → 4. Umsetzung direkt auf `main`, ein Commit pro Phase; Scope `review` (Phase 3 `artifacts`, Phase 4 `attachments`). Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten. Nach Änderungen an Typen über die Tauri-Grenze `pnpm bindings` und mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Erkenntnisse nach [FINDINGS.md](FINDINGS.md). Planabschluss mit Versions-Tag (Minor-Version) nach [releases.md](../../conventions/releases.md).
 
@@ -85,10 +85,20 @@ Nachrichten zwischen Artefakt-Seite und Verwalter (alle mit `verwalter: 1`):
 
 ## Summary
 
+Review-Kommentare lassen sich jetzt an drei Dingen festmachen: Diff-Zeile, Element in einem Artefakt, Bereich auf einem Bild. Alle landen in derselben Liste der Eingabeleiste und gehen mit der nächsten Nachricht an den Agenten. Ein kommentiertes Bild aus einer früheren Nachricht geht erneut als Bild-Block mit.
+
 ## Files touched
+
+Core: `src-tauri/src/review/` (Kommentar-Ziel, Prüfung, Text an den Agenten), `src-tauri/src/artifacts/server.rs` (Skript-Brücke), Sende-Weg für erneute Bild-Blöcke. Oberfläche: `src/stores/review.ts`, `src/features/review/` (Karten), `src/features/artifacts/` (Kommentiermodus), `src/features/attachments/` (`ImageViewer`, `imageRect.ts`, Chip und Zeile), `src/stores/attachments.ts`, `src/features/chat/` (Einstiege). Doku: ADR 035, `docs/code-map.md`, `docs/glossary.md`.
 
 ## Commits
 
+`3578061` Core · `8c03e7b` Karten · `b61cd26` Artefakt · `0f3b31c` Bildansicht.
+
 ## Deviations from plan
 
+`toImageRect` nimmt zusätzlich die Originalgröße als Parameter. Unter „Neue Session“ gibt es keinen Einstieg in die Bildansicht, weil dort keine Session für Kommentare existiert. Der eingepasste Modus passt nur die Breite an.
+
 ## Follow-ups
+
+Bereich aufziehen geht nur mit der Maus; eine Tastatur-Variante gibt es nicht.

@@ -1,10 +1,10 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-22_kommentare-artefakt-bild/`
-**Phase:** 4/4 — Bild (pending)
-**Nächster Schritt:** Phase 4 gemäß Kontext-Diät lesen und die Bildansicht für Bereichskommentare umsetzen.
+**Aktiver Plan:** (kein aktiver Plan)
+**Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_kommentare-artefakt-bild/` (ADR 035), Release `v0.28.0`.
+**Nächster Schritt:** nächsten geparkten Plan wählen (Empfehlung: `2026-10-22_skill-kassensturz`).
 
-**Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036), `2026-10-22_kommentare-artefakt-bild` (ADR 035). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 035–039 für diese fünf; keiner braucht eine Migration.
+**Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036), dazu `2026-10-22_linux-pfade` (Einzeldatei, ohne ADR). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 036–039 für die vier Pläne; keiner braucht eine Migration.
 
 **Außerdem offen:** Plan `mitgelieferte-befehle` (ungetrackt in `docs/planning/`) übernehmen oder verwerfen; seine README verweist noch auf `../2026-10-21_warnhinweise/` (jetzt im Archiv). Dessen generiertes `codex-probe.cjs` ist gezielt aus ESLint ausgeschlossen; `pnpm check` bleibt grün. Keine Smoke-Checklisten mehr: getestet wird im laufenden Betrieb, Releases folgen dem Plan-Abschluss ohne Abnahme.
 
@@ -33,4 +33,4 @@
 ## Offen
 
 - Alle archivierten Pläne sind mit `v0.27.0` ausgeliefert. Die Smoke-Abschnitte in den archivierten Plänen sind Altbestand und werden nicht mehr abgearbeitet.
-- **ADR-Nummern:** Changes-Review 015, Claude Code lokal 016 (vergeben), Autark 017, „Ordner ohne Git“ 018 (Sidebar hat 019 bekommen), Innere Repositories 020, Claude-Konto 021, Scratchpad im Workspace 022, Dateiverweise im Chat 023, MCP-Anmeldung 024, Git-Werkzeuge 025, Artefakte 026, Session-Übergabe 027, Vorhaben-Retro 028, Archiv-Suche 029, Browser-Zugriff 030, Codex 031, Wartet auf Skript 032, Warnhinweise 033 (vergeben).
+- **ADR-Nummern:** Changes-Review 015, Claude Code lokal 016 (vergeben), Autark 017, „Ordner ohne Git“ 018 (Sidebar hat 019 bekommen), Innere Repositories 020, Claude-Konto 021, Scratchpad im Workspace 022, Dateiverweise im Chat 023, MCP-Anmeldung 024, Git-Werkzeuge 025, Artefakte 026, Session-Übergabe 027, Vorhaben-Retro 028, Archiv-Suche 029, Browser-Zugriff 030, Codex 031, Wartet auf Skript 032, Warnhinweise 033, Kommentare an Artefakt und Bild 035 (vergeben).
