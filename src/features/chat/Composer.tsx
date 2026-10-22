@@ -505,7 +505,9 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
             sections={commandMenu.sections}
             highlighted={commandMenu.highlighted}
             onHighlight={commandMenu.setHighlighted}
-            onPick={pickRow}
+            onPick={(row: CommandRow): void => {
+              commandMenu.pick(row, pickRow);
+            }}
             showFilter={commandMenu.showFilter}
             filter={commandMenu.filter}
             onFilterChange={commandMenu.setFilter}

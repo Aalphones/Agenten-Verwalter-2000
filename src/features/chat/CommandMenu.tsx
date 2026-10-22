@@ -68,11 +68,15 @@ export function CommandMenu({
     const { label, description } = rowText(row, session);
     const isHighlighted: boolean = key === highlightedKey;
     const hasProblem: boolean = hasMcpProblem(row, session);
+    const count: string | null = rowCount(row);
+    const isToggle: boolean = row.kind === 'unusedToggle';
+    const isUnused: boolean = row.kind === 'skill' && row.count === 0;
     return (
       <button
         key={key}
         type="button"
-        className={`command-menu__row${isHighlighted ? ' command-menu__row--highlighted' : ''}`}
+        className={`command-menu__row${isHighlighted ? ' command-menu__row--highlighted' : ''}${isUnused ? ' command-menu__row--unused' : ''}${isToggle ? ' command-menu__row--toggle' : ''}`}
+        aria-expanded={row.kind === 'unusedToggle' ? row.isOpen : undefined}
         aria-current={isHighlighted}
         tabIndex={showFilter ? 0 : -1}
         onMouseEnter={(): void => {
@@ -93,6 +97,7 @@ export function CommandMenu({
         >
           {rowOrigin(row, session)}
         </span>
+        {count !== null && <span className="command-menu__count">{count}</span>}
       </button>
     );
   }
@@ -156,6 +161,17 @@ function hasMcpProblem(row: CommandRow, session: SessionSummary | null): boolean
   return (
     row.kind === 'session' && row.command === 'mcp' && session !== null && session.mcpProblems > 0
   );
+}
+
+/** Zahl rechts außen: Aufrufe der letzten 30 Tage („—“ bei keinem), bei der Klapp-Zeile die Zahl der ungenutzten Skills. */
+function rowCount(row: CommandRow): string | null {
+  if (row.kind === 'unusedToggle') {
+    return String(row.count);
+  }
+  if (row.kind !== 'skill' || row.count === null) {
+    return null;
+  }
+  return row.count === 0 ? '—' : `${String(row.count)}×`;
 }
 
 function rowOrigin(row: CommandRow, session: SessionSummary | null): string {

@@ -1,6 +1,7 @@
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { SkillInfo } from '@/lib/bindings/SkillInfo';
+import { sortByUse, useCount } from '@/features/skills/skillUses';
 import { modelName } from '@/lib/labels';
 
 /** `full`: Knopf `/` in der Eingabeleiste · `slash`: `/` am Feldanfang · `skills`: nur Skills („Neue Session“). */
@@ -11,7 +12,9 @@ export type CommandRow =
   | { kind: 'attach' }
   | { kind: 'model' }
   | { kind: 'effort' }
-  | { kind: 'skill'; skill: SkillInfo }
+  /** `count`: Aufrufe der letzten 30 Tage; `null`, wenn die Zählung fehlt. */
+  | { kind: 'skill'; skill: SkillInfo; count: number | null }
+  | { kind: 'unusedToggle'; count: number; isOpen: boolean }
   | { kind: 'session'; command: SessionCommand };
 
 export interface CommandSection {
@@ -23,6 +26,8 @@ interface RowText {
   label: string;
   description: string;
 }
+
+const UNUSED_TOGGLE_LABEL = 'Seit 30 Tagen nicht benutzt';
 
 const PAUSABLE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiting'];
 
@@ -46,6 +51,8 @@ export function rowText(row: CommandRow, session: SessionSummary | null): RowTex
       return { label: 'Denkaufwand', description: '' };
     case 'skill':
       return { label: `/${row.skill.name}`, description: row.skill.description };
+    case 'unusedToggle':
+      return { label: `${row.isOpen ? '▾' : '▸'} ${UNUSED_TOGGLE_LABEL}`, description: '' };
     case 'session':
       if (row.command === 'chrome') {
         return {
@@ -82,6 +89,8 @@ export function buildCommandSections(
   session: SessionSummary | null,
   hasBrowser: boolean,
   hasMcp: boolean,
+  uses: ReadonlyMap<string, number> | null,
+  isUnusedOpen: boolean | null,
 ): CommandSection[] {
   const needle: string = filter.trim().toLowerCase();
 
@@ -96,10 +105,7 @@ export function buildCommandSections(
   const sections: CommandSection[] = [
     { title: 'Kontext', rows: scope === 'full' ? [{ kind: 'attach' }] : [] },
     { title: 'Modell', rows: scope === 'full' ? [{ kind: 'model' }, { kind: 'effort' }] : [] },
-    {
-      title: 'Skills',
-      rows: skills.map((skill: SkillInfo): CommandRow => ({ kind: 'skill', skill })),
-    },
+    { title: 'Skills', rows: skillRows(skills, uses, isUnusedOpen) },
     { title: 'Session', rows: scope === 'skills' ? [] : sessionRows(session, hasBrowser, hasMcp) },
   ];
 
@@ -118,6 +124,43 @@ export function buildCommandSections(
       rows: section.rows.filter(matches),
     }))
     .filter((section: CommandSection) => section.rows.length > 0);
+}
+
+/**
+ * Nach Gebrauch sortiert; fehlt die Zählung, bleibt es bei der Reihenfolge der Eingabe.
+ * `isUnusedOpen`: `null` = alles in einer Liste (Filter, Slash-Menü), sonst hängt die Klapp-Zeile für ungenutzte Skills am Ende.
+ */
+function skillRows(
+  skills: readonly SkillInfo[],
+  uses: ReadonlyMap<string, number> | null,
+  isUnusedOpen: boolean | null,
+): CommandRow[] {
+  if (uses === null) {
+    return skills.map((skill: SkillInfo): CommandRow => ({ kind: 'skill', skill, count: null }));
+  }
+  const rows: CommandRow[] = sortByUse(skills, uses).map((skill: SkillInfo): CommandRow => ({
+    kind: 'skill',
+    skill,
+    count: useCount(skill, uses),
+  }));
+  if (isUnusedOpen === null) {
+    return rows;
+  }
+  const usedRows: CommandRow[] = rows.filter(
+    (row: CommandRow) => row.kind === 'skill' && row.count !== 0,
+  );
+  const unusedRows: CommandRow[] = rows.filter(
+    (row: CommandRow) => row.kind === 'skill' && row.count === 0,
+  );
+  if (unusedRows.length === 0) {
+    return usedRows;
+  }
+  const toggle: CommandRow = {
+    kind: 'unusedToggle',
+    count: unusedRows.length,
+    isOpen: isUnusedOpen,
+  };
+  return isUnusedOpen ? [...usedRows, toggle, ...unusedRows] : [...usedRows, toggle];
 }
 
 function sessionRows(

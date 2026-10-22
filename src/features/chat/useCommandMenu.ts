@@ -37,6 +37,8 @@ export interface CommandMenuState {
   sections: CommandSection[];
   highlighted: CommandRow | null;
   setHighlighted: (row: CommandRow) => void;
+  /** Wahl einer Zeile per Klick oder Enter; `onPick` bekommt alles außer der Klapp-Zeile. */
+  pick: (row: CommandRow, onPick: (row: CommandRow) => void) => void;
   /** Hält das Slash-Menü zu, bis der Entwurf nicht mehr mit `/` beginnt. */
   dismissSlash: () => void;
   /** ↑/↓/Enter des offenen Slash-Menüs im Textfeld; `true`, wenn die Taste verbraucht wurde. */
@@ -63,6 +65,7 @@ export function useCommandMenu({
   const [buttonFilter, setButtonFilter] = useState<string>('');
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const [isSlashDismissed, setIsSlashDismissed] = useState<boolean>(false);
+  const [isUnusedOpen, setIsUnusedOpen] = useState<boolean>(false);
   // Claude in Chrome gibt es nur mit der Claude-Kommandozeile und dem Claude-Abo.
   const hasBrowser: boolean = useSettingsStore(
     (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
@@ -83,7 +86,13 @@ export function useCommandMenu({
   const scope: CommandScope = isButtonOpen ? buttonScope : slashScope;
   const filter: string = isButtonOpen ? buttonFilter : (slashMatch?.[1] ?? '');
 
-  const { skills } = useSkills(skillSource, isOpen);
+  if (!isOpen && isUnusedOpen) {
+    setIsUnusedOpen(false);
+  }
+
+  const { skills, uses } = useSkills(skillSource, isOpen);
+  // Einklappen gibt es nur im Knopf-Menü ohne Filter; sonst stehen alle Treffer in einer Liste.
+  const isFoldable: boolean = isButtonOpen && filter.trim() === '';
   const sections: CommandSection[] = buildCommandSections(
     scope,
     filter,
@@ -91,11 +100,22 @@ export function useCommandMenu({
     session,
     hasBrowser,
     hasMcp,
+    uses,
+    isFoldable ? isUnusedOpen : null,
   );
   const rows: CommandRow[] = pickableRows(sections);
   // Ohne (noch gültige) Markierung gilt die erste wählbare Zeile als markiert.
   const highlighted: CommandRow | null =
     rows.find((row: CommandRow) => rowKey(row) === highlightedKey) ?? rows[0] ?? null;
+
+  /** Die Klapp-Zeile schaltet nur um und lässt das Menü offen; jede andere Zeile geht an `onPick`. */
+  function pick(row: CommandRow, onPick: (row: CommandRow) => void): void {
+    if (row.kind === 'unusedToggle') {
+      setIsUnusedOpen(!row.isOpen);
+      return;
+    }
+    onPick(row);
+  }
 
   function handleNavigationKey(
     event: KeyboardEvent<HTMLElement>,
@@ -113,7 +133,7 @@ export function useCommandMenu({
     }
     if (event.key === 'Enter' && !event.ctrlKey && highlighted !== null) {
       event.preventDefault();
-      onPick(highlighted);
+      pick(highlighted, onPick);
       return true;
     }
     return false;
@@ -133,6 +153,7 @@ export function useCommandMenu({
     setHighlighted: (row: CommandRow): void => {
       setHighlightedKey(rowKey(row));
     },
+    pick,
     dismissSlash: (): void => {
       setIsSlashDismissed(true);
     },
