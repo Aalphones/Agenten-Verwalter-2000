@@ -1,12 +1,13 @@
 # STATE
 
 **Aktiver Plan:** (kein aktiver Plan)
-**Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_kommentare-artefakt-bild/` (ADR 035), Release `v0.28.0`.
+**Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_linux-pfade.md` (ohne ADR), Release `v0.28.1`.
 **Nächster Schritt:** nächsten geparkten Plan wählen (Empfehlung: `2026-10-22_skill-kassensturz`).
 
-**Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036), dazu `2026-10-22_linux-pfade` (Einzeldatei, ohne ADR). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 036–039 für die vier Pläne; keiner braucht eine Migration.
+**Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`, ADR- und Plan-Reihenfolge):** `2026-10-22_skill-kassensturz` (ADR 039), `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038), `2026-10-22_ohne-fundstelle` (ADR 036). Unabhängig voneinander umsetzbar; empfohlen in dieser Reihenfolge (klein und sicher zuerst). Reserviert: ADR 034 für `mitgelieferte-befehle`, 036–039 für die vier Pläne; keiner braucht eine Migration.
 
 **Außerdem offen:** Plan `mitgelieferte-befehle` (ungetrackt in `docs/planning/`) übernehmen oder verwerfen; seine README verweist noch auf `../2026-10-21_warnhinweise/` (jetzt im Archiv). Dessen generiertes `codex-probe.cjs` ist gezielt aus ESLint ausgeschlossen; `pnpm check` bleibt grün. Keine Smoke-Checklisten mehr: getestet wird im laufenden Betrieb, Releases folgen dem Plan-Abschluss ohne Abnahme.
+**Linux-Laufzeitnachweis offen:** `linux-pfade` ist nur per Prüfkette belegt, nicht auf Linux/macOS gelaufen.
 
 ## Reihenfolge der geparkten Pläne in `docs/planning/`
 

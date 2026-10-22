@@ -4,7 +4,7 @@
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | Externe Pfade nativ behandeln und plattformabhängige Aufrufe korrigieren | standard | pending |
+| 1 | Externe Pfade nativ behandeln und plattformabhängige Aufrufe korrigieren | standard | complete |
 
 ## Ziel
 
@@ -64,22 +64,34 @@ Vor der Umsetzung lesen: `AGENTS.md`, `docs/code-map.md`, `docs/conventions/rust
 
 ### Checkliste
 
-- [ ] Scratchpad-Pfadquelle bis zum Core nachverfolgen und im Frontend den nativen Trenner verwenden.
-- [ ] `native_path` in `filesystem` ergänzen und Git-, Changes- und Artefakt-Dateisystemzugriffe darauf umstellen.
-- [ ] VS-Code-Aufruf nach Betriebssystem verzweigen.
-- [ ] Unix- und Windows-Zweige von `rule_path` korrigieren bzw. erhalten.
-- [ ] `docs/conventions/rust.md` und `docs/conventions/releases.md` aktualisieren; `docs/code-map.md` nur ändern, falls die bestehende Zuordnung nicht mehr zutrifft.
-- [ ] `pnpm check` ausführen.
-- [ ] Nach einem Linux-Laufzeitnachweis den Hinweis in `docs/conventions/releases.md` präzise aktualisieren; bis dahin Linux/macOS weiterhin als nicht vollständig getestet kennzeichnen.
+- [x] Scratchpad-Pfadquelle bis zum Core nachverfolgen und im Frontend den nativen Trenner verwenden.
+- [x] `native_path` in `filesystem` ergänzen und Git-, Changes- und Artefakt-Dateisystemzugriffe darauf umstellen.
+- [x] VS-Code-Aufruf nach Betriebssystem verzweigen.
+- [x] Unix- und Windows-Zweige von `rule_path` korrigieren bzw. erhalten.
+- [x] `docs/conventions/rust.md` und `docs/conventions/releases.md` aktualisieren; `docs/code-map.md` nur ändern, falls die bestehende Zuordnung nicht mehr zutrifft.
+- [x] `pnpm check` ausführen.
+- [ ] (offen, Follow-up) Nach einem Linux-Laufzeitnachweis den Hinweis in `docs/conventions/releases.md` präzise aktualisieren; bis dahin Linux/macOS weiterhin als nicht vollständig getestet kennzeichnen.
 
 ## Abschluss
 
 ### Summary
 
+`filesystem::native_path` wandelt `/` nur unter Windows in `\` um; Git-, Changes-, Artefakt- und Review-Pfade nutzen sie. Der Scratchpad-Ordner kommt als `PathBuf`-Text mit nativen Trennern aus dem Core, das Frontend übernimmt den Trenner aus dem Ordnerpfad. VS Code startet nur unter Windows über `cmd`. Unix-Freigabemuster beginnen mit `//`. `pnpm check` grün.
+
 ### Files touched
+
+`src-tauri/src/filesystem/mod.rs`, `git/mod.rs`, `git/actions.rs`, `changes/mod.rs`, `artifacts/server.rs`, `review/mod.rs`, `worktrees/mod.rs`, `src/features/background/ScratchpadTab.tsx`, `docs/conventions/rust.md`, `docs/conventions/releases.md`.
 
 ### Commits
 
+Siehe `git log` zum Plan „Linux-Pfade“.
+
 ### Deviations from plan
 
+- Zusätzlich umgestellt: der Dateipfad des Artefakt-Kommentars in `review/mod.rs` (gleiche Umwandlung, im Plan nicht genannt).
+- Der Hinweis „Öffnet den Ordner im Windows-Explorer“ im Scratchpad-Tab bleibt unverändert (außerhalb des Umfangs).
+
 ### Follow-ups
+
+- Laufzeitnachweis auf Linux/macOS; danach den Plattformhinweis in `docs/conventions/releases.md` präzisieren.
+- Wurzelordner `/` als Elternordner eines Ticket-Worktrees ergäbe das Muster `///…` — unwahrscheinlich, nicht behandelt.
