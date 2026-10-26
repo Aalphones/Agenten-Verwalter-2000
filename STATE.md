@@ -1,14 +1,12 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-26_automatisch-weiter/`
-**Phase:** 4/4 — Fehlerbehebung Changes: Arbeitsbäume (pending); Phase 1–3 committet
-**Nächster Schritt:** Phase 4 laut `phase-4-arbeitsbaeume.md` bauen (Sonnet), `pnpm check`, Commit; danach Plan archivieren und Release (Minor-Version). Offen aus Phase 3: Ablauf „Automatisch weiter“ einmal im Test-Vorhaben fahren (Report-Back Phase 3). Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVM\bin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"` — sonst scheitert whisper-rs-sys.
-**Danach (Backlog):** Geparkte Pläne `2026-10-22_parallele-sessions` (ADR 037), dann `2026-10-22_umgebung` (ADR 038) — unabhängig voneinander umsetzbar.
-**Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_skill-kassensturz/` (ADR 039), Release `v0.30.0`.
+**Aktiver Plan:** keiner. Als Nächstes aus dem Backlog `2026-10-22_parallele-sessions` (ADR 037) oder `2026-10-22_umgebung` (ADR 038).
+**Phase:** —
+**Nächster Schritt:** Plan wählen und freigeben lassen. Offen aus „Automatisch weiter“ (Follow-ups in dessen README): Ablauf einmal im Test-Vorhaben fahren; Arbeitsbaum-Erkennung einmal gegen die laufende App fahren. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVMin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"` — sonst scheitert whisper-rs-sys.
+**Danach (Backlog):** `2026-10-22_parallele-sessions` und `2026-10-22_umgebung` — unabhängig voneinander umsetzbar; beide fassen wie „Automatisch weiter“ die Funktion `send` an, wer später umsetzt, liest sie neu.
+**Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-26_automatisch-weiter/` (ADR 040, Migration 14), Release `v0.34.0`.
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`):** `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038). Reserviert: ADR 034 für `mitgelieferte-befehle`; keiner braucht eine Migration.
-
-**Geparkt seit 2026-10-26 (Entwurf unter `artifacts/`):** `2026-10-26_automatisch-weiter` (ADR 040, Migration 14) — mehrere Einstiegszeilen, „In neuem Vorhaben starten“, Schalter „Automatisch weiter“ je Vorhaben; drei Phasen strikt nacheinander, Phase 3 auf Opus. Berührt wie `parallele-sessions` die Funktion `send` — wer zweiter umsetzt, liest sie neu.
 
 **Außerdem offen:** Plan `mitgelieferte-befehle` (ungetrackt in `docs/planning/`) übernehmen oder verwerfen; seine README verweist noch auf `../2026-10-21_warnhinweise/` (jetzt im Archiv). Kommt dort eine neue Herkunft dazu, braucht `skillUseKey` (`src/features/skills/skillUses.ts`) und `db/skill_uses.rs` einen eigenen Fall. Dessen generiertes `codex-probe.cjs` ist gezielt aus ESLint ausgeschlossen; `pnpm check` bleibt grün. Keine Smoke-Checklisten mehr: getestet wird im laufenden Betrieb, Releases folgen dem Plan-Abschluss ohne Abnahme.
 **Linux-Laufzeitnachweis offen:** `linux-pfade` ist nur per Prüfkette belegt, nicht auf Linux/macOS gelaufen.
@@ -38,4 +36,4 @@
 ## Offen
 
 - Alle archivierten Pläne sind bis `v0.30.0` ausgeliefert. Die Smoke-Abschnitte in den archivierten Plänen sind Altbestand und werden nicht mehr abgearbeitet.
-- **ADR-Nummern:** Changes-Review 015, Claude Code lokal 016, Autark 017, „Ordner ohne Git“ 018 (Sidebar hat 019 bekommen), Innere Repositories 020, Claude-Konto 021, Scratchpad im Workspace 022, Dateiverweise im Chat 023, MCP-Anmeldung 024, Git-Werkzeuge 025, Artefakte 026, Session-Übergabe 027, Vorhaben-Retro 028, Archiv-Suche 029, Browser-Zugriff 030, Codex 031, Wartet auf Skript 032, Warnhinweise 033, Kommentare an Artefakt und Bild 035, Ohne Fundstelle 036, Skill-Kassensturz 039 (vergeben).
+- **ADR-Nummern:** Changes-Review 015, Claude Code lokal 016, Autark 017, „Ordner ohne Git“ 018 (Sidebar hat 019 bekommen), Innere Repositories 020, Claude-Konto 021, Scratchpad im Workspace 022, Dateiverweise im Chat 023, MCP-Anmeldung 024, Git-Werkzeuge 025, Artefakte 026, Session-Übergabe 027, Vorhaben-Retro 028, Archiv-Suche 029, Browser-Zugriff 030, Codex 031, Wartet auf Skript 032, Warnhinweise 033, Kommentare an Artefakt und Bild 035, Ohne Fundstelle 036, Skill-Kassensturz 039, Automatisch weiter 040 (vergeben).

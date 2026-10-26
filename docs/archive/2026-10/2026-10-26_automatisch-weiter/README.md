@@ -119,14 +119,30 @@ pub struct HandoffStartedEvent { pub from_session_id: String, pub to_session_id:
 - 🟡 **Unsicher: ob `send` aus einem fremden Thread alles auslöst, was der Klick auslöst** (Auto-Titel, TL;DR des Vorhabens). Check in Phase 3: nach dem automatischen Start trägt die neue Session in der Sidebar binnen Sekunden einen eigenen Namen, und der erste Eintrag ihres Verlaufs enthält den Stand des Vorhabens, wenn die alte Session einen hatte — Vergleich mit einem Klick auf den Knopf.
 - 🟡 **Parallele geparkte Pläne:** „Parallele Sessions“ (ADR 037) fasst `send` an (Satz an den Agenten). Wer zuerst umgesetzt wird, ist egal; der zweite liest `send` neu, statt Zeilennummern aus dem Plan zu trauen.
 
-## Report-Back
-
 ## Summary
+
+Fertig, ausgeliefert als Minor-Version (Tag im Release-Commit). Eine Antwort darf mehrere Einstiegszeilen tragen, „Weiter:“ und „Neues Vorhaben …:“, jede mit eigenem Knopf; je Vorhaben schaltet „Automatisch weiter“ den Start der Folgesession nach 10 s Countdown ein, mit Haltegründen und Kettenbremse 6 (ADR 040, Migration 14). Dazu die Fehlerbehebung der Changes: Arbeitsbäume werden an der `.git`-Datei der geschriebenen Dateien erkannt, nicht mehr an Name und Lage.
 
 ## Files touched
 
+47 Dateien über Phase 1–3 (Core: `sessions/handoff.rs`, `sessions/auto_handoff.rs`, `sessions/model.rs`, `sessions/registry.rs`, `projects/`, `db/` mit Migration 14, Commands; Oberfläche: `HandoffBar`, Übersicht, Dialog „Neues Vorhaben“, Stores, Bindings; Doku: ADR 040, Code-Map, Glossar). Phase 4: `worktrees/mod.rs`, `changes/mod.rs`, `changes/sources.rs`, `sessions/registry.rs`, `sessions/registry/commit_scan.rs`, beide Prüfprogramme unter `examples/`, Code-Map, Glossar, ADR 020.
+
 ## Commits
+
+- `ee1c555` feat(chat): mehrere Einstiegszeilen und Start eines neuen Vorhabens aus der Zeile
+- `234d4b7` feat(projects): Schalter „Automatisch weiter“ je Vorhaben
+- `fa1abe1` feat(sessions): Einstiegszeile automatisch senden
+- `9e570a0` fix(changes): Arbeitsbäume über die geschriebenen Dateien finden
 
 ## Deviations from plan
 
+- Phase 4 kam nachträglich in den Plan (eigener Fehler in der Changes-Ansicht) und trägt den Release, der ursprünglich an Phase 3 hing.
+- Phase 3: `handoff_stop` wird nach einem Neustart aus dem letzten Text-Eintrag neu bestimmt; `take_auto_handoff` löst nur ein, wenn die Session noch „abgeschlossen“ ist; Countdown als Unterkomponente (Einzelheiten im Report-Back der Phase 3).
+- Phase 4: App-Worktrees (Sessions vor ADR 010) übergeht `discover`; die Commit-Suche lädt dafür `session_files`.
+- Velocity: geschätzt ~7,5 h; die Zeit wurde nicht gemessen.
+
 ## Follow-ups
+
+- Ablauf „Automatisch weiter“ einmal im Test-Vorhaben fahren (Schalter an, Antwort mit `Weiter: Test – Modell haiku`), dabei Auto-Titel und TL;DR gegen den Knopf vergleichen.
+- Arbeitsbaum-Erkennung einmal gegen die laufende App fahren (`git worktree add facepass-wt-probe -b probe`, Datei darin schreiben); offen, ob `own.touched` auch per Shell geschriebene Dateien enthält.
+- Grenzen der Erkennung: relativer `gitdir`-Pfad zählt nicht; die kleingeschriebenen Schlüssel in `touched` könnten auf Linux/macOS nichts finden.
