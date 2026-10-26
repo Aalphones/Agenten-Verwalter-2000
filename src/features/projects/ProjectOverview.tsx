@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
+import { AutoHandoffSwitch } from '@/features/chat/AutoHandoffSwitch';
 import {
   countChangedFiles,
   fileCountLabel,
@@ -175,6 +176,14 @@ export function ProjectOverview({
               </svg>
               Neue Session
             </button>
+          </div>
+          <div className="project-overview__auto">
+            <AutoHandoffSwitch
+              projectId={project.id}
+              enabled={project.autoHandoff}
+              label="Einstiegszeilen automatisch senden"
+              wide
+            />
           </div>
           {errorMessage !== null && <p className="project-overview__error">{errorMessage}</p>}
           <div className="project-overview__cards">

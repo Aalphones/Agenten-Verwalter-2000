@@ -298,6 +298,10 @@ export function App(): ReactElement {
         backgroundByToolUseId={backgroundByToolUseId}
         artifacts={artifacts}
         onSessionCreated={handleSessionCreated}
+        autoHandoff={
+          projects.find((project: ProjectSummary) => project.id === session.projectId)
+            ?.autoHandoff ?? false
+        }
       />
     );
   }

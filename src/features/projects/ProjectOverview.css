@@ -123,6 +123,12 @@
     }
   }
 
+  &__auto {
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+  }
+
   &__error {
     margin: 0;
     font-size: var(--font-size-xs);

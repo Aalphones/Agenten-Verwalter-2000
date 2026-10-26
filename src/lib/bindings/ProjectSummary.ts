@@ -4,4 +4,8 @@ export type ProjectSummary = { id: string, name: string, createdAt: number,
 /**
  * Namen der Repositories in Positions-Reihenfolge; für alle Sessions des Vorhabens gleich.
  */
-repositoryNames: Array<string>, };
+repositoryNames: Array<string>, 
+/**
+ * „Automatisch weiter“ ist an (ADR 040).
+ */
+autoHandoff: boolean, };

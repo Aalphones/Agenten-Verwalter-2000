@@ -1,6 +1,6 @@
 # Phase 2 — Schalter „Automatisch weiter“ je Vorhaben
 
-Rating: standard · Modell: Sonnet · Commit: `feat(projects): Schalter „Automatisch weiter“ je Vorhaben`
+Status: complete · Rating: standard · Modell: Sonnet · Commit: `feat(projects): Schalter „Automatisch weiter“ je Vorhaben`
 
 Diese Phase speichert und zeigt nur den Schalter. Gestartet wird noch nichts — das baut Phase 3.
 
@@ -30,15 +30,15 @@ Bestand (gelesen 2026-10-26, per Grep neu finden):
 
 ### Core
 
-- [ ] `src-tauri/src/db/migrations/014_project_auto_handoff.sql`: `ALTER TABLE projects ADD COLUMN auto_handoff INTEGER NOT NULL DEFAULT 0;` und in `migrations.rs` hinter `013` eintragen.
-- [ ] `db/projects.rs`: `ProjectRow` bekommt `pub auto_handoff: bool` (Doc „„Automatisch weiter“ ist an (ADR 040)“); `load_active` und `load_one`: `, auto_handoff` ans Ende des `SELECT`, gelesen mit dem nächsten Spaltenindex. `insert` bleibt (Spalten-Default 0). Neu:
+- [x] `src-tauri/src/db/migrations/014_project_auto_handoff.sql`: `ALTER TABLE projects ADD COLUMN auto_handoff INTEGER NOT NULL DEFAULT 0;` und in `migrations.rs` hinter `013` eintragen.
+- [x] `db/projects.rs`: `ProjectRow` bekommt `pub auto_handoff: bool` (Doc „„Automatisch weiter“ ist an (ADR 040)“); `load_active` und `load_one`: `, auto_handoff` ans Ende des `SELECT`, gelesen mit dem nächsten Spaltenindex. `insert` bleibt (Spalten-Default 0). Neu:
 
   ```rust
   pub fn set_auto_handoff(connection: &Connection, id: &str, enabled: bool) -> Result<(), CommandError>
   ```
 
   `UPDATE projects SET auto_handoff = ?2 WHERE id = ?1` (Muster `rename`).
-- [ ] `registry.rs`: `ProjectState.auto_handoff: bool` (Doc wie oben), gefüllt aus `row.auto_handoff` bzw. `false` in `create_project`. `project_summary` liest es unter derselben Sperre wie `name` und setzt `auto_handoff` im `ProjectSummary`. Neu, Muster `rename_project`:
+- [x] `registry.rs`: `ProjectState.auto_handoff: bool` (Doc wie oben), gefüllt aus `row.auto_handoff` bzw. `false` in `create_project`. `project_summary` liest es unter derselben Sperre wie `name` und setzt `auto_handoff` im `ProjectSummary`. Neu, Muster `rename_project`:
 
   ```rust
   /// Schaltet „Automatisch weiter“ für das Vorhaben (ADR 040).
@@ -52,22 +52,29 @@ Bestand (gelesen 2026-10-26, per Grep neu finden):
   pub fn project_auto_handoff(&self, project_id: &str) -> bool
   ```
 
-- [ ] `projects/model.rs` `ProjectSummary`: `/// „Automatisch weiter“ ist an (ADR 040).` `pub auto_handoff: bool,` hinter `repository_names`.
-- [ ] `commands/projects.rs`: `project_set_auto_handoff(app, registry, project_id: String, enabled: bool) -> Result<(), CommandError>` (Muster `project_rename`), in `lib.rs` registrieren.
-- [ ] `pnpm bindings`.
+- [x] `projects/model.rs` `ProjectSummary`: `/// „Automatisch weiter“ ist an (ADR 040).` `pub auto_handoff: bool,` hinter `repository_names`.
+- [x] `commands/projects.rs`: `project_set_auto_handoff(app, registry, project_id: String, enabled: bool) -> Result<(), CommandError>` (Muster `project_rename`), in `lib.rs` registrieren.
+- [x] `pnpm bindings`.
 
 ### Oberfläche
 
-- [ ] `src/lib/projects.ts`: `setProjectAutoHandoff(projectId: string, enabled: boolean): Promise<void>` → `invoke('project_set_auto_handoff', { projectId, enabled })` (Muster `renameProject`).
-- [ ] `src/features/chat/handoff.ts`: `export const AUTO_HANDOFF_TITLE = 'Startet nach jeder fertigen Antwort mit genau einer „Weiter:“-Zeile die nächste Session dieses Vorhabens selbst — nach 10 Sekunden Countdown, mit dem Modell aus der Zeile und der Zeile als erster Nachricht. Hält an, wenn die Antwort 🔴 enthält, mit einer Frage endet, „Merge“ nennt oder mehrere „Weiter:“-Zeilen hat, und nach 6 automatischen Starts in Folge ohne Nachricht von dir.';`
-- [ ] Neu `src/features/chat/AutoHandoffSwitch.tsx` + `.css`: Props `{ projectId: string; enabled: boolean; label: string }`. Zustand `isSaving`, `errorMessage`. Markup `<div className="auto-handoff-switch">` mit `<span className="auto-handoff-switch__label">{label}</span>`, Info-Symbol `<span className="auto-handoff-switch__info" title={AUTO_HANDOFF_TITLE}>` (SVG aus `RepositoryPicker.tsx` übernehmen), `<Switch checked={enabled} label={label} disabled={isSaving} onChange={…} />`; darunter bei Fehler `<p className="auto-handoff-switch__error" role="alert">`. `onChange(next)`: `setIsSaving(true)`, `await setProjectAutoHandoff(projectId, next)`, Fehler → `setErrorMessage(`Nicht gespeichert: ${commandErrorText(reason)}`)`, zuletzt `setIsSaving(false)`. Der angezeigte Stand kommt nur aus `enabled` (Ereignis), nie optimistisch. CSS: Flex, `align-items: center`, `gap: var(--space-sm)`, `font-size: var(--font-size-sm)`, `color: var(--color-fg-muted)`; `__info` wie `repository-picker__info`; `__error` wie `handoff__error`.
-- [ ] `ProjectOverview.tsx` + `.css`: zwischen `project-overview__sessions-head` und der Fehlerzeile `<div className="project-overview__auto"><AutoHandoffSwitch projectId={project.id} enabled={project.autoHandoff} label="Einstiegszeilen automatisch senden" /></div>`; `__auto`: Rahmen `1px solid var(--color-border-subtle)` (Token-Name wie die übrigen Rahmen in `ProjectOverview.css`), `border-radius: var(--radius-lg)`, `padding: var(--space-sm) var(--space-md)`. Aussehen nach Entwurf Zustand 4 (Schalter rechts: `AutoHandoffSwitch` bekommt dort per Modifikator `auto-handoff-switch--wide` `justify-content: space-between` und `width: 100%`; Prop `wide?: boolean`).
-- [ ] Durchreichen: `App.tsx` an `<ChatView …>` `autoHandoff={projects.find((project: ProjectSummary) => project.id === session.projectId)?.autoHandoff ?? false}`; `ChatView` Prop `autoHandoff: boolean` (Doc „„Automatisch weiter“ des Vorhabens (ADR 040)“) → `ChatTimeline` → `HandoffBar`.
-- [ ] `HandoffBar.tsx`: Prop `autoHandoff: boolean`; nach den Reihen, nur wenn `lines.some((line) => line.kind === 'session')`: `<div className="handoff-bar__foot"><AutoHandoffSwitch projectId={projectId} enabled={autoHandoff} label="Automatisch weiter" /></div>`; `__foot` Flex, `justify-content: flex-end`.
+- [x] `src/lib/projects.ts`: `setProjectAutoHandoff(projectId: string, enabled: boolean): Promise<void>` → `invoke('project_set_auto_handoff', { projectId, enabled })` (Muster `renameProject`).
+- [x] `src/features/chat/handoff.ts`: `export const AUTO_HANDOFF_TITLE = 'Startet nach jeder fertigen Antwort mit genau einer „Weiter:“-Zeile die nächste Session dieses Vorhabens selbst — nach 10 Sekunden Countdown, mit dem Modell aus der Zeile und der Zeile als erster Nachricht. Hält an, wenn die Antwort 🔴 enthält, mit einer Frage endet, „Merge“ nennt oder mehrere „Weiter:“-Zeilen hat, und nach 6 automatischen Starts in Folge ohne Nachricht von dir.';`
+- [x] Neu `src/features/chat/AutoHandoffSwitch.tsx` + `.css`: Props `{ projectId: string; enabled: boolean; label: string }`. Zustand `isSaving`, `errorMessage`. Markup `<div className="auto-handoff-switch">` mit `<span className="auto-handoff-switch__label">{label}</span>`, Info-Symbol `<span className="auto-handoff-switch__info" title={AUTO_HANDOFF_TITLE}>` (SVG aus `RepositoryPicker.tsx` übernehmen), `<Switch checked={enabled} label={label} disabled={isSaving} onChange={…} />`; darunter bei Fehler `<p className="auto-handoff-switch__error" role="alert">`. `onChange(next)`: `setIsSaving(true)`, `await setProjectAutoHandoff(projectId, next)`, Fehler → `setErrorMessage(`Nicht gespeichert: ${commandErrorText(reason)}`)`, zuletzt `setIsSaving(false)`. Der angezeigte Stand kommt nur aus `enabled` (Ereignis), nie optimistisch. CSS: Flex, `align-items: center`, `gap: var(--space-sm)`, `font-size: var(--font-size-sm)`, `color: var(--color-fg-muted)`; `__info` wie `repository-picker__info`; `__error` wie `handoff__error`.
+- [x] `ProjectOverview.tsx` + `.css`: zwischen `project-overview__sessions-head` und der Fehlerzeile `<div className="project-overview__auto"><AutoHandoffSwitch projectId={project.id} enabled={project.autoHandoff} label="Einstiegszeilen automatisch senden" /></div>`; `__auto`: Rahmen `1px solid var(--color-border-subtle)` (Token-Name wie die übrigen Rahmen in `ProjectOverview.css`), `border-radius: var(--radius-lg)`, `padding: var(--space-sm) var(--space-md)`. Aussehen nach Entwurf Zustand 4 (Schalter rechts: `AutoHandoffSwitch` bekommt dort per Modifikator `auto-handoff-switch--wide` `justify-content: space-between` und `width: 100%`; Prop `wide?: boolean`).
+- [x] Durchreichen: `App.tsx` an `<ChatView …>` `autoHandoff={projects.find((project: ProjectSummary) => project.id === session.projectId)?.autoHandoff ?? false}`; `ChatView` Prop `autoHandoff: boolean` (Doc „„Automatisch weiter“ des Vorhabens (ADR 040)“) → `ChatTimeline` → `HandoffBar`.
+- [x] `HandoffBar.tsx`: Prop `autoHandoff: boolean`; nach den Reihen, nur wenn `lines.some((line) => line.kind === 'session')`: `<div className="handoff-bar__foot"><AutoHandoffSwitch projectId={projectId} enabled={autoHandoff} label="Automatisch weiter" /></div>`; `__foot` Flex, `justify-content: flex-end`.
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Zeile „Vorhaben“ um `auto_handoff` (Spalte, `set_project_auto_handoff`, `project_set_auto_handoff`), Zeile „Chat“ um `AutoHandoffSwitch`; Migration 14 steht pauschal unter „Persistenz“ (`migrations/*.sql`) — nur ergänzen, wenn die Zeile Migrationen einzeln nennt.
-- [ ] `pnpm check` grün, Commit (Bindings mit).
+- [x] `docs/code-map.md`: Zeile „Vorhaben“ um `auto_handoff` (Spalte, `set_project_auto_handoff`, `project_set_auto_handoff`), Zeile „Chat“ um `AutoHandoffSwitch`; Migration 14 steht pauschal unter „Persistenz“ (`migrations/*.sql`) — nur ergänzen, wenn die Zeile Migrationen einzeln nennt.
+- [x] `pnpm check` grün, Commit (Bindings mit).
 
 ## Report-Back
+
+Status: complete. Alle Checklisten-Punkte umgesetzt wie beschrieben, `pnpm bindings` + `pnpm check` grün (Prüfkette aus STATE.md).
+
+- Abweichung: `migrations.rs` führt die Liste als `[&str; N]` — Länge 13 → 14 (steht nicht in der Checkliste).
+- `AutoHandoffSwitch` hat eine äußere Hülle `auto-handoff-switch-wrap`, damit die Fehlerzeile unter dem Schalter steht; `wide` schiebt den Schalter rechts, das Info-Symbol füllt die Lücke.
+- Unsicherste Stelle: `ProjectOverview.css` `&__auto` / `AutoHandoffSwitch.css` `--wide` — Aussehen nur nach Code, nicht im laufenden Betrieb gesehen.
+- `project_auto_handoff` (Core) hat noch keinen Aufrufer — Phase 3 nutzt es.

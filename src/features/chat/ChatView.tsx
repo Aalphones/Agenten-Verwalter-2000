@@ -26,6 +26,8 @@ interface ChatViewProps {
   artifacts: ArtifactList | null;
   /** Nimmt eine aus der Einstiegszeile angelegte Session in die Liste auf und wählt sie aus. */
   onSessionCreated: (created: SessionSummary) => void;
+  /** „Automatisch weiter“ des Vorhabens (ADR 040). */
+  autoHandoff: boolean;
 }
 
 /** Die Einträge einer Session sind ab 0 durchnummeriert; der letzte geladene trägt die höchste `seq`. */
@@ -43,6 +45,7 @@ export function ChatView({
   backgroundByToolUseId,
   artifacts,
   onSessionCreated,
+  autoHandoff,
 }: ChatViewProps): ReactElement {
   const { entries, hasMore, loadingOlder, loadError, olderError, loadOlder } = useChatEntries(
     session.id,
@@ -137,6 +140,7 @@ export function ChatView({
         olderError={olderError}
         onLoadOlder={loadOlder}
         onSessionCreated={onSessionCreated}
+        autoHandoff={autoHandoff}
         topInset={topInset}
         bottomInset={bottomInset}
       />

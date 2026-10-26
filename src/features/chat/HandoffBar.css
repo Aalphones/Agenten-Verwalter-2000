@@ -11,6 +11,11 @@
     min-width: 0;
   }
 
+  &__foot {
+    display: flex;
+    justify-content: flex-end;
+  }
+
   &__kind {
     padding: 0 var(--space-sm);
     border-radius: var(--radius-full);

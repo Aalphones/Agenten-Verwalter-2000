@@ -14,6 +14,8 @@ pub struct ProjectRow {
     pub tldr_sources: Option<u32>,
     /// Der Name ist automatisch entstanden und darf nachgezogen werden; von Hand gesetzt = `false`.
     pub name_auto: bool,
+    /// „Automatisch weiter“ ist an (ADR 040).
+    pub auto_handoff: bool,
 }
 
 pub fn insert(connection: &Connection, row: &ProjectRow) -> Result<(), CommandError> {
@@ -27,8 +29,8 @@ pub fn insert(connection: &Connection, row: &ProjectRow) -> Result<(), CommandEr
 /// Alle nicht archivierten Vorhaben, neueste zuerst.
 pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandError> {
     let mut statement = connection.prepare(
-        "SELECT id, name, created_at, tldr, tldr_at, tldr_sources, name_auto FROM projects \
-         WHERE archived_at IS NULL ORDER BY created_at DESC",
+        "SELECT id, name, created_at, tldr, tldr_at, tldr_sources, name_auto, auto_handoff \
+         FROM projects WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let rows = statement
         .query_map([], |row| {
@@ -40,6 +42,7 @@ pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandEr
                 tldr_at: row.get(4)?,
                 tldr_sources: row.get(5)?,
                 name_auto: row.get(6)?,
+                auto_handoff: row.get(7)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<ProjectRow>>>()?;
@@ -50,8 +53,8 @@ pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandEr
 pub fn load_one(connection: &Connection, id: &str) -> Result<Option<ProjectRow>, CommandError> {
     let row = connection
         .query_row(
-            "SELECT id, name, created_at, tldr, tldr_at, tldr_sources, name_auto FROM projects \
-             WHERE id = ?1",
+            "SELECT id, name, created_at, tldr, tldr_at, tldr_sources, name_auto, auto_handoff \
+             FROM projects WHERE id = ?1",
             params![id],
             |row| {
                 Ok(ProjectRow {
@@ -62,6 +65,7 @@ pub fn load_one(connection: &Connection, id: &str) -> Result<Option<ProjectRow>,
                     tldr_at: row.get(4)?,
                     tldr_sources: row.get(5)?,
                     name_auto: row.get(6)?,
+                    auto_handoff: row.get(7)?,
                 })
             },
         )
@@ -108,6 +112,18 @@ pub fn rename(
     connection.execute(
         "UPDATE projects SET name = ?2, name_auto = ?3 WHERE id = ?1",
         params![id, name, auto],
+    )?;
+    Ok(())
+}
+
+pub fn set_auto_handoff(
+    connection: &Connection,
+    id: &str,
+    enabled: bool,
+) -> Result<(), CommandError> {
+    connection.execute(
+        "UPDATE projects SET auto_handoff = ?2 WHERE id = ?1",
+        params![id, enabled],
     )?;
     Ok(())
 }

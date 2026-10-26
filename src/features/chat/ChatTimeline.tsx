@@ -68,6 +68,8 @@ interface ChatTimelineProps {
   onLoadOlder: () => void;
   /** Nimmt eine aus der Einstiegszeile angelegte Session in die Liste auf und wählt sie aus. */
   onSessionCreated: (created: SessionSummary) => void;
+  /** „Automatisch weiter“ des Vorhabens (ADR 040). */
+  autoHandoff: boolean;
   /** Höhe der Überlagerung oben (TL;DR) und unten (Eingabe); der Verlauf lässt so viel Platz frei. */
   topInset: number;
   bottomInset: number;
@@ -88,6 +90,7 @@ export function ChatTimeline({
   olderError,
   onLoadOlder,
   onSessionCreated,
+  autoHandoff,
   topInset,
   bottomInset,
 }: ChatTimelineProps): ReactElement {
@@ -343,6 +346,7 @@ export function ChatTimeline({
                 projectId={session.projectId}
                 lines={session.handoffLines}
                 onSessionCreated={onSessionCreated}
+                autoHandoff={autoHandoff}
               />
             )}
           </>

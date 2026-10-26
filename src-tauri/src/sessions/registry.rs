@@ -120,6 +120,8 @@ struct ProjectState {
     name: String,
     /// Der Name ist automatisch entstanden und darf nachgezogen werden; von Hand gesetzt = `false`.
     name_auto: bool,
+    /// „Automatisch weiter“ ist an (ADR 040).
+    auto_handoff: bool,
     created_at: f64,
     tldr: Option<ProjectTldr>,
     tldr_at: Option<f64>,
@@ -137,6 +139,7 @@ impl ProjectState {
         ProjectState {
             name,
             name_auto: false,
+            auto_handoff: false,
             created_at,
             tldr: None,
             tldr_at: None,
@@ -151,6 +154,7 @@ impl ProjectState {
     fn restored(row: &ProjectRow) -> Self {
         let mut state = ProjectState::new(row.name.clone(), row.created_at);
         state.name_auto = row.name_auto;
+        state.auto_handoff = row.auto_handoff;
         state.tldr = row
             .tldr
             .as_deref()
@@ -495,6 +499,7 @@ impl SessionRegistry {
             tldr_at: None,
             tldr_sources: None,
             name_auto: true,
+            auto_handoff: false,
         };
         let saved = self.database.with(|connection| {
             project_rows::insert(connection, &project_row)?;
@@ -627,19 +632,50 @@ impl SessionRegistry {
 
     /// Unbekanntes Vorhaben → Fehler.
     pub fn project_summary(&self, project_id: &str) -> Result<ProjectSummary, CommandError> {
-        let (name, created_at) = {
+        let (name, created_at, auto_handoff) = {
             let projects = self.lock_projects();
             let project = projects
                 .get(project_id)
                 .ok_or_else(|| project_not_found(project_id))?;
-            (project.name.clone(), project.created_at)
+            (
+                project.name.clone(),
+                project.created_at,
+                project.auto_handoff,
+            )
         };
         Ok(ProjectSummary {
             id: project_id.to_owned(),
             name,
             created_at,
             repository_names: self.project_repository_names(project_id),
+            auto_handoff,
         })
+    }
+
+    /// `false` für ein unbekanntes Vorhaben.
+    pub fn project_auto_handoff(&self, project_id: &str) -> bool {
+        self.lock_projects()
+            .get(project_id)
+            .is_some_and(|project: &ProjectState| project.auto_handoff)
+    }
+
+    /// Schaltet „Automatisch weiter“ für das Vorhaben (ADR 040).
+    pub fn set_project_auto_handoff(
+        &self,
+        app: &AppHandle,
+        project_id: &str,
+        enabled: bool,
+    ) -> Result<(), CommandError> {
+        if !self.lock_projects().contains_key(project_id) {
+            return Err(project_not_found(project_id));
+        }
+        self.database
+            .with(|connection| project_rows::set_auto_handoff(connection, project_id, enabled))?;
+        if let Some(project) = self.lock_projects().get_mut(project_id) {
+            project.auto_handoff = enabled;
+        }
+        let _ = app.emit(PROJECT_CHANGED_EVENT, self.project_summary(project_id)?);
+        Ok(())
     }
 
     /// Die Repositories der Session mit der kleinsten Nummer — alle Sessions teilen dieselben.

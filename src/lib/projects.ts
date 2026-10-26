@@ -45,6 +45,12 @@ export async function renameProject(projectId: string, name: string): Promise<vo
   await invoke('project_rename', { projectId, name });
 }
 
+/** Schaltet „Automatisch weiter“ für das Vorhaben; die Änderung kommt als `PROJECT_CHANGED_EVENT` zurück.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `internal` (unbekanntes Vorhaben) */
+export async function setProjectAutoHandoff(projectId: string, enabled: boolean): Promise<void> {
+  await invoke('project_set_auto_handoff', { projectId, enabled });
+}
+
 /** Hängt ein bekanntes Repository an alle Sessions des Vorhabens (Haupt-Checkout, Basis = letzter Commit vor dem
  *  Anlegen des Vorhabens); ein ruhender Agent startet mit der nächsten Nachricht neu und kennt es dann.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `repositoryMissing`, `git`, `gitNotFound`,

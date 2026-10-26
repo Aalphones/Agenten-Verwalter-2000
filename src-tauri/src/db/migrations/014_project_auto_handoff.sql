@@ -1,0 +1,1 @@
+ALTER TABLE projects ADD COLUMN auto_handoff INTEGER NOT NULL DEFAULT 0;

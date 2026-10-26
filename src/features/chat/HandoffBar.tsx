@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { AutoHandoffSwitch } from '@/features/chat/AutoHandoffSwitch';
 import { HandoffButton } from '@/features/chat/HandoffButton';
 import { handoffExcerpt } from '@/features/chat/handoff';
 import { ProjectHandoffButton } from '@/features/chat/ProjectHandoffButton';
@@ -12,10 +13,17 @@ interface HandoffBarProps {
   lines: readonly HandoffLine[];
   /** Nimmt die angelegte Session in die Liste und wählt sie aus (`handleSessionCreated` in `App`). */
   onSessionCreated: (created: SessionSummary) => void;
+  /** „Automatisch weiter“ des Vorhabens (ADR 040). */
+  autoHandoff: boolean;
 }
 
 /** Eine Reihe je Einstiegszeile unter der Antwort; Art und Zeilenanfang nur, wenn es mehrere gibt. */
-export function HandoffBar({ projectId, lines, onSessionCreated }: HandoffBarProps): ReactElement {
+export function HandoffBar({
+  projectId,
+  lines,
+  onSessionCreated,
+  autoHandoff,
+}: HandoffBarProps): ReactElement {
   return (
     <div className="handoff-bar">
       {lines.map((line: HandoffLine, index: number) => (
@@ -37,6 +45,15 @@ export function HandoffBar({ projectId, lines, onSessionCreated }: HandoffBarPro
           )}
         </div>
       ))}
+      {lines.some((line: HandoffLine) => line.kind === 'session') && (
+        <div className="handoff-bar__foot">
+          <AutoHandoffSwitch
+            projectId={projectId}
+            enabled={autoHandoff}
+            label="Automatisch weiter"
+          />
+        </div>
+      )}
     </div>
   );
 }

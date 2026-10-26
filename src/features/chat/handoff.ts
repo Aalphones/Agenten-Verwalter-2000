@@ -6,6 +6,10 @@ const SESSION_PREFIX = 'Weiter:';
 const PROJECT_PREFIX = 'Neues Vorhaben';
 const REPOSITORY_NAME_CHARACTER = /[a-z0-9_-]/;
 
+/** Erklärung am Info-Symbol des Schalters „Automatisch weiter“ (ADR 040). */
+export const AUTO_HANDOFF_TITLE =
+  'Startet nach jeder fertigen Antwort mit genau einer „Weiter:“-Zeile die nächste Session dieses Vorhabens selbst — nach 10 Sekunden Countdown, mit dem Modell aus der Zeile und der Zeile als erster Nachricht. Hält an, wenn die Antwort 🔴 enthält, mit einer Frage endet, „Merge“ nennt oder mehrere „Weiter:“-Zeilen hat, und nach 6 automatischen Starts in Folge ohne Nachricht von dir.';
+
 /** `seq` der letzten Textantwort, wenn nach ihr keine Nutzernachricht steht; sonst `null`. */
 export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
