@@ -91,7 +91,8 @@ export function Popover({
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('pointerdown', handlePointerDown);
     };
-  }, []);
+    // `detached` ist je Menü fest; ein Wechsel würde den Fokus ohnehin neu setzen.
+  }, [detached]);
 
   const [side, setSide] = useState<'above' | 'below'>(placement);
 
