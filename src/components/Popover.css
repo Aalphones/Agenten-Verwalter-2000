@@ -13,6 +13,10 @@
   background: var(--color-bg-popover);
   box-shadow: var(--shadow-popover);
 
+  &--fixed {
+    position: fixed;
+  }
+
   &--above {
     bottom: calc(100% + var(--space-md));
   }

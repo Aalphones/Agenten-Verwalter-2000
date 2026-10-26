@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { FOCUSABLE_SELECTOR } from '@/lib/focus';
 import './Popover.css';
 
@@ -16,6 +17,9 @@ interface PopoverProps {
   /** `false`: der Fokus bleibt, wo er ist (Menü, das ein Textfeld begleitet). Standard `true`. */
   autoFocus?: boolean;
   className?: string;
+  /** `true`: das Menü hängt am `body` und liegt per `position: fixed` am Auslöser. Nötig, wenn ein
+   *  Vorfahre des Auslösers scrollt oder abschneidet (Liste der Seitenleiste). */
+  detached?: boolean;
   children: ReactNode;
 }
 
@@ -30,9 +34,11 @@ export function Popover({
   onClose,
   autoFocus = true,
   className,
+  detached = false,
   children,
 }: PopoverProps): ReactElement {
   const rootRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<HTMLSpanElement>(null);
   const onCloseRef = useRef<() => void>(onClose);
   const shouldTakeFocusRef = useRef<boolean>(autoFocus);
 
@@ -67,8 +73,13 @@ export function Popover({
     }
 
     function handlePointerDown(event: PointerEvent): void {
-      const anchor: HTMLElement | null = root?.parentElement ?? null;
-      if (anchor !== null && event.target instanceof Node && anchor.contains(event.target)) {
+      const anchor: HTMLElement | null =
+        (detached ? markerRef.current : root)?.parentElement ?? null;
+      if (event.target instanceof Node && (anchor?.contains(event.target) ?? false)) {
+        return;
+      }
+      // Ein losgelöstes Menü liegt nicht im Auslöser; ein Klick hinein ist trotzdem kein „außerhalb“.
+      if (detached && event.target instanceof Node && (root?.contains(event.target) ?? false)) {
         return;
       }
       onCloseRef.current();
@@ -88,7 +99,7 @@ export function Popover({
   // Seite nicht, klappt es auf die andere, und die Höhe wird auf den verfügbaren Platz begrenzt.
   useLayoutEffect(() => {
     const root: HTMLDivElement | null = rootRef.current;
-    const anchor: HTMLElement | null = root?.parentElement ?? null;
+    const anchor: HTMLElement | null = (detached ? markerRef.current : root)?.parentElement ?? null;
     if (root === null || anchor === null) {
       return undefined;
     }
@@ -115,29 +126,36 @@ export function Popover({
         '--popover-max-height',
         `${String(Math.max(120, Math.floor(space)))}px`,
       );
+      if (detached) {
+        placeFixed(root, anchorRect, chosen, align, gap);
+      }
       setSide(chosen);
     }
     fit();
     const observer: ResizeObserver = new ResizeObserver(fit);
     observer.observe(root);
     window.addEventListener('resize', fit);
+    // Ein losgelöstes Menü scrollt nicht mit seinem Auslöser: es folgt ihm bei jedem Scrollen.
+    if (detached) {
+      window.addEventListener('scroll', fit, true);
+    }
     return (): void => {
       observer.disconnect();
       window.removeEventListener('resize', fit);
+      window.removeEventListener('scroll', fit, true);
     };
-  }, [placement]);
+  }, [placement, align, detached]);
 
   const classNames: string = [
     'popover',
-    `popover--${side}`,
-    `popover--${align}`,
+    detached ? 'popover--fixed' : `popover--${side} popover--${align}`,
     width === 'anchor' ? 'popover--anchor' : '',
     className ?? '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  return (
+  const dialog: ReactElement = (
     <div
       ref={rootRef}
       className={classNames}
@@ -148,4 +166,38 @@ export function Popover({
       {children}
     </div>
   );
+
+  if (!detached) {
+    return dialog;
+  }
+  // Der Marker bleibt am Auslöser und verrät, woran das Menü hängt; das Menü selbst liegt im `body`.
+  return (
+    <>
+      <span ref={markerRef} hidden />
+      {createPortal(dialog, document.body)}
+    </>
+  );
+}
+
+/** Setzt ein `position: fixed`-Menü an den Auslöser und hält es im Fenster. */
+function placeFixed(
+  root: HTMLElement,
+  anchorRect: DOMRect,
+  side: 'above' | 'below',
+  align: 'start' | 'end',
+  gap: number,
+): void {
+  const style: CSSStyleDeclaration = root.style;
+  style.top = side === 'below' ? `${String(anchorRect.bottom + gap)}px` : 'auto';
+  style.bottom =
+    side === 'above' ? `${String(window.innerHeight - anchorRect.top + gap)}px` : 'auto';
+  if (root.classList.contains('popover--anchor')) {
+    style.width = `${String(anchorRect.width)}px`;
+  }
+  const maxLeft: number = Math.max(
+    VIEWPORT_MARGIN,
+    window.innerWidth - root.offsetWidth - VIEWPORT_MARGIN,
+  );
+  const left: number = align === 'start' ? anchorRect.left : anchorRect.right - root.offsetWidth;
+  style.left = `${String(Math.min(Math.max(VIEWPORT_MARGIN, left), maxLeft))}px`;
 }

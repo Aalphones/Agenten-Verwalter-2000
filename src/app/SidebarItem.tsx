@@ -93,6 +93,7 @@ export function SidebarItem({
       </button>
       {isMenuOpen && (
         <Popover
+          detached
           label={`Aktionen für ${session.name}`}
           placement="below"
           align="start"

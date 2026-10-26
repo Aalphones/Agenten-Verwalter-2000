@@ -138,6 +138,7 @@ export function SidebarProject({
         </button>
         {isMenuOpen && (
           <Popover
+            detached
             label={`Aktionen für ${project.name}`}
             placement="below"
             align="start"
