@@ -344,9 +344,11 @@ export function ChatTimeline({
             {showsHandoff && entry.seq === answerSeq && (
               <HandoffBar
                 projectId={session.projectId}
+                sessionId={session.id}
                 lines={session.handoffLines}
                 onSessionCreated={onSessionCreated}
                 autoHandoff={autoHandoff}
+                autoState={session.autoHandoff}
               />
             )}
           </>

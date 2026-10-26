@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-26_automatisch-weiter/`
-**Phase:** 3/4 — Automatischer Start (pending); Phase 1 und 2 committet
-**Nächster Schritt:** Phase 3 laut `phase-3-automatik.md` bauen (Opus, heikel), `pnpm check`, Commit; danach Phase 4 (`phase-4-arbeitsbaeume.md`, Sonnet, trägt den Plan-Abschluss und das Release). Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVMin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"` — sonst scheitert whisper-rs-sys.
+**Phase:** 4/4 — Fehlerbehebung Changes: Arbeitsbäume (pending); Phase 1–3 committet
+**Nächster Schritt:** Phase 4 laut `phase-4-arbeitsbaeume.md` bauen (Sonnet), `pnpm check`, Commit; danach Plan archivieren und Release (Minor-Version). Offen aus Phase 3: Ablauf „Automatisch weiter“ einmal im Test-Vorhaben fahren (Report-Back Phase 3). Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVM\bin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"` — sonst scheitert whisper-rs-sys.
 **Danach (Backlog):** Geparkte Pläne `2026-10-22_parallele-sessions` (ADR 037), dann `2026-10-22_umgebung` (ADR 038) — unabhängig voneinander umsetzbar.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_skill-kassensturz/` (ADR 039), Release `v0.30.0`.
 

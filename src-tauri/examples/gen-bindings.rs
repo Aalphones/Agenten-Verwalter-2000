@@ -38,7 +38,9 @@ use verwalter_lib::{
     repositories::model::{KnownRepository, RepositoryKind},
     retro::model::{RetroExport, RetroProgress},
     review::model::{CommentTarget, ReviewComment},
-    sessions::model::{AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary},
+    sessions::model::{
+        AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionStatus, SessionSummary,
+    },
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
     tldr::model::{
@@ -84,6 +86,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     SessionSummary::export_all(&cfg)?;
     ChatPage::export_all(&cfg)?;
     ChatEntryEvent::export_all(&cfg)?;
+    HandoffStartedEvent::export_all(&cfg)?;
     ProjectSummary::export_all(&cfg)?;
     ProjectCreated::export_all(&cfg)?;
     ArchiveSnippet::export_all(&cfg)?;

@@ -1,4 +1,5 @@
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
+import type { HandoffHalt } from '@/lib/bindings/HandoffHalt';
 import type { HandoffLine } from '@/lib/bindings/HandoffLine';
 import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 
@@ -9,6 +10,18 @@ const REPOSITORY_NAME_CHARACTER = /[a-z0-9_-]/;
 /** Erklärung am Info-Symbol des Schalters „Automatisch weiter“ (ADR 040). */
 export const AUTO_HANDOFF_TITLE =
   'Startet nach jeder fertigen Antwort mit genau einer „Weiter:“-Zeile die nächste Session dieses Vorhabens selbst — nach 10 Sekunden Countdown, mit dem Modell aus der Zeile und der Zeile als erster Nachricht. Hält an, wenn die Antwort 🔴 enthält, mit einer Frage endet, „Merge“ nennt oder mehrere „Weiter:“-Zeilen hat, und nach 6 automatischen Starts in Folge ohne Nachricht von dir.';
+
+/** Grund unter der Antwort, warum „Automatisch weiter“ nicht startet (ADR 040). */
+export const HALT_TEXT: Record<HandoffHalt, string> = {
+  red: 'Nicht automatisch weiter: die Antwort enthält 🔴.',
+  question: 'Nicht automatisch weiter: die Antwort endet mit einer Frage.',
+  merge: 'Nicht automatisch weiter: die Antwort nennt den Merge.',
+  severalLines: 'Nicht automatisch weiter: mehrere Einstiegszeilen — wähle selbst.',
+  pendingSession: 'Nicht automatisch weiter: im Vorhaben wartet schon eine neue Session.',
+  chainLimit:
+    'Nicht automatisch weiter: 6 automatische Starts in Folge — schick eine Nachricht oder starte von Hand.',
+  cancelled: 'Automatisch weiter abgebrochen.',
+};
 
 /** `seq` der letzten Textantwort, wenn nach ihr keine Nutzernachricht steht; sonst `null`. */
 export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null {

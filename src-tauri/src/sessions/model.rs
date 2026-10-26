@@ -60,6 +60,8 @@ pub struct SessionSummary {
     pub unread: bool,
     /// Einstiegszeilen der letzten Antwort in Antwort-Reihenfolge (ADR 027, ADR 040); leer ohne oder nach einer neueren Nutzernachricht.
     pub handoff_lines: Vec<HandoffLine>,
+    /// Stand der Automatik unter der letzten Antwort (ADR 040); nur im Speicher, `None` ohne.
+    pub auto_handoff: Option<AutoHandoff>,
     /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
     pub awaited_script: Option<AwaitedScript>,
 }
@@ -83,6 +85,43 @@ pub struct HandoffLine {
     pub text: String,
     /// `Modell <name>` aus der Zeile; `None` ohne Angabe.
     pub model: Option<ModelId>,
+}
+
+/// Warum eine Einstiegszeile nicht automatisch gesendet wird (ADR 040).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum HandoffHalt {
+    Red,
+    Question,
+    Merge,
+    SeveralLines,
+    PendingSession,
+    ChainLimit,
+    Cancelled,
+}
+
+/// Stand der Automatik unter der letzten Antwort; nur im Speicher.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum AutoHandoff {
+    /// Startet zum Zeitpunkt `starts_at` (Millisekunden seit Epoche) auf `model` (`None` = übernommen).
+    #[serde(rename_all = "camelCase")]
+    Countdown {
+        starts_at: f64,
+        model: Option<ModelId>,
+    },
+    #[serde(rename_all = "camelCase")]
+    Halted { reason: HandoffHalt },
+    #[serde(rename_all = "camelCase")]
+    Failed { message: String },
+}
+
+/// Gesendet als `session://handoff-started`, nachdem eine Folgesession automatisch gestartet ist.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct HandoffStartedEvent {
+    pub from_session_id: String,
+    pub to_session_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

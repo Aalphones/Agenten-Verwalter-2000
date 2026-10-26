@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
+import type { UnlistenFn } from '@tauri-apps/api/event';
 import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionActionError } from '@/app/SessionActionError';
 import { SessionHeader } from '@/app/SessionHeader';
@@ -30,10 +31,12 @@ import { useVoiceModel } from '@/features/voice/useVoiceModel';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
+import type { HandoffStartedEvent } from '@/lib/bindings/HandoffStartedEvent';
 import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { ProjectRestored } from '@/lib/bindings/ProjectRestored';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { onHandoffStarted } from '@/lib/sessions';
 import { useBackgroundStore } from '@/stores/background';
 import { useSessionsStore, type ProjectView, type SessionView } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
@@ -70,6 +73,40 @@ export function App(): ReactElement {
   );
   useVoiceModel();
   useRetroProgress();
+
+  // „Automatisch weiter“ (ADR 040): wer gerade die alte Session ansieht, landet in der neuen. Die
+  // neue Session selbst kommt über `session://changed` in die Liste.
+  useEffect(() => {
+    const controller = new AbortController();
+    let unlisten: UnlistenFn | null = null;
+    onHandoffStarted((event: HandoffStartedEvent) => {
+      const state = useSessionsStore.getState();
+      if (
+        state.activeSessionId === event.fromSessionId &&
+        !state.showNewSession &&
+        !state.showSettings &&
+        !state.showProjectOverview
+      ) {
+        state.selectSession(event.toSessionId);
+      }
+    })
+      .then((stop: UnlistenFn) => {
+        if (controller.signal.aborted) {
+          stop();
+          return;
+        }
+        unlisten = stop;
+      })
+      .catch((reason: unknown) => {
+        console.error('Automatisch weiter nicht abonnierbar', reason);
+      });
+    return (): void => {
+      controller.abort();
+      if (unlisten !== null) {
+        unlisten();
+      }
+    };
+  }, []);
   // „Neues Vorhaben“ und die Einstellungen ersetzen den Inhalt; Session und Übersicht sind dann nicht sichtbar.
   const isMainReplaced: boolean = showNewSession || showSettings;
 

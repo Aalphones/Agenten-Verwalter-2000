@@ -62,8 +62,12 @@ use crate::review::{
     self,
     model::{CommentTarget, ReviewComment},
 };
+use crate::sessions::auto_handoff::{
+    self, AUTO_HANDOFF_CHAIN_LIMIT, AUTO_HANDOFF_DELAY, FollowUp, ScheduledHandoff,
+};
 use crate::sessions::model::{
-    AwaitedScript, ChatEntryEvent, ChatPage, HandoffLine, SessionStatus, SessionSummary,
+    AutoHandoff, AwaitedScript, ChatEntryEvent, ChatPage, HandoffHalt, HandoffKind, HandoffLine,
+    SessionStatus, SessionSummary,
 };
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
@@ -223,6 +227,15 @@ struct SessionState {
     last_activity_at: f64,
     /// Einstiegszeilen der letzten Antwort (ADR 027, ADR 040); eine Nutzernachricht löscht sie.
     handoff_lines: Vec<HandoffLine>,
+    /// Haltegrund aus dem Text der letzten Antwort (ADR 040); nur im Speicher, nach einem Neustart
+    /// beim Laden des Verlaufs neu bestimmt.
+    handoff_stop: Option<HandoffHalt>,
+    /// Stand der Automatik unter der letzten Antwort; nur im Speicher.
+    auto_handoff: Option<AutoHandoff>,
+    /// Marke des Countdowns: jede Änderung erhöht sie, der Zeitgeber vergleicht sie beim Ablauf.
+    auto_handoff_token: u64,
+    /// Der wievielte automatische Start in Folge diese Session ist; 0 = von dir gestartet. Nur im Speicher.
+    auto_chain: u32,
     /// Wann der User die Session zuletzt gesehen hat.
     seen_at: f64,
     /// Die Oberfläche zeigt die Session gerade (`set_viewed`); nur im Speicher.
@@ -347,6 +360,9 @@ struct Outbox {
     open_urls: Vec<String>,
     /// Jüngster Kontingent-Stand aus einer Antwort des Claude-Abos.
     rate_limit: Option<RateLimitInfo>,
+    /// Die Antwort endete als abgeschlossen; nach dem Freigeben der Sperre prüft „Automatisch
+    /// weiter“ die Einstiegszeile (ADR 040).
+    turn_completed: bool,
 }
 
 impl SessionRegistry {
@@ -675,7 +691,206 @@ impl SessionRegistry {
             project.auto_handoff = enabled;
         }
         let _ = app.emit(PROJECT_CHANGED_EVENT, self.project_summary(project_id)?);
+        // Ohne gehaltene Sperre: `consider` bzw. `update` sperrt jede Session einzeln.
+        for member in self.project_sessions(project_id) {
+            if enabled {
+                auto_handoff::consider(app, &member);
+            } else {
+                let _ = update(
+                    app,
+                    &member,
+                    |state: &mut SessionState, outbox: &mut Outbox| {
+                        state.drop_auto_handoff(outbox);
+                        Ok(())
+                    },
+                );
+            }
+        }
         Ok(())
+    }
+
+    /// Die Sessions eines Vorhabens (für Schalter an/aus).
+    pub(crate) fn project_sessions(&self, project_id: &str) -> Vec<Arc<Session>> {
+        self.lock_sessions()
+            .values()
+            .filter(|session: &&Arc<Session>| session.project_id == project_id)
+            .cloned()
+            .collect()
+    }
+
+    /// Spätere oder wartende Sessions im Vorhaben; sperrt jede andere Session einzeln und kurz.
+    pub(crate) fn follow_up(&self, session: &Session) -> FollowUp {
+        let mut follow_up = FollowUp::default();
+        for member in self.project_sessions(&session.project_id) {
+            if member.id == session.id {
+                continue;
+            }
+            let status: SessionStatus = member.lock().status;
+            if status == SessionStatus::New {
+                follow_up.pending_new = true;
+            } else if member.number > session.number {
+                follow_up.later_started = true;
+            }
+        }
+        follow_up
+    }
+
+    /// Entscheidet unter der Sperre der Session, ob ein Countdown beginnt.
+    pub(crate) fn schedule_auto_handoff(
+        &self,
+        app: &AppHandle,
+        session: &Arc<Session>,
+        follow_up: FollowUp,
+    ) -> Option<ScheduledHandoff> {
+        update(
+            app,
+            session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                // Der Agent setzt selbst fort: erst die abschließende Antwort danach zählt.
+                if state.status != SessionStatus::Completed
+                    || state.is_awaiting_subagent()
+                    || state.awaited_script().is_some()
+                {
+                    return Ok(None);
+                }
+                let session_lines: Vec<HandoffLine> = state
+                    .handoff_lines
+                    .iter()
+                    .filter(|line: &&HandoffLine| line.kind == HandoffKind::Session)
+                    .cloned()
+                    .collect();
+                // Ohne Zeile oder mit veralteter Zeile: still, wie der Anzeige-Status „Wiedereinstieg“.
+                let Some(line) = session_lines.first().cloned() else {
+                    state.drop_auto_handoff(outbox);
+                    return Ok(None);
+                };
+                if follow_up.later_started {
+                    state.drop_auto_handoff(outbox);
+                    return Ok(None);
+                }
+                let halt: Option<HandoffHalt> = state.handoff_stop.or(if session_lines.len() > 1 {
+                    Some(HandoffHalt::SeveralLines)
+                } else if follow_up.pending_new {
+                    Some(HandoffHalt::PendingSession)
+                } else if state.auto_chain >= AUTO_HANDOFF_CHAIN_LIMIT {
+                    Some(HandoffHalt::ChainLimit)
+                } else {
+                    None
+                });
+                if let Some(reason) = halt {
+                    state.set_auto_handoff(outbox, AutoHandoff::Halted { reason });
+                    return Ok(None);
+                }
+                let token: u64 = state.set_auto_handoff(
+                    outbox,
+                    AutoHandoff::Countdown {
+                        starts_at: now_ms() + AUTO_HANDOFF_DELAY.as_millis() as f64,
+                        model: line.model,
+                    },
+                );
+                Ok(Some(ScheduledHandoff {
+                    token,
+                    line,
+                    chain: state.auto_chain,
+                }))
+            },
+        )
+        .ok()
+        .flatten()
+    }
+
+    /// Löst den Countdown ein: `true` nur, wenn `token` noch gilt und ein Countdown steht; setzt dann `None`.
+    pub(crate) fn take_auto_handoff(
+        &self,
+        app: &AppHandle,
+        session: &Arc<Session>,
+        token: u64,
+    ) -> bool {
+        update(
+            app,
+            session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                let is_current: bool = state.auto_handoff_token == token
+                    && matches!(state.auto_handoff, Some(AutoHandoff::Countdown { .. }));
+                if is_current {
+                    state.drop_auto_handoff(outbox);
+                }
+                // Der Agent kann ohne neuen Text wieder angelaufen sein (Subagent, Skript fertig).
+                Ok(is_current
+                    && state.status == SessionStatus::Completed
+                    && !state.is_awaiting_subagent()
+                    && state.awaited_script().is_none())
+            },
+        )
+        .unwrap_or(false)
+    }
+
+    /// Setzt `Halted { reason }`, wenn `token` noch gilt.
+    pub(crate) fn halt_auto_handoff(
+        &self,
+        app: &AppHandle,
+        session: &Arc<Session>,
+        token: u64,
+        reason: HandoffHalt,
+    ) {
+        let _ = update(
+            app,
+            session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                if state.auto_handoff_token == token {
+                    state.set_auto_handoff(outbox, AutoHandoff::Halted { reason });
+                }
+                Ok(())
+            },
+        );
+    }
+
+    /// Setzt `Failed { message }` (nach `take_auto_handoff`, ohne Marke).
+    pub(crate) fn fail_auto_handoff(
+        &self,
+        app: &AppHandle,
+        session: &Arc<Session>,
+        message: String,
+    ) {
+        let _ = update(
+            app,
+            session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.set_auto_handoff(outbox, AutoHandoff::Failed { message });
+                Ok(())
+            },
+        );
+    }
+
+    /// Merkt sich an der neuen Session, der wievielte automatische Start in Folge sie ist.
+    pub(crate) fn set_auto_chain(&self, session_id: &str, chain: u32) {
+        if let Ok(session) = self.get(session_id) {
+            session.lock().auto_chain = chain;
+        }
+    }
+
+    /// Bricht einen laufenden Countdown ab: `Halted { Cancelled }`; ohne Countdown nichts.
+    pub fn cancel_auto_handoff(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                if matches!(state.auto_handoff, Some(AutoHandoff::Countdown { .. })) {
+                    state.set_auto_handoff(
+                        outbox,
+                        AutoHandoff::Halted {
+                            reason: HandoffHalt::Cancelled,
+                        },
+                    );
+                }
+                Ok(())
+            },
+        )
     }
 
     /// Die Repositories der Session mit der kleinsten Nummer — alle Sessions teilen dieselben.
@@ -1893,7 +2108,11 @@ impl Session {
         Ok(state)
     }
 
-    fn log_line(&self, line: String) {
+    pub(crate) fn project_id(&self) -> &str {
+        &self.project_id
+    }
+
+    pub(crate) fn log_line(&self, line: String) {
         self.lock().push_log(line);
     }
 
@@ -1934,6 +2153,10 @@ impl SessionState {
             created_at: now,
             last_activity_at: now,
             handoff_lines: Vec::new(),
+            handoff_stop: None,
+            auto_handoff: None,
+            auto_handoff_token: 0,
+            auto_chain: 0,
             seen_at: now,
             is_viewed: false,
             running_ms: 0.0,
@@ -2035,6 +2258,17 @@ impl SessionState {
         self.entries = entries;
         self.background = background;
         self.entries_loaded = true;
+        if !self.handoff_lines.is_empty() {
+            self.handoff_stop = self
+                .entries
+                .iter()
+                .rev()
+                .find_map(|entry: &ChatEntry| match entry {
+                    ChatEntry::Text { text, .. } => Some(handoff::stop_reason(text)),
+                    _ => None,
+                })
+                .flatten();
+        }
         self.settle_background_after_restart(session);
         if self.needs_settling {
             let mut outbox = Outbox::default();
@@ -2442,8 +2676,28 @@ impl SessionState {
         });
         self.touch_activity(outbox);
         self.handoff_lines.clear();
+        self.handoff_stop = None;
+        self.drop_auto_handoff(outbox);
+        self.auto_chain = 0;
         // Wer sendet, hat die Session gesehen.
         self.seen_at = self.last_activity_at;
+    }
+
+    /// Entwertet einen laufenden Zeitgeber und nimmt den Stand der Automatik weg.
+    fn drop_auto_handoff(&mut self, outbox: &mut Outbox) {
+        self.auto_handoff_token += 1;
+        if self.auto_handoff.is_some() {
+            self.auto_handoff = None;
+            outbox.summary_dirty = true;
+        }
+    }
+
+    /// Setzt den Stand der Automatik unter einer neuen Marke.
+    fn set_auto_handoff(&mut self, outbox: &mut Outbox, value: AutoHandoff) -> u64 {
+        self.auto_handoff_token += 1;
+        self.auto_handoff = Some(value);
+        outbox.summary_dirty = true;
+        self.auto_handoff_token
     }
 
     fn replace_entry(&mut self, outbox: &mut Outbox, entry: ChatEntry) {
@@ -2559,6 +2813,8 @@ impl SessionState {
                     self.handoff_lines = lines;
                     outbox.summary_dirty = true;
                 }
+                self.handoff_stop = handoff::stop_reason(&text);
+                self.drop_auto_handoff(outbox);
                 let seq: u32 = self.push_entry(outbox, |seq: u32| ChatEntry::Text {
                     seq,
                     text,
@@ -3002,7 +3258,10 @@ impl SessionState {
                 });
                 self.set_status(outbox, SessionStatus::Error);
             }
-            TurnEnd::Completed => self.set_status(outbox, SessionStatus::Completed),
+            TurnEnd::Completed => {
+                self.set_status(outbox, SessionStatus::Completed);
+                outbox.turn_completed = true;
+            }
         }
     }
 
@@ -3221,6 +3480,10 @@ fn update<R>(
     if !windows.is_empty() {
         commit_scan::schedule(Arc::clone(session), windows);
     }
+    // Die Session-Sperre ist hier frei: `consider` nimmt Vorhaben- und Session-Sperren selbst.
+    if outbox.turn_completed {
+        auto_handoff::consider(app, session);
+    }
     let value = result?;
     outbox.deliver(session)?;
     Ok(value)
@@ -3338,6 +3601,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         last_activity_at: state.last_activity_at,
         unread: state.last_activity_at > state.seen_at,
         handoff_lines: state.handoff_lines.clone(),
+        auto_handoff: state.auto_handoff.clone(),
         awaited_script: state.awaited_script(),
     }
 }

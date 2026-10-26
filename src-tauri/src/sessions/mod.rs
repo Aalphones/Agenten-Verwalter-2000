@@ -1,3 +1,4 @@
+pub mod auto_handoff;
 pub mod handoff;
 pub mod model;
 pub mod registry;

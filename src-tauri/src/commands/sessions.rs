@@ -95,6 +95,16 @@ pub async fn session_set_model(
     registry.set_model(&app, &session_id, model)
 }
 
+/// Bricht den Countdown von „Automatisch weiter“ ab (ADR 040).
+#[tauri::command]
+pub async fn session_cancel_auto_handoff(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+) -> Result<(), CommandError> {
+    registry.cancel_auto_handoff(&app, &session_id)
+}
+
 #[tauri::command]
 pub async fn session_set_mode(
     app: tauri::AppHandle,
