@@ -7,12 +7,13 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
 | 1 | Mehrere Einstiegszeilen und „Neues Vorhaben“: Erkennung im Core, Knopf-Reihen, vorbelegter Dialog; ADR 040 | standard | 1 | complete |
-| 2 | Schalter „Automatisch weiter“ je Vorhaben: Migration 14, Command, Schalter in Übersicht und unter der Antwort | standard | 2 | pending |
-| 3 | Automatischer Start: Haltegründe, Countdown, Start, Abbrechen, Kettenbremse, Ansicht folgt; Doku-Abschluss, Release | heikel | 3 | pending |
+| 2 | Schalter „Automatisch weiter“ je Vorhaben: Migration 14, Command, Schalter in Übersicht und unter der Antwort | standard | 2 | complete |
+| 3 | Automatischer Start: Haltegründe, Countdown, Start, Abbrechen, Kettenbremse, Ansicht folgt; Doku | heikel | 3 | pending |
+| 4 | Fehlerbehebung Changes: Arbeitsbäume über die geschriebenen Dateien finden (Struktur statt Name und Lage); Plan-Abschluss, Release | standard | 4 | pending |
 
-**Rahmen:** strikt 1 → 2 → 3 — jede Phase schreibt in `sessions/model.rs`, `sessions/registry.rs` und die Knopf-Leiste unter der Antwort, keine zwei Phasen haben disjunkte Dateien. Direkt auf `main`, ein Commit pro Phase. `pnpm check` grün vor jedem Commit; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten (`regex` ist schon da). Bindings (`pnpm bindings`) mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste (Projektstand). Phase 3 läuft auf Opus (heikel: Thread, Sperren, Ablauf am Umschaltpunkt), 1 und 2 auf Sonnet. Planabschluss mit Versions-Tag (Minor-Version, [releases.md](../../conventions/releases.md)).
+**Rahmen:** strikt 1 → 2 → 3 → 4 (Phase 4 ist ein eigener Fehler in der Changes-Ansicht, kein Teil der Automatik; sie trägt den Plan-Abschluss, damit nur ein Release entsteht) — jede Phase schreibt in `sessions/model.rs`, `sessions/registry.rs` und die Knopf-Leiste unter der Antwort, keine zwei Phasen haben disjunkte Dateien. Direkt auf `main`, ein Commit pro Phase. `pnpm check` grün vor jedem Commit; rustfmt und Clippy brauchen `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten (`regex` ist schon da). Bindings (`pnpm bindings`) mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste (Projektstand). Phase 3 läuft auf Opus (heikel: Thread, Sperren, Ablauf am Umschaltpunkt), 1 und 2 auf Sonnet. Planabschluss mit Versions-Tag (Minor-Version, [releases.md](../../conventions/releases.md)).
 
-**Schätzung:** ~6 h (Phase 1 ~2 h, Phase 2 ~1 h, Phase 3 ~3 h).
+**Schätzung:** ~7,5 h (Phase 1 ~2 h, Phase 2 ~1 h, Phase 3 ~3 h, Phase 4 ~1,5 h).
 
 ## Scope
 

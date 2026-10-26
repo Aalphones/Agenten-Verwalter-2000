@@ -1,6 +1,6 @@
 # Phase 3 — Automatischer Start
 
-Rating: heikel · Modell: Opus · Commit: `feat(sessions): Einstiegszeile automatisch senden`, danach Release (Minor-Version)
+Rating: heikel · Modell: Opus · Commit: `feat(sessions): Einstiegszeile automatisch senden` (Release und Archiv: Phase 4)
 
 Heikel, weil hier ein eigener Thread nach Ablauf eines Zeitgebers Sessions anlegt und sendet: Sperren-Reihenfolge, veraltete Zeitgeber und der Augenblick des Umschaltens müssen stimmen.
 
@@ -127,6 +127,6 @@ Bestand in `src-tauri/src/sessions/registry.rs` (gelesen 2026-10-26, per Grep ne
 - [ ] `docs/code-map.md` Zeile „Sessions“: `auto_handoff.rs` (Countdown, Start, Kettenbremse), Haltegründe in `handoff.rs`; Zeile „Chat“: `useSecondsUntil`, Zustände der `HandoffBar`.
 - [ ] `docs/glossary.md`: Eintrag **Automatisch weiter** — Schalter je Vorhaben; startet nach einer Antwort mit genau einer „Weiter:“-Zeile nach 10 s Countdown die nächste Session mit dem Modell der Zeile; hält an bei 🔴, Frage, „Merge“, mehreren Zeilen, wartender neuer Session, 6 Starts in Folge; ADR 040.
 - [ ] `pnpm check` grün, Commit (Bindings mit).
-- [ ] Plan archivieren nach `docs/archive/2026-10/2026-10-26_automatisch-weiter/` (Bottom-Sektionen der README füllen), `STATE.md` nachziehen, Release nach [releases.md](../../conventions/releases.md): Minor-Version (`0.33.0`, sofern seit `0.32.1` nichts anderes released wurde — `git tag --list "v0.*" --sort=-v:refname` prüfen), `chore(release)`-Commit, Tag, Push.
+- [ ] Plan archivieren und Release entfallen hier: beides macht Phase 4 ([phase-4-arbeitsbaeume.md](phase-4-arbeitsbaeume.md)). Phase 3 endet mit dem Commit.
 
 ## Report-Back
