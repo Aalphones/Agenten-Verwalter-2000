@@ -1799,11 +1799,15 @@ impl SessionRegistry {
             })
         })?;
         let ticket_folders = sources::scope_ticket_folders(&ticket_roots, remembered, &own.touched);
+        let repositories = session.repositories();
+        // Dateisystem, deshalb außerhalb der Session-Sperre.
+        let discovered = worktrees::discover(&repositories, &own.touched);
         Ok(ChangesInput {
             workspace: session.workspace.clone(),
-            repositories: session.repositories(),
+            repositories,
             ticket_roots,
             ticket_folders,
+            discovered,
             since_ms,
             own,
         })

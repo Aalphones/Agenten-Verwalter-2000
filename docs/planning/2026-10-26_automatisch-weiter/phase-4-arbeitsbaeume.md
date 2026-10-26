@@ -62,16 +62,23 @@ pub fn discover(repositories: &[SessionRepository], touched: &HashMap<String, f6
 
 ### Core
 
-- [ ] `worktrees/mod.rs`: `DiscoveredWorktree`, `linked_worktree_of` (Aufstieg über die Elternordner der Datei bis zum ersten Ordner, in dem `.git` eine **Datei** ist; Inhalt `gitdir: …` lesen, `/worktrees/<Name>` abschneiden, `/.git` abschneiden; Pfade mit `native_path` und `same_dir` vergleichen, Schrägstriche beachten), `discover` (je geschriebene Datei einmal, Ergebnis je Ordner zwischenspeichern; Haupt-Repository gegen `repository_path` jedes Session-Repositorys und gegen `repository_path.join(inner)` für `inner_repositories` prüfen), `ticket_worktrees_at`.
-- [ ] `changes/mod.rs`: `ChangesInput.discovered`; `changes/sources.rs`: in `sources` und `inner_sources` die gefundenen Pfade neben den Namens-Treffern auflösen, entdoppeln nach `normalized_dir`.
-- [ ] `registry.rs` `changes_input` und `commit_scan.rs`: `discovered` aus `own.touched` bauen (außerhalb der Sperre, direkt hinter `scope_ticket_folders`).
-- [ ] `pnpm bindings` nur, falls sich ein `derive(TS)`-Typ geändert hat (erwartet: nein).
+- [x] `worktrees/mod.rs`: `DiscoveredWorktree`, `linked_worktree_of` (Aufstieg über die Elternordner der Datei bis zum ersten Ordner, in dem `.git` eine **Datei** ist; Inhalt `gitdir: …` lesen, `/worktrees/<Name>` abschneiden, `/.git` abschneiden; Pfade mit `native_path` und `same_dir` vergleichen, Schrägstriche beachten), `discover` (je geschriebene Datei einmal, Ergebnis je Ordner zwischenspeichern; Haupt-Repository gegen `repository_path` jedes Session-Repositorys und gegen `repository_path.join(inner)` für `inner_repositories` prüfen), `ticket_worktrees_at`.
+- [x] `changes/mod.rs`: `ChangesInput.discovered`; `changes/sources.rs`: in `sources` und `inner_sources` die gefundenen Pfade neben den Namens-Treffern auflösen, entdoppeln nach `normalized_dir`.
+- [x] `registry.rs` `changes_input` und `commit_scan.rs`: `discovered` aus `own.touched` bauen (außerhalb der Sperre, direkt hinter `scope_ticket_folders`).
+- [x] `pnpm bindings` nur, falls sich ein `derive(TS)`-Typ geändert hat (erwartet: nein).
 
 ### Doku und Abschluss
 
-- [ ] `docs/code-map.md` Zeile „Changes“: Erkennung über `.git`-Datei; ADR 020 (bzw. der Abschnitt dort, der die Erkennung über `<Repo>-wt-` beschreibt): Satz ersetzen, nicht anhängen.
-- [ ] Prüfung am echten Fall (Projektstand: keine automatisierten Tests): eine Session mit dem Repo `facepass` im Hauptbaum, ein Arbeitsbaum darin (`git worktree add facepass-wt-probe -b probe`), eine Datei darin schreiben → Eintrag erscheint; einen zweiten Arbeitsbaum mit Namen ohne `-wt-` anlegen und ebenso prüfen; danach beide mit `git worktree remove` entfernen. 🟡 Unsicher: ob `own.touched` auch Dateien füllt, die der Agent per Shell-Befehl schreibt, nicht nur per Edit/Write. Check: in einem der Arbeitsbäume eine Datei per `Set-Content` schreiben und nachsehen; erscheint sie nicht, ist das ein benannter offener Punkt im Report-Back, kein Grund, den Befehlstext zu parsen.
-- [ ] `pnpm check` grün, Commit.
+- [x] `docs/code-map.md` Zeile „Changes“: Erkennung über `.git`-Datei; ADR 020 (bzw. der Abschnitt dort, der die Erkennung über `<Repo>-wt-` beschreibt): Satz ersetzen, nicht anhängen.
+- [~] Prüfung am echten Fall (Projektstand: keine automatisierten Tests): eine Session mit dem Repo `facepass` im Hauptbaum, ein Arbeitsbaum darin (`git worktree add facepass-wt-probe -b probe`), eine Datei darin schreiben → Eintrag erscheint; einen zweiten Arbeitsbaum mit Namen ohne `-wt-` anlegen und ebenso prüfen; danach beide mit `git worktree remove` entfernen. 🟡 Unsicher: ob `own.touched` auch Dateien füllt, die der Agent per Shell-Befehl schreibt, nicht nur per Edit/Write. Check: in einem der Arbeitsbäume eine Datei per `Set-Content` schreiben und nachsehen; erscheint sie nicht, ist das ein benannter offener Punkt im Report-Back, kein Grund, den Befehlstext zu parsen. **Teilweise:** `.git`-Datei-Format am echten Git belegt (Scratch-Repo, Arbeitsbaum innen und mit beliebigem Namen: `gitdir: <abs>/.git/worktrees/<Name>`); die Probe in der laufenden App und der Shell-Befehl-Fall bleiben offen (siehe Report-Back).
+- [x] `pnpm check` grün, Commit.
 - [ ] Plan archivieren nach `docs/archive/2026-10/2026-10-26_automatisch-weiter/` (Bottom-Sektionen der README füllen), `STATE.md` nachziehen, Release nach [releases.md](../../conventions/releases.md): nächste freie Minor-Version (`v0.33.0` ist schon vergeben — `git tag --list "v0.*" --sort=-v:refname` prüfen), `chore(release)`-Commit, Tag, Push.
 
 ## Report-Back
+Stand: Kern gebaut, `pnpm check` grün (Lint, Typecheck, Format, Build, rustfmt, Clippy).
+
+- `worktrees/mod.rs`: `linked_worktree_of` (Aufstieg bis zur ersten `.git`; Ordner → `None`, Datei → `gitdir:` lesen, `/.git/worktrees/` abtrennen), `discover` (je Ordner einmal zwischengespeichert, nach Wurzel entdoppelt, Haupt-Repository gegen Session-Repositories und innere geprüft), `ticket_worktrees_at`; `ticket_worktrees_in` und `_at` teilen sich `listed_worktrees`.
+- `changes/sources.rs`: gefundene Pfade neben den Namens-Treffern aufgelöst, entdoppelt nach Ordner **und** Name (der Schlüssel besteht aus dem Namen).
+- `registry.rs` `changes_input` und `commit_scan.rs`: `discovered` aus den geschriebenen Dateien, außerhalb der Sperre; die Commit-Suche lädt dafür `session_files` der Session. Beide Prüfprogramme (`examples/`) mitgezogen. `note_ticket_worktrees` unverändert (AK 5).
+- Entscheidungen: App-Worktrees (Sessions vor ADR 010) werden bei `discover` übergangen — sie sind verknüpfte Arbeitsbäume ihres Repositorys, aber keine Ticket-Worktrees. Keine Bindings-Änderung (keine `derive(TS)`-Typen berührt).
+- 🟡 Offen: (1) Gegen die laufende App nicht gefahren; (2) ob `own.touched` auch per Shell geschriebene Dateien enthält, ungeprüft; (3) ein relativer `gitdir`-Pfad (Git schreibt ihn nur auf ausdrücklichen Wunsch) zählt nicht; (4) die Schlüssel in `touched` sind kleingeschrieben — auf Linux/macOS liest `linked_worktree_of` dann einen nicht vorhandenen Pfad und findet nichts (Windows ohne Folgen).

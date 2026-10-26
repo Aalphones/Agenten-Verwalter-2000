@@ -1,11 +1,13 @@
 //! Commits einer Session finden und speichern (ADR 014).
+use std::slice;
 use std::sync::Arc;
 use std::thread;
 
 use super::Session;
 use crate::changes::attribution::Ownership;
 use crate::changes::{ChangesInput, scan};
-use crate::db::session_commits;
+use crate::db::{session_commits, session_files};
+use crate::worktrees;
 
 /// Sucht in einem eigenen Thread die Commits der Zeitfenster und speichert sie.
 pub(super) fn schedule(session: Arc<Session>, windows: Vec<(f64, f64)>) {
@@ -24,11 +26,20 @@ pub(super) fn schedule(session: Arc<Session>, windows: Vec<(f64, f64)>) {
             };
             // Die Basis der inneren Repositories liegt vor dem Anlegen der Session; eigene Commits
             // liegen immer danach.
+            // Auch Arbeitsbäume mit beliebigem Namen und beliebiger Lage: ihre Commits gehören dazu.
+            let touched = session
+                .database
+                .with(|connection| {
+                    session_files::load_for(connection, slice::from_ref(&session.id))
+                })
+                .unwrap_or_default();
+            let discovered = worktrees::discover(&repositories, &touched);
             let input = ChangesInput {
                 workspace: session.workspace.clone(),
                 repositories,
                 ticket_roots,
                 ticket_folders,
+                discovered,
                 since_ms: created_at,
                 own: Ownership::default(),
             };

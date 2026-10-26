@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 use crate::changes::ChangesInput;
 use crate::error::CommandError;
-use crate::worktrees::{self, RepositoryCheckout, SessionRepository, TicketRoot, TicketWorktree};
+use crate::worktrees::{
+    self, DiscoveredWorktree, RepositoryCheckout, SessionRepository, TicketRoot, TicketWorktree,
+};
 
 /// Ein Eintrag der Changes-Ansicht, bevor Git seine Dateien liest.
 pub struct Source {
@@ -60,7 +62,16 @@ pub fn sources(input: &ChangesInput) -> Vec<Source> {
                 optional: false,
                 error: None,
             });
-            for worktree in worktrees::ticket_worktrees(repository, position, &sibling) {
+            let mut ticket_worktrees = worktrees::ticket_worktrees(repository, position, &sibling);
+            merge_worktrees(
+                &mut ticket_worktrees,
+                worktrees::ticket_worktrees_at(
+                    repository,
+                    position,
+                    &discovered_paths(input, position, None),
+                ),
+            );
+            for worktree in ticket_worktrees {
                 sources.push(Source {
                     key: format!("{position}/{}", worktree.folder),
                     name: format!("{} · {}", repository.name, worktree.folder),
@@ -122,11 +133,19 @@ fn inner_sources(
             }];
         }
     };
-    let worktrees = worktrees::ticket_worktrees_in(
+    let mut worktrees = worktrees::ticket_worktrees_in(
         &inner_repository,
         position,
         folders,
         &outer.repository_path,
+    );
+    merge_worktrees(
+        &mut worktrees,
+        worktrees::ticket_worktrees_at(
+            &inner_repository,
+            position,
+            &discovered_paths(input, position, Some(inner)),
+        ),
     );
     let mut sources = vec![Source {
         key,
@@ -151,6 +170,36 @@ fn inner_sources(
             }),
     );
     sources
+}
+
+/// Die Pfade der Arbeitsbäume, die die geschriebenen Dateien dem Repository `position` (oder seinem
+/// inneren Repository `inner`) zuordnen.
+fn discovered_paths(input: &ChangesInput, position: u32, inner: Option<&str>) -> Vec<PathBuf> {
+    input
+        .discovered
+        .iter()
+        .filter(|found: &&DiscoveredWorktree| {
+            found.position == position && found.inner.as_deref() == inner
+        })
+        .map(|found: &DiscoveredWorktree| found.path.clone())
+        .collect()
+}
+
+/// Hängt `extra` an `worktrees`, ohne einen Arbeitsbaum doppelt zu führen — weder denselben Ordner
+/// noch denselben Namen: der Schlüssel des Eintrags besteht aus dem Namen.
+fn merge_worktrees(worktrees: &mut Vec<TicketWorktree>, extra: Vec<TicketWorktree>) {
+    for worktree in extra {
+        let is_known = worktrees.iter().any(|known: &TicketWorktree| {
+            worktrees::normalized_dir(&known.path) == worktrees::normalized_dir(&worktree.path)
+                || known.folder.eq_ignore_ascii_case(&worktree.folder)
+        });
+        if !is_known {
+            worktrees.push(worktree);
+        }
+    }
+    worktrees.sort_by(|first: &TicketWorktree, second: &TicketWorktree| {
+        first.folder.cmp(&second.folder)
+    });
 }
 
 /// Der Eintrag zu einem Schlüssel aus der Oberfläche — nur einer, den `sources` für dieselbe

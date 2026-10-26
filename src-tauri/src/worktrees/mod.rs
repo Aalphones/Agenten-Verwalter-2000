@@ -1,16 +1,22 @@
 //! Arbeitsordner der Session-Repositories: Haupt-Checkouts, Freigaben für Ticket-Worktrees, die
 //! App-Worktrees von Sessions vor ADR 010 und Ordner ohne Git.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use crate::db::repositories::RepositoryRow;
 use crate::error::CommandError;
+use crate::filesystem::native_path;
 use crate::git;
 
 /// Namensregel eines Ticket-Worktrees: Nachbarordner `<Ordner des Repositorys>-wt-<Name>`.
 pub const TICKET_WORKTREE_INFIX: &str = "-wt-";
+
+/// Beginn der Zeile in der `.git`-Datei eines verknüpften Arbeitsbaums.
+const GITDIR_PREFIX: &str = "gitdir:";
+/// Im `gitdir` eines verknüpften Arbeitsbaums zwischen Haupt-Repository und Arbeitsbaum-Name.
+const LINKED_WORKTREE_MARKER: &str = "/.git/worktrees/";
 
 /// Zeichen, hinter denen im Text ein Ordnername beginnen kann (außer Leerraum).
 const NAME_BOUNDARIES: [char; 6] = ['\\', '/', '"', '\'', '=', ':'];
@@ -450,17 +456,46 @@ pub fn ticket_worktrees_in(
     folders: &[String],
     parent: &Path,
 ) -> Vec<TicketWorktree> {
+    let candidates: Vec<(String, PathBuf)> = folders
+        .iter()
+        .map(|folder: &String| (folder.clone(), parent.join(folder)))
+        .collect();
+    listed_worktrees(repository, position, candidates)
+}
+
+/// Wie `ticket_worktrees`, aber die Worktrees stehen mit ihrem Pfad fest — gefunden über die Dateien
+/// der Session (`discover`), nicht über Name und Lage. `folder` ist der letzte Pfadbestandteil.
+pub fn ticket_worktrees_at(
+    repository: &SessionRepository,
+    position: u32,
+    paths: &[PathBuf],
+) -> Vec<TicketWorktree> {
+    let candidates: Vec<(String, PathBuf)> = paths
+        .iter()
+        .filter_map(|path: &PathBuf| {
+            let folder = path.file_name()?.to_string_lossy().into_owned();
+            Some((folder, path.clone()))
+        })
+        .collect();
+    listed_worktrees(repository, position, candidates)
+}
+
+/// Die Kandidaten `(Ordnername, Pfad)`, die Git als Worktree des Haupt-Checkouts führt, nach Ordner sortiert.
+fn listed_worktrees(
+    repository: &SessionRepository,
+    position: u32,
+    candidates: Vec<(String, PathBuf)>,
+) -> Vec<TicketWorktree> {
     let has_ticket_worktrees = matches!(repository.checkout, RepositoryCheckout::Main);
-    if !has_ticket_worktrees || folders.is_empty() {
+    if !has_ticket_worktrees || candidates.is_empty() {
         return Vec::new();
     }
     let Ok(entries) = git::worktree_list(&repository.repository_path) else {
         return Vec::new();
     };
-    let mut worktrees: Vec<TicketWorktree> = folders
-        .iter()
-        .filter_map(|folder: &String| {
-            let expected = parent.join(folder);
+    let mut worktrees: Vec<TicketWorktree> = candidates
+        .into_iter()
+        .filter_map(|(folder, expected): (String, PathBuf)| {
             let entry = entries
                 .iter()
                 .find(|entry: &&git::WorktreeEntry| same_dir(&entry.path, &expected))?;
@@ -470,7 +505,7 @@ pub fn ticket_worktrees_in(
             }
             Some(TicketWorktree {
                 position,
-                folder: folder.clone(),
+                folder,
                 path: entry.path.clone(),
                 head: entry.head.clone(),
                 branch: entry.branch.clone(),
@@ -481,6 +516,112 @@ pub fn ticket_worktrees_in(
         first.folder.cmp(&second.folder)
     });
     worktrees
+}
+
+/// Wurzel und Haupt-Repository des verknüpften Arbeitsbaums, in dem `file` liegt; `None` bei einem
+/// normalen Repository, ohne Git, bei einem Submodul oder wenn die `.git`-Datei nicht lesbar ist.
+/// Nur Dateisystem: ein verknüpfter Arbeitsbaum hat in seiner Wurzel eine **Datei** `.git` mit der
+/// Zeile `gitdir: <Haupt-Repository>/.git/worktrees/<Name>`, ein normales Repository einen Ordner.
+/// Ein relativer `gitdir`-Pfad zählt nicht (Git schreibt ihn nur auf ausdrücklichen Wunsch).
+pub fn linked_worktree_of(file: &Path) -> Option<(PathBuf, PathBuf)> {
+    for dir in file.ancestors().skip(1) {
+        let dot_git = dir.join(".git");
+        let Ok(metadata) = fs::metadata(&dot_git) else {
+            continue;
+        };
+        if metadata.is_dir() {
+            return None;
+        }
+        let text = fs::read_to_string(&dot_git).ok()?;
+        let target = text
+            .lines()
+            .find_map(|line: &str| line.trim().strip_prefix(GITDIR_PREFIX))?
+            .trim();
+        let slashed = target.replace('\\', "/");
+        let marker_at = slashed.rfind(LINKED_WORKTREE_MARKER)?;
+        let main = native_path(&slashed[..marker_at]);
+        if !main.is_absolute() {
+            return None;
+        }
+        return Some((dir.to_path_buf(), main));
+    }
+    None
+}
+
+/// Ein Arbeitsbaum, den die Dateien der Session verraten.
+#[derive(Debug, Clone)]
+pub struct DiscoveredWorktree {
+    /// Position des Session-Repositorys, zu dem sein Haupt-Repository gehört.
+    pub position: u32,
+    /// `Some(<Ordnername>)`, wenn das Haupt-Repository ein inneres Repository des angehängten Ordners ist.
+    pub inner: Option<String>,
+    pub path: PathBuf,
+}
+
+/// Die Arbeitsbäume, in denen die Session Dateien geschrieben hat (`touched`: normalisierter
+/// Dateipfad → ms) und die zu einem ihrer Repositories gehören — unabhängig von Name und Lage. Ob Git
+/// sie noch führt, prüft der Aufrufer. Nur Dateisystem; je Ordner wird einmal aufgestiegen.
+pub fn discover(
+    repositories: &[SessionRepository],
+    touched: &HashMap<String, f64>,
+) -> Vec<DiscoveredWorktree> {
+    let mut by_dir: HashMap<PathBuf, Option<(PathBuf, PathBuf)>> = HashMap::new();
+    // Nach Wurzel entdoppelt und sortiert, damit die Reihenfolge nicht von der Hash-Tabelle abhängt.
+    let mut roots: BTreeMap<String, (PathBuf, PathBuf)> = BTreeMap::new();
+    for key in touched.keys() {
+        let file = native_path(key);
+        let Some(dir) = file.parent() else {
+            continue;
+        };
+        let found = by_dir
+            .entry(dir.to_path_buf())
+            .or_insert_with(|| linked_worktree_of(&file))
+            .clone();
+        if let Some((root, main)) = found {
+            roots.entry(normalized_dir(&root)).or_insert((root, main));
+        }
+    }
+    let mut owners: HashMap<String, Option<(u32, Option<String>)>> = HashMap::new();
+    let mut discovered: Vec<DiscoveredWorktree> = Vec::new();
+    for (root, main) in roots.into_values() {
+        let owner = owners
+            .entry(normalized_dir(&main))
+            .or_insert_with(|| owner_of(repositories, &main))
+            .clone();
+        if let Some((position, inner)) = owner {
+            discovered.push(DiscoveredWorktree {
+                position,
+                inner,
+                path: root,
+            });
+        }
+    }
+    discovered
+}
+
+/// Das Repository der Session (oder sein inneres), dessen Haupt-Checkout `main` ist. App-Worktrees
+/// zählen nicht: sie sind verknüpfte Arbeitsbäume ihres Repositorys, aber keine Ticket-Worktrees.
+fn owner_of(repositories: &[SessionRepository], main: &Path) -> Option<(u32, Option<String>)> {
+    for (index, repository) in repositories.iter().enumerate() {
+        let Ok(position) = u32::try_from(index) else {
+            continue;
+        };
+        match repository.checkout {
+            RepositoryCheckout::AppWorktree { .. } => continue,
+            RepositoryCheckout::Main => {
+                if same_dir(main, &repository.repository_path) {
+                    return Some((position, None));
+                }
+            }
+            RepositoryCheckout::Folder => {}
+        }
+        for name in inner_repositories(&repository.repository_path) {
+            if same_dir(main, &repository.repository_path.join(&name)) {
+                return Some((position, Some(name)));
+            }
+        }
+    }
+    None
 }
 
 /// `(base_commit, base_ref)` eines Ticket-Worktrees: die Abzweigung vom Standard-Branch, damit die

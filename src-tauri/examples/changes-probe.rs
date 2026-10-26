@@ -106,11 +106,13 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         let workspace = PathBuf::from(row.workspace_dir.clone().unwrap_or_default());
         // Die Commit-Suche der App kennt nur die gemerkten Ticket-Worktrees der Session und
         // rechnet ab deren Anlegen; die Changes der Reichweite „Session“ kennen mehr.
+        let discovered = worktrees::discover(&repositories, &own.touched);
         let scan_input = ChangesInput {
             workspace: workspace.clone(),
             repositories: repositories.clone(),
             ticket_roots: ticket_roots.clone(),
             ticket_folders: remembered.clone(),
+            discovered: discovered.clone(),
             since_ms: row.created_at,
             own: Ownership::default(),
         };
@@ -120,6 +122,7 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
             repositories,
             ticket_roots,
             ticket_folders,
+            discovered,
             since_ms,
             own,
         };

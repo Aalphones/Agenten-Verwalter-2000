@@ -23,7 +23,9 @@ use crate::changes::sources::Source;
 use crate::error::CommandError;
 use crate::filesystem::native_path;
 use crate::git;
-use crate::worktrees::{self, RepositoryCheckout, SessionRepository, TicketRoot, TicketWorktree};
+use crate::worktrees::{
+    self, DiscoveredWorktree, RepositoryCheckout, SessionRepository, TicketRoot, TicketWorktree,
+};
 
 /// Größere untracked Dateien gelten als binär: ihre Zeilen zu zählen hieße, sie ganz zu lesen.
 const MAX_UNTRACKED_BYTES: u64 = 8 * 1024 * 1024;
@@ -46,6 +48,8 @@ pub struct ChangesInput {
     pub ticket_roots: Vec<TicketRoot>,
     /// Die Ticket-Worktrees der Reichweite als `(Position, Ordner)`, aus `scope_ticket_folders`.
     pub ticket_folders: Vec<(u32, String)>,
+    /// Die Arbeitsbäume, die die geschriebenen Dateien verraten — gleich welcher Name, welche Lage.
+    pub discovered: Vec<DiscoveredWorktree>,
     /// Beginn der Reichweite in ms; Basis der inneren Repositories.
     pub since_ms: f64,
     pub own: Ownership,

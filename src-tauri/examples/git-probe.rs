@@ -52,11 +52,13 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         let remembered = session_ticket_worktrees::load(connection, session_id)?;
         let ticket_roots = worktrees::ticket_roots(&repositories);
         let ticket_folders = sources::scope_ticket_folders(&ticket_roots, remembered, &own.touched);
+        let discovered = worktrees::discover(&repositories, &own.touched);
         Ok(ChangesInput {
             workspace: PathBuf::from(row.workspace_dir.clone().unwrap_or_default()),
             repositories,
             ticket_roots,
             ticket_folders,
+            discovered,
             since_ms: row.created_at,
             own,
         })
