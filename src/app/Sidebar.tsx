@@ -22,6 +22,7 @@ const OVERSCAN = 12;
 const ESTIMATED_HEIGHT: Record<SidebarRow['kind'], number> = {
   project: 44,
   session: 26,
+  more: 30,
 };
 const LAST_SESSION_EXTRA = 4;
 
@@ -68,7 +69,11 @@ export function Sidebar({
   const expanded: Record<string, boolean> = useSessionsStore((state) => state.expanded);
   const startRename = useSessionsStore((state) => state.startRename);
   const stopRename = useSessionsStore((state) => state.stopRename);
+  const showAllSessions: Record<string, boolean> = useSessionsStore(
+    (state) => state.showAllSessions,
+  );
   const setExpanded = useSessionsStore((state) => state.setExpanded);
+  const setShowAllSessions = useSessionsStore((state) => state.setShowAllSessions);
   // Das Kontingent gehört zum Abo von Claude bzw. Codex; im lokalen Betrieb gibt es nichts anzuzeigen.
   const hasUsage: boolean = useSettingsStore((state) => {
     const operatingMode: string = state.settings?.operatingMode ?? 'claude';
@@ -89,6 +94,12 @@ export function Sidebar({
           project,
           sessions: projectSessions,
           isExpanded: expanded[project.id] ?? (containsActiveSession || isOverviewActive),
+          showAll: showAllSessions[project.id] ?? false,
+          pinnedIds: new Set<string>(
+            [activeSessionId, renaming?.kind === 'session' ? renaming.id : null].filter(
+              (id: string | null): id is string => id !== null,
+            ),
+          ),
           activity: projectActivity(project, projectSessions),
         };
       })
@@ -97,7 +108,16 @@ export function Sidebar({
           second.activity - first.activity || second.project.createdAt - first.project.createdAt,
       );
     return buildSidebarRows(ranked);
-  }, [projects, sessions, expanded, activeSessionId, activeProjectId, showProjectOverview]);
+  }, [
+    projects,
+    sessions,
+    expanded,
+    showAllSessions,
+    renaming,
+    activeSessionId,
+    activeProjectId,
+    showProjectOverview,
+  ]);
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -193,7 +213,29 @@ export function Sidebar({
         return renderProject(row);
       case 'session':
         return renderSession(row);
+      case 'more':
+        return renderMore(row);
     }
+  }
+
+  function renderMore(row: Extract<SidebarRow, { kind: 'more' }>): ReactElement {
+    const label: string = row.isShowingAll
+      ? 'Weniger anzeigen'
+      : `${String(row.hiddenCount)} weitere anzeigen`;
+    return (
+      <div className="sidebar__session sidebar__session--last">
+        <button
+          type="button"
+          className="sidebar__more"
+          aria-expanded={row.isShowingAll}
+          onClick={(): void => {
+            setShowAllSessions(row.projectId, !row.isShowingAll);
+          }}
+        >
+          {label}
+        </button>
+      </div>
+    );
   }
 
   function renderProject(row: Extract<SidebarRow, { kind: 'project' }>): ReactElement {

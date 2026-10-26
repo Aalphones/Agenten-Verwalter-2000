@@ -27,6 +27,8 @@ interface SessionsState {
   renaming: RenameTarget | null;
   /** Vorhaben-ID → aufgeklappt; fehlt ein Eintrag, entscheidet die Sidebar nach ihrem Standard. */
   expanded: Record<string, boolean>;
+  /** Vorhaben-ID → alle Sessions gezeigt statt nur der zuletzt aktiven; fehlt ein Eintrag, kürzt die Sidebar. */
+  showAllSessions: Record<string, boolean>;
   selectSession: (sessionId: string) => void;
   selectProject: (projectId: string) => void;
   showView: (view: SessionView) => void;
@@ -36,6 +38,7 @@ interface SessionsState {
   openSettings: () => void;
   closeSettings: () => void;
   setExpanded: (projectId: string, value: boolean) => void;
+  setShowAllSessions: (projectId: string, value: boolean) => void;
   startRename: (kind: RenameKind, id: string) => void;
   stopRename: () => void;
 }
@@ -50,6 +53,7 @@ export const useSessionsStore = create<SessionsState>((set) => ({
   projectView: 'overview',
   renaming: null,
   expanded: {},
+  showAllSessions: {},
   selectSession: (sessionId: string): void => {
     set({
       activeSessionId: sessionId,
@@ -87,6 +91,11 @@ export const useSessionsStore = create<SessionsState>((set) => ({
   },
   setExpanded: (projectId: string, value: boolean): void => {
     set((state: SessionsState) => ({ expanded: { ...state.expanded, [projectId]: value } }));
+  },
+  setShowAllSessions: (projectId: string, value: boolean): void => {
+    set((state: SessionsState) => ({
+      showAllSessions: { ...state.showAllSessions, [projectId]: value },
+    }));
   },
   startRename: (kind: RenameKind, id: string): void => {
     set({ renaming: { kind, id } });
