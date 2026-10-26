@@ -44,6 +44,9 @@ pub struct SessionRow {
     pub codex_model: Option<String>,
     /// Zustand des Prompt-Caches als JSON gespeichert (ADR 033); unlesbar gilt als nicht vorhanden.
     pub prompt_cache: Option<PromptCache>,
+    /// Der Name ist automatisch entstanden und darf vom TL;DR nachgezogen werden; ein von Hand
+    /// gesetzter Name steht auf `false`.
+    pub name_auto: bool,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -73,6 +76,7 @@ struct StoredRow {
     chrome: bool,
     codex_model: Option<String>,
     prompt_cache: Option<String>,
+    name_auto: bool,
 }
 
 impl StoredRow {
@@ -102,6 +106,7 @@ impl StoredRow {
             chrome: row.get(21)?,
             codex_model: row.get(22)?,
             prompt_cache: row.get(23)?,
+            name_auto: row.get(24)?,
         })
     }
 
@@ -130,6 +135,7 @@ impl StoredRow {
             handoff_line: self.handoff_line,
             chrome: self.chrome,
             codex_model: self.codex_model,
+            name_auto: self.name_auto,
             prompt_cache: self
                 .prompt_cache
                 .as_deref()
@@ -147,9 +153,9 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              project_id, number, last_activity_at, seen_at, handoff_line, chrome, codex_model, \
-             prompt_cache) \
+             prompt_cache, name_auto) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20, ?21) \
+             ?19, ?20, ?21, ?22) \
          ON CONFLICT(id) DO UPDATE SET \
              name = excluded.name, \
              status = excluded.status, \
@@ -166,7 +172,8 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
              handoff_line = excluded.handoff_line, \
              chrome = excluded.chrome, \
              codex_model = excluded.codex_model, \
-             prompt_cache = excluded.prompt_cache",
+             prompt_cache = excluded.prompt_cache, \
+             name_auto = excluded.name_auto",
         params![
             row.id,
             row.name,
@@ -191,6 +198,7 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
             row.prompt_cache
                 .as_ref()
                 .and_then(|cache: &PromptCache| serde_json::to_string(cache).ok()),
+            row.name_auto,
         ],
     )?;
     Ok(())
@@ -203,7 +211,7 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, \
-             handoff_line, chrome, codex_model, prompt_cache \
+             handoff_line, chrome, codex_model, prompt_cache, name_auto \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
@@ -221,7 +229,7 @@ pub fn load_for_project(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              project_id, number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, handoff_line, \
-             chrome, codex_model, prompt_cache \
+             chrome, codex_model, prompt_cache, name_auto \
          FROM sessions WHERE project_id = ?1 ORDER BY number",
     )?;
     let stored: Vec<StoredRow> = statement

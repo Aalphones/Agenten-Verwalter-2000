@@ -6,6 +6,9 @@ use ts_rs::TS;
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionTldr {
+    /// Titel der Session; leer bei einem TL;DR von vor dem Titel.
+    #[serde(default)]
+    pub title: String,
     /// Ein Satz, höchstens 160 Zeichen.
     pub short: String,
     pub goal: String,
@@ -21,6 +24,9 @@ pub struct SessionTldr {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectTldr {
+    /// Titel des Vorhabens; leer bei einem TL;DR von vor dem Titel.
+    #[serde(default)]
+    pub title: String,
     /// Zwei Sätze.
     pub summary: String,
     pub status: String,

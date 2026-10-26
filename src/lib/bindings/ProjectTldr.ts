@@ -5,6 +5,10 @@
  */
 export type ProjectTldr = { 
 /**
+ * Titel des Vorhabens; leer bei einem TL;DR von vor dem Titel.
+ */
+title: string, 
+/**
  * Zwei Sätze.
  */
 summary: string, status: string, 

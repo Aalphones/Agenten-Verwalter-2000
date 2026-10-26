@@ -7,17 +7,23 @@ use std::thread;
 use serde::de::DeserializeOwned;
 use tauri::{AppHandle, Emitter, Manager};
 
-use super::{ProjectState, Session, SessionRegistry, SessionState, now_ms, project_not_found};
+use super::{
+    Outbox, PROJECT_CHANGED_EVENT, ProjectState, Session, SessionRegistry, SessionState, now_ms,
+    project_not_found, update,
+};
 use crate::agents::claude::print::{HaikuRequest, PrintProgram, ask_haiku, print_program};
 use crate::db::tldr as tldr_rows;
 use crate::error::CommandError;
+use crate::db::projects as project_rows;
+use crate::sessions::clean_title;
 use crate::sessions::model::SessionStatus;
 use crate::tldr::model::{
     ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
     TldrChangedEvent,
 };
 use crate::tldr::prompt::{
-    PROJECT_SCHEMA, PROJECT_SYSTEM_PROMPT, SESSION_SCHEMA, SESSION_SYSTEM_PROMPT, TLDR_TIMEOUT,
+    PROJECT_SCHEMA, PROJECT_SYSTEM_PROMPT, SESSION_SCHEMA, SESSION_SYSTEM_PROMPT, TITLE_INPUT_CHARS,
+    TITLE_SCHEMA, TITLE_SYSTEM_PROMPT, TLDR_TIMEOUT,
 };
 use crate::tldr::transcript::{project_input, session_transcript};
 
@@ -151,6 +157,65 @@ impl SessionRegistry {
         Ok(())
     }
 
+    /// Kehrt sofort zurück; Haiku benennt im Hintergrund die Session aus ihrer ersten Nachricht, bei
+    /// Nummer 1 auch das Vorhaben. Ein inzwischen von Hand gesetzter Name bleibt stehen, ein
+    /// fehlgeschlagener Aufruf lässt den Namen aus dem ersten Satz.
+    pub fn start_auto_title(&self, app: &AppHandle, session_id: &str, first_message: &str) {
+        let Ok(program) = print_program(app) else {
+            return;
+        };
+        let input: String = first_message.chars().take(TITLE_INPUT_CHARS).collect();
+        let thread_app = app.clone();
+        let thread_session_id = session_id.to_owned();
+        let _ = thread::Builder::new()
+            .name("title-session".to_owned())
+            .spawn(move || {
+                let request = HaikuRequest {
+                    system_prompt: TITLE_SYSTEM_PROMPT,
+                    json_schema: TITLE_SCHEMA,
+                    input: &input,
+                    timeout: TLDR_TIMEOUT,
+                };
+                let Ok(answer) = ask_haiku::<TitleAnswer>(&thread_app, &program, &request) else {
+                    return;
+                };
+                let Some(title) = clean_title(&answer.title) else {
+                    return;
+                };
+                let registry = thread_app.state::<SessionRegistry>();
+                let Ok(session) = registry.get(&thread_session_id) else {
+                    return;
+                };
+                retitle_session(&thread_app, &session, &title);
+                if session.number == 1 {
+                    registry.retitle_project(&thread_app, &session.project_id, &title);
+                }
+            });
+    }
+
+    /// Nur ein automatisch entstandener Name wird ersetzt; ein archiviertes Vorhaben bekommt nichts.
+    pub(super) fn retitle_project(&self, app: &AppHandle, project_id: &str, title: &str) {
+        {
+            let mut projects = self.lock_projects();
+            let Some(project) = projects.get_mut(project_id) else {
+                return;
+            };
+            if !project.name_auto || project.name == title {
+                return;
+            }
+            let saved = self
+                .database
+                .with(|connection| project_rows::rename(connection, project_id, title, true));
+            if saved.is_err() {
+                return;
+            }
+            project.name = title.to_owned();
+        }
+        if let Ok(summary) = self.project_summary(project_id) {
+            let _ = app.emit(PROJECT_CHANGED_EVENT, summary);
+        }
+    }
+
     /// Alle Sessions des Vorhabens, nach Nummer.
     pub(super) fn project_members(&self, project_id: &str) -> Vec<Arc<Session>> {
         let mut members: Vec<Arc<Session>> = self
@@ -171,6 +236,10 @@ impl SessionRegistry {
         outcome: Result<ProjectTldr, String>,
         source_count: u32,
     ) {
+        let title: Option<String> = outcome
+            .as_ref()
+            .ok()
+            .and_then(|tldr: &ProjectTldr| clean_title(&tldr.title));
         {
             let mut projects = self.lock_projects();
             let Some(project) = projects.get_mut(project_id) else {
@@ -194,6 +263,9 @@ impl SessionRegistry {
                 Err(error) => project.tldr_error = Some(error),
             }
             project.tldr_running = false;
+        }
+        if let Some(title) = title {
+            self.retitle_project(app, project_id, &title);
         }
         emit_tldr_changed(app, project_id, None);
     }
@@ -233,6 +305,10 @@ fn run_session_tldr(
     let Ok(session) = registry.get(session_id) else {
         return;
     };
+    let title: Option<String> = outcome
+        .as_ref()
+        .ok()
+        .and_then(|tldr: &SessionTldr| clean_title(&tldr.title));
     {
         let mut state = session.lock();
         match outcome {
@@ -255,7 +331,31 @@ fn run_session_tldr(
         }
         state.tldr_running = false;
     }
+    if let Some(title) = title {
+        retitle_session(app, &session, &title);
+    }
     emit_tldr_changed(app, &session.project_id, Some(&session.id));
+}
+
+/// Nur ein automatisch entstandener Name wird ersetzt; ein Fehler beim Schreiben lässt den alten.
+fn retitle_session(app: &AppHandle, session: &Arc<Session>, title: &str) {
+    let _ = update(
+        app,
+        session,
+        |state: &mut SessionState, outbox: &mut Outbox| {
+            if state.name_auto && state.name != title {
+                state.name = title.to_owned();
+                outbox.summary_dirty = true;
+            }
+            Ok(())
+        },
+    );
+}
+
+/// Die Antwort von Haiku auf `TITLE_SCHEMA`.
+#[derive(serde::Deserialize)]
+struct TitleAnswer {
+    title: String,
 }
 
 /// Nacheinander im selben Thread: erst die fehlenden Session-TL;DRs, dann das des Vorhabens aus

@@ -12,12 +12,14 @@ pub struct ProjectRow {
     pub tldr: Option<String>,
     pub tldr_at: Option<f64>,
     pub tldr_sources: Option<u32>,
+    /// Der Name ist automatisch entstanden und darf nachgezogen werden; von Hand gesetzt = `false`.
+    pub name_auto: bool,
 }
 
 pub fn insert(connection: &Connection, row: &ProjectRow) -> Result<(), CommandError> {
     connection.execute(
-        "INSERT INTO projects (id, name, created_at) VALUES (?1, ?2, ?3)",
-        params![row.id, row.name, row.created_at],
+        "INSERT INTO projects (id, name, created_at, name_auto) VALUES (?1, ?2, ?3, ?4)",
+        params![row.id, row.name, row.created_at, row.name_auto],
     )?;
     Ok(())
 }
@@ -25,7 +27,7 @@ pub fn insert(connection: &Connection, row: &ProjectRow) -> Result<(), CommandEr
 /// Alle nicht archivierten Vorhaben, neueste zuerst.
 pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandError> {
     let mut statement = connection.prepare(
-        "SELECT id, name, created_at, tldr, tldr_at, tldr_sources FROM projects \
+        "SELECT id, name, created_at, tldr, tldr_at, tldr_sources, name_auto FROM projects \
          WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let rows = statement
@@ -37,6 +39,7 @@ pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandEr
                 tldr: row.get(3)?,
                 tldr_at: row.get(4)?,
                 tldr_sources: row.get(5)?,
+                name_auto: row.get(6)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<ProjectRow>>>()?;
@@ -47,7 +50,8 @@ pub fn load_active(connection: &Connection) -> Result<Vec<ProjectRow>, CommandEr
 pub fn load_one(connection: &Connection, id: &str) -> Result<Option<ProjectRow>, CommandError> {
     let row = connection
         .query_row(
-            "SELECT id, name, created_at, tldr, tldr_at, tldr_sources FROM projects WHERE id = ?1",
+            "SELECT id, name, created_at, tldr, tldr_at, tldr_sources, name_auto FROM projects \
+             WHERE id = ?1",
             params![id],
             |row| {
                 Ok(ProjectRow {
@@ -57,6 +61,7 @@ pub fn load_one(connection: &Connection, id: &str) -> Result<Option<ProjectRow>,
                     tldr: row.get(3)?,
                     tldr_at: row.get(4)?,
                     tldr_sources: row.get(5)?,
+                    name_auto: row.get(6)?,
                 })
             },
         )
@@ -93,10 +98,16 @@ pub fn load_archived(connection: &Connection) -> Result<Vec<ArchivedRow>, Comman
     Ok(rows)
 }
 
-pub fn rename(connection: &Connection, id: &str, name: &str) -> Result<(), CommandError> {
+/// `auto`: der Name stammt nicht vom Benutzer und darf später nachgezogen werden.
+pub fn rename(
+    connection: &Connection,
+    id: &str,
+    name: &str,
+    auto: bool,
+) -> Result<(), CommandError> {
     connection.execute(
-        "UPDATE projects SET name = ?2 WHERE id = ?1",
-        params![id, name],
+        "UPDATE projects SET name = ?2, name_auto = ?3 WHERE id = ?1",
+        params![id, name, auto],
     )?;
     Ok(())
 }

@@ -5,6 +5,10 @@
  */
 export type SessionTldr = { 
 /**
+ * Titel der Session; leer bei einem TL;DR von vor dem Titel.
+ */
+title: string, 
+/**
  * Ein Satz, höchstens 160 Zeichen.
  */
 short: string, goal: string, done: string, 

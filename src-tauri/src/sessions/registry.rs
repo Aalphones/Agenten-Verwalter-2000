@@ -118,6 +118,8 @@ pub struct SessionRegistry {
 /// Was ein Vorhaben selbst trägt; Workspace und Repositories liegen gleich an jeder seiner Sessions.
 struct ProjectState {
     name: String,
+    /// Der Name ist automatisch entstanden und darf nachgezogen werden; von Hand gesetzt = `false`.
+    name_auto: bool,
     created_at: f64,
     tldr: Option<ProjectTldr>,
     tldr_at: Option<f64>,
@@ -134,6 +136,7 @@ impl ProjectState {
     fn new(name: String, created_at: f64) -> Self {
         ProjectState {
             name,
+            name_auto: false,
             created_at,
             tldr: None,
             tldr_at: None,
@@ -147,6 +150,7 @@ impl ProjectState {
     /// Ein gespeichertes TL;DR, das sich nicht mehr lesen lässt, gilt als nicht vorhanden.
     fn restored(row: &ProjectRow) -> Self {
         let mut state = ProjectState::new(row.name.clone(), row.created_at);
+        state.name_auto = row.name_auto;
         state.tldr = row
             .tldr
             .as_deref()
@@ -183,6 +187,9 @@ struct PendingRequest {
 
 struct SessionState {
     name: String,
+    /// Der Name ist automatisch entstanden und darf vom TL;DR nachgezogen werden; von Hand gesetzt
+    /// = `false`.
+    name_auto: bool,
     status: SessionStatus,
     model: ModelId,
     /// Modell in der Betriebsart Codex; `None` = Standardmodell von Codex. Das Claude-Modell darüber
@@ -464,9 +471,11 @@ impl SessionRegistry {
             skills::match_invocation(task, &skills::collect(&home, &repository_roots))
         });
         let mut state = SessionState::new(name.clone(), model, effort, mode);
+        state.name_auto = true;
         state.codex_model = codex_model;
         state.ticket_roots = worktrees::ticket_roots(&repositories);
-        let project = ProjectState::new(name, state.created_at);
+        let mut project = ProjectState::new(name, state.created_at);
+        project.name_auto = true;
         let session = Arc::new(Session {
             id: id.clone(),
             project_id: project_id.clone(),
@@ -485,6 +494,7 @@ impl SessionRegistry {
             tldr: None,
             tldr_at: None,
             tldr_sources: None,
+            name_auto: true,
         };
         let saved = self.database.with(|connection| {
             project_rows::insert(connection, &project_row)?;
@@ -527,6 +537,7 @@ impl SessionRegistry {
                 return Err(error);
             }
         };
+        self.start_auto_title(app, &id, task);
         Ok(ProjectCreated {
             project: self.project_summary(&project_id)?,
             session: session_summary,
@@ -675,9 +686,10 @@ impl SessionRegistry {
             return Err(project_not_found(project_id));
         }
         self.database
-            .with(|connection| project_rows::rename(connection, project_id, &name))?;
+            .with(|connection| project_rows::rename(connection, project_id, &name, false))?;
         if let Some(project) = self.lock_projects().get_mut(project_id) {
             project.name = name;
+            project.name_auto = false;
         }
         // Wie die übrigen Ereignisse ohne Session-Protokoll: ein Sendefehler ändert nichts am Namen.
         let _ = app.emit(PROJECT_CHANGED_EVENT, self.project_summary(project_id)?);
@@ -851,7 +863,9 @@ impl SessionRegistry {
             .get(&session.project_id)
             .and_then(|project: &ProjectState| project.tldr.as_ref())
             .map(|tldr: &ProjectTldr| with_project_tldr(text, tldr));
-        update(
+        // Gesetzt, wenn dieses Senden der Session ihren ersten Namen gibt.
+        let mut titled = false;
+        let sent = update(
             app,
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
@@ -953,6 +967,8 @@ impl SessionRegistry {
                     && state.name == format!("Session {}", session.number)
                 {
                     state.name = name_from_task(text);
+                    state.name_auto = true;
+                    titled = true;
                     outbox.summary_dirty = true;
                 }
                 state.begin_sourcing(&agent_text);
@@ -960,7 +976,11 @@ impl SessionRegistry {
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
             },
-        )
+        );
+        if titled && sent.is_ok() {
+            self.start_auto_title(app, session_id, text);
+        }
+        sent
     }
 
     pub fn answer(
@@ -1053,6 +1073,7 @@ impl SessionRegistry {
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
                 state.name = name;
+                state.name_auto = false;
                 outbox.summary_dirty = true;
                 Ok(())
             },
@@ -1861,6 +1882,7 @@ impl SessionState {
         let now = now_ms();
         SessionState {
             name,
+            name_auto: false,
             status: SessionStatus::Starting,
             model,
             codex_model: None,
@@ -1944,6 +1966,7 @@ impl SessionState {
         state.context_used = row.context_used;
         state.context_window = row.context_window;
         state.prompt_cache = row.prompt_cache.clone();
+        state.name_auto = row.name_auto;
         state.has_agent_history = row.has_agent_history;
         state.chrome = row.chrome;
         state.codex_model = row.codex_model.clone();
@@ -3182,6 +3205,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
     SessionRow {
         id: session.id.clone(),
         name: state.name.clone(),
+        name_auto: state.name_auto,
         status: state.status,
         model: state.model,
         codex_model: state.codex_model.clone(),
