@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entwurf Automatisch weiter</title>
+<link rel="stylesheet" href="entwuerfe/app.css">
+<style>
+.handoff-ico { width: 12px; height: 12px; color: var(--accent); }
+.amsg pre { margin: 0 0 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg-sidebar); border: 1px solid var(--border-subtle); font: 12px var(--mono); white-space: pre-wrap; color: var(--fg2); }
+.amsg .tldr { color: var(--fg); }
+.hbar { display: grid; gap: 6px; margin-top: 2px; max-width: 68ch; }
+.hrow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.hrow .kindtag { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--accent-subtle); color: var(--accent-text); white-space: nowrap; flex: none; }
+.hrow .excerpt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg2); font-size: 12px; }
+.hbtn { padding: 3px 12px; border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); font-size: 12px; white-space: nowrap; flex: none; }
+.hfoot { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg2); }
+.hfoot .sp { flex: 1; }
+.hfoot .sw { display: inline-flex; align-items: center; gap: 7px; }
+.switch.off { background: var(--border); }
+.switch.off::after { right: auto; left: 2px; }
+.auto { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: var(--accent-subtle); font-size: 12.5px; }
+.auto p { margin: 0; flex: 1; }
+.auto b { font-variant-numeric: tabular-nums; }
+.halt { font-size: 12px; color: var(--muted); }
+.ov { padding: 22px 32px; display: grid; gap: 14px; max-width: 900px; }
+.ov-head { display: flex; align-items: center; gap: 12px; }
+.ov-head h3 { margin: 0; font: 600 14px var(--display); }
+.ov-head .cnt { color: var(--muted); font-weight: 400; }
+.ov-head .sp { flex: 1; }
+.ov-auto { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; font-size: 12.5px; }
+.ov-auto .grow { flex: 1; color: var(--fg2); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
+.card b { font-size: 12.5px; }
+.card span { color: var(--muted); }
+.dlg { padding: 22px 32px; display: grid; gap: 14px; max-width: 760px; margin: 0 auto; width: 100%; }
+.dlg h3 { margin: 0; font: 600 14px var(--display); display: flex; gap: 8px; align-items: center; }
+.dlg .ta { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-height: 70px; background: var(--bg-surface); }
+.repo { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-top: 1px solid var(--border-subtle); font-size: 12.5px; }
+.repo .box { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); }
+.repo .box.on { background: var(--accent); border-color: var(--accent); }
+.repo .path { color: var(--muted); font: 11.5px var(--mono); }
+.dlg .foot { display: flex; gap: 10px; align-items: center; justify-content: flex-end; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="handoff" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4 6h3.6M5.9 4.2 7.7 6 5.9 7.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
+<header class="intro">
+  <span class="eyebrow">Entwurf · Verwalter</span>
+  <h1>Automatisch weiter</h1>
+  <p>Endet eine Antwort mit einer Einstiegszeile („Weiter: …“), startet der Verwalter auf Wunsch die nächste Session selbst — mit dem Modell aus der Zeile, nach einem kurzen Countdown. Er hält an, wenn die Antwort 🔴 enthält, mit einer Frage endet oder vom Merge spricht. Dazu: mehrere Einstiegszeilen in einer Antwort, und eine Zeile „Neues Vorhaben …“ öffnet den Dialog für ein neues Vorhaben. Gestrichelt umrandet = neu.</p>
+</header>
+
+<section class="state">
+  <h2><span class="mk">1</span>Mehrere Einstiegszeilen unter einer Antwort</h2>
+  <p>Jede erkannte Zeile bekommt eine eigene Reihe: Art, Anfang der Zeile (ganz im Tooltip) und ihr Knopf. Steht nur eine Zeile da, bleibt es beim einzelnen Knopf wie heute. Darunter der Schalter „Automatisch weiter“ für das ganze Vorhaben — er erscheint nur, wenn mindestens eine „Weiter:“-Zeile da ist. Bei zwei „Weiter:“-Zeilen startet nichts automatisch; die Zeile „Neues Vorhaben“ zählt dabei nicht mit.</p>
+  <div class="frame"><div class="app tall">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p"><svg class="handoff-ico"><use href="#handoff"/></svg>Session-Workflow</div>
+      <div class="sb-s"><span class="grow">Zielbild</span><span class="n">#1</span></div>
+      <div class="sb-s sel"><span class="grow">Skill-Umbau planen</span><svg class="handoff-ico"><use href="#handoff"/></svg><span class="n">#2</span></div>
+      <div class="sb-p"><span class="dot"></span>Photofant Tags</div>
+      <div class="sb-s"><span class="grow">Tag-Seite</span><span class="n">#4</span></div>
+    </aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="crumb">Session-Workflow ›</span><span class="crumb">#2</span><span class="hname">Skill-Umbau planen</span><span class="pill">main</span></div><div class="tabs"><span class="tab on">Chat</span><span class="tab">Changes</span><span class="tab">Artefakte 1</span></div><div class="hdr-r"><span class="btn">Hintergrund</span></div></div>
+      <div class="chat"><div class="col">
+        <div class="umsg">Sind das jetzt zwei Sessions?</div>
+        <div class="amsg">
+          <p>Ja, es sind zwei. Session 1 baut den Verwalter aus (neues Vorhaben mit dessen Repo), Session 2 legt hier den Plan für den Skill-Umbau an. Beide dürfen parallel laufen.</p>
+          <pre>Neues Vorhaben im Agenten-Verwalter-2000: Plan „Einstiegszeile automatisch senden“ per mode-planning – optional je Vorhaben … Modell opus.</pre>
+          <p>Weiter: Umbau der facepass-Workflow-Skills auf Sessions statt Unteragenten – Repo facepass, Zielbild Abschnitte 3–7 und 9, Modell opus, nächster Schritt: Plan per project-planning anlegen.</p>
+          <p class="tldr"><b>TL;DR:</b> Zwei Sessions: neues Vorhaben starten und hier weitermachen.</p>
+        </div>
+        <div class="hbar new">
+          <div class="hrow"><span class="kindtag">Neues Vorhaben</span><span class="excerpt" title="Neues Vorhaben im Agenten-Verwalter-2000: Plan …">Agenten-Verwalter-2000: Plan „Einstiegszeile automatisch senden“ per mode-planning …</span><button class="hbtn">In neuem Vorhaben starten</button></div>
+          <div class="hrow"><span class="kindtag">Session</span><span class="excerpt">Umbau der facepass-Workflow-Skills auf Sessions statt Unteragenten – Repo facepass …</span><button class="hbtn">In neuer Session weiter</button></div>
+          <div class="hfoot"><span class="sp"></span><span class="sw">Automatisch weiter <span class="switch off"></span> <span class="info" title="Startet nach jeder fertigen Antwort mit genau einer „Weiter:“-Zeile die nächste Session dieses Vorhabens selbst — nach 10 Sekunden Countdown, mit dem Modell aus der Zeile. Hält an bei 🔴, einer Frage, dem Wort Merge, mehreren Zeilen und nach 6 automatischen Starts in Folge.">?</span></span></div>
+        </div>
+      </div></div>
+      <div class="cwrap"><div class="cbox"><div class="cfield">Nachricht an Claude … (/ für Skills)</div><div class="cfoot"><span>＋</span><span>/</span><span class="sp"></span><span>Opus · Hoch</span><span class="send">↑</span></div></div></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">2</span>Countdown: startet gleich von selbst</h2>
+  <p>Schalter an, die Antwort hat genau eine „Weiter:“-Zeile und keinen Haltegrund: 10 Sekunden lang steht der Countdown mit dem Modell aus der Zeile. „Abbrechen“ hält an, danach steht wieder der Knopf da. Läuft der Countdown ab, legt der Verwalter die Session an, stellt das Modell um und sendet die Zeile. Schaust du gerade auf diese Session, wechselt die Ansicht mit.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p"><svg class="handoff-ico"><use href="#handoff"/></svg>Kontext-Leiste</div>
+      <div class="sb-s"><span class="grow">Plan anlegen</span><span class="n">#1</span></div>
+      <div class="sb-s sel"><span class="grow">Phase 1 umsetzen</span><svg class="handoff-ico"><use href="#handoff"/></svg><span class="n">#2</span></div>
+    </aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="crumb">Kontext-Leiste ›</span><span class="crumb">#2</span><span class="hname">Phase 1 umsetzen</span><span class="pill">main</span></div><div class="tabs"><span class="tab on">Chat</span><span class="tab">Changes 6</span></div><div class="hdr-r"><span class="btn">Hintergrund</span></div></div>
+      <div class="chat"><div class="col">
+        <div class="tool"><b>Bash</b> pnpm check</div>
+        <div class="amsg">
+          <p>Phase 1 ist committet, <code>pnpm check</code> grün.</p>
+          <p>Weiter: Kontext-Leiste Phase 2 – Plan docs/planning/2026-10-27_kontext-leiste, Modell sonnet, nächster Schritt: Leiste in der Oberfläche.</p>
+          <p class="tldr"><b>TL;DR:</b> Phase 1 fertig, Phase 2 startet automatisch.</p>
+        </div>
+        <div class="hbar">
+          <div class="auto new"><svg class="handoff-ico"><use href="#handoff"/></svg><p>Startet automatisch in <b>7 s</b> auf Sonnet</p><button class="lnk">Abbrechen</button></div>
+          <div class="hfoot"><span class="sp"></span><span class="sw">Automatisch weiter <span class="switch"></span> <span class="info">?</span></span></div>
+        </div>
+      </div></div>
+      <div class="cwrap"><div class="cbox"><div class="cfield">Nachricht an Claude … (/ für Skills)</div><div class="cfoot"><span>＋</span><span>/</span><span class="sp"></span><span>Opus · Hoch</span><span class="send">↑</span></div></div></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">3</span>Angehalten: der Grund steht da, der Knopf bleibt</h2>
+  <p>Greift ein Haltegrund, startet nichts. Eine graue Zeile sagt, warum; der Knopf funktioniert wie heute (Session anlegen, Zeile ins Eingabefeld, du sendest).</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p"><svg class="handoff-ico"><use href="#handoff"/></svg>Kontext-Leiste</div>
+      <div class="sb-s sel"><span class="grow">Phase 2 umsetzen</span><svg class="handoff-ico"><use href="#handoff"/></svg><span class="n">#3</span></div>
+    </aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="crumb">Kontext-Leiste ›</span><span class="crumb">#3</span><span class="hname">Phase 2 umsetzen</span><span class="pill">main</span></div><div class="tabs"><span class="tab on">Chat</span><span class="tab">Changes 3</span></div><div class="hdr-r"><span class="btn">Hintergrund</span></div></div>
+      <div class="chat"><div class="col">
+        <div class="amsg">
+          <p>🔴 Die Leiste braucht eine Schwelle — Empfehlung 250 k, sonst 200 k. Ohne Antwort nehme ich 250 k.</p>
+          <p>Weiter: Kontext-Leiste Phase 3 – Modell sonnet, nächster Schritt: Doku und Release.</p>
+        </div>
+        <div class="hbar">
+          <div class="hrow"><button class="hbtn">In neuer Session weiter</button></div>
+          <div class="hfoot"><span class="halt new">Nicht automatisch weiter: die Antwort enthält 🔴.</span><span class="sp"></span><span class="sw">Automatisch weiter <span class="switch"></span> <span class="info">?</span></span></div>
+        </div>
+      </div></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">4</span>Schalter in der Übersicht des Vorhabens</h2>
+  <p>Derselbe Schalter steht in der Übersicht über den Session-Karten. Standard ist aus; der Zustand bleibt über einen Neustart erhalten. Einschalten bei einer fertigen Antwort mit Einstiegszeile startet sofort deren Countdown.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p" style="background:var(--bg-selected)"><svg class="handoff-ico"><use href="#handoff"/></svg>Kontext-Leiste</div>
+      <div class="sb-s"><span class="grow">Plan anlegen</span><span class="n">#1</span></div>
+      <div class="sb-s"><span class="grow">Phase 1 umsetzen</span><span class="n">#2</span></div>
+    </aside>
+    <div class="main">
+      <div class="hdr"><div class="hdr-l"><span class="hname">Kontext-Leiste</span></div><div class="tabs"><span class="tab on">Übersicht</span><span class="tab">Changes</span></div><div class="hdr-r"></div></div>
+      <div class="ov">
+        <div class="ov-head"><h3>Sessions <span class="cnt">2</span></h3><span class="sp"></span><span class="btn">Neue Session</span></div>
+        <div class="ov-auto new"><span>Einstiegszeilen automatisch senden</span><span class="info" title="Startet nach jeder fertigen Antwort mit genau einer „Weiter:“-Zeile die nächste Session dieses Vorhabens selbst — nach 10 Sekunden Countdown, mit dem Modell aus der Zeile.">?</span><span class="grow"></span><span class="switch"></span></div>
+        <div class="cards">
+          <div class="card"><b>#1 Plan anlegen</b><span>Abgeschlossen · Opus</span></div>
+          <div class="card"><b>#2 Phase 1 umsetzen</b><span>Wartet auf Wiedereinstieg · Sonnet</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2><span class="mk">5</span>„In neuem Vorhaben starten“: der Dialog ist vorbelegt</h2>
+  <p>Der Knopf öffnet „Neues Vorhaben“: der Auftrag ist der Text hinter dem ersten Doppelpunkt, das Modell kommt aus der Zeile, und jedes bekannte Repository, dessen Name in der Zeile steht, ist schon angehakt. Gestartet wird erst mit deinem Klick.</p>
+  <div class="frame"><div class="app">
+    <aside class="sidebar">
+      <div class="sb-head">Agenten Verwalter 2000</div>
+      <div class="sb-p"><svg class="handoff-ico"><use href="#handoff"/></svg>Session-Workflow</div>
+      <div class="sb-s"><span class="grow">Skill-Umbau planen</span><span class="n">#2</span></div>
+    </aside>
+    <div class="main">
+      <div class="dlg new">
+        <h3><span class="mk">1</span>Was soll der Agent tun?</h3>
+        <div class="ta">Plan „Einstiegszeile automatisch senden“ per mode-planning – optional je Vorhaben: erkannte „Weiter:“-Zeile startet nach Abschluss automatisch die Folgesession … Modell opus.</div>
+        <h3><span class="mk">2</span>Repositories</h3>
+        <div>
+          <div class="repo"><span class="box on"></span><b>Agenten-Verwalter-2000</b><span class="path">C:\Users\…\develop\Agenten-Verwalter-2000</span></div>
+          <div class="repo"><span class="box"></span><b>facepass</b><span class="path">C:\Users\…\develop\easyfitness\facepass</span></div>
+        </div>
+        <div class="foot"><span>1 Repository · Opus · Automatisch</span><span class="btn primary">Starten</span></div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<ul class="legend">
+  <li><span class="mk">1</span><span><b>Erkannt wird</b> jede Zeile, die mit „Weiter:“ beginnt (Session im selben Vorhaben) oder mit „Neues Vorhaben … :“ (neues Vorhaben), in den letzten fünf übrigen Zeilen der Antwort — auch fett, in Backticks oder in einem Code-Block.</span></li>
+  <li><span class="mk">2</span><span><b>Haltegründe:</b> 🔴 irgendwo in der Antwort · eine der letzten Zeilen endet mit „?“ · eine der letzten Zeilen nennt „Merge“ · mehr als eine „Weiter:“-Zeile · 6 automatische Starts in Folge ohne Nachricht von dir · im Vorhaben wartet schon eine neue Session · du hast abgebrochen. Rückfragen mit Auswahl halten die Session ohnehin in „wartet auf dich“.</span></li>
+  <li><span class="mk">3</span><span><b>Nach einem Neustart</b> läuft kein Countdown weiter; der Knopf steht wieder da.</span></li>
+</ul>
+</body>
+</html>

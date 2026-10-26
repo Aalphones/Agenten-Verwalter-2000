@@ -6,6 +6,8 @@
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`):** `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038). Reserviert: ADR 034 für `mitgelieferte-befehle`; keiner braucht eine Migration.
 
+**Geparkt seit 2026-10-26 (Entwurf unter `artifacts/`):** `2026-10-26_automatisch-weiter` (ADR 040, Migration 14) — mehrere Einstiegszeilen, „In neuem Vorhaben starten“, Schalter „Automatisch weiter“ je Vorhaben; drei Phasen strikt nacheinander, Phase 3 auf Opus. Berührt wie `parallele-sessions` die Funktion `send` — wer zweiter umsetzt, liest sie neu.
+
 **Außerdem offen:** Plan `mitgelieferte-befehle` (ungetrackt in `docs/planning/`) übernehmen oder verwerfen; seine README verweist noch auf `../2026-10-21_warnhinweise/` (jetzt im Archiv). Kommt dort eine neue Herkunft dazu, braucht `skillUseKey` (`src/features/skills/skillUses.ts`) und `db/skill_uses.rs` einen eigenen Fall. Dessen generiertes `codex-probe.cjs` ist gezielt aus ESLint ausgeschlossen; `pnpm check` bleibt grün. Keine Smoke-Checklisten mehr: getestet wird im laufenden Betrieb, Releases folgen dem Plan-Abschluss ohne Abnahme.
 **Linux-Laufzeitnachweis offen:** `linux-pfade` ist nur per Prüfkette belegt, nicht auf Linux/macOS gelaufen.
 
