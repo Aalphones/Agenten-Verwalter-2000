@@ -1,7 +1,9 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Nächster Schritt:** Geparkte Pläne `2026-10-22_parallele-sessions` (ADR 037), dann `2026-10-22_umgebung` (ADR 038) — unabhängig voneinander umsetzbar.
+**Aktiver Plan:** `docs/planning/2026-10-26_automatisch-weiter/`
+**Phase:** 2/3 — Schalter „Automatisch weiter“ (pending); Phase 1 committet
+**Nächster Schritt:** Phase 2 laut `phase-2-schalter.md` bauen (Sonnet), `pnpm check`, Commit. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVMin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"` — sonst scheitert whisper-rs-sys.
+**Danach (Backlog):** Geparkte Pläne `2026-10-22_parallele-sessions` (ADR 037), dann `2026-10-22_umgebung` (ADR 038) — unabhängig voneinander umsetzbar.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-22_skill-kassensturz/` (ADR 039), Release `v0.30.0`.
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`):** `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038). Reserviert: ADR 034 für `mitgelieferte-befehle`; keiner braucht eine Migration.

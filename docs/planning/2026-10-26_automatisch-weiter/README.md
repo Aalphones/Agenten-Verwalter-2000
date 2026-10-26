@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | Mehrere Einstiegszeilen und „Neues Vorhaben“: Erkennung im Core, Knopf-Reihen, vorbelegter Dialog; ADR 040 | standard | 1 | pending |
+| 1 | Mehrere Einstiegszeilen und „Neues Vorhaben“: Erkennung im Core, Knopf-Reihen, vorbelegter Dialog; ADR 040 | standard | 1 | complete |
 | 2 | Schalter „Automatisch weiter“ je Vorhaben: Migration 14, Command, Schalter in Übersicht und unter der Antwort | standard | 2 | pending |
 | 3 | Automatischer Start: Haltegründe, Countdown, Start, Abbrechen, Kettenbremse, Ansicht folgt; Doku-Abschluss, Release | heikel | 3 | pending |
 

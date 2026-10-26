@@ -1,26 +1,105 @@
-//! Die Einstiegszeile am Ende einer Agenten-Antwort (ADR 027).
+//! Einstiegszeilen am Ende einer Agenten-Antwort (ADR 027, ADR 040).
+
+use std::sync::LazyLock;
+
+use regex::Regex;
+
+use crate::agents::event::ModelId;
+use crate::sessions::model::{HandoffKind, HandoffLine};
 
 const HANDOFF_PREFIX: &str = "Weiter:";
+const PROJECT_PREFIX: &str = "Neues Vorhaben";
+const PROJECT_LABEL_MAX: usize = 80;
 const HANDOFF_WINDOW: usize = 5;
 const CODE_FENCE: &str = "```";
 
-/// Die Einstiegszeile am Ende einer Antwort (ADR 027); `None`, wenn keine der letzten fünf nicht
-/// leeren Zeilen mit „Weiter:“ beginnt.
-pub fn handoff_line(text: &str) -> Option<String> {
-    let counted_lines = text
-        .lines()
-        .rev()
-        .map(str::trim)
-        .filter(|line: &&str| !line.is_empty() && !line.starts_with(CODE_FENCE))
-        .take(HANDOFF_WINDOW);
-    for line in counted_lines {
-        let cleaned = clean(line);
-        if cleaned.starts_with(HANDOFF_PREFIX) && cleaned.chars().count() > HANDOFF_PREFIX.len() + 1
-        {
-            return Some(cleaned);
+static MODEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\bModell\s+(fable|opusplan|opus|sonnet|haiku)\b")
+        .expect("MODEL ist ein gültiger regulärer Ausdruck")
+});
+
+/// Die Einstiegszeilen einer Antwort in Antwort-Reihenfolge. Gesucht wird von hinten; Einstiegszeilen
+/// zählen nicht gegen das Fenster, andere nicht leere Zeilen schon (fünf, dann ist Schluss).
+pub fn handoff_lines(text: &str) -> Vec<HandoffLine> {
+    let mut found: Vec<HandoffLine> = Vec::new();
+    let mut counted: usize = 0;
+    for line in text.lines().rev().map(str::trim) {
+        if line.is_empty() || line.starts_with(CODE_FENCE) {
+            continue;
+        }
+        match parse_line(&clean(line)) {
+            Some(handoff) => found.push(handoff),
+            None => {
+                counted += 1;
+                if counted == HANDOFF_WINDOW {
+                    break;
+                }
+            }
         }
     }
-    None
+    found.reverse();
+    found
+}
+
+/// Erkennt eine bereinigte Zeile als „Weiter: …“ oder „Neues Vorhaben … : …“.
+pub fn parse_line(cleaned: &str) -> Option<HandoffLine> {
+    let kind: HandoffKind = if is_session_line(cleaned) {
+        HandoffKind::Session
+    } else if is_project_line(cleaned) {
+        HandoffKind::Project
+    } else {
+        return None;
+    };
+    Some(HandoffLine {
+        kind,
+        text: cleaned.to_owned(),
+        model: model_of(cleaned),
+    })
+}
+
+/// Die Zeilen für die Spalte `handoff_line`, durch Zeilenumbruch getrennt; `None` ohne Zeilen.
+pub fn join(lines: &[HandoffLine]) -> Option<String> {
+    if lines.is_empty() {
+        return None;
+    }
+    let texts: Vec<&str> = lines
+        .iter()
+        .map(|line: &HandoffLine| line.text.as_str())
+        .collect();
+    Some(texts.join("\n"))
+}
+
+/// Gegenstück zu [`join`]; liest auch Altbestände mit einer einzelnen Zeile.
+pub fn split(stored: Option<&str>) -> Vec<HandoffLine> {
+    stored.map_or_else(Vec::new, |value: &str| {
+        value.lines().filter_map(parse_line).collect()
+    })
+}
+
+fn is_session_line(cleaned: &str) -> bool {
+    cleaned.starts_with(HANDOFF_PREFIX) && cleaned.chars().count() > HANDOFF_PREFIX.len() + 1
+}
+
+fn is_project_line(cleaned: &str) -> bool {
+    let Some(rest) = cleaned.strip_prefix(PROJECT_PREFIX) else {
+        return false;
+    };
+    let Some(colon) = rest.find(':') else {
+        return false;
+    };
+    rest[..colon].chars().count() <= PROJECT_LABEL_MAX && !rest[colon + 1..].trim().is_empty()
+}
+
+fn model_of(line: &str) -> Option<ModelId> {
+    let name: &str = MODEL.captures(line)?.get(1)?.as_str();
+    match name.to_lowercase().as_str() {
+        "fable" => Some(ModelId::Fable),
+        "opusplan" => Some(ModelId::Opusplan),
+        "opus" => Some(ModelId::Opus),
+        "sonnet" => Some(ModelId::Sonnet),
+        "haiku" => Some(ModelId::Haiku),
+        _ => None,
+    }
 }
 
 /// Entfernt Zitat-Zeichen, Fettdruck und Backticks um die Zeile.

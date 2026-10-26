@@ -32,7 +32,7 @@ export function displayStatus(
   if (session.awaitedScript !== null) {
     return 'script';
   }
-  if (session.status !== 'completed' || session.handoffLine === null) {
+  if (session.status !== 'completed' || session.handoffLines.length === 0) {
     return session.status;
   }
   const hasFollowUp: boolean = sessions.some(

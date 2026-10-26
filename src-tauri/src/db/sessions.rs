@@ -36,7 +36,7 @@ pub struct SessionRow {
     pub last_activity_at: f64,
     /// Wann der User die Session zuletzt gesehen hat.
     pub seen_at: f64,
-    /// Einstiegszeile der letzten Antwort (ADR 027); `None` ohne.
+    /// Einstiegszeilen der letzten Antwort, durch `\n` getrennt (ADR 027, ADR 040); `None` ohne.
     pub handoff_line: Option<String>,
     /// Browser-Zugriff (Claude in Chrome) beim nächsten Start; ADR 030.
     pub chrome: bool,

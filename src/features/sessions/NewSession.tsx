@@ -39,6 +39,8 @@ import {
 } from '@/lib/labels';
 import { createProject } from '@/lib/projects';
 import { NEW_SESSION_KEY, useAttachmentsStore } from '@/stores/attachments';
+import { useSessionsStore } from '@/stores/sessions';
+import type { NewSessionPrefill } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
 import { NEW_SESSION_OWNER, useVoiceStore } from '@/stores/voice';
 import './NewSession.css';
@@ -60,10 +62,14 @@ interface NewSessionProps {
 }
 
 export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactElement {
-  const [text, setText] = useState<string>('');
+  // Vorbelegung aus einer Einstiegszeile (ADR 040), einmal je Öffnen des Dialogs gelesen.
+  const [prefill] = useState<NewSessionPrefill | null>(
+    () => useSessionsStore.getState().newSessionPrefill,
+  );
+  const [text, setText] = useState<string>(prefill?.task ?? '');
   // Startwerte aus den Einstellungen; sind sie noch nicht geladen, gelten die eingebauten Standardwerte.
   const [model, setModel] = useState<ModelId>(
-    () => useSettingsStore.getState().settings?.defaultModel ?? 'sonnet',
+    () => prefill?.model ?? useSettingsStore.getState().settings?.defaultModel ?? 'sonnet',
   );
   const [codexModel, setCodexModel] = useState<string | null>(
     () => useSettingsStore.getState().settings?.defaultCodexModel ?? null,
@@ -74,7 +80,7 @@ export function NewSession({ onCreated, onCancel }: NewSessionProps): ReactEleme
   const [mode, setMode] = useState<Mode>(
     () => useSettingsStore.getState().settings?.defaultMode ?? 'auto',
   );
-  const [repositoryIds, setRepositoryIds] = useState<string[]>([]);
+  const [repositoryIds, setRepositoryIds] = useState<string[]>(prefill?.repositoryIds ?? []);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState<boolean>(false);

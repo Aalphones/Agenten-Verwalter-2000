@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { focusComposer, setHandoffDraft } from '@/features/chat/composerDraft';
-import { modelOfHandoff } from '@/features/chat/handoff';
+import type { HandoffLine } from '@/lib/bindings/HandoffLine';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
@@ -14,7 +14,7 @@ const HANDOFF_TITLE =
 interface HandoffButtonProps {
   projectId: string;
   /** Die Einstiegszeile, die in den Entwurf der neuen Session kommt. */
-  line: string;
+  line: HandoffLine;
   /** Nimmt die angelegte Session in die Liste und wählt sie aus (`handleSessionCreated` in `App`). */
   onSessionCreated: (created: SessionSummary) => void;
 }
@@ -39,7 +39,7 @@ export function HandoffButton({
       return;
     }
     onSessionCreated(created);
-    const model: ModelId | null = modelOfHandoff(line);
+    const model: ModelId | null = line.model;
     if (model !== null && model !== created.model) {
       try {
         await setSessionModel(created.id, model);
@@ -47,7 +47,7 @@ export function HandoffButton({
         setErrorMessage(`Modell nicht umgestellt: ${commandErrorText(reason)}`);
       }
     }
-    setHandoffDraft(created.id, line);
+    setHandoffDraft(created.id, line.text);
     focusComposer();
     setIsCreating(false);
   }

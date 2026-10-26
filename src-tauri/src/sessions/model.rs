@@ -58,10 +58,31 @@ pub struct SessionSummary {
     pub last_activity_at: f64,
     /// Seit dem letzten Blick des Users hat der Agent abgegeben.
     pub unread: bool,
-    /// Einstiegszeile der letzten Antwort („Weiter: …“, ADR 027); `None` ohne oder nach einer neueren Nutzernachricht.
-    pub handoff_line: Option<String>,
+    /// Einstiegszeilen der letzten Antwort in Antwort-Reihenfolge (ADR 027, ADR 040); leer ohne oder nach einer neueren Nutzernachricht.
+    pub handoff_lines: Vec<HandoffLine>,
     /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
     pub awaited_script: Option<AwaitedScript>,
+}
+
+/// Art einer Einstiegszeile (ADR 040).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum HandoffKind {
+    /// „Weiter: …“ — nächste Session im selben Vorhaben.
+    Session,
+    /// „Neues Vorhaben … : …“ — Auftrag für ein neues Vorhaben.
+    Project,
+}
+
+/// Eine Einstiegszeile am Ende einer Antwort (ADR 027, ADR 040).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct HandoffLine {
+    pub kind: HandoffKind,
+    /// Die bereinigte Zeile, wie sie gesendet bzw. als Auftrag übernommen wird.
+    pub text: String,
+    /// `Modell <name>` aus der Zeile; `None` ohne Angabe.
+    pub model: Option<ModelId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

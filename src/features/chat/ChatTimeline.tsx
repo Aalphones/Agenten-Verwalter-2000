@@ -6,7 +6,7 @@ import { ArtifactCard } from '@/features/artifacts/ArtifactCard';
 import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
-import { HandoffButton } from '@/features/chat/HandoffButton';
+import { HandoffBar } from '@/features/chat/HandoffBar';
 import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
@@ -133,7 +133,7 @@ export function ChatTimeline({
   const lastErrorSeq: number | null = useMemo(() => findLastErrorSeq(entries), [entries]);
   const answerSeq: number | null = useMemo(() => lastAnswerSeq(entries), [entries]);
   const showsHandoff: boolean =
-    session.handoffLine !== null && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
+    session.handoffLines.length > 0 && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
   const workingLabel: string = useMemo(() => findActiveTodoLabel(entries), [entries]);
   const oldestOpenQuestion: QuestionEntry | null = useMemo(
     () => findOldestOpenQuestion(entries),
@@ -338,10 +338,10 @@ export function ChatTimeline({
         return (
           <>
             <TextBlock text={entry.text} unsourced={entry.unsourced} />
-            {showsHandoff && session.handoffLine !== null && entry.seq === answerSeq && (
-              <HandoffButton
+            {showsHandoff && entry.seq === answerSeq && (
+              <HandoffBar
                 projectId={session.projectId}
-                line={session.handoffLine}
+                lines={session.handoffLines}
                 onSessionCreated={onSessionCreated}
               />
             )}

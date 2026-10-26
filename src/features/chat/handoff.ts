@@ -1,7 +1,10 @@
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
-import type { ModelId } from '@/lib/bindings/ModelId';
+import type { HandoffLine } from '@/lib/bindings/HandoffLine';
+import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 
-const HANDOFF_MODEL_PATTERN = /\bModell\s+(fable|opusplan|opus|sonnet|haiku)\b/i;
+const SESSION_PREFIX = 'Weiter:';
+const PROJECT_PREFIX = 'Neues Vorhaben';
+const REPOSITORY_NAME_CHARACTER = /[a-z0-9_-]/;
 
 /** `seq` der letzten Textantwort, wenn nach ihr keine Nutzernachricht steht; sonst `null`. */
 export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null {
@@ -17,22 +20,49 @@ export function lastAnswerSeq(entries: readonly ChatEntry[]): number | null {
   return null;
 }
 
-/** Das Modell, das die Einstiegszeile empfiehlt (`Modell sonnet`); `null` ohne Angabe. */
-export function modelOfHandoff(line: string): ModelId | null {
-  const match: RegExpMatchArray | null = HANDOFF_MODEL_PATTERN.exec(line);
-  const name: string | undefined = match?.[1];
-  switch (name?.toLowerCase()) {
-    case 'fable':
-      return 'fable';
-    case 'opus':
-      return 'opus';
-    case 'opusplan':
-      return 'opusplan';
-    case 'sonnet':
-      return 'sonnet';
-    case 'haiku':
-      return 'haiku';
-    default:
-      return null;
+/** Der Auftrag einer Zeile „Neues Vorhaben … : <Auftrag>“ — alles hinter dem ersten Doppelpunkt. */
+export function taskOfProjectLine(text: string): string {
+  return text.slice(text.indexOf(':') + 1).trim();
+}
+
+/** Die Zeile ohne ihr Kennwort („Weiter:“ bzw. „Neues Vorhaben“) — für die Anzeige in einer Reihe. */
+export function handoffExcerpt(line: HandoffLine): string {
+  const prefix: string = line.kind === 'session' ? SESSION_PREFIX : PROJECT_PREFIX;
+  return line.text.slice(prefix.length).trim();
+}
+
+/** IDs der vorhandenen Repositories, deren Name in `text` als ganzes Wort steht (ohne Groß-/Kleinschreibung). */
+export function matchingRepositoryIds(
+  text: string,
+  repositories: readonly KnownRepository[],
+): string[] {
+  const haystack: string = text.toLowerCase();
+  return repositories
+    .filter(
+      (repository: KnownRepository) =>
+        !repository.isMissing && containsWholeWord(haystack, repository.name.toLowerCase()),
+    )
+    .map((repository: KnownRepository) => repository.id);
+}
+
+function containsWholeWord(haystack: string, word: string): boolean {
+  if (word === '') {
+    return false;
+  }
+  let from = 0;
+  for (;;) {
+    const index: number = haystack.indexOf(word, from);
+    if (index === -1) {
+      return false;
+    }
+    const before: string = haystack.charAt(index - 1);
+    const after: string = haystack.charAt(index + word.length);
+    const isBounded: boolean =
+      (before === '' || !REPOSITORY_NAME_CHARACTER.test(before)) &&
+      (after === '' || !REPOSITORY_NAME_CHARACTER.test(after));
+    if (isBounded) {
+      return true;
+    }
+    from = index + 1;
   }
 }

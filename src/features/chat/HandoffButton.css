@@ -1,6 +1,4 @@
 .handoff {
-  margin-top: var(--space-lg);
-
   &__button {
     padding: var(--space-xs) var(--space-lg);
     border: 1px solid var(--color-status-handoff);

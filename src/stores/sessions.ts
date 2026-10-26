@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ModelId } from '@/lib/bindings/ModelId';
 
 export const SESSION_VIEWS = ['chat', 'changes', 'artifacts'] as const;
 export type SessionView = (typeof SESSION_VIEWS)[number];
@@ -13,10 +14,19 @@ export interface RenameTarget {
   id: string;
 }
 
+/** Vorbelegung für „Neues Vorhaben“ aus einer Einstiegszeile (ADR 040). */
+export interface NewSessionPrefill {
+  task: string;
+  model: ModelId | null;
+  repositoryIds: string[];
+}
+
 interface SessionsState {
   activeSessionId: string | null;
   activeView: SessionView;
   showNewSession: boolean;
+  /** Vorbelegung des Dialogs „Neues Vorhaben“; `null` = leerer Dialog. */
+  newSessionPrefill: NewSessionPrefill | null;
   /** `true`: die Einstellungsseite statt Session, Übersicht oder „Neues Vorhaben“. */
   showSettings: boolean;
   activeProjectId: string | null;
@@ -34,6 +44,7 @@ interface SessionsState {
   showView: (view: SessionView) => void;
   showProjectView: (view: ProjectView) => void;
   openNewSession: () => void;
+  openNewSessionWith: (prefill: NewSessionPrefill) => void;
   closeNewSession: () => void;
   openSettings: () => void;
   closeSettings: () => void;
@@ -47,6 +58,7 @@ export const useSessionsStore = create<SessionsState>((set) => ({
   activeSessionId: null,
   activeView: 'chat',
   showNewSession: false,
+  newSessionPrefill: null,
   showSettings: false,
   activeProjectId: null,
   showProjectOverview: false,
@@ -78,10 +90,23 @@ export const useSessionsStore = create<SessionsState>((set) => ({
     set({ projectView: view });
   },
   openNewSession: (): void => {
-    set({ showNewSession: true, showSettings: false, showProjectOverview: false });
+    set({
+      showNewSession: true,
+      newSessionPrefill: null,
+      showSettings: false,
+      showProjectOverview: false,
+    });
+  },
+  openNewSessionWith: (prefill: NewSessionPrefill): void => {
+    set({
+      showNewSession: true,
+      newSessionPrefill: prefill,
+      showSettings: false,
+      showProjectOverview: false,
+    });
   },
   closeNewSession: (): void => {
-    set({ showNewSession: false });
+    set({ showNewSession: false, newSessionPrefill: null });
   },
   openSettings: (): void => {
     set({ showSettings: true, showNewSession: false, showProjectOverview: false });

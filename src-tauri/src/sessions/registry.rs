@@ -63,7 +63,7 @@ use crate::review::{
     model::{CommentTarget, ReviewComment},
 };
 use crate::sessions::model::{
-    AwaitedScript, ChatEntryEvent, ChatPage, SessionStatus, SessionSummary,
+    AwaitedScript, ChatEntryEvent, ChatPage, HandoffLine, SessionStatus, SessionSummary,
 };
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
@@ -217,8 +217,8 @@ struct SessionState {
     created_at: f64,
     /// Letztes Senden oder Abgeben des Agenten.
     last_activity_at: f64,
-    /// Einstiegszeile der letzten Antwort (ADR 027); eine Nutzernachricht löscht sie.
-    handoff_line: Option<String>,
+    /// Einstiegszeilen der letzten Antwort (ADR 027, ADR 040); eine Nutzernachricht löscht sie.
+    handoff_lines: Vec<HandoffLine>,
     /// Wann der User die Session zuletzt gesehen hat.
     seen_at: f64,
     /// Die Oberfläche zeigt die Session gerade (`set_viewed`); nur im Speicher.
@@ -1897,7 +1897,7 @@ impl SessionState {
             mode,
             created_at: now,
             last_activity_at: now,
-            handoff_line: None,
+            handoff_lines: Vec::new(),
             seen_at: now,
             is_viewed: false,
             running_ms: 0.0,
@@ -1960,7 +1960,7 @@ impl SessionState {
         };
         state.created_at = row.created_at;
         state.last_activity_at = row.last_activity_at;
-        state.handoff_line = row.handoff_line.clone();
+        state.handoff_lines = handoff::split(row.handoff_line.as_deref());
         state.seen_at = row.seen_at;
         state.running_ms = row.running_ms;
         state.context_used = row.context_used;
@@ -2405,7 +2405,7 @@ impl SessionState {
             comments,
         });
         self.touch_activity(outbox);
-        self.handoff_line = None;
+        self.handoff_lines.clear();
         // Wer sendet, hat die Session gesehen.
         self.seen_at = self.last_activity_at;
     }
@@ -2518,9 +2518,9 @@ impl SessionState {
             }
             AgentEvent::Text(text) => {
                 self.wake_if_idle(outbox);
-                let handoff = handoff::handoff_line(&text);
-                if self.handoff_line != handoff {
-                    self.handoff_line = handoff;
+                let lines: Vec<HandoffLine> = handoff::handoff_lines(&text);
+                if self.handoff_lines != lines {
+                    self.handoff_lines = lines;
                     outbox.summary_dirty = true;
                 }
                 let seq: u32 = self.push_entry(outbox, |seq: u32| ChatEntry::Text {
@@ -3215,7 +3215,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         created_at: state.created_at,
         last_activity_at: state.last_activity_at,
         seen_at: state.seen_at,
-        handoff_line: state.handoff_line.clone(),
+        handoff_line: handoff::join(&state.handoff_lines),
         chrome: state.chrome,
         running_ms: state.running_ms,
         context_used: state.context_used,
@@ -3301,7 +3301,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         mcp_problems: state.mcp_problem_count(),
         last_activity_at: state.last_activity_at,
         unread: state.last_activity_at > state.seen_at,
-        handoff_line: state.handoff_line.clone(),
+        handoff_lines: state.handoff_lines.clone(),
         awaited_script: state.awaited_script(),
     }
 }
