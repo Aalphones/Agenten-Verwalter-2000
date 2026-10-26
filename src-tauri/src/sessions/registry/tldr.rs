@@ -12,9 +12,9 @@ use super::{
     project_not_found, update,
 };
 use crate::agents::claude::print::{HaikuRequest, PrintProgram, ask_haiku, print_program};
+use crate::db::projects as project_rows;
 use crate::db::tldr as tldr_rows;
 use crate::error::CommandError;
-use crate::db::projects as project_rows;
 use crate::sessions::clean_title;
 use crate::sessions::model::SessionStatus;
 use crate::tldr::model::{
@@ -22,8 +22,8 @@ use crate::tldr::model::{
     TldrChangedEvent,
 };
 use crate::tldr::prompt::{
-    PROJECT_SCHEMA, PROJECT_SYSTEM_PROMPT, SESSION_SCHEMA, SESSION_SYSTEM_PROMPT, TITLE_INPUT_CHARS,
-    TITLE_SCHEMA, TITLE_SYSTEM_PROMPT, TLDR_TIMEOUT,
+    PROJECT_SCHEMA, PROJECT_SYSTEM_PROMPT, SESSION_SCHEMA, SESSION_SYSTEM_PROMPT,
+    TITLE_INPUT_CHARS, TITLE_SCHEMA, TITLE_SYSTEM_PROMPT, TLDR_TIMEOUT,
 };
 use crate::tldr::transcript::{project_input, session_transcript};
 
