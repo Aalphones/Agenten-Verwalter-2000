@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ArtifactFrame } from '@/features/artifacts/ArtifactFrame';
 import { ArtifactFullscreen } from '@/features/artifacts/ArtifactFullscreen';
@@ -46,6 +46,7 @@ export function ArtifactsView({
   const [pick, setPick] = useState<ArtifactPick | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const commentRef = useRef<HTMLDivElement>(null);
   const lastModified = useRef<Record<string, number>>({});
   const selectedFile: string | undefined = useArtifactsStore((state) => state.selected[projectId]);
   const select = useArtifactsStore((state) => state.select);
@@ -108,6 +109,17 @@ export function ArtifactsView({
   }
 
   useArtifactPicker(frameRef, isCommenting, marks, handlePick);
+
+  // Unter das Element, sonst auf dessen Oberkante — immer innerhalb der Bühne.
+  useLayoutEffect(() => {
+    const comment: HTMLDivElement | null = commentRef.current;
+    const stage: HTMLDivElement | null = stageRef.current;
+    if (comment === null || stage === null || pick === null) return;
+    const maxTop: number = Math.max(0, stage.clientHeight - comment.offsetHeight);
+    const below: number = pick.rect.y + pick.rect.height;
+    const top: number = below <= maxTop ? below : pick.rect.y;
+    comment.style.top = `${String(Math.max(0, Math.min(top, maxTop)))}px`;
+  }, [pick, box]);
 
   useEffect(() => {
     if (selectedKey === undefined || selectedModifiedAt === undefined) {
@@ -371,10 +383,7 @@ export function ArtifactsView({
             frameRef={frameRef}
           />
           {currentSessionId !== null && pick !== null && box !== null ? (
-            <div
-              className="artifacts__comment"
-              style={{ left: pick.rect.x, top: pick.rect.y + pick.rect.height }}
-            >
+            <div ref={commentRef} className="artifacts__comment" style={{ left: pick.rect.x }}>
               <CommentBox
                 fileLabel={pick.label === '' ? pick.selector : `„${pick.label}“`}
                 lineLabel={selectorTail(pick.selector)}
