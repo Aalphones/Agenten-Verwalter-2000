@@ -6,6 +6,9 @@ use verwalter_lib::{
         Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
         QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
     },
+    app_update::model::{
+        AppUpdateProgress, AppUpdateStatus, InstallKind, InstallPhase, ReleaseInfo,
+    },
     archive::model::{ArchivePage, ArchiveSnippet, ArchivedProject, ProjectRestored},
     artifacts::model::{Artifact, ArtifactList},
     background::model::{
@@ -136,6 +139,11 @@ fn main() -> Result<(), ts_rs::ExportError> {
     AccountStatus::export_all(&cfg)?;
     CliUpdateOutcome::export_all(&cfg)?;
     CliVersionStatus::export_all(&cfg)?;
+    InstallKind::export_all(&cfg)?;
+    ReleaseInfo::export_all(&cfg)?;
+    AppUpdateStatus::export_all(&cfg)?;
+    InstallPhase::export_all(&cfg)?;
+    AppUpdateProgress::export_all(&cfg)?;
     SessionTldr::export_all(&cfg)?;
     ProjectTldr::export_all(&cfg)?;
     SessionTldrView::export_all(&cfg)?;

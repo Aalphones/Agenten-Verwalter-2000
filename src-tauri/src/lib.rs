@@ -1,5 +1,6 @@
 pub mod account;
 pub mod agents;
+pub mod app_update;
 pub mod archive;
 pub mod artifacts;
 pub mod attachments;
@@ -39,6 +40,7 @@ use std::sync::Arc;
 use tauri::Manager;
 
 use account::AccountService;
+use app_update::AppUpdateService;
 use cli_update::CliUpdateService;
 use codex::models::CodexService;
 use codex_account::CodexAccountService;
@@ -69,6 +71,11 @@ pub fn run() {
             app.manage(AccountService::new());
             app.manage(CodexAccountService::new());
             app.manage(CliUpdateService::new());
+            let app_update = AppUpdateService::new();
+            if let Some(exe) = app_update.exe() {
+                app_update::swap::cleanup(exe);
+            }
+            app.manage(app_update);
             app.manage(VoiceService::new());
             SessionRegistry::start_reaper(app.handle().clone());
             // Ohne Server fehlen nur die Artefakte; `artifacts_list` meldet das.
@@ -122,6 +129,8 @@ pub fn run() {
             commands::account::account_login,
             commands::cli_update::cli_update_load,
             commands::cli_update::cli_update_run,
+            commands::app_update::app_update_load,
+            commands::app_update::app_update_install,
             commands::attachments::attachment_add_files,
             commands::attachments::attachment_add_bytes,
             commands::attachments::attachment_discard,

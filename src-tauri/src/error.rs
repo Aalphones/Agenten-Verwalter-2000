@@ -56,6 +56,8 @@ pub enum CommandError {
     FileNotFound(String),
     #[error("{0}")]
     FileNotAllowed(String),
+    #[error("{0}")]
+    AppUpdate(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

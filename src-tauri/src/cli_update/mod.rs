@@ -169,7 +169,7 @@ fn read_latest() -> Result<String, String> {
 }
 
 /// Vergleicht numerisch je Abschnitt (`2.1.9` < `2.1.10`); ein Zusatz wie `-beta` zählt nicht.
-fn compare_versions(left: &str, right: &str) -> Ordering {
+pub(crate) fn compare_versions(left: &str, right: &str) -> Ordering {
     numbers(left).cmp(&numbers(right))
 }
 

@@ -64,6 +64,8 @@ jobs:
           echo "CMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG" >> "$GITHUB_ENV"
           echo "CMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG" >> "$GITHUB_ENV"
       - run: pnpm tauri build --bundles ${{ matrix.bundles }}
+      # Die Namen `*-setup.exe` und `*_x64-portable.exe` liest die Update-Funktion des Verwalters
+      # (ADR 041) — nicht ändern, ohne `app_update/releases.rs` anzupassen.
       - name: Dateien einsammeln
         shell: bash
         run: |

@@ -1,8 +1,8 @@
 # STATE
 
-**Aktiver Plan:** keiner. Als Nächstes aus dem Backlog `2026-10-22_parallele-sessions` (ADR 037) oder `2026-10-22_umgebung` (ADR 038).
-**Phase:** —
-**Nächster Schritt:** Plan wählen und freigeben lassen. Offen aus „Automatisch weiter“ (Follow-ups in dessen README): Ablauf einmal im Test-Vorhaben fahren; Arbeitsbaum-Erkennung einmal gegen die laufende App fahren. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVMin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"` — sonst scheitert whisper-rs-sys.
+**Aktiver Plan:** `docs/planning/2026-10-27_app-update.md`
+**Phase:** 2/2 — Oberfläche (pending); Phase 1 Core complete.
+**Nächster Schritt:** Phase 2 umsetzen (Abschnitt „Agenten Verwalter“, Dialog, Punkt in der Sidebar, Doku-Abschluss, Versions-Tag). Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVMbin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"`, `%USERPROFILE%\.cargobin` in den PATH — sonst scheitert whisper-rs-sys.
 **Danach (Backlog):** `2026-10-22_parallele-sessions` und `2026-10-22_umgebung` — unabhängig voneinander umsetzbar; beide fassen wie „Automatisch weiter“ die Funktion `send` an, wer später umsetzt, liest sie neu.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-26_automatisch-weiter/` (ADR 040, Migration 14), Release `v0.34.0`.
 

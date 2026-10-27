@@ -1,5 +1,6 @@
 pub mod account;
 pub mod app;
+pub mod app_update;
 pub mod archive;
 pub mod artifacts;
 pub mod attachments;
