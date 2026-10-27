@@ -165,6 +165,18 @@
     }
   }
 
+  &__settings-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-left: auto;
+    border-radius: 50%;
+
+    &--update {
+      background: var(--color-accent);
+    }
+  }
+
   &__empty {
     margin: 0;
     padding: var(--space-md);

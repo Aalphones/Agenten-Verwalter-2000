@@ -13,6 +13,7 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { archiveProject, renameProject } from '@/lib/projects';
 import { deleteSession, renameSession } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
+import { useAppUpdateStore } from '@/stores/appUpdate';
 import { useSessionsStore } from '@/stores/sessions';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
@@ -79,6 +80,7 @@ export function Sidebar({
     const operatingMode: string = state.settings?.operatingMode ?? 'claude';
     return operatingMode === 'claude' || operatingMode === 'codex';
   });
+  const hasAppUpdate: boolean = useAppUpdateStore((state) => state.status?.hasUpdate === true);
   const { error: actionError, run } = useActionError('sidebar');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -405,6 +407,13 @@ export function Sidebar({
             <circle cx="5" cy="10" r="1.5" />
           </svg>
           <span>Einstellungen</span>
+          {hasAppUpdate && (
+            <span
+              className="sidebar__settings-dot sidebar__settings-dot--update"
+              role="img"
+              aria-label="Neue Version verfügbar"
+            />
+          )}
         </button>
       </div>
     </nav>

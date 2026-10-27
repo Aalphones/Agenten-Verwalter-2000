@@ -1,0 +1,49 @@
+.app-version-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-grow: 1;
+  min-width: 0;
+
+  &__state {
+    display: flex;
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  &__versions {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+    min-width: 0;
+  }
+
+  &__current,
+  &__plain {
+    font-size: var(--font-size-md);
+    color: var(--color-fg-secondary);
+  }
+
+  &__extra {
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+  }
+
+  &__available {
+    font-size: var(--font-size-sm);
+    color: var(--color-accent);
+    white-space: nowrap;
+  }
+
+  &__error {
+    font-size: var(--font-size-sm);
+    color: var(--color-status-waiting);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--space-sm);
+  }
+}

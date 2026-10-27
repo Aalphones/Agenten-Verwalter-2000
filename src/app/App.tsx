@@ -5,6 +5,7 @@ import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionActionError } from '@/app/SessionActionError';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
+import { useAppUpdateCheck } from '@/features/appupdate/useAppUpdate';
 import { ArchiveDialog } from '@/features/archive/ArchiveDialog';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
 import { countRunning, indexByToolUseId } from '@/features/background/backgroundItems';
@@ -73,6 +74,8 @@ export function App(): ReactElement {
   );
   useVoiceModel();
   useRetroProgress();
+  // Die Abfrage beim Start füllt den Store; der Punkt an „Einstellungen“ liest ihn.
+  useAppUpdateCheck();
 
   // „Automatisch weiter“ (ADR 040): wer gerade die alte Session ansieht, landet in der neuen. Die
   // neue Session selbst kommt über `session://changed` in die Liste.
@@ -347,6 +350,7 @@ export function App(): ReactElement {
     if (showSettings) {
       return (
         <SettingsView
+          sessions={sessions}
           overview={settingsOverview}
           loadError={settingsError}
           onReload={reloadSettings}

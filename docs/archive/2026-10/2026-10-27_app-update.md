@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../AGENTS.md), [docs/code-map.md](..
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Releases abfragen, Download mit Prüfsumme, Datei tauschen, Neustart; Prüfprogramm; ADR 041 | heikel | complete |
-| 2 | Oberfläche: Abschnitt „Agenten Verwalter“, Dialog mit Release-Notes, Punkt am Knopf „Einstellungen“; Doku-Abschluss | standard | pending |
+| 2 | Oberfläche: Abschnitt „Agenten Verwalter“, Dialog mit Release-Notes, Punkt am Knopf „Einstellungen“; Doku-Abschluss | standard | complete |
 
 **Rahmen:** strikt 1 → 2 (die Oberfläche braucht die generierten Typen), direkt auf `main`, ein Commit pro Phase, Scope `settings`. `pnpm check` grün vor jedem Commit, `cargo` im PATH (Rechner-Besonderheiten der Prüfkette: [STATE.md](../../STATE.md)), keine neuen Abhängigkeiten (`ureq`, `sha2`, `serde_json` sind da), Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version). Keine Änderung an `release.yml` außer einem Kommentar (siehe Entscheidungen).
 
@@ -96,13 +96,13 @@ AK:
 5. Der Knopf „Einstellungen“ in der Sidebar trägt einen Punkt (Akzentfarbe, `aria-label` „Neue Version verfügbar“), solange `hasUpdate` wahr ist; geprüft beim App-Start und beim Öffnen der Einstellungen.
 6. Mit `VERWALTER_APP_VERSION=0.0.1 pnpm tauri dev` erscheinen Zeile, Dialog mit den echten Release-Notes und der Punkt; die Zustände „aktuell“ und „Fehler“ sind belegt (Funktionsweise ohne Netz: Netzwerk trennen, „Erneut prüfen“).
 
-- [ ] Wrapper `src/lib/appUpdate.ts` nach Kontrakt (Muster `cliUpdate.ts`).
-- [ ] Store `src/stores/appUpdate.ts`: `status: AppUpdateStatus | null`, `setStatus`; Hook `src/features/appupdate/useAppUpdate.ts`: lädt beim Einhängen, `check()`, `install()` (setzt `progress` aus dem Ereignis, fängt Fehler als Satz über `commandErrorText`), Abo auf `app-update://progress` mit Abmelden. Einmal in `App.tsx` beim Start laden; `SettingsView` ruft `check()` beim Öffnen.
-- [ ] `src/features/appupdate/AppVersionRow.tsx` + `.css` (BEM `app-version-row__*`), `AppUpdateDialog.tsx` + `.css`, `appUpdateTexts.ts` (alle Sätze, `formatMegabytes`, `runningSessionCount(summaries)`); eingebunden in `renderSections` über „Claude Code“.
-- [ ] `Sidebar.tsx`: Punkt nach AK 5 (Klasse `sidebar__settings-dot`, falls Phase 2 des Plans „Umgebung“ ihn schon angelegt hat, dieselbe Klasse mit Modifikator `--update`; sonst neu).
-- [ ] Doc: `docs/code-map.md` neue Zeile „App-Update“ (Oberfläche `src/features/appupdate/`, Store, Wrapper; Core `src-tauri/src/app_update/`, Commands, Prüfprogramm, ADR 041); `docs/glossary.md` neue Einträge **Portable** („Die lose `verwalter.exe` ohne Installer; ein Update ersetzt sie am selben Pfad (ADR 041).“) und **Prüfsumme** („SHA-256 einer Release-Datei, von GitHub je Datei genannt; ohne Treffer wird nichts installiert.“); `AGENTS.md`: Zeile `VERWALTER_APP_VERSION` in „Befehle“; `docs/conventions/releases.md`: Regel „Die Dateinamen `*-setup.exe` und `*_x64-portable.exe` sind ein Vertrag mit der Update-Funktion“; `README.md` Satz zum Update in den Einstellungen.
-- [ ] Plan-Abschluss: Bottom-Sektionen, Archiv, STATE.md, Versions-Tag (Minor-Version).
-- [ ] `pnpm check` grün, Commit `feat(settings): Abschnitt Agenten Verwalter, Dialog und Hinweis in der Sidebar`.
+- [x] Wrapper `src/lib/appUpdate.ts` nach Kontrakt (Muster `cliUpdate.ts`).
+- [x] Store `src/stores/appUpdate.ts`: `status: AppUpdateStatus | null`, `setStatus`; Hook `src/features/appupdate/useAppUpdate.ts`: lädt beim Einhängen, `check()`, `install()` (setzt `progress` aus dem Ereignis, fängt Fehler als Satz über `commandErrorText`), Abo auf `app-update://progress` mit Abmelden. Einmal in `App.tsx` beim Start laden; `SettingsView` ruft `check()` beim Öffnen.
+- [x] `src/features/appupdate/AppVersionRow.tsx` + `.css` (BEM `app-version-row__*`), `AppUpdateDialog.tsx` + `.css`, `appUpdateTexts.ts` (alle Sätze, `formatMegabytes`, `runningSessionCount(summaries)`); eingebunden in `renderSections` über „Claude Code“.
+- [x] `Sidebar.tsx`: Punkt nach AK 5 (Klasse `sidebar__settings-dot`, falls Phase 2 des Plans „Umgebung“ ihn schon angelegt hat, dieselbe Klasse mit Modifikator `--update`; sonst neu).
+- [x] Doc: `docs/code-map.md` neue Zeile „App-Update“ (Oberfläche `src/features/appupdate/`, Store, Wrapper; Core `src-tauri/src/app_update/`, Commands, Prüfprogramm, ADR 041); `docs/glossary.md` neue Einträge **Portable** („Die lose `verwalter.exe` ohne Installer; ein Update ersetzt sie am selben Pfad (ADR 041).“) und **Prüfsumme** („SHA-256 einer Release-Datei, von GitHub je Datei genannt; ohne Treffer wird nichts installiert.“); `AGENTS.md`: Zeile `VERWALTER_APP_VERSION` in „Befehle“; `docs/conventions/releases.md`: Regel „Die Dateinamen `*-setup.exe` und `*_x64-portable.exe` sind ein Vertrag mit der Update-Funktion“; `README.md` Satz zum Update in den Einstellungen.
+- [x] Plan-Abschluss: Bottom-Sektionen, Archiv, STATE.md, Versions-Tag (Minor-Version).
+- [x] `pnpm check` grün, Commit `feat(settings): Abschnitt Agenten Verwalter, Dialog und Hinweis in der Sidebar`.
 
 ## Wackelstellen (nur Plan, kein Prüfauftrag)
 
@@ -113,12 +113,26 @@ AK:
 
 ## Summary
 
+Der Verwalter aktualisiert sich aus den GitHub-Releases: Core (Abfrage, Download mit SHA-256-Prüfung, Tausch der eigenen exe oder Installer-Start, Neustart) in Phase 1, Oberfläche in Phase 2 — Abschnitt „Agenten Verwalter“ mit Version und „Erneut prüfen“, Dialog mit Release-Notes aller neueren Versionen und Fortschrittsleiste, Punkt am Knopf „Einstellungen“. ADR 041.
+
 ## Files touched
+
+- Core (Phase 1): `src-tauri/src/app_update/`, `src-tauri/src/commands/app_update.rs`, `src-tauri/examples/app-update-probe.rs`, `lib.rs`, `error.rs`, Bindings, `release.yml` (Kommentar), ADR 041.
+- Oberfläche (Phase 2): `src/features/appupdate/` (Zeile, Dialog, Hooks, Texte), `src/stores/appUpdate.ts`, `src/lib/appUpdate.ts`, `SettingsView.tsx`, `App.tsx`, `Sidebar.tsx` + `.css`.
+- Doku: `docs/code-map.md`, `docs/glossary.md`, `docs/conventions/releases.md`, `AGENTS.md`, `README.md`.
 
 ## Commits
 
+- Phase 1: `feat(settings): Releases abfragen, prüfen und die eigene Datei tauschen`
+- Phase 2: `feat(settings): Abschnitt Agenten Verwalter, Dialog und Hinweis in der Sidebar` (mit Archivierung dieses Plans)
+- Release: `chore(release): v0.35.0`, Tag `v0.35.0`
+
 ## Deviations from plan
 
+- Phase 2: Zwei Hooks statt einem — `useAppUpdateCheck` (Abfrage, Status im Store; in `App.tsx` beim Start und in der Zeile beim Öffnen der Einstellungen) und `useAppUpdateInstall` (Installation, Fortschritt, Fehler; nur im Dialog). `check()` setzt `isChecking` selbst; beim Einhängen übernimmt der Startwert, weil die Regel `set-state-in-effect` einen synchronen `setState` im Effekt verbietet.
+- Phase 2: Die Zahl laufender Sessions kommt als Prop `sessions` von `App.tsx` über `SettingsView` in die Zeile (die Session-Liste lebt im Hook `useSessionSummaries`, nicht im Sessions-Store).
+- Phase 2: Der Dialog gehört der Zeile (`AppVersionRow`), nicht der Seite. Warnfarbe = `--color-status-waiting` (es gibt kein eigenes Warn-Token). Punkt in der Sidebar neu angelegt (`sidebar__settings-dot--update`), der Plan „Umgebung“ hatte keinen.
+- Phase 2: Nicht in der laufenden App geprüft (AK 6) — nur Prüfkette (Lint, Typen, Format, Build, rustfmt, Clippy). Smoke laut Rahmen entfallen; der erste echte Lauf ist `VERWALTER_APP_VERSION=0.0.1 pnpm tauri dev` oder das Update von `v0.35.0` auf das nächste Release.
 - Phase 1: Neustart und Installer-Start laufen mit `CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP` statt `DETACHED_PROCESS` — ohne eigene (verborgene) Konsole öffnete `ping` ein sichtbares Fenster; der Prozess überlebt das Ende des Verwalters trotzdem, die App hängt ihre Kinder an kein Job-Objekt. Der Installer startet ebenfalls über `cmd … start`, damit Windows bei Bedarf nach Administratorrechten fragt.
 - Phase 1: ureq 3 kennt kein Zeitlimit je Lesen. Download mit 30 s für Verbindung und Antwortkopf, 10 min für den ganzen Inhalt.
 - Phase 1: `releases::fetch` liefert alle veröffentlichten Releases (die Version geht nur in den `User-Agent`); das Filtern auf „neuer als“ macht `releases::newer_than`. `Asset` trägt `sha256` (Hex ohne Präfix) statt `digest`. `download::verify` ist eigenständig, damit das Prüfprogramm eine veränderte Datei prüfen kann. Neue Variante `CommandError::AppUpdate` für die Sätze des Updates.
@@ -128,4 +142,5 @@ AK:
 
 - → Phase 2: Ob laufende Agenten beim Beenden des Verwalters mitsterben, ist nicht belegt (Hypothese: Claude endet mit geschlossener Standardeingabe, Autark/Codex laufen als eigene exe weiter und können `.alt` sperren). Folge im ADR 041 vermerkt; ein zweites Update vor dem Ende eines solchen Agenten scheitert mit Meldung.
 - → Phase 2: Fehlersätze kommen als `CommandError` der Art `appUpdate` mit fertigem Satz in `message`; `commandErrorText` gibt ihn ohne eigenen Fall aus.
+- Erste echte Beobachtung des Updates: nach dem Release nach `v0.35.0` (Portable-Tausch, Neustart, `.alt` löschen) bzw. vorab im Dev-Lauf mit `VERWALTER_APP_VERSION=0.0.1`.
 - Prüfkette auf diesem Rechner: der Clippy-Lauf baut whisper-rs-sys in einem eigenen Build-Ordner; lag dort ein CMake-Cache eines anderen Visual-Studio-Generators, half nur Löschen von `CMakeCache.txt` und `CMakeFiles` in `target/debug/build/whisper-rs-sys-*/out/build`.

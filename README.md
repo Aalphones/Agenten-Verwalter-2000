@@ -22,6 +22,7 @@ Leitsatz: **Chat first, Changes second.** Was dem Agent-Workflow nicht aktiv hil
 - **Kontext, Kontingent, Konto:** Aufschlüsselung des Kontexts, Abo-Kontingent, Claude-Konto und -Version in der App sehen und wechseln, MCP-Server je Session verwalten.
 - **Vorhaben-Retro:** sammelt die Befunde aller Sessions eines Vorhabens und legt daraus eine Retro-Session an.
 - **Einstellungen:** Farbschema (Dunkel, Hell, System), Standardwerte für neue Vorhaben, Betriebsart, Sprache des Diktats.
+- **Update des Verwalters:** Der Abschnitt „Agenten Verwalter“ in den Einstellungen zeigt die laufende Version und die neueren Releases von GitHub samt Release-Notes; ein Klick lädt die neue Datei, prüft ihre Prüfsumme und startet den Verwalter neu (die portable exe ersetzt sich selbst, der Installer wird gestartet). Ein Punkt am Knopf „Einstellungen“ weist auf ein Update hin.
 
 ### Betriebsarten
 

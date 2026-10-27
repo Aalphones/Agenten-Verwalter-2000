@@ -5,6 +5,8 @@ import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
 import { Switch } from '@/components/Switch';
 import { AccountRow } from '@/features/account/AccountRow';
+import { runningSessionCount } from '@/features/appupdate/appUpdateTexts';
+import { AppVersionRow } from '@/features/appupdate/AppVersionRow';
 import { CodexAccountRow } from '@/features/codexaccount/CodexAccountRow';
 import { CliVersionRow } from '@/features/cliupdate/CliVersionRow';
 import {
@@ -29,6 +31,7 @@ import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { OperatingMode } from '@/lib/bindings/OperatingMode';
+import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { Settings } from '@/lib/bindings/Settings';
 import type { SettingsOverview } from '@/lib/bindings/SettingsOverview';
 import { commandErrorText } from '@/lib/errors';
@@ -48,12 +51,19 @@ const NO_CODEX_MODELS: readonly CodexModel[] = [];
 type OpenMenu = 'model' | 'mode' | 'localModel' | null;
 
 interface SettingsViewProps {
+  /** Alle Sessions; ein Update des Verwalters unterbricht die laufenden. */
+  sessions: readonly SessionSummary[];
   overview: SettingsOverview | null;
   loadError: string | null;
   onReload: () => void;
 }
 
-export function SettingsView({ overview, loadError, onReload }: SettingsViewProps): ReactElement {
+export function SettingsView({
+  sessions,
+  overview,
+  loadError,
+  onReload,
+}: SettingsViewProps): ReactElement {
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [revealError, setRevealError] = useState<string | null>(null);
   const storedSettings: Settings | null = useSettingsStore((state) => state.settings);
@@ -181,6 +191,10 @@ export function SettingsView({ overview, loadError, onReload }: SettingsViewProp
           <h2 className="settings-view__section-title">Konto</h2>
           {current.operatingMode !== 'standalone' && <AccountRow />}
           <CodexAccountRow />
+        </section>
+        <section className="settings-view__section">
+          <h2 className="settings-view__section-title">Agenten Verwalter</h2>
+          <AppVersionRow runningSessions={runningSessionCount(sessions)} />
         </section>
         {current.operatingMode !== 'standalone' && (
           <section className="settings-view__section">
