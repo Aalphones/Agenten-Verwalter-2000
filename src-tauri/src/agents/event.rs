@@ -265,6 +265,19 @@ impl ChatEntry {
     }
 }
 
+/// Eingabe und Ausgabe eines Werkzeug-Aufrufs, geladen erst beim Aufklappen (ADR 042). Beide
+/// Texte sind auf ihren Deckel gekürzt; `output` ist leer, solange der Aufruf läuft.
+#[derive(Debug, Clone, Default, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolDetail {
+    pub input: String,
+    pub input_truncated: bool,
+    pub output: String,
+    pub output_truncated: bool,
+    /// Es gibt keine Zeile zu diesem Aufruf (älterer Verlauf oder Aufruf ohne Ergebnis).
+    pub missing: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(
     tag = "kind",
@@ -336,6 +349,9 @@ pub enum AgentEvent {
         /// Ungekürzte Werte von `file_path`, `notebook_path`, `path` und `command` aus der Eingabe
         /// des Werkzeugs; daraus ordnet die Session Ticket-Worktrees zu.
         used_paths: Vec<String>,
+        /// Text der Eingabe für die Werkzeug-Details, gekürzt auf `MAX_TOOL_INPUT_BYTES`.
+        input: String,
+        input_truncated: bool,
     },
     ToolFinished {
         tool_use_id: String,
@@ -343,7 +359,12 @@ pub enum AgentEvent {
     },
     /// Ausgabe eines Werkzeugs des Hauptagenten; Quelle für den Abgleich der Antwort (ADR 036).
     ToolOutput {
+        tool_use_id: String,
+        /// Ungekürzt: der Abgleich soll dasselbe sehen wie der Agent.
         text: String,
+        /// `text` gekürzt auf `MAX_TOOL_OUTPUT_BYTES`, für die Werkzeug-Details.
+        detail: String,
+        truncated: bool,
     },
     Todos(Vec<TodoItem>),
     QuestionAsked {

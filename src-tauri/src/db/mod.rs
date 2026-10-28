@@ -16,6 +16,7 @@ pub mod sessions;
 pub mod settings;
 pub mod skill_uses;
 pub mod tldr;
+pub mod tool_details;
 
 use std::fs;
 use std::path::Path;

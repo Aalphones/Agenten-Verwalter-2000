@@ -41,6 +41,19 @@ pub fn tail_text(text: &str, max_bytes: usize) -> (String, bool) {
     (whole_lines.to_owned(), true)
 }
 
+/// Die ersten höchstens `max_bytes` von `text`, geschnitten an einer Zeichengrenze. Zweiter Wert:
+/// ob gekürzt wurde.
+pub fn head_text(text: &str, max_bytes: usize) -> (String, bool) {
+    if text.len() <= max_bytes {
+        return (text.to_owned(), false);
+    }
+    let mut end = max_bytes;
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    (text[..end].to_owned(), true)
+}
+
 /// Höchstens `max_bytes` vom Anfang der Datei; `None`, wenn sie sich nicht lesen lässt.
 pub fn read_head(path: &Path, max_bytes: u64) -> Option<String> {
     let file = File::open(path).ok()?;
