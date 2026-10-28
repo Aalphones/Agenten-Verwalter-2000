@@ -66,12 +66,30 @@
     padding-left: var(--space-2xl);
   }
 
+  &__item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
   &__line {
     display: flex;
     align-items: baseline;
     gap: var(--space-md);
     min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
     font-size: var(--font-size-sm);
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
 
     &--failed .tool-group__tool {
       color: var(--color-status-error);

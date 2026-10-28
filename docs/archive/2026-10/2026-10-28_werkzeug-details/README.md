@@ -6,9 +6,9 @@ Zwei Anliegen aus einer Beobachtung: (1) Der Reiter „Prozesse" zeigt bei einem
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | [Prozess-Ausgabe: ehrlicher Text, Pfad früher](phase-1-prozess-ausgabe.md) | standard | 1 | pending |
-| 2 | [Kern: Eingabe und Ausgabe je Aufruf speichern und liefern](phase-2-speicher-und-command.md) | heikel | 2 | pending |
-| 3 | [Oberfläche: Aufruf aufklappen](phase-3-aufklappen.md) | standard | 3 | pending |
+| 1 | [Prozess-Ausgabe: ehrlicher Text, Pfad früher](phase-1-prozess-ausgabe.md) | standard | 1 | complete (AK 3 Rohzeile offen) |
+| 2 | [Kern: Eingabe und Ausgabe je Aufruf speichern und liefern](phase-2-speicher-und-command.md) | heikel | 2 | complete |
+| 3 | [Oberfläche: Aufruf aufklappen](phase-3-aufklappen.md) | standard | 3 | complete (App-Lauf offen) |
 
 Rein sequenziell, weil alle drei Phasen `sessions/registry.rs` (`apply_event`, `Outbox`) anfassen und Phase 3 den Command aus Phase 2 braucht; Phase 1 und 2 überlappen schreibend in `registry.rs`.
 
@@ -37,7 +37,7 @@ pub struct ToolDetail {
 }
 ```
 
-`output` ist leer, solange der Aufruf läuft. Neue Ereignisse in `agents/event.rs`: `ToolStarted` bekommt `input: String` und `input_truncated: bool`; `ToolOutput` bekommt `tool_use_id: String` und `truncated: bool` (der Text ist dort schon gekürzt).
+`output` ist leer, solange der Aufruf läuft. Neue Ereignisse in `agents/event.rs`: `ToolStarted` bekommt `input: String` und `input_truncated: bool`; `ToolOutput` bekommt `tool_use_id: String`, `detail: String` (gekürzt) und `truncated: bool`; `text` bleibt ungekürzt, weil er den Abgleich aus ADR 036 speist. `ToolDetail` liegt in `agents/event.rs`.
 
 ## Finale AK (fürs Ganze)
 
@@ -48,10 +48,23 @@ pub struct ToolDetail {
 
 ## Summary
 
+Der Reiter „Prozesse" sagt bei einem laufenden Befehl ohne Ausgabedatei jetzt, dass die Ausgabe erst nach dem Ende vorliegt. Im Chat lässt sich jeder Werkzeug-Aufruf einzeln aufklappen und zeigt Befehl bzw. Eingabe und Ausgabe; gespeichert wird je Aufruf in der neuen Tabelle `tool_details` (Migration 015, ADR 042), geladen erst beim Aufklappen.
+
 ## Files touched
+
+Rust: `agents/event.rs`, `agents/claude/translate.rs`, `background/output.rs`, `sessions/registry.rs`, `db/tool_details.rs` + Migration 015, `commands/tool_details.rs`. TypeScript: `features/chat/` (`ToolDetail.tsx`, `ToolDetail.css`, `useToolDetail.ts`, `ToolGroup.tsx`, `ToolGroup.css`, `ChatTimeline.tsx`), `features/background/ProcessesTab.tsx`, `lib/toolDetails.ts`. Doku: ADR 042, Glossar, `code-map.md`.
 
 ## Commits
 
+`d87bd11` Prozess-Ausgabe, `7ba3da3` Speicher und Command, `d890153` Aufklappen.
+
 ## Deviations from plan
 
+- Phase 3 ohne App-Lauf abgeschlossen (vom User bewusst so entschieden): AK 2 und 3 sind nur per Lint/Typecheck/Build belegt, nicht gesehen. Das gilt auch für den Weg über `persist` und den Command aus Phase 2.
+- Phase 1, AK 3 (Rohzeile `task_started`) bleibt offen.
+- `cargo clippy` lief in Phase 3 nicht (kein Rust-Code geändert).
+
 ## Follow-ups
+
+- App-Lauf nachholen: Bash/Grep/Read aufklappen, langes Ergebnis (Gekürzt-Hinweis), alter Verlauf („älterer Verlauf"), laufender Aufruf lädt nach dem Ende nach.
+- Schritte von Subagenten und die Archiv-Suche über Ausgaben bleiben außen vor (siehe Entscheidungen).

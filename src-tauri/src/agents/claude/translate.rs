@@ -14,6 +14,8 @@ use crate::agents::event::{
     AgentEvent, Question, QuestionKind, QuestionOption, RateLimitInfo, TaskEnd, TaskKind, TodoItem,
     TodoState, TurnEnd,
 };
+use crate::background::output::{head_text, tail_text};
+use crate::db::tool_details::{MAX_TOOL_INPUT_BYTES, MAX_TOOL_OUTPUT_BYTES};
 use crate::notices::model::Denial;
 
 const ASK_USER_TOOL: &str = "AskUserQuestion";
@@ -61,6 +63,9 @@ pub struct Translator {
     /// Vordergrund) nach `tool_use_id` → Eingang in ms; ihr Ergebnis schließt das Zeitfenster für
     /// die Commit-Suche (ADR 014).
     git_calls: HashMap<String, f64>,
+    /// Bash-/PowerShell-Aufrufe des Hauptagenten bis zu ihrem Ergebnis: bei ihnen behalten die
+    /// Werkzeug-Details das Ende der Ausgabe, bei allen anderen den Anfang.
+    shell_calls: HashSet<String>,
     /// Nach `compact_boundary`: die nächste synthetische `user`-Zeile ist die Zusammenfassung.
     awaiting_compact_summary: bool,
 }
@@ -141,6 +146,7 @@ impl Translator {
             TaskKind::Subagent => description,
         };
         self.started_tasks.insert(tool_use_id.clone());
+        let output_file = system.output_file;
         let mut events = vec![AgentEvent::TaskStarted {
             task_id,
             tool_use_id: tool_use_id.clone(),
@@ -148,6 +154,12 @@ impl Translator {
             title,
             subagent_type: system.subagent_type,
         }];
+        if let Some(path) = output_file.filter(|path: &String| !path.is_empty()) {
+            events.push(AgentEvent::TaskOutputFile {
+                tool_use_id: tool_use_id.clone(),
+                path,
+            });
+        }
         events.extend(
             self.early_task_events
                 .remove(&tool_use_id)
@@ -200,7 +212,7 @@ impl Translator {
         let ContentBlock::ToolUse { id, name, input } = block else {
             return;
         };
-        if name != BASH_TOOL && name != POWERSHELL_TOOL {
+        if !is_shell_tool(name) {
             return;
         }
         let command = input
@@ -324,8 +336,19 @@ impl Translator {
                 };
                 self.push_task_detail(&tool_use_id, event, &mut events);
             }
+            let keeps_end = self.shell_calls.remove(&tool_use_id);
             if !text.is_empty() {
-                events.push(AgentEvent::ToolOutput { text });
+                let (detail, truncated) = if keeps_end {
+                    tail_text(&text, MAX_TOOL_OUTPUT_BYTES)
+                } else {
+                    head_text(&text, MAX_TOOL_OUTPUT_BYTES)
+                };
+                events.push(AgentEvent::ToolOutput {
+                    tool_use_id,
+                    text,
+                    detail,
+                    truncated,
+                });
             }
         }
         events
@@ -359,7 +382,12 @@ impl Translator {
                 seconds: self.take_thinking_seconds(),
                 text: thinking,
             }),
-            ContentBlock::ToolUse { id, name, input } => translate_tool_use(id, name, &input),
+            ContentBlock::ToolUse { id, name, input } => {
+                if is_shell_tool(&name) {
+                    self.shell_calls.insert(id.clone());
+                }
+                translate_tool_use(id, name, &input)
+            }
             ContentBlock::ToolResult { .. } | ContentBlock::Other => None,
         }
     }
@@ -459,14 +487,32 @@ fn translate_tool_use(id: String, name: String, input: &Value) -> Option<AgentEv
         ASK_USER_TOOL => None,
         _ => {
             let target = target_of(&name, input);
+            let (detail_input, input_truncated) =
+                head_text(&input_text(&name, input), MAX_TOOL_INPUT_BYTES);
             Some(AgentEvent::ToolStarted {
                 tool_use_id: id,
                 tool: name,
                 target,
                 used_paths: used_paths(input),
+                input: detail_input,
+                input_truncated,
             })
         }
     }
+}
+
+fn is_shell_tool(name: &str) -> bool {
+    name == BASH_TOOL || name == POWERSHELL_TOOL
+}
+
+/// Bei Bash/PowerShell der Befehl wie geschrieben, sonst die ganze Eingabe als JSON.
+fn input_text(name: &str, input: &Value) -> String {
+    if is_shell_tool(name)
+        && let Some(command) = input.get("command").and_then(Value::as_str)
+    {
+        return command.to_owned();
+    }
+    serde_json::to_string_pretty(input).unwrap_or_default()
 }
 
 fn todo_items(input: &Value) -> Vec<TodoItem> {

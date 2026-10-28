@@ -33,6 +33,8 @@ const RUNNING_LABEL = 'läuft';
 const EXIT_LABEL_PREFIX = 'Exit ';
 const TRUNCATED_NOTICE = 'Gekürzt — nur das Ende wird gezeigt.';
 const MISSING_NOTICE = 'Ausgabe nicht mehr verfügbar.';
+const MISSING_RUNNING_NOTICE =
+  'Ausgabe noch nicht verfügbar — sie liegt erst vor, wenn der Befehl endet.';
 const COPY_LABEL: Record<'idle' | 'copied' | 'failed', string> = {
   idle: 'Ausgabe kopieren',
   copied: 'Kopiert',
@@ -145,7 +147,7 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
         />
         <OutputPane
           text={output === null ? '' : output.text}
-          notice={outputError ?? outputNotice(output)}
+          notice={outputError ?? outputNotice(output, selected.state)}
           followsEnd={selected.state === 'running'}
         />
       </>
@@ -180,12 +182,12 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
   return <PanelLayout listRef={listRef} list={list} detail={renderDetail()} />;
 }
 
-function outputNotice(output: TextPreview | null): string | null {
+function outputNotice(output: TextPreview | null, state: BackgroundItem['state']): string | null {
   if (output === null) {
     return null;
   }
   if (output.missing) {
-    return MISSING_NOTICE;
+    return state === 'running' ? MISSING_RUNNING_NOTICE : MISSING_NOTICE;
   }
   return output.truncated ? TRUNCATED_NOTICE : null;
 }

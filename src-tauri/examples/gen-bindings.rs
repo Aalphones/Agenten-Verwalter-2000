@@ -4,7 +4,7 @@ use verwalter_lib::{
     account::model::{AccountInfo, AccountStatus},
     agents::event::{
         Attachment, AttachmentKind, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
-        QuestionKind, QuestionOption, TodoItem, TodoState, ToolState,
+        QuestionKind, QuestionOption, TodoItem, TodoState, ToolDetail, ToolState,
     },
     app_update::model::{
         AppUpdateProgress, AppUpdateStatus, InstallKind, InstallPhase, ReleaseInfo,
@@ -82,6 +82,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     Denial::export_all(&cfg)?;
     Notice::export_all(&cfg)?;
     ChatEntry::export_all(&cfg)?;
+    ToolDetail::export_all(&cfg)?;
     QuestionAnswer::export_all(&cfg)?;
     SessionStatus::export_all(&cfg)?;
     AwaitedScript::export_all(&cfg)?;

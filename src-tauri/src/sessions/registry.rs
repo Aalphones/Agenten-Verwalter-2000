@@ -26,7 +26,7 @@ use crate::agents::claude::translate::Translator;
 use crate::agents::codex::{self, find_codex};
 use crate::agents::event::{
     AgentEvent, Attachment, ChatEntry, Effort, Mode, ModelId, Question, QuestionAnswer,
-    QuestionKind, RateLimitInfo, TaskEnd, TaskKind, TodoItem, ToolState, TurnEnd,
+    QuestionKind, RateLimitInfo, TaskEnd, TaskKind, TodoItem, ToolDetail, ToolState, TurnEnd,
 };
 use crate::agents::standalone;
 use crate::attachments;
@@ -49,6 +49,7 @@ use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
     session_commits, session_files, session_repositories, session_ticket_worktrees,
+    tool_details as tool_detail_rows,
 };
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
@@ -344,6 +345,9 @@ struct Outbox {
     background: Vec<BackgroundItem>,
     /// Ausgaben von Befehlen als (id, Ausgabe, gekürzt).
     outputs: Vec<(String, String, bool)>,
+    /// Eingaben und Ausgaben von Werkzeug-Aufrufen als (tool_use_id, Text, gekürzt), ADR 042.
+    tool_inputs: Vec<(String, String, bool)>,
+    tool_outputs: Vec<(String, String, bool)>,
     background_changed: bool,
     context_changed: bool,
     mcp_changed: bool,
@@ -1892,6 +1896,24 @@ impl SessionRegistry {
         }
     }
 
+    /// Eingabe und Ausgabe eines Werkzeug-Aufrufs (ADR 042); ohne gespeicherte Zeile `missing`.
+    /// Gelesen wird ohne Session-Sperre: die Zeile schreibt nur `persist`, und das unter der
+    /// Sperre der Datenbank.
+    pub fn tool_detail(
+        &self,
+        session_id: &str,
+        tool_use_id: &str,
+    ) -> Result<ToolDetail, CommandError> {
+        let session = self.get(session_id)?;
+        let stored = session
+            .database
+            .with(|connection| tool_detail_rows::load(connection, &session.id, tool_use_id))?;
+        Ok(stored.unwrap_or(ToolDetail {
+            missing: true,
+            ..ToolDetail::default()
+        }))
+    }
+
     /// Bittet den Agenten, einen Prozess oder Subagenten zu beenden. Den Zustand ändert erst dessen
     /// Meldung über das Ende.
     pub fn stop_background(
@@ -2839,8 +2861,13 @@ impl SessionState {
                 tool,
                 target,
                 used_paths,
+                input,
+                input_truncated,
             } => {
                 self.wake_if_idle(outbox);
+                outbox
+                    .tool_inputs
+                    .push((tool_use_id.clone(), input, input_truncated));
                 self.note_ticket_worktrees(outbox, &used_paths);
                 self.note_touched_files(outbox, &tool, &used_paths);
                 for path in &used_paths {
@@ -2864,7 +2891,15 @@ impl SessionState {
                 tool_use_id,
                 failed,
             } => self.finish_tool(outbox, &tool_use_id, failed),
-            AgentEvent::ToolOutput { text } => self.turn_sources.push_text(&text),
+            AgentEvent::ToolOutput {
+                tool_use_id,
+                text,
+                detail,
+                truncated,
+            } => {
+                self.turn_sources.push_text(&text);
+                outbox.tool_outputs.push((tool_use_id, detail, truncated));
+            }
             AgentEvent::Todos(items) => {
                 self.wake_if_idle(outbox);
                 self.update_todos(outbox, items);
@@ -3553,6 +3588,12 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
         }
         for (id, output, truncated) in &outbox.outputs {
             background_rows::set_output(connection, &session.id, id, output, *truncated)?;
+        }
+        for (tool_use_id, input, truncated) in &outbox.tool_inputs {
+            tool_detail_rows::set_input(connection, &session.id, tool_use_id, input, *truncated)?;
+        }
+        for (tool_use_id, output, truncated) in &outbox.tool_outputs {
+            tool_detail_rows::set_output(connection, &session.id, tool_use_id, output, *truncated)?;
         }
         if !outbox.ticket_worktrees.is_empty() {
             session_ticket_worktrees::insert_all(
