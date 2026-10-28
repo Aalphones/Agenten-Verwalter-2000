@@ -48,10 +48,23 @@ pub struct ToolDetail {
 
 ## Summary
 
+Der Reiter „Prozesse" sagt bei einem laufenden Befehl ohne Ausgabedatei jetzt, dass die Ausgabe erst nach dem Ende vorliegt. Im Chat lässt sich jeder Werkzeug-Aufruf einzeln aufklappen und zeigt Befehl bzw. Eingabe und Ausgabe; gespeichert wird je Aufruf in der neuen Tabelle `tool_details` (Migration 015, ADR 042), geladen erst beim Aufklappen.
+
 ## Files touched
+
+Rust: `agents/event.rs`, `agents/claude/translate.rs`, `background/output.rs`, `sessions/registry.rs`, `db/tool_details.rs` + Migration 015, `commands/tool_details.rs`. TypeScript: `features/chat/` (`ToolDetail.tsx`, `ToolDetail.css`, `useToolDetail.ts`, `ToolGroup.tsx`, `ToolGroup.css`, `ChatTimeline.tsx`), `features/background/ProcessesTab.tsx`, `lib/toolDetails.ts`. Doku: ADR 042, Glossar, `code-map.md`.
 
 ## Commits
 
+`d87bd11` Prozess-Ausgabe, `7ba3da3` Speicher und Command, `d890153` Aufklappen.
+
 ## Deviations from plan
 
+- Phase 3 ohne App-Lauf abgeschlossen (vom User bewusst so entschieden): AK 2 und 3 sind nur per Lint/Typecheck/Build belegt, nicht gesehen. Das gilt auch für den Weg über `persist` und den Command aus Phase 2.
+- Phase 1, AK 3 (Rohzeile `task_started`) bleibt offen.
+- `cargo clippy` lief in Phase 3 nicht (kein Rust-Code geändert).
+
 ## Follow-ups
+
+- App-Lauf nachholen: Bash/Grep/Read aufklappen, langes Ergebnis (Gekürzt-Hinweis), alter Verlauf („älterer Verlauf"), laufender Aufruf lädt nach dem Ende nach.
+- Schritte von Subagenten und die Archiv-Suche über Ausgaben bleiben außen vor (siehe Entscheidungen).
