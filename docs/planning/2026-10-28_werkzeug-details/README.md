@@ -6,7 +6,7 @@ Zwei Anliegen aus einer Beobachtung: (1) Der Reiter „Prozesse" zeigt bei einem
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | [Prozess-Ausgabe: ehrlicher Text, Pfad früher](phase-1-prozess-ausgabe.md) | standard | 1 | pending |
+| 1 | [Prozess-Ausgabe: ehrlicher Text, Pfad früher](phase-1-prozess-ausgabe.md) | standard | 1 | umgesetzt (uncommitted) |
 | 2 | [Kern: Eingabe und Ausgabe je Aufruf speichern und liefern](phase-2-speicher-und-command.md) | heikel | 2 | pending |
 | 3 | [Oberfläche: Aufruf aufklappen](phase-3-aufklappen.md) | standard | 3 | pending |
 

@@ -141,6 +141,7 @@ impl Translator {
             TaskKind::Subagent => description,
         };
         self.started_tasks.insert(tool_use_id.clone());
+        let output_file = system.output_file;
         let mut events = vec![AgentEvent::TaskStarted {
             task_id,
             tool_use_id: tool_use_id.clone(),
@@ -148,6 +149,12 @@ impl Translator {
             title,
             subagent_type: system.subagent_type,
         }];
+        if let Some(path) = output_file.filter(|path: &String| !path.is_empty()) {
+            events.push(AgentEvent::TaskOutputFile {
+                tool_use_id: tool_use_id.clone(),
+                path,
+            });
+        }
         events.extend(
             self.early_task_events
                 .remove(&tool_use_id)
