@@ -8,7 +8,7 @@ Zwei Anliegen aus einer Beobachtung: (1) Der Reiter „Prozesse" zeigt bei einem
 |---|---|---|---|---|
 | 1 | [Prozess-Ausgabe: ehrlicher Text, Pfad früher](phase-1-prozess-ausgabe.md) | standard | 1 | complete (AK 3 Rohzeile offen) |
 | 2 | [Kern: Eingabe und Ausgabe je Aufruf speichern und liefern](phase-2-speicher-und-command.md) | heikel | 2 | complete |
-| 3 | [Oberfläche: Aufruf aufklappen](phase-3-aufklappen.md) | standard | 3 | pending |
+| 3 | [Oberfläche: Aufruf aufklappen](phase-3-aufklappen.md) | standard | 3 | complete (App-Lauf offen) |
 
 Rein sequenziell, weil alle drei Phasen `sessions/registry.rs` (`apply_event`, `Outbox`) anfassen und Phase 3 den Command aus Phase 2 braucht; Phase 1 und 2 überlappen schreibend in `registry.rs`.
 

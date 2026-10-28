@@ -25,11 +25,16 @@ Rating: standard · Wave 3 · setzt Phase 2 voraus
 
 ## Checkliste
 
-- [ ] `src/features/chat/useToolDetail.ts`: lädt bei `isOpen` einmal, wieder bei Änderung von `state`; Abbruch/Request-Zähler wie `useItemOutput.ts`.
-- [ ] `src/features/chat/ToolDetail.tsx` (+ eigene CSS-Klassen `tool-detail__*` in `ToolGroup.css` oder neuer `ToolDetail.css`, BEM): Blöcke laut AK 3-7.
-- [ ] `ToolGroup.tsx`: neue Props `sessionId`, `isToolExpanded(toolUseId)`, `onToggleTool(toolUseId)`; Zeilen zu Buttons; `ToolDetail` nur rendern, wenn der Aufruf aufgeklappt ist.
-- [ ] `ChatTimeline.tsx`: dieselbe `expandedKeys`-Menge mit Schlüssel `tool:<toolUseId>` nutzen; Props durchreichen.
-- [ ] Doc: `docs/code-map.md`-Zeile aus Phase 2 vervollständigen.
+- [x] `src/features/chat/useToolDetail.ts`: lädt bei `isOpen` einmal, wieder bei Änderung von `state`; Abbruch/Request-Zähler wie `useItemOutput.ts`.
+- [x] `src/features/chat/ToolDetail.tsx` (+ eigene CSS-Klassen `tool-detail__*` in `ToolGroup.css` oder neuer `ToolDetail.css`, BEM): Blöcke laut AK 3-7.
+- [x] `ToolGroup.tsx`: neue Props `sessionId`, `isToolExpanded(toolUseId)`, `onToggleTool(toolUseId)`; Zeilen zu Buttons; `ToolDetail` nur rendern, wenn der Aufruf aufgeklappt ist.
+- [x] `ChatTimeline.tsx`: dieselbe `expandedKeys`-Menge mit Schlüssel `tool:<toolUseId>` nutzen; Props durchreichen.
+- [x] Doc: `docs/code-map.md`-Zeile aus Phase 2 vervollständigen.
 - [ ] DoD: `pnpm check` grün; Selbst-Verifikation in der laufenden App (`pnpm tauri dev`): Verlauf mit Bash, Grep, Read öffnen → alles zu; Zeile aufklappen → Befehl + Ausgabe; langes Ergebnis → Scrollbereich + Gekürzt-Hinweis; alten Verlauf öffnen → „älterer Verlauf"; Screenshots (zu/auf/gekürzt/alt) im Report-Back.
 
 ## Report-Back
+
+Umgesetzt: `ToolDetail.tsx` (Blöcke Befehl/Eingabe und Ausgabe, Kopieren je Block, Gekürzt-Hinweis je Werkzeug, Zustände „älterer Verlauf", „Keine Ausgabe.", „Läuft noch …", Ladefehler), `useToolDetail.ts` (lädt erst beim Rendern, lädt bei Änderung von `state` neu, kein Polling), `ToolGroup.tsx` (Zeilen sind Buttons mit `aria-expanded`, Chevron 11 px), `ChatTimeline.tsx` (Schlüssel `tool:<toolUseId>` in `expandedKeys`).
+Geprüft: `pnpm lint`, `typecheck`, `format:check`, `build` grün; `cargo fmt --check` grün; `cargo clippy` nicht gelaufen (Rust in dieser Phase unberührt).
+**Offen:** DoD-Punkt App-Lauf (`pnpm tauri dev`, Screenshots zu/auf/gekürzt/alt) und damit auch die nachgeholte App-Verifikation von Phase 2 — in dieser Session nicht möglich, kein sichtbares Fenster.
+Unsicherste Stelle: `useToolDetail.ts` — bei laufendem Aufruf lädt der Hook beim Aufklappen einen Zwischenstand und erst beim Zustandswechsel neu; ob `persist` den Detailsatz vor dem Zustandswechsel an die UI schreibt, ist nur per App-Lauf zu belegen.

@@ -50,6 +50,11 @@ const STICK_TO_BOTTOM_TOLERANCE = 24;
 const LOAD_OLDER_THRESHOLD = 200;
 const WORKING_KEY = 'working';
 const WORKING_FALLBACK_LABEL = 'Claude arbeitet …';
+
+/** Schlüssel eines einzelnen Aufrufs in `expandedKeys`; Gruppen-Schlüssel kommen aus `buildBlocks`. */
+function toolKey(toolUseId: string): string {
+  return `tool:${toolUseId}`;
+}
 /** Solange der Agent arbeitet oder die Session leer ist, steht unter der Antwort kein „Weiter“-Knopf. */
 const HANDOFF_HIDDEN_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'new'];
 const DIGIT_KEYS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -434,10 +439,15 @@ export function ChatTimeline({
     if (block.kind === 'tools') {
       return (
         <ToolGroup
+          sessionId={session.id}
           tools={block.tools}
           isExpanded={expandedKeys.has(block.key)}
           onToggle={(): void => {
             toggleExpanded(block.key);
+          }}
+          isToolExpanded={(toolUseId: string): boolean => expandedKeys.has(toolKey(toolUseId))}
+          onToggleTool={(toolUseId: string): void => {
+            toggleExpanded(toolKey(toolUseId));
           }}
         />
       );
