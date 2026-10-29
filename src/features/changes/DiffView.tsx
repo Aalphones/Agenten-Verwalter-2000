@@ -172,6 +172,10 @@ export function DiffView({
     getItemKey,
     overscan: OVERSCAN,
   });
+  // Die Vorgabe misst jede neue Zeile gegen den schon verschobenen Rand: am oberen Rand eingeblendete, umbrechende
+  // Zeilen schöben die Ansicht Zeile für Zeile weiter. Ausgeglichen werden nur Zeilen über der obersten sichtbaren.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item: VirtualItem): boolean =>
+    virtualizer.range !== null && item.index < virtualizer.range.startIndex;
 
   function openCommentBox(target: CommentTarget, text: string): void {
     setRevealLineId(target.lineId);
