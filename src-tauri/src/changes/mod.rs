@@ -425,18 +425,21 @@ pub fn file_diff(
     validate_path(path)?;
     let (worktree, base) = checked_dir(source)?;
     let base = base.as_str();
-    let raw = match scope {
+    // Im Blickwinkel „Committet“ ist die neue Fassung die des letzten eigenen Commits, sonst die im
+    // Arbeitsverzeichnis.
+    let (raw, last_own_commit) = match scope {
         ChangeScope::Committed => {
             let Some(file) = own_file(&worktree, base, own, path)? else {
                 return Err(CommandError::Internal(NO_OWN_COMMITS.to_owned()));
             };
-            git::diff_tree_patch(&worktree, &file.from, &file.to, path)?
+            let raw = git::diff_tree_patch(&worktree, &file.from, &file.to, path)?;
+            (raw, Some(file.to))
         }
         ChangeScope::All => match own_file(&worktree, base, own, path)? {
-            Some(file) => git::diff_index_patch(&worktree, &file.from, path)?,
-            None => git::diff_index_patch(&worktree, HEAD, path)?,
+            Some(file) => (git::diff_index_patch(&worktree, &file.from, path)?, None),
+            None => (git::diff_index_patch(&worktree, HEAD, path)?, None),
         },
-        ChangeScope::Uncommitted => git::diff_index_patch(&worktree, HEAD, path)?,
+        ChangeScope::Uncommitted => (git::diff_index_patch(&worktree, HEAD, path)?, None),
     };
     // Untracked Dateien kennt kein Diff-Befehl; ihr Inhalt ist der ganze Diff.
     if scope != ChangeScope::Committed
@@ -446,9 +449,11 @@ pub fn file_diff(
         return Ok(untracked_diff(&worktree.join(native_path(path))));
     }
     let mut diff = parse::unified(&raw);
-    // Ein Fehler beim Lesen der neuen Fassung ist kein Fehler des Diffs: dann fehlt nur die Zahl.
-    let content = new_side(&worktree, base, path, scope, own).ok().flatten();
-    diff.new_line_count = content.as_deref().map(line_count);
+    // Binäres hat keine Zeilen; ist die neue Fassung nicht lesbar, fehlt nur die Zahl, nicht der Diff.
+    if !diff.binary {
+        let content = new_text(&worktree, path, last_own_commit.as_deref());
+        diff.new_line_count = content.as_deref().map(line_count);
+    }
     Ok(diff)
 }
 
@@ -520,12 +525,22 @@ fn new_side(
     own: &Ownership,
 ) -> Result<Option<String>, CommandError> {
     if scope != ChangeScope::Committed {
-        return Ok(read_text(&worktree.join(native_path(path))));
+        return Ok(new_text(worktree, path, None));
     }
     let Some(file) = own_file(worktree, base, own, path)? else {
         return Err(CommandError::Internal(NO_OWN_COMMITS.to_owned()));
     };
-    Ok(git::show_file(worktree, &file.to, path).filter(|content: &String| is_text(content)))
+    Ok(new_text(worktree, path, Some(&file.to)))
+}
+
+/// Die Datei im Stand `commit`, ohne ihn die im Arbeitsverzeichnis; `None` heißt binär, über 8 MB,
+/// gelöscht oder nicht lesbar.
+fn new_text(worktree: &Path, path: &str, commit: Option<&str>) -> Option<String> {
+    match commit {
+        Some(commit) => git::show_file(worktree, commit, path, MAX_UNTRACKED_BYTES)
+            .filter(|content: &String| !is_binary(content.as_bytes())),
+        None => read_text(&worktree.join(native_path(path))),
+    }
 }
 
 /// Erster und letzter eigener Commit an `path`; `None`, wenn die Reichweite ihn nicht committet hat.
@@ -609,12 +624,6 @@ fn line_count(content: &str) -> u32 {
 /// Git hält eine Datei für binär, wenn in den ersten Bytes ein NUL steht.
 fn is_binary(content: &[u8]) -> bool {
     content[..content.len().min(BINARY_PROBE_BYTES)].contains(&0)
-}
-
-/// Text aus einem Git-Stand: nicht binär und nicht größer als bei Dateien im Arbeitsverzeichnis.
-fn is_text(content: &str) -> bool {
-    u64::try_from(content.len()).is_ok_and(|bytes: u64| bytes <= MAX_UNTRACKED_BYTES)
-        && !is_binary(content.as_bytes())
 }
 
 /// Inhalt einer Datei im Arbeitsverzeichnis; `None` heißt binär, zu groß oder nicht lesbar.

@@ -286,10 +286,20 @@ pub fn commit_files(worktree: &Path, commits: &[String]) -> Result<String, Comma
     )
 }
 
-/// `git show <rev>:<path>` — die Datei im Stand `rev`. `None` bei jedem Git-Fehler: der Diff hat
-/// dieselbe Datei kurz zuvor gelesen, ein Fehler heißt also, dass sie dort nicht (mehr) liegt.
-pub fn show_file(worktree: &Path, rev: &str, path: &str) -> Option<String> {
+/// `git show <rev>:<path>` — die Datei im Stand `rev`, sofern sie höchstens `max_bytes` groß ist;
+/// die Größe fragt vorher `git cat-file -s` ab, damit eine große Datei nicht ganz gelesen wird.
+/// `None` bei jedem Git-Fehler: der Diff hat dieselbe Datei kurz zuvor gelesen, ein Fehler heißt
+/// also, dass sie dort nicht (mehr) liegt.
+pub fn show_file(worktree: &Path, rev: &str, path: &str, max_bytes: u64) -> Option<String> {
     let object = format!("{rev}:{path}");
+    let size: u64 = run(worktree, &args(&["cat-file", "-s", &object]))
+        .ok()?
+        .trim()
+        .parse()
+        .ok()?;
+    if size > max_bytes {
+        return None;
+    }
     run_raw(worktree, &args(&["show", &object])).ok()
 }
 
