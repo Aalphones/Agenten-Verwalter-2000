@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebenfrage /btw – Entwürfe</title>
+<style>
+  :root {
+    --bg-base: #ffffff; --bg-sidebar: #f8f8f8; --bg-hover: #f0f0f0; --bg-selected: #e4e6f1;
+    --border-subtle: #e5e5e5; --border: #cecece;
+    --fg: #3c3c3c; --fg2: #555555; --fg-muted: #6e6e6e;
+    --accent: #c4572f; --accent-text: #a8461f; --accent-subtle: rgba(196,87,47,.10);
+    --cold: #3d6fa8; --cold-subtle: rgba(61,111,168,.10);
+    --ok: #16803c; --warn: #a86a00;
+    --shadow: 0 8px 28px rgba(0,0,0,.14);
+    --page: #f3f3f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-base: #1f1f1f; --bg-sidebar: #181818; --bg-hover: #2e2e30; --bg-selected: #37373d;
+      --border-subtle: #2e2e30; --border: #4a4a4f;
+      --fg: #e4e4e4; --fg2: #c8c8c8; --fg-muted: #8f8f8f;
+      --accent: #e0825c; --accent-text: #eea283; --accent-subtle: rgba(224,130,92,.14);
+      --cold: #8ab8ea; --cold-subtle: rgba(138,184,234,.12);
+      --ok: #4cc38a; --warn: #f2b33d;
+      --shadow: 0 8px 28px rgba(0,0,0,.5);
+      --page: #121212;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--fg); font: 14px/1.5 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 { font-size: 18px; margin: 48px 0 4px; }
+  p.lead { color: var(--fg2); margin: 0 0 8px; max-width: 70ch; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--border); color: var(--fg-muted); margin-right: 6px; }
+  .tag.rec { border-color: var(--accent); color: var(--accent-text); background: var(--accent-subtle); }
+  .pros { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0 14px; font-size: 13px; }
+  .pros div { padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-base); }
+  .pros b { display: block; margin-bottom: 2px; }
+  @media (max-width: 640px) { .pros { grid-template-columns: 1fr; } }
+
+  /* Mock-App */
+  .app { display: grid; grid-template-columns: 150px 1fr; height: 430px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg-base); position: relative; }
+  .side { background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle); padding: 10px; font-size: 12px; color: var(--fg2); }
+  .side div { padding: 4px 6px; border-radius: 5px; }
+  .side .sel { background: var(--bg-selected); color: var(--fg); }
+  .main { position: relative; display: flex; flex-direction: column; min-width: 0; }
+  .head { padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 12px; color: var(--fg-muted); display: flex; gap: 14px; }
+  .head b { color: var(--fg); font-weight: 600; }
+  .flow { flex: 1; padding: 14px 18px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 82%; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+  .msg.user { align-self: flex-end; background: var(--bg-hover); }
+  .msg.agent { align-self: flex-start; }
+  .dim { color: var(--fg-muted); font-size: 12px; }
+
+  .composer { margin: 0 14px 14px; border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; background: var(--bg-base); position: relative; }
+  .composer .row { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  .composer .ph { color: var(--fg-muted); flex: 1; }
+  .composer .foot { margin-top: 6px; display: flex; gap: 6px; font-size: 11px; color: var(--fg-muted); }
+  .chip { padding: 1px 8px; border: 1px solid var(--border-subtle); border-radius: 99px; }
+  kbd { font: 11px ui-monospace, Consolas, monospace; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--fg2); }
+
+  .menu { position: absolute; left: 14px; bottom: 74px; width: 330px; background: var(--bg-base); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; font-size: 12px; z-index: 3; }
+  .menu .sec { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); padding: 4px 8px 2px; }
+  .menu .it { display: flex; gap: 8px; padding: 5px 8px; border-radius: 6px; }
+  .menu .it.hl { background: var(--bg-selected); }
+  .menu .it span:first-child { font-weight: 600; min-width: 62px; }
+  .menu .it span:last-child { color: var(--fg-muted); }
+
+  .pop { position: absolute; left: 14px; right: 14px; bottom: 74px; background: var(--bg-base); border: 1px solid var(--cold); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 14px; z-index: 3; }
+  .pop .top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--cold); font-weight: 600; margin-bottom: 6px; gap: 8px; }
+  .pop .q { font-weight: 600; margin-bottom: 4px; }
+  .pop .acts { margin-top: 8px; display: flex; gap: 8px; font-size: 12px; color: var(--fg-muted); align-items: center; }
+  .btn { border: 1px solid var(--border); border-radius: 6px; padding: 1px 8px; font-size: 12px; color: var(--fg2); background: var(--bg-base); }
+  .pill { font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--cold-subtle); color: var(--cold); }
+  .pill.warm { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+
+  .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 230px; background: var(--bg-sidebar); border-left: 1px solid var(--border-subtle); padding: 10px 12px; font-size: 12px; z-index: 2; display: flex; flex-direction: column; gap: 10px; }
+  .drawer h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--cold); }
+  .note { border: 1px solid var(--border-subtle); background: var(--bg-base); border-radius: 8px; padding: 8px 10px; }
+  .note .q { font-weight: 600; }
+  .note.old { opacity: .6; }
+
+  .aside { align-self: stretch; margin: 2px 0 2px 28px; padding: 8px 12px; border: 1px dashed var(--cold); border-radius: 10px; background: var(--cold-subtle); font-size: 12px; }
+  .aside .lab { color: var(--cold); font-weight: 600; font-size: 11px; display: flex; gap: 8px; justify-content: space-between; }
+  .aside .q { font-weight: 600; margin: 2px 0; }
+
+  .composer.btw { border-color: var(--cold); box-shadow: 0 0 0 3px var(--cold-subtle); }
+  .modechip { font-size: 11px; font-weight: 600; color: var(--cold); background: var(--cold-subtle); border-radius: 99px; padding: 1px 9px; }
+  .strip { margin: 0 14px 8px; padding: 8px 12px; border: 1px solid var(--cold); border-radius: 10px; background: var(--cold-subtle); font-size: 12px; }
+
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.10); z-index: 2; }
+  .sidechat { position: absolute; top: 8px; right: 8px; bottom: 8px; width: 300px; z-index: 4; background: var(--bg-base); border: 1px solid var(--cold); border-radius: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; font-size: 12px; }
+  .sidechat .sh { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--cold); font-weight: 600; }
+  .sidechat .sh .x { margin-left: auto; color: var(--fg-muted); font-weight: 400; }
+  .sidechat .sb { flex: 1; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .sidechat .bq { align-self: flex-end; background: var(--cold-subtle); border-radius: 10px; padding: 5px 10px; max-width: 88%; }
+  .sidechat .ba { max-width: 94%; }
+  .sidechat .sf { border-top: 1px solid var(--border-subtle); padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .sidechat .inp { border: 1px solid var(--border); border-radius: 8px; padding: 5px 9px; color: var(--fg-muted); }
+  .sidechat .hint { color: var(--fg-muted); font-size: 11px; display: flex; gap: 8px; align-items: center; }
+  .frames { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+  @media (max-width: 760px) { .frames { grid-template-columns: 1fr; } }
+  .frame { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-base); padding: 12px; position: relative; min-height: 250px; overflow: hidden; }
+  .frame .cap { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); margin-bottom: 8px; }
+  mark.sel { background: color-mix(in srgb, var(--cold) 30%, transparent); color: inherit; border-radius: 2px; }
+  .ctx { position: absolute; width: 230px; background: var(--bg-base); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); padding: 4px; font-size: 12px; }
+  .ctx div { padding: 4px 8px; border-radius: 5px; display: flex; justify-content: space-between; gap: 8px; }
+  .ctx .hl { background: var(--bg-selected); font-weight: 600; }
+  .ctx kbd { font-size: 10px; }
+  .plus { position: absolute; z-index: 3; left: 12px; bottom: 100px; width: 300px; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); font-size: 12px; overflow: hidden; }
+  .plus .r { display: flex; justify-content: space-between; padding: 8px 12px; }
+  .plus .r.hl { background: var(--bg-selected); }
+  .plus .r kbd { font-size: 10px; }
+  .plus .tip { padding: 8px 12px; color: var(--fg-muted); border-top: 1px solid var(--border-subtle); background: var(--bg-base); }
+  .quote { border-left: 3px solid var(--cold); padding: 2px 8px; color: var(--fg-muted); font-size: 12px; margin-bottom: 6px; }
+  .tabs { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; margin-bottom: 10px; }
+  .tabs span { padding: 3px 9px; border-radius: 7px; color: var(--fg2); }
+  .tabs .on { background: var(--bg-selected); color: var(--fg); font-weight: 600; }
+  .tabs .cnt { color: var(--fg-muted); }
+  .lab2 { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); margin: 8px 0 4px; }
+  .nrow { padding: 7px 9px; border-radius: 8px; font-size: 12px; border: 1px solid transparent; }
+  .nrow.on { background: var(--bg-hover); border-color: var(--border-subtle); }
+  .nrow .qq { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+  .nrow .qq small { color: var(--fg-muted); font-weight: 400; white-space: nowrap; }
+  .nrow .aa { color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  ol.flow2 { padding-left: 20px; margin: 8px 0 14px; font-size: 13px; } ol.flow2 li { margin-bottom: 6px; }
+  code { font: 12px ui-monospace, Consolas, monospace; background: var(--bg-hover); padding: 0 4px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+  th { background: var(--bg-sidebar); font-size: 12px; }
+  .note-box { margin-top: 14px; padding: 10px 14px; border: 1px solid var(--warn); border-radius: 8px; font-size: 13px; background: color-mix(in srgb, var(--warn) 8%, transparent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Nebenfrage <code>/btw</code> im Verwalter</h1>
+  <p class="lead">Eine Frage, die den Verlauf der Session <b>sieht</b>, aber nicht <b>verlängert</b>: keine Werkzeuge, eine Antwort, nichts wandert zurück in den Chat. Vier Wege, sie optisch zu verorten. Alle vier teilen dasselbe Gerüst: eine Zeile <code>/btw</code> im <code>/</code>-Menü, ein Befehl im Eingabefeld und die einheitliche Farbe „kalt/Neben“ (das Blau des Prompt-Cache-Symbols), damit eine Nebenfrage nie wie eine echte Nachricht aussieht.</p>
+
+  <!-- 0 Gemeinsam -->
+  <h2>0 · Gemeinsamer Einstieg (für alle Varianten)</h2>
+  <p class="lead">Neue Zeile im Abschnitt „Session“ des <code>/</code>-Menüs. Der Cache-Zustand der Session steht gleich dabei: warm = fast gratis, kalt = die Frage kostet den vollen Verlauf.</p>
+  <div class="app">
+    <div class="side"><div class="sel">▾ Mein Vorhaben</div><div>&nbsp;&nbsp;#1 Umbau</div><div>&nbsp;&nbsp;#2 Review</div></div>
+    <div class="main">
+      <div class="head"><b>Mein Vorhaben › #1 Umbau</b><span>Chat</span><span>Changes</span><span>Artefakte</span></div>
+      <div class="flow">
+        <div class="msg user">Bau den Export um.</div>
+        <div class="msg agent">Erledigt, drei Dateien geändert.</div>
+      </div>
+      <div class="menu">
+        <div class="sec">Session</div>
+        <div class="it"><span>/rename</span><span>Session umbenennen</span></div>
+        <div class="it hl"><span>/btw</span><span>Nebenfrage – ohne den Verlauf zu verlängern</span></div>
+        <div class="it"><span>/changes</span><span>Changes-Ansicht öffnen</span></div>
+        <div class="it"><span>/pause</span><span>Agent pausieren</span></div>
+      </div>
+      <div class="composer"><div class="row"><span class="ph">/</span></div><div class="foot"><span class="chip">Opus</span><span class="chip">Plan</span></div></div>
+    </div>
+  </div>
+
+  <!-- A -->
+  <h2>A · Schwebende Antwort über der Eingabeleiste <span class="tag rec">Empfehlung</span></h2>
+  <p class="lead">Wie in Claude Code selbst: Antwort in einem Fenster direkt über dem Eingabefeld, Esc oder Klick daneben schließt es. Die Frage steht fett, darunter die Antwort, rechts der Preis in Worten.</p>
+  <div class="pros"><div><b>Dafür</b>Kürzester Weg vom Gedanken zur Antwort. Der Verlauf bleibt unberührt, nichts erinnert an eine echte Nachricht. Passt zum bestehenden Popover-Baustein.</div><div><b>Dagegen</b>Flüchtig: Fenster zu = Antwort weg, außer man holt sie über „Frühere Nebenfragen“ zurück. Lange Antworten brauchen Scrollen im Fenster.</div></div>
+  <div class="app">
+    <div class="side"><div class="sel">▾ Mein Vorhaben</div><div>&nbsp;&nbsp;#1 Umbau</div></div>
+    <div class="main">
+      <div class="head"><b>Mein Vorhaben › #1 Umbau</b><span>Chat</span><span>Changes</span></div>
+      <div class="flow">
+        <div class="msg user">Bau den Export um.</div>
+        <div class="msg agent">Erledigt, drei Dateien geändert.</div>
+        <div class="msg user">Prüf noch die Tests.</div>
+        <div class="msg agent dim">Arbeitet …</div>
+      </div>
+      <div class="pop">
+        <div class="top"><span>NEBENFRAGE · kommt nicht in den Verlauf</span><span><span class="pill warm">Cache warm · kostet kaum etwas</span></span></div>
+        <div class="q">Wie hieß die Datei mit den Export-Optionen noch?</div>
+        <div>Die Optionen stehen in <code>export/options.ts</code>; die Standardwerte setzt <code>export/defaults.ts</code>.</div>
+        <div class="acts"><span class="btn">Kopieren</span><span class="btn">Als Fork weiterführen</span><span style="margin-left:auto"><kbd>Esc</kbd> schließen</span></div>
+      </div>
+      <div class="composer btw"><div class="row"><span class="modechip">/btw</span><span class="ph">Nebenfrage …</span></div><div class="foot"><span class="chip">Opus</span><span class="chip">Plan</span></div></div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <h2>B · Randspalte „Nebenfragen“</h2>
+  <p class="lead">Eine schmale Spalte rechts neben dem Chat sammelt alle Nebenfragen der Session. Eine neue Antwort erscheint oben, ältere rutschen darunter und bleiben stehen.</p>
+  <div class="pros"><div><b>Dafür</b>Antworten bleiben sichtbar, der Verlauf bleibt sauber. Gut für Sessions mit vielen Zwischenfragen. Liefert das „Nachschlagewerk“ gleich mit.</div><div><b>Dagegen</b>Frisst Breite, und der Chat ist die Hauptarbeitsfläche. Braucht einen Schalter in der Kopfzeile, die ohnehin schon Reiter, Hintergrund und Anzeige trägt.</div></div>
+  <div class="app">
+    <div class="side"><div class="sel">▾ Mein Vorhaben</div><div>&nbsp;&nbsp;#1 Umbau</div></div>
+    <div class="main">
+      <div class="head"><b>Mein Vorhaben › #1 Umbau</b><span>Chat</span><span>Changes</span><span style="margin-left:auto;color:var(--cold)">Nebenfragen 2</span></div>
+      <div class="flow" style="padding-right:250px">
+        <div class="msg user">Bau den Export um.</div>
+        <div class="msg agent">Erledigt, drei Dateien geändert.</div>
+        <div class="msg user">Prüf noch die Tests.</div>
+        <div class="msg agent dim">Arbeitet …</div>
+      </div>
+      <div class="drawer">
+        <h4>Nebenfragen</h4>
+        <div class="note"><div class="q">Wie hieß die Datei mit den Export-Optionen?</div>Die Optionen stehen in <code>export/options.ts</code>.</div>
+        <div class="note old"><div class="q">Welche Node-Version?</div>22, laut <code>.nvmrc</code>.</div>
+        <div class="dim" style="margin-top:auto">Stehen nicht im Verlauf des Agenten.</div>
+      </div>
+      <div class="composer"><div class="row"><span class="ph">Nachricht …</span></div><div class="foot"><span class="chip">Opus</span><span class="chip">Plan</span></div></div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <h2>C · Randnotiz im Verlauf (gestrichelt)</h2>
+  <p class="lead">Die Nebenfrage erscheint an ihrer Stelle im Verlauf, aber klar anders: gestrichelter Rahmen, blau getönt, eingerückt, Etikett „nicht im Kontext“.</p>
+  <div class="pros"><div><b>Dafür</b>Man sieht später, wann man was gefragt hat. Nichts geht verloren, kein zweites Fenster.</div><div><b>Dagegen</b>Der Verlauf wächst optisch doch, und der Verwalter speichert und lädt ihn: Randnotizen bräuchten einen eigenen Eintragstyp, der nie an den Agenten geht. Das größte Risiko für Verwechslung und der teuerste Umbau.</div></div>
+  <div class="app">
+    <div class="side"><div class="sel">▾ Mein Vorhaben</div><div>&nbsp;&nbsp;#1 Umbau</div></div>
+    <div class="main">
+      <div class="head"><b>Mein Vorhaben › #1 Umbau</b><span>Chat</span><span>Changes</span></div>
+      <div class="flow">
+        <div class="msg user">Bau den Export um.</div>
+        <div class="msg agent">Erledigt, drei Dateien geändert.</div>
+        <div class="aside"><div class="lab"><span>NEBENFRAGE · nicht im Kontext</span><span>14:02</span></div><div class="q">Welche Node-Version?</div>22, laut <code>.nvmrc</code>.</div>
+        <div class="msg user">Prüf noch die Tests.</div>
+      </div>
+      <div class="composer"><div class="row"><span class="ph">Nachricht …</span></div><div class="foot"><span class="chip">Opus</span><span class="chip">Plan</span></div></div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <h2>D · Eingabemodus „Nebenfrage“ mit Antwortstreifen</h2>
+  <p class="lead">Die Eingabeleiste wechselt sichtbar in den Nebenfragen-Modus: blauer Rahmen, Chip „/btw“, Platzhalter ändert sich. Die Antwort steht in einem schmalen Streifen direkt über der Leiste und schiebt den Verlauf nach oben, statt ihn zu überdecken.</p>
+  <div class="pros"><div><b>Dafür</b>Der Moduswechsel ist unübersehbar, Fehlsendungen an den Agenten sind ausgeschlossen. Streifen verdeckt keinen Verlauf.</div><div><b>Dagegen</b>Streifen nimmt Höhe, wenn die Antwort länger wird. Ein weiterer Modus neben Modell, Plan und Denkaufwand.</div></div>
+  <div class="app">
+    <div class="side"><div class="sel">▾ Mein Vorhaben</div><div>&nbsp;&nbsp;#1 Umbau</div></div>
+    <div class="main">
+      <div class="head"><b>Mein Vorhaben › #1 Umbau</b><span>Chat</span><span>Changes</span></div>
+      <div class="flow">
+        <div class="msg user">Bau den Export um.</div>
+        <div class="msg agent">Erledigt, drei Dateien geändert.</div>
+        <div class="msg user">Prüf noch die Tests.</div>
+        <div class="msg agent dim">Arbeitet …</div>
+      </div>
+      <div class="strip"><b>Welche Node-Version?</b> 22, laut <code>.nvmrc</code>. <span class="pill" style="margin-left:6px">Cache kalt · volle Kosten</span> <span class="btn" style="float:right">✕</span></div>
+      <div class="composer btw"><div class="row"><span class="modechip">/btw</span><span class="ph">Nebenfrage … (Esc: zurück zur Nachricht)</span></div><div class="foot"><span class="chip">Opus</span><span class="chip">Plan</span></div></div>
+    </div>
+  </div>
+
+  <!-- E -->
+  <h2>E · Side Chat nach dem Vorbild der Desktop-App <span class="tag rec">neu</span></h2>
+  <p class="lead">Abgeleitet aus der Doku der Desktop-App: Öffnen mit <kbd>Strg</kbd>+<kbd>;</kbd> oder <code>/btw</code>, kleiner Chat <b>mit Nachfragen</b>, der den Haupt-Thread bis dahin liest. Schließen bringt dich zurück, nichts wird gespeichert. <b>Wie das Original wirklich aussieht, ist nicht belegt</b> – Platzierung und Größe unten sind mein Vorschlag für den Verwalter, keine Kopie.</p>
+  <div class="pros"><div><b>Dafür</b>Nachfragen möglich (Variante A kann nur eine Antwort). Der Chat hinter dem Panel bleibt sichtbar und läuft weiter. „Als Fork weiterführen“ macht aus einer Nebenfrage bei Bedarf eine echte Session.</div><div><b>Dagegen</b>Größter Bau neben C: eigener Mini-Verlauf, eigene Eingabe, Zustand je Session. Der Hinweis „wird nicht gespeichert“ muss ehrlich stimmen – sonst Datenschutzfalle.</div></div>
+  <div class="app">
+    <div class="side"><div class="sel">▾ Mein Vorhaben</div><div>&nbsp;&nbsp;#1 Umbau</div></div>
+    <div class="main">
+      <div class="head"><b>Mein Vorhaben › #1 Umbau</b><span>Chat</span><span>Changes</span><span style="margin-left:auto"><kbd>Strg</kbd>+<kbd>;</kbd> Side Chat</span></div>
+      <div class="flow">
+        <div class="msg user">Bau den Export um.</div>
+        <div class="msg agent">Erledigt, drei Dateien geändert.</div>
+        <div class="msg user">Prüf noch die Tests.</div>
+        <div class="msg agent dim">Arbeitet … (läuft weiter, während du fragst)</div>
+      </div>
+      <div class="composer"><div class="row"><span class="ph">Nachricht …</span></div><div class="foot"><span class="chip">Opus</span><span class="chip">Plan</span></div></div>
+      <div class="sidechat">
+        <div class="sh"><span>Side Chat</span><span class="pill warm">Cache warm</span><span class="x">✕ <kbd>Esc</kbd></span></div>
+        <div class="sb">
+          <div class="bq">Wie hieß die Datei mit den Export-Optionen?</div>
+          <div class="ba">In <code>export/options.ts</code>; Standardwerte in <code>export/defaults.ts</code>.</div>
+          <div class="bq">Und wer ruft sie auf?</div>
+          <div class="ba">Nur <code>exportRun()</code> in <code>export/run.ts</code>.</div>
+        </div>
+        <div class="sf">
+          <div class="inp">Nachfrage …</div>
+          <div class="hint"><span>Nicht im Verlauf · nicht gespeichert</span><span class="btn" style="margin-left:auto">Als Fork weiterführen</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Gegenüberstellung</h2>
+  <table>
+    <tr><th></th><th>A Fenster</th><th>B Randspalte</th><th>C Randnotiz</th><th>D Modus + Streifen</th><th>E Side Chat</th></tr>
+    <tr><td>Antwort bleibt sichtbar</td><td>nein (Liste „Früher“)</td><td>ja</td><td>ja</td><td>bis zur nächsten</td><td>bis Schließen</td></tr>
+    <tr><td>Nachfragen</td><td>nein</td><td>nein</td><td>nein</td><td>nein</td><td>ja</td></tr>
+    <tr><td>Verwechslung mit echter Nachricht</td><td>ausgeschlossen</td><td>ausgeschlossen</td><td>möglich</td><td>ausgeschlossen</td><td>ausgeschlossen</td></tr>
+    <tr><td>Umbau</td><td>klein</td><td>mittel</td><td>groß (neuer Eintragstyp)</td><td>klein–mittel</td><td>mittel–groß</td></tr>
+    <tr><td>Platz</td><td>keiner</td><td>Breite</td><td>Verlauf</td><td>Höhe</td><td>Überlagerung rechts</td></tr>
+  </table>
+
+  <div class="note-box">
+    <b>Empfehlung: A, ergänzt um den Cache-Preis aus D.</b> Kleinster Umbau, passt zum vorhandenen Popover, und der Cache-Hinweis nutzt, was der Verwalter ohnehin schon zeigt. Eine Liste „Frühere Nebenfragen“ (Pfeil im Fenster) füllt die Lücke von B, ohne Breite zu kosten.
+    <br><br>
+    <b>Offen, bevor gebaut wird (nicht geprüft):</b> Der Verwalter spricht mit Claude über einen laufenden Prozess. Ob sich eine Nebenfrage dort ohne Verlauf-Eintrag stellen lässt, oder ob ein kurzer Einmal-Aufruf auf einer Kopie der Session nötig ist, habe ich noch nicht untersucht. Dasselbe gilt für die Betriebsarten Autark und Codex. Davon hängt ab, ob der „kostet kaum etwas“-Hinweis stimmt.
+  </div>
+
+  <!-- F -->
+  <h2>F · Beschlossen: A + Reiter „Nebenfragen“ + drei Einstiege <span class="tag rec">aktuell</span></h2>
+  <p class="lead">Die Antwort erscheint als schwebendes Fenster (A). Jede Nebenfrage wandert zusätzlich in einen vierten Reiter des Hintergrund-Panels. Drei Wege hinein, alle landen im selben Fenster.</p>
+  <div class="frames">
+    <div class="frame">
+      <div class="cap">Einstieg 1 · Text markieren → Rechtsklick</div>
+      <div class="msg agent" style="max-width:100%">Die Optionen laden wir jetzt aus <mark class="sel">export/options.ts</mark>, die Standardwerte kommen aus <code>defaults.ts</code>. Danach läuft der Export über <code>exportRun()</code>.</div>
+      <div class="ctx" style="left:96px; top:112px">
+        <div>Kopieren <kbd>Strg C</kbd></div>
+        <div class="hl">Nebenfrage zur Auswahl … <kbd>Strg ;</kbd></div>
+        <div>Als Zitat in die Nachricht</div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="cap">Einstieg 2 · Das „+“-Menü unten</div>
+      <div class="dim" style="margin-bottom:6px">… (Verlauf)</div>
+      <div class="plus">
+        <div class="r"><span>Datei oder Bild anhängen …</span><kbd>Ctrl U</kbd></div>
+        <div class="r hl"><span>Nebenfrage stellen …</span><kbd>Ctrl ;</kbd></div>
+        <div class="tip">Frage zur Session, ohne den Verlauf zu verlängern. Auch mit <code>/btw</code>.</div>
+      </div>
+      <div class="composer" style="position:absolute; left:12px; right:12px; bottom:12px; margin:0"><div class="row"><span class="ph">Nachricht …</span></div><div class="foot"><span class="chip">＋</span><span class="chip">/</span><span class="chip">Opus Plan Mittel</span></div></div>
+    </div>
+    <div class="frame">
+      <div class="cap">Einstieg 3 · <code>/btw</code> tippen → Fenster (A), hier mit Zitat aus Einstieg 1</div>
+      <div class="pop" style="position:static; margin-top:6px">
+        <div class="top"><span>NEBENFRAGE · nicht im Verlauf</span><span class="pill warm">Cache warm</span></div>
+        <div class="quote">„export/options.ts“</div>
+        <div class="q">Wer liest diese Datei außer dem Export?</div>
+        <div>Nur <code>exportRun()</code> in <code>export/run.ts</code>; Tests lesen sie nicht.</div>
+        <div class="acts"><span class="btn">Kopieren</span><span class="btn">Als Fork weiterführen</span><span style="margin-left:auto"><kbd>Esc</kbd></span></div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="cap">Sammlung · Hintergrund-Panel, vierter Reiter</div>
+      <div class="tabs"><span>Prozesse</span><span>Subagenten</span><span>Scratchpad</span><span class="on">Nebenfragen <span class="cnt">2</span></span></div>
+      <div class="lab2">Diese Sitzung</div>
+      <div class="nrow on"><div class="qq"><span>Wer liest diese Datei außer dem Export?</span><small>14:07</small></div><div class="aa">Nur exportRun() in export/run.ts; Tests lesen sie nicht.</div></div>
+      <div class="nrow"><div class="qq"><span>Welche Node-Version?</span><small>14:02</small></div><div class="aa">22, laut .nvmrc.</div></div>
+      <div class="dim" style="margin-top:10px">Nur im Speicher: mit dem Beenden der App weg. Klick öffnet die Antwort wieder im Fenster.</div>
+    </div>
+  </div>
+
+  <h2>Technik: so könnte es laufen</h2>
+  <p class="lead">Stand der Prüfung: Das Gerüst steht schon im Verwalter (kurzlebiger <code>claude -p</code> ohne Werkzeuge, <code>print.rs</code>). Was fehlt, ist ein Einmal-Aufruf <b>mit dem Verlauf der Session</b>. Alles unten mit „?“ ist Hypothese, nicht gemessen.</p>
+  <ol class="flow2">
+    <li><b>Frage abschicken.</b> Die Oberfläche ruft einen neuen Befehl (Arbeitsname <code>session_side_ask</code>) mit Session-ID, Frage und optionalem Zitat. Der Hauptprozess der Session wird nicht angefasst, der Agent arbeitet ungestört weiter.</li>
+    <li><b>Zweiter Prozess starten.</b> Claude: <code>claude -p --resume &lt;Session-ID&gt; --fork-session</code>. Der Fork bekommt eine neue ID, das Original bleibt unverändert. Den Verlauf liest Claude aus der Transkript-Datei der Session; die letzte, noch nicht geschriebene Antwort fehlt – genau wie beim Original.</li>
+    <li><b>Keine Werkzeuge.</b> Nur lesen, nichts ausführen. <b>Stolperstein (?):</b> <code>--tools ""</code> ändert die Werkzeugliste und könnte den Prompt-Cache entwerten, dann zahlt jede Nebenfrage den ganzen Verlauf zum vollen Preis. Alternative: dieselben Optionen wie der Hauptprozess, Werkzeuge per Rechte-Modus sperren.</li>
+    <li><b>Antwort lesen</b> (Ausgabe als Text, nicht strukturiert wie TL;DR) und als Ereignis <code>side://answer</code> an die Oberfläche; Zustand im Speicher je Session (Zustand-Store, nicht Datenbank).</li>
+    <li><b>Preis anzeigen.</b> Die Pille „Cache warm / kalt“ nutzt den vorhandenen Zustand aus <code>prompt_cache/</code>; nach dem Aufruf lässt sich die Wahrheit aus der Antwort ablesen (gelesene Cache-Tokens).</li>
+  </ol>
+  <table>
+    <tr><th>Betriebsart</th><th>Weg</th><th>Offen</th></tr>
+    <tr><td>Claude</td><td>Fork per <code>--resume --fork-session</code> wie oben</td><td>Cache-Treffer? Läuft <code>--resume</code> auf eine Session, die gerade von einem anderen Prozess geschrieben wird?</td></tr>
+    <tr><td>Claude + LM Studio</td><td>Wie Claude, mit dem lokalen Modell (<code>local::apply</code>)</td><td>Kein Cache-Thema, dafür Geschwindigkeit des lokalen Modells</td></tr>
+    <tr><td>Autark</td><td>Eigener Agent hat den Verlauf als JSONL (<code>standalone/transcript</code>): Verlauf lesen, eine Anfrage ohne Werkzeuge schicken</td><td>Neuer Einstiegspunkt im eigenen Agenten nötig</td></tr>
+    <tr><td>Codex</td><td>Kurzlebiger Thread über <code>codex app-server</code> (wie <code>helper</code>/<code>print</code>)</td><td>Ob Codex einen bestehenden Thread kopieren kann (?)</td></tr>
+  </table>
+  <div class="note-box">
+    <b>Vorschlag für den ersten Schritt: ein Prüfprogramm, noch keine Oberfläche.</b> Passend zur Konvention im Repo (<code>changes-probe</code>, <code>git-probe</code> …): <code>side-probe</code> startet auf einer Kopie einer echten Session den Fork ohne Werkzeuge, stellt eine Frage und gibt Antwort und Cache-Zahlen aus. Zwei Läufe hintereinander zeigen, ob der Cache trägt. Erst danach lohnt sich der Bau von Core und Oberfläche.
+  </div>
+</main>
+</body>
+</html>
