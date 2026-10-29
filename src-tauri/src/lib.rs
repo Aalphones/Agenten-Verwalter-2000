@@ -27,6 +27,7 @@ pub mod retro;
 pub mod review;
 pub mod sessions;
 pub mod settings;
+pub mod side;
 pub mod skills;
 pub mod sourcing;
 pub mod standalone;
@@ -172,6 +173,9 @@ pub fn run() {
             commands::file_links::file_link_open,
             commands::artifacts::artifacts_list,
             commands::artifacts::artifact_open_in_browser,
+            commands::side::side_ask,
+            commands::side::side_load,
+            commands::side::side_dismiss,
             commands::tldr::tldr_session_load,
             commands::tldr::tldr_session_create,
             commands::tldr::tldr_project_load,

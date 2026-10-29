@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
-| 1 | Core: Einmal-Aufruf als Fork, Zustand, Befehle, Prüfprogramm `side-probe`, ADR 044 | heikel | 1 | pending |
+| 1 | Core: Einmal-Aufruf als Fork, Zustand, Befehle, Prüfprogramm `side-probe`, ADR 044 | heikel | 1 | complete |
 | 2 | Oberfläche: Fenster, Reiter, `/btw`, `+`-Menü, `Strg+;`, Doku | standard | 2 | pending |
 | 3 | Markieren → Rechtsklick → „Nebenfrage zur Auswahl“ | standard | 3 | pending |
 
@@ -14,9 +14,9 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 ## Festgelegte Entscheidungen
 
-- **Nebenfrage = eigener Einmal-Aufruf auf einem Fork der Session.** `claude -p --resume <Session-ID> --fork-session` im Arbeitsordner der Session (`session.workspace`), Ausgabe `--output-format json`. Der Hauptprozess der Session wird nicht berührt, ihr Verlauf bekommt keinen Eintrag. Die Session-ID ist die, die der Verwalter selbst vergibt (`--session-id <session.id>`, `build_command` in `agents/claude/process.rs`).
+- **Nebenfrage = eigener Einmal-Aufruf auf einem Fork der Session.** `claude -p --resume <Session-ID> --fork-session --no-session-persistence` im Arbeitsordner der Session (`session.workspace`), Ausgabe `--output-format json`. Der Hauptprozess der Session wird nicht berührt, ihr Verlauf bekommt keinen Eintrag. Die Session-ID ist die, die der Verwalter selbst vergibt (`--session-id <session.id>`, `build_command` in `agents/claude/process.rs`).
 - **Nur im Speicher.** Keine Datenbank, keine Migration. Die Nebenfragen leben im `SessionState` und sind nach dem Beenden der App weg (wie bei Claude: der Side Chat wird nicht gespeichert). Höchstens **20** je Session, die 21. verdrängt die älteste. Höchstens **3** laufen gleichzeitig je Session, die 4. wird abgelehnt.
-- **Keine Werkzeuge für die Nebenfrage.** Zwei Varianten, die Phase 1 **misst**: `bare` (`--tools "" --safe-mode --strict-mcp-config`, wie `print_command`) und `same` (Werkzeugliste und Systemprompt wie der Hauptprozess, Werkzeuge nur durch `--permission-mode dontAsk` gesperrt). Sinn: eine geänderte Werkzeugliste kann den Prompt-Cache entwerten, dann kostet jede Nebenfrage den ganzen Verlauf zum vollen Preis. **Entscheidungsregel (Phase 1, steht danach in ADR 044):** zweite Frage innerhalb von 60 s nach der ersten, beide Varianten; Variante mit `cache_read_input_tokens > 0` bei der zweiten Frage gewinnt, bei Gleichstand `bare` (einfacher). Liest keine Variante aus dem Cache, gilt `bare`, und die Oberfläche zeigt statt der Cache-Pille den festen Hinweis „liest den ganzen Verlauf neu“.
+- **Keine Werkzeuge für die Nebenfrage, aber dieselbe Werkzeugliste wie der Hauptprozess** (gemessen in Phase 1, [ADR 044](../../decisions/044-nebenfragen.md)): Werkzeugliste, Systemprompt-Zusatz und Modell wie der Hauptprozess (`common_args` in `agents/claude/process.rs`), Werkzeuge nur durch `--permission-mode dontAsk` gesperrt. So liest schon die erste Nebenfrage aus dem Prompt-Cache der Session (0,045 $ statt 0,92 $ bei ~114k Token Verlauf auf Opus). Die vorab festgelegte Regel „zweite Frage entscheidet, bei Gleichstand `bare`“ ist nach der Messung verworfen (User, 2026-10-29); eine Variante `bare` gibt es im Code nicht.
 - **Frage im Prompt, nicht im Systemprompt.** Ein Zitat und die Anweisung „Beantworte nur aus dem bisherigen Verlauf, knapp, ohne Werkzeuge“ stehen im Text der Frage, damit der Anfang des Prompts (und damit der Cache) unverändert bleibt.
 - **Betriebsarten (Version 1):** Claude und Claude + LM Studio (beide starten die Claude-Kommandozeile). **Autark und Codex nicht:** `side_ask` liefert dort `Internal("Nebenfragen gibt es in dieser Betriebsart noch nicht.")`; die Oberfläche zeigt denselben Satz als Hinweis, wenn man den Einstieg wählt (Muster `LOCAL_MODEL_PICK_HINT` in `Composer.tsx`). Zeitlimit: **120 s** in Claude, **300 s** mit LM Studio (das erste Token kam beim Fortsetzen einer Session mit dem lokalen Modell nach 224 s, [claude-stream-json.md](../../knowledge/claude-stream-json.md)).
 - **Anzeige:** Fenster über der Eingabeleiste (Entwurf A) mit Frage, Antwort (als Markdown), Pille für den Cache, „Kopieren“, Schließen mit `Esc`; dazu der Reiter „Nebenfragen“ im Hintergrund-Panel (Liste, Klick öffnet die Antwort wieder im Fenster, „Entfernen“ je Zeile).
@@ -38,12 +38,13 @@ pub struct SideQuestion {
     pub state: SideState,
     pub answer: Option<String>,     // gesetzt bei Done
     pub error: Option<String>,      // gesetzt bei Failed
-    pub asked_at: i64,              // Millisekunden seit 1970
-    pub answered_at: Option<i64>,
+    pub asked_at: f64,              // Millisekunden seit 1970 (wie `now_ms`, TS `number`)
+    pub answered_at: Option<f64>,
     pub usage: Option<SideUsage>,   // aus der Antwort der Kommandozeile
 }
 
-pub struct SideUsage { pub input_tokens: u64, pub cache_read_tokens: u64 }
+pub struct SideUsage { pub input_tokens: u64, pub cache_read_tokens: u64 }  // input_tokens = alle Eingabe-Token samt Cache; TS `number`
+pub struct SideChangedEvent { pub session_id: String }
 ```
 
 Befehle (`src-tauri/src/commands/side.rs`, `async`, Muster `commands/tldr.rs`):
@@ -54,7 +55,7 @@ side_load(registry, session_id: String) -> Result<Vec<SideQuestion>, CommandErro
 side_dismiss(registry, session_id: String, id: String) -> Result<(), CommandError>
 ```
 
-Ereignis `side://changed`, Nutzlast `{ sessionId: string }` (Muster `tldr://changed`, `emit_tldr_changed`); die Oberfläche lädt dann mit `side_load` neu. Fehler: leere Frage (nach `trim`) → `Internal("Die Frage ist leer.")`; vierte gleichzeitige → `Internal("Es laufen schon drei Nebenfragen. Warte auf eine Antwort.")`; Session unbekannt → wie die anderen Befehle der Registry. Wrapper `src/lib/side.ts`: `askSide(sessionId, question, quote)`, `loadSide(sessionId)`, `dismissSide(sessionId, id)`, `subscribeSide(handler)`.
+Ereignis `side://changed`, Nutzlast `{ sessionId: string }` (Muster `tldr://changed`, `emit_tldr_changed`); die Oberfläche lädt dann mit `side_load` neu. Fehler: leere Frage (nach `trim`) → `Internal("Die Frage ist leer.")`; vierte gleichzeitige → `Internal("Es laufen schon drei Nebenfragen. Warte auf eine Antwort.")`; Session unbekannt → wie die anderen Befehle der Registry; Session ohne Transkript der Kommandozeile → `Internal("Diese Session hat noch keinen Verlauf.")`. `side_dismiss` meldet kein Ereignis, die Oberfläche lädt selbst neu. Wrapper `src/lib/side.ts`: `askSide(sessionId, question, quote)`, `loadSide(sessionId)`, `dismissSide(sessionId, id)`, `subscribeSide(handler)`.
 
 Store (`src/stores/side.ts`, Phase 2; Phase 3 ruft ihn nur auf):
 
@@ -80,7 +81,7 @@ interface SideState {
 
 - **Cache entwertet.** Siehe Entscheidung oben; Phase 1 misst, bevor die Oberfläche gebaut wird.
 - **`--resume` auf eine Session, die gerade geschrieben wird.** Der Fork liest die Transkript-Datei, während der Hauptprozess anhängt. Gegenmaßnahme: Phase 1 prüft das ausdrücklich während eines laufenden Zugs; die letzte, noch nicht geschriebene Antwort fehlt dem Fork (wie beim Original).
-- **Fork-Dateien.** Jeder Fork kann eine eigene Transkript-Datei im Projektordner der Kommandozeile hinterlassen und die Liste von `claude --resume` des Nutzers füllen. Phase 1 prüft das und räumt bei Bedarf nach jedem Lauf auf (`locate`-Modul liefert die Pfade).
+- ~~**Fork-Dateien.**~~ Erledigt in Phase 1: ohne Schalter hinterlässt jeder Fork eine Datei, mit `--no-session-persistence` keine.
 - **`Strg+;` auf deutscher Tastatur.** Das Semikolon liegt auf Umschalt+Komma, `event.shiftKey` ist dort wahr. Die Abfrage darf `shift` deshalb nicht ausschließen.
 - **Kosten bei vielen Nebenfragen.** Jede liest den ganzen Verlauf; bei kaltem Cache voller Preis. Gegenmaßnahme: Pille zeigt den Zustand vor dem Senden.
 

@@ -1,4 +1,4 @@
-# Phase 1 — Core (heikel, Wave 1)
+# Phase 1 — Core (heikel, Wave 1) — complete
 
 Ergebnis: ein Tauri-Befehl `side_ask`, der eine Nebenfrage als Fork der Session beantwortet, plus Zustand, Ereignis und das Prüfprogramm `side-probe`, das die Cache-Frage **misst**. Kontrakt (Typen, Befehle, Ereignis, Grenzen) und Entscheidungen stehen in der [README](README.md) — dort nachlesen, hier nicht wiederholt.
 
@@ -37,13 +37,23 @@ Ergebnis: ein Tauri-Befehl `side_ask`, der eine Nebenfrage als Fork der Session 
 
 ## Checkliste
 
-- [ ] `git status` prüfen; liegen Änderungen dort, die nicht zu dieser Phase gehören (STATE.md nennt den uncommitteten ersten Versuch der Diff-Ansicht in `src-tauri/src/changes/`, `git/`, `commands/changes.rs`, `examples/changes-probe.rs`), **nicht anfassen** und nur die eigenen Dateien per Pfad committen; unklarer Besitz → 🔴 an den User.
-- [ ] Modelle, Dateien, Funktionen nach „Neue und geänderte Dateien“ anlegen; `pnpm bindings`.
-- [ ] `side-probe` bauen und **zuerst** die Messung fahren (AK 1–5), erst dann Registry und Befehle fertigstellen — fällt die Messung anders aus als erwartet, bleibt die Oberfläche unberührt.
-- [ ] ADR 044 (10 Zeilen): Kontext (ADR 003: ein Prozess je Session; Nebenfrage braucht den Verlauf, darf ihn nicht verlängern); Optionen (a) Frage in den Hauptprozess schicken und aus dem Verlauf streichen — verworfen, der Agent wäre blockiert und der Verlauf wird verändert; (b) Einmal-Aufruf ohne Verlauf — verworfen, die Frage braucht den Kontext; (c) Fork der Session — gewählt; Entscheidung `bare` oder `same` mit den vier Messwerten; Konsequenzen: eigene Kosten je Frage, nur im Speicher, nur Claude und Claude + LM Studio.
-- [ ] Doku: `docs/code-map.md` — Features-Liste um `side` (Nebenfragen) ergänzen und neue Tabellenzeile „Nebenfragen“ (Core-Spalte: `src-tauri/src/side/`, `agents/claude/side.rs`, `sessions/registry/side.rs`, `commands/side.rs`, Probe, ADR 044; Oberfläche-Spalte: „folgt in Phase 2“); `docs/glossary.md` Eintrag **Nebenfrage** („Frage zur Session, die Claude aus dem Verlauf beantwortet, ohne dass sie in den Chat wandert; Fork der Session, nur im Speicher“, ADR 044); `AGENTS.md` Befehlstabelle: Zeile `side-probe` mit Aufruf und Zweck (Kopie der Datenbank, nie gegen `%USERPROFILE%\.verwalter\verwalter.db`).
-- [ ] Ein Commit, Scope `side`, Bindings dabei.
+- [x] `git status` prüfen; liegen Änderungen dort, die nicht zu dieser Phase gehören (STATE.md nennt den uncommitteten ersten Versuch der Diff-Ansicht in `src-tauri/src/changes/`, `git/`, `commands/changes.rs`, `examples/changes-probe.rs`), **nicht anfassen** und nur die eigenen Dateien per Pfad committen; unklarer Besitz → 🔴 an den User.
+- [x] Modelle, Dateien, Funktionen nach „Neue und geänderte Dateien“ anlegen; `pnpm bindings`.
+- [x] `side-probe` bauen und **zuerst** die Messung fahren (AK 1–5), erst dann Registry und Befehle fertigstellen — fällt die Messung anders aus als erwartet, bleibt die Oberfläche unberührt.
+- [x] ADR 044 (10 Zeilen): Kontext (ADR 003: ein Prozess je Session; Nebenfrage braucht den Verlauf, darf ihn nicht verlängern); Optionen (a) Frage in den Hauptprozess schicken und aus dem Verlauf streichen — verworfen, der Agent wäre blockiert und der Verlauf wird verändert; (b) Einmal-Aufruf ohne Verlauf — verworfen, die Frage braucht den Kontext; (c) Fork der Session — gewählt; Entscheidung `bare` oder `same` mit den vier Messwerten; Konsequenzen: eigene Kosten je Frage, nur im Speicher, nur Claude und Claude + LM Studio.
+- [x] Doku: `docs/code-map.md` — Features-Liste um `side` (Nebenfragen) ergänzen und neue Tabellenzeile „Nebenfragen“ (Core-Spalte: `src-tauri/src/side/`, `agents/claude/side.rs`, `sessions/registry/side.rs`, `commands/side.rs`, Probe, ADR 044; Oberfläche-Spalte: „folgt in Phase 2“); `docs/glossary.md` Eintrag **Nebenfrage** („Frage zur Session, die Claude aus dem Verlauf beantwortet, ohne dass sie in den Chat wandert; Fork der Session, nur im Speicher“, ADR 044); `AGENTS.md` Befehlstabelle: Zeile `side-probe` mit Aufruf und Zweck (Kopie der Datenbank, nie gegen `%USERPROFILE%\.verwalter\verwalter.db`).
+- [x] Ein Commit, Scope `side`, Bindings dabei.
 
 ## Report-Back
 
 Ausgabe von `side-probe` für AK 1–5 (mit den Cache-Zahlen beider Varianten), Entscheidung `bare`/`same`, `pnpm check`-Ergebniszeile, Commit-Hash.
+
+### Report-Back (2026-10-29)
+
+- **Messung vor dem Code** (Handlauf mit den Argumenten des laufenden Hauptprozesses, diese Session, Opus, ~114k Token): ohne Werkzeuge 1. Frage `cache_read` 0 (0,92 $), 2. Frage 113 554 (0,036 $); gleiche Werkzeugliste 1. Frage 146 336 (0,045 $), 2. Frage 146 336 (0,052 $). Die README-Regel (nur die 2. Frage zählt) hätte `bare` gewählt; nach Rückfrage gilt die gleiche Werkzeugliste wie in Claude Codes `/btw` (User, 2026-10-29). `SideVariant` entfällt, `common_args` bleibt.
+- **Abweichungen:** `side-probe` hat kein Argument `bare|same` mehr (`<Datenbank-Kopie> <Session-ID> "<Frage>" [--twice]`); Fork mit `--no-session-persistence` statt Aufräumen über `locate` (keine Datei entsteht); Zeiten `f64` statt `i64` (wie `now_ms`, TS `number`); `SideUsage.input_tokens` = alle Eingabe-Token samt Cache; neuer Fehler „Diese Session hat noch keinen Verlauf.“ ohne Transkript; die Arbeitsordner baut `ask_side` aus `SessionRepository::working_dir` ohne `worktrees::ensure` (legt nichts an).
+- **AK 1, 2, 3, 5** belegt mit `side-probe … --twice` gegen diese Session: beide Läufe Exit 0, `num_turns` 1, `cache_read_input_tokens` 205 724 von 207 128 schon im ersten Lauf, Transkript vorher/nachher 453 Zeilen / 1 825 316 Bytes, keine neue Datei im Projektordner.
+- **AK 4** belegt durch denselben Lauf: der Hauptprozess dieser Session schrieb währenddessen den laufenden Zug weiter, ohne Eintrag der Nebenfrage. Kein Screenshot (der Chat zeigt nichts, was zu fotografieren wäre).
+- **AK 6, 7, 8** nur per Code geprüft, nicht ausgeführt: Betriebsart-Prüfung vor jedem Prozess, Zähler `MAX_RUNNING`/`MAX_QUESTIONS`, `clip_quote` an Zeichengrenze und `> `-Zeilen in `prompt`. Lauf in der App folgt mit Phase 2.
+- **AK 9:** `pnpm bindings` und `pnpm check` grün.
+- **Unsicherste Stelle:** `sessions/registry/side.rs` nimmt Denkaufwand und Browser-Schalter des laufenden Prozesses, aber Modell und LM-Studio-Backend aus Session und Einstellungen. Weichen die ab (z. B. LM-Studio-Modell gewechselt, Prozess noch alt), verfehlt die Frage den Cache, sie funktioniert aber.

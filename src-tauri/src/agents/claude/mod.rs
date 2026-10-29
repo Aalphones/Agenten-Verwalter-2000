@@ -6,5 +6,6 @@ pub mod mcp;
 pub mod print;
 pub mod process;
 pub mod protocol;
+pub mod side;
 pub mod stats;
 pub mod translate;

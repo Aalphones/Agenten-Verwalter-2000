@@ -73,6 +73,7 @@ use crate::sessions::model::{
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
 use crate::settings::model::OperatingMode;
+use crate::side::model::SideQuestion;
 use crate::skills::{self, model::SkillRef};
 use crate::sourcing::{self, Sources};
 use crate::tldr::model::{ProjectTldr, SessionTldr};
@@ -85,6 +86,7 @@ mod commit_scan;
 mod mcp;
 mod restore;
 mod retro;
+mod side;
 mod tldr;
 
 const SESSION_CHANGED_EVENT: &str = "session://changed";
@@ -311,6 +313,8 @@ struct SessionState {
     tldr_error: Option<String>,
     /// Haken der Einstiegsansicht einer neuen Session; nur im Speicher, Standard gesetzt.
     carries_project_tldr: bool,
+    /// Nebenfragen gibt es nur im Speicher (ADR 044), neueste zuletzt.
+    side: Vec<SideQuestion>,
 }
 
 /// Eine Session, wie `SessionRegistry::restore` sie aus der Datenbank liest.
@@ -2227,6 +2231,7 @@ impl SessionState {
             tldr_running: false,
             tldr_error: None,
             carries_project_tldr: true,
+            side: Vec::new(),
         }
     }
 

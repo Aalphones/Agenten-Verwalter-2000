@@ -45,6 +45,7 @@ use verwalter_lib::{
         AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionStatus, SessionSummary,
     },
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
+    side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
     tldr::model::{
         ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
@@ -152,6 +153,10 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ProjectSessionTldr::export_all(&cfg)?;
     ProjectTldrView::export_all(&cfg)?;
     TldrChangedEvent::export_all(&cfg)?;
+    SideState::export_all(&cfg)?;
+    SideUsage::export_all(&cfg)?;
+    SideQuestion::export_all(&cfg)?;
+    SideChangedEvent::export_all(&cfg)?;
     ColorScheme::export_all(&cfg)?;
     OperatingMode::export_all(&cfg)?;
     LocalModelKind::export_all(&cfg)?;

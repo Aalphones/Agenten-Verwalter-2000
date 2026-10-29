@@ -1,10 +1,10 @@
 # STATE
 
-**Aktiver Plan:** keiner. `2026-10-29_unveraenderte-zeilen` ist archiviert (`docs/archive/2026-10/2026-10-29_unveraenderte-zeilen/`, ADR 043, keine Migration), mit Review (`REVIEW.md` dort), ohne Lauf in der echten App (Follow-ups in dessen README).
-**Nächster Schritt:** Plan aus dem Backlog wählen: `2026-10-22_parallele-sessions` oder `2026-10-22_umgebung` — unabhängig voneinander umsetzbar; beide fassen wie „Automatisch weiter“ die Funktion `send` an, wer später umsetzt, liest sie neu. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVM\bin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"`, `%USERPROFILE%\.cargo\bin` in den PATH — sonst scheitert whisper-rs-sys.
+**Aktiver Plan:** `docs/planning/2026-10-29_nebenfragen/` (ADR 044). **Phase:** 1/3 — Core (complete, committet). Danach Phase 2/3 — Oberfläche (standard, Modell sonnet): FINDINGS-Einträge „→ Phase 2“ zuerst lesen.
+**Nächster Schritt:** Phase 2 der Nebenfragen (Oberfläche) in neuer Session auf Sonnet. Danach Backlog: `2026-10-22_parallele-sessions` oder `2026-10-22_umgebung` — unabhängig voneinander umsetzbar; beide fassen wie „Automatisch weiter“ die Funktion `send` an, wer später umsetzt, liest sie neu. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit vcvars64 (VS 2019 Build Tools), `LIBCLANG_PATH=C:\Program Files\LLVM\bin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"`, `%USERPROFILE%\.cargo\bin` in den PATH — sonst scheitert whisper-rs-sys.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-29_unveraenderte-zeilen/` (ADR 043, keine Migration), Release `v0.37.0`; davor `docs/archive/2026-10/2026-10-28_werkzeug-details/` (ADR 042, Migration 015), Release `v0.36.0`. Der volle Update-Durchlauf (Klick → Tausch → Neustart) ist noch nie in der echten App gelaufen.
 
-**Freigegeben, geparkt (2026-10-29):** `2026-10-29_nebenfragen` (ADR 044, drei Phasen, mit Entwurf unter `artifacts/`). Phase 1 misst zuerst, ob der Prompt-Cache beim Fork der Session trägt (`side-probe`), erst danach entsteht die Oberfläche. Unabhängig von `unveraenderte-zeilen`.
+**In Arbeit (2026-10-29):** `2026-10-29_nebenfragen` — Phase 1 umgesetzt: Fork mit gleicher Werkzeugliste wie der Hauptprozess (Messung in ADR 044), `--no-session-persistence`, Prüfprogramm `side-probe`.
 
 **Geparkt seit 2026-10-22 (je mit Entwurf unter `artifacts/`):** `2026-10-22_parallele-sessions` (ADR 037), `2026-10-22_umgebung` (ADR 038). Reserviert: ADR 034 für `mitgelieferte-befehle`; keiner braucht eine Migration.
 

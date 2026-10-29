@@ -198,7 +198,11 @@ fn print_command(exe: &Path, cwd: &Path, request: &PrintRequest<'_>) -> Command 
 
 /// Die ganze Standardausgabe als Text. Schreiben und Lesen laufen in eigenen Threads, damit das
 /// Zeitlimit auch dann greift, wenn die Kommandozeile die Eingabe nicht abnimmt.
-fn exchange(child: &mut Child, input: &str, timeout: Duration) -> Result<String, String> {
+pub(super) fn exchange(
+    child: &mut Child,
+    input: &str,
+    timeout: Duration,
+) -> Result<String, String> {
     let (Some(stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
         return Err("Ein-/Ausgabe von Claude nicht verfügbar".to_owned());
     };

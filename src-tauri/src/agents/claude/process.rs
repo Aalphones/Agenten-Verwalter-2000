@@ -124,9 +124,22 @@ fn build_command(opts: &SpawnOptions) -> Command {
         .arg("stream-json")
         .arg("--verbose")
         .arg("--permission-prompt-tool")
-        .arg("stdio")
-        .arg("--model")
-        .arg(model_arg(opts));
+        .arg("stdio");
+    common_args(&mut command, opts, opts.mode.cli_value());
+    if opts.resume {
+        command.arg("--resume");
+    } else {
+        command.arg("--session-id");
+    }
+    command.arg(&opts.session_id);
+    hide_console(&mut command);
+    command
+}
+
+/// Alles, was Systemprompt, Werkzeugliste und Modell bestimmt. Eine Nebenfrage (`side.rs`) setzt
+/// dieselben Argumente, damit sie den Prompt-Cache des Hauptprozesses liest (ADR 044).
+pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission_mode: &str) {
+    command.arg("--model").arg(model_arg(opts));
     // Das lokale Modell kennt keinen Denkaufwand, und Artefakte veröffentlicht nur Anthropic.
     if opts.local.is_none() {
         command
@@ -144,11 +157,11 @@ fn build_command(opts: &SpawnOptions) -> Command {
     }
     command
         .arg("--permission-mode")
-        .arg(opts.mode.cli_value())
+        .arg(permission_mode)
         // Ohne die Variable lädt Claude die `CLAUDE.md` eines `--add-dir`-Ordners nicht.
         .env("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1");
     if let Some(backend) = &opts.local {
-        local::apply(&mut command, backend);
+        local::apply(command, backend);
         // Der autarke Agent braucht den Ordner für die Ausgaben seiner Hintergrundprozesse, und den
         // Pfad aus dem Prompt-Text zu fischen wäre brüchig.
         if backend.program == LocalProgram::Standalone
@@ -194,14 +207,6 @@ fn build_command(opts: &SpawnOptions) -> Command {
     if !mcp_configs.is_empty() {
         command.arg("--mcp-config").args(&mcp_configs);
     }
-    if opts.resume {
-        command.arg("--resume");
-    } else {
-        command.arg("--session-id");
-    }
-    command.arg(&opts.session_id);
-    hide_console(&mut command);
-    command
 }
 
 /// In „Codex“ das Codex-Modell der Session, leer = Standardmodell von Codex; das Claude-Modell gilt
