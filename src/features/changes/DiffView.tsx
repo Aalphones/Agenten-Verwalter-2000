@@ -393,7 +393,7 @@ export function DiffView({
   /** Balken einer Lücke: oben nur Pfeil nach oben, unten nur Pfeil nach unten, dazwischen beide. */
   function renderGap(gap: GapRow): ReactElement {
     const hidden: number = gap.to - gap.from + 1;
-    const error: string | null =
+    const gapError: string | null =
       errorGap !== null && (errorGap.gap === 'all' || errorGap.gap === gap.id)
         ? errorGap.text
         : null;
@@ -413,7 +413,7 @@ export function DiffView({
         >
           {hiddenLinesLabel(hidden)}
         </button>
-        {error !== null && <span className="diff-view__gap-error">{error}</span>}
+        {gapError !== null && <span className="diff-view__gap-error">{gapError}</span>}
       </div>
     );
   }
