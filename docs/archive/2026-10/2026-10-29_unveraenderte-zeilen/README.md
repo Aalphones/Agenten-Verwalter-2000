@@ -154,14 +154,32 @@ Report-Back: Screenshots der Fälle aus der Selbstprüfung, `pnpm check`-Ergebni
 
 Unsicherste Stellen: (1) die Abstandsformeln für Lücken bei Abschnitten ohne alte oder neue Zeilen (`b = 0` oder `d = 0`, reine Einfügung bzw. Löschung) — Check: in Phase 1 eine Datei mit reiner Einfügung und eine mit reiner Löschung durch die Probe laufen lassen und die Nummern am Rand der Lücke gegen `git diff` halten; (2) Scrollsprung beim Einfügen von Zeilen in die virtualisierte Liste — Check: AK 6 in der laufenden App; (3) ob `git show <rev>:<pfad>` für Dateien mit Sonderzeichen im Pfad ohne zusätzliche Maskierung funktioniert — Check: Probe mit einem Pfad mit Leerzeichen.
 
-## Bottom-Sektionen (beim Archivieren füllen)
+## Bottom-Sektionen
 
 ### Summary
 
+Die Diff-Ansicht zeigt statt der Abschnittsköpfe graue Balken für die unveränderten Zeilen zwischen, vor und nach den Änderungen. Ein Pfeil blendet bis zu 20 Zeilen an seiner Seite ein, der Text im Balken die ganze Lücke, „Ganze Datei“ im Dateikopf alle Lücken mit einem Aufruf. Eingeblendete Zeilen tragen beide Nummern, Syntaxfarben und Review-Kommentare. Der Core liefert dafür die Zeilenzahl der neuen Fassung mit dem Diff und einen Befehl für Zeilenbereiche (ADR 043); der erste Versuch mit großer Umgebung ist zurückgebaut.
+
 ### Files touched
+
+Rust: `changes/mod.rs`, `changes/model.rs`, `changes/parse.rs`, `commands/changes.rs`, `git/mod.rs`, `lib.rs`, `examples/changes-probe.rs`, `examples/gen-bindings.rs`. TypeScript: `features/changes/` (`DiffView.tsx`, `DiffView.css`, neu `diffRows.ts`, `useGapExpansion.ts`), `lib/changes.ts`, Bindings `FileDiff.ts`, `FileLines.ts`. Doku: ADR 043, Glossar, `code-map.md`, `AGENTS.md`.
 
 ### Commits
 
+`b6dc998` Core, `66ed0b2` Oberfläche; aus dem Review `cdb80d5` Umbenennung, `161e153` Scroll-Sprung, `9d29a52` Lesen aus Commits bis 8 MB, `c63d56e` Bereichsprüfung zuerst; Merge `c75c67f`.
+
 ### Deviations from plan
 
+- Während eines Nachladens sind alle Balken und „Ganze Datei“ gesperrt, nicht nur der geklickte Balken.
+- „Ganze Datei“ holt von der ersten bis zur letzten versteckten Zeile statt `1..min(newLineCount, 20000)`.
+- Passt die Antwort des Core nicht zur Lücke, steht „Die Datei hat sich seit dem Diff geändert.“ im Balken.
+- Stabile Schlüssel je Zeile in der virtualisierten Liste; nach dem Review gleicht die Liste beim Messen nur Zeilen über der obersten sichtbaren aus (vorher sprang sie bei umbrechenden Zeilen am oberen Rand).
+- `show_file` fragt die Größe vorher mit `git cat-file -s` ab; binäre Diffs lesen die neue Fassung nicht.
+- Kein Lauf in der echten App; geprüft im Browser-Prüfstand (Edge headless, echte `DiffView`, Core nachgebaut).
+
 ### Follow-ups
+
+- Lauf in der echten App: schmaler Diff-Bereich, lange Zeilen, mittleren Balken bündig an den oberen Rand scrollen, Pfeil nach unten und Text klicken; Kommentar auf eingeblendeter Zeile; „Ganze Datei“ und zurück.
+- `DiffView.tsx` (560 Zeilen) unter 400 bringen: Balken als eigene Komponente mit eigener CSS-Datei, danach das Kommentar-Rendering je Zeile ([REVIEW.md](REVIEW.md), Befund 6).
+- Datei über 8 MB in einem eigenen Commit durch die Probe laufen lassen (`PROBE_SCOPE=committed`), erwartet `neue Zeilen: —`.
+- Nach jedem Update von `@tanstack/react-virtual` den Scroll-Fall aus dem ersten Follow-up nachklicken.
