@@ -16,7 +16,7 @@ use std::thread::{self, ScopedJoinHandle};
 use crate::changes::attribution::{OwnFile, Ownership};
 use crate::changes::history::CommitInfo;
 use crate::changes::model::{
-    ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, LineStat,
+    ChangeKind, ChangeScope, DiffLine, DiffLineKind, FileChange, FileDiff, FileLines, LineStat,
     RepositoryChanges, SessionChanges,
 };
 use crate::changes::sources::Source;
@@ -36,6 +36,7 @@ const WORKTREE_MISSING: &str =
 const THREAD_FAILED: &str = "interner Fehler beim Lesen der Changes";
 const HEAD: &str = "HEAD";
 const NO_OWN_COMMITS: &str = "Die Datei hat keine eigenen Commits in dieser Ansicht";
+const NO_TEXT: &str = "Kein Text: Binärdatei, größer als 8 MB oder nicht mehr vorhanden.";
 const SHORT_COMMIT_CHARS: usize = 7;
 /// Basis eines Ticket-Worktrees, wenn sie sich nicht bestimmen ließ; der Eintrag trägt dann den Fehler.
 const UNKNOWN_BASE: &str = "unbekannt";
@@ -422,6 +423,83 @@ pub fn file_diff(
     own: &Ownership,
 ) -> Result<FileDiff, CommandError> {
     validate_path(path)?;
+    let (worktree, base) = checked_dir(source)?;
+    let base = base.as_str();
+    // Im Blickwinkel „Committet“ ist die neue Fassung die des letzten eigenen Commits, sonst die im
+    // Arbeitsverzeichnis.
+    let (raw, last_own_commit) = match scope {
+        ChangeScope::Committed => {
+            let Some(file) = own_file(&worktree, base, own, path)? else {
+                return Err(CommandError::Internal(NO_OWN_COMMITS.to_owned()));
+            };
+            let raw = git::diff_tree_patch(&worktree, &file.from, &file.to, path)?;
+            (raw, Some(file.to))
+        }
+        ChangeScope::All => match own_file(&worktree, base, own, path)? {
+            Some(file) => (git::diff_index_patch(&worktree, &file.from, path)?, None),
+            None => (git::diff_index_patch(&worktree, HEAD, path)?, None),
+        },
+        ChangeScope::Uncommitted => (git::diff_index_patch(&worktree, HEAD, path)?, None),
+    };
+    // Untracked Dateien kennt kein Diff-Befehl; ihr Inhalt ist der ganze Diff.
+    if scope != ChangeScope::Committed
+        && raw.trim().is_empty()
+        && git::is_untracked(&worktree, path)?
+    {
+        return Ok(untracked_diff(&worktree.join(native_path(path))));
+    }
+    let mut diff = parse::unified(&raw);
+    // Binäres hat keine Zeilen; ist die neue Fassung nicht lesbar, fehlt nur die Zahl, nicht der Diff.
+    if !diff.binary {
+        let content = new_text(&worktree, path, last_own_commit.as_deref());
+        diff.new_line_count = content.as_deref().map(line_count);
+    }
+    Ok(diff)
+}
+
+/// Bereich für `file_lines`: 1-basiert, `to` nicht vor `from`. Der Befehl prüft ihn zuerst, damit
+/// ein ungültiger Bereich weder Git noch das Dateisystem berührt.
+pub fn check_line_range(from: u32, to: u32) -> Result<(), CommandError> {
+    if from == 0 || to < from {
+        return Err(CommandError::Internal(format!(
+            "Ungültiger Zeilenbereich: {from}–{to}"
+        )));
+    }
+    Ok(())
+}
+
+/// Die Zeilen `from..=to` der neuen Fassung einer Datei (die, die `file_diff` im selben Blickwinkel als
+/// neue Seite zeigt). Prüft Bereich, Pfad und Eintrag, bevor Git oder das Dateisystem berührt werden.
+pub fn file_lines(
+    source: &Source,
+    path: &str,
+    scope: ChangeScope,
+    own: &Ownership,
+    from: u32,
+    to: u32,
+) -> Result<FileLines, CommandError> {
+    check_line_range(from, to)?;
+    validate_path(path)?;
+    let (worktree, base) = checked_dir(source)?;
+    let Some(content) = new_side(&worktree, &base, path, scope, own)? else {
+        return Err(CommandError::Internal(NO_TEXT.to_owned()));
+    };
+    let first = usize::try_from(from - 1).unwrap_or(usize::MAX);
+    let count = usize::try_from(to - from)
+        .unwrap_or(usize::MAX)
+        .saturating_add(1)
+        .min(parse::MAX_DIFF_LINES);
+    let lines: Vec<String> = text_lines(&content)
+        .into_iter()
+        .skip(first)
+        .take(count)
+        .map(str::to_owned)
+        .collect();
+    Ok(FileLines { lines })
+}
+
+/// Ordner des Eintrags und seine Basis; prüft, dass beides da ist, bevor etwas daraus gelesen wird.
+fn checked_dir(source: &Source) -> Result<(PathBuf, String), CommandError> {
     if let Some(error) = &source.error {
         return Err(CommandError::Io(error.clone()));
     }
@@ -441,28 +519,35 @@ pub fn file_diff(
             repository.base_commit.clone()
         }
     };
-    let base = base.as_str();
-    let raw = match scope {
-        ChangeScope::Committed => {
-            let Some(file) = own_file(&worktree, base, own, path)? else {
-                return Err(CommandError::Internal(NO_OWN_COMMITS.to_owned()));
-            };
-            git::diff_tree_patch(&worktree, &file.from, &file.to, path)?
-        }
-        ChangeScope::All => match own_file(&worktree, base, own, path)? {
-            Some(file) => git::diff_index_patch(&worktree, &file.from, path)?,
-            None => git::diff_index_patch(&worktree, HEAD, path)?,
-        },
-        ChangeScope::Uncommitted => git::diff_index_patch(&worktree, HEAD, path)?,
-    };
-    // Untracked Dateien kennt kein Diff-Befehl; ihr Inhalt ist der ganze Diff.
-    if scope != ChangeScope::Committed
-        && raw.trim().is_empty()
-        && git::is_untracked(&worktree, path)?
-    {
-        return Ok(untracked_diff(&worktree.join(native_path(path))));
+    Ok((worktree, base))
+}
+
+/// Die neue Fassung der Datei als Text: im Blickwinkel „Committet“ die des letzten eigenen Commits,
+/// sonst die im Arbeitsverzeichnis. `None` heißt binär, über 8 MB, gelöscht oder nicht lesbar.
+fn new_side(
+    worktree: &Path,
+    base: &str,
+    path: &str,
+    scope: ChangeScope,
+    own: &Ownership,
+) -> Result<Option<String>, CommandError> {
+    if scope != ChangeScope::Committed {
+        return Ok(new_text(worktree, path, None));
     }
-    Ok(parse::unified(&raw))
+    let Some(file) = own_file(worktree, base, own, path)? else {
+        return Err(CommandError::Internal(NO_OWN_COMMITS.to_owned()));
+    };
+    Ok(new_text(worktree, path, Some(&file.to)))
+}
+
+/// Die Datei im Stand `commit`, ohne ihn die im Arbeitsverzeichnis; `None` heißt binär, über 8 MB,
+/// gelöscht oder nicht lesbar.
+fn new_text(worktree: &Path, path: &str, commit: Option<&str>) -> Option<String> {
+    match commit {
+        Some(commit) => git::show_file(worktree, commit, path, MAX_UNTRACKED_BYTES)
+            .filter(|content: &String| !is_binary(content.as_bytes())),
+        None => read_text(&worktree.join(native_path(path))),
+    }
 }
 
 /// Erster und letzter eigener Commit an `path`; `None`, wenn die Reichweite ihn nicht committet hat.
@@ -495,19 +580,14 @@ fn untracked_diff(path: &Path) -> FileDiff {
         lines: Vec::new(),
         binary: false,
         truncated: false,
+        new_line_count: None,
     };
     let Some(content) = read_text(path) else {
         diff.binary = true;
         return diff;
     };
-    let mut texts: Vec<&str> = content
-        .split('\n')
-        .map(|line: &str| line.strip_suffix('\r').unwrap_or(line))
-        .collect();
-    // Endet die Datei auf einen Zeilenumbruch, ist das letzte Stück leer und keine Zeile.
-    if content.ends_with('\n') || content.is_empty() {
-        texts.pop();
-    }
+    let texts: Vec<&str> = text_lines(&content);
+    diff.new_line_count = Some(u32::try_from(texts.len()).unwrap_or(u32::MAX));
     if texts.is_empty() {
         return diff;
     }
@@ -532,7 +612,28 @@ fn untracked_diff(path: &Path) -> FileDiff {
     diff
 }
 
-/// Inhalt einer untracked Datei; `None` heißt binär, zu groß oder nicht lesbar.
+/// Die Zeilen eines Textes ohne Zeilenende; ein abschließender Zeilenumbruch ist keine Zeile.
+fn text_lines(content: &str) -> Vec<&str> {
+    let mut texts: Vec<&str> = content
+        .split('\n')
+        .map(|line: &str| line.strip_suffix('\r').unwrap_or(line))
+        .collect();
+    if content.ends_with('\n') || content.is_empty() {
+        texts.pop();
+    }
+    texts
+}
+
+fn line_count(content: &str) -> u32 {
+    u32::try_from(text_lines(content).len()).unwrap_or(u32::MAX)
+}
+
+/// Git hält eine Datei für binär, wenn in den ersten Bytes ein NUL steht.
+fn is_binary(content: &[u8]) -> bool {
+    content[..content.len().min(BINARY_PROBE_BYTES)].contains(&0)
+}
+
+/// Inhalt einer Datei im Arbeitsverzeichnis; `None` heißt binär, zu groß oder nicht lesbar.
 fn read_text(path: &Path) -> Option<String> {
     let is_small = fs::metadata(path)
         .is_ok_and(|metadata: fs::Metadata| metadata.len() <= MAX_UNTRACKED_BYTES);
@@ -541,8 +642,7 @@ fn read_text(path: &Path) -> Option<String> {
     }
     // Die Datei kann zwischen Auflisten und Lesen verschwunden sein; der nächste Durchlauf korrigiert.
     let content = fs::read(path).ok()?;
-    let probe = &content[..content.len().min(BINARY_PROBE_BYTES)];
-    if probe.contains(&0) {
+    if is_binary(&content) {
         return None;
     }
     Some(String::from_utf8_lossy(&content).into_owned())

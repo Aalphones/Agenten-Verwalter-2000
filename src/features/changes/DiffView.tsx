@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import {
@@ -8,8 +8,17 @@ import {
   statOf,
   statStamp,
 } from '@/features/changes/changesScope';
+import {
+  buildRows,
+  revealRange,
+  rowKey,
+  type DiffRow,
+  type GapDirection,
+  type GapRow,
+} from '@/features/changes/diffRows';
 import { highlightDiff } from '@/features/changes/highlightDiff';
 import { useFileDiff } from '@/features/changes/useFileDiff';
+import { useGapExpansion } from '@/features/changes/useGapExpansion';
 import { CollectedNote } from '@/features/review/CollectedNote';
 import { CommentBox } from '@/features/review/CommentBox';
 import { fileName, lineLabel } from '@/features/review/reviewLabels';
@@ -31,6 +40,9 @@ import {
 import './DiffView.css';
 
 const LINE_HEIGHT = 20;
+// Höhen aus DiffView.css: Pfeilknopf 26 px, Linien je 1 px; measureElement misst ohnehin nach.
+const GAP_HEIGHT = 28;
+const MIDDLE_GAP_HEIGHT = 54;
 const OVERSCAN = 20;
 const BINARY_TEXT = 'Kein Textvergleich: Binärdatei oder größer als 8 MB.';
 const EMPTY_TEXT = 'Keine Textänderungen.';
@@ -70,6 +82,20 @@ const SIGN: Record<DiffLine['kind'], string> = {
   deleted: '-',
 };
 
+/** Die Kürzungs-Meldung steht im Stil eines Abschnittskopfs. */
+const TRUNCATED_LINE: RenderedLine = {
+  kind: 'hunk',
+  oldLine: '',
+  newLine: '',
+  sign: '',
+  segments: plainLine(TRUNCATED_TEXT),
+};
+
+const GAP_ARROW: Record<Exclude<GapDirection, 'all'>, { title: string; where: string }> = {
+  down: { title: 'Zeilen darunter anzeigen', where: 'darunter' },
+  up: { title: 'Zeilen darüber anzeigen', where: 'darüber' },
+};
+
 export function DiffView({
   sessionId,
   reach,
@@ -106,21 +132,50 @@ export function DiffView({
   );
   const lines: readonly DiffLine[] = useMemo(() => diff?.lines ?? [], [diff]);
   const language: string | null = useMemo(() => languageOf(file.path), [file.path]);
+  const { expansions, busyGap, errorGap, expand, expandAll, collapseAll } = useGapExpansion(
+    sessionId,
+    reach,
+    { key: repository.key, path: file.path },
+    scope,
+    diff,
+    language,
+  );
   const highlighted: SyntaxLine[] = useMemo(
     () => highlightDiff(lines, language),
     [lines, language],
   );
-  const isTruncated: boolean = diff?.truncated ?? false;
-  const count: number = lines.length + (isTruncated ? 1 : 0);
+  const rows: readonly DiffRow[] = useMemo(
+    () => (diff === null ? [] : buildRows(diff, expansions)),
+    [diff, expansions],
+  );
+  const gaps: readonly GapRow[] = useMemo(
+    () => rows.filter((row: DiffRow): row is GapRow => row.kind === 'gap'),
+    [rows],
+  );
+  const hasGaps: boolean = gaps.length > 0 || expansions.size > 0;
+  const isWholeFile: boolean = hasGaps && gaps.length === 0;
+  const isBusy: boolean = busyGap !== null;
+  const getItemKey = useCallback(
+    (index: number): string => {
+      const row: DiffRow | undefined = rows[index];
+      return row === undefined ? `index-${String(index)}` : rowKey(row);
+    },
+    [rows],
+  );
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
-    count,
+    count: rows.length,
     getScrollElement: (): HTMLDivElement | null => scrollRef.current,
-    estimateSize: (): number => LINE_HEIGHT, // umgebrochene Zeilen misst measureElement nach
+    estimateSize: (index: number): number => estimatedHeight(rows[index]), // umgebrochene Zeilen misst measureElement nach
+    getItemKey,
     overscan: OVERSCAN,
   });
+  // Die Vorgabe misst jede neue Zeile gegen den schon verschobenen Rand: am oberen Rand eingeblendete, umbrechende
+  // Zeilen schöben die Ansicht Zeile für Zeile weiter. Ausgeglichen werden nur Zeilen über der obersten sichtbaren.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item: VirtualItem): boolean =>
+    virtualizer.range !== null && item.index < virtualizer.range.startIndex;
 
   function openCommentBox(target: CommentTarget, text: string): void {
     setRevealLineId(target.lineId);
@@ -265,11 +320,7 @@ export function DiffView({
         style={{ height: `${String(virtualizer.getTotalSize())}px` }}
       >
         {virtualizer.getVirtualItems().map((item: VirtualItem) => {
-          const line: DiffLine | undefined = lines[item.index];
-          const rendered: RenderedLine = renderLine(line, highlighted[item.index]);
-          const target: CommentTarget | null = canComment
-            ? commentTargetOf(line, scope, repository.key, file.path)
-            : null;
+          const row: DiffRow | undefined = rows[item.index];
           // Die Zeile wächst mit Kommentarfeld oder Karte; measureElement misst den ganzen Block nach.
           return (
             <div
@@ -279,29 +330,146 @@ export function DiffView({
               className="diff-view__row"
               style={{ transform: `translateY(${String(item.start)}px)` }}
             >
-              <div className={`diff-view__line diff-view__line--${rendered.kind}`}>
-                {target !== null && renderCommentButton(target)}
-                <span className="diff-view__old">{rendered.oldLine}</span>
-                <span className="diff-view__new">{rendered.newLine}</span>
-                <span className="diff-view__sign">{rendered.sign}</span>
-                <span className="diff-view__text">
-                  {rendered.segments.map((segment: SyntaxSegment, index: number) =>
-                    segment.className === null ? (
-                      segment.text
-                    ) : (
-                      <span key={index} className={segment.className}>
-                        {segment.text}
-                      </span>
-                    ),
-                  )}
-                </span>
-              </div>
-              {target !== null && renderCommentBelow(target)}
+              {row !== undefined && renderRow(row)}
             </div>
           );
         })}
       </div>
     );
+  }
+
+  function renderRow(row: DiffRow): ReactElement | null {
+    switch (row.kind) {
+      case 'line': {
+        const line: DiffLine | undefined = lines[row.index];
+        if (line === undefined) {
+          return null;
+        }
+        const number: number | null = line.kind === 'deleted' ? line.oldLine : line.newLine;
+        return renderCodeLine(
+          renderLine(line, highlighted[row.index]),
+          number === null ? null : commentTargetOf(line.kind, number, line.text),
+        );
+      }
+      case 'revealed':
+        return renderCodeLine(
+          {
+            kind: 'context',
+            oldLine: String(row.oldLine),
+            newLine: String(row.line),
+            sign: '',
+            segments: row.segments,
+          },
+          commentTargetOf('context', row.line, row.text),
+        );
+      case 'gap':
+        return renderGap(row);
+      case 'truncated':
+        return renderCodeLine(TRUNCATED_LINE, null);
+    }
+  }
+
+  function renderCodeLine(rendered: RenderedLine, target: CommentTarget | null): ReactElement {
+    return (
+      <>
+        <div className={`diff-view__line diff-view__line--${rendered.kind}`}>
+          {target !== null && renderCommentButton(target)}
+          <span className="diff-view__old">{rendered.oldLine}</span>
+          <span className="diff-view__new">{rendered.newLine}</span>
+          <span className="diff-view__sign">{rendered.sign}</span>
+          <span className="diff-view__text">
+            {rendered.segments.map((segment: SyntaxSegment, index: number) =>
+              segment.className === null ? (
+                segment.text
+              ) : (
+                <span key={index} className={segment.className}>
+                  {segment.text}
+                </span>
+              ),
+            )}
+          </span>
+        </div>
+        {target !== null && renderCommentBelow(target)}
+      </>
+    );
+  }
+
+  /** Balken einer Lücke: oben nur Pfeil nach oben, unten nur Pfeil nach unten, dazwischen beide. */
+  function renderGap(gap: GapRow): ReactElement {
+    const hidden: number = gap.to - gap.from + 1;
+    const gapError: string | null =
+      errorGap !== null && (errorGap.gap === 'all' || errorGap.gap === gap.id)
+        ? errorGap.text
+        : null;
+    return (
+      <div className="diff-view__gap">
+        <div className="diff-view__gap-arrows">
+          {gap.position !== 'top' && renderGapArrow(gap, 'down')}
+          {gap.position !== 'bottom' && renderGapArrow(gap, 'up')}
+        </div>
+        <button
+          type="button"
+          className="diff-view__gap-label"
+          disabled={isBusy}
+          onClick={(): void => {
+            expand(gap, 'all');
+          }}
+        >
+          {hiddenLinesLabel(hidden)}
+        </button>
+        {gapError !== null && <span className="diff-view__gap-error">{gapError}</span>}
+      </div>
+    );
+  }
+
+  function renderGapArrow(gap: GapRow, direction: Exclude<GapDirection, 'all'>): ReactElement {
+    const range: { from: number; to: number } = revealRange(gap, direction);
+    const count: number = range.to - range.from + 1;
+    const arrow: { title: string; where: string } = GAP_ARROW[direction];
+    return (
+      <button
+        type="button"
+        className="diff-view__gap-button"
+        title={arrow.title}
+        aria-label={`${formatCount(count)} ${count === 1 ? 'Zeile' : 'Zeilen'} ${arrow.where} anzeigen`}
+        disabled={isBusy}
+        onClick={(): void => {
+          expand(gap, direction);
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          {direction === 'down' ? (
+            <path d="M7 3v8M3.5 7.5L7 11l3.5-3.5M3 2h8" />
+          ) : (
+            <path d="M7 11V3M3.5 6.5L7 3l3.5 3.5M3 12h8" />
+          )}
+        </svg>
+      </button>
+    );
+  }
+
+  /** Kommentierbar nur in der Session; eingeblendete Zeilen teilen die Kennung mit derselben Zeile aus dem Diff. */
+  function commentTargetOf(kind: DiffLineKind, line: number, code: string): CommentTarget | null {
+    if (!canComment) {
+      return null;
+    }
+    return {
+      lineId: lineIdOf(scope, repository.key, file.path, kind, line),
+      kind,
+      line,
+      code,
+      label: lineLabel(kind, line),
+    };
   }
 
   return (
@@ -320,6 +488,28 @@ export function DiffView({
         <span className="diff-view__compare" title="Links der ältere, rechts der neuere Stand">
           {compareLabel(scope, repository.baseRef, repository.branch)}
         </span>
+        {hasGaps && (
+          <button
+            type="button"
+            className="diff-view__whole"
+            aria-pressed={isWholeFile}
+            title={
+              isWholeFile
+                ? 'Eingeblendete Zeilen wieder ausblenden'
+                : 'Alle unveränderten Zeilen einblenden'
+            }
+            disabled={isBusy}
+            onClick={(): void => {
+              if (isWholeFile) {
+                collapseAll();
+              } else {
+                expandAll(gaps);
+              }
+            }}
+          >
+            {isWholeFile ? 'Nur Änderungen' : 'Ganze Datei'}
+          </button>
+        )}
         <button
           type="button"
           className="diff-view__close"
@@ -348,39 +538,7 @@ export function DiffView({
   );
 }
 
-function commentTargetOf(
-  line: DiffLine | undefined,
-  scope: ChangeScope,
-  repositoryKey: string,
-  path: string,
-): CommentTarget | null {
-  if (line === undefined || line.kind === 'hunk') {
-    return null;
-  }
-  const number: number | null = line.kind === 'deleted' ? line.oldLine : line.newLine;
-  if (number === null) {
-    return null;
-  }
-  return {
-    lineId: lineIdOf(scope, repositoryKey, path, line.kind, number),
-    kind: line.kind,
-    line: number,
-    code: line.text,
-    label: lineLabel(line.kind, number),
-  };
-}
-
-/** Ohne Zeile (Index hinter der letzten) steht die Kürzungs-Meldung im Stil eines Abschnittskopfs. */
-function renderLine(line: DiffLine | undefined, segments: SyntaxLine | undefined): RenderedLine {
-  if (line === undefined) {
-    return {
-      kind: 'hunk',
-      oldLine: '',
-      newLine: '',
-      sign: '',
-      segments: plainLine(TRUNCATED_TEXT),
-    };
-  }
+function renderLine(line: DiffLine, segments: SyntaxLine | undefined): RenderedLine {
   return {
     kind: line.kind,
     oldLine: line.oldLine === null ? '' : String(line.oldLine),
@@ -388,4 +546,15 @@ function renderLine(line: DiffLine | undefined, segments: SyntaxLine | undefined
     sign: SIGN[line.kind],
     segments: segments ?? plainLine(line.text),
   };
+}
+
+function estimatedHeight(row: DiffRow | undefined): number {
+  if (row?.kind !== 'gap') {
+    return LINE_HEIGHT;
+  }
+  return row.position === 'middle' ? MIDDLE_GAP_HEIGHT : GAP_HEIGHT;
+}
+
+function hiddenLinesLabel(count: number): string {
+  return `${formatCount(count)} unveränderte ${count === 1 ? 'Zeile' : 'Zeilen'} anzeigen`;
 }

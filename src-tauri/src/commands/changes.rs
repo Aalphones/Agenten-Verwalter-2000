@@ -1,6 +1,6 @@
 use crate::changes::{
     self,
-    model::{ChangeScope, ChangesReach, FileDiff, SessionChanges},
+    model::{ChangeScope, ChangesReach, FileDiff, FileLines, SessionChanges},
 };
 use crate::error::CommandError;
 use crate::sessions::registry::SessionRegistry;
@@ -34,4 +34,25 @@ pub async fn changes_file_diff(
     let input = registry.changes_input(&session_id, reach)?;
     let source = changes::sources::find(&input, &key)?;
     changes::file_diff(&source, &path, scope, &input.own)
+}
+
+/// Die Zeilen `from..=to` der neuen Fassung einer Datei, für die unveränderten Stellen zwischen den
+/// Änderungen (ADR 043). `key` und `path` wie bei `changes_file_diff`.
+// Die Parameter sind die Aufrufform der Oberfläche (`loadFileLines`); einer davon stellt Tauri selbst.
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub async fn changes_file_lines(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    reach: ChangesReach,
+    key: String,
+    path: String,
+    scope: ChangeScope,
+    from: u32,
+    to: u32,
+) -> Result<FileLines, CommandError> {
+    changes::check_line_range(from, to)?;
+    let input = registry.changes_input(&session_id, reach)?;
+    let source = changes::sources::find(&input, &key)?;
+    changes::file_lines(&source, &path, scope, &input.own, from, to)
 }

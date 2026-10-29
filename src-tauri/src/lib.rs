@@ -148,6 +148,7 @@ pub fn run() {
             commands::repositories::repository_remove,
             commands::changes::changes_load,
             commands::changes::changes_file_diff,
+            commands::changes::changes_file_lines,
             commands::git::git_status,
             commands::git::git_branches,
             commands::git::git_commit,

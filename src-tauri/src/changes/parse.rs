@@ -77,6 +77,7 @@ pub fn unified(raw: &str) -> FileDiff {
         lines: Vec::new(),
         binary: false,
         truncated: false,
+        new_line_count: None,
     };
     let mut in_hunk = false;
     let mut old_line: u32 = 0;
