@@ -17,7 +17,7 @@ use verwalter_lib::{
     },
     changes::model::{
         ChangeKind, ChangeScope, ChangesReach, DiffLine, DiffLineKind, FileChange, FileDiff,
-        LineStat, RepositoryChanges, SessionChanges,
+        FileLines, LineStat, RepositoryChanges, SessionChanges,
     },
     cli_update::model::{CliUpdateOutcome, CliVersionStatus},
     codex::models::{CodexModel, CodexModels},
@@ -109,6 +109,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     DiffLineKind::export_all(&cfg)?;
     DiffLine::export_all(&cfg)?;
     FileDiff::export_all(&cfg)?;
+    FileLines::export_all(&cfg)?;
     BackgroundKind::export_all(&cfg)?;
     BackgroundState::export_all(&cfg)?;
     SubagentStep::export_all(&cfg)?;

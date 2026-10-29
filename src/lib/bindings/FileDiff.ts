@@ -9,4 +9,8 @@ binary: boolean,
 /**
  * `lines` endet nach der Höchstzahl an Zeilen.
  */
-truncated: boolean, };
+truncated: boolean, 
+/**
+ * Zeilen der neuen Fassung; fehlt bei Binärem, Gelöschtem, nicht Lesbarem und Dateien über 8 MB.
+ */
+newLineCount: number | null, };

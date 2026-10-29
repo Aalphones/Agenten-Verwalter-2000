@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileDiff } from '@/lib/bindings/FileDiff';
+import type { FileLines } from '@/lib/bindings/FileLines';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 
 /** Was in den Repositories der Session und in ihren Ticket-Worktrees geändert ist — je Eintrag gegen seine Basis.
@@ -23,4 +24,19 @@ export function loadFileDiff(
   scope: ChangeScope,
 ): Promise<FileDiff> {
   return invoke<FileDiff>('changes_file_diff', { sessionId, reach, key, path, scope });
+}
+
+/** Die Zeilen `from` bis `to` (1-basiert, einschließlich) der neuen Fassung einer Datei, für die unveränderten
+ *  Stellen zwischen den Änderungen (ADR 043). Der Bereich wird an die Dateigröße gekürzt.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (ungültiger Bereich, Pfad, Schlüssel oder Ordner, Datei ohne eigene Commits, kein Text), `repositoryMissing`, `io` (Worktree fehlt, gehört nicht zur Session oder gibt es nicht mehr), `git` */
+export function loadFileLines(
+  sessionId: string,
+  reach: ChangesReach,
+  key: string,
+  path: string,
+  scope: ChangeScope,
+  from: number,
+  to: number,
+): Promise<FileLines> {
+  return invoke<FileLines>('changes_file_lines', { sessionId, reach, key, path, scope, from, to });
 }

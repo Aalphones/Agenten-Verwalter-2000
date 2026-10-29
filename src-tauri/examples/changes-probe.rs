@@ -1,7 +1,7 @@
 //! Zeigt, was die Changes für eine Session aus einer **Kopie** der Datenbank ermitteln. Aufruf:
-//! `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad>]`.
+//! `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad> [<von> <bis>]]`.
 //! Ohne Schlüssel die Changes als JSON, mit Schlüssel und Pfad den Diff dieser Datei (Blickwinkel
-//! „alles“). Die Wurzeln der Ticket-Worktrees und, für die Reichweite `session`, die Suchordner der
+//! „alles“, mit `PROBE_SCOPE=committed|uncommitted` ein anderer) samt Zeilenzahl der neuen Fassung, mit `<von> <bis>` zusätzlich diese Zeilen. Die Wurzeln der Ticket-Worktrees und, für die Reichweite `session`, die Suchordner der
 //! Commit-Suche gehen nach stderr.
 use std::env;
 use std::fs;
@@ -18,8 +18,7 @@ use verwalter_lib::db::{
 };
 use verwalter_lib::worktrees::{self, TicketRoot};
 
-const USAGE: &str =
-    "Aufruf: changes-probe <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad>]";
+const USAGE: &str = "Aufruf: changes-probe <Datenbank-Kopie> <Session-ID> [session|project] [<Schlüssel> <Pfad> [<von> <bis>]]";
 const DIFF_PREVIEW_LINES: usize = 20;
 
 /// Reichweite wie in der Oberfläche: nur die Session oder alle Sessions ihres Vorhabens.
@@ -44,6 +43,20 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
     };
     let diff_target = match (arguments.get(3), arguments.get(4)) {
         (Some(key), Some(path)) => Some((key.as_str(), path.as_str())),
+        (None, None) => None,
+        _ => {
+            eprintln!("{USAGE}");
+            return Ok(ExitCode::from(2));
+        }
+    };
+    let range: Option<(u32, u32)> = match (arguments.get(5), arguments.get(6)) {
+        (Some(from), Some(to)) => match (from.parse::<u32>(), to.parse::<u32>()) {
+            (Ok(from), Ok(to)) if diff_target.is_some() => Some((from, to)),
+            _ => {
+                eprintln!("{USAGE}");
+                return Ok(ExitCode::from(2));
+            }
+        },
         (None, None) => None,
         _ => {
             eprintln!("{USAGE}");
@@ -136,13 +149,39 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         println!("{}", serde_json::to_string_pretty(&changes::load(&input))?);
         return Ok(ExitCode::SUCCESS);
     };
+    let scope = match env::var("PROBE_SCOPE").as_deref() {
+        Ok("committed") => ChangeScope::Committed,
+        Ok("uncommitted") => ChangeScope::Uncommitted,
+        _ => ChangeScope::All,
+    };
     let diff = sources::find(&input, key)
-        .and_then(|source| changes::file_diff(&source, path, ChangeScope::All, &input.own));
+        .and_then(|source| changes::file_diff(&source, path, scope, &input.own));
     match diff {
         Ok(diff) => {
             println!("{} Zeilen", diff.lines.len());
+            let count = diff
+                .new_line_count
+                .map_or_else(|| "—".to_owned(), |count: u32| count.to_string());
+            println!("neue Zeilen: {count}");
             for line in diff.lines.iter().take(DIFF_PREVIEW_LINES) {
                 println!("{:?}  {}", line.kind, line.text);
+            }
+            if let Some((from, to)) = range {
+                let lines = sources::find(&input, key).and_then(|source| {
+                    changes::file_lines(&source, path, scope, &input.own, from, to)
+                });
+                match lines {
+                    Ok(lines) => {
+                        println!("Zeilen {from}–{to}: {} geliefert", lines.lines.len());
+                        for (offset, text) in lines.lines.iter().enumerate() {
+                            println!("{:>5}  {text}", usize::try_from(from).unwrap_or(0) + offset);
+                        }
+                    }
+                    Err(error) => {
+                        println!("Fehler: {error}");
+                        return Ok(ExitCode::from(1));
+                    }
+                }
             }
             Ok(ExitCode::SUCCESS)
         }

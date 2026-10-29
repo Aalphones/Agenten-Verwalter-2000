@@ -117,4 +117,14 @@ pub struct FileDiff {
     pub binary: bool,
     /// `lines` endet nach der Höchstzahl an Zeilen.
     pub truncated: bool,
+    /// Zeilen der neuen Fassung; fehlt bei Binärem, Gelöschtem, nicht Lesbarem und Dateien über 8 MB.
+    pub new_line_count: Option<u32>,
+}
+
+/// Die Zeilen `from..=to` der neuen Fassung (1-basiert, an die Dateigröße gekürzt, höchstens
+/// `MAX_DIFF_LINES`), ohne Zeilenende.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct FileLines {
+    pub lines: Vec<String>,
 }

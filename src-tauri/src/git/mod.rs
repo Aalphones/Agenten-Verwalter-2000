@@ -286,6 +286,13 @@ pub fn commit_files(worktree: &Path, commits: &[String]) -> Result<String, Comma
     )
 }
 
+/// `git show <rev>:<path>` — die Datei im Stand `rev`. `None` bei jedem Git-Fehler: der Diff hat
+/// dieselbe Datei kurz zuvor gelesen, ein Fehler heißt also, dass sie dort nicht (mehr) liegt.
+pub fn show_file(worktree: &Path, rev: &str, path: &str) -> Option<String> {
+    let object = format!("{rev}:{path}");
+    run_raw(worktree, &args(&["show", &object])).ok()
+}
+
 /// `git diff-tree -r -p --no-renames -U3 <from> <to> -- <path>`
 pub fn diff_tree_patch(
     worktree: &Path,
