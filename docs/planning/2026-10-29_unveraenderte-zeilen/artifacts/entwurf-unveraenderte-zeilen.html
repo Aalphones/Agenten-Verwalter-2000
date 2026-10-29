@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changes: Unveränderte Zeilen aufklappen</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --fg: #1d2330; --muted: #667085; --border: #dfe3ea;
+    --add-bg: #e6f6ea; --add-gutter: #cdecd5; --add-fg: #1a7f37;
+    --del-bg: #fdecec; --del-gutter: #f8d3d3; --del-fg: #c62828;
+    --gap-bg: #eceef2; --gap-hover: #d9dde5; --accent: #2f6fed; --code: #1d2330; --kw: #8250df; --str: #0a7a5a; --com: #8a93a3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1a1e26; --fg: #e6e9ef; --muted: #98a2b3; --border: #2b313c;
+      --add-bg: #16301f; --add-gutter: #1e4029; --add-fg: #56d364;
+      --del-bg: #3a1a1c; --del-gutter: #4d2326; --del-fg: #ff7b72;
+      --gap-bg: #232833; --gap-hover: #303747; --accent: #6b9cff; --code: #e6e9ef; --kw: #c297ff; --str: #5fd1a8; --com: #7b8494;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 { font-size: 18px; margin: 36px 0 8px; }
+  p, li { max-width: 74ch; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .tag.ok { color: var(--add-fg); border-color: var(--add-fg); }
+  .tag.open { color: var(--del-fg); border-color: var(--del-fg); }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .92em; }
+
+  .diff { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 12px 0; }
+  .diff__header { display: flex; gap: 10px; align-items: center; height: 40px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--border); }
+  .diff__path { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .diff__stat-add { color: var(--add-fg); font: 12px ui-monospace, Consolas, monospace; }
+  .diff__stat-del { color: var(--del-fg); font: 12px ui-monospace, Consolas, monospace; }
+  .diff__spacer { flex: 1; }
+  .btn { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font: 12.5px system-ui, sans-serif; cursor: pointer; }
+  .btn:hover { background: var(--gap-bg); }
+  .btn:focus-visible, .gap__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rows { font: 12.5px/20px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--code); }
+  .row { display: grid; grid-template-columns: 44px 44px 18px 1fr; }
+  .row > span { padding: 0 6px; white-space: pre; overflow: hidden; }
+  .row .n { text-align: right; color: var(--muted); user-select: none; }
+  .row .t { padding-left: 4px; }
+  .row.add { background: var(--add-bg); } .row.add .n { background: var(--add-gutter); }
+  .row.del { background: var(--del-bg); } .row.del .n { background: var(--del-gutter); }
+  .row.new-ctx { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .row.new-ctx { animation: none; } }
+  .kw { color: var(--kw); } .str { color: var(--str); } .com { color: var(--com); font-style: italic; }
+
+  /* Lücke: grauer Balken wie bei Bitbucket; Pfeile je Richtung, Mitte zeigt die Anzahl */
+  .gap { display: grid; grid-template-columns: 88px 1fr; background: var(--gap-bg); border-block: 1px solid var(--border); min-height: 26px; }
+  .gap__arrows { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+  .gap__btn { flex: 1; min-height: 26px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .gap__btn:hover { background: var(--gap-hover); color: var(--fg); }
+  .gap__btn + .gap__btn { border-top: 1px solid var(--border); }
+  .gap__label { display: flex; align-items: center; padding: 0 12px; font: 12.5px system-ui, sans-serif; color: var(--muted); }
+  .gap__label button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 0; text-decoration: underline dotted; }
+  .gap__label button:hover { color: var(--fg); }
+  .note { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; }
+  .card p { margin: 0; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Changes: unveränderte Zeilen aufklappen</h1>
+  <p class="lead">Designvorschlag nach dem Vorbild von Bitbucket. Das Muster: Die Diff-Ansicht bleibt kompakt, zwischen den Änderungen sitzt ein grauer Balken, und ein Klick darauf holt die versteckten Zeilen genau dort, wo du sie brauchst. Kein Umschalter, kein Neuladen.</p>
+
+  <h2>Was Bitbucket macht</h2>
+  <table>
+    <thead><tr><th>Verhalten</th><th>Beleg</th></tr></thead>
+    <tbody>
+      <tr><td>Standard sind drei Zeilen Umgebung um jede Änderung; übersprungene Abschnitte sind anklickbar und blenden die Umgebung sofort ein.</td><td><span class="tag ok">belegt</span> Atlassian-Blog zu Side-by-side-Diffs</td></tr>
+      <tr><td>Grauer Balken mit Pfeil und Tooltip („Show lines after“) am Rand des versteckten Bereichs.</td><td><span class="tag ok">belegt</span> dein Screenshot</td></tr>
+      <tr><td>Auf aufgeklappten Zeilen lassen sich Kommentare setzen, obwohl sie nicht zur Änderung gehören.</td><td><span class="tag ok">belegt</span> Release-Notes Bitbucket Server 7.0 (Cloud: nicht geprüft)</td></tr>
+      <tr><td>Je Datei ein Eintrag „View entire file“, der die ganze Datei in einem eigenen Fenster öffnet.</td><td><span class="tag ok">belegt</span> Bitbucket-Cloud-Dokumentation</td></tr>
+      <tr><td>Checkbox „Viewed“ im Dateikopf: klappt die Datei zu, bleibt zu, setzt sich bei neuen Commits an der Datei zurück.</td><td><span class="tag ok">belegt</span> Bitbucket-Cloud-Dokumentation</td></tr>
+      <tr><td>Wie viele Zeilen ein Pfeilklick auf einmal holt (Server: „Show more“ holt alles auf einmal).</td><td><span class="tag open">offen</span> für Cloud nicht belegt; die 20 unten sind meine Annahme</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Vorschlag für den Verwalter</h2>
+  <div class="cols">
+    <div class="card"><h3>1 · Lücken-Balken statt Abschnittskopf</h3><p>Die <code>@@ … @@</code>-Zeile verschwindet. An ihrer Stelle sitzt ein grauer Balken: links Pfeile, rechts „12 unveränderte Zeilen“.</p></div>
+    <div class="card"><h3>2 · Drei Balken-Arten</h3><p>Oben (vor der ersten Änderung): ein Pfeil nach oben. Unten (nach der letzten): ein Pfeil nach unten. Dazwischen: zwei Pfeile, einer holt von oben weiter, einer von unten.</p></div>
+    <div class="card"><h3>3 · Klick = 20 Zeilen, Text = alle</h3><p>Ein Pfeil holt 20 Zeilen. Der Text im Balken („12 Zeilen anzeigen“) holt die ganze Lücke. Ist der Rest kleiner als 20, verschwindet der Balken.</p></div>
+    <div class="card"><h3>4 · „Ganze Datei“ im Dateikopf</h3><p>Der Schalter bleibt als Abkürzung, klappt aber nur alle Balken auf. Gleiche Ansicht, gleiche Kommentare, kein Neuladen des Diffs.</p></div>
+    <div class="card"><h3>5 · Aufgeklappte Zeilen sind echte Zeilen</h3><p>Zeilennummern, Farben und die „+“-Schaltfläche für Review-Kommentare funktionieren dort wie überall. Neu eingeblendete Zeilen blinken kurz auf, damit der Blick nicht verloren geht.</p></div>
+    <div class="card"><h3>6 · Scrollposition bleibt</h3><p>Aufklappen darf die Ansicht nie nach oben springen (bei Bitbucket Server ein bekannter Fehler, BSERV-12576). Die Zeile, auf die du geklickt hast, bleibt an Ort und Stelle.</p></div>
+  </div>
+
+  <h2>Zum Ausprobieren</h2>
+  <p>Klick auf die Pfeile (je 5 Zeilen, damit die kleine Beispieldatei reicht), auf den Text im Balken (alles) oder oben auf „Ganze Datei“.</p>
+
+  <section class="diff" aria-label="Beispiel-Diff">
+    <div class="diff__header">
+      <span class="diff__path">src/features/changes/useFileDiff.ts</span>
+      <span class="diff__stat-add">+2</span><span class="diff__stat-del">−1</span>
+      <span class="diff__spacer"></span>
+      <button class="btn" id="all" type="button">Ganze Datei</button>
+      <button class="btn" id="reset" type="button">Zurücksetzen</button>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+  <p class="note">Die Beispieldatei ist erfunden; der Balken-Mechanismus entspricht dem Vorschlag.</p>
+
+  <h2>Was dafür im Code nötig ist</h2>
+  <ul>
+    <li><strong>Rust:</strong> neuer Befehl, der Zeilenbereiche der Datei liefert (neuer Stand: Arbeitsverzeichnis bzw. Git-Objekt des letzten Commits). Der Diff selbst bleibt bei drei Zeilen Umgebung — die Umgebung zu vergrößern, wie in meinem ersten Versuch, entfällt und wird zurückgebaut.</li>
+    <li><strong>Oberfläche:</strong> Die Liste der Zeilen bekommt neben Diff-Zeilen eine zweite Zeilenart „Lücke“. Die Lücken ergeben sich aus den Zeilennummern der Abschnitte; in einer Lücke sind alte und neue Nummer um dasselbe Maß versetzt, also genügt der neue Stand.</li>
+    <li><strong>Grenzen:</strong> Gelöschte und binäre Dateien bekommen keine Balken; neue Dateien sind schon vollständig. Die Höchstgrenze von 20.000 Zeilen bleibt.</li>
+  </ul>
+</main>
+
+<script>
+  const STEP = 5;
+  const code = [
+    "import { useEffect, useState } from 'react';",
+    "import type { ChangeScope } from '@/lib/bindings/ChangeScope';",
+    "import type { ChangesReach } from '@/lib/bindings/ChangesReach';",
+    "import type { FileDiff } from '@/lib/bindings/FileDiff';",
+    "import { loadFileDiff } from '@/lib/changes';",
+    "import { commandErrorText } from '@/lib/errors';",
+    "",
+    "/** Welche Datei eines Eintrags; der Blickwinkel kommt getrennt. */",
+    "export interface DiffTarget {",
+    "  key: string;",
+    "  path: string;",
+    "}",
+    "",
+    "export interface FileDiffState {",
+    "  diff: FileDiff | null;",
+    "  error: string | null;",
+    "  isLoading: boolean;",
+    "}",
+    "",
+    "interface LoadedDiff {",
+    "  key: string;",
+    "  diff: FileDiff | null;",
+    "  error: string | null;",
+    "}",
+    "",
+    "export function fileDiffKey(file: DiffTarget, scope: ChangeScope): string {",
+    "  return `${file.key}:${file.path}:${scope}`;",
+    "}",
+    "",
+    "/** Lädt den Diff der geöffneten Datei. */",
+    "export function useFileDiff(",
+    "  sessionId: string,",
+    "  file: DiffTarget,",
+    "  scope: ChangeScope,",
+    "): FileDiffState {",
+    "  const [state, setState] = useState<LoadedDiff | null>(null);",
+    "  const diffKey: string = fileDiffKey(file, scope);",
+    "  const { key, path } = file;",
+    "  return toState(state, diffKey);",
+    "}",
+  ];
+  const N = code.length;
+  // Änderungen: Zeile 10 (alt) wird ersetzt, nach Zeile 31 kommt eine neue.
+  const changes = {
+    10: { del: "  key: string; // Eintrag", add: "  key: string;" },
+  };
+  const addedAfter = { 31: "  // Der Stand wird bei jedem Nachladen neu gelesen." };
+  const near = [8, 9, 10, 11, 12, 29, 30, 31, 32, 33, 34];
+  let visible;
+  const rowsEl = document.getElementById('rows');
+  let fresh = new Set();
+
+  function reset() { visible = Array.from({ length: N + 2 }, (_, i) => near.includes(i)); fresh = new Set(); render(); }
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function hl(s) {
+    let h = esc(s);
+    h = h.replace(/(\/\*\*.*\*\/|\/\/.*)$/, '<span class="com">$1</span>');
+    h = h.replace(/\b(import|from|export|function|interface|const|return|type)\b/g, '<span class="kw">$1</span>');
+    h = h.replace(/('[^']*'|`[^`]*`)/g, '<span class="str">$1</span>');
+    return h;
+  }
+  function row(kind, o, n, text, isNew) {
+    const sign = kind === 'add' ? '+' : kind === 'del' ? '−' : '';
+    return `<div class="row ${kind}${isNew ? ' new-ctx' : ''}"><span class="n">${o ?? ''}</span><span class="n">${n ?? ''}</span><span>${sign}</span><span class="t">${hl(text)}</span></div>`;
+  }
+  // Alte/neue Nummer: vor Zeile 10 gleich, ab dort um 0 versetzt (eine Zeile ersetzt), nach 31 neue +1.
+  function nums(i) { return [i, i + (i > 31 ? 1 : 0)]; }
+  function gap(from, to) {
+    const count = to - from + 1, top = from === 1, bottom = to === N;
+    const up = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V3M3.5 6.5L7 3l3.5 3.5M3 12h8"/></svg>`;
+    const down = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M3.5 7.5L7 11l3.5-3.5M3 2h8"/></svg>`;
+    const btns = [];
+    if (!top) btns.push(`<button class="gap__btn" data-act="after" data-from="${from}" data-to="${to}" title="Zeilen darunter anzeigen" aria-label="${Math.min(STEP, count)} Zeilen nach dem Abschnitt darüber anzeigen">${down}</button>`);
+    if (!bottom) btns.push(`<button class="gap__btn" data-act="before" data-from="${from}" data-to="${to}" title="Zeilen darüber anzeigen" aria-label="${Math.min(STEP, count)} Zeilen vor dem Abschnitt darunter anzeigen">${up}</button>`);
+    return `<div class="gap"><div class="gap__arrows">${btns.join('')}</div><div class="gap__label"><button data-act="all" data-from="${from}" data-to="${to}">${count} unveränderte ${count === 1 ? 'Zeile' : 'Zeilen'} anzeigen</button></div></div>`;
+  }
+  function render() {
+    let html = '', i = 1;
+    while (i <= N) {
+      if (!visible[i]) {
+        let j = i; while (j + 1 <= N && !visible[j + 1]) j++;
+        html += gap(i, j); i = j + 1; continue;
+      }
+      const [o, n] = nums(i);
+      if (changes[i]) {
+        html += row('del', i, '', changes[i].del) + row('add', '', i, changes[i].add);
+      } else {
+        html += row('ctx', o, n, code[i - 1], fresh.has(i));
+      }
+      if (addedAfter[i]) html += row('add', '', i + 1, addedAfter[i]);
+      i++;
+    }
+    rowsEl.innerHTML = html;
+  }
+  rowsEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const from = +b.dataset.from, to = +b.dataset.to, act = b.dataset.act;
+    const reveal = (a, z) => { for (let k = a; k <= z; k++) { visible[k] = true; fresh.add(k); } };
+    fresh = new Set();
+    if (act === 'all') reveal(from, to);
+    if (act === 'after') reveal(from, Math.min(to, from + STEP - 1));
+    if (act === 'before') reveal(Math.max(from, to - STEP + 1), to);
+    render();
+  });
+  document.getElementById('all').addEventListener('click', () => { fresh = new Set(); for (let k = 1; k <= N; k++) { if (!visible[k]) { visible[k] = true; fresh.add(k); } } render(); });
+  document.getElementById('reset').addEventListener('click', reset);
+  reset();
+</script>
+</body>
+</html>
