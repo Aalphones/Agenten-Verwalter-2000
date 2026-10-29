@@ -51,6 +51,7 @@ pub async fn changes_file_lines(
     from: u32,
     to: u32,
 ) -> Result<FileLines, CommandError> {
+    changes::check_line_range(from, to)?;
     let input = registry.changes_input(&session_id, reach)?;
     let source = changes::sources::find(&input, &key)?;
     changes::file_lines(&source, &path, scope, &input.own, from, to)

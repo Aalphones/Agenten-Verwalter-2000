@@ -457,6 +457,17 @@ pub fn file_diff(
     Ok(diff)
 }
 
+/// Bereich für `file_lines`: 1-basiert, `to` nicht vor `from`. Der Befehl prüft ihn zuerst, damit
+/// ein ungültiger Bereich weder Git noch das Dateisystem berührt.
+pub fn check_line_range(from: u32, to: u32) -> Result<(), CommandError> {
+    if from == 0 || to < from {
+        return Err(CommandError::Internal(format!(
+            "Ungültiger Zeilenbereich: {from}–{to}"
+        )));
+    }
+    Ok(())
+}
+
 /// Die Zeilen `from..=to` der neuen Fassung einer Datei (die, die `file_diff` im selben Blickwinkel als
 /// neue Seite zeigt). Prüft Bereich, Pfad und Eintrag, bevor Git oder das Dateisystem berührt werden.
 pub fn file_lines(
@@ -467,11 +478,7 @@ pub fn file_lines(
     from: u32,
     to: u32,
 ) -> Result<FileLines, CommandError> {
-    if from == 0 || to < from {
-        return Err(CommandError::Internal(format!(
-            "Ungültiger Zeilenbereich: {from}–{to}"
-        )));
-    }
+    check_line_range(from, to)?;
     validate_path(path)?;
     let (worktree, base) = checked_dir(source)?;
     let Some(content) = new_side(&worktree, &base, path, scope, own)? else {
