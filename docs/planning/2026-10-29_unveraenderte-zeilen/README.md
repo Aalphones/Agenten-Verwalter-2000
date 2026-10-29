@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Core: erster Versuch zurückbauen, Zeilenzahl im Diff, Befehl für Zeilenbereiche; ADR 043 | standard | complete |
-| 2 | Oberfläche: Balken, Aufklappen, „Ganze Datei“, Kommentare auf eingeblendeten Zeilen; Doku-Abschluss | heikel | pending |
+| 2 | Oberfläche: Balken, Aufklappen, „Ganze Datei“, Kommentare auf eingeblendeten Zeilen; Doku-Abschluss | heikel | complete (Lauf in der echten App offen) |
 
 **Rahmen:** strikt 1 → 2 (Phase 2 braucht die erzeugten Bindings aus Phase 1; zwei Phasen, deshalb keine Parallelspur), direkt auf `main`, ein Commit pro Phase, Scope `changes`. `pnpm check` grün vor jedem Commit, `cargo` im PATH (Prüfkette auf diesem Rechner: siehe [STATE.md](../../../STATE.md), „Nächster Schritt“), keine neuen Abhängigkeiten, Bindings mitcommitten. Keine automatisierten Tests (Projektregel, [linting.md](../../conventions/linting.md)), keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).
 
@@ -117,15 +117,20 @@ AK:
 10. **Rückbau abgeschlossen:** in `src/` kommen `wholeFile` und `whole` nur noch als Teil von „Ganze Datei“ vor; `useFileDiff` und `loadFileDiff` haben wieder ihre ursprünglichen Parameter.
 
 Checkliste:
-- [ ] `useFileDiff.ts`, `loadFileDiff`: Zustand wie vor dem ersten Versuch (Phase 1 hat sie zurückgesetzt) — nur prüfen.
-- [ ] `diffRows.ts`, `useGapExpansion.ts`, `loadFileLines` anlegen; `DiffView.tsx` auf `DiffRow[]` umstellen: `count = rows.length`, Zeile je `kind` rendern (Balken, eingeblendete Zeile wie `context`, Kürzungs-Meldung wie bisher), `commentTargetOf` auf `(kind, Nummer, Text)` verallgemeinern, damit eingeblendete Zeilen kommentierbar sind. `highlightDiff` bleibt unverändert für Diff-Zeilen.
-- [ ] Schalter „Ganze Datei“ von `wholeFile`-State auf `expandAll`/`collapseAll` umhängen.
-- [ ] `DiffView.css`: `__gap`, `__gap-arrows`, `__gap-button`, `__gap-label`, `__gap-error` (BEM wie die übrigen Blöcke, Tokens aus AK 2); `__whole` bleibt.
-- [ ] `pnpm check` grün.
-- [ ] Selbstprüfung in der laufenden App (`pnpm tauri dev`, Prüfkette: [STATE.md](../../../STATE.md)): eine Datei mit zwei weit auseinanderliegenden Änderungen öffnen, Pfeile und Text klicken, bis Balken verschwinden, Kommentar auf eingeblendeter Zeile setzen, „Ganze Datei“ und zurück, neue Datei (kein Balken), Scrollposition vor und nach dem Klick. Je Punkt ein Screenshot oder eine Zeile im Report-Back.
-- [ ] Doku: `docs/code-map.md` Zeile „Changes“ um `diffRows.ts`, `useGapExpansion.ts`, `loadFileLines` ergänzen; `docs/glossary.md` **Lücke** auf Oberfläche erweitern (Balken, Pfeile, „Ganze Datei“).
+- [x] `useFileDiff.ts`, `loadFileDiff`: Zustand wie vor dem ersten Versuch (Phase 1 hat sie zurückgesetzt) — nur prüfen.
+- [x] `diffRows.ts`, `useGapExpansion.ts`, `loadFileLines` anlegen; `DiffView.tsx` auf `DiffRow[]` umstellen: `count = rows.length`, Zeile je `kind` rendern (Balken, eingeblendete Zeile wie `context`, Kürzungs-Meldung wie bisher), `commentTargetOf` auf `(kind, Nummer, Text)` verallgemeinern, damit eingeblendete Zeilen kommentierbar sind. `highlightDiff` bleibt unverändert für Diff-Zeilen.
+- [x] Schalter „Ganze Datei“ von `wholeFile`-State auf `expandAll`/`collapseAll` umhängen.
+- [x] `DiffView.css`: `__gap`, `__gap-arrows`, `__gap-button`, `__gap-label`, `__gap-error` (BEM wie die übrigen Blöcke, Tokens aus AK 2); `__whole` bleibt.
+- [x] `pnpm check` grün.
+- [ ] Selbstprüfung in der laufenden App (`pnpm tauri dev`, Prüfkette: [STATE.md](../../../STATE.md)): eine Datei mit zwei weit auseinanderliegenden Änderungen öffnen, Pfeile und Text klicken, bis Balken verschwinden, Kommentar auf eingeblendeter Zeile setzen, „Ganze Datei“ und zurück, neue Datei (kein Balken), Scrollposition vor und nach dem Klick. Je Punkt ein Screenshot oder eine Zeile im Report-Back. — **Offen in der echten App:** ein zweiter Verwalter teilt sich mit dem laufenden die Datenbank unter `%USERPROFILE%\.verwalter` (fester Pfad), in dem die Umsetzungs-Session lief. Ersatzweise geprüft im Browser-Prüfstand: echte `DiffView` samt CSS, Virtualisierung und Färbung, nur der Core nachgebaut (`mockIPC`), Edge headless; alle Fälle der Liste plus AK 2–4, 8, 9, siehe Report-Back.
+- [x] Doku: `docs/code-map.md` Zeile „Changes“ um `diffRows.ts`, `useGapExpansion.ts`, `loadFileLines` ergänzen; `docs/glossary.md` **Lücke** auf Oberfläche erweitern (Balken, Pfeile, „Ganze Datei“).
 
 Report-Back: Screenshots der Fälle aus der Selbstprüfung, `pnpm check`-Ergebniszeile, Commit-Hash.
+
+**Report-Back Phase 2 (2026-10-29):**
+- Prüfstand (Datei mit 200 → 201 Zeilen: alte Zeile 50 gelöscht, nach alter 148 zwei eingefügt; dazu eine neue Datei mit 30 Zeilen): 28 von 28 Prüfungen grün — drei Balken 46/92/49 mit den richtigen Pfeilen, kein `@@`; Pfeil unten in der Mitte holt 53–72, Pfeil oben 125–144, Text den Rest; oben 46 → 26 → 6 → Balken weg; alte Nummer = neue + Abstand auf jeder eingeblendeten Zeile (Mitte +1, unten −1, letzte Zeile 201 = alt 200); `scrollTop` vor und nach dem Klick gleich (auch gescrollt bei 1488 px), die erste eingeblendete Zeile steht genau, wo der Balken stand; Kommentar auf eingeblendeter Zeile 30 hat die Kennung `all|repo1|src/demo.ts|new30` und erscheint als Karte darunter; „Ganze Datei“ = ein Aufruf, danach „Nur Änderungen“ mit `aria-pressed`, zurück ergibt wieder drei Balken; während des Ladens alle Knöpfe gesperrt; Fehler erscheint rot im Balken, Balken und Knöpfe bleiben; Neuladen des Diffs setzt alles zurück; neue Datei ohne Balken und ohne „Ganze Datei“.
+- Prüfkette: `eslint` 0 Warnungen, `tsc` (App und Node) 0 Fehler, `prettier --check` sauber, `vite build` grün, kein BEM-Selektor mit `__`/`--` am Anfang im gebauten CSS; `cargo fmt --check` sauber, `cargo clippy --all-targets -- -D warnings` ohne Befund (kein Rust geändert).
+- Abweichungen: (1) Während eines Nachladens sind die Knöpfe **aller** Balken und „Ganze Datei“ gesperrt, nicht nur die des geklickten Balkens — es lädt immer nur eines, sonst könnten zwei Antworten dieselbe Lücke doppelt füllen. (2) „Ganze Datei“ holt von der ersten bis zur letzten versteckten Zeile (höchstens 20.000) statt `1..min(newLineCount, 20000)`: gleiche Wirkung, weniger Zeilen, geht auch ohne `newLineCount`. (3) Liefert der Core für einen Pfeil weniger Zeilen als angefragt (Pfeil nach oben) oder keine (sonst), steht „Die Datei hat sich seit dem Diff geändert.“ im Balken, statt Zeilen mit falschen Nummern einzublenden. (4) Die virtualisierte Liste hat stabile Schlüssel je Zeile (`rowKey`), sonst hingen gemessene Höhen und der Scroll-Anker nach dem Einfügen an der falschen Zeile.
 
 ## Finale AK (fürs Ganze)
 
