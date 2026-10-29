@@ -133,6 +133,8 @@ Report-Back: Screenshots der Fälle aus der Selbstprüfung, `pnpm check`-Ergebni
 - Commit: `66ed0b2` (nach Abnahme des Diffs durch den User).
 - Abweichungen: (1) Während eines Nachladens sind die Knöpfe **aller** Balken und „Ganze Datei“ gesperrt, nicht nur die des geklickten Balkens — es lädt immer nur eines, sonst könnten zwei Antworten dieselbe Lücke doppelt füllen. (2) „Ganze Datei“ holt von der ersten bis zur letzten versteckten Zeile (höchstens 20.000) statt `1..min(newLineCount, 20000)`: gleiche Wirkung, weniger Zeilen, geht auch ohne `newLineCount`. (3) Liefert der Core für einen Pfeil weniger Zeilen als angefragt (Pfeil nach oben) oder keine (sonst), steht „Die Datei hat sich seit dem Diff geändert.“ im Balken, statt Zeilen mit falschen Nummern einzublenden. (4) Die virtualisierte Liste hat stabile Schlüssel je Zeile (`rowKey`), sonst hingen gemessene Höhen und der Scroll-Anker nach dem Einfügen an der falschen Zeile.
 
+**Review des Branches (2026-10-29):** [REVIEW.md](REVIEW.md) — 2 WARNING, 4 MINOR, 2 INFO; behoben bis auf die Länge von `DiffView.tsx` (über 400 Zeilen, Schnitt beschrieben). Wichtigster Befund: bei umbrechenden Zeilen sprang die Ansicht nach dem Aufklappen eines Balkens am oberen Rand um 400 px weiter; jetzt bleibt die Stelle stehen.
+
 ## Finale AK (fürs Ganze)
 
 1. In der Diff-Ansicht öffnet jeder Balken die versteckten Zeilen an Ort und Stelle, ohne den Diff neu zu laden.
