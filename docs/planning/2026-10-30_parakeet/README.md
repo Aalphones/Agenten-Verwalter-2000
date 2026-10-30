@@ -4,7 +4,7 @@ Ziel: Das Sprachdiktat erkennt mit NVIDIA Parakeet TDT 0.6B v3 (ONNX, int8, nur 
 
 | # | Phase | Rating | Wave | Aufwand | Status |
 |---|---|---|---|---|---|
-| 1 | [Messlauf: Parakeet gegen Whisper auf derselben Aufnahme, Go/No-Go](phase-1-messlauf.md) | heikel | 1 | M | pending |
+| 1 | [Messlauf: Parakeet gegen Whisper auf derselben Aufnahme, Go/No-Go](phase-1-messlauf.md) | heikel | 1 | M | complete (Go) |
 | 2 | [Core: Modellsatz laden, Parakeet erkennt, whisper-rs raus](phase-2-core-umstellen.md) | heikel | 2 | L | pending |
 | 3 | [Spracheinstellung und Whisper-Texte aus Einstellungen und Oberfläche entfernen](phase-3-einstellung-und-texte.md) | standard | 3 | S | pending |
 | 4 | [Build, CI, Doku, ADR 049, Release](phase-4-aufraeumen-und-release.md) | mechanisch | 4 | S | pending |
@@ -50,7 +50,9 @@ pub fn download(dir: &Path, cancel: &AtomicBool, on_progress: impl FnMut(u64, u6
 
 | Datei (lokal) | Quelle (Pfad im Repo, fest gepinnt) | Bytes | SHA-256 |
 |---|---|---|---|
-| *Phase 1* | | | |
+| `encoder-model.int8.onnx` | `encoder-model.int8.onnx` | 652183999 | `6139d2fa7e1b086097b277c7149725edbab89cc7c7ae64b23c741be4055aff09` |
+| `decoder_joint-model.int8.onnx` | `decoder_joint-model.int8.onnx` | 18202004 | `eea7483ee3d1a30375daedc8ed83e3960c91b098812127a0d99d1c8977667a70` |
+| `vocab.txt` | `vocab.txt` | 102132 | `ba8e4007c65f4bb4358ffe2ecc13d9ccc7a10351151065242b5c3a943e685742` |
 
 ## Finale AK (Gesamtergebnis)
 
