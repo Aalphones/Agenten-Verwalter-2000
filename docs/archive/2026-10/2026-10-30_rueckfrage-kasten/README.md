@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Kasten neu: Kurzname aus dem Core, Ziehharmonika, Auswahl-Marker, aktive Frage, Senden mit Absicht, „Empfohlen“, kompakt beantwortet; ADR 045 | standard | complete |
-| 2 | Eigene Ergänzungen: Notiz je Option, eigene Antwort je Frage, Antworttext; Doku-Abschluss | standard | pending |
+| 2 | Eigene Ergänzungen: Notiz je Option, eigene Antwort je Frage, Antworttext; Doku-Abschluss | standard | complete |
 
 **Rahmen:** strikt 1 → 2 (beide Phasen ändern dieselben Dateien, nichts läuft parallel), direkt auf `main`, ein Commit pro Phase, Scope `chat`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten, Bindings mitcommitten. Keine Migration: die Rückfragen liegen als JSON in `chat_entries`, das neue Feld bekommt `#[serde(default)]`. Keine automatisierten Tests, keine Smoke-Checkliste; jede Phase endet mit einer Selbstprüfung in `pnpm tauri dev` samt Screenshot. Planabschluss mit Versions-Tag (Minor-Version). Schätzung: Phase 1 rund 3 Stunden, Phase 2 rund 2 Stunden.
 
@@ -105,14 +105,15 @@ AK:
 - [x] `QuestionBlock.tsx`: Ziehharmonika-Zeile zeigt `answerText(...)` der Frage.
 - [x] `QuestionBlock.css`: `__option-row` (Flex, Abstand `--space-sm`, Options-Knopf `flex: 1`), `__note-toggle` (34 px breit, Rahmen und Hintergrund wie `__option`, gedimmt bis Hover oder Fokus der Zeile, offen mit Rahmen `--color-accent`), `__note` und `__custom-input` (Höhe 30 px, Schrift `--font-size-xs`, Fokus-Umriss wie `__submit`), `__custom-open` (gestrichelter Rahmen, Schrift `--color-fg-muted`).
 - [x] Doc: `docs/glossary.md` neue Einträge **Notiz (Rückfrage)**: „Kurzer Text zu einer Option einer Rückfrage; geht als `<Option> (Notiz: <Text>)` an den Agenten (ADR 045).“ und **Eigene Antwort (Rückfrage)**: „Freitext zu genau einer Frage einer Rückfrage; ersetzt bei Einfachauswahl die Wahl (ADR 045).“ Neuer Eintrag **Rückfrage** (das Glossar hat bisher keinen eigenen) vor **Rechte-Abfrage**: „Frage des Agenten mit Optionen (AskUserQuestion); mehrere Fragen erscheinen als Ziehharmonika, nur die aktive ist aufgeklappt (ADR 045).“
-- [ ] Selbstprüfung in `pnpm tauri dev`: Rückfrage wie in Phase 1, eine Notiz an einer Einfachauswahl, eine eigene Antwort an einer anderen Frage, eine Notiz mit ` · ` darin; AK 1–10 durchgehen. Screenshots mit offenem Notizfeld und beantwortet, Pfade unter „Report-Back“.
-- [ ] Plan-Abschluss: Bottom-Sektionen, Archiv nach `docs/archive/2026-10/`, STATE.md, Versions-Tag.
-- [ ] `pnpm check` grün, Commit `feat(chat): Notiz je Option und eigene Antwort je Frage`.
+- [ ] (nicht gefahren, siehe Report-Back) Selbstprüfung in `pnpm tauri dev`: Rückfrage wie in Phase 1, eine Notiz an einer Einfachauswahl, eine eigene Antwort an einer anderen Frage, eine Notiz mit ` · ` darin; AK 1–10 durchgehen. Screenshots mit offenem Notizfeld und beantwortet, Pfade unter „Report-Back“.
+- [x] Plan-Abschluss: Bottom-Sektionen, Archiv nach `docs/archive/2026-10/`, STATE.md, Versions-Tag.
+- [x] `pnpm check` grün, Commit `feat(chat): Notiz je Option und eigene Antwort je Frage`.
 
 ## Report-Back
 
 - Phase 1: Selbstprüfung in `pnpm tauri dev` hat die umsetzende Session nicht gefahren (keine Bedienung der Oberfläche möglich); Commit vom User freigegeben. Ob der Verlauf beim Zuklappen springt (Wackelstelle 1), ist damit offen.
 
+- Archiviert und getaggt (`v0.39.0`) auf Zuruf des Users ohne Selbstprüfung durch die umsetzende Session; ob AK 10 trägt, zeigt der laufende Betrieb.
 - Phase 2: Umsetzung und `pnpm check` grün (inkl. Rust); die Entwurfslogik (Notiz, eigene Antwort, Antworttext mit ` · `, `answeredLabels`) ist per Wegwerf-Skript gegen die AK 3, 4, 7, 9 geprüft. Die Selbstprüfung in `pnpm tauri dev` (AK 1, 2, 5, 6, 8, 10 samt Fokus nach ✎ und Sprung des Verlaufs) steht aus: die umsetzende Session kann die Oberfläche nicht bedienen. Plan-Abschluss (Archiv, Tag) wartet auf diese Selbstprüfung, vor allem auf AK 10 — gibt der Agent Notiz und eigene Antwort nicht wieder, ist Entscheidung (d) falsch.
 
 ## Wackelstellen
@@ -128,9 +129,15 @@ AK:
 
 ## Summary
 
+Der Rückfrage-Kasten zeigt mehrere Fragen als Ziehharmonika (nur die aktive aufgeklappt, Kurznamen von Claude, „Empfohlen“-Plakette, kompakt im Verlauf) und nimmt zu jeder Option eine Notiz und zu jeder Frage eine eigene Antwort an; beides geht im Antworttext je Frage an den Agenten (ADR 045). Rechte-Abfragen unverändert.
+
 ## Files touched
 
+`src/features/chat/` (`questionDraft.ts`, `QuestionBlock.tsx`/`.css`, `QuestionItem.tsx`, `QuestionAnswered.tsx`, `ChatTimeline.tsx`), `src-tauri/src/agents/event.rs` und `agents/claude/translate.rs` (`Question.header`), Bindings, `docs/decisions/045-rueckfrage-kasten.md`, `docs/glossary.md`, `docs/code-map.md`.
+
 ## Commits
+
+`4c50713` Phase 1, `35d0773` Phase 2, dazu der Archiv- und der Release-Commit `v0.39.0`.
 
 ## Deviations from plan
 
@@ -138,3 +145,6 @@ AK:
 - Phase 2: `QuestionItem` bekommt Notiz und eigene Antwort gebündelt als optionales Prop `extras` (ohne `extras` reine Anzeige, so in `QuestionAnswered`); Enter im Feld läuft über `extras.onEnter`. Die Optionszeile heißt `question-block__option-row`, der Options-Knopf bleibt `question-block__choice`; `noteFor` ist exportiert und schützt vor Prototyp-Namen wie `constructor`.
 
 ## Follow-ups
+
+- Selbstprüfung in `pnpm tauri dev` steht aus: Verlauf springt beim Zuklappen nicht (Wackelstelle 1), Fokus nach ✎ (Wackelstelle 2), AK 10 (Agent gibt Notiz und eigene Antwort wieder; sonst ist Entscheidung (d) aus ADR 045 falsch). Springt der Verlauf, FINDINGS anlegen und `virtualizer.measure()` vor dem Zuklappen nachziehen.
+- Nicht in diesem Plan: Hinweis über dem Eingabefeld bei weggescrolltem Kasten; Claudes Vorschau je Option.
