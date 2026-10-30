@@ -1,69 +1,56 @@
-//! Misst Parakeet TDT gegen Whisper auf derselben Aufnahme (Plan `parakeet`, Phase 1). Aufruf:
-//! `cargo run --release --manifest-path src-tauri/Cargo.toml --example parakeet-probe -- <WAV>
-//! <Parakeet-Ordner> [<Whisper-Modell>] [--reference "<Text>"]`. `-` statt des Parakeet-Ordners
-//! lässt Parakeet aus, damit der Arbeitsspeicher jeder Engine in einem eigenen Prozess messbar ist.
-//! Druckt je Engine Ladezeit, Erkennungszeit, Audiolänge, Echtzeitfaktor, Text und Wortfehlerrate.
+//! Prüft den Modellsatz und die Erkennung des Diktierens über dieselben Bausteine wie die App. Aufruf:
+//! `cargo run --release --manifest-path src-tauri/Cargo.toml --example parakeet-probe -- <Unterbefehl>`:
+//! `download <Ordner> [--cancel-after <Sekunden>]` lädt den Modellsatz (fertige Dateien werden
+//! übersprungen, `--cancel-after` setzt nach der Zeit das Abbruch-Zeichen); `ready <Ordner>` sagt, ob
+//! der Satz vollständig ist; `recognize <Ordner> <WAV> [--reference "<Text>"]` erkennt die Aufnahme
+//! und druckt Ladezeit, Erkennungszeit, Echtzeitfaktor, Text und Wortfehlerrate.
 use std::env;
-use std::num::NonZero;
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use parakeet_rs::{ExecutionConfig, ParakeetTDT, TimestampMode, Transcriber as _};
-use verwalter_lib::voice::dictation::BASE_PROMPT;
-use verwalter_lib::voice::resample::to_mono_16k;
+use verwalter_lib::voice::model_file::{download, is_model_ready, total_bytes};
+use verwalter_lib::voice::resample::{TARGET_RATE, to_mono_16k};
 use verwalter_lib::voice::transcribe::Transcriber;
 
-const USAGE: &str =
-    "Aufruf: parakeet-probe <WAV> <Parakeet-Ordner|-> [<Whisper-Modell>] [--reference \"<Text>\"]";
-const SAMPLE_RATE: u32 = 16_000;
-const MAX_THREADS: usize = 8;
-const SKIP: &str = "-";
+const USAGE: &str = "Aufruf: parakeet-probe download <Ordner> [--cancel-after <Sekunden>] | ready <Ordner> | recognize <Ordner> <WAV> [--reference \"<Text>\"]";
+const PROGRESS_STEP_BYTES: u64 = 100 * 1024 * 1024;
+const BYTES_PER_MB: u64 = 1024 * 1024;
 
 type ProbeResult = Result<ExitCode, Box<dyn std::error::Error>>;
 
-struct Measurement {
-    load: Duration,
-    recognition: Duration,
-    text: String,
-}
-
 fn main() -> ProbeResult {
     let arguments: Vec<String> = env::args().skip(1).collect();
-    let reference = option_value(&arguments, "--reference");
-    let positional: Vec<&String> = arguments
+    let positional: Vec<&str> = arguments
         .iter()
         .take_while(|argument: &&String| !argument.starts_with("--"))
+        .map(String::as_str)
         .collect();
-    let (Some(wav), Some(parakeet_dir)) = (positional.first(), positional.get(1)) else {
-        eprintln!("{USAGE}");
-        return Ok(ExitCode::from(2));
-    };
-
-    let audio = read_mono_16k(Path::new(wav))?;
-    let seconds = audio.len() as f64 / f64::from(SAMPLE_RATE);
-    println!("Aufnahme: {wav} ({seconds:.2} s)");
-    if let Some(reference) = reference {
-        println!("Referenz: {reference}");
+    match positional.as_slice() {
+        ["download", dir] => {
+            let cancel_after = option_value(&arguments, "--cancel-after")
+                .map(str::parse::<f64>)
+                .transpose()?;
+            run_download(Path::new(dir), cancel_after)
+        }
+        ["ready", dir] => {
+            let is_ready = is_model_ready(Path::new(dir));
+            println!("bereit: {}", if is_ready { "ja" } else { "nein" });
+            Ok(ExitCode::SUCCESS)
+        }
+        ["recognize", dir, wav] => run_recognize(
+            Path::new(dir),
+            Path::new(wav),
+            option_value(&arguments, "--reference"),
+        ),
+        _ => {
+            eprintln!("{USAGE}");
+            Ok(ExitCode::from(2))
+        }
     }
-
-    if parakeet_dir.as_str() != SKIP {
-        let measurement = run_parakeet(Path::new(parakeet_dir), &audio)?;
-        report(
-            "Parakeet TDT 0.6B v3 int8",
-            &measurement,
-            seconds,
-            reference,
-        );
-    }
-    if let Some(whisper_model) = positional.get(2) {
-        let measurement = run_whisper(Path::new(whisper_model), &audio)?;
-        report("Whisper small q5_1", &measurement, seconds, reference);
-    }
-    Ok(ExitCode::SUCCESS)
 }
 
 fn option_value<'a>(arguments: &'a [String], name: &str) -> Option<&'a str> {
@@ -71,6 +58,73 @@ fn option_value<'a>(arguments: &'a [String], name: &str) -> Option<&'a str> {
         .iter()
         .position(|argument: &String| argument == name)?;
     arguments.get(index + 1).map(String::as_str)
+}
+
+fn run_download(dir: &Path, cancel_after: Option<f64>) -> ProbeResult {
+    let cancel = Arc::new(AtomicBool::new(false));
+    if let Some(seconds) = cancel_after {
+        let timer_cancel = Arc::clone(&cancel);
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs_f64(seconds));
+            timer_cancel.store(true, Ordering::Relaxed);
+        });
+    }
+    println!("vorher bereit: {}", is_model_ready(dir));
+    let started = Instant::now();
+    let mut next_report: u64 = 0;
+    let result = download(dir, &cancel, |received_bytes: u64, total: u64| {
+        if received_bytes >= next_report {
+            println!(
+                "  {} / {} MB",
+                received_bytes / BYTES_PER_MB,
+                total / BYTES_PER_MB
+            );
+            next_report = received_bytes + PROGRESS_STEP_BYTES;
+        }
+    });
+    let elapsed_ms = started.elapsed().as_millis();
+    match result {
+        Ok(()) => {
+            println!(
+                "bereit nach {elapsed_ms} ms ({} Bytes im Satz)",
+                total_bytes()
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Err(error) => {
+            let kind = if cancel.load(Ordering::Relaxed) {
+                "abgebrochen"
+            } else {
+                "Fehler"
+            };
+            println!("{kind} nach {elapsed_ms} ms: {error}");
+            Ok(ExitCode::FAILURE)
+        }
+    }
+}
+
+fn run_recognize(dir: &Path, wav: &Path, reference: Option<&str>) -> ProbeResult {
+    let audio = read_mono_16k(wav)?;
+    let seconds = audio.len() as f64 / f64::from(TARGET_RATE);
+    println!("Aufnahme: {} ({seconds:.2} s)", wav.display());
+    let started = Instant::now();
+    let transcriber = Transcriber::load(dir)?;
+    println!("Ladezeit: {} ms", started.elapsed().as_millis());
+    let cancel = Arc::new(AtomicBool::new(false));
+    let started = Instant::now();
+    let text = transcriber.transcribe(&audio, &cancel)?;
+    let recognition = started.elapsed();
+    println!("Erkennungszeit: {} ms", recognition.as_millis());
+    println!("Echtzeitfaktor: {:.3}", recognition.as_secs_f64() / seconds);
+    println!("Text: {text}");
+    if let Some(reference) = reference {
+        println!("Referenz: {reference}");
+        println!(
+            "Wortfehlerrate: {:.1} %",
+            word_error_rate(reference, &text) * 100.0
+        );
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 fn read_mono_16k(path: &Path) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
@@ -88,67 +142,6 @@ fn read_mono_16k(path: &Path) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
             .collect::<Result<Vec<f32>, hound::Error>>()?,
     };
     Ok(to_mono_16k(&samples, spec.channels, spec.sample_rate))
-}
-
-fn thread_count() -> usize {
-    let available = thread::available_parallelism().map_or(1, NonZero::get);
-    available.min(MAX_THREADS)
-}
-
-fn assert_send<T: Send>() {}
-
-fn run_parakeet(dir: &Path, audio: &[f32]) -> Result<Measurement, Box<dyn std::error::Error>> {
-    assert_send::<ParakeetTDT>();
-    let started = Instant::now();
-    let config = ExecutionConfig::new()
-        .with_environment(parakeet_rs::ort::init().build()?)
-        .with_intra_threads(thread_count());
-    let mut model = ParakeetTDT::from_pretrained(dir, Some(config))?;
-    let load = started.elapsed();
-    let started = Instant::now();
-    let result = model.transcribe_samples(
-        audio.to_vec(),
-        SAMPLE_RATE,
-        1,
-        Some(TimestampMode::Sentences),
-    )?;
-    Ok(Measurement {
-        load,
-        recognition: started.elapsed(),
-        text: result.text.trim().to_owned(),
-    })
-}
-
-fn run_whisper(path: &Path, audio: &[f32]) -> Result<Measurement, Box<dyn std::error::Error>> {
-    let cancel = Arc::new(AtomicBool::new(false));
-    let started = Instant::now();
-    let transcriber = Transcriber::load(path)?;
-    let load = started.elapsed();
-    let started = Instant::now();
-    let text = transcriber.transcribe(audio, BASE_PROMPT, None, &cancel)?;
-    Ok(Measurement {
-        load,
-        recognition: started.elapsed(),
-        text,
-    })
-}
-
-fn report(engine: &str, measurement: &Measurement, seconds: f64, reference: Option<&str>) {
-    let recognition_ms = measurement.recognition.as_millis();
-    println!("== {engine}");
-    println!("Ladezeit: {} ms", measurement.load.as_millis());
-    println!("Erkennungszeit: {recognition_ms} ms");
-    println!(
-        "Echtzeitfaktor: {:.3}",
-        measurement.recognition.as_secs_f64() / seconds
-    );
-    println!("Text: {}", measurement.text);
-    if let Some(reference) = reference {
-        println!(
-            "Wortfehlerrate: {:.1} %",
-            word_error_rate(reference, &measurement.text) * 100.0
-        );
-    }
 }
 
 fn normalized_words(text: &str) -> Vec<String> {

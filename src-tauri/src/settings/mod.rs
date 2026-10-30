@@ -76,13 +76,6 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
     {
         return Err(CommandError::Internal("Modellname leer".to_owned()));
     }
-    if let SettingsChange::VoiceLanguage { value: Some(code) } = &change
-        && whisper_rs::get_lang_id(code).is_none()
-    {
-        return Err(CommandError::Internal(format!(
-            "Unbekannte Sprache für die Spracheingabe: {code}"
-        )));
-    }
     database.with(|connection| {
         let transaction = connection.transaction()?;
         match change {

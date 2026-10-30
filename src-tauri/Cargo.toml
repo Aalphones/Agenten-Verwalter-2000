@@ -29,7 +29,6 @@ ts-rs = "=12.0.1"
 uuid = { version = "1", features = ["v4"] }
 tauri-plugin-dialog = "2"
 base64 = "0.22"
-whisper-rs = "0.16"
 parakeet-rs = "0.4.3"
 cpal = "0.18"
 ureq = "3"

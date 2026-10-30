@@ -5,7 +5,7 @@ Ziel: Das Sprachdiktat erkennt mit NVIDIA Parakeet TDT 0.6B v3 (ONNX, int8, nur 
 | # | Phase | Rating | Wave | Aufwand | Status |
 |---|---|---|---|---|---|
 | 1 | [Messlauf: Parakeet gegen Whisper auf derselben Aufnahme, Go/No-Go](phase-1-messlauf.md) | heikel | 1 | M | complete (Go) |
-| 2 | [Core: Modellsatz laden, Parakeet erkennt, whisper-rs raus](phase-2-core-umstellen.md) | heikel | 2 | L | pending |
+| 2 | [Core: Modellsatz laden, Parakeet erkennt, whisper-rs raus](phase-2-core-umstellen.md) | heikel | 2 | L | complete |
 | 3 | [Spracheinstellung und Whisper-Texte aus Einstellungen und Oberfläche entfernen](phase-3-einstellung-und-texte.md) | standard | 3 | S | pending |
 | 4 | [Build, CI, Doku, ADR 049, Release](phase-4-aufraeumen-und-release.md) | mechanisch | 4 | S | pending |
 

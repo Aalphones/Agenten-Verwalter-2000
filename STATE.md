@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-30_parakeet/`
-**Phase:** 2/4 — Core umstellen (pending, Rating heikel)
-**Nächster Schritt:** `phase-2-core-umstellen.md` beginnen, zuerst die an Phase 2 getaggten FINDINGS lesen. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC 14.44; `vcvars64` von VS 2019 reicht für ONNX Runtime nicht mehr), `LIBCLANG_PATH=C:\Program Files\LLVM\bin`, `BINDGEN_EXTRA_CLANG_ARGS=-isystem "C:/Program Files/LLVM/lib/clang/23/include"`, `%USERPROFILE%\.cargo\bin` in den PATH — sonst scheitert whisper-rs-sys, solange es im Baum ist.
+**Phase:** 3/4 — Spracheinstellung und Whisper-Texte entfernen (pending, Rating standard)
+**Nächster Schritt:** `phase-3-einstellung-und-texte.md` beginnen, zuerst die an Phase 3 getaggten FINDINGS lesen. Prüfkette auf diesem Rechner: `cmd`-Aufruf mit `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC 14.44), `%USERPROFILE%\.cargoin` in den PATH; LLVM/`LIBCLANG_PATH` braucht whisper-rs-sys seit Phase 2 nicht mehr (ob ein anderer Crate es braucht, prüft Phase 4).
 **Danach im Backlog:** `2026-10-22_parallele-sessions` oder `2026-10-22_umgebung` — unabhängig voneinander umsetzbar; beide fassen wie „Automatisch weiter“ die Funktion `send` an, wer später umsetzt, liest sie neu.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-29_nebenfragen/` (ADR 044, keine Migration), Release `v0.38.0`; die Selbstprüfung der Oberfläche (Phase 2 und 3, AK) in der echten App steht aus; davor `docs/archive/2026-10/2026-10-29_unveraenderte-zeilen/` (ADR 043, keine Migration), Release `v0.37.0`; davor `docs/archive/2026-10/2026-10-28_werkzeug-details/` (ADR 042, Migration 015), Release `v0.36.0`. Der volle Update-Durchlauf (Klick → Tausch → Neustart) ist noch nie in der echten App gelaufen.
 

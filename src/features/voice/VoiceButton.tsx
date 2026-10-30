@@ -29,7 +29,6 @@ interface VoiceButtonProps {
  *  bei fehlendem Sprachmodell das Einrichten. `Strg+M` im Textfeld schaltet dasselbe um. */
 export function VoiceButton({
   owner,
-  sessionId,
   inputRef,
   getValue,
   setValue,
@@ -41,7 +40,6 @@ export function VoiceButton({
   const modelState: VoiceModelState | null = useVoiceStore((state) => state.modelState);
   const dictation: DictationControl = useDictation({
     owner,
-    sessionId,
     inputRef,
     getValue,
     setValue,
