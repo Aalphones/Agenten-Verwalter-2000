@@ -6,11 +6,15 @@ import {
   answeredLabels,
   draftAnswer,
   draftAnswerPart,
+  editCustom,
+  editNote,
   isAnswered,
   isComplete,
   needsSubmit,
   questionHeader,
   setActive,
+  toggleCustom,
+  toggleNote,
   type QuestionDraft,
   type QuestionEntry,
 } from '@/features/chat/questionDraft';
@@ -25,7 +29,7 @@ interface QuestionBlockProps {
   isSending: boolean;
   onPick: (questionIndex: number, optionIndex: number) => void;
   onSubmit: (answer: QuestionAnswer) => void;
-  /** Alles außer Wahl und Senden: welche Frage aufgeklappt ist. */
+  /** Alles außer Wahl und Senden: aufgeklappte Frage, Notizen, eigene Antworten. */
   onDraft: (next: QuestionDraft) => void;
 }
 
@@ -143,6 +147,27 @@ export function QuestionBlock({
         selected={draft.labels[questionIndex] ?? []}
         isActive
         isLocked={isSending}
+        extras={{
+          notes: draft.notes[questionIndex] ?? {},
+          custom: draft.custom[questionIndex] ?? null,
+          onToggleNote: (name: string): void => {
+            onDraft(toggleNote(draft, questionIndex, name));
+          },
+          onEditNote: (name: string, text: string): void => {
+            onDraft(editNote(entry, draft, questionIndex, name, text));
+          },
+          onToggleCustom: (): void => {
+            onDraft(toggleCustom(draft, questionIndex));
+          },
+          onEditCustom: (text: string): void => {
+            onDraft(editCustom(entry, draft, questionIndex, text));
+          },
+          onEnter: (): void => {
+            if (!isSending && isComplete(entry, draft)) {
+              onSubmit(draftAnswer(draft));
+            }
+          },
+        }}
         onPick={(optionIndex: number): void => {
           onPick(questionIndex, optionIndex);
         }}
@@ -151,7 +176,7 @@ export function QuestionBlock({
   }
 
   function renderFooter(): ReactElement {
-    if (!needsSubmit(entry)) {
+    if (!needsSubmit(entry, draft)) {
       return <div className="question-block__footer">Oder schreib unten eine eigene Antwort.</div>;
     }
     const isReady: boolean = isComplete(entry, draft);
