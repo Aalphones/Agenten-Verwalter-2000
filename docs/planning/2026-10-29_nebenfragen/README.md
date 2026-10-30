@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Wave | Status |
 |---|---|---|---|---|
 | 1 | Core: Einmal-Aufruf als Fork, Zustand, Befehle, Prüfprogramm `side-probe`, ADR 044 | heikel | 1 | complete |
-| 2 | Oberfläche: Fenster, Reiter, `/btw`, `+`-Menü, `Strg+;`, Doku | standard | 2 | pending |
+| 2 | Oberfläche: Fenster, Reiter, `/btw`, `+`-Menü, `Strg+;`, Doku | standard | 2 | umgesetzt, Commit wartet auf Abnahme |
 | 3 | Markieren → Rechtsklick → „Nebenfrage zur Auswahl“ | standard | 3 | pending |
 
 **Rahmen:** strikt 1 → 2 → 3, keine Parallelspur (drei Phasen; Phase 2 braucht die erzeugten Bindings aus Phase 1, Phase 3 den Store aus Phase 2). Direkt auf `main`, ein Commit pro Phase, Scope `side`. `pnpm check` grün vor jedem Commit, Prüfkette auf diesem Rechner siehe [STATE.md](../../../STATE.md) („Nächster Schritt“), keine neuen Abhängigkeiten, Bindings mitcommitten. Keine automatisierten Tests (Projektregel, [linting.md](../../conventions/linting.md)), keine Smoke-Checkliste; geprüft wird mit dem Prüfprogramm (Phase 1) und in der laufenden App (Phase 2, 3). Planabschluss mit Versions-Tag (Minor-Version). **Reihenfolge zu anderen Plänen:** unabhängig von `unveraenderte-zeilen`, `parallele-sessions`, `umgebung` (andere Dateien); `parallele-sessions` und `umgebung` fassen `send` in `registry.rs` an, dieser Plan nicht — der neue Code liegt in `sessions/registry/side.rs`.
