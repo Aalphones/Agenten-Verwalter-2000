@@ -52,7 +52,7 @@ Ergebnis: Fenster über der Eingabeleiste, Reiter „Nebenfragen“, die Einstie
 
 ## Report-Back
 
-- Stand: umgesetzt, `pnpm check` grün (Lint, Typecheck, Format, Build, rustfmt, Clippy), Commit wartet auf Abnahme.
+- Stand: umgesetzt, `pnpm check` grün (Lint, Typecheck, Format, Build, rustfmt, Clippy), committet als `bc68a37`.
 - **Selbstprüfung in der laufenden App (AK 1–8) nicht gelaufen** — kein Weg, die Oberfläche aus der Session heraus zu bedienen; offen für den Betrieb.
 - Abweichungen: `SIDE_UNSUPPORTED_HINT` liegt in `openSide.ts` statt in `Composer.tsx`. Der Hinweis für Autark/Codex läuft über `useSideStore.notices`, damit `Strg+;` (in `App`) und später der Rechtsklick ihn ohne Zugriff auf die Fehlerzeile der Leiste setzen können. Die Zeile im `+`-Menü erscheint nur in der Eingabeleiste (Prop `onSide` optional, „Neue Session“ hat keinen Verlauf).
 - Pille: `promptCacheState` warm/kalt vor und während der Antwort, danach zusätzlich `<n>k Tokens aus dem Cache`; bei `fresh`/`unknown` zeigt sie vor dem Senden nichts.
