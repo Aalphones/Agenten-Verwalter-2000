@@ -15,7 +15,6 @@ const DOT_NUMBERS = [1, 2, 3] as const;
 interface VoiceButtonProps {
   /** Schlüssel der Eingabe: Session-ID bzw. `NEW_SESSION_OWNER`. */
   owner: string;
-  sessionId: string | null;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   getValue: () => string;
   setValue: (next: string) => void;
