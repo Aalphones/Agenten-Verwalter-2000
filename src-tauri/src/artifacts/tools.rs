@@ -10,8 +10,6 @@ use crate::sessions::registry::SessionRegistry;
 const SHOW_EVENT: &str = "artifacts://show";
 const LIST: &str = "artifact_list";
 const SHOW: &str = "artifact_show";
-/// Bis Phase 2 des Plans „Artefakte aller Dateitypen“ kennt die Liste nur HTML.
-const KIND_HTML: &str = "html";
 const NO_REGISTRY: &str = "Der Verwalter startet noch";
 
 pub struct ArtifactTools;
@@ -25,7 +23,7 @@ impl ToolSet for ArtifactTools {
         vec![
             ToolSpec {
                 name: LIST,
-                description: "Listet die Artefakte dieses Vorhabens (Dateien im Ordner .artefakte) \
+                description: "Listet die Artefakte dieses Vorhabens (Dateien und Ordner in .artefakte) \
                               mit Titel, Typ, letzter Änderung und der Session, die sie anlegte.",
                 input_schema: json!({
                     "type": "object",
@@ -42,7 +40,7 @@ impl ToolSet for ArtifactTools {
                     "properties": {
                         "file": {
                             "type": "string",
-                            "description": "Dateiname direkt im Ordner .artefakte",
+                            "description": "Name einer Datei oder eines Ordners direkt in .artefakte",
                         },
                     },
                     "required": ["file"],
@@ -88,7 +86,12 @@ fn list(session_id: &str, dir: &str, items: &[Artifact]) -> ToolResult {
                 (Some(number), Some(name)) => format!("#{number} {name}"),
                 _ => "ohne Zuordnung".to_owned(),
             };
-            format!("„{}“ ({}, {KIND_HTML}, {owner})", item.title, item.file)
+            format!(
+                "„{}“ ({}, {}, {owner})",
+                item.title,
+                item.file,
+                item.kind.as_str()
+            )
         })
         .collect();
     let text = if lines.is_empty() {
@@ -102,7 +105,7 @@ fn list(session_id: &str, dir: &str, items: &[Artifact]) -> ToolResult {
             json!({
                 "file": item.file,
                 "title": item.title,
-                "kind": KIND_HTML,
+                "kind": item.kind,
                 "modifiedAt": item.modified_at,
                 "sessionNumber": item.session_number,
                 "sessionName": item.session_name,

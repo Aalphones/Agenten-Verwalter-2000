@@ -426,6 +426,7 @@ export function ChatTimeline({
         return (
           <ArtifactCard
             file={entry.file}
+            kind={entry.artifactKind}
             item={item}
             onOpen={(): void => {
               if (item === undefined) {

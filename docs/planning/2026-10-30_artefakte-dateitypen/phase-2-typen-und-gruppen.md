@@ -1,6 +1,6 @@
 # Phase 2 — Typ-Erkennung, Gruppierung nach Session, Medien
 
-**Rating:** heikel (Sicherheitsmodell der Betrachter, Schema-Änderung, Kontrakt für Phasen 3–5) · **Wave:** 2 · **Aufwand:** L
+**Status:** umgesetzt, Laufzeitbelege in der App offen · **Rating:** heikel (Sicherheitsmodell der Betrachter, Schema-Änderung, Kontrakt für Phasen 3–5) · **Wave:** 2 · **Aufwand:** L
 
 Die Liste nimmt jede Datei und jeden Nicht-Zubehör-Ordner auf, erkennt den Typ, gruppiert nach anlegender Session und zeigt Bilder, Videos, Ton und die Rest-Karte. Danach tragen die Phasen 3–5 nur noch Betrachter ein.
 
@@ -30,36 +30,36 @@ Die Liste nimmt jede Datei und jeden Nicht-Zubehör-Ordner auf, erkennt den Typ,
 
 ## Abnahmekriterien
 
-- [ ] Migration 16 fügt `session_files.first_touched_at REAL` hinzu; der Upsert setzt sie beim ersten Eintrag und lässt sie danach unverändert; Altbestand bleibt `NULL`.
-- [ ] `artifacts::list` liefert jede sichtbare Datei und jeden Nicht-Zubehör-Ordner mit `kind`, `size`, `entries`; die drei Zubehör-Regeln greifen (geprüft am Ordner `.artefakte` dieses Vorhabens: `entwurf-umsetzung/`, `ablauf-recherche/`, `phasen-und-rollen/` fehlen in der Liste).
-- [ ] `session_*` ist die anlegende Session, `last_session_*` nur gesetzt, wenn eine andere zuletzt schrieb; ohne `first_touched_at` gilt die zuletzt schreibende.
-- [ ] Die Liste im Reiter ist nach Kontrakt gruppiert, Gruppen auf- und zuklappbar, Typ-Abzeichen je Eintrag; in der Vorhaben-Übersicht (ohne aktive Session) entfällt „diese Session“.
+- [x] Migration 16 fügt `session_files.first_touched_at REAL` hinzu; der Upsert setzt sie beim ersten Eintrag und lässt sie danach unverändert; Altbestand bleibt `NULL`.
+- [x] `artifacts::list` liefert jede sichtbare Datei und jeden Nicht-Zubehör-Ordner mit `kind`, `size`, `entries`; die drei Zubehör-Regeln greifen (geprüft am Ordner `.artefakte` dieses Vorhabens: `entwurf-umsetzung/`, `ablauf-recherche/`, `phasen-und-rollen/` fehlen in der Liste).
+- [x] `session_*` ist die anlegende Session, `last_session_*` nur gesetzt, wenn eine andere zuletzt schrieb; ohne `first_touched_at` gilt die zuletzt schreibende.
+- [x] Die Liste im Reiter ist nach Kontrakt gruppiert, Gruppen auf- und zuklappbar, Typ-Abzeichen je Eintrag; in der Vorhaben-Übersicht (ohne aktive Session) entfällt „diese Session“.
 - [ ] Bild, Video und Ton werden in ihren Betrachtern gezeigt; `?view=1` liefert die Betrachter-Seite mit Kommentar-Brücke, ohne `?view` die Rohdatei.
-- [ ] Jeder Typ ohne Betrachter zeigt die Rest-Karte; beide Knöpfe funktionieren.
+- [x] Jeder Typ ohne Betrachter zeigt die Rest-Karte; beide Knöpfe funktionieren.
 - [ ] Kommentieren funktioniert auf Bild-, Video- und Ton-Betrachter (Element anklicken → Kommentar).
-- [ ] Die Karte im Chat erscheint für jedes `Write` in `.artefakte`, mit Typ-Abzeichen.
-- [ ] `artifact_list` (MCP) liefert `kind` aus `ArtifactKind`.
-- [ ] Die Anweisung an Claude und Codex nennt, dass jedes Medium als Artefakt abgelegt werden darf, HTML für Interaktives bleibt, und die `_`-Regel für Zubehör-Ordner.
+- [x] Die Karte im Chat erscheint für jedes `Write` in `.artefakte`, mit Typ-Abzeichen.
+- [x] `artifact_list` (MCP) liefert `kind` aus `ArtifactKind`.
+- [x] Die Anweisung an Claude und Codex nennt, dass jedes Medium als Artefakt abgelegt werden darf, HTML für Interaktives bleibt, und die `_`-Regel für Zubehör-Ordner.
 
 ## Checkliste
 
-- [ ] `src-tauri/src/db/migrations/016_session_files_first.sql`: `ALTER TABLE session_files ADD COLUMN first_touched_at REAL;` und in `migrations.rs` registrieren.
-- [ ] `db/session_files.rs`: Upsert auf `INSERT … (session_id, path, touched_at, first_touched_at) VALUES (?1, ?2, ?3, ?3) ON CONFLICT … DO UPDATE SET touched_at = max(touched_at, excluded.touched_at)` (`first_touched_at` nicht anfassen); `load_for` liefert zusätzlich `first_touched_at: Option<f64>`. `ArtifactOwner.touched` wird `HashMap<String, (f64, Option<f64>)>` (letzte, erste); alle Leser von `load_for` anpassen (Grep nach `load_for`).
-- [ ] `artifacts/model.rs`: `ArtifactKind` und neue Felder nach Kontrakt; Export in `src-tauri/examples/gen-bindings.rs`; `pnpm bindings`.
-- [ ] `artifacts/mod.rs`: `ARTIFACT_EXTENSIONS` und Namensprüfung ersetzen durch `kind_of(path) -> ArtifactKind` (Tabelle: html/htm → Html; md/markdown → Markdown; json → Json; jsonl/ndjson → JsonLines; yaml/yml → Yaml; toml/ini/env und Dateiname `.env*` → Config; xml → Xml; csv/tsv → Csv; txt → Text; log → Log; diff/patch → Diff; mmd/mermaid → Mermaid; png/jpg/jpeg/gif/webp/avif/svg/ico → Image; mp4/webm → Video; mp3/wav/ogg/m4a → Audio; pdf → Pdf; Quelltext ts/tsx/js/jsx/mjs/py/rs/go/kt/java/cs/sql/sh/ps1/bat/cmd/css/scss/c/cpp/h/rb/php/swift → Code; sonst Other) und `is_accessory_dir(dir, name, html_files)` nach Kontrakt. `list` liest Dateien und Ordner, überspringt Namen mit `.`-Präfix (außer `.env*`), berechnet `size`/`entries` (Ordner: zwei Ebenen tief, höchstens 1000 Einträge gezählt). Titel: HTML wie bisher aus `<title>`, Markdown aus der ersten Zeile `# …`, sonst Dateiname ohne Endung.
-- [ ] `artifacts/mod.rs`: `creator_owner` (kleinstes `first_touched_at`) neben `latest_owner`; `list` setzt `session_*` aus `creator_owner` mit Rückfall `latest_owner`, `last_session_*` wenn abweichend.
-- [ ] `artifact_file_of` und der `Write`-Zweig in `registry.rs`: jede Datei direkt in `.artefakte` oder in einem Nicht-Zubehör-Ordner ergibt die Karte (bei Dateien in Ordnern: Karte für den Ordner).
-- [ ] `artifacts/viewers/mod.rs`, `shell.html` (Grundgerüst: Kopfzeile mit Dateiname und Typ, Bühne, Rohtext-Rückfall, Tokens für hell/dunkel über `prefers-color-scheme`), `image.js`, `video.js`, `audio.js`; Weiche `page(kind)`.
-- [ ] `artifacts/server.rs` `answer`: Query `view=1` erkennen (heute wird die Query abgeschnitten, Zeile 118 — Query vorher auswerten); bei `view=1` und `viewers::page(kind)` = `Some` → Betrachter-Seite als `text/html` mit `with_bridge` und gleicher CSP; Ordner-Ziel ohne `view` → `index.html` des Ordners, falls vorhanden, sonst 404. `content_type` nach Entscheidung erweitern.
-- [ ] Commands `artifact_open_default(session_id, file)` und `artifact_reveal(session_id, file)` in `commands/artifacts.rs` (Pfad über `artifacts::resolve` prüfen, öffnen per Opener-Plugin wie `file_link_open`; Explorer: `opener.reveal_item_in_dir`); Wrapper in `src/lib/artifacts.ts`; in `lib.rs` registrieren.
-- [ ] `src/features/artifacts/groupArtifacts.ts` (reine Funktion nach Kontrakt), `ArtifactGroupHeader.tsx`, `ArtifactKindBadge.tsx` (Kurztexte je Typ in `artifactTexts.ts`: HTML, SITE, DIR, MD, JSON, JSONL, YAML, CONF, XML, CSV, CODE, TXT, LOG, DIFF, BILD, VIDEO, TON, PDF, MMD, DATEI), `ArtifactOtherCard.tsx`; `ArtifactsView.tsx` rendert Gruppen statt flacher Liste; `src/stores/artifacts.ts` um `collapsed: Record<string, Record<string, boolean>>` (Vorhaben → Gruppen-Schlüssel) mit `toggleGroup`.
-- [ ] `ArtifactFrame.tsx`/`ArtifactFullscreen.tsx`: Adresse je Typ — `Html` und `Site` wie bisher (Site: `<datei>/`), Typen mit Betrachter `<datei>?view=1`, sonst `ArtifactOtherCard` statt Rahmen. Welche Typen einen Betrachter haben, liefert der Core als Feld `viewable: bool` an `Artifact` (aus `viewers::page(kind).is_some()` oder `Html`/`Site`) — die Oberfläche hält keine eigene Liste.
-- [ ] `artifactTexts.ts` `metaLine`: bei `lastSessionNumber` Zusatz „· zuletzt #<n>“; `ARTIFACTS_INFO` an neue Regeln anpassen.
-- [ ] `ArtifactCard.tsx` (Chat): Typ-Abzeichen.
-- [ ] `artifacts/tools.rs`: `kind` aus `ArtifactKind` (kebab-case).
-- [ ] Anweisung `artifacts_prompt` in `process.rs` und `codex/instructions.rs`: „Möchte der Benutzer etwas zum Ansehen, lege es als Artefakt direkt in diesen Ordner: jede Datei, die einen Sachverhalt veranschaulicht — HTML-Seite, Markdown, Bild, Diagramm (Mermaid), PDF, Video, Ton, JSON, YAML, CSV oder ein Ordner. Interaktives als HTML. Dateiname in Kleinbuchstaben mit Bindestrichen. Dateien, die nur eine Seite braucht (Bilder, Skripte, Stylesheets), gehören in einen Unterordner, dessen Name mit _ beginnt. Zum Überarbeiten dieselbe Datei ändern.“ (übrige Sätze der bisherigen Anweisung zu Netz und Veröffentlichen bleiben).
-- [ ] Prüfprogramm `src-tauri/examples/artifacts-probe.rs`: `artifacts-probe <Datenbank-Kopie> <Session-ID>` druckt die Liste wie `artifacts::list` (Datei, Typ, Größe, anlegende/letzte Session, Zubehör übersprungen); Aufruf in `AGENTS.md`.
-- [ ] ADR `docs/decisions/047-artefakte-alle-dateitypen.md` (Definition „Artefakt“ aus der README, Zubehör-Regel, anlegende Session, Betrachter im Rahmen statt im App-Fenster, Bibliotheken über CDN mit SRI statt gebündelt, Rest-Karte); ADR 026 Kopf um „ergänzt durch ADR 047“.
+- [x] `src-tauri/src/db/migrations/016_session_files_first.sql`: `ALTER TABLE session_files ADD COLUMN first_touched_at REAL;` und in `migrations.rs` registrieren.
+- [x] `db/session_files.rs`: Upsert auf `INSERT … (session_id, path, touched_at, first_touched_at) VALUES (?1, ?2, ?3, ?3) ON CONFLICT … DO UPDATE SET touched_at = max(touched_at, excluded.touched_at)` (`first_touched_at` nicht anfassen); `load_for` liefert zusätzlich `first_touched_at: Option<f64>`. `ArtifactOwner.touched` wird `HashMap<String, (f64, Option<f64>)>` (letzte, erste); alle Leser von `load_for` anpassen (Grep nach `load_for`).
+- [x] `artifacts/model.rs`: `ArtifactKind` und neue Felder nach Kontrakt; Export in `src-tauri/examples/gen-bindings.rs`; `pnpm bindings`.
+- [x] `artifacts/mod.rs`: `ARTIFACT_EXTENSIONS` und Namensprüfung ersetzen durch `kind_of(path) -> ArtifactKind` (Tabelle: html/htm → Html; md/markdown → Markdown; json → Json; jsonl/ndjson → JsonLines; yaml/yml → Yaml; toml/ini/env und Dateiname `.env*` → Config; xml → Xml; csv/tsv → Csv; txt → Text; log → Log; diff/patch → Diff; mmd/mermaid → Mermaid; png/jpg/jpeg/gif/webp/avif/svg/ico → Image; mp4/webm → Video; mp3/wav/ogg/m4a → Audio; pdf → Pdf; Quelltext ts/tsx/js/jsx/mjs/py/rs/go/kt/java/cs/sql/sh/ps1/bat/cmd/css/scss/c/cpp/h/rb/php/swift → Code; sonst Other) und `is_accessory_dir(dir, name, html_files)` nach Kontrakt. `list` liest Dateien und Ordner, überspringt Namen mit `.`-Präfix (außer `.env*`), berechnet `size`/`entries` (Ordner: zwei Ebenen tief, höchstens 1000 Einträge gezählt). Titel: HTML wie bisher aus `<title>`, Markdown aus der ersten Zeile `# …`, sonst Dateiname ohne Endung.
+- [x] `artifacts/mod.rs`: `creator_owner` (kleinstes `first_touched_at`) neben `latest_owner`; `list` setzt `session_*` aus `creator_owner` mit Rückfall `latest_owner`, `last_session_*` wenn abweichend.
+- [x] `artifact_file_of` und der `Write`-Zweig in `registry.rs`: jede Datei direkt in `.artefakte` oder in einem Nicht-Zubehör-Ordner ergibt die Karte (bei Dateien in Ordnern: Karte für den Ordner).
+- [x] `artifacts/viewers/mod.rs`, `shell.html` (Grundgerüst: Kopfzeile mit Dateiname und Typ, Bühne, Rohtext-Rückfall, Tokens für hell/dunkel über `prefers-color-scheme`), `image.js`, `video.js`, `audio.js`; Weiche `page(kind)`.
+- [x] `artifacts/server.rs` `answer`: Query `view=1` erkennen (heute wird die Query abgeschnitten, Zeile 118 — Query vorher auswerten); bei `view=1` und `viewers::page(kind)` = `Some` → Betrachter-Seite als `text/html` mit `with_bridge` und gleicher CSP; Ordner-Ziel ohne `view` → `index.html` des Ordners, falls vorhanden, sonst 404. `content_type` nach Entscheidung erweitern.
+- [x] Commands `artifact_open_default(session_id, file)` und `artifact_reveal(session_id, file)` in `commands/artifacts.rs` (Pfad über `artifacts::resolve` prüfen, öffnen per Opener-Plugin wie `file_link_open`; Explorer: `opener.reveal_item_in_dir`); Wrapper in `src/lib/artifacts.ts`; in `lib.rs` registrieren.
+- [x] `src/features/artifacts/groupArtifacts.ts` (reine Funktion nach Kontrakt), `ArtifactGroupHeader.tsx`, `ArtifactKindBadge.tsx` (Kurztexte je Typ in `artifactTexts.ts`: HTML, SITE, DIR, MD, JSON, JSONL, YAML, CONF, XML, CSV, CODE, TXT, LOG, DIFF, BILD, VIDEO, TON, PDF, MMD, DATEI), `ArtifactOtherCard.tsx`; `ArtifactsView.tsx` rendert Gruppen statt flacher Liste; `src/stores/artifacts.ts` um `collapsed: Record<string, Record<string, boolean>>` (Vorhaben → Gruppen-Schlüssel) mit `toggleGroup`.
+- [x] `ArtifactFrame.tsx`/`ArtifactFullscreen.tsx`: Adresse je Typ — `Html` und `Site` wie bisher (Site: `<datei>/`), Typen mit Betrachter `<datei>?view=1`, sonst `ArtifactOtherCard` statt Rahmen. Welche Typen einen Betrachter haben, liefert der Core als Feld `viewable: bool` an `Artifact` (aus `viewers::page(kind).is_some()` oder `Html`/`Site`) — die Oberfläche hält keine eigene Liste.
+- [x] `artifactTexts.ts` `metaLine`: bei `lastSessionNumber` Zusatz „· zuletzt #<n>“; `ARTIFACTS_INFO` an neue Regeln anpassen.
+- [x] `ArtifactCard.tsx` (Chat): Typ-Abzeichen.
+- [x] `artifacts/tools.rs`: `kind` aus `ArtifactKind` (kebab-case).
+- [x] Anweisung `artifacts_prompt` in `process.rs` und `codex/instructions.rs`: „Möchte der Benutzer etwas zum Ansehen, lege es als Artefakt direkt in diesen Ordner: jede Datei, die einen Sachverhalt veranschaulicht — HTML-Seite, Markdown, Bild, Diagramm (Mermaid), PDF, Video, Ton, JSON, YAML, CSV oder ein Ordner. Interaktives als HTML. Dateiname in Kleinbuchstaben mit Bindestrichen. Dateien, die nur eine Seite braucht (Bilder, Skripte, Stylesheets), gehören in einen Unterordner, dessen Name mit _ beginnt. Zum Überarbeiten dieselbe Datei ändern.“ (übrige Sätze der bisherigen Anweisung zu Netz und Veröffentlichen bleiben).
+- [x] Prüfprogramm `src-tauri/examples/artifacts-probe.rs`: `artifacts-probe <Datenbank-Kopie> <Session-ID>` druckt die Liste wie `artifacts::list` (Datei, Typ, Größe, anlegende/letzte Session, Zubehör übersprungen); Aufruf in `AGENTS.md`.
+- [x] ADR `docs/decisions/047-artefakte-alle-dateitypen.md` (Definition „Artefakt“ aus der README, Zubehör-Regel, anlegende Session, Betrachter im Rahmen statt im App-Fenster, Bibliotheken über CDN mit SRI statt gebündelt, Rest-Karte); ADR 026 Kopf um „ergänzt durch ADR 047“.
 
 ## Definition of Done
 
@@ -70,3 +70,15 @@ Die Liste nimmt jede Datei und jeden Nicht-Zubehör-Ordner auf, erkennt den Typ,
 - Seven-Goals-Check; Schwerpunkt Sicherheit (kein Dateiinhalt im App-Fenster) und Wartbarkeit (eine Typ-Tabelle, eine Betrachter-Weiche).
 
 ## Report-Back
+
+Umgesetzt in einer Session (Opus), committet auf `feature/artefakte-dateitypen`.
+
+- **Belegt:** `pnpm check` grün, `pnpm bindings` gelaufen. `artifacts-probe` gegen eine Kopie der Datenbank (`artifacts/phase-2-probe.txt`): Migration 16 läuft (Schema vorher/nachher), der Upsert lässt `first_touched_at` beim zweiten und dritten Eintrag stehen (500 bleibt, `touched_at` 900), im Vorhaben mit den Plan-Entwürfen fehlen `entwurf-umsetzung/`, `ablauf-recherche/`, `phasen-und-rollen/`; im Testordner stimmen Typ, Größe, Dateizahl, Site/Folder, `.env` sichtbar, `.hidden`/`_assets`/`bilder` (Verweis)/`seite` (gleichnamig) fehlen, `notiz.md` steht unter dem Anleger mit „zuletzt #2“, `daten.json` ohne erste Uhrzeit fällt auf die zuletzt schreibende Session zurück.
+- **Offen (Laufzeit, nicht ohne laufende App prüfbar):** Screenshots der gruppierten Liste hell/dunkel, Bild-/Video-/Ton-Betrachter im Rahmen, Rest-Karte mit beiden Knöpfen, Kommentar auf einem Bild, Karte im Chat mit Abzeichen. AK „Bild, Video und Ton …“ und „Kommentieren funktioniert …“ deshalb nicht abgehakt. Die Betrachter-Skripte sind nur von ESLint/Prettier unberührt (sie liegen unter `src-tauri/`) und ungeprüft im Browser gelaufen.
+- **Abweichungen vom Plan:**
+  - `session_files::load_for` bleibt unverändert; neu ist `load_with_first` (eine Session, Pfad → (letzte, erste Uhrzeit)), nur für die Artefakte. Die beiden anderen Leser von `load_for` (Changes, Commit-Suche) brauchen die erste Uhrzeit nicht.
+  - Statt eines neuen Commands `artifact_open_default` neben `artifact_open_in_browser` ist der alte Command umbenannt und verallgemeinert (Datei oder Ordner, Prüfung über `is_plain_name` + `resolve_entry`); `artifact_reveal` ist neu.
+  - Die Zubehör-Regel erkennt zusätzlich `"./<name>/` und `'./<name>/` (häufige Schreibweise relativer Pfade). ADR 047 nennt es.
+  - Das Feld an `ChatEntry::Artifact` heißt `artifact_kind` (`artifactKind`), weil `kind` dort schon der Variantenname des Eintrags ist; ältere Einträge ohne Feld gelten als HTML.
+  - Die Meta-Zeile eines Eintrags nennt keine Session mehr (die steht im Gruppenkopf), sondern Dateiname bzw. Dateizahl · Uhrzeit · „zuletzt #n“.
+- **Unsicherste Stelle:** die Betrachter-Skripte `src-tauri/src/artifacts/viewers/{image,video,audio}.js` — nie im Rahmen gelaufen. Besonders: ob `fetch` + `URL.createObjectURL` unter der CSP der Artefakt-Seiten (`blob:` ist erlaubt) und in der Sandbox ohne `allow-same-origin` funktioniert, und ob `AudioContext.decodeAudioData` dort verfügbar ist. Prüfung: in der App je ein `.png`, `.mp4`, `.mp3` in `.artefakte` legen und öffnen; schlägt `fetch` fehl, zeigt der Betrachter „lässt sich nicht laden“.

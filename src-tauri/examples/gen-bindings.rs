@@ -10,7 +10,7 @@ use verwalter_lib::{
         AppUpdateProgress, AppUpdateStatus, InstallKind, InstallPhase, ReleaseInfo,
     },
     archive::model::{ArchivePage, ArchiveSnippet, ArchivedProject, ProjectRestored},
-    artifacts::model::{Artifact, ArtifactList, ArtifactShowEvent},
+    artifacts::model::{Artifact, ArtifactKind, ArtifactList, ArtifactShowEvent},
     background::model::{
         BackgroundChangedEvent, BackgroundItem, BackgroundKind, BackgroundState, ScratchpadEntry,
         ScratchpadListing, SessionBackground, SubagentStep, TextPreview,
@@ -172,6 +172,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     VoiceLevelEvent::export_all(&cfg)?;
     VoicePartialEvent::export_all(&cfg)?;
     Artifact::export_all(&cfg)?;
+    ArtifactKind::export_all(&cfg)?;
     ArtifactList::export_all(&cfg)?;
     ArtifactShowEvent::export_all(&cfg)?;
     GitOperation::export_all(&cfg)?;

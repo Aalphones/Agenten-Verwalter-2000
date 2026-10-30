@@ -34,9 +34,9 @@ impl SessionRegistry {
         // Erst ohne jede Session-Sperre an die Datenbank.
         let mut owners: Vec<ArtifactOwner> = Vec::with_capacity(members.len());
         for (member, name) in members.iter().zip(names) {
-            let touched = self.database.with(|connection| {
-                session_files::load_for(connection, std::slice::from_ref(&member.id))
-            })?;
+            let touched = self
+                .database
+                .with(|connection| session_files::load_with_first(connection, &member.id))?;
             owners.push(ArtifactOwner {
                 session_id: member.id.clone(),
                 number: member.number,

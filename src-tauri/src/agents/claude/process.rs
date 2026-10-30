@@ -251,16 +251,17 @@ fn scratchpad_prompt(dir: &Path) -> String {
 fn artifacts_prompt(dir: &Path, can_publish: bool) -> String {
     let mut prompt = format!(
         "Artefakte dieses Vorhabens: {}\n\
-         Möchte der Benutzer etwas zum Ansehen — einen Bericht, eine Präsentation, ein Diagramm, \
-         einen Design-Entwurf oder eine andere Seite —, schreibe es als eigenständige HTML-Datei \
-         direkt in diesen Ordner: Dateiname in Kleinbuchstaben mit Bindestrichen und der Endung \
-         .html, ein sprechender <title>. Bilder, Skripte und Stylesheets dazu gehören in einen \
-         Unterordner daneben und werden relativ eingebunden. Der Verwalter zeigt jede HTML-Datei \
-         dieses Ordners im Reiter „Artefakte“ an und lädt sie nach jedem Speichern neu; zum \
-         Überarbeiten dieselbe Datei ändern statt eine neue anzulegen. Die Seite darf Skripte, \
-         Schriften und Bibliotheken über https aus dem Internet laden, hat aber keinen Zugriff auf \
-         Dateien außerhalb dieses Ordners. Lege in diesem Ordner nichts anderes ab als Artefakte \
-         und ihre Dateien.",
+         Möchte der Benutzer etwas zum Ansehen, lege es als Artefakt direkt in diesen Ordner: \
+         jede Datei, die einen Sachverhalt veranschaulicht — HTML-Seite, Markdown, Bild, \
+         Diagramm (Mermaid), PDF, Video, Ton, JSON, YAML, CSV oder ein Ordner. Interaktives als \
+         HTML mit sprechendem <title>. Dateiname in Kleinbuchstaben mit Bindestrichen. Dateien, \
+         die nur eine Seite braucht (Bilder, Skripte, Stylesheets), gehören in einen Unterordner, \
+         dessen Name mit _ beginnt, und werden relativ eingebunden. Der Verwalter zeigt jedes \
+         Artefakt dieses Ordners im Reiter „Artefakte“ an und lädt es nach jedem Speichern neu; \
+         zum Überarbeiten dieselbe Datei ändern statt eine neue anzulegen. Eine Seite darf \
+         Skripte, Schriften und Bibliotheken über https aus dem Internet laden, hat aber keinen \
+         Zugriff auf Dateien außerhalb dieses Ordners. Lege in diesem Ordner nichts anderes ab \
+         als Artefakte und ihre Dateien.",
         dir.display()
     );
     if can_publish {

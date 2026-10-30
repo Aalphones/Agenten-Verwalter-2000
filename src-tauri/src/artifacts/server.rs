@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Manager};
 
-use super::resolve;
+use super::{kind_of, resolve, viewers};
 use crate::error::CommandError;
 use crate::filesystem::native_path;
 use crate::sessions::registry::SessionRegistry;
@@ -25,6 +25,8 @@ use crate::sessions::registry::SessionRegistry;
 const MAX_REQUEST_BYTES: usize = 16 * 1024;
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const TEXT_PLAIN: &str = "text/plain; charset=utf-8";
+const HTML: &str = "text/html; charset=utf-8";
+const INDEX_PAGE: &str = "index.html";
 const BRIDGE_SCRIPT: &str = include_str!("bridge.js");
 
 /// Der laufende Server; als Tauri-State verwaltet.
@@ -115,7 +117,9 @@ impl Connection {
         if method != "GET" {
             return text_reply(405, "Method Not Allowed", "Nur GET");
         }
-        let path = target.split(['?', '#']).next().unwrap_or_default();
+        let target = target.split('#').next().unwrap_or_default();
+        let (path, query) = target.split_once('?').unwrap_or((target, ""));
+        let wants_viewer = query.split('&').any(|pair: &str| pair == "view=1");
         let Some(rest) = path
             .strip_prefix('/')
             .and_then(|path: &str| path.strip_prefix(self.token.as_str()))
@@ -138,19 +142,37 @@ impl Connection {
         let Ok(dir) = registry.artifacts_dir(&session_id) else {
             return not_found();
         };
+        // Ein Ordner-Ziel (`<ordner>/`) ist eine Website: ihre `index.html`.
+        let relative = if relative.ends_with('/') {
+            format!("{relative}{INDEX_PAGE}")
+        } else {
+            relative
+        };
         let target = match resolve(&dir, &native_path(&relative).to_string_lossy()) {
             Ok(target) => target,
             Err(CommandError::FileNotFound(_)) => return not_found(),
             Err(_) => return text_reply(403, "Forbidden", "Nicht erlaubt"),
         };
-        let Ok(body) = fs::read(&target) else {
-            return not_found();
-        };
-        let content_type = content_type(&target);
-        let body = if content_type.starts_with("text/html") {
-            with_bridge(body)
+        let (content_type, body) = if wants_viewer {
+            // Nur der Name des geprüften Ziels geht in die Seite, nie der Anfragetext.
+            let file = target
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let Some(page) = viewers::render(kind_of(&target), &file) else {
+                return not_found();
+            };
+            (HTML, with_bridge(page.into_bytes()))
         } else {
-            body
+            let Ok(body) = fs::read(&target) else {
+                return not_found();
+            };
+            let content_type = content_type(&target);
+            if content_type == HTML {
+                (content_type, with_bridge(body))
+            } else {
+                (content_type, body)
+            }
         };
         // Aus der geprüften Session-ID neu kodiert, nie aus dem Anfragetext: der landet sonst in der CSP.
         let scope = format!(
@@ -295,7 +317,7 @@ fn content_type(path: &Path) -> &'static str {
         .map(|extension| extension.to_string_lossy().to_ascii_lowercase())
         .unwrap_or_default();
     match extension.as_str() {
-        "html" | "htm" => "text/html; charset=utf-8",
+        "html" | "htm" => HTML,
         "css" => "text/css; charset=utf-8",
         "js" | "mjs" => "text/javascript; charset=utf-8",
         "json" | "map" => "application/json",
@@ -304,14 +326,23 @@ fn content_type(path: &Path) -> &'static str {
         "jpg" | "jpeg" => "image/jpeg",
         "gif" => "image/gif",
         "webp" => "image/webp",
+        "avif" => "image/avif",
         "ico" => "image/x-icon",
         "woff" => "font/woff",
         "woff2" => "font/woff2",
         "ttf" => "font/ttf",
         "otf" => "font/otf",
-        "txt" | "md" | "csv" => TEXT_PLAIN,
+        "md" | "markdown" => "text/markdown; charset=utf-8",
+        "csv" => "text/csv; charset=utf-8",
+        "yaml" | "yml" => "text/yaml; charset=utf-8",
+        "txt" => TEXT_PLAIN,
         "mp4" => "video/mp4",
         "webm" => "video/webm",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "ogg" => "audio/ogg",
+        "m4a" => "audio/mp4",
+        "pdf" => "application/pdf",
         _ => "application/octet-stream",
     }
 }

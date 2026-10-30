@@ -3115,10 +3115,12 @@ impl SessionState {
             let Some(file) = crate::artifacts::artifact_file_of(&dir, path) else {
                 continue;
             };
+            let artifact_kind = crate::artifacts::kind_of_entry(&dir.join(&file));
             self.push_entry(outbox, |seq: u32| ChatEntry::Artifact {
                 seq,
                 path: path.clone(),
                 file,
+                artifact_kind,
             });
         }
     }
