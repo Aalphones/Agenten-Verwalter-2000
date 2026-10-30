@@ -29,12 +29,10 @@ In CI folgt als letzter Schritt `pnpm bindings` und die Prüfung, dass `src/lib/
 
 ## Voraussetzungen
 
-Clippy, `pnpm bindings` und jeder Bau übersetzen whisper.cpp (Diktieren, [ADR 009](../decisions/009-sprachdiktat-lokal.md)) und brauchen deshalb zusätzlich zu Rust:
+Kein CMake, kein LLVM. Zusätzlich zu Rust braucht der Bau unter Windows:
 
-- **CMake** im PATH. Fehlt es: aus den Visual-Studio-Build-Tools (`C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin`) oder `winget install Kitware.CMake`.
-- **LLVM (libclang)**, weil `whisper-rs-sys` seine Bindings per bindgen erzeugt: `winget install LLVM.LLVM`. Die mitgelieferten Bindings der Crate sind unter Linux erzeugt und scheitern unter Windows. Wechselt man von einem Stand ohne LLVM, einmal `cargo clean -p whisper-rs-sys`, sonst bleiben die alten Bindings im Zwischenspeicher.
-
-`.cargo/config.toml` im Projektordner setzt die Compiler-Flags für whisper.cpp (`/O2`, `NDEBUG`); ohne sie wird whisper.cpp unoptimiert übersetzt und die Erkennung ist rund zehnmal langsamer. Nach einer Änderung dort `cargo clean -p whisper-rs-sys` (Cargo erkennt die Änderung am Zwischenspeicher nicht zuverlässig).
+- **Ein aktuelles v143-Werkzeugset** (VS 2022 Build Tools mit MSVC ab 14.4x, gebaut mit `VsDevCmd.bat -arch=amd64`). Das Diktieren ([ADR 049](../decisions/049-sprachdiktat-parakeet.md)) linkt eine fertige ONNX-Runtime-Bibliothek, die neuere STL-Funktionen verlangt; mit VS 2019 und mit Toolset 14.38 scheitert der Link mit LNK2019.
+- **Netz zu `cdn.pyke.io`** beim ersten Bau: `ort-sys` lädt die Bibliothek dort herunter (Ausweg: `ORT_LIB_PATH`).
 
 ## Regeln
 

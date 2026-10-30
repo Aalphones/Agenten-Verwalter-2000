@@ -7,7 +7,7 @@ Ziel: Das Sprachdiktat erkennt mit NVIDIA Parakeet TDT 0.6B v3 (ONNX, int8, nur 
 | 1 | [Messlauf: Parakeet gegen Whisper auf derselben Aufnahme, Go/No-Go](phase-1-messlauf.md) | heikel | 1 | M | complete (Go) |
 | 2 | [Core: Modellsatz laden, Parakeet erkennt, whisper-rs raus](phase-2-core-umstellen.md) | heikel | 2 | L | complete |
 | 3 | [Spracheinstellung und Whisper-Texte aus Einstellungen und Oberfläche entfernen](phase-3-einstellung-und-texte.md) | standard | 3 | S | complete |
-| 4 | [Build, CI, Doku, ADR 049, Release](phase-4-aufraeumen-und-release.md) | mechanisch | 4 | S | pending |
+| 4 | [Build, CI, Doku, ADR 049, Release](phase-4-aufraeumen-und-release.md) | mechanisch | 4 | S | complete |
 
 **Warum rein sequenziell:** Phase 1 entscheidet, ob der Plan überhaupt weiterläuft (Gate). Phase 2 und 3 ändern beide `src-tauri/src/voice/mod.rs`, `src-tauri/src/commands/voice.rs` und über die Bindings dieselben TS-Dateien; Phase 3 baut auf der in Phase 2 gestrichenen Whisper-Abhängigkeit auf; Phase 4 fasst die fertigen Ergebnisse zusammen. Keine disjunkten Datei-Mengen, also keine Wellen.
 
@@ -71,10 +71,23 @@ pub fn download(dir: &Path, cancel: &AtomicBool, on_progress: impl FnMut(u64, u6
 
 ## Summary
 
+Das Diktat erkennt mit Parakeet TDT 0.6B v3 (ONNX, int8, CPU) statt mit Whisper. Gemessen: 8,3-s-Satz in 0,5 s, Wortfehler 10 % gegen 25 %. Whisper, CMake, LLVM und die Compiler-Flags sind aus dem Bau verschwunden; es gibt keine Sprachwahl und keinen Wortschatz-Hinweis mehr. ADR 049, Version 0.39.0.
+
 ## Files touched
+
+`src-tauri/src/voice/` (Erkennung, Modell-Download), `commands/voice.rs`, Einstellungen und Bindings (Sprachwahl raus), `VoiceButton`, `.cargo/config.toml` (gelöscht), `.github/workflows/`, Doku (ADR 009/049, linting, README, PROJECT, Glossar, Code-Map).
 
 ## Commits
 
+Phase 1 `9f90bb5`, Phase 2 `d3ebd4b`, Phase 3 `589178b`…`f72773e`, Phase 4 siehe Branch `feature/parakeet-release`.
+
 ## Deviations from plan
 
+Phase 4 lief im Arbeitsbaum auf einem Feature-Branch statt direkt auf `main` (Hauptbaum durch parallele Session belegt). Schätzung 5–7 h; Ist nicht erfasst. Zusatz-Voraussetzung gegenüber der Annahme: MSVC ab 14.4x (VS 2019 und 14.38 scheitern am Link).
+
 ## Follow-ups
+
+- Der User diktiert einmal in der echten App (Download, ein Satz mit „Worktree“, „Commit“, „Verwalter“); Auffälligkeiten hier nachtragen.
+- Erster Tag-Lauf der CI: Linux (`cmake clang` ungeprüft), `ort-sys`-Download, Exe-/Installer-Größe messen.
+- Gesamt-Review vor dem Merge (Plan hat eine mechanische Phase).
+- Ladezeit 3,5–4,0 s beim ersten Diktat; falls störend, Modell beim Start vorladen.
