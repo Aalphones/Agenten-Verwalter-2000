@@ -236,7 +236,7 @@ export function ChatTimeline({
       if (
         event.shiftKey ||
         isControlTarget(event.target) ||
-        !needsSubmit(oldestOpenQuestion) ||
+        !needsSubmit(oldestOpenQuestion, draft) ||
         !isComplete(oldestOpenQuestion, draft)
       ) {
         return;

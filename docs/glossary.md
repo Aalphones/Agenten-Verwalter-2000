@@ -47,6 +47,9 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Ungelesen** | Eine Session, deren letzte Aktivität jünger ist als der letzte Blick des Users. Gesehen ist eine Session, solange sie im Chat- oder Changes-Reiter offen ist. |
 | **Archivieren** | Blendet ein Vorhaben samt aller seiner Sessions aus der Liste aus (`archived_at` in der Datenbank gesetzt); einzelne Sessions lassen sich nicht archivieren. Der Verlauf bleibt erhalten; bei Sessions vor ADR 010 entfernt die App App-Worktrees ohne offene Änderungen; Haupt-Checkouts und Ticket-Worktrees bleiben immer. Archivierte Vorhaben findet der Archiv-Dialog über Namen und Chat-Text ([ADR 029](decisions/029-archiv-suche.md)). |
 | **Wiederherstellen** | Holt ein archiviertes Vorhaben samt aller seiner Sessions aus dem Archiv zurück in die Seitenleiste (`archived_at` wieder leer). Der Verlauf lädt beim Öffnen einer Session, der Agent startet erst mit der nächsten Nachricht. |
+| **Rückfrage** | Frage des Agenten mit Optionen (AskUserQuestion); mehrere Fragen erscheinen als Ziehharmonika, nur die aktive ist aufgeklappt ([ADR 045](decisions/045-rueckfrage-kasten.md)). |
+| **Notiz (Rückfrage)** | Kurzer Text zu einer Option einer Rückfrage; geht als `<Option> (Notiz: <Text>)` an den Agenten ([ADR 045](decisions/045-rueckfrage-kasten.md)). |
+| **Eigene Antwort (Rückfrage)** | Freitext zu genau einer Frage einer Rückfrage; ersetzt bei Einfachauswahl die Wahl ([ADR 045](decisions/045-rueckfrage-kasten.md)). |
 | **Rechte-Abfrage** | Der Agent fragt vor einem Werkzeug-Aufruf um Erlaubnis; erscheint im Chat wie eine Rückfrage mit Erlauben/Ablehnen. |
 | **Tool-Aktivität** | Die Einzelschritte des Agenten (Datei lesen, Befehl ausführen …). Im Chat standardmäßig eingeklappt zusammengefasst. |
 | **Chat-Ansicht** | Hauptansicht einer Session: Gespräch mit dem Agenten, Status, Rückfragen. |
