@@ -22,7 +22,6 @@ const KEY_DEFAULT_MODE: &str = "default_mode";
 const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
-const KEY_VOICE_LANGUAGE: &str = "voice_language";
 const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
 
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
@@ -34,7 +33,6 @@ const DEFAULT_SETTINGS: Settings = Settings {
     operating_mode: OperatingMode::Claude,
     local_model: None,
     default_codex_model: None,
-    voice_language: None,
     mark_unsourced: true,
 };
 
@@ -54,11 +52,6 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .map(str::to_owned),
         default_codex_model: stored
             .get(KEY_DEFAULT_CODEX_MODEL)
-            .map(|text: &String| text.trim())
-            .filter(|text: &&str| !text.is_empty())
-            .map(str::to_owned),
-        voice_language: stored
-            .get(KEY_VOICE_LANGUAGE)
             .map(|text: &String| text.trim())
             .filter(|text: &&str| !text.is_empty())
             .map(str::to_owned),
@@ -101,14 +94,6 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
                     &transaction,
                     KEY_DEFAULT_CODEX_MODEL,
                     value.as_deref().map_or("", str::trim),
-                )?;
-            }
-            SettingsChange::VoiceLanguage { value } => {
-                // Leer = automatische Erkennung; `load` liest leere Texte als „nicht gesetzt“.
-                setting_rows::write(
-                    &transaction,
-                    KEY_VOICE_LANGUAGE,
-                    value.as_deref().unwrap_or(""),
                 )?;
             }
             SettingsChange::MarkUnsourced { value } => {
