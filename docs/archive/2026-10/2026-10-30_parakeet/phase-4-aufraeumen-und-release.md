@@ -43,7 +43,7 @@ Definition of Done
 
 ## Report-Back
 
-**Stand:** Bau, Doku, ADR 049 fertig; Version 0.39.0, Tag und Push stehen aus (Freigabe).
+**Stand:** Bau, Doku, ADR 049 fertig; Version 0.40.0 (0.39.0 ging an den parallelen Rückfrage-Kasten), Tag und Push mit dem Merge.
 
 | AK | Beleg |
 |---|---|

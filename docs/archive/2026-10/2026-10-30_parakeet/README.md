@@ -71,7 +71,7 @@ pub fn download(dir: &Path, cancel: &AtomicBool, on_progress: impl FnMut(u64, u6
 
 ## Summary
 
-Das Diktat erkennt mit Parakeet TDT 0.6B v3 (ONNX, int8, CPU) statt mit Whisper. Gemessen: 8,3-s-Satz in 0,5 s, Wortfehler 10 % gegen 25 %. Whisper, CMake, LLVM und die Compiler-Flags sind aus dem Bau verschwunden; es gibt keine Sprachwahl und keinen Wortschatz-Hinweis mehr. ADR 049, Version 0.39.0.
+Das Diktat erkennt mit Parakeet TDT 0.6B v3 (ONNX, int8, CPU) statt mit Whisper. Gemessen: 8,3-s-Satz in 0,5 s, Wortfehler 10 % gegen 25 %. Whisper, CMake, LLVM und die Compiler-Flags sind aus dem Bau verschwunden; es gibt keine Sprachwahl und keinen Wortschatz-Hinweis mehr. ADR 049, Version 0.40.0.
 
 ## Files touched
 
