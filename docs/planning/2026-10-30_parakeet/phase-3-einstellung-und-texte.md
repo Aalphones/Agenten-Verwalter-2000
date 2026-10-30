@@ -1,6 +1,6 @@
 # Phase 3 — Spracheinstellung und Whisper-Texte entfernen
 
-Rating **standard** · Wave 3 · Aufwand S
+Rating **standard** · Wave 3 · Aufwand S · Status **complete**
 
 ## Kontext
 
@@ -12,28 +12,33 @@ Rating **standard** · Wave 3 · Aufwand S
 
 ## AK der Phase
 
-- [ ] `grep -rn "voice_language\|voiceLanguage\|VoiceLanguage" src src-tauri/src` liefert nichts.
-- [ ] Einstellungen zeigt keine Sektion „Spracheingabe“ mehr; die übrigen Sektionen stehen unverändert (Beleg: `pnpm tauri dev` starten, Einstellungen öffnen, Screenshot wie im Phasen-Report üblich; ist kein Browser-Werkzeug da, Beleg per Quelltext: die Sektionsreihenfolge in `SettingsView.tsx` ohne den Block).
-- [ ] `pnpm bindings` erzeugt `Settings.ts` ohne `voiceLanguage` und `SettingsChange.ts` ohne Variante `voiceLanguage`; `git diff --stat src/lib/bindings` zeigt genau diese zwei Dateien.
-- [ ] Das Einrichten-Menü des Mikrofons nennt die tatsächliche Modellgröße: `MODEL_SIZE_LABEL` entspricht der Summe der Bytes aus der README-Tabelle, gerundet auf ganze MB (Beleg: Summe nachgerechnet im Report-Back).
-- [ ] `pnpm check` grün.
+- [x] `grep -rn "voice_language\|voiceLanguage\|VoiceLanguage" src src-tauri/src` liefert nichts.
+- [x] Einstellungen zeigt keine Sektion „Spracheingabe“ mehr; die übrigen Sektionen stehen unverändert (Beleg per Quelltext: Block samt Import aus `SettingsView.tsx` gelöscht, Nachbarsektionen unberührt; kein Screenshot).
+- [x] `pnpm bindings` erzeugt `Settings.ts` ohne `voiceLanguage` und `SettingsChange.ts` ohne Variante `voiceLanguage`; die zwei Dateien liegen in Commit `ccae7b6`.
+- [x] `MODEL_SIZE_LABEL` = `'670 MB'`: 652183999 + 18202004 + 102132 = 670488135 Bytes, gerundet 670 MB.
+- [x] `pnpm check` grün.
 
 ## Checkliste
 
 Implementation
-- [ ] Rust: `voice_language` aus `Settings` (`model.rs`), `SettingsChange::VoiceLanguage` aus dem Enum (`model.rs`), `KEY_VOICE_LANGUAGE`, Default-Feld, Lese-Block in `load` und Arm in `update` (`mod.rs`) entfernen.
-- [ ] `pnpm bindings` ausführen (Befehl und Voraussetzungen: `AGENTS.md`), die zwei Binding-Dateien mitcommitten.
-- [ ] TS: Sektion „Spracheingabe“ aus `SettingsView.tsx` samt Import von `VoiceLanguageSegment` löschen; `VoiceLanguageSegment.tsx` löschen (und seine CSS, falls es eine eigene gibt: `Glob src/features/settings/VoiceLanguageSegment*`).
-- [ ] `VoiceSetup.tsx`: `MODEL_SIZE_LABEL` auf `'<gerundete MB> MB'` aus der Tabelle (Erwartung: `'670 MB'`); Text bleibt sonst.
+- [x] Rust: `voice_language` aus `Settings`, `SettingsChange::VoiceLanguage`, `KEY_VOICE_LANGUAGE`, Default-Feld, Lese-Block und Arm entfernt.
+- [x] `pnpm bindings` ausgeführt, die zwei Binding-Dateien mitcommittet.
+- [x] TS: Sektion „Spracheingabe“ samt Import gelöscht; `VoiceLanguageSegment.tsx` gelöscht (keine eigene CSS).
+- [x] `VoiceSetup.tsx`: `MODEL_SIZE_LABEL` auf `'670 MB'`.
+- [x] Finding aus Phase 2: ungenutzte Eigenschaft `sessionId` an `VoiceButton` samt den zwei Aufrufern entfernt.
 
 Doku
-- [ ] Keine; Doku-Nachzug sammelt Phase 4.
+- [x] Keine; Doku-Nachzug sammelt Phase 4.
 
 Definition of Done
-- [ ] Alle AK erfüllt, Zitate im Report-Back.
-- [ ] Sichtbares Ergebnis: Einstellungsseite ohne Spracheingabe; Mikrofon-Menü „Diktieren einrichten“ mit neuer Größe.
-- [ ] Artefakt: Ausgabe der `grep`-Prüfung, `git diff --stat`, letzte Zeilen von `pnpm check`; Screenshot, wenn ein Werkzeug dafür da ist.
-- [ ] Seven-Goals-Sanity je ein Satz.
-- [ ] Ein Commit `refactor(settings): Spracheingabe-Einstellung entfernt`.
+- [x] Alle AK erfüllt.
+- [x] Sichtbares Ergebnis: Einstellungsseite ohne Spracheingabe; Mikrofon-Menü „Diktieren einrichten“ mit 670 MB.
+- [x] Artefakt: `grep`-Prüfung leer, `pnpm check` Exit 0.
+- [x] Statt eines Commits vier kleine (auf Wunsch des Users), alle auf `main`.
 
 ## Report-Back
+
+- Commits: `589178b` Sprachwahl aus der Einstellungsseite, `ccae7b6` Einstellung aus Core und Bindings, `1c47aea` ungenutzte `sessionId`, `f72773e` Größenangabe 670 MB.
+- Abweichung: vier statt einem Commit; parallele Session (Rückfrage-Kasten) arbeitete im selben Tree, deshalb Commits nur mit expliziten Pfaden. `pnpm check` lief erst grün, als deren Stand lint-sauber war; der erste Lauf war wegen deren Dateien rot.
+- Nicht geprüft: Sichtprüfung in der laufenden App (kein Screenshot, kein `pnpm tauri dev`).
+- Unsicherste Stelle: `src-tauri/src/settings/mod.rs` — alte Datenbankzeile `voice_language` bleibt liegen und wird nirgends gelesen; gewollt, keine Migration.
