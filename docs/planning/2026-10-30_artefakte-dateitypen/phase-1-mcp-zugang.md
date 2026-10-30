@@ -1,6 +1,6 @@
 # Phase 1 — MCP-Zugang des Verwalters
 
-**Rating:** heikel (Sicherheit, neuer Kontrakt über Feature-Grenzen) · **Wave:** 1 · **Aufwand:** L
+**Status:** umgesetzt, Laufzeitbelege offen · **Rating:** heikel (Sicherheit, neuer Kontrakt über Feature-Grenzen) · **Wave:** 1 · **Aufwand:** L
 
 Ein eigener MCP-Server im Verwalter, über den jeder Agent einer Session Werkzeuge des Verwalters aufruft. Erste Werkzeuge: `artifact_list`, `artifact_show`. Der Plan „Umsetzung“ hängt später seinen Werkzeug-Satz an dieselbe Stelle.
 
@@ -42,23 +42,23 @@ Ein eigener MCP-Server im Verwalter, über den jeder Agent einer Session Werkzeu
 
 ## Checkliste
 
-- [ ] `client.rs`: `JSON_RPC_VERSION` auf `pub(crate)` stellen.
-- [ ] `mcp_access/http.rs`: Anfrage lesen — Kopf wie `read_head` in `artifacts/server.rs` (Kopf ≤ 16 KiB, 5 s Lese-Zeitlimit), danach genau `Content-Length` Bytes Körper (fehlend → 411, > 1 MiB → 413). Kopfzeilen als `Vec<(String, String)>`, Namen ohne Beachtung der Groß-/Kleinschreibung gesucht. Antwort schreiben mit `Content-Type`, `Content-Length`, `Cache-Control: no-store`, `Connection: close`, optional `Mcp-Session-Id`; nie `Access-Control-*`.
-- [ ] `mcp_access/mod.rs`: `McpAccess { origin: String, keys: Mutex<HashMap<String, String>>, config_dir: PathBuf }`; `start(app: AppHandle) -> io::Result<Arc<McpAccess>>` bindet `127.0.0.1:0`, Thread `mcp-access`, je Verbindung Thread `mcp-request` (wie `artifacts::server::start`). Prüfreihenfolge je Anfrage: Host → Methode → Schlüssel → Content-Type → Körper → JSON-RPC.
-- [ ] `McpAccess::config_for(&self, session_id: &str) -> Option<PathBuf>`: vorhandenen Schlüssel der Session wiederverwenden, sonst neu erzeugen; Datei `config_dir/<session-id>.json` mit dem Inhalt aus dem Kontrakt schreiben (`serde_json::to_vec_pretty`); Schreibfehler → `None` und `eprintln!`, der Agent startet dann ohne Zugang. `config_dir` = `filesystem::workspace::data_dir()` + `mcp` (Ordner anlegen).
-- [ ] `McpAccess::forget(&self, session_id)`: Schlüssel entfernen und Datei löschen; aufrufen, wo eine Session gelöscht wird (`delete_session` in `sessions/registry.rs`).
-- [ ] `mcp_access/rpc.rs`: Weiche nach Kontrakt (`initialize`, `ping`, `notifications/*`, `tools/list`, `tools/call`, Fehlercodes `-32700`, `-32601`, `-32602`). `tools/call` sucht den Satz über das Präfix des Namens; kein Satz → `-32602` mit `Unbekanntes Werkzeug: <name>`.
-- [ ] `mcp_access/tools.rs`: Typen aus dem Kontrakt; `tool_sets() -> Vec<Box<dyn ToolSet>>` mit genau einem Eintrag `artifacts::tools::ArtifactTools`.
-- [ ] `src-tauri/src/artifacts/tools.rs`: `ArtifactTools` mit `artifact_list` (gleiche Daten wie `commands::artifacts::artifacts_list`, über `SessionRegistry::artifact_scope` und `artifacts::list`) und `artifact_show` (Datei gegen `list` prüfen, `project_id` der Session aus der Registry, `app.emit("artifacts://show", …)`). Schemas: `{"type":"object","properties":{},"additionalProperties":false}` bzw. `{"type":"object","properties":{"file":{"type":"string","description":"Dateiname direkt im Ordner .artefakte"}},"required":["file"],"additionalProperties":false}`.
-- [ ] `lib.rs` `setup`: `mcp_access::start` nach dem Artefakt-Server; Erfolg → `app.manage(access)`, Fehler → `eprintln!` wie beim Artefakt-Server (App läuft ohne Zugang).
-- [ ] `SpawnOptions` um `verwalter_mcp: Option<PathBuf>` erweitern. In `common_args` hinter `project_mcp_configs` anhängen: die Liste für `--mcp-config` ist `project_mcp_configs(..)` plus `verwalter_mcp`, als **ein** `--mcp-config` mit allen Pfaden. In `registry.rs` (Zeile ~3749) `verwalter_mcp` aus `app.try_state::<Arc<McpAccess>>()` → `config_for(&session_id)` setzen; in `registry/side.rs` `None`.
-- [ ] Prüfen, dass die Betriebsart Autark `--mcp-config` mit mehreren Pfaden liest (`standalone/args.rs`, `standalone/mcp/config.rs`); falls nur ein Pfad gelesen wird, dort auf mehrere erweitern.
-- [ ] Oberfläche: Abo auf `artifacts://show` einmal in `src/app/App.tsx` (Wrapper in `src/lib/artifacts.ts`: `onArtifactShow(handler)`). Handler: `useArtifactsStore.getState().select(projectId, file)`; ist `sessionId` die aktive Session, `activeView` auf `'artifacts'` setzen.
-- [ ] **Codex prüfen:** `codex app-server generate-json-schema --out <Scratchpad>` (oder `generate-ts`) ausführen und in `ThreadStartParams` nach einem Feld `config` suchen. Vorhanden → in `codex/session.rs` beim `thread/start` `config` mit `mcp_servers.verwalter.url` und `mcp_servers.verwalter.http_headers = { Authorization = "Bearer <schlüssel>" }` mitsenden (Werte aus der Konfigurationsdatei der Session, die der Übersetzer über `--mcp-config` bekommt). Nicht vorhanden oder Codex nicht installiert → kein Code, Lücke in ADR 046 und als Eintrag in `FINDINGS.md` (`→ Plan Umsetzung`).
-- [ ] Prüfprogramm `src-tauri/examples/mcp-probe.rs`: `mcp-probe <url> <schlüssel> [list|call <name> <json>]` — sendet `initialize`, `notifications/initialized`, dann `tools/list` oder `tools/call`, druckt Status, Köpfe und Körper; mit `--negative` zusätzlich die sechs Fehlfälle (ohne Schlüssel, falscher Host, GET, OPTIONS, text/plain, 2 MiB). Aufruf in `AGENTS.md` eintragen. Verwendet `ureq` wie `client.rs` (keine neue Abhängigkeit).
-- [ ] Probe-Seite `docs/planning/2026-10-30_artefakte-dateitypen/artifacts/mcp-sicherheitsprobe.html`: liest Port und Schlüssel aus Eingabefeldern, versucht `fetch` (POST, JSON, mit und ohne `Authorization`) an `http://127.0.0.1:<port>/mcp` und zeigt das Ergebnis. In `.artefakte` eines Test-Vorhabens kopieren und im Reiter öffnen.
-- [ ] ADR `docs/decisions/046-mcp-zugang.md` (Kontext, Optionen: Pfad im Artefakt-Server / eigener Port / stdio-Hilfsprozess; Entscheidung; Konsequenzen inkl. Codex-Ergebnis).
-- [ ] Code-Map: Zeile „MCP-Zugang“ (Oberfläche: Abo in `App.tsx`; Core: `src-tauri/src/mcp_access/`, `artifacts/tools.rs`, `verwalter_mcp` in `process.rs`, Start in `lib.rs`); Querschnitt-Liste um `mcp_access` ergänzen. Glossar: „MCP-Zugang“, „Werkzeug-Satz“.
+- [x] `client.rs`: `JSON_RPC_VERSION` auf `pub(crate)` stellen.
+- [x] `mcp_access/http.rs`: Anfrage lesen — Kopf wie `read_head` in `artifacts/server.rs` (Kopf ≤ 16 KiB, 5 s Lese-Zeitlimit), danach genau `Content-Length` Bytes Körper (fehlend → 411, > 1 MiB → 413). Kopfzeilen als `Vec<(String, String)>`, Namen ohne Beachtung der Groß-/Kleinschreibung gesucht. Antwort schreiben mit `Content-Type`, `Content-Length`, `Cache-Control: no-store`, `Connection: close`, optional `Mcp-Session-Id`; nie `Access-Control-*`.
+- [x] `mcp_access/mod.rs`: `McpAccess { origin: String, keys: Mutex<HashMap<String, String>>, config_dir: PathBuf }`; `start(app: AppHandle) -> io::Result<Arc<McpAccess>>` bindet `127.0.0.1:0`, Thread `mcp-access`, je Verbindung Thread `mcp-request` (wie `artifacts::server::start`). Prüfreihenfolge je Anfrage: Host → Methode → Schlüssel → Content-Type → Körper → JSON-RPC.
+- [x] `McpAccess::config_for(&self, session_id: &str) -> Option<PathBuf>`: vorhandenen Schlüssel der Session wiederverwenden, sonst neu erzeugen; Datei `config_dir/<session-id>.json` mit dem Inhalt aus dem Kontrakt schreiben (`serde_json::to_vec_pretty`); Schreibfehler → `None` und `eprintln!`, der Agent startet dann ohne Zugang. `config_dir` = `filesystem::workspace::data_dir()` + `mcp` (Ordner anlegen).
+- [x] `McpAccess::forget(&self, session_id)`: Schlüssel entfernen und Datei löschen; aufrufen, wo eine Session gelöscht wird (`delete_session` in `sessions/registry.rs`).
+- [x] `mcp_access/rpc.rs`: Weiche nach Kontrakt (`initialize`, `ping`, `notifications/*`, `tools/list`, `tools/call`, Fehlercodes `-32700`, `-32601`, `-32602`). `tools/call` sucht den Satz über das Präfix des Namens; kein Satz → `-32602` mit `Unbekanntes Werkzeug: <name>`.
+- [x] `mcp_access/tools.rs`: Typen aus dem Kontrakt; `tool_sets() -> Vec<Box<dyn ToolSet>>` mit genau einem Eintrag `artifacts::tools::ArtifactTools`.
+- [x] `src-tauri/src/artifacts/tools.rs`: `ArtifactTools` mit `artifact_list` (gleiche Daten wie `commands::artifacts::artifacts_list`, über `SessionRegistry::artifact_scope` und `artifacts::list`) und `artifact_show` (Datei gegen `list` prüfen, `project_id` der Session aus der Registry, `app.emit("artifacts://show", …)`). Schemas: `{"type":"object","properties":{},"additionalProperties":false}` bzw. `{"type":"object","properties":{"file":{"type":"string","description":"Dateiname direkt im Ordner .artefakte"}},"required":["file"],"additionalProperties":false}`.
+- [x] `lib.rs` `setup`: `mcp_access::start` nach dem Artefakt-Server; Erfolg → `app.manage(access)`, Fehler → `eprintln!` wie beim Artefakt-Server (App läuft ohne Zugang).
+- [x] `SpawnOptions` um `verwalter_mcp: Option<PathBuf>` erweitern. In `common_args` hinter `project_mcp_configs` anhängen: die Liste für `--mcp-config` ist `project_mcp_configs(..)` plus `verwalter_mcp`, als **ein** `--mcp-config` mit allen Pfaden. In `registry.rs` (Zeile ~3749) `verwalter_mcp` aus `app.try_state::<Arc<McpAccess>>()` → `config_for(&session_id)` setzen; in `registry/side.rs` `None`.
+- [x] Prüfen, dass die Betriebsart Autark `--mcp-config` mit mehreren Pfaden liest (`standalone/args.rs`, `standalone/mcp/config.rs`); falls nur ein Pfad gelesen wird, dort auf mehrere erweitern.
+- [x] Oberfläche: Abo auf `artifacts://show` einmal in `src/app/App.tsx` (Wrapper in `src/lib/artifacts.ts`: `onArtifactShow(handler)`). Handler: `useArtifactsStore.getState().select(projectId, file)`; ist `sessionId` die aktive Session, `activeView` auf `'artifacts'` setzen.
+- [x] **Codex prüfen:** `codex app-server generate-json-schema --out <Scratchpad>` (oder `generate-ts`) ausführen und in `ThreadStartParams` nach einem Feld `config` suchen. Vorhanden → in `codex/session.rs` beim `thread/start` `config` mit `mcp_servers.verwalter.url` und `mcp_servers.verwalter.http_headers = { Authorization = "Bearer <schlüssel>" }` mitsenden (Werte aus der Konfigurationsdatei der Session, die der Übersetzer über `--mcp-config` bekommt). Nicht vorhanden oder Codex nicht installiert → kein Code, Lücke in ADR 046 und als Eintrag in `FINDINGS.md` (`→ Plan Umsetzung`).
+- [x] Prüfprogramm `src-tauri/examples/mcp-probe.rs`: `mcp-probe <url> <schlüssel> [list|call <name> <json>]` — sendet `initialize`, `notifications/initialized`, dann `tools/list` oder `tools/call`, druckt Status, Köpfe und Körper; mit `--negative` zusätzlich die sechs Fehlfälle (ohne Schlüssel, falscher Host, GET, OPTIONS, text/plain, 2 MiB). Aufruf in `AGENTS.md` eintragen. Verwendet `ureq` wie `client.rs` (keine neue Abhängigkeit).
+- [x] Probe-Seite `docs/planning/2026-10-30_artefakte-dateitypen/artifacts/mcp-sicherheitsprobe.html`: liest Port und Schlüssel aus Eingabefeldern, versucht `fetch` (POST, JSON, mit und ohne `Authorization`) an `http://127.0.0.1:<port>/mcp` und zeigt das Ergebnis. In `.artefakte` eines Test-Vorhabens kopieren und im Reiter öffnen.
+- [x] ADR `docs/decisions/046-mcp-zugang.md` (Kontext, Optionen: Pfad im Artefakt-Server / eigener Port / stdio-Hilfsprozess; Entscheidung; Konsequenzen inkl. Codex-Ergebnis).
+- [x] Code-Map: Zeile „MCP-Zugang“ (Oberfläche: Abo in `App.tsx`; Core: `src-tauri/src/mcp_access/`, `artifacts/tools.rs`, `verwalter_mcp` in `process.rs`, Start in `lib.rs`); Querschnitt-Liste um `mcp_access` ergänzen. Glossar: „MCP-Zugang“, „Werkzeug-Satz“.
 
 ## Definition of Done
 
@@ -69,3 +69,20 @@ Ein eigener MCP-Server im Verwalter, über den jeder Agent einer Session Werkzeu
 - Seven-Goals-Check im Report-Back, Schwerpunkt Sicherheit und Simplicity.
 
 ## Report-Back
+
+**Stand:** Code, Doku und `pnpm check` (Lint, Typecheck, Format, Build, rustfmt, Clippy) grün im Arbeitsbaum `feature/artefakte-dateitypen`. Umgesetzt selbst in der Hauptsession, ohne Tester-/Developer-/Reviewer-Agenten (Entscheidung Sascha).
+
+**Abweichungen vom Plan:**
+- Nebenfragen bekommen **dieselbe** `--mcp-config` statt keiner: sonst weicht ihre Werkzeugliste vom Hauptprozess ab und der Prompt-Cache (ADR 044) greift nicht. `dontAsk` sperrt die Aufrufe. README-Kontrakt nachgezogen.
+- Zusätzlich `--allowedTools mcp__verwalter`: ohne Freigabe fragte Claude bei jedem Aufruf nach.
+- `mcp-probe` spricht rohes HTTP über `std::net` statt `ureq`, damit `Host` und Methode frei wählbar sind; nimmt auch die Konfigurationsdatei statt URL + Schlüssel (der Schlüssel landet so nicht in der Kommandozeile).
+- `artifacts://show` springt auch in der Übersicht des Vorhabens auf den Reiter „Artefakte“, nicht nur in der Session.
+- Zusätzliche Fehlercodes neben dem Kontrakt: 404 (Pfad ≠ `/mcp`), 411 (ohne `Content-Length`), `-32600` (JSON ist kein Objekt).
+
+**Codex:** keine `codex.exe` auf dem Entwicklungsrechner → kein Code, Lücke in ADR 046 und `FINDINGS.md`.
+
+**Offen (Laufzeitbelege, nicht gefahren):** `mcp-probe` normal und `--negative` gegen die laufende Dev-App, Sicherheitsprobe-Seite im Reiter, Chat-Probe Claude/Autark. Grund: `pnpm tauri dev` teilt sich Datenbank und Benutzerordner mit dem laufenden Verwalter, in dem diese Session läuft. Artefakte `phase-1-*.txt/png` fehlen deshalb.
+
+**Unsicherste Stelle:** `src-tauri/src/mcp_access/http.rs` `drain` — ob der Client bei 413 (2 MiB) wirklich die Antwort statt eines Verbindungs-Resets sieht, ist nur mit `mcp-probe --negative` belegbar.
+
+**Seven-Goals (Sicherheit, Simplicity):** eigener Port ohne CORS, Host-Prüfung vor allem anderen, Schlüssel nur im Speicher und an eine Session gebunden, Datei-Auswahl nur aus der Liste; keine neue Abhängigkeit, ein Trait als einzige Erweiterungsstelle.

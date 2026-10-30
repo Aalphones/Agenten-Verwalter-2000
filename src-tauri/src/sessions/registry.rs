@@ -55,6 +55,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
+use crate::mcp_access::McpAccess;
 use crate::notices::model::{Denial, Notice};
 use crate::projects::model::{ProjectCreated, ProjectSummary};
 use crate::prompt_cache::model::PromptCache;
@@ -1361,6 +1362,9 @@ impl SessionRegistry {
         self.lock_sessions().remove(&session.id);
         if is_last {
             projects.remove(&session.project_id);
+        }
+        if let Some(access) = app.try_state::<Arc<McpAccess>>() {
+            access.forget(&session.id);
         }
         drop(projects);
         {
@@ -3741,6 +3745,9 @@ fn start_process(
     state.forget_mcp(outbox);
     let scratchpad_dir = use_scratchpad(session, state, outbox);
     let artifacts_dir = use_artifacts(session, state);
+    let verwalter_mcp = app
+        .try_state::<Arc<McpAccess>>()
+        .and_then(|access| access.config_for(&session.id));
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -3763,6 +3770,7 @@ fn start_process(
             artifacts: artifacts_dir,
             chrome: state.chrome,
             codex_exe,
+            verwalter_mcp,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);

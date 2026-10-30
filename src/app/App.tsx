@@ -30,7 +30,9 @@ import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
 import { UsageAlertBar } from '@/features/usage/UsageAlertBar';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
+import { onArtifactShow } from '@/lib/artifacts';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
+import type { ArtifactShowEvent } from '@/lib/bindings/ArtifactShowEvent';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { HandoffStartedEvent } from '@/lib/bindings/HandoffStartedEvent';
@@ -40,6 +42,7 @@ import type { ProjectRestored } from '@/lib/bindings/ProjectRestored';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { onHandoffStarted } from '@/lib/sessions';
+import { useArtifactsStore } from '@/stores/artifacts';
 import { useBackgroundStore } from '@/stores/background';
 import { useSessionsStore, type ProjectView, type SessionView } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
@@ -107,6 +110,44 @@ export function App(): ReactElement {
       })
       .catch((reason: unknown) => {
         console.error('Automatisch weiter nicht abonnierbar', reason);
+      });
+    return (): void => {
+      controller.abort();
+      if (unlisten !== null) {
+        unlisten();
+      }
+    };
+  }, []);
+  // MCP-Zugang (ADR 046): der Agent wählt ein Artefakt aus. Ausgewählt wird immer; die Ansicht
+  // springt nur, wenn der Benutzer gerade diese Session oder die Übersicht ihres Vorhabens sieht.
+  useEffect(() => {
+    const controller = new AbortController();
+    let unlisten: UnlistenFn | null = null;
+    onArtifactShow((event: ArtifactShowEvent) => {
+      useArtifactsStore.getState().select(event.projectId, event.file);
+      const state = useSessionsStore.getState();
+      if (state.showNewSession || state.showSettings) {
+        return;
+      }
+      if (state.showProjectOverview) {
+        if (state.activeProjectId === event.projectId) {
+          state.showProjectView('artifacts');
+        }
+        return;
+      }
+      if (state.activeSessionId === event.sessionId) {
+        state.showView('artifacts');
+      }
+    })
+      .then((stop: UnlistenFn) => {
+        if (controller.signal.aborted) {
+          stop();
+          return;
+        }
+        unlisten = stop;
+      })
+      .catch((reason: unknown) => {
+        console.error('Auswahl von Artefakten nicht abonnierbar', reason);
       });
     return (): void => {
       controller.abort();

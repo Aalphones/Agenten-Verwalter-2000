@@ -8,7 +8,7 @@ Der Verwalter bekommt einen eigenen MCP-Zugang, über den Agenten Werkzeuge des 
 
 | Phase | Inhalt | Rating | Wave | Aufwand | Status |
 |---|---|---|---|---|---|
-| 1 | [MCP-Zugang des Verwalters](phase-1-mcp-zugang.md) | heikel | 1 | L | pending |
+| 1 | [MCP-Zugang des Verwalters](phase-1-mcp-zugang.md) | heikel | 1 | L | umgesetzt, Laufzeitbelege offen |
 | 2 | [Typ-Erkennung, Gruppierung nach Session, Medien](phase-2-typen-und-gruppen.md) | heikel | 2 | L | pending |
 | 3 | [Text, Code, Log, Diff, Markdown](phase-3-text-und-markdown.md) | standard | 3 | M | pending |
 | 4 | [Strukturierte Daten: JSON, JSON Lines, YAML, TOML/INI/.env, XML, CSV](phase-4-daten.md) | standard | 4 | M | pending |
@@ -47,7 +47,7 @@ Grobschätzung gesamt: 6–8 Umsetzungs-Sessions (L ≈ 2, M ≈ 1, S ≈ ½).
 - **Werkzeuge der Artefakte** (`src-tauri/src/artifacts/tools.rs`):
   - `artifact_list` — Eingabe `{}`. Ausgabe: `structuredContent = { dir, items: [ { file, title, kind, modifiedAt, sessionNumber, sessionName, isOwnSession } ] }`, `text` = eine Zeile je Artefakt `„<title>“ (<file>, <kind>, #<n> <name>)`. Ab Phase 2 kommt `kind` aus `ArtifactKind`; in Phase 1 steht dort `"html"`.
   - `artifact_show` — Eingabe `{ "file": string }` (Name direkt in `.artefakte`). Prüft, dass die Datei ein Artefakt der Liste ist (sonst `Err("Kein Artefakt: <file>")`), sendet Ereignis `artifacts://show` mit `{ sessionId, projectId, file }` und antwortet `„<title>“ im Reiter Artefakte ausgewählt.`
-- **Übergabe an den Agenten:** beim Start jedes Agenten schreibt der Verwalter `<Benutzerordner>\.verwalter\mcp\<session-id>.json` neu: `{ "mcpServers": { "verwalter": { "type": "http", "url": "http://127.0.0.1:<port>/mcp", "headers": { "Authorization": "Bearer <schlüssel>" } } } }` und hängt den Pfad an die Liste von `--mcp-config` (neben den `.mcp.json` der Repositories). Werkzeugnamen beim Agenten: `mcp__verwalter__artifact_list` usw. Nebenfragen (`registry/side.rs`) bekommen keinen Zugang.
+- **Übergabe an den Agenten:** beim Start jedes Agenten schreibt der Verwalter `<Benutzerordner>\.verwalter\mcp\<session-id>.json` neu: `{ "mcpServers": { "verwalter": { "type": "http", "url": "http://127.0.0.1:<port>/mcp", "headers": { "Authorization": "Bearer <schlüssel>" } } } }` und hängt den Pfad an die Liste von `--mcp-config` (neben den `.mcp.json` der Repositories). Dazu `mcp__verwalter` in `--allowedTools` (keine Rückfrage je Aufruf). Werkzeugnamen beim Agenten: `mcp__verwalter__artifact_list` usw. Nebenfragen (`registry/side.rs`) bekommen **dieselbe** Datei, weil ihre Werkzeugliste der des Hauptprozesses gleichen muss (Prompt-Cache, ADR 044); aufrufen können sie die Werkzeuge nicht (`dontAsk`).
 
 ### Artefakte (Phase 2, ADR 047)
 

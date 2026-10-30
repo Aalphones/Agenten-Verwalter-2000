@@ -1,6 +1,8 @@
 # STATE
 
-**Aktiver Plan:** keiner.
+**Aktiver Plan:** `docs/planning/2026-10-30_artefakte-dateitypen/` — Arbeitsbaum `C:\Users\smick\develop\Agenten-Verwalter-2000-wt-artefakte-dateitypen`, Branch `feature/artefakte-dateitypen`.
+**Phase:** 1/6 — MCP-Zugang (committet; Laufzeitbelege gegen die Dev-App offen, siehe Report-Back der Phase). Nächste: 2/6 — Typ-Erkennung, Gruppierung nach Session, Medien (heikel).
+**Nächster Schritt:** Phase 2 in frischer Session starten (Modell opus); FINDINGS-Einträge „→ Phase 2“ zuerst.
 **Prüfkette auf diesem Rechner:** `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC ab 14.4x), `%USERPROFILE%\.cargo\bin` im PATH; kein CMake, kein LLVM nötig.
 **Danach im Backlog:** `2026-10-22_parallele-sessions` oder `2026-10-22_umgebung` — unabhängig voneinander umsetzbar; beide fassen wie „Automatisch weiter“ die Funktion `send` an, wer später umsetzt, liest sie neu.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-30_parakeet/` (ADR 049, keine Migration), Release `v0.40.0`; die Diktat-Probe in der echten App (Download, Satz mit „Worktree“) steht aus; davor `docs/archive/2026-10/2026-10-30_rueckfrage-kasten/` (ADR 045, keine Migration), Release `v0.39.0`; die Selbstprüfung der Oberfläche beider Phasen (Wackelstellen, AK 10) steht aus; davor `docs/archive/2026-10/2026-10-29_nebenfragen/` (ADR 044, keine Migration), Release `v0.38.0`; die Selbstprüfung der Oberfläche (Phase 2 und 3, AK) in der echten App steht aus; davor `docs/archive/2026-10/2026-10-29_unveraenderte-zeilen/` (ADR 043, keine Migration), Release `v0.37.0`; davor `docs/archive/2026-10/2026-10-28_werkzeug-details/` (ADR 042, Migration 015), Release `v0.36.0`. Der volle Update-Durchlauf (Klick → Tausch → Neustart) ist noch nie in der echten App gelaufen.

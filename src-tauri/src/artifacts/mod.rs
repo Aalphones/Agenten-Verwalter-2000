@@ -3,6 +3,7 @@
 //! eigenen Server auf `127.0.0.1` (`server`).
 pub mod model;
 pub mod server;
+pub mod tools;
 
 use std::cmp::Ordering;
 use std::fs::{self, File};

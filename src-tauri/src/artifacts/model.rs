@@ -32,6 +32,17 @@ pub struct ArtifactList {
     pub items: Vec<Artifact>,
 }
 
+/// Ereignis `artifacts://show`: der Agent der Session hat per MCP-Zugang ein Artefakt ausgewählt
+/// (ADR 046).
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtifactShowEvent {
+    pub session_id: String,
+    pub project_id: String,
+    /// Dateiname im Ordner, wie ihn die Liste führt.
+    pub file: String,
+}
+
 /// Eine Session des Vorhabens mit den Dateien, die ihr Agent geschrieben hat: normalisierter Pfad
 /// → letzte Uhrzeit. Nur im Core, für die Zuordnung in `artifacts::list`.
 pub struct ArtifactOwner {

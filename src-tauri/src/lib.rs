@@ -18,6 +18,7 @@ pub mod filesystem;
 pub mod git;
 pub mod lmstudio;
 pub mod mcp;
+pub mod mcp_access;
 pub mod notices;
 pub mod processes;
 pub mod projects;
@@ -85,6 +86,13 @@ pub fn run() {
                     app.manage(server);
                 }
                 Err(error) => eprintln!("Server für Artefakte nicht gestartet: {error}"),
+            }
+            // Ohne Zugang starten die Agenten ohne die Werkzeuge des Verwalters.
+            match mcp_access::start(app.handle().clone()) {
+                Ok(access) => {
+                    app.manage(access);
+                }
+                Err(error) => eprintln!("MCP-Zugang nicht gestartet: {error}"),
             }
             Ok(())
         })

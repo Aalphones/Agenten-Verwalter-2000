@@ -1,5 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
+import type { ArtifactShowEvent } from '@/lib/bindings/ArtifactShowEvent';
+
+const ARTIFACT_SHOW_EVENT = 'artifacts://show';
 
 /** Adresse einer Seite auf dem Artefakt-Server; `?v=` zwingt das iframe zum Neuladen, sobald die Datei sich ändert. */
 export function artifactUrl(baseUrl: string, file: string, modifiedAt: number): string {
@@ -18,4 +22,11 @@ export async function listArtifacts(sessionId: string): Promise<ArtifactList> {
  *    `fileNotAllowed` (kein Artefakt), `io` (Öffnen gescheitert) */
 export async function openArtifactInBrowser(sessionId: string, file: string): Promise<void> {
   await invoke('artifact_open_in_browser', { sessionId, file });
+}
+
+/** Meldet, dass der Agent einer Session per MCP-Zugang ein Artefakt ausgewählt hat (ADR 046). */
+export function onArtifactShow(callback: (event: ArtifactShowEvent) => void): Promise<UnlistenFn> {
+  return listen<ArtifactShowEvent>(ARTIFACT_SHOW_EVENT, (event: Event<ArtifactShowEvent>) => {
+    callback(event.payload);
+  });
 }

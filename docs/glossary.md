@@ -66,6 +66,8 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Modus** | Wie selbstständig der Agent arbeitet: Manuell, Automatisch bearbeiten, Planen, Auto. Pro Session, jederzeit wechselbar. |
 | **Denkaufwand** | Wie gründlich das Modell nachdenkt, fünf Stufen von Niedrig bis Max. Pro Session, jederzeit wechselbar. |
 | **Artefakt** | Eine HTML-Seite, die ein Agent zum Ansehen im Ordner `.artefakte` des Vorhabens ablegt (Bericht, Präsentation, Diagramm, Entwurf). Gehört dem Vorhaben, nicht der Session. Im Reiter „Artefakte“ von Session und Übersicht ([ADR 026](decisions/026-artefakte.md)). |
+| **MCP-Zugang** | MCP-Server des Verwalters auf `127.0.0.1`, über den der Agent einer Session Werkzeuge des Verwalters aufruft (`mcp__verwalter__…`); ein Schlüssel je Session und App-Start bindet jeden Aufruf an deren Vorhaben ([ADR 046](decisions/046-mcp-zugang.md)). |
+| **Werkzeug-Satz** | Die Werkzeuge eines Features im MCP-Zugang mit gemeinsamem Präfix (z. B. `artifact_`), angemeldet an einer Stelle (`mcp_access::tool_sets`). |
 | **Subagent** | Ein vom Agenten selbst gestarteter Hilfs-Agent für eine Teilaufgabe. Läuft innerhalb der Session, wird dort angezeigt. |
 | **Hintergrundprozess** | Ein vom Agenten mit `run_in_background` gestarteter Bash-Befehl, der weiterläuft, während der Agent arbeitet (z.B. ein Dev-Server). Seine Ausgabe schreibt die Kommandozeile in eine eigene Ausgabedatei; die App kann ihn anhalten. |
 | **Ausgeführter Befehl** | Ein Bash-Aufruf des Agenten im Vordergrund; steht im Hintergrund-Panel unter „Ausgeführt“ mit Exit-Code und Ausgabe. |

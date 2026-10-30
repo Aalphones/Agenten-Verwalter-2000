@@ -14,6 +14,11 @@ impl SessionRegistry {
         Ok(artifacts::dir(&self.get(session_id)?.workspace))
     }
 
+    /// Das Vorhaben, zu dem die Session gehört.
+    pub fn project_of(&self, session_id: &str) -> Result<String, CommandError> {
+        Ok(self.get(session_id)?.project_id.clone())
+    }
+
     /// Workspace der Session und je Session des Vorhabens die Dateien, die ihr Agent schrieb.
     pub fn artifact_scope(
         &self,

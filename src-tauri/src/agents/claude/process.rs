@@ -12,6 +12,8 @@ use crate::processes::hide_console;
 use crate::{codex, standalone};
 
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
+/// Erlaubt alle Werkzeuge des MCP-Zugangs (`mcp__verwalter__…`).
+const VERWALTER_MCP_RULE: &str = "mcp__verwalter";
 
 pub struct SpawnOptions {
     pub exe: PathBuf,
@@ -41,6 +43,8 @@ pub struct SpawnOptions {
     pub chrome: bool,
     /// `Some` in der Betriebsart Codex: die `codex.exe`, die der Übersetzer startet.
     pub codex_exe: Option<PathBuf>,
+    /// Konfigurationsdatei des MCP-Zugangs der Session (ADR 046); `None`: ohne Zugang.
+    pub verwalter_mcp: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -195,15 +199,22 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
     }
     // `--allowedTools` nimmt mehrere Werte; die nächste Option (`--add-dir`, `--resume`,
     // `--session-id`) beendet die Liste.
-    if !opts.allowed_rules.is_empty() {
-        command.arg("--allowedTools").args(&opts.allowed_rules);
+    // Die Werkzeuge des Verwalters lesen nur und wählen in der eigenen Oberfläche aus: keine
+    // Rückfrage je Aufruf.
+    let mut allowed_rules: Vec<&str> = opts.allowed_rules.iter().map(String::as_str).collect();
+    if opts.verwalter_mcp.is_some() {
+        allowed_rules.push(VERWALTER_MCP_RULE);
+    }
+    if !allowed_rules.is_empty() {
+        command.arg("--allowedTools").args(&allowed_rules);
     }
     for dir in &opts.add_dirs {
         command.arg("--add-dir").arg(dir);
     }
     // Claude sucht die `.mcp.json` nur im Arbeitsverzeichnis, das hier der Workspace des Vorhabens
     // ist — die der Repositories reichen wir ausdrücklich nach.
-    let mcp_configs = project_mcp_configs(&opts.add_dirs);
+    let mut mcp_configs = project_mcp_configs(&opts.add_dirs);
+    mcp_configs.extend(opts.verwalter_mcp.iter().cloned());
     if !mcp_configs.is_empty() {
         command.arg("--mcp-config").args(&mcp_configs);
     }
