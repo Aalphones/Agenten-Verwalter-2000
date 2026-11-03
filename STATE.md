@@ -1,6 +1,6 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-10-30_umsetzung/` (Branch `feature/umsetzung` im Haupt-Checkout)
+**Aktiver Plan:** `docs/planning/2026-10-30_umsetzung/` (direkt auf `main`)
 **Phase:** 2/7 — Zeitleiste und Kartei (pending; Phase 1 complete)
 **Nächster Schritt:** Phase 2 lesen (`phase-2-zeitleiste-und-kartei.md` + FINDINGS „→ Phase 2“), dann Zeitleiste und Kartei in `src/features/implementation/` bauen.
 **Prüfkette auf diesem Rechner:** `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC ab 14.4x), `%USERPROFILE%\.cargo\bin` im PATH; kein CMake, kein LLVM nötig.
