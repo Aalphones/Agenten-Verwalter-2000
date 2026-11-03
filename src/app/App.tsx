@@ -533,7 +533,7 @@ export function App(): ReactElement {
           />
           <SessionActionError sessionId={currentSession.id} />
           {isClaude && <UsageAlertBar />}
-          <OverlapBar sessionId={currentSession.id} />
+          <OverlapBar sessionId={currentSession.id} projectId={currentSession.projectId} />
           {renderSessionBody(currentSession)}
         </Fragment>
       );
