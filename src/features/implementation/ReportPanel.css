@@ -1,0 +1,40 @@
+.report-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__text {
+    margin: 0;
+    padding: var(--space-xl) var(--space-xl);
+    overflow-x: auto;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  &__loading {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-status-error);
+  }
+}

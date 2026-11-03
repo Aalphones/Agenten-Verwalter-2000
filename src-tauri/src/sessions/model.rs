@@ -64,6 +64,10 @@ pub struct SessionSummary {
     pub auto_handoff: Option<AutoHandoff>,
     /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
     pub awaited_script: Option<AwaitedScript>,
+    /// Umsetzung, deren Station diese Session ist (ADR 048); die Sidebar zeigt sie nicht als Zeile.
+    pub station_of: Option<String>,
+    /// Umsetzung, zu der diese Session eine Rückfrage ist (ADR 048).
+    pub inquiry_of: Option<String>,
 }
 
 /// Art einer Einstiegszeile (ADR 040).

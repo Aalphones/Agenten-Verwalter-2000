@@ -1,0 +1,142 @@
+//! Legt eine Umsetzung (ADR 048) in einer **Kopie** der Datenbank an oder zeigt sie, ohne App und
+//! ohne Registry. Aufruf:
+//! `cargo run --manifest-path src-tauri/Cargo.toml --example implementation-probe -- <Datenbank-Kopie> create <Session-ID> <JSON-Datei>`
+//! bzw. `… -- <Datenbank-Kopie> show <Umsetzungs-ID>`.
+//! Die JSON-Datei hat die Form der Eingabe von `implementation_create` (`name`, `source`, `phases`).
+//! Druckt den Lagebericht; Stationen gelten als nicht gestartet, weil keine Session läuft. Fehler
+//! als `FEHLER: <Satz>`.
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+use serde::Deserialize;
+use verwalter_lib::db::Database;
+use verwalter_lib::db::implementations::{self, StoredImplementation};
+use verwalter_lib::db::sessions::{self, SessionRow};
+use verwalter_lib::error::CommandError;
+use verwalter_lib::implementation::model::{
+    MAX_NAME_CHARS, MAX_SOURCE_CHARS, PhaseInput, check_length, validate,
+};
+use verwalter_lib::implementation::{build_view, new_rows, now_ms, report};
+
+const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID>";
+
+#[derive(Deserialize)]
+struct CreateInput {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    source: Option<String>,
+    #[serde(default)]
+    phases: Vec<PhaseInput>,
+}
+
+fn main() -> ExitCode {
+    let arguments: Vec<String> = env::args().skip(1).collect();
+    let Some(database_path) = arguments.first().map(PathBuf::from) else {
+        eprintln!("{USAGE}");
+        return ExitCode::from(2);
+    };
+    // `Database::open` führt Migrationen aus: gegen die Datenbank der App liefe das neben ihr her.
+    if is_app_database(&database_path) {
+        eprintln!(
+            "Nur gegen eine Kopie: {} ist die Datenbank der App.",
+            database_path.display()
+        );
+        return ExitCode::from(2);
+    }
+    let outcome = match (
+        arguments.get(1).map(String::as_str),
+        arguments.get(2),
+        arguments.get(3),
+    ) {
+        (Some("create"), Some(session_id), Some(json_file)) => {
+            create(&database_path, session_id, Path::new(json_file))
+        }
+        (Some("show"), Some(implementation_id), None) => show(&database_path, implementation_id),
+        _ => {
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        }
+    };
+    match outcome {
+        Ok(text) => {
+            println!("{text}");
+            ExitCode::SUCCESS
+        }
+        Err(message) => {
+            println!("FEHLER: {message}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn create(database_path: &Path, session_id: &str, json_file: &Path) -> Result<String, String> {
+    let json = fs::read_to_string(json_file)
+        .map_err(|error| format!("{} nicht lesbar: {error}", json_file.display()))?;
+    let input: CreateInput =
+        serde_json::from_str(&json).map_err(|error| format!("Eingabe nicht lesbar: {error}"))?;
+    check_length("name", input.name.trim(), 1, MAX_NAME_CHARS)?;
+    let source = input.source.unwrap_or_default();
+    check_length("source", source.trim(), 0, MAX_SOURCE_CHARS)?;
+    validate(&input.phases)?;
+    let database = Database::open(database_path).map_err(|error| error.to_string())?;
+    let id = database
+        .with(|connection| {
+            let Some(row) = sessions::load_active(connection)?
+                .into_iter()
+                .find(|row: &SessionRow| row.id == session_id)
+            else {
+                return Err(CommandError::Implementation(format!(
+                    "Session {session_id} ist nicht aktiv oder unbekannt"
+                )));
+            };
+            if let Some((_, running)) =
+                implementations::unfinished_of_project(connection, &row.project_id)?
+            {
+                return Err(CommandError::Implementation(format!(
+                    "Im Vorhaben läuft schon die Umsetzung „{running}“."
+                )));
+            }
+            let (implementation, phases, stations) = new_rows(
+                &row.project_id,
+                session_id,
+                &input.name,
+                &source,
+                &input.phases,
+                now_ms(),
+            );
+            implementations::insert(connection, &implementation, &phases, &stations)?;
+            Ok(implementation.id)
+        })
+        .map_err(|error| error.to_string())?;
+    let text = report_of(&database, &id)?;
+    Ok(format!("Umsetzung {id} angelegt.\n\n{text}"))
+}
+
+fn show(database_path: &Path, implementation_id: &str) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(|error| error.to_string())?;
+    report_of(&database, implementation_id)
+}
+
+fn report_of(database: &Database, implementation_id: &str) -> Result<String, String> {
+    let stored: StoredImplementation = database
+        .with(|connection| implementations::load(connection, implementation_id))
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| format!("Umsetzung nicht gefunden: {implementation_id}"))?;
+    let view = build_view(&stored, &HashMap::new(), &HashMap::new());
+    Ok(report::text(&view, now_ms(), false))
+}
+
+fn is_app_database(path: &Path) -> bool {
+    let Some(profile) = env::var_os("USERPROFILE") else {
+        return false;
+    };
+    let app_database = Path::new(&profile).join(".verwalter").join("verwalter.db");
+    match (fs::canonicalize(path), fs::canonicalize(app_database)) {
+        (Ok(given), Ok(app)) => given == app,
+        _ => false,
+    }
+}

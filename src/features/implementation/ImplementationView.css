@@ -1,0 +1,15 @@
+.implementation-view {
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0;
+
+  &__column {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: var(--space-4xl) var(--space-5xl);
+  }
+}

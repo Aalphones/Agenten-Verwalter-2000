@@ -44,6 +44,7 @@ use crate::changes::attribution::{self, Ownership};
 use crate::changes::model::ChangesReach;
 use crate::changes::sources;
 use crate::context::model::{ContextBreakdown, ContextChangedEvent, SessionContext};
+use crate::db::implementations as implementation_rows;
 use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
@@ -84,6 +85,7 @@ use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 
 mod artifacts;
 mod commit_scan;
+mod implementation;
 mod mcp;
 mod overlaps;
 mod restore;
@@ -321,6 +323,11 @@ struct SessionState {
     carries_project_tldr: bool,
     /// Nebenfragen gibt es nur im Speicher (ADR 044), neueste zuletzt.
     side: Vec<SideQuestion>,
+    /// Umsetzung, deren Station diese Session ist (ADR 048); beim App-Start aus der Datenbank,
+    /// sonst beim Start der Station gesetzt.
+    station_of: Option<String>,
+    /// Umsetzung, zu der diese Session eine Rückfrage ist (ADR 048); gespeichert.
+    inquiry_of: Option<String>,
 }
 
 /// Eine Session, wie `SessionRegistry::restore` sie aus der Datenbank liest.
@@ -328,6 +335,7 @@ struct StoredSession {
     row: SessionRow,
     repositories: Vec<SessionRepository>,
     ticket_worktrees: Vec<(u32, String)>,
+    station_of: Option<String>,
 }
 
 /// Alles, woraus `SessionRegistry::create_project` ein Vorhaben mit seiner ersten Session anlegt.
@@ -399,12 +407,17 @@ impl SessionRegistry {
             database.with(|connection| {
                 let project_list = project_rows::load_active(connection)?;
                 let rows = session_rows::load_active(connection)?;
+                let stations: HashMap<String, String> =
+                    implementation_rows::station_sessions(connection)?
+                        .into_iter()
+                        .collect();
                 let loaded = rows
                     .into_iter()
                     .map(|row: SessionRow| {
                         let repositories = session_repositories::load(connection, &row.id)?;
                         let ticket_worktrees = session_ticket_worktrees::load(connection, &row.id)?;
                         Ok(StoredSession {
+                            station_of: stations.get(&row.id).cloned(),
                             row,
                             repositories,
                             ticket_worktrees,
@@ -2103,6 +2116,7 @@ fn build_session(
         row,
         repositories,
         ticket_worktrees,
+        station_of,
     } = stored;
     // Ohne Freigabe zeigt der Scratchpad-Reiter keine Bilder; alles andere geht trotzdem.
     if let Some(dir) = &row.scratchpad_dir {
@@ -2111,6 +2125,7 @@ fn build_session(
     let mut state = SessionState::restored(&row);
     state.ticket_roots = worktrees::ticket_roots(&repositories);
     state.ticket_worktrees = ticket_worktrees;
+    state.station_of = station_of;
     let paused_row = if state.needs_settling {
         Some(SessionRow {
             status: SessionStatus::Paused,
@@ -2254,6 +2269,8 @@ impl SessionState {
             tldr_error: None,
             carries_project_tldr: true,
             side: Vec::new(),
+            station_of: None,
+            inquiry_of: None,
         }
     }
 
@@ -2284,6 +2301,7 @@ impl SessionState {
         state.codex_model = row.codex_model.clone();
         state.process_chrome = row.chrome;
         state.scratchpad_dir = row.scratchpad_dir.clone();
+        state.inquiry_of = row.inquiry_of.clone();
         state.idle_since = None;
         state.entries_loaded = false;
         state.needs_settling = was_active;
@@ -3596,6 +3614,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         tldr: None,
         tldr_at: None,
         tldr_seq: None,
+        inquiry_of: state.inquiry_of.clone(),
     }
 }
 
@@ -3677,6 +3696,8 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         handoff_lines: state.handoff_lines.clone(),
         auto_handoff: state.auto_handoff.clone(),
         awaited_script: state.awaited_script(),
+        station_of: state.station_of.clone(),
+        inquiry_of: state.inquiry_of.clone(),
     }
 }
 

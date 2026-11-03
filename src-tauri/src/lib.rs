@@ -16,6 +16,7 @@ pub mod error;
 pub mod file_links;
 pub mod filesystem;
 pub mod git;
+pub mod implementation;
 pub mod lmstudio;
 pub mod mcp;
 pub mod mcp_access;
@@ -48,6 +49,7 @@ use codex::models::CodexService;
 use codex_account::CodexAccountService;
 use db::Database;
 use filesystem::workspace::data_dir;
+use implementation::ImplementationService;
 use sessions::registry::SessionRegistry;
 use usage::UsageService;
 use voice::VoiceService;
@@ -79,6 +81,7 @@ pub fn run() {
             }
             app.manage(app_update);
             app.manage(VoiceService::new());
+            app.manage(ImplementationService::default());
             SessionRegistry::start_reaper(app.handle().clone());
             // Ohne Server fehlen nur die Artefakte; `artifacts_list` meldet das.
             match artifacts::server::start(app.handle().clone()) {
@@ -192,6 +195,8 @@ pub fn run() {
             commands::tldr::tldr_project_create,
             commands::tldr::tldr_set_carry,
             commands::retro::retro_run,
+            commands::implementation::implementation_list,
+            commands::implementation::implementation_report,
             commands::settings::settings_load,
             commands::settings::settings_update,
             commands::settings::settings_local_models,

@@ -58,6 +58,9 @@ pub enum CommandError {
     FileNotAllowed(String),
     #[error("{0}")]
     AppUpdate(String),
+    /// Ein Satz über die Umsetzung (ADR 048), so wie der Agent ihn liest.
+    #[error("{0}")]
+    Implementation(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

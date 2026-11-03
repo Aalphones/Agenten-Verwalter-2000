@@ -69,4 +69,12 @@ autoHandoff: AutoHandoff | null,
 /**
  * Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
  */
-awaitedScript: AwaitedScript | null, };
+awaitedScript: AwaitedScript | null, 
+/**
+ * Umsetzung, deren Station diese Session ist (ADR 048); die Sidebar zeigt sie nicht als Zeile.
+ */
+stationOf: string | null, 
+/**
+ * Umsetzung, zu der diese Session eine Rückfrage ist (ADR 048).
+ */
+inquiryOf: string | null, };
