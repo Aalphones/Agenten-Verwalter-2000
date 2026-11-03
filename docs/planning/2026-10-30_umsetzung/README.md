@@ -13,7 +13,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 3 | [Stationen starten: Fertigmeldung, Nachfolger, erste Nachricht, Countdown, Fix-Runde, Fehler](phase-3-stationen-starten.md) | heikel | 3 | L | complete |
 | 4 | [Wellen (parallele Phasen) und Plan-Änderung mit Karte „Plan ändern?“](phase-4-wellen-und-plan-aenderung.md) | heikel | 4 | L | complete |
 | 5 | [Rückfragen mit Lagebericht als Anhang, Knopf „Lagebericht“](phase-5-rueckfragen-und-lagebericht.md) | standard | 5 | M | complete |
-| 6 | [Doku-Abschluss: Code-Map, Glossar, AGENTS.md, Prüfprogramm in AGENTS.md](phase-6-doku-abschluss.md) | mechanisch | 6 | S | pending |
+| 6 | [Doku-Abschluss: Code-Map, Glossar, AGENTS.md, Prüfprogramm in AGENTS.md](phase-6-doku-abschluss.md) | mechanisch | 6 | S | complete |
 | 7 | [Skills: Planung und Umsetzung auf die Werkzeuge des Verwalters umstellen (Master unter `G:\Meine Ablage\U104_Agents`, dann spiegeln)](phase-7-skills.md) | standard | 7 | M | pending |
 
 Rein sequenziell: jede Phase 2–5 erweitert dieselben Dateien (`src-tauri/src/implementation/mod.rs`, `commands/implementation.rs`, `src/lib/implementation.ts`, `ImplementationView.tsx`); Phase 4 und 5 ließen sich nur mit einem Kontrakt-Split auf Dateiebene parallelisieren, der mehr kostet als eine Session Wartezeit. Phase 1 ist eine Fundament-Phase (Datenmodell + Werkzeuge), ihr sichtbarer Anteil ist die Zeile in der Sidebar und der Lagebericht als Text.
