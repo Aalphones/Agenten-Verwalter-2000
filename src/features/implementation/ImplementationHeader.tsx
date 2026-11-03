@@ -1,8 +1,10 @@
 import type { ReactElement } from 'react';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
+import { activeLaneCount } from '@/features/implementation/implementationOrder';
 import {
   implementationTitle,
+  lanesActiveText,
   REPORT_LABEL,
   REPORT_TITLE,
   VIEW_LABEL,
@@ -42,6 +44,7 @@ export function ImplementationHeader({
   const views: readonly ImplementationViewKind[] = IMPLEMENTATION_VIEWS.filter(
     (view: ImplementationViewKind) => view === 'flow' || hasChanges,
   );
+  const activeLanes: number = activeLaneCount(implementation);
   return (
     <header className="session-header">
       <div className="session-header__title">
@@ -74,6 +77,9 @@ export function ImplementationHeader({
           <StatusIcon status={stateIcon(implementation.urgency)} size={10} />
           <span>{stateLabel(implementation.urgency)}</span>
         </span>
+        {activeLanes >= 2 && (
+          <span className="implementation-bar__lanes">{lanesActiveText(activeLanes)}</span>
+        )}
       </div>
       <div className="session-header__tabs" role="tablist" aria-label="Ansicht">
         {views.map((view: ImplementationViewKind) => (

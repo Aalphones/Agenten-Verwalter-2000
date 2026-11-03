@@ -1,7 +1,8 @@
 //! Lagebericht einer Umsetzung als Text: für `implementation_get`, die Ansicht und Rückfragen.
 use chrono::{DateTime, Local, TimeZone};
 
-use super::model::{ImplementationView, PhaseView, StationState, StationView};
+use super::changes::describe;
+use super::model::{ChangeView, ImplementationView, PhaseView, StationState, StationView};
 
 const INQUIRY_LINE: &str =
     "Diese Session ist eine Rückfrage: lesen, erklären, umplanen; keinen Code ändern.";
@@ -35,7 +36,32 @@ pub fn text(view: &ImplementationView, now_ms: f64, for_inquiry: bool) -> String
     } else {
         lines.push(format!("Offen: {open}"));
     }
+    push_section(&mut lines, "Plan-Änderungen", change_lines(view), "keine");
     lines.join("\n")
+}
+
+/// Übernommene Änderungen in Reihenfolge, dazu ein offener Vorschlag.
+fn change_lines(view: &ImplementationView) -> Vec<String> {
+    let mut entries: Vec<String> = view
+        .changes
+        .iter()
+        .map(|change: &ChangeView| {
+            format!(
+                "{} aus #{}: {}",
+                stamp(change.at),
+                change.session_number,
+                describe(&change.summary)
+            )
+        })
+        .collect();
+    if let Some(pending) = &view.pending_change {
+        entries.push(format!(
+            "Vorschlag aus #{} wartet auf Übernehmen: {}",
+            pending.session_number,
+            describe(&pending.summary)
+        ));
+    }
+    entries
 }
 
 fn push_section(lines: &mut Vec<String>, title: &str, entries: Vec<String>, empty: &str) {
@@ -167,6 +193,15 @@ fn number_in_brackets(station: &StationView) -> String {
 
 fn first_line(text: &str) -> &str {
     text.lines().next().unwrap_or_default().trim()
+}
+
+/// Ortszeit „TT.MM. HH:MM“.
+fn stamp(at_ms: f64) -> String {
+    Local
+        .timestamp_millis_opt(at_ms as i64)
+        .single()
+        .map(|time: DateTime<Local>| time.format("%d.%m. %H:%M").to_string())
+        .unwrap_or_default()
 }
 
 /// Ortszeit „HH:MM“.

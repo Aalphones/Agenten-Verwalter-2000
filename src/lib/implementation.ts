@@ -64,3 +64,9 @@ export async function completeStationByUser(
 ): Promise<void> {
   await invoke('implementation_complete_station', { id, stationId, result });
 }
+
+/** „Übernehmen“ (`accept`) oder „Verwerfen“ des Vorschlags „Plan ändern?“.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (kein Vorschlag, Phase hat schon begonnen), `database` */
+export async function applyImplementationChange(id: string, accept: boolean): Promise<void> {
+  await invoke('implementation_apply_change', { id, accept });
+}

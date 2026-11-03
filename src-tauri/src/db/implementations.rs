@@ -467,13 +467,16 @@ pub fn set_pending_change(
     Ok(())
 }
 
-/// Ersetzt die kommenden Phasen: löscht `removed_phase_ids` samt ihren Stationen und legt
-/// `phases`/`stations` neu an; Positionen kommen fertig vom Aufrufer.
+/// Ersetzt die kommenden Phasen: löscht `removed_phase_ids` samt ihren Stationen, legt
+/// `phases`/`stations` neu an (die Positionen der Phasen zählen ab 0 und werden hinter die
+/// verbleibenden gesetzt), verwirft einen offenen Vorschlag und hält die Änderung fest.
 pub fn replace_upcoming_phases(
     connection: &mut Connection,
+    implementation_id: &str,
     removed_phase_ids: &[String],
     phases: &[PhaseRow],
     stations: &[StationRow],
+    change: Option<&ChangeRow>,
 ) -> Result<(), CommandError> {
     let transaction = connection.transaction()?;
     for phase_id in removed_phase_ids {
@@ -482,8 +485,34 @@ pub fn replace_upcoming_phases(
             params![phase_id],
         )?;
     }
-    insert_phases(&transaction, phases, stations)?;
+    let first_position: u32 = transaction.query_row(
+        "SELECT COALESCE(MAX(position) + 1, 0) FROM implementation_phases \
+         WHERE implementation_id = ?1",
+        params![implementation_id],
+        |row| row.get(0),
+    )?;
+    let shifted: Vec<PhaseRow> = phases
+        .iter()
+        .map(|phase: &PhaseRow| PhaseRow {
+            position: first_position + phase.position,
+            ..phase.clone()
+        })
+        .collect();
+    insert_phases(&transaction, &shifted, stations)?;
+    if let Some(change) = change {
+        insert_change(&transaction, change)?;
+    }
+    set_pending_change(&transaction, implementation_id, None)?;
     transaction.commit()?;
+    Ok(())
+}
+
+/// Nimmt die Marke „neu“/„vorgezogen“ von der Phase, sobald ihre erste Station startet.
+pub fn clear_phase_mark(connection: &Connection, phase_id: &str) -> Result<(), CommandError> {
+    connection.execute(
+        "UPDATE implementation_phases SET mark = NULL WHERE id = ?1",
+        params![phase_id],
+    )?;
     Ok(())
 }
 

@@ -199,6 +199,7 @@ pub fn run() {
             commands::implementation::implementation_set_stop_after_current,
             commands::implementation::implementation_start_station,
             commands::implementation::implementation_cancel_countdown,
+            commands::implementation::implementation_apply_change,
             commands::implementation::implementation_complete_station,
             commands::settings::settings_load,
             commands::settings::settings_update,

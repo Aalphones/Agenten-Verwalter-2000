@@ -200,6 +200,9 @@ fn start_claimed(
     }
     let created: SessionSummary = registry.create_fresh_in_project(&view.project_id)?;
     registry.bind_station(app, implementation_id, station_id, &created.id)?;
+    if phase.mark.is_some() {
+        registry.clear_phase_mark(&phase.id)?;
+    }
     registry.rename(
         app,
         &created.id,

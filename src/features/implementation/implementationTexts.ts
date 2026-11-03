@@ -1,4 +1,5 @@
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
+import type { PhaseMark } from '@/lib/bindings/PhaseMark';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { StationState } from '@/lib/bindings/StationState';
 import type { StationView } from '@/lib/bindings/StationView';
@@ -42,6 +43,65 @@ export const REPORT_TITLE =
   'Zeigt den Lagebericht, den auch der Agent über implementation_get liest';
 export const TIMELINE_LABEL = 'Zeitleiste der Umsetzung';
 export const NO_PHASES = 'Diese Umsetzung hat noch keine Phasen.';
+
+export const PLAN_PROPOSAL_TITLE = 'Plan ändern?';
+export const PLAN_CHANGED_TITLE = 'Plan geändert';
+export const APPLY_CHANGE_LABEL = 'Übernehmen';
+export const APPLY_CHANGE_TITLE = 'Ersetzt die kommenden Phasen durch den Vorschlag';
+export const DISCARD_CHANGE_LABEL = 'Verwerfen';
+export const DISCARD_CHANGE_TITLE = 'Lässt die kommenden Phasen, wie sie sind';
+export const SHOW_PENDING_LABEL = 'Vorschlag ansehen';
+export const SHOW_PENDING_TITLE = 'Holt die Karte „Plan ändern?“ nach vorn';
+export const CHANGE_MARKER_TITLE = 'Zeigt diese Plan-Änderung vorn in der Kartei';
+export const PHASE_MARK_LABEL: Record<PhaseMark, string> = {
+  new: 'neu',
+  moved: 'vorgezogen',
+};
+export const PHASE_MARK_TITLE: Record<PhaseMark, string> = {
+  new: 'Diese Phase kam mit der letzten Plan-Änderung dazu',
+  moved: 'Diese Phase wurde mit der letzten Plan-Änderung vorgezogen',
+};
+
+/** „2 Spuren aktiv“ in der Kopfzeile, solange eine Welle mehrere Phasen zugleich bearbeitet. */
+export function lanesActiveText(count: number): string {
+  return `${String(count)} Spuren aktiv`;
+}
+
+/** „Welle 2 · Phase 3 und 4 gleichzeitig“; bei drei und mehr „Phase 3, 4 und 5“. */
+export function waveTitle(wave: number, phases: readonly PhaseView[]): string {
+  const keys: string[] = phases.map((phase: PhaseView) => phase.key);
+  const last: string | undefined = keys.pop();
+  const names: string = keys.length === 0 ? (last ?? '') : `${keys.join(', ')} und ${last ?? ''}`;
+  return `Welle ${String(wave)} · Phase ${names} gleichzeitig`;
+}
+
+/** „30.10. 14:05“ in Ortszeit. */
+export function stampText(at: number): string {
+  return new Date(at).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** „aus #3 · 30.10. 14:05“; die Session gibt es nicht mehr, wenn ihre Nummer 0 ist. */
+export function changeOrigin(sessionNumber: number, at: number): string {
+  const origin: string =
+    sessionNumber === 0 ? 'aus einer gelöschten Session' : `aus #${String(sessionNumber)}`;
+  return `${origin} · ${stampText(at)}`;
+}
+
+/** Schlüssel einer Änderungsliste, „nichts“ bei leerer. */
+export function keysText(keys: readonly string[]): string {
+  return keys.length === 0 ? 'nichts' : keys.join(', ');
+}
+
+/** Zeile der Marke auf der Linie. */
+export function changeMarkerText(sessionNumber: number): string {
+  const origin: string = sessionNumber === 0 ? '' : ` · aus #${String(sessionNumber)}`;
+  return `Plan geändert${origin} · von dir übernommen`;
+}
 
 const MINUTE_MS = 60_000;
 const HOUR_MINUTES = 60;

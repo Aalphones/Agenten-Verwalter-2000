@@ -27,6 +27,12 @@
     flex: 1;
   }
 
+  &__lanes {
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+  }
+
   &__switch {
     display: inline-flex;
     gap: 7px;

@@ -8,7 +8,7 @@ use super::model::{
     ImplementationChangedEvent, ImplementationView, MAX_DESCRIPTION_CHARS, MAX_NAME_CHARS,
     MAX_SOURCE_CHARS, MAX_TITLE_CHARS, PhaseInput, check_length, validate,
 };
-use super::{IMPLEMENTATION_CHANGED_EVENT, report};
+use super::{IMPLEMENTATION_CHANGED_EVENT, changes, report};
 use crate::mcp_access::tools::{ToolCall, ToolResult, ToolSet, ToolSpec};
 use crate::sessions::registry::SessionRegistry;
 
@@ -18,7 +18,6 @@ const SET_PHASES: &str = "implementation_set_phases";
 const DESCRIBE_PHASE: &str = "implementation_describe_phase";
 const COMPLETE_STATION: &str = "implementation_complete_station";
 const NO_REGISTRY: &str = "Der Verwalter startet noch";
-const NOT_YET: &str = "Noch nicht verfügbar.";
 const NOT_A_STATION: &str = "Diese Session ist keine Station.";
 const MAX_RESULT_CHARS: usize = 200;
 
@@ -116,7 +115,7 @@ impl ToolSet for ImplementationTools {
             GET => get(call, &registry),
             DESCRIBE_PHASE => describe_phase(call, &registry),
             COMPLETE_STATION => complete_station(call, &registry),
-            SET_PHASES => Err(NOT_YET.to_owned()),
+            SET_PHASES => set_phases(call),
             other => Err(format!("Unbekanntes Werkzeug: {other}")),
         };
         outcome.unwrap_or_else(ToolResult::Err)
@@ -165,6 +164,27 @@ struct CreateArguments {
     source: Option<String>,
     #[serde(default)]
     phases: Vec<PhaseInput>,
+}
+
+#[derive(Deserialize)]
+struct SetPhasesArguments {
+    #[serde(default)]
+    phases: Vec<PhaseInput>,
+}
+
+fn set_phases(call: &ToolCall) -> Result<ToolResult, String> {
+    let arguments: SetPhasesArguments = parse(call.arguments)?;
+    let text = changes::propose(call.app, call.session_id, &arguments.phases)?;
+    let structured = call
+        .app
+        .try_state::<SessionRegistry>()
+        .and_then(|registry: tauri::State<'_, SessionRegistry>| {
+            registry
+                .require_implementation_of_session(call.session_id)
+                .ok()
+        })
+        .and_then(|view: ImplementationView| serde_json::to_value(view).ok());
+    Ok(ToolResult::Ok { text, structured })
 }
 
 #[derive(Deserialize)]

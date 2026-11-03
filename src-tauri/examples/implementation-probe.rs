@@ -5,6 +5,8 @@
 //! bzw. `… -- <Datenbank-Kopie> complete <Umsetzungs-ID> <Station-ID> "<Ergebnis>" [--fix]`
 //! (meldet die Station fertig, ohne etwas zu starten, und druckt, welche Stationen danach starten
 //! dürfen).
+//! bzw. `… -- <Datenbank-Kopie> set-phases <Umsetzungs-ID> <JSON-Datei>` (druckt die Unterschiede
+//! eines Vorschlags `{ "phases": [...] }`, schreibt nichts).
 //! Die JSON-Datei hat die Form der Eingabe von `implementation_create` (`name`, `source`, `phases`).
 //! Druckt den Lagebericht; Stationen gelten als nicht gestartet, weil keine Session läuft. Fehler
 //! als `FEHLER: <Satz>`.
@@ -23,9 +25,11 @@ use verwalter_lib::implementation::model::{ImplementationView, StationState};
 use verwalter_lib::implementation::model::{
     MAX_NAME_CHARS, MAX_SOURCE_CHARS, PhaseInput, check_length, validate,
 };
-use verwalter_lib::implementation::{build_view, new_rows, now_ms, plan_completion, report};
+use verwalter_lib::implementation::{
+    build_view, changes, new_rows, now_ms, plan_completion, report,
+};
 
-const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID> | complete <Umsetzungs-ID> <Station-ID> \"<Ergebnis>\" [--fix]";
+const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID> | complete <Umsetzungs-ID> <Station-ID> \"<Ergebnis>\" [--fix] | set-phases <Umsetzungs-ID> <JSON-Datei>";
 
 #[derive(Deserialize)]
 struct CreateInput {
@@ -33,6 +37,12 @@ struct CreateInput {
     name: String,
     #[serde(default)]
     source: Option<String>,
+    #[serde(default)]
+    phases: Vec<PhaseInput>,
+}
+
+#[derive(Deserialize)]
+struct SetPhasesInput {
     #[serde(default)]
     phases: Vec<PhaseInput>,
 }
@@ -76,6 +86,9 @@ fn main() -> ExitCode {
             create(&database_path, session_id, Path::new(json_file))
         }
         (Some("show"), Some(implementation_id), None) => show(&database_path, implementation_id),
+        (Some("set-phases"), Some(implementation_id), Some(json_file)) => {
+            set_phases(&database_path, implementation_id, Path::new(json_file))
+        }
         _ => {
             eprintln!("{USAGE}");
             return ExitCode::from(2);
@@ -193,6 +206,56 @@ Darf starten:
         report::text(&before, now_ms(), false),
         report::text(&after, now_ms(), false),
     ))
+}
+
+/// Druckt die Unterschiede eines Vorschlags, ohne etwas zu schreiben.
+fn set_phases(
+    database_path: &Path,
+    implementation_id: &str,
+    json_file: &Path,
+) -> Result<String, String> {
+    let json = fs::read_to_string(json_file)
+        .map_err(|error| format!("{} nicht lesbar: {error}", json_file.display()))?;
+    let input: SetPhasesInput =
+        serde_json::from_str(&json).map_err(|error| format!("Eingabe nicht lesbar: {error}"))?;
+    validate(&input.phases)?;
+    let database = Database::open(database_path).map_err(|error| error.to_string())?;
+    let view = view_of(&database, implementation_id)?;
+    let summary = changes::diff(&view, &input.phases)?;
+    let effect = if view.phases.iter().any(changes::is_begun) {
+        "wartet als Vorschlag auf Übernehmen"
+    } else {
+        "gälte sofort (noch keine Station gestartet)"
+    };
+    Ok(format!(
+        "Neu: {}\nVorgezogen: {}\nEntfallen: {}\nStationen {} → {}\nWirkung: {effect}",
+        list_or_nothing(&summary.added),
+        list_or_nothing(&summary.moved),
+        list_or_nothing(&summary.removed),
+        view.stations_total,
+        stations_after(&view, &input.phases),
+    ))
+}
+
+fn list_or_nothing(keys: &[String]) -> String {
+    if keys.is_empty() {
+        return "nichts".to_owned();
+    }
+    keys.join(", ")
+}
+
+/// Stationen der begonnenen Phasen plus die des Vorschlags.
+fn stations_after(view: &ImplementationView, proposed: &[PhaseInput]) -> usize {
+    let kept: usize = view
+        .phases
+        .iter()
+        .filter(|phase| changes::is_begun(phase))
+        .map(|phase| phase.stations.len())
+        .sum();
+    kept + proposed
+        .iter()
+        .map(|phase| phase.stations.len())
+        .sum::<usize>()
 }
 
 fn view_of(database: &Database, implementation_id: &str) -> Result<ImplementationView, String> {

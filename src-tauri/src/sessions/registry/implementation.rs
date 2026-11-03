@@ -12,9 +12,11 @@ use super::{
     Outbox, PendingRequest, ProjectState, Session, SessionRegistry, SessionState, now_ms, update,
 };
 use crate::agents::event::Question;
-use crate::db::implementations::{self as implementation_rows, StationRow, StoredImplementation};
+use crate::db::implementations::{
+    self as implementation_rows, ChangeRow, PhaseRow, StationRow, StoredImplementation,
+};
 use crate::error::CommandError;
-use crate::implementation::model::{ImplementationView, PhaseInput, PhaseView};
+use crate::implementation::model::{ImplementationView, PendingChange, PhaseInput, PhaseView};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
 use crate::sessions::model::SessionStatus;
 
@@ -204,6 +206,53 @@ impl SessionRegistry {
                 finished_at,
             )
         })
+    }
+
+    /// Nummer der Session im Vorhaben; 0 für eine unbekannte.
+    pub fn session_number(&self, session_id: &str) -> u32 {
+        self.get(session_id)
+            .map_or(0, |session: Arc<Session>| session.number)
+    }
+
+    /// Legt den Vorschlag ab oder verwirft ihn (`None`).
+    pub fn store_pending_change(
+        &self,
+        implementation_id: &str,
+        pending: Option<&PendingChange>,
+    ) -> Result<(), CommandError> {
+        let json: Option<String> = pending
+            .map(|change: &PendingChange| serde_json::to_string(change))
+            .transpose()
+            .map_err(|error| CommandError::Implementation(error.to_string()))?;
+        self.database.with(|connection| {
+            implementation_rows::set_pending_change(connection, implementation_id, json.as_deref())
+        })
+    }
+
+    /// Ersetzt die kommenden Phasen in einem Zug (siehe `replace_upcoming_phases`).
+    pub fn store_plan_change(
+        &self,
+        implementation_id: &str,
+        removed_phase_ids: &[String],
+        phases: &[PhaseRow],
+        stations: &[StationRow],
+        change: Option<&ChangeRow>,
+    ) -> Result<(), CommandError> {
+        self.database.with(|connection| {
+            implementation_rows::replace_upcoming_phases(
+                connection,
+                implementation_id,
+                removed_phase_ids,
+                phases,
+                stations,
+                change,
+            )
+        })
+    }
+
+    pub fn clear_phase_mark(&self, phase_id: &str) -> Result<(), CommandError> {
+        self.database
+            .with(|connection| implementation_rows::clear_phase_mark(connection, phase_id))
     }
 
     /// Beginnt den Countdown der Station; ein laufender wird ersetzt. Gibt die Marke zurück.

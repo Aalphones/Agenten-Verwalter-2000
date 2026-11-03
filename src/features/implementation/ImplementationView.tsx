@@ -7,12 +7,15 @@ import { ImplementationHeader } from '@/features/implementation/ImplementationHe
 import {
   autoFocus,
   flatStations,
+  focusOrder,
+  isFocusValid,
   type StationRef,
 } from '@/features/implementation/implementationOrder';
 import { ReportPanel } from '@/features/implementation/ReportPanel';
 import { Timeline } from '@/features/implementation/Timeline';
 import type { ImplementationView as Implementation } from '@/lib/bindings/ImplementationView';
 import {
+  applyImplementationChange,
   cancelStationCountdown,
   completeStationByUser,
   setImplementationAutoStart,
@@ -80,8 +83,9 @@ export function ImplementationView({
   const now: number = useNow(isTicking);
 
   const automaticId: string | null = autoFocus(implementation);
+  const order: string[] = useMemo(() => focusOrder(implementation), [implementation]);
   const isStoredValid: boolean =
-    storedFocus !== undefined && stations.some((ref: StationRef) => ref.station.id === storedFocus);
+    storedFocus !== undefined && isFocusValid(implementation, storedFocus);
   const focusedId: string | null =
     isStoredValid && storedFocus !== undefined ? storedFocus : automaticId;
   const isManualFocus: boolean = isStoredValid && storedFocus !== automaticId;
@@ -91,6 +95,7 @@ export function ImplementationView({
     if (!isFlow || focusedId === null) {
       return undefined;
     }
+    const currentFocus: string = focusedId;
     function handleKeyDown(event: KeyboardEvent): void {
       const step: number = arrowStep(event.key);
       if (step === 0 || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
@@ -99,21 +104,19 @@ export function ImplementationView({
       if (isTextTarget(event.target)) {
         return;
       }
-      const position: number = stations.findIndex(
-        (ref: StationRef) => ref.station.id === focusedId,
-      );
-      const target: StationRef | undefined = stations[position + step];
+      const position: number = order.indexOf(currentFocus);
+      const target: string | undefined = order[position + step];
       if (position < 0 || target === undefined) {
         return;
       }
       event.preventDefault();
-      setFocused(implementationId, target.station.id);
+      setFocused(implementationId, target);
     }
     window.addEventListener('keydown', handleKeyDown);
     return (): void => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isFlow, focusedId, stations, implementationId, setFocused]);
+  }, [isFlow, focusedId, order, implementationId, setFocused]);
 
   function openChat(stationId: string): void {
     const sessionId: string | null =
@@ -145,13 +148,14 @@ export function ImplementationView({
         isManualFocus={isManualFocus}
         now={now}
         changesCount={hasChanges ? changesCount : null}
-        onFocus={(stationId: string): void => {
-          setFocused(implementationId, stationId);
+        onFocus={(focusId: string): void => {
+          setFocused(implementationId, focusId);
         }}
         onBackToCurrent={(): void => {
           clearFocused(implementationId);
         }}
         onOpenChat={openChat}
+        onOpenSession={selectSession}
         onShowChanges={(): void => {
           onShowView('changes');
         }}
@@ -163,6 +167,12 @@ export function ImplementationView({
         }}
         onCompleteByUser={(stationId: string, result: string): void => {
           run(() => completeStationByUser(implementationId, stationId, result));
+        }}
+        onApplyChange={(accept: boolean): void => {
+          run(
+            () => applyImplementationChange(implementationId, accept),
+            'Übernehmen fehlgeschlagen',
+          );
         }}
       />
     );
@@ -179,8 +189,8 @@ export function ImplementationView({
             implementation={implementation}
             focusedId={focusedId}
             now={now}
-            onFocus={(stationId: string): void => {
-              setFocused(implementationId, stationId);
+            onFocus={(focusId: string): void => {
+              setFocused(implementationId, focusId);
             }}
             onOpenChat={openChat}
           />

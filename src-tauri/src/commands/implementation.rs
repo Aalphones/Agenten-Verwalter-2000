@@ -2,7 +2,7 @@ use tauri::AppHandle;
 
 use crate::error::CommandError;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
-use crate::implementation::{self, announce, now_ms, report, start};
+use crate::implementation::{self, announce, changes, now_ms, report, start};
 use crate::sessions::registry::SessionRegistry;
 
 /// Alle Umsetzungen nicht archivierter Vorhaben, neueste zuerst (ADR 048). `async`, damit die
@@ -85,6 +85,16 @@ pub async fn implementation_cancel_countdown(
     let _ = registry.cancel_countdown(&station_id);
     announce(&app, &registry.implementation_view(&id)?);
     Ok(())
+}
+
+/// „Übernehmen“ oder „Verwerfen“ des Vorschlags „Plan ändern?“.
+#[tauri::command]
+pub async fn implementation_apply_change(
+    app: AppHandle,
+    id: String,
+    accept: bool,
+) -> Result<(), CommandError> {
+    changes::decide(&app, &id, accept)
 }
 
 /// „Erledigt“ für eine Station des Benutzers.
