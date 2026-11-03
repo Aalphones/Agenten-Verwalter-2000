@@ -97,3 +97,4 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Ohne Fundstelle** | Angabe in einer Antwort des Agenten (Pfad, Datei:Zeile, Zahl ab zwei Ziffern), die in keiner Werkzeug-Ausgabe derselben Antwort und nicht in der Nachricht des Nutzers vorkommt; im Verlauf gepunktet unterstrichen ([ADR 036](decisions/036-ohne-fundstelle.md)). |
 | **Portable** | Die lose `verwalter.exe` ohne Installer; ein Update ersetzt sie am selben Pfad ([ADR 041](decisions/041-app-update.md)). |
 | **Prüfsumme** | SHA-256 einer Release-Datei, von GitHub je Datei genannt; ohne Treffer wird nichts installiert ([ADR 041](decisions/041-app-update.md)). |
+| **Schreib-Ordner** | Ordner, in dem eine Session tatsächlich schreibt: ihre benutzten Ticket-Worktrees und der Haupt-Checkout, wenn sie dort Dateien geändert hat ([ADR 037](decisions/037-parallele-sessions.md)). |
