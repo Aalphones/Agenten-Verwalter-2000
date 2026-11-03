@@ -30,3 +30,6 @@ Der Reiter „Artefakte“ zeigte nur HTML-Seiten direkt im Ordner `.artefakte`;
 - Betrachter mit Bibliothek brauchen Internet; ohne zeigen sie Rohtext. Bild, Video und Ton laufen ohne Bibliothek.
 - `Artifact.session_*` bedeutet jetzt **anlegende** Session; Leser, die „zuletzt bearbeitet“ meinten, nehmen `last_session_*`.
 - Kommentare auf einer Betrachter-Seite tragen Selektoren der Betrachter-Seite (z. B. `img`), nicht des Dateiinhalts.
+- PDF rechnet im Hauptthread: ein Worker von fremder Herkunft startet unter der CSP nicht und meldet keinen Fehler. Der Betrachter lädt `pdf.worker.min.mjs` als Modul mit Prüfsumme; sehr große PDFs können die Seite kurz anhalten.
+- Kommentare auf Inhalte in der Vorschau des Ordner-Betrachters (zweiter Rahmen) erreichen die App nicht; Ordner-Kommentare gehen nur auf Baumzeilen und Raster-Kacheln.
+- „Mit Standardprogramm öffnen“ öffnet bei einer Website `index.html`, bei einem Ordner ohne `index.html` den Ordner im Explorer.

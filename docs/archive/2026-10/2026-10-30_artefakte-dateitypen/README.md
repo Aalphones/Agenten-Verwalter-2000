@@ -13,7 +13,7 @@ Der Verwalter bekommt einen eigenen MCP-Zugang, über den Agenten Werkzeuge des 
 | 3 | [Text, Code, Log, Diff, Markdown](phase-3-text-und-markdown.md) | standard | 3 | M | umgesetzt, Laufzeitbelege in der App offen |
 | 4 | [Strukturierte Daten: JSON, JSON Lines, YAML, TOML/INI/.env, XML, CSV](phase-4-daten.md) | standard | 4 | M | umgesetzt, Laufzeitbelege in der App offen |
 | 5 | [PDF, Mermaid, Ordner](phase-5-pdf-diagramme-ordner.md) | standard | 5 | L | umgesetzt, Laufzeitbelege in der App offen |
-| 6 | [Doku, Anweisung an den Agenten, Release](phase-6-doku-und-release.md) | mechanisch | 6 | S | pending |
+| 6 | [Doku, Anweisung an den Agenten, Release](phase-6-doku-und-release.md) | mechanisch | 6 | S | complete |
 
 Rein sequenziell, weil Phase 2 den Typ-Katalog und die Betrachter-Weiche festlegt, in die 3–5 je ihre Zeilen eintragen (dieselben Dateien `viewers/mod.rs` und `ArtifactKind`), und Phase 1 den MCP-Zugang liefert, dessen `artifact_list` in Phase 2 die neuen Felder bekommt.
 
@@ -81,10 +81,29 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Der Verwalter hat einen eigenen MCP-Zugang (`mcp__verwalter__artifact_list`, `…artifact_show`; Schlüssel je Session, nur auf `127.0.0.1`), und der Reiter „Artefakte“ zeigt jede Datei und jeden Nicht-Zubehör-Ordner in `.artefakte`: Typ-Erkennung (`ArtifactKind`), Betrachter für Text, Code, Log, Diff, Markdown (mit Mermaid), JSON, JSON Lines, YAML, TOML/INI/.env, XML, CSV, PDF, Mermaid und Ordner, Bild/Video/Ton im Rahmen, Rest-Karte für den Rest, Gruppierung nach anlegender Session. Die Anweisung an den Agenten nennt die neuen Dateitypen und die beiden Werkzeuge.
+
 ## Files touched
+
+- Core: `src-tauri/src/mcp_access/` (neu), `src-tauri/src/artifacts/` (`model.rs`, `mod.rs`, `server.rs`, `folder.rs`, `tools.rs`, `viewers/` mit `shell.html` und je Typ einer `.js`), `agents/claude/process.rs`, `db/session_files.rs` (Migration 16), `sessions/registry*`, `lib.rs`, Prüfprogramme `mcp-probe.rs` und `artifacts-probe.rs`.
+- Oberfläche: `src/features/artifacts/` (Gruppen, Abzeichen, Rest-Karte, Rahmen je Typ), `src/stores/artifacts.ts`, `src/lib/artifacts.ts`, `src/app/App.tsx`.
+- Doku: ADR 046 und 047, ADR 026 (Verweis), Code-Map, Glossar, `AGENTS.md`.
 
 ## Commits
 
+`0f06c79` MCP-Zugang · `2732d7d` Typen, Gruppen, Medien · `a320e62` Text/Code/Markdown · `bd04fbf` strukturierte Daten · `f06f060` PDF, Mermaid, Ordner · Phase 6: Doku und Anweisung, Archiv, `chore(release): v0.41.0`.
+
 ## Deviations from plan
 
+- PDF ohne Worker (Phase 5, ADR 047): ein fremder Worker startet unter der CSP nicht; pdf.js rechnet im Hauptthread.
+- Ordner-Betrachter nutzt `tree.js` nicht (eigener schlichter Baum).
+- „Mit Standardprogramm öffnen“ einer Website öffnet `index.html` statt den Ordner.
+- Aufwand: geschätzt 6–8 Sessions, gelaufen sind sechs (je Phase eine); keine Phase musste neu geschnitten werden.
+
 ## Follow-ups
+
+- **Codex ohne MCP-Zugang** (ADR 046): keine `codex.exe` auf dem Entwicklungsrechner, `thread/start` von `codex app-server` ungeprüft. Der Plan „Umsetzung“ (`2026-10-30_umsetzung`) hat in Codex bis dahin keine Werkzeuge.
+- **Autark:** `--allowedTools mcp__verwalter` wertet der autarke Agent nur als Pfad; ob er MCP-Werkzeuge ohne Rückfrage ausführt, entscheidet seine eigene Rechte-Logik — bei schreibenden Werkzeugen (Plan „Umsetzung“) dort prüfen.
+- **Kommentare in der Ordner-Vorschau** (zweiter Rahmen) erreichen die App nicht; Lösung: `folder.js` leitet die Nachrichten der inneren Brücke weiter. Nur bauen, wenn Ordner-Kommentare gebraucht werden.
+- **Laufzeitbelege in der echten App offen** (Phase 1–5): Listen-Screenshots hell/dunkel, Bild/Video/Ton im Rahmen, Rest-Karte, Kommentar auf Bild und nach „Neu laden“, Chat-Karte mit Abzeichen, CSP und Mermaid im Betrachter, „Pfad kopieren“, CSV-Filter, YAML-Einklappen, verschachtelter Ordner-Rahmen, PDF großer Dateien, Strg+Mausrad-Zoom in Mermaid, `?list=1` ohne Berechtigung (403), „Mit Standardprogramm öffnen“ einer Website. Getestet wird im laufenden Betrieb.
+- Vault: zwei `→ Vault`-Einträge (pdf.js-Worker, Edge headless) stehen offen in `FINDINGS.md` für `session-review`.
