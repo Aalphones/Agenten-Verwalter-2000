@@ -1,15 +1,40 @@
 .implementation-view {
-  overflow-y: auto;
+  display: grid;
   flex-grow: 1;
+  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 
-  &__column {
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    max-width: 780px;
-    margin: 0 auto;
-    padding: var(--space-4xl) var(--space-5xl);
+  &__timeline {
+    min-height: 0;
+    overflow-y: auto;
+    border-right: 1px solid var(--color-border-subtle);
+  }
+
+  &__cards {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  &__report {
+    padding: 14px var(--space-3xl) 0;
+  }
+
+  /* Schmal: die Kartei steht unter der Zeitleiste, die ganze Fläche rollt als eine. */
+  @container main (max-width: 900px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    align-content: start;
+    overflow-y: auto;
+
+    &__timeline {
+      overflow-y: visible;
+      border-right: 0;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    &__cards {
+      overflow-y: visible;
+    }
   }
 }

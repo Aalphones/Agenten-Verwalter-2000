@@ -3,13 +3,15 @@ import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import {
   implementationTitle,
-  progressLine,
+  REPORT_LABEL,
+  REPORT_TITLE,
   VIEW_LABEL,
 } from '@/features/implementation/implementationTexts';
 import { stateIcon, stateLabel } from '@/features/implementation/stationState';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import { IMPLEMENTATION_VIEWS, type ImplementationViewKind } from '@/stores/sessions';
 import '@/app/SessionHeader.css';
+import './ImplementationBar.css';
 
 interface ImplementationHeaderProps {
   implementation: ImplementationView;
@@ -19,6 +21,8 @@ interface ImplementationHeaderProps {
   hasChanges: boolean;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
+  isReportShown: boolean;
+  onToggleReport: () => void;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
 }
@@ -30,6 +34,8 @@ export function ImplementationHeader({
   activeView,
   hasChanges,
   changesCount,
+  isReportShown,
+  onToggleReport,
   onShowView,
   onOpenProject,
 }: ImplementationHeaderProps): ReactElement {
@@ -89,7 +95,15 @@ export function ImplementationHeader({
         ))}
       </div>
       <div className="session-header__tools">
-        <span className="session-header__mono">{progressLine(implementation)}</span>
+        <button
+          type="button"
+          className="implementation-bar__button"
+          aria-pressed={isReportShown}
+          title={REPORT_TITLE}
+          onClick={onToggleReport}
+        >
+          {REPORT_LABEL}
+        </button>
       </div>
     </header>
   );

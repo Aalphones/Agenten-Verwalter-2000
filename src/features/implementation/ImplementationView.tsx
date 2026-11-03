@@ -1,8 +1,19 @@
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
+import { useNow } from '@/features/background/useNow';
+import { CardStack } from '@/features/implementation/CardStack';
+import { ImplementationBar } from '@/features/implementation/ImplementationBar';
 import { ImplementationHeader } from '@/features/implementation/ImplementationHeader';
+import {
+  autoFocus,
+  flatStations,
+  type StationRef,
+} from '@/features/implementation/implementationOrder';
 import { ReportPanel } from '@/features/implementation/ReportPanel';
+import { Timeline } from '@/features/implementation/Timeline';
 import type { ImplementationView as Implementation } from '@/lib/bindings/ImplementationView';
-import type { ImplementationViewKind } from '@/stores/sessions';
+import { useImplementationStore } from '@/stores/implementation';
+import { useSessionsStore, type ImplementationViewKind } from '@/stores/sessions';
 import './ImplementationView.css';
 
 interface ImplementationViewProps {
@@ -17,7 +28,23 @@ interface ImplementationViewProps {
   onOpenProject: () => void;
 }
 
-/** Hauptfläche einer Umsetzung (ADR 048): Kopfzeile, darunter der Ablauf oder die Changes. */
+function isTextTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !==
+      null
+  );
+}
+
+/** Schritt in der Stationsfolge für eine Taste; 0, wenn sie nicht blättert. */
+function arrowStep(key: string): number {
+  if (key === 'ArrowDown') {
+    return 1;
+  }
+  return key === 'ArrowUp' ? -1 : 0;
+}
+
+/** Hauptfläche einer Umsetzung (ADR 048): Kopfzeile, darunter Zeitleiste mit Kartei oder die Changes. */
 export function ImplementationView({
   implementation,
   projectName,
@@ -28,14 +55,114 @@ export function ImplementationView({
   onShowView,
   onOpenProject,
 }: ImplementationViewProps): ReactElement {
+  const [isReportShown, setIsReportShown] = useState<boolean>(false);
+  const storedFocus: string | undefined = useImplementationStore(
+    (state) => state.focused[implementation.id],
+  );
+  const setFocused = useImplementationStore((state) => state.setFocused);
+  const clearFocused = useImplementationStore((state) => state.clearFocused);
+  const selectSession = useSessionsStore((state) => state.selectSession);
+
+  const stations: StationRef[] = useMemo(() => flatStations(implementation), [implementation]);
+  const isFlow: boolean = !(activeView === 'changes' && hasChanges);
+  const isTicking: boolean = stations.some((ref: StationRef) =>
+    ['running', 'starting', 'countdown'].includes(ref.station.state),
+  );
+  const now: number = useNow(isTicking);
+
+  const automaticId: string | null = autoFocus(implementation);
+  const isStoredValid: boolean =
+    storedFocus !== undefined && stations.some((ref: StationRef) => ref.station.id === storedFocus);
+  const focusedId: string | null =
+    isStoredValid && storedFocus !== undefined ? storedFocus : automaticId;
+  const isManualFocus: boolean = isStoredValid && storedFocus !== automaticId;
+  const implementationId: string = implementation.id;
+
+  useEffect(() => {
+    if (!isFlow || focusedId === null) {
+      return undefined;
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      const step: number = arrowStep(event.key);
+      if (step === 0 || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      if (isTextTarget(event.target)) {
+        return;
+      }
+      const position: number = stations.findIndex(
+        (ref: StationRef) => ref.station.id === focusedId,
+      );
+      const target: StationRef | undefined = stations[position + step];
+      if (position < 0 || target === undefined) {
+        return;
+      }
+      event.preventDefault();
+      setFocused(implementationId, target.station.id);
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return (): void => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFlow, focusedId, stations, implementationId, setFocused]);
+
+  function openChat(stationId: string): void {
+    const sessionId: string | null =
+      stations.find((ref: StationRef) => ref.station.id === stationId)?.station.sessionId ?? null;
+    if (sessionId !== null) {
+      selectSession(sessionId);
+    }
+  }
+
+  function renderCards(): ReactElement | null {
+    if (focusedId === null) {
+      return null;
+    }
+    return (
+      <CardStack
+        implementation={implementation}
+        focusedId={focusedId}
+        isManualFocus={isManualFocus}
+        now={now}
+        changesCount={hasChanges ? changesCount : null}
+        onFocus={(stationId: string): void => {
+          setFocused(implementationId, stationId);
+        }}
+        onBackToCurrent={(): void => {
+          clearFocused(implementationId);
+        }}
+        onOpenChat={openChat}
+        onShowChanges={(): void => {
+          onShowView('changes');
+        }}
+      />
+    );
+  }
+
   function renderBody(): ReactNode {
-    if (activeView === 'changes' && hasChanges) {
+    if (!isFlow) {
       return changes;
     }
     return (
       <div className="implementation-view">
-        <div className="implementation-view__column">
-          <ReportPanel implementation={implementation} />
+        <div className="implementation-view__timeline">
+          <Timeline
+            implementation={implementation}
+            focusedId={focusedId}
+            now={now}
+            onFocus={(stationId: string): void => {
+              setFocused(implementationId, stationId);
+            }}
+            onOpenChat={openChat}
+          />
+        </div>
+        <div className="implementation-view__cards">
+          {isReportShown && (
+            <div className="implementation-view__report">
+              <ReportPanel implementation={implementation} />
+            </div>
+          )}
+          {renderCards()}
         </div>
       </div>
     );
@@ -49,9 +176,14 @@ export function ImplementationView({
         activeView={activeView}
         hasChanges={hasChanges}
         changesCount={changesCount}
+        isReportShown={isReportShown}
+        onToggleReport={(): void => {
+          setIsReportShown((current: boolean) => !current);
+        }}
         onShowView={onShowView}
         onOpenProject={onOpenProject}
       />
+      <ImplementationBar implementation={implementation} />
       {renderBody()}
     </>
   );
