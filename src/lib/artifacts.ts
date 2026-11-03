@@ -7,7 +7,8 @@ import type { ArtifactShowEvent } from '@/lib/bindings/ArtifactShowEvent';
 const ARTIFACT_SHOW_EVENT = 'artifacts://show';
 
 /** Adresse eines Artefakts auf dem Artefakt-Server (ADR 047): HTML direkt, eine Website als Ordner
- *  (`<name>/`), alles andere als Betrachter-Seite (`?view=1`). `v=` zwingt das iframe zum Neuladen,
+ *  (`<name>/`), ein Ordner ohne `index.html` als Ordner-Betrachter (`<name>/?view=1`), alles andere
+ *  als Betrachter-Seite (`?view=1`). `v=` zwingt das iframe zum Neuladen,
  *  sobald die Datei sich ändert. */
 export function artifactUrl(baseUrl: string, item: Artifact): string {
   const path: string = `${baseUrl}${encodeURIComponent(item.file)}`;
@@ -17,6 +18,8 @@ export function artifactUrl(baseUrl: string, item: Artifact): string {
       return `${path}?${version}`;
     case 'site':
       return `${path}/?${version}`;
+    case 'folder':
+      return `${path}/?view=1&${version}`;
     default:
       return `${path}?view=1&${version}`;
   }
@@ -28,7 +31,8 @@ export async function listArtifacts(sessionId: string): Promise<ArtifactList> {
   return invoke<ArtifactList>('artifacts_list', { sessionId });
 }
 
-/** Öffnet das Artefakt mit dem Standardprogramm, einen Ordner im Explorer.
+/** Öffnet das Artefakt mit dem Standardprogramm, eine Website über ihre `index.html` im Browser,
+ *  einen Ordner ohne `index.html` im Explorer.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `fileNotFound`,
  *    `fileNotAllowed` (kein Artefakt), `io` (Öffnen gescheitert) */
 export async function openArtifactDefault(sessionId: string, file: string): Promise<void> {

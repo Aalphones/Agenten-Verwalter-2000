@@ -35,6 +35,18 @@ const LIBRARIES = {
     url: `${CDN}papaparse@5.4.1/papaparse.min.js`,
     integrity: 'sha384-D/t0ZMqQW31H3az8ktEiNb39wyKnS82iFY52QPACM+IjKW3jDUhyIgh2PApRqJZs',
   },
+  // ES-Modul, das `globalThis.pdfjsLib` setzt.
+  pdfjs: {
+    url: `${CDN}pdfjs-dist@4.4.168/build/pdf.min.mjs`,
+    integrity: 'sha384-fzqD3KLclV6zyTSuToNuSG370CipiqN572vfT2zti7ORKnQPaJrvsz8deY+/Tgwe',
+    isModule: true,
+  },
+  // Setzt `globalThis.pdfjsWorker`: pdf.js rechnet dann im Hauptthread statt in einem Worker.
+  pdfjsWorker: {
+    url: `${CDN}pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`,
+    integrity: 'sha384-RTiLhGDoA0SEd0K0E9qrg2HwSEEnAo91MwUh79PteR4v01eEByhHOdEkFKxeaeqw',
+    isModule: true,
+  },
 };
 const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_HIGHLIGHT_BYTES = 512 * 1024;
@@ -54,12 +66,13 @@ const LANGUAGES = {
 const loadedScripts = new Map();
 
 /** Lädt ein Skript einmal; lehnt ab, wenn es nicht kommt oder die Prüfsumme nicht stimmt. */
-function loadScript(url, integrity) {
+function loadScript(url, integrity, isModule = false) {
   if (!loadedScripts.has(url)) {
     loadedScripts.set(
       url,
       new Promise((resolve, reject) => {
         const script = document.createElement('script');
+        if (isModule) script.type = 'module';
         script.src = url;
         script.integrity = integrity;
         script.crossOrigin = 'anonymous';
@@ -73,7 +86,7 @@ function loadScript(url, integrity) {
 }
 
 function loadLibrary(name) {
-  return loadScript(LIBRARIES[name].url, LIBRARIES[name].integrity);
+  return loadScript(LIBRARIES[name].url, LIBRARIES[name].integrity, LIBRARIES[name].isModule);
 }
 
 function languageOf(file) {

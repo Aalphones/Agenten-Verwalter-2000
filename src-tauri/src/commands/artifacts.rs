@@ -30,7 +30,8 @@ pub async fn artifacts_list(
     })
 }
 
-/// Öffnet ein Artefakt mit dem Standardprogramm, einen Ordner im Explorer. `file` kommt aus der
+/// Öffnet ein Artefakt mit dem Standardprogramm, einen Ordner im Explorer, eine Website über ihre
+/// `index.html`. `file` kommt aus der
 /// Oberfläche: nur ein Name direkt im Ordner, und `artifacts::resolve_entry` prüft die Grenze,
 /// bevor etwas geöffnet wird.
 #[tauri::command]
@@ -41,6 +42,13 @@ pub async fn artifact_open_default(
     file: String,
 ) -> Result<(), CommandError> {
     let target = checked_target(&registry, &session_id, &file)?;
+    // Eine Website gehört in den Browser: ihr Ordner im Explorer wäre nur die Dateiliste.
+    let index_page = target.join(artifacts::INDEX_PAGE);
+    let target = if index_page.is_file() {
+        index_page
+    } else {
+        target
+    };
     app.opener()
         .open_path(target.to_string_lossy(), None::<&str>)
         .map_err(|error| CommandError::Io(error.to_string()))

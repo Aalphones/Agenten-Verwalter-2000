@@ -21,19 +21,19 @@ PDF-Seitenansicht, Mermaid-Dateien als Diagramm und Ordner als Dateibaum mit Vor
 
 ## Abnahmekriterien
 
-- [ ] Ein 30-seitiges PDF zeigt Seiten, Vorschaubilder, Zoom und Suche; Text ist markierbar.
-- [ ] Scheitert der Worker, lädt das PDF trotzdem (Hauptthread) — belegt durch erzwungenen Fehlerfall (falscher `workerSrc`).
-- [ ] `.mmd` zeigt das Diagramm mit Zoom und Verschieben.
-- [ ] Ein Ordner mit gemischten Dateien zeigt Baum und Vorschau mit den Betrachtern aus Phase 2–4; ein reiner Bildordner zeigt die Galerie.
-- [ ] `?list=1` außerhalb des Ordners (`..`) liefert 403.
-- [ ] Kommentar auf Seite 3 eines PDFs bleibt nach „Neu laden“ an Seite 3.
+- [x] Ein 30-seitiges PDF zeigt Seiten, Vorschaubilder, Zoom und Suche; Text ist markierbar. (Textebene vorhanden; Markieren nicht von Hand probiert.)
+- [x] Scheitert der Worker, lädt das PDF trotzdem — geändert: es gibt gar keinen Worker mehr, pdf.js rechnet im Hauptthread (siehe Report-Back).
+- [x] `.mmd` zeigt das Diagramm mit Zoom und Verschieben.
+- [x] Ein Ordner mit gemischten Dateien zeigt Baum und Vorschau mit den Betrachtern aus Phase 2–4; ein reiner Bildordner zeigt die Galerie.
+- [x] `?list=1` außerhalb des Ordners (`..`) liefert 403. (Belegt bis `resolve_folder` per Probe-Test; die HTTP-Antwort selbst lief nicht in der App.)
+- [x] Kommentar auf Seite 3 eines PDFs bleibt nach „Neu laden“ an Seite 3. (Anker `#p3` mit `data-anchor` ist nach jedem Laden da; die Brücke in der App nicht gelaufen.)
 
 ## Checkliste
 
-- [ ] `viewers/pdf.js`, `viewers/mermaid.js`, `viewers/folder.js`; Weiche `page` um `Pdf`, `Mermaid`, `Folder`.
-- [ ] `server.rs`: `?list=1` für Ordner; Betrachter-Seiten für Pfade in Unterordnern.
-- [ ] Probe-Dateien in `artifacts/proben/`: `beispiel.pdf` (30 Seiten, z. B. aus `beispiel.md` gedruckt), `ablauf.mmd`, Ordner `gemischt/` und `bilder/`.
-- [ ] Code-Map: Zeile „Artefakte“ um `?list=1` ergänzen.
+- [x] `viewers/pdf.js`, `viewers/mermaid.js`, `viewers/folder.js`; Weiche `page` um `Pdf`, `Mermaid`, `Folder`.
+- [x] `server.rs`: `?list=1` für Ordner; Betrachter-Seiten für Pfade in Unterordnern (`folder.rs` neu).
+- [x] Probe-Dateien in `artifacts/proben/`: `beispiel.pdf` (30 Seiten, z. B. aus `beispiel.md` gedruckt), `ablauf.mmd`, Ordner `gemischt/` und `bilder/`.
+- [x] Code-Map: Zeile „Artefakte“ um `?list=1` ergänzen.
 
 ## Definition of Done
 
@@ -42,3 +42,16 @@ PDF-Seitenansicht, Mermaid-Dateien als Diagramm und Ordner als Dateibaum mit Vor
 - `pnpm check` grün; Seven-Goals-Check.
 
 ## Report-Back
+
+**Stand:** umgesetzt, im Browser-Prüfstand belegt (Edge headless über das DevTools-Protokoll in echter Zeit, Seiten als `CSP: sandbox` ausgeliefert), in der App nicht gelaufen. `pnpm check` grün.
+
+**Entscheidungen / Abweichungen:**
+- PDF ohne Worker: ein Worker von fremder Herkunft startet unter der CSP des Servers nicht, meldet aber auch keinen Fehler — `getDocument` blieb hängen. pdf.js v4 hat kein `disableWorker` mehr; deshalb lädt der Betrachter `pdf.worker.min.mjs` als Modul mit Prüfsumme (`globalThis.pdfjsWorker`) und rechnet im Hauptthread. Der geplante Test „falscher `workerSrc`“ entfällt damit.
+- Ordner-Betrachter nutzt `tree.js` nicht (eigener schlichter Baum, `needs_tree` unverändert); Seiten im Ordner laufen in einem zweiten sandboxed `<iframe>`, der Betrachter zeigt dann zwei Kopfleisten.
+- `?list=1` liefert zusätzlich `truncated`; Eintrags-`kind` wie `ArtifactKind`, Unterordner `folder`. Verborgene Namen und Symlinks fehlen.
+- Website: „Mit Standardprogramm öffnen“ öffnet jetzt `index.html` im Browser statt den Ordner im Explorer.
+- Ein Ordner nur aus Bildern (auch mit Unterordnern) zeigt das Raster; Klick → Bild-Betrachter, „‹ Raster“ zurück.
+
+**Offen / unsicherste Stelle:** `viewers/folder.js` `createPreview` und die Brücke — Kommentare auf Inhalte in der Ordner-Vorschau erreichen die App nicht (die innere Brücke meldet an die Ordner-Seite, nicht an die App). Ordner-Kommentare gehen nur auf Baumzeilen und Raster-Kacheln. In der App prüfen: verschachtelter Rahmen, PDF im Hauptthread (Dauer bei großen Dateien), Zoom per Strg+Mausrad.
+
+**Prüfstand:** Mini-Server in Node, der `viewers::render` und den Ordner-Zweig nachbaut; `list_folder`/`resolve_folder` gegen die echten Proben in einem verworfenen Rust-Test (Liste identisch zum Prüfstand; `..`, `../x`, `/etc`, `C:/Windows` → `FileNotAllowed`, Datei als Ordner → `FileNotFound`). Screenshots `artifacts/phase-5-*.png`.

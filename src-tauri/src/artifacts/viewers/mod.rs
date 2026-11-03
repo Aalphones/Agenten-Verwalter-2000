@@ -16,6 +16,9 @@ const YAML: &str = include_str!("yaml.js");
 const CONFIG: &str = include_str!("config.js");
 const XML: &str = include_str!("xml.js");
 const CSV: &str = include_str!("csv.js");
+const PDF: &str = include_str!("pdf.js");
+const MERMAID: &str = include_str!("mermaid.js");
+const FOLDER: &str = include_str!("folder.js");
 
 /// Das Skript des Betrachters für den Typ; `None` → die Oberfläche zeigt die Rest-Karte. Ein neuer
 /// Betrachter ist eine `.js` daneben und eine Zeile hier.
@@ -33,6 +36,9 @@ pub fn page(kind: ArtifactKind) -> Option<&'static str> {
             Some(TEXT)
         }
         ArtifactKind::Markdown => Some(MARKDOWN),
+        ArtifactKind::Pdf => Some(PDF),
+        ArtifactKind::Mermaid => Some(MERMAID),
+        ArtifactKind::Folder => Some(FOLDER),
         _ => None,
     }
 }

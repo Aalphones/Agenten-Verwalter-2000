@@ -2,6 +2,7 @@
 //! (ADR 026, 047). Hier liegen Ordner, Liste, Typ-Erkennung und die Pfadprüfung; ausgeliefert wird
 //! über einen eigenen Server auf `127.0.0.1` (`server`), alles außer HTML in einer Betrachter-Seite
 //! (`viewers`).
+pub mod folder;
 pub mod model;
 pub mod server;
 pub mod tools;
@@ -26,7 +27,7 @@ const MAX_TITLE_CHARS: usize = 200;
 const MAX_PAGE_BYTES: u64 = 1024 * 1024;
 /// Höchstens so viele Einträge eines Ordners werden für Größe und Anzahl gezählt.
 const MAX_FOLDER_ENTRIES: u32 = 1000;
-const INDEX_PAGE: &str = "index.html";
+pub const INDEX_PAGE: &str = "index.html";
 const HTML_ENTITIES: [(&str, &str); 6] = [
     ("&lt;", "<"),
     ("&gt;", ">"),
