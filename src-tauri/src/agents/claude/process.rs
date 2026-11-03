@@ -190,6 +190,7 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
         prompts.push(artifacts_prompt(
             dir,
             opts.local.is_none() && opts.codex_exe.is_none(),
+            opts.verwalter_mcp.is_some() && opts.codex_exe.is_none(),
         ));
     }
     if !prompts.is_empty() {
@@ -248,7 +249,7 @@ fn scratchpad_prompt(dir: &Path) -> String {
 
 /// Ohne die Vorgabe schreibt der Agent Berichte und Entwürfe irgendwohin, und der Reiter
 /// „Artefakte“ bleibt leer.
-fn artifacts_prompt(dir: &Path, can_publish: bool) -> String {
+fn artifacts_prompt(dir: &Path, can_publish: bool, has_tools: bool) -> String {
     let mut prompt = format!(
         "Artefakte dieses Vorhabens: {}\n\
          Möchte der Benutzer etwas zum Ansehen, lege es als Artefakt direkt in diesen Ordner: \
@@ -264,6 +265,12 @@ fn artifacts_prompt(dir: &Path, can_publish: bool) -> String {
          als Artefakte und ihre Dateien.",
         dir.display()
     );
+    if has_tools {
+        prompt.push_str(
+            "\nWerkzeuge des Verwalters: mcp__verwalter__artifact_list nennt die vorhandenen \
+             Artefakte, mcp__verwalter__artifact_show wählt eines im Reiter „Artefakte“ aus.",
+        );
+    }
     if can_publish {
         prompt.push_str(
             "\nSoll eine Seite zusätzlich veröffentlicht werden, veröffentliche die Datei aus \
