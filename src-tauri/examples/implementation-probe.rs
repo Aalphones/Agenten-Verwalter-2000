@@ -2,6 +2,7 @@
 //! ohne Registry. Aufruf:
 //! `cargo run --manifest-path src-tauri/Cargo.toml --example implementation-probe -- <Datenbank-Kopie> create <Session-ID> <JSON-Datei>`
 //! bzw. `… -- <Datenbank-Kopie> show <Umsetzungs-ID>`
+//! bzw. `… -- <Datenbank-Kopie> report <Umsetzungs-ID>` (Lagebericht einer Rückfrage, mit „Ziel“)
 //! bzw. `… -- <Datenbank-Kopie> complete <Umsetzungs-ID> <Station-ID> "<Ergebnis>" [--fix]`
 //! (meldet die Station fertig, ohne etwas zu starten, und druckt, welche Stationen danach starten
 //! dürfen).
@@ -21,15 +22,17 @@ use verwalter_lib::db::Database;
 use verwalter_lib::db::implementations::{self, StoredImplementation};
 use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::error::CommandError;
+use verwalter_lib::file_links::LinkRoots;
 use verwalter_lib::implementation::model::{ImplementationView, StationState};
 use verwalter_lib::implementation::model::{
     MAX_NAME_CHARS, MAX_SOURCE_CHARS, PhaseInput, check_length, validate,
 };
+use verwalter_lib::implementation::report::Extras;
 use verwalter_lib::implementation::{
     build_view, changes, new_rows, now_ms, plan_completion, report,
 };
 
-const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID> | complete <Umsetzungs-ID> <Station-ID> \"<Ergebnis>\" [--fix] | set-phases <Umsetzungs-ID> <JSON-Datei>";
+const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID> | report <Umsetzungs-ID> | complete <Umsetzungs-ID> <Station-ID> \"<Ergebnis>\" [--fix] | set-phases <Umsetzungs-ID> <JSON-Datei>";
 
 #[derive(Deserialize)]
 struct CreateInput {
@@ -86,6 +89,9 @@ fn main() -> ExitCode {
             create(&database_path, session_id, Path::new(json_file))
         }
         (Some("show"), Some(implementation_id), None) => show(&database_path, implementation_id),
+        (Some("report"), Some(implementation_id), None) => {
+            inquiry_report(&database_path, implementation_id)
+        }
         (Some("set-phases"), Some(implementation_id), Some(json_file)) => {
             set_phases(&database_path, implementation_id, Path::new(json_file))
         }
@@ -274,6 +280,23 @@ fn view_of(database: &Database, implementation_id: &str) -> Result<Implementatio
 fn show(database_path: &Path, implementation_id: &str) -> Result<String, String> {
     let database = Database::open(database_path).map_err(|error| error.to_string())?;
     report_of(&database, implementation_id)
+}
+
+/// Der Lagebericht einer Rückfrage, wie die App ihn anhängt: „Ziel“ aus der README der Quelle,
+/// relativ zum aktuellen Ordner; die Zahl der geänderten Dateien kennt nur die App.
+fn inquiry_report(database_path: &Path, implementation_id: &str) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(|error| error.to_string())?;
+    let view = view_of(&database, implementation_id)?;
+    let folder = env::current_dir().map_err(|error| error.to_string())?;
+    let roots = LinkRoots {
+        relative_bases: vec![folder.clone()],
+        allowed: vec![folder],
+    };
+    let extras = Extras {
+        goal: report::goal_of(&view.source, &roots),
+        changed_files: None,
+    };
+    Ok(report::text_with(&view, now_ms(), true, &extras))
 }
 
 fn report_of(database: &Database, implementation_id: &str) -> Result<String, String> {

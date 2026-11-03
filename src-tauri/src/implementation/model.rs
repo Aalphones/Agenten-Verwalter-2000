@@ -2,8 +2,9 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::agents::event::ModelId;
+use crate::agents::event::{Attachment, ModelId};
 use crate::db::enum_from_text;
+use crate::sessions::model::SessionSummary;
 
 pub const MAX_NAME_CHARS: usize = 80;
 pub const MAX_SOURCE_CHARS: usize = 300;
@@ -13,6 +14,14 @@ pub const MAX_DESCRIPTION_CHARS: usize = 500;
 pub const MAX_STAGE_CHARS: usize = 40;
 pub const MAX_SKILL_CHARS: usize = 40;
 pub const MAX_BRIEF_CHARS: usize = 1000;
+
+/// Eine neue Rückfrage: die Session und der Lagebericht, der als ungesendeter Anhang an ihr hängt.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct InquiryCreated {
+    pub session: SessionSummary,
+    pub attachment: Attachment,
+}
 
 /// Zustand einer Station, abgeleitet aus ihrer Session; nie gespeichert.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

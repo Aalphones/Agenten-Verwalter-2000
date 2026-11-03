@@ -9,18 +9,35 @@ use std::sync::{Arc, MutexGuard, PoisonError};
 use tauri::AppHandle;
 
 use super::{
-    Outbox, PendingRequest, ProjectState, Session, SessionRegistry, SessionState, now_ms, update,
+    Outbox, PendingRequest, ProjectState, Session, SessionRegistry, SessionState, now_ms,
+    summarize, update,
 };
-use crate::agents::event::Question;
+use crate::agents::event::{Attachment, Question};
+use crate::attachments;
+use crate::changes::{self, model::ChangesReach};
 use crate::db::implementations::{
     self as implementation_rows, ChangeRow, PhaseRow, StationRow, StoredImplementation,
 };
 use crate::error::CommandError;
-use crate::implementation::model::{ImplementationView, PendingChange, PhaseInput, PhaseView};
+use crate::file_links;
+use crate::implementation::model::{
+    ImplementationView, InquiryCreated, PendingChange, PhaseInput, PhaseView,
+};
+use crate::implementation::report::{self, Extras};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
 use crate::sessions::model::SessionStatus;
 
 const NO_IMPLEMENTATION: &str = "In diesem Vorhaben gibt es keine Umsetzung.";
+
+/// Ein neuerer Lagebericht für eine Rückfrage: die Datei und was `send` im Zustand vermerkt.
+pub(super) struct ReportUpdate {
+    pub attachment: Attachment,
+    /// Der Bericht ohne die Zeile „Lage“, für den nächsten Vergleich.
+    pub stripped: String,
+    /// Stand des Berichts in ms.
+    pub at: f64,
+    pub summary: String,
+}
 
 impl SessionRegistry {
     /// Alle Umsetzungen nicht archivierter Vorhaben, neueste zuerst.
@@ -284,6 +301,99 @@ impl SessionRegistry {
         self.implementation_countdowns
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Der Lagebericht, wie Agent, Ansicht und Rückfragen ihn lesen: dazu „Ziel“ aus der README
+    /// der Quelle und die Zahl der geänderten Dateien. Liest Dateien und Git, also nie unter einer
+    /// Sperre aufrufen.
+    pub fn report_text(&self, view: &ImplementationView, for_inquiry: bool, now: f64) -> String {
+        report::text_with(view, now, for_inquiry, &self.report_extras(view))
+    }
+
+    fn report_extras(&self, view: &ImplementationView) -> Extras {
+        let Some(anchor) = self.project_members(&view.project_id).pop() else {
+            return Extras::default();
+        };
+        let Ok(input) = self.changes_input(&anchor.id, ChangesReach::Project) else {
+            return Extras::default();
+        };
+        let loaded = changes::load(&input);
+        let counted: Vec<usize> = loaded
+            .repositories
+            .iter()
+            .filter(|repository| repository.error.is_none())
+            .map(|repository| {
+                repository
+                    .files
+                    .iter()
+                    .filter(|file| file.all.is_some())
+                    .count()
+            })
+            .collect();
+        Extras {
+            goal: report::goal_of(&view.source, &file_links::roots(&input)),
+            changed_files: (!counted.is_empty())
+                .then(|| u32::try_from(counted.iter().sum::<usize>()).unwrap_or(u32::MAX)),
+        }
+    }
+
+    /// Legt eine Rückfrage zur Umsetzung an: eine frische Session im Vorhaben, der Lagebericht als
+    /// ungesendeter Anhang. Wie viel vom Bericht die Session schon kennt, steht in `last_report`.
+    pub fn new_inquiry(
+        &self,
+        app: &AppHandle,
+        implementation_id: &str,
+    ) -> Result<InquiryCreated, CommandError> {
+        let view = self.implementation_view(implementation_id)?;
+        let created = self.create_fresh_in_project(&view.project_id)?;
+        let now = now_ms();
+        let text = self.report_text(&view, true, now);
+        let attachment = attachments::add_text(app, &report::file_name(now), &text)?;
+        let session = self.get(&created.id)?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.inquiry_of = Some(implementation_id.to_owned());
+                state.last_report = Some(report::stripped(&text));
+                outbox.summary_dirty = true;
+                Ok(())
+            },
+        )?;
+        let summary = summarize(&session, &session.lock());
+        Ok(InquiryCreated {
+            session: summary,
+            attachment,
+        })
+    }
+
+    /// Hat sich der Lagebericht seit dem letzten Anhang dieser Rückfrage geändert, kommt er als
+    /// neue Datei zurück. Keine Rückfrage, keine Änderung oder ein Fehler beim Anlegen: `None` —
+    /// das Senden der Nachricht scheitert daran nie.
+    pub(super) fn report_update(&self, app: &AppHandle, session: &Session) -> Option<ReportUpdate> {
+        let (inquiry_of, last_report) = {
+            let state = session.lock();
+            (state.inquiry_of.clone(), state.last_report.clone())
+        };
+        let view = self.implementation_view(&inquiry_of?).ok()?;
+        let at = now_ms();
+        let text = self.report_text(&view, true, at);
+        let stripped = report::stripped(&text);
+        if last_report.as_deref() == Some(stripped.as_str()) {
+            return None;
+        }
+        let summary = last_report
+            .as_deref()
+            .map_or_else(report::unknown_change, |old: &str| {
+                report::change_summary(old, &stripped)
+            });
+        let attachment = attachments::add_text(app, &report::file_name(at), &text).ok()?;
+        Some(ReportUpdate {
+            attachment,
+            stripped,
+            at,
+            summary,
+        })
     }
 
     /// Name des Vorhabens für Kopfzeilen; leer für ein unbekanntes.

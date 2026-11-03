@@ -12,7 +12,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 2 | [Ansicht: Zeitleiste mit gekoppelter Kartei, Kopfzeile, Reiter Changes](phase-2-zeitleiste-und-kartei.md) | standard | 2 | L | complete |
 | 3 | [Stationen starten: Fertigmeldung, Nachfolger, erste Nachricht, Countdown, Fix-Runde, Fehler](phase-3-stationen-starten.md) | heikel | 3 | L | complete |
 | 4 | [Wellen (parallele Phasen) und Plan-Änderung mit Karte „Plan ändern?“](phase-4-wellen-und-plan-aenderung.md) | heikel | 4 | L | complete |
-| 5 | [Rückfragen mit Lagebericht als Anhang, Knopf „Lagebericht“](phase-5-rueckfragen-und-lagebericht.md) | standard | 5 | M | pending |
+| 5 | [Rückfragen mit Lagebericht als Anhang, Knopf „Lagebericht“](phase-5-rueckfragen-und-lagebericht.md) | standard | 5 | M | complete |
 | 6 | [Doku-Abschluss: Code-Map, Glossar, AGENTS.md, Prüfprogramm in AGENTS.md](phase-6-doku-abschluss.md) | mechanisch | 6 | S | pending |
 | 7 | [Skills: Planung und Umsetzung auf die Werkzeuge des Verwalters umstellen (Master unter `G:\Meine Ablage\U104_Agents`, dann spiegeln)](phase-7-skills.md) | standard | 7 | M | pending |
 
@@ -117,7 +117,7 @@ pub struct ImplementationChangedEvent { pub implementation: ImplementationView }
 | `implementation_complete_station(id, station_id, result)` („Erledigt“ nur für `by_user`) | `completeStationByUser` | 3 |
 | `implementation_apply_change(id, accept: bool)` | `applyImplementationChange` | 4 |
 | `implementation_report(id) -> String` | `loadImplementationReport` | 5 |
-| `implementation_new_inquiry(id) -> SessionSummary` | `createInquiry` | 5 |
+| `implementation_new_inquiry(id) -> InquiryCreated` (`{ session, attachment }`) | `createInquiry` | 5 |
 
 Ereignis `implementation://changed` mit `ImplementationChangedEvent` nach jeder Änderung an Aufbau, Texten, Automatik, Countdown und nach jedem Start; Zustandswechsel der Stations-Sessions kommen weiter über `session://changed` — die Oberfläche lädt die Liste neu, wenn `session://changed` eine Session meldet, die als `session_id` in einer Station steht.
 

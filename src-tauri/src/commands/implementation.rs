@@ -1,8 +1,8 @@
 use tauri::AppHandle;
 
 use crate::error::CommandError;
-use crate::implementation::model::{ImplementationView, PhaseView, StationView};
-use crate::implementation::{self, announce, changes, now_ms, report, start};
+use crate::implementation::model::{ImplementationView, InquiryCreated, PhaseView, StationView};
+use crate::implementation::{self, announce, changes, now_ms, start};
 use crate::sessions::registry::SessionRegistry;
 
 /// Alle Umsetzungen nicht archivierter Vorhaben, neueste zuerst (ADR 048). `async`, damit die
@@ -21,7 +21,17 @@ pub async fn implementation_report(
     id: String,
 ) -> Result<String, CommandError> {
     let view = registry.implementation_view(&id)?;
-    Ok(report::text(&view, now_ms(), false))
+    Ok(registry.report_text(&view, false, now_ms()))
+}
+
+/// „Neue Rückfrage“: eine frische Session im Vorhaben mit dem Lagebericht als Anhang (ADR 048).
+#[tauri::command]
+pub async fn implementation_new_inquiry(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+) -> Result<InquiryCreated, CommandError> {
+    registry.new_inquiry(&app, &id)
 }
 
 /// Schaltet „Automatisch weiter“. Aus: laufende Countdowns enden. An: Stationen, die starten

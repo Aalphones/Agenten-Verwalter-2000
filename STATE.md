@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-10-30_umsetzung/` (direkt auf `main`)
-**Phase:** 5/7 — Rückfragen und Lagebericht (pending; Phase 4 complete)
-**Nächster Schritt:** Phase 5 lesen (`phase-5-rueckfragen-und-lagebericht.md` + FINDINGS „→ Phase 5“), dann `implementation_new_inquiry`, Lagebericht als Anhang und Knopf „Lagebericht“ bauen.
+**Phase:** 6/7 — Doku-Abschluss (pending; Phase 5 complete)
+**Nächster Schritt:** Phase 6 lesen (`phase-6-doku-abschluss.md` + FINDINGS „→ Phase 6“), dann Code-Map, Glossar, AGENTS.md (Prüfprogramm), ADR 048 nachziehen.
 **Prüfkette auf diesem Rechner:** `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC ab 14.4x), `%USERPROFILE%\.cargo\bin` im PATH; kein CMake, kein LLVM nötig.
 **Danach im Backlog:** `2026-10-22_umgebung` — fasst wie „Automatisch weiter“ und „Parallele Sessions“ die Funktion `send` an, wer umsetzt, liest sie neu.
 **Zuletzt abgeschlossen:** `docs/archive/2026-10/2026-10-30_artefakte-dateitypen/` (ADR 046/047, Migration 16), Release `v0.42.0`; Laufzeitbelege in der echten App stehen aus (Liste in den README-Follow-ups); davor `docs/archive/2026-11/2026-10-22_parallele-sessions/` (ADR 037, keine Migration), Release `v0.41.0`; der Live-Lauf mit zwei echten Sessions im selben Ordner steht aus; davor `docs/archive/2026-10/2026-10-30_parakeet/` (ADR 049, keine Migration), Release `v0.40.0`; die Diktat-Probe in der echten App (Download, Satz mit „Worktree“) steht aus; davor `docs/archive/2026-10/2026-10-30_rueckfrage-kasten/` (ADR 045, keine Migration), Release `v0.39.0`; die Selbstprüfung der Oberfläche beider Phasen (Wackelstellen, AK 10) steht aus; davor `docs/archive/2026-10/2026-10-29_nebenfragen/` (ADR 044, keine Migration), Release `v0.38.0`; die Selbstprüfung der Oberfläche (Phase 2 und 3, AK) in der echten App steht aus; davor `docs/archive/2026-10/2026-10-29_unveraenderte-zeilen/` (ADR 043, keine Migration), Release `v0.37.0`; davor `docs/archive/2026-10/2026-10-28_werkzeug-details/` (ADR 042, Migration 015), Release `v0.36.0`. Der volle Update-Durchlauf (Klick → Tausch → Neustart) ist noch nie in der echten App gelaufen.

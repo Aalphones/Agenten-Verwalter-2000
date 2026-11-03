@@ -54,6 +54,8 @@ interface SidebarProps {
   onSelectSession: (sessionId: string) => void;
   onSelectProject: (projectId: string) => void;
   onSelectImplementation: (implementationId: string) => void;
+  /** Legt eine Rückfrage zur Umsetzung an und öffnet sie. */
+  onNewInquiry: (implementationId: string) => Promise<void>;
   onNew: () => void;
   onOpenSettings: () => void;
   onOpenArchive: () => void;
@@ -74,6 +76,7 @@ export function Sidebar({
   onSelectSession,
   onSelectProject,
   onSelectImplementation,
+  onNewInquiry,
   onNew,
   onOpenSettings,
   onOpenArchive,
@@ -306,6 +309,9 @@ export function Sidebar({
           isActive={implementation.id === activeImplementationId}
           onSelect={(): void => {
             onSelectImplementation(implementation.id);
+          }}
+          onNewInquiry={(): void => {
+            run(() => onNewInquiry(implementation.id), 'Rückfrage nicht angelegt');
           }}
         />
       </div>

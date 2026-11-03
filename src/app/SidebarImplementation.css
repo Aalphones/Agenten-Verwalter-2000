@@ -69,4 +69,22 @@
     border-radius: 50%;
     background: var(--color-accent);
   }
+
+  &__menu-item {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 var(--space-lg);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-fg-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+  }
 }

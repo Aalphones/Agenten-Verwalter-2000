@@ -12,6 +12,12 @@ export const VIEW_LABEL: Record<ImplementationViewKind, string> = {
 
 export const REPORT_LABEL = 'Lagebericht';
 export const REPORT_LOADING = 'Lagebericht wird geladen …';
+export const REPORT_COPY_LABEL = 'Kopieren';
+export const REPORT_COPIED = 'In die Zwischenablage kopiert.';
+export const REPORT_CLOSE_LABEL = 'Schließen';
+export const INQUIRY_LABEL = 'Neue Rückfrage';
+export const INQUIRY_TITLE =
+  'Frage zur Umsetzung in einer frischen Session — der Lagebericht hängt dran';
 
 /** „Phase 2 von 7 · 6 von 16 Sessions fertig“. */
 export function progressLine(implementation: ImplementationView): string {

@@ -1,15 +1,41 @@
 //! Lagebericht einer Umsetzung als Text: für `implementation_get`, die Ansicht und Rückfragen.
+use std::fs;
+
 use chrono::{DateTime, Local, TimeZone};
 
 use super::changes::describe;
 use super::model::{ChangeView, ImplementationView, PhaseView, StationState, StationView};
+use crate::file_links::{self, LinkRoots};
 
 const INQUIRY_LINE: &str =
     "Diese Session ist eine Rückfrage: lesen, erklären, umplanen; keinen Code ändern.";
 const INDENT: &str = "  ";
 const SEPARATOR: &str = " · ";
+const GOAL_FILE: &str = "README.md";
+const MAX_GOAL_CHARS: usize = 300;
+const PLAN_CHANGED: &str = "Plan geändert";
+const STATE_CHANGED: &str = "Stand geändert";
+
+/// Angaben, die nicht in der Ansicht stehen, sondern aus Dateien und Git kommen. Fehlt eine, fehlt
+/// ihre Zeile im Bericht.
+#[derive(Debug, Default)]
+pub struct Extras {
+    /// Erste Textzeile der README der Quelle.
+    pub goal: Option<String>,
+    /// Zahl der Dateien unter „Alle“ in der Reichweite Vorhaben.
+    pub changed_files: Option<u32>,
+}
 
 pub fn text(view: &ImplementationView, now_ms: f64, for_inquiry: bool) -> String {
+    text_with(view, now_ms, for_inquiry, &Extras::default())
+}
+
+pub fn text_with(
+    view: &ImplementationView,
+    now_ms: f64,
+    for_inquiry: bool,
+    extras: &Extras,
+) -> String {
     let mut lines: Vec<String> = vec![format!(
         "Lage: Umsetzung {} — Stand {}",
         view.name,
@@ -20,6 +46,9 @@ pub fn text(view: &ImplementationView, now_ms: f64, for_inquiry: bool) -> String
     }
     if !view.source.is_empty() {
         lines.push(format!("Quelle: {}", view.source));
+    }
+    if let Some(goal) = &extras.goal {
+        lines.push(format!("Ziel: {goal}"));
     }
     lines.push(format!(
         "Stand: Phase {} von {} · {} von {} Sessions fertig",
@@ -37,7 +66,92 @@ pub fn text(view: &ImplementationView, now_ms: f64, for_inquiry: bool) -> String
         lines.push(format!("Offen: {open}"));
     }
     push_section(&mut lines, "Plan-Änderungen", change_lines(view), "keine");
+    if let Some(count) = extras.changed_files {
+        lines.push(format!("Geänderte Dateien: {count}"));
+    }
     lines.join("\n")
+}
+
+/// Der Bericht ohne die Zeile „Lage“ mit der Uhrzeit: damit vergleicht eine Rückfrage, ob sich
+/// seit dem letzten Anhang etwas geändert hat.
+pub fn stripped(text: &str) -> String {
+    text.split_once('\n')
+        .map_or_else(String::new, |(_, rest): (&str, &str)| rest.to_owned())
+}
+
+/// Name der Anhangs-Datei: „lagebericht-1405.md“.
+pub fn file_name(now_ms: f64) -> String {
+    let time = Local
+        .timestamp_millis_opt(now_ms as i64)
+        .single()
+        .map(|time: DateTime<Local>| time.format("%H%M").to_string())
+        .unwrap_or_default();
+    format!("lagebericht-{time}.md")
+}
+
+/// Die kürzeste Änderung zwischen zwei Berichten (beide ohne die Zeile „Lage“): eine
+/// Plan-Änderung vor einer neu fertigen Station vor „Stand geändert“.
+pub fn change_summary(old: &str, new: &str) -> String {
+    if section(old, "Plan-Änderungen") != section(new, "Plan-Änderungen") {
+        return PLAN_CHANGED.to_owned();
+    }
+    let before = section(old, "Fertig");
+    let finished = section(new, "Fertig")
+        .into_iter()
+        .find(|entry: &&str| !before.contains(entry));
+    if let Some(entry) = finished {
+        let head = entry
+            .split_once(" #")
+            .or_else(|| entry.split_once(" — "))
+            .map(|(head, _): (&str, &str)| head);
+        if let Some(head) = head {
+            return format!("{head} fertig");
+        }
+    }
+    STATE_CHANGED.to_owned()
+}
+
+/// Wenn der letzte Bericht nicht mehr bekannt ist (nach einem Neustart der App).
+pub fn unknown_change() -> String {
+    STATE_CHANGED.to_owned()
+}
+
+/// Zeilen eines Abschnitts: Rest der Kopfzeile („Offen: …“) und die eingerückten Zeilen danach.
+fn section<'a>(text: &'a str, title: &str) -> Vec<&'a str> {
+    let header = format!("{title}:");
+    let mut entries: Vec<&str> = Vec::new();
+    let mut is_inside = false;
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix(header.as_str()) {
+            is_inside = true;
+            if !rest.trim().is_empty() {
+                entries.push(rest.trim());
+            }
+            continue;
+        }
+        if is_inside && line.starts_with(INDENT) {
+            entries.push(line.trim());
+            continue;
+        }
+        is_inside = false;
+    }
+    entries
+}
+
+/// Erste Textzeile (nicht leer, keine Überschrift) der README im Ordner `source`. Der Pfad kommt
+/// vom Agenten und muss, wie ein Dateiverweis im Chat, im Vorhaben liegen.
+pub fn goal_of(source: &str, roots: &LinkRoots) -> Option<String> {
+    let folder = source.trim().trim_end_matches(['/', '\\']);
+    if folder.is_empty() {
+        return None;
+    }
+    let readme = file_links::resolve(&format!("{folder}/{GOAL_FILE}"), roots).ok()?;
+    let content = fs::read_to_string(readme).ok()?;
+    content
+        .lines()
+        .map(str::trim)
+        .find(|line: &&str| !line.is_empty() && !line.starts_with('#'))
+        .map(|line: &str| line.chars().take(MAX_GOAL_CHARS).collect())
 }
 
 /// Übernommene Änderungen in Reihenfolge, dazu ein offener Vorschlag.

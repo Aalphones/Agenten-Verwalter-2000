@@ -94,6 +94,8 @@ mod retro;
 mod side;
 mod tldr;
 
+use self::implementation::ReportUpdate;
+
 const SESSION_CHANGED_EVENT: &str = "session://changed";
 const PROJECT_CHANGED_EVENT: &str = "project://changed";
 const CHAT_ENTRY_EVENT: &str = "chat://entry";
@@ -331,6 +333,9 @@ struct SessionState {
     station_of: Option<String>,
     /// Umsetzung, zu der diese Session eine Rückfrage ist (ADR 048); gespeichert.
     inquiry_of: Option<String>,
+    /// Lagebericht (ohne Zeile „Lage“), den diese Rückfrage zuletzt als Anhang bekam; nur im
+    /// Speicher — nach einem Neustart hängt das nächste Senden den Bericht neu an.
+    last_report: Option<String>,
 }
 
 /// Eine Session, wie `SessionRegistry::restore` sie aus der Datenbank liest.
@@ -1153,6 +1158,18 @@ impl SessionRegistry {
             .map(|tldr: &ProjectTldr| with_project_tldr(text, tldr));
         // Vor `update`: liest Sessions und Datenbank, beides nie unter der Session-Sperre.
         let overlap: Option<SessionOverlap> = self.overlap_of(session_id);
+        // Vor `update`: liest Dateien und Git. Auf eine offene Rückfrage des Agenten antwortet nur
+        // Text, dort hätte ein Anhang keinen Platz.
+        let is_answering: bool = !session.lock().pending.is_empty();
+        let report_update: Option<ReportUpdate> = if is_answering {
+            None
+        } else {
+            self.report_update(app, &session)
+        };
+        let mut all_attachment_ids: Vec<String> = attachment_ids.to_vec();
+        if let Some(found) = &report_update {
+            all_attachment_ids.push(found.attachment.id.clone());
+        }
         // Gesetzt, wenn dieses Senden der Session ihren ersten Namen gibt.
         let mut titled = false;
         let sent = update(
@@ -1209,7 +1226,7 @@ impl SessionRegistry {
                 }
                 // Unter der Session-Sperre zulässig: verschiebt nur lokale Dateien, schreibt nicht in die Pipe.
                 let sent_attachments =
-                    attachments::take_for_workspace(app, attachment_ids, &session.workspace)?;
+                    attachments::take_for_workspace(app, &all_attachment_ids, &session.workspace)?;
                 let mut comments = comments.to_vec();
                 let mut extra_attachments: Vec<Attachment> = Vec::new();
                 for comment in &mut comments {
@@ -1273,6 +1290,16 @@ impl SessionRegistry {
                 }
                 state.begin_sourcing(&agent_text);
                 state.push_user(outbox, sent_text, sent_attachments, skill, comments);
+                if let Some(found) = &report_update {
+                    state.last_report = Some(found.stripped.clone());
+                    state.push_entry(outbox, |seq: u32| ChatEntry::Notice {
+                        seq,
+                        notice: Notice::ReportUpdated {
+                            at: found.at,
+                            summary: found.summary.clone(),
+                        },
+                    });
+                }
                 state.set_status(outbox, SessionStatus::Running);
                 outbox.write(state, line)
             },
@@ -2286,6 +2313,7 @@ impl SessionState {
             side: Vec::new(),
             station_of: None,
             inquiry_of: None,
+            last_report: None,
         }
     }
 

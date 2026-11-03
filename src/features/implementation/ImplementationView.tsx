@@ -35,6 +35,8 @@ interface ImplementationViewProps {
   changesCount: number | null;
   /** Inhalt des Reiters „Changes“ (Reichweite Vorhaben); gezeigt, wenn er aktiv ist. */
   changes: ReactNode;
+  /** Legt eine Rückfrage zur Umsetzung an und öffnet sie (`useInquiry`). */
+  onNewInquiry: (implementationId: string) => Promise<void>;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
 }
@@ -63,6 +65,7 @@ export function ImplementationView({
   hasChanges,
   changesCount,
   changes,
+  onNewInquiry,
   onShowView,
   onOpenProject,
 }: ImplementationViewProps): ReactElement {
@@ -195,14 +198,7 @@ export function ImplementationView({
             onOpenChat={openChat}
           />
         </div>
-        <div className="implementation-view__cards">
-          {isReportShown && (
-            <div className="implementation-view__report">
-              <ReportPanel implementation={implementation} />
-            </div>
-          )}
-          {renderCards()}
-        </div>
+        <div className="implementation-view__cards">{renderCards()}</div>
       </div>
     );
   }
@@ -219,6 +215,9 @@ export function ImplementationView({
         onToggleReport={(): void => {
           setIsReportShown((current: boolean) => !current);
         }}
+        onNewInquiry={(): void => {
+          run(() => onNewInquiry(implementationId), 'Rückfrage nicht angelegt');
+        }}
         onShowView={onShowView}
         onOpenProject={onOpenProject}
       />
@@ -233,6 +232,14 @@ export function ImplementationView({
       />
       {renderActionError()}
       {renderBody()}
+      {isReportShown && (
+        <ReportPanel
+          implementation={implementation}
+          onClose={(): void => {
+            setIsReportShown(false);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -4,6 +4,8 @@ import { formatCount } from '@/features/changes/changesScope';
 import { activeLaneCount } from '@/features/implementation/implementationOrder';
 import {
   implementationTitle,
+  INQUIRY_LABEL,
+  INQUIRY_TITLE,
   lanesActiveText,
   REPORT_LABEL,
   REPORT_TITLE,
@@ -25,6 +27,7 @@ interface ImplementationHeaderProps {
   changesCount: number | null;
   isReportShown: boolean;
   onToggleReport: () => void;
+  onNewInquiry: () => void;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
 }
@@ -38,6 +41,7 @@ export function ImplementationHeader({
   changesCount,
   isReportShown,
   onToggleReport,
+  onNewInquiry,
   onShowView,
   onOpenProject,
 }: ImplementationHeaderProps): ReactElement {
@@ -101,6 +105,14 @@ export function ImplementationHeader({
         ))}
       </div>
       <div className="session-header__tools">
+        <button
+          type="button"
+          className="implementation-bar__button"
+          title={INQUIRY_TITLE}
+          onClick={onNewInquiry}
+        >
+          {INQUIRY_LABEL}
+        </button>
         <button
           type="button"
           className="implementation-bar__button"

@@ -15,6 +15,7 @@ import { useProjectArtifacts } from '@/features/artifacts/useProjectArtifacts';
 import { ChatView } from '@/features/chat/ChatView';
 import { useGitStatus } from '@/features/git/useGitStatus';
 import { ImplementationView as ImplementationMain } from '@/features/implementation/ImplementationView';
+import { useInquiry } from '@/features/implementation/useInquiry';
 import { useImplementations } from '@/features/implementation/useImplementations';
 import { countChangedFiles } from '@/features/changes/changesScope';
 import { ChangesView } from '@/features/changes/ChangesView';
@@ -344,6 +345,8 @@ export function App(): ReactElement {
     selectSession(created.id);
   }
 
+  const startInquiry = useInquiry(handleSessionCreated);
+
   function renderOverview(project: ProjectSummary, latestSession: SessionSummary): ReactElement {
     // Ein Schlüssel für die ganze Ansicht, nicht je Kind: gleiche Schlüssel an Geschwistern lassen React beim
     // Wechsel Kopfzeilen duplizieren statt ersetzen.
@@ -386,6 +389,7 @@ export function App(): ReactElement {
               onChanged={reloadChanges}
             />
           }
+          onNewInquiry={startInquiry}
           onShowView={showImplementationView}
           onOpenProject={(): void => {
             selectProject(project.id);
@@ -556,6 +560,7 @@ export function App(): ReactElement {
         onSelectSession={selectSession}
         onSelectProject={selectProject}
         onSelectImplementation={selectImplementation}
+        onNewInquiry={startInquiry}
         onNew={openNewSession}
         onOpenSettings={openSettings}
         onOpenArchive={(): void => {

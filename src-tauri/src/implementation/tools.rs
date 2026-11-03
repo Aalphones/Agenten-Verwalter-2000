@@ -8,7 +8,7 @@ use super::model::{
     ImplementationChangedEvent, ImplementationView, MAX_DESCRIPTION_CHARS, MAX_NAME_CHARS,
     MAX_SOURCE_CHARS, MAX_TITLE_CHARS, PhaseInput, check_length, validate,
 };
-use super::{IMPLEMENTATION_CHANGED_EVENT, changes, report};
+use super::{IMPLEMENTATION_CHANGED_EVENT, changes};
 use crate::mcp_access::tools::{ToolCall, ToolResult, ToolSet, ToolSpec};
 use crate::sessions::registry::SessionRegistry;
 
@@ -209,14 +209,14 @@ fn create(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, Str
     announce(call, &view);
     // Die erste Station darf sofort starten; die Automatik ist bei einer neuen Umsetzung an.
     super::start::schedule_ready(call.app, &view.id).map_err(|error| error.to_string())?;
-    Ok(answer(&view))
+    Ok(answer(registry, &view))
 }
 
 fn get(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, String> {
     let view = registry
         .require_implementation_of_session(call.session_id)
         .map_err(|error| error.to_string())?;
-    Ok(answer(&view))
+    Ok(answer(registry, &view))
 }
 
 fn describe_phase(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, String> {
@@ -281,9 +281,9 @@ fn parse<T: for<'de> Deserialize<'de>>(arguments: &Value) -> Result<T, String> {
         .map_err(|error| format!("Eingabe nicht lesbar: {error}"))
 }
 
-fn answer(view: &ImplementationView) -> ToolResult {
+fn answer(registry: &SessionRegistry, view: &ImplementationView) -> ToolResult {
     ToolResult::Ok {
-        text: report::text(view, super::now_ms(), false),
+        text: registry.report_text(view, false, super::now_ms()),
         structured: serde_json::to_value(view).ok(),
     }
 }

@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { ImplementationChangedEvent } from '@/lib/bindings/ImplementationChangedEvent';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
+import type { InquiryCreated } from '@/lib/bindings/InquiryCreated';
 
 const IMPLEMENTATION_CHANGED_EVENT = 'implementation://changed';
 
@@ -15,6 +16,12 @@ export function listImplementations(): Promise<ImplementationView[]> {
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (unbekannte Umsetzung), `database` */
 export function loadImplementationReport(id: string): Promise<string> {
   return invoke<string>('implementation_report', { id });
+}
+
+/** Legt eine Rückfrage an: eine frische Session im Vorhaben mit dem Lagebericht als ungesendetem Anhang.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (unbekannte Umsetzung), `io`, `database` */
+export function createInquiry(id: string): Promise<InquiryCreated> {
+  return invoke<InquiryCreated>('implementation_new_inquiry', { id });
 }
 
 export function onImplementationChanged(

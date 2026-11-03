@@ -24,10 +24,6 @@
     overflow-y: auto;
   }
 
-  &__report {
-    padding: 14px var(--space-3xl) 0;
-  }
-
   /* Schmal: die Kartei steht unter der Zeitleiste, die ganze Fläche rollt als eine. */
   @container main (max-width: 900px) {
     grid-template-columns: minmax(0, 1fr);
