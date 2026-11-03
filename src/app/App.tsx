@@ -23,6 +23,8 @@ import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
 import { useRetroProgress } from '@/features/retro/useRetroProgress';
 import { EmptyState } from '@/features/sessions/EmptyState';
 import { NewSession } from '@/features/sessions/NewSession';
+import { OverlapBar } from '@/features/sessions/OverlapBar';
+import { useSessionOverlaps } from '@/features/sessions/useSessionOverlaps';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
 import { openSide } from '@/features/side/openSide';
 import { useViewedSession } from '@/features/sessions/useViewedSession';
@@ -115,6 +117,7 @@ export function App(): ReactElement {
       }
     };
   }, []);
+  useSessionOverlaps();
   // „Neues Vorhaben“ und die Einstellungen ersetzen den Inhalt; Session und Übersicht sind dann nicht sichtbar.
   const isMainReplaced: boolean = showNewSession || showSettings;
 
@@ -410,6 +413,7 @@ export function App(): ReactElement {
           />
           <SessionActionError sessionId={currentSession.id} />
           {isClaude && <UsageAlertBar />}
+          <OverlapBar sessionId={currentSession.id} />
           {renderSessionBody(currentSession)}
         </Fragment>
       );
