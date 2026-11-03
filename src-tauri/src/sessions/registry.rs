@@ -68,7 +68,7 @@ use crate::sessions::auto_handoff::{
 };
 use crate::sessions::model::{
     AutoHandoff, AwaitedScript, ChatEntryEvent, ChatPage, HandoffHalt, HandoffKind, HandoffLine,
-    SessionStatus, SessionSummary,
+    SessionOverlap, SessionStatus, SessionSummary,
 };
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
@@ -84,6 +84,7 @@ use crate::worktrees::{self, SessionRepository, TicketRoot, WorktreeCheck};
 mod artifacts;
 mod commit_scan;
 mod mcp;
+mod overlaps;
 mod restore;
 mod retro;
 mod side;
@@ -104,6 +105,8 @@ const MAX_LOG_LINES: usize = 300;
 const MAX_LOG_LINE_CHARS: usize = 500;
 const MAX_HISTORY_PAGE: u32 = 500;
 const RESUME_MESSAGE: &str = "Mach weiter.";
+/// Satz an den Agenten, wenn eine andere Session im selben Schreib-Ordner arbeitet (ADR 037).
+const OVERLAP_HINT: &str = "Hinweis des Verwalters: Eine andere Session arbeitet gerade im selben Ordner ({folder}, Session „{name}“). Ihre uncommitteten Änderungen dort sind nicht deine.";
 const ANSWER_SEPARATOR: &str = " · ";
 const DEFAULT_IDLE_SECONDS: u64 = 1800;
 const IDLE_CHECK_INTERVAL: Duration = Duration::from_secs(15);
@@ -304,6 +307,8 @@ struct SessionState {
     ticket_roots: Vec<TicketRoot>,
     /// Ticket-Worktrees, die der Agent oder ein Subagent benutzt hat, als (Position, Ordnername).
     ticket_worktrees: Vec<(u32, String)>,
+    /// Schlüssel der Überschneidung, deren Satz der Agent zuletzt bekam (ADR 037); nur im Speicher.
+    last_overlap_key: Option<String>,
     tldr: Option<SessionTldr>,
     tldr_at: Option<f64>,
     /// Anzahl Chat-Einträge, die `tldr` kannte; 0 ohne TL;DR.
@@ -1122,6 +1127,8 @@ impl SessionRegistry {
             .get(&session.project_id)
             .and_then(|project: &ProjectState| project.tldr.as_ref())
             .map(|tldr: &ProjectTldr| with_project_tldr(text, tldr));
+        // Vor `update`: liest Sessions und Datenbank, beides nie unter der Session-Sperre.
+        let overlap: Option<SessionOverlap> = self.overlap_of(session_id);
         // Gesetzt, wenn dieses Senden der Session ihren ersten Namen gibt.
         let mut titled = false;
         let sent = update(
@@ -1218,8 +1225,18 @@ impl SessionRegistry {
                     }
                     _ => text,
                 };
-                let agent_text = review::agent_text(sent_text, &comments, &folders);
+                let mut agent_text = review::agent_text(sent_text, &comments, &folders);
+                // Der Satz geht nur an den Agenten, nicht in den Chat, und nur bei neuer Lage.
+                if let Some(found) = overlap.as_ref().filter(|found: &&SessionOverlap| {
+                    state.last_overlap_key.as_deref() != Some(found.key.as_str())
+                }) {
+                    agent_text.push_str("\n\n");
+                    agent_text.push_str(&overlaps::overlap_hint(found));
+                }
                 let line = message_line(&agent_text, &agent_attachments)?;
+                state.last_overlap_key = overlap
+                    .as_ref()
+                    .map(|found: &SessionOverlap| found.key.clone());
                 // Erst nach allen Schritten, die scheitern können: ein Fehlstart lässt den Namen
                 // stehen. Der Name kommt aus dem getippten Text, nicht aus dem Stand des Vorhabens.
                 if state.status == SessionStatus::New
@@ -2225,6 +2242,7 @@ impl SessionState {
             artifacts_dir: None,
             ticket_roots: Vec::new(),
             ticket_worktrees: Vec::new(),
+            last_overlap_key: None,
             tldr: None,
             tldr_at: None,
             tldr_seq: 0,

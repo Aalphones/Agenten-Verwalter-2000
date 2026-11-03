@@ -99,6 +99,7 @@ pub fn run() {
             commands::archive::archive_search,
             commands::archive::project_restore,
             commands::sessions::session_list,
+            commands::sessions::session_overlaps,
             commands::sessions::session_create_in_project,
             commands::sessions::session_pause,
             commands::sessions::session_resume,

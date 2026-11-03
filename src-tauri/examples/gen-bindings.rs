@@ -42,7 +42,8 @@ use verwalter_lib::{
     retro::model::{RetroExport, RetroProgress},
     review::model::{CommentTarget, ReviewComment},
     sessions::model::{
-        AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionStatus, SessionSummary,
+        AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionOverlap,
+        SessionStatus, SessionSummary,
     },
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
@@ -89,6 +90,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     AwaitedScript::export_all(&cfg)?;
     PromptCache::export_all(&cfg)?;
     SessionSummary::export_all(&cfg)?;
+    SessionOverlap::export_all(&cfg)?;
     ChatPage::export_all(&cfg)?;
     ChatEntryEvent::export_all(&cfg)?;
     HandoffStartedEvent::export_all(&cfg)?;

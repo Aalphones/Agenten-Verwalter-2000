@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | Core: Schreib-Ordner je Session, Überschneidungen ermitteln, Command, Satz an den Agenten; ADR 037 | standard | pending |
+| 1 | Core: Schreib-Ordner je Session, Überschneidungen ermitteln, Command, Satz an den Agenten; ADR 037 | standard | complete |
 | 2 | Oberfläche: Leiste, Sidebar-Marke, Abfrage; Doku-Abschluss | standard | pending |
 
 **Rahmen:** strikt 1 → 2, direkt auf `main`, ein Commit pro Phase, Scope `sessions`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten, Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).
@@ -57,16 +57,16 @@ AK:
 2. Zwei laufende Sessions mit demselben angehängten Repository, die nur in verschiedenen Ticket-Worktrees schreiben, liefern nichts.
 3. `send` hängt den Satz bei neuer Lage genau einmal an; bei gleicher Lage nicht erneut; der Chat-Eintrag bleibt ohne Satz.
 
-- [ ] `sessions/model.rs`: `SessionOverlap` nach Kontrakt; in `src-tauri/examples/gen-bindings.rs` exportieren.
-- [ ] Neues Modul `src-tauri/src/sessions/registry/overlaps.rs` (Muster wie `registry/artifacts.rs`), Modul-Kommentar „Sessions, die gerade im selben Ordner schreiben (ADR 037).“:
+- [x] `sessions/model.rs`: `SessionOverlap` nach Kontrakt; in `src-tauri/examples/gen-bindings.rs` exportieren.
+- [x] Neues Modul `src-tauri/src/sessions/registry/overlaps.rs` (Muster wie `registry/artifacts.rs`), Modul-Kommentar „Sessions, die gerade im selben Ordner schreiben (ADR 037).“:
   - `struct WriterSnapshot { id, number, name, project_name, repositories: Vec<SessionRepository>, ticket_folders: Vec<PathBuf> }`.
   - `fn ticket_folder_path(repositories: &[SessionRepository], roots: &[TicketRoot], position: u32, folder: &str) -> Option<PathBuf>`: Repository an `position`; passende Wurzel = `roots` mit gleicher `position`, deren `prefix` den kleingeschriebenen `folder` beginnt; `inner == None` → `repository_path.parent()?.join(folder)`, sonst `repository_path.join(folder)`.
   - `impl SessionRegistry { pub fn overlaps(&self) -> Result<Vec<SessionOverlap>, CommandError> }`: Schritt 1 Schnappschüsse (Sperre je Session einzeln, nur Sessions im Status `Starting | Running | Waiting`; Name des Vorhabens wie in `busy_in_project`/`summarize` beschafft); Schritt 2 `self.database.with(|c| session_files::load_for(c, &[id]))` je Session (Funktion gibt die Pfade einer Session; ist `load_for` nur über mehrere Sessions zusammengefasst, eine neue Funktion `paths_of(connection, session_id) -> Result<Vec<String>, CommandError>` in `db/session_files.rs` ergänzen); Schritt 3 Schreib-Ordner nach Entscheidung, normalisiert; Schritt 4 Paare suchen, je Session den ersten Ordner (nach Pfad sortiert) mit `other_*` = erste andere Session (nach `number`), `more` = Rest; `key` = `folder|` + sortierte IDs aller Sessions dieses Ordners, mit `,` verbunden.
   - `pub fn overlap_of(&self, session_id: &str) -> Option<SessionOverlap>` (filtert `overlaps()`; Fehler → `None`).
-- [ ] `commands/sessions.rs`: `session_overlaps(registry: State<SessionRegistry>)`; in `lib.rs` registrieren.
-- [ ] `registry.rs`: Feld `SessionState.last_overlap_key: Option<String>`. In `send` **vor** `update` `let overlap = self.overlap_of(session_id);`; in der Closure nach `review::agent_text`: ist `overlap` gesetzt und `Some(key) != state.last_overlap_key`, Satz anhängen (`\n\n` davor) und Schlüssel merken; ist `overlap` `None`, `last_overlap_key = None`.
-- [ ] `docs/decisions/037-parallele-sessions.md`: Optionen (a) Warnung, sobald zwei Sessions dasselbe Repository angehängt haben — verworfen, meldet den Normalfall mehrerer Worktrees dauernd; (b) Schreib-Ordner aus Ticket-Worktrees und geschriebenen Dateien — gewählt; (c) Sperre statt Warnung — verworfen, der Verwalter hält keinen Agenten an. Konsequenzen: Abfrage alle 5 s aus der Oberfläche; Dateien, die der Agent per Shell schreibt, zählen nur, soweit `session_files` sie kennt.
-- [ ] `pnpm check` grün, Commit `feat(sessions): Sessions im selben Schreib-Ordner erkennen`.
+- [x] `commands/sessions.rs`: `session_overlaps(registry: State<SessionRegistry>)`; in `lib.rs` registrieren.
+- [x] `registry.rs`: Feld `SessionState.last_overlap_key: Option<String>`. In `send` **vor** `update` `let overlap = self.overlap_of(session_id);`; in der Closure nach `review::agent_text`: ist `overlap` gesetzt und `Some(key) != state.last_overlap_key`, Satz anhängen (`\n\n` davor) und Schlüssel merken; ist `overlap` `None`, `last_overlap_key = None`.
+- [x] `docs/decisions/037-parallele-sessions.md`: Optionen (a) Warnung, sobald zwei Sessions dasselbe Repository angehängt haben — verworfen, meldet den Normalfall mehrerer Worktrees dauernd; (b) Schreib-Ordner aus Ticket-Worktrees und geschriebenen Dateien — gewählt; (c) Sperre statt Warnung — verworfen, der Verwalter hält keinen Agenten an. Konsequenzen: Abfrage alle 5 s aus der Oberfläche; Dateien, die der Agent per Shell schreibt, zählen nur, soweit `session_files` sie kennt.
+- [x] `pnpm check` grün, Commit `feat(sessions): Sessions im selben Schreib-Ordner erkennen`.
 
 ## Phase 2 — Oberfläche
 
