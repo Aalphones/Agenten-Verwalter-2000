@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Schreib-Ordner je Session, Überschneidungen ermitteln, Command, Satz an den Agenten; ADR 037 | standard | complete |
-| 2 | Oberfläche: Leiste, Sidebar-Marke, Abfrage; Doku-Abschluss | standard | pending |
+| 2 | Oberfläche: Leiste, Sidebar-Marke, Abfrage; Doku-Abschluss | standard | complete |
 
 **Rahmen:** strikt 1 → 2, direkt auf `main`, ein Commit pro Phase, Scope `sessions`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten, Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).
 
@@ -77,13 +77,13 @@ AK:
 2. „Ausblenden“ blendet für diese Session und diesen `key` aus; ändert sich der `key`, erscheint die Leiste wieder.
 3. In der Sidebar trägt jede betroffene Session nach Uhr/vor Ungelesen-Punkt das Symbol (14 px, `--color-waiting`, `role="img"`, `aria-label`/`title` „Arbeitet im selben Ordner wie eine andere Session“), unabhängig vom Ausblenden.
 
-- [ ] `src/stores/sessions.ts` (oder neuer Slice `src/stores/overlaps.ts`, Feature-Name `overlaps`): `overlaps: Record<string, SessionOverlap>`, `dismissed: Record<string, string>` (Session → Schlüssel), Aktionen `setOverlaps(list)`, `dismissOverlap(sessionId, key)`.
-- [ ] Hook `src/features/sessions/useSessionOverlaps.ts`, einmal in `App.tsx`: Intervall 5 s, dazu Abo auf `session://changed` mit 500 ms Entprellung; Fehler still verwerfen (nächster Lauf).
-- [ ] `src/features/sessions/OverlapBar.tsx` + `.css` (BEM `overlap-bar__*`), Symbol als `src/components/TwinFoldersIcon.tsx`; in `App.tsx` nach `UsageAlertBar`.
-- [ ] `SidebarItem.tsx`: Marke nach AK 3 (Klasse `sidebar-item__overlap`).
-- [ ] Doc: `docs/code-map.md` neue Zeile „Parallele Sessions“ (Oberfläche `OverlapBar`, `useSessionOverlaps`, Store; Core `sessions/registry/overlaps.rs`, `session_overlaps`, ADR 037); `docs/glossary.md` neuer Eintrag **Schreib-Ordner**: „Ordner, in dem eine Session tatsächlich schreibt: ihre benutzten Ticket-Worktrees und der Haupt-Checkout, wenn sie dort Dateien geändert hat (ADR 037).“
-- [ ] Plan-Abschluss: Bottom-Sektionen, Archiv (ganzer Plan-Ordner), STATE.md, Versions-Tag.
-- [ ] `pnpm check` grün, Commit `feat(sessions): Leiste und Sidebar-Marke bei gleichem Schreib-Ordner`.
+- [x] `src/stores/sessions.ts` (oder neuer Slice `src/stores/overlaps.ts`, Feature-Name `overlaps`): `overlaps: Record<string, SessionOverlap>`, `dismissed: Record<string, string>` (Session → Schlüssel), Aktionen `setOverlaps(list)`, `dismissOverlap(sessionId, key)`.
+- [x] Hook `src/features/sessions/useSessionOverlaps.ts`, einmal in `App.tsx`: Intervall 5 s, dazu Abo auf `session://changed` mit 500 ms Entprellung; Fehler still verwerfen (nächster Lauf).
+- [x] `src/features/sessions/OverlapBar.tsx` + `.css` (BEM `overlap-bar__*`), Symbol als `src/components/TwinFoldersIcon.tsx`; in `App.tsx` nach `UsageAlertBar`.
+- [x] `SidebarItem.tsx`: Marke nach AK 3 (Klasse `sidebar-item__overlap`).
+- [x] Doc: `docs/code-map.md` neue Zeile „Parallele Sessions“ (Oberfläche `OverlapBar`, `useSessionOverlaps`, Store; Core `sessions/registry/overlaps.rs`, `session_overlaps`, ADR 037); `docs/glossary.md` neuer Eintrag **Schreib-Ordner**: „Ordner, in dem eine Session tatsächlich schreibt: ihre benutzten Ticket-Worktrees und der Haupt-Checkout, wenn sie dort Dateien geändert hat (ADR 037).“
+- [x] Plan-Abschluss: Bottom-Sektionen, Archiv (ganzer Plan-Ordner), STATE.md, Versions-Tag.
+- [x] `pnpm check` grün, Commit `feat(sessions): Leiste und Sidebar-Marke bei gleichem Schreib-Ordner`.
 
 ## Wackelstellen (nur Plan, kein Prüfauftrag)
 
@@ -92,10 +92,24 @@ AK:
 
 ## Summary
 
+Schreiben zwei laufende Sessions im selben Ordner, zeigt der Verwalter eine Leiste unter der Kopfzeile und eine Marke an beiden Sessions in der Sidebar; der nächste gesendete Text trägt einen Hinweis an den Agenten. Sessions auf getrennten Ticket-Worktrees bleiben still. Entscheidung: [ADR 037](../../decisions/037-parallele-sessions.md).
+
 ## Files touched
+
+- Core: `src-tauri/src/sessions/registry/overlaps.rs`, `registry.rs`, `sessions/model.rs`, `db/session_files.rs`, `commands/sessions.rs`, `lib.rs`, `examples/gen-bindings.rs`
+- Oberfläche: `src/features/sessions/OverlapBar.tsx` + `.css`, `useSessionOverlaps.ts`, `src/stores/overlaps.ts`, `src/components/TwinFoldersIcon.tsx`, `src/app/SidebarItem.tsx` + `.css`, `src/app/App.tsx`, `src/lib/sessions.ts`, `src/styles/theme.css`
+- Doku: `docs/decisions/037-parallele-sessions.md`, `docs/code-map.md`, `docs/glossary.md`
 
 ## Commits
 
+- `c1278ab` feat(sessions): Sessions im selben Schreib-Ordner erkennen
+- `5e2bf4c` feat(sessions): Leiste und Sidebar-Marke bei gleichem Schreib-Ordner
+
 ## Deviations from plan
 
+- Neues Farb-Token `--color-status-waiting-subtle` in `theme.css` (hell und beide Dunkel-Blöcke): der Plan nannte `waiting-subtle`, das Token gab es nicht.
+- Store als eigener Slice `src/stores/overlaps.ts` statt in `sessions.ts`.
+
 ## Follow-ups
+
+- Die Leiste hat keinen Live-Lauf mit zwei echten Sessions hinter sich; geprüft sind Typen, Lint, Format, Build und Clippy.
