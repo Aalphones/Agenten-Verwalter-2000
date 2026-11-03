@@ -10,11 +10,22 @@ const VIDEO: &str = include_str!("video.js");
 const AUDIO: &str = include_str!("audio.js");
 const TEXT: &str = include_str!("text.js");
 const MARKDOWN: &str = include_str!("markdown.js");
+const TREE: &str = include_str!("tree.js");
+const JSON: &str = include_str!("json.js");
+const YAML: &str = include_str!("yaml.js");
+const CONFIG: &str = include_str!("config.js");
+const XML: &str = include_str!("xml.js");
+const CSV: &str = include_str!("csv.js");
 
 /// Das Skript des Betrachters für den Typ; `None` → die Oberfläche zeigt die Rest-Karte. Ein neuer
 /// Betrachter ist eine `.js` daneben und eine Zeile hier.
 pub fn page(kind: ArtifactKind) -> Option<&'static str> {
     match kind {
+        ArtifactKind::Json | ArtifactKind::JsonLines => Some(JSON),
+        ArtifactKind::Yaml => Some(YAML),
+        ArtifactKind::Config => Some(CONFIG),
+        ArtifactKind::Xml => Some(XML),
+        ArtifactKind::Csv => Some(CSV),
         ArtifactKind::Image => Some(IMAGE),
         ArtifactKind::Video => Some(VIDEO),
         ArtifactKind::Audio => Some(AUDIO),
@@ -26,15 +37,28 @@ pub fn page(kind: ArtifactKind) -> Option<&'static str> {
     }
 }
 
+/// Diese Betrachter zeichnen Bäume und bekommen `tree.js` vor ihr eigenes Skript.
+fn needs_tree(kind: ArtifactKind) -> bool {
+    matches!(
+        kind,
+        ArtifactKind::Json | ArtifactKind::JsonLines | ArtifactKind::Yaml | ArtifactKind::Xml
+    )
+}
+
 /// Die fertige Betrachter-Seite für `file`, ohne Kommentar-Brücke (die hängt der Server an).
 pub fn render(kind: ArtifactKind, file: &str) -> Option<String> {
-    let script = page(kind)?;
+    let page_script = page(kind)?;
+    let script = if needs_tree(kind) {
+        format!("{TREE}\n{page_script}")
+    } else {
+        page_script.to_owned()
+    };
     // Erst die Skripte, zuletzt der Dateiname: so kann kein Name einen Platzhalter tragen,
     // der danach noch ersetzt würde.
     Some(
         SHELL
             .replace("__COMMON__", COMMON)
-            .replace("__SCRIPT__", script)
+            .replace("__SCRIPT__", &script)
             .replace("__KIND__", &script_string(kind.as_str()))
             .replace("__FILE__", &script_string(file)),
     )

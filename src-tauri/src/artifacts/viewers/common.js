@@ -27,10 +27,20 @@ const LIBRARIES = {
     url: `${CDN}mermaid@10.9.1/dist/mermaid.min.js`,
     integrity: 'sha384-WmdflGW9aGfoBdHc4rRyWzYuAjEmDwMdGdiPNacbwfGKxBW/SO6guzuQ76qjnSlr',
   },
+  yaml: {
+    url: `${CDN}js-yaml@4.1.0/dist/js-yaml.min.js`,
+    integrity: 'sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du',
+  },
+  papaparse: {
+    url: `${CDN}papaparse@5.4.1/papaparse.min.js`,
+    integrity: 'sha384-D/t0ZMqQW31H3az8ktEiNb39wyKnS82iFY52QPACM+IjKW3jDUhyIgh2PApRqJZs',
+  },
 };
 const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_HIGHLIGHT_BYTES = 512 * 1024;
 const BIG_FILE_LINES = 3000;
+const MAX_TABLE_ROWS = 5000;
+const SEARCH_DELAY_MS = 150;
 
 // Endung → highlight.js-Sprache; was fehlt, bleibt ungefärbt.
 const LANGUAGES = {
@@ -197,4 +207,76 @@ async function highlightLines(container, language) {
     if (elements[index]) elements[index].innerHTML = html;
   });
   return true;
+}
+
+/** Färbt die Zeile `number` als Fehlerstelle und rollt sie in die Mitte. */
+function markErrorLine(container, number) {
+  const element = container.children[number - 1];
+  if (!element) return;
+  element.style.background = 'var(--diff-del-bg)';
+  element.style.color = 'var(--diff-del-fg)';
+  element.style.boxShadow = 'inset 3px 0 var(--diff-del-fg)';
+  element.scrollIntoView({ block: 'center' });
+}
+
+/** Suchfeld in der Kopfleiste; `onChange` bekommt den Suchtext in Kleinbuchstaben, leicht verzögert. */
+function addSearchField(placeholder, onChange) {
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.placeholder = placeholder;
+  input.setAttribute('aria-label', placeholder);
+  Object.assign(input.style, {
+    padding: '2px 8px',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+    background: 'var(--bg)',
+    color: 'var(--fg)',
+    font: 'inherit',
+  });
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => onChange(input.value.trim().toLowerCase()), SEARCH_DELAY_MS);
+  });
+  document.getElementById('viewer-tools').prepend(input);
+  return input;
+}
+
+/** Sich ausschließende Ansichten als Knöpfe in der Kopfleiste: `views` = `[{ label, show }]`. */
+function addViewSwitch(views, initialIndex = 0) {
+  const buttons = [];
+  const select = (index) => {
+    buttons.forEach((button, buttonIndex) => {
+      button.setAttribute('aria-pressed', String(buttonIndex === index));
+    });
+    views[index].show();
+  };
+  views.forEach((view, index) => {
+    buttons.push(viewer.addTool(view.label, () => select(index), index === initialIndex));
+  });
+  select(initialIndex);
+}
+
+/** Tabellen-Stile für CSV und JSON Lines, einmal je Seite. */
+function ensureTableStyles() {
+  if (document.getElementById('table-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'table-styles';
+  style.textContent = `
+    .dt { min-width: 100%; border-collapse: collapse; font: 12px/1.5 var(--font-mono); }
+    .dt th, .dt td {
+      max-width: 480px; padding: 2px 10px; border-bottom: 1px solid var(--border);
+      overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; vertical-align: top;
+    }
+    .dt th {
+      position: sticky; top: 0; z-index: 1; background: var(--bg-bar); font-weight: 600;
+      cursor: pointer; user-select: none;
+    }
+    .dt th[aria-sort] { color: var(--accent); }
+    .dt .num { text-align: right; }
+    .dt .nr { color: var(--fg-muted); text-align: right; user-select: none; }
+    .dt .muted { color: var(--fg-muted); }
+    .dt tbody tr:hover { background: var(--bg-bar); }
+  `;
+  document.head.append(style);
 }

@@ -22,22 +22,36 @@ Betrachter für JSON, JSON Lines, YAML, TOML/INI/.env, XML und CSV/TSV.
 
 ## Abnahmekriterien
 
-- [ ] Jeder der sechs Typen zeigt seinen Betrachter; ohne Internet (YAML, CSV) den Rohtext.
-- [ ] JSON-Baum: Aufklappen, Suche, „Pfad kopieren“ liefert `$.…`; kaputtes JSON zeigt die Fehlerzeile.
-- [ ] `.env`-Werte sind verdeckt, bis sie angeklickt werden.
-- [ ] CSV mit `;` wird richtig in Spalten zerlegt; Sortieren und Filtern funktionieren.
-- [ ] Kommentar auf einen JSON-Knoten bleibt nach „Neu laden“ am selben Knoten.
+- [x] Jeder der sechs Typen zeigt seinen Betrachter; ohne Internet (YAML, CSV) den Rohtext. (Prüfstand Edge headless, CDN gesperrt: YAML Quelltext, CSV Rohtext)
+- [x] JSON-Baum: Aufklappen, Suche; kaputtes JSON zeigt die Fehlerzeile. „Pfad kopieren“ liefert `$.…` — nur der Rückfall (Pfad zum Markieren) belegt, der Erfolgsweg nur in der App prüfbar.
+- [x] `.env`-Werte sind verdeckt, bis sie angeklickt werden.
+- [x] CSV mit `;` wird richtig in Spalten zerlegt; Sortieren und Filtern funktionieren (Sortieren belegt, Filter nur gebaut).
+- [ ] Kommentar auf einen JSON-Knoten bleibt nach „Neu laden“ am selben Knoten. (Zeilen-IDs sind gültige, stabile Selektoren; die Brücke fehlt im Prüfstand — in der App prüfen.)
 
 ## Checkliste
 
-- [ ] `viewers/tree.js`, `viewers/json.js` (Json, JsonLines), `viewers/yaml.js`, `viewers/config.js`, `viewers/xml.js`, `viewers/csv.js`; `tree.js` wird in `mod.rs` bei Json, JsonLines, Yaml, Xml vor das Typ-Skript gehängt.
-- [ ] Weiche `page` um die sechs Typen ergänzen.
-- [ ] Probe-Dateien in `artifacts/proben/`: `beispiel.json`, `kaputt.json`, `beispiel.jsonl`, `beispiel.yaml` (zwei Dokumente), `beispiel.toml`, `beispiel.env`, `beispiel.xml`, `komma.csv`, `semikolon.csv`.
+- [x] `viewers/tree.js`, `viewers/json.js` (Json, JsonLines), `viewers/yaml.js`, `viewers/config.js`, `viewers/xml.js`, `viewers/csv.js`; `tree.js` wird in `mod.rs` bei Json, JsonLines, Yaml, Xml vor das Typ-Skript gehängt.
+- [x] Weiche `page` um die sechs Typen ergänzen.
+- [x] Probe-Dateien in `artifacts/proben/`: `beispiel.json`, `kaputt.json`, `beispiel.jsonl`, `beispiel.yaml` (zwei Dokumente), `beispiel.toml`, `beispiel.env`, `beispiel.xml`, `komma.csv`, `semikolon.csv`; dazu `kaputt.xml`.
 
 ## Definition of Done
 
-- Screenshots je Betrachter und der Fehlerfälle in `artifacts/phase-4-*.png`; Nachweis „Pfad kopieren“ im Report-Back.
-- Sichtbares Ergebnis: Daten-Ausgaben des Agenten sind im Reiter durchsuchbar statt als Textwand.
-- `pnpm check` grün; Seven-Goals-Check.
+- [x] Screenshots je Betrachter und der Fehlerfälle in `artifacts/phase-4-*.png` (Edge headless, dunkel); Nachweis „Pfad kopieren“ siehe oben.
+- [x] Sichtbares Ergebnis: Daten-Ausgaben des Agenten sind im Reiter durchsuchbar statt als Textwand.
+- [x] `pnpm check` grün; Seven-Goals-Check.
 
 ## Report-Back
+
+**Stand:** umgesetzt, im Browser-Prüfstand belegt, in der App nicht gelaufen.
+
+**Entscheidungen / Abweichungen:**
+- Zeilen-ID eines Baumknotens ist nicht der JSONPath selbst, sondern `n<prefix>-<pfad>` mit allen Zeichen außer `A–Z a–z 0–9 -` als `_<hex>_`: die Brücke findet Kommentare per `#id` wieder, und ein ID mit `$ . [ ]` ist kein gültiger Selektor (querySelector wirft). Der echte Pfad steht in `data-path` und ist das, was „Pfad kopieren“ liefert.
+- JSON-Fehlerzeile: Edge nennt in der Meldung keine Stelle mehr, nur einen Textausschnitt. `json.js` sucht die Stelle selbst (Halbierung über die Länge des gültigen Anfangs). Die Plan-Annahme „Zeile aus der Fehlermeldung“ trägt nicht.
+- YAML mit `CORE_SCHEMA` (Zeitstempel bleiben Text, kein Date/Binary im Baum).
+- Rohtext von JSON ist neu formatiert (2 Leerzeichen); seine Zeilennummern passen nicht zur Datei.
+- `.env`: die echten Werte liegen nur in einem JS-Feld, nicht im DOM — ein Kommentar auf die Zeile trägt sie nicht weiter.
+- XML: gemischter Inhalt in Dokumentreihenfolge als `#text`-Knoten; Pfade im XPath-Stil.
+
+**Offen / unsicherste Stelle:** `tree.js` `copyPath` — Erfolgsweg (`execCommand`/`navigator.clipboard`) im Prüfstand nicht auslösbar (headless: beides abgelehnt), nur der Rückfall belegt. In der App prüfen, ob der Rahmen das Kopieren zulässt.
+
+**Prüfstand:** Edge headless gegen einen Mini-Server, der `viewers::render` nachbaut; `pnpm check` grün (Rust hat keine Tests).
