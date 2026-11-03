@@ -6,7 +6,9 @@ const STORAGE_KEY = 'verwalter.overlapDismissedProjects';
 function readDismissedProjects(): string[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(parsed) ? parsed.filter((id: unknown): id is string => typeof id === 'string') : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
   } catch {
     return [];
   }

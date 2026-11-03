@@ -15,7 +15,9 @@ interface OverlapBarProps {
 /** Leiste unter der Kopfzeile, solange eine andere laufende Session im selben Schreib-Ordner arbeitet (ADR 037). „Ausblenden“ gilt dauerhaft für das ganze Vorhaben. */
 export function OverlapBar({ sessionId, projectId }: OverlapBarProps): ReactElement | null {
   const overlap: SessionOverlap | undefined = useOverlapStore((state) => state.overlaps[sessionId]);
-  const dismissed: boolean = useOverlapStore((state) => state.dismissedProjects.includes(projectId));
+  const dismissed: boolean = useOverlapStore((state) =>
+    state.dismissedProjects.includes(projectId),
+  );
   const dismissForProject = useOverlapStore((state) => state.dismissForProject);
   const selectSession = useSessionsStore((state) => state.selectSession);
 
