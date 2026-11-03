@@ -2,27 +2,265 @@
 pub mod model;
 pub mod report;
 pub mod schedule;
+pub mod start;
 pub mod tools;
 
-use std::collections::HashMap;
-use std::sync::Mutex;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::db::implementations::{
     ChangeRow, ImplementationRow, PhaseRow, StationRow, StoredImplementation,
 };
+use crate::error::CommandError;
 use crate::sessions::model::SessionStatus;
+use crate::sessions::registry::SessionRegistry;
 use model::{
-    ChangeSummary, ChangeView, ImplementationView, PendingChange, PhaseInput, PhaseView,
-    StationState, StationView,
+    ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationView, PendingChange,
+    PhaseInput, PhaseView, StationState, StationView,
 };
 
 pub const IMPLEMENTATION_CHANGED_EVENT: &str = "implementation://changed";
 
-/// Tauri-State der Umsetzungen; trägt die Marken der Countdowns (Station → Marke).
+/// So lange wartet eine Station nach der Fertigmeldung ihres Vorgängers, bevor sie startet.
+pub const START_DELAY: Duration = Duration::from_secs(10);
+
+/// Stufe der eingehängten Station nach einem Review mit Befund.
+const FIX_STAGE: &str = "Fix-Runde";
+/// Stufe der Station, deren Modell und Skill die Fix-Runde übernimmt.
+const BUILD_STAGE: &str = "Umsetzung";
+/// Höchstens so viele Fix-Runden je Phase; danach entscheidet der Benutzer.
+const MAX_FIX_ROUNDS: usize = 2;
+const FIX_BRIEF: &str = "Behebe die Befunde der vorigen Review-Station (siehe Vorgänger).";
+const FIX_LIMIT_HINT: &str = "Zwei Fix-Runden sind durch; frag den Benutzer (🔴).";
+
+/// Countdowns und Startsperren der Stationen; liegt in der `SessionRegistry` (eigene Sperre, nie
+/// zusammen mit einer anderen gehalten).
 #[derive(Default)]
-pub struct ImplementationService {
-    pub countdowns: Mutex<HashMap<String, u64>>,
+pub struct Countdowns {
+    next_token: u64,
+    /// Station → (Marke, Ende in ms).
+    running: HashMap<String, (u64, f64)>,
+    /// Stationen, deren Session gerade angelegt wird.
+    starting: HashSet<String>,
+}
+
+impl Countdowns {
+    /// Ersetzt einen laufenden Countdown der Station und gibt die neue Marke zurück.
+    pub fn begin(&mut self, station_id: &str, ends_at: f64) -> u64 {
+        self.next_token += 1;
+        self.running
+            .insert(station_id.to_owned(), (self.next_token, ends_at));
+        self.next_token
+    }
+
+    /// `true`, wenn der Countdown mit dieser Marke noch läuft; er ist danach beendet.
+    pub fn take(&mut self, station_id: &str, token: u64) -> bool {
+        if self
+            .running
+            .get(station_id)
+            .is_some_and(|&(running_token, _): &(u64, f64)| running_token == token)
+        {
+            self.running.remove(station_id);
+            return true;
+        }
+        false
+    }
+
+    pub fn cancel(&mut self, station_id: &str) -> bool {
+        self.running.remove(station_id).is_some()
+    }
+
+    pub fn ends(&self) -> HashMap<String, f64> {
+        self.running
+            .iter()
+            .map(|(station_id, &(_, ends_at)): (&String, &(u64, f64))| {
+                (station_id.clone(), ends_at)
+            })
+            .collect()
+    }
+
+    pub fn claim_start(&mut self, station_id: &str) -> bool {
+        self.starting.insert(station_id.to_owned())
+    }
+
+    pub fn release_start(&mut self, station_id: &str) {
+        self.starting.remove(station_id);
+    }
+}
+
+/// Eine Station mit Phase, wie Meldungen an den Agenten sie nennen.
+#[derive(Debug, Clone)]
+pub struct StationRef {
+    pub phase_key: String,
+    pub stage: String,
+}
+
+/// Was nach einer Fertigmeldung kommt.
+#[derive(Debug, Default)]
+pub struct CompleteOutcome {
+    /// Stationen, die danach starten (Countdown) oder bereitstehen.
+    pub next: Vec<StationRef>,
+    /// Nichts startet von selbst: Halt, Automatik aus oder eine Station des Benutzers ist dran.
+    pub waits_for_user: bool,
+    pub is_finished: bool,
+    pub hint: Option<String>,
+}
+
+impl CompleteOutcome {
+    /// Der Satz, den der Agent als Antwort der Fertigmeldung liest.
+    pub fn text(&self) -> String {
+        let mut text = String::from("Station fertig gemeldet.");
+        if self.is_finished {
+            text.push_str(" Die Umsetzung ist fertig.");
+        } else if self.waits_for_user || self.next.is_empty() {
+            text.push_str(" Die Umsetzung wartet auf den Benutzer.");
+        } else {
+            let names: Vec<String> = self
+                .next
+                .iter()
+                .map(|next: &StationRef| format!("Phase {} · {}", next.phase_key, next.stage))
+                .collect();
+            text.push_str(&format!(" Als Nächstes startet: {}.", names.join(", ")));
+        }
+        if let Some(hint) = &self.hint {
+            text.push(' ');
+            text.push_str(hint);
+        }
+        text
+    }
+}
+
+/// Schickt die Umsetzung an die Oberfläche; ohne Fenster geht nichts verloren.
+pub fn announce(app: &AppHandle, view: &ImplementationView) {
+    let _ = app.emit(
+        IMPLEMENTATION_CHANGED_EVENT,
+        ImplementationChangedEvent {
+            implementation: view.clone(),
+        },
+    );
+}
+
+/// Meldet die Station fertig, hängt bei `fix_needed` Fix-Runde und zweites Review an und plant
+/// die Stationen, die danach starten dürfen. Läuft im MCP-Thread oder im Tauri-Befehl, ohne dass
+/// eine Sperre gehalten wird: die Registry nimmt Datenbank-, Vorhaben- und Session-Sperren selbst,
+/// nacheinander.
+pub fn complete_station(
+    app: &AppHandle,
+    implementation_id: &str,
+    station_id: &str,
+    result: &str,
+    fix_needed: bool,
+) -> Result<CompleteOutcome, CommandError> {
+    let registry = app.state::<SessionRegistry>();
+    let view = registry.implementation_view(implementation_id)?;
+    let (followups, hint) =
+        plan_completion(&view, station_id, fix_needed).map_err(CommandError::Implementation)?;
+    registry.store_station_completion(station_id, result.trim(), &followups)?;
+    let mut outcome = after_completion(app, &registry, implementation_id)?;
+    outcome.hint = hint;
+    Ok(outcome)
+}
+
+/// Prüft die Fertigmeldung und liefert die Stationen, die dahinter einzuhängen sind (Fix-Runde und
+/// zweites Review), sowie den Hinweis an den Agenten, wenn die Fix-Runden erschöpft sind.
+pub fn plan_completion(
+    view: &ImplementationView,
+    station_id: &str,
+    fix_needed: bool,
+) -> Result<(Vec<StationRow>, Option<String>), String> {
+    let (phase, station) = find_station(view, station_id)
+        .ok_or_else(|| "Diese Station gehört nicht zur Umsetzung.".to_owned())?;
+    if station.state == StationState::Done {
+        return Err("Diese Station ist schon fertig gemeldet.".to_owned());
+    }
+    if !fix_needed {
+        return Ok((Vec::new(), None));
+    }
+    if fix_rounds(phase) < MAX_FIX_ROUNDS {
+        return Ok((fix_stations(phase, station), None));
+    }
+    Ok((Vec::new(), Some(FIX_LIMIT_HINT.to_owned())))
+}
+
+/// Stellt nach einer Fertigmeldung fest, was kommt: Ende, Halt oder die nächsten Stationen.
+fn after_completion(
+    app: &AppHandle,
+    registry: &SessionRegistry,
+    implementation_id: &str,
+) -> Result<CompleteOutcome, CommandError> {
+    let view = registry.implementation_view(implementation_id)?;
+    let mut outcome = CompleteOutcome::default();
+    if view.stations_done == view.stations_total {
+        registry.store_implementation_flags(
+            implementation_id,
+            view.auto_start,
+            false,
+            Some(now_ms()),
+        )?;
+        outcome.is_finished = true;
+    } else if view.stop_after_current {
+        registry.store_implementation_flags(implementation_id, false, false, None)?;
+        outcome.waits_for_user = true;
+    } else if view.auto_start {
+        outcome.next = start::schedule_ready(app, implementation_id)?;
+        outcome.waits_for_user = outcome.next.is_empty();
+    } else {
+        outcome.waits_for_user = true;
+    }
+    announce(app, &registry.implementation_view(implementation_id)?);
+    Ok(outcome)
+}
+
+fn find_station<'a>(
+    view: &'a ImplementationView,
+    station_id: &str,
+) -> Option<(&'a PhaseView, &'a StationView)> {
+    view.phases.iter().find_map(|phase: &PhaseView| {
+        phase
+            .stations
+            .iter()
+            .find(|station: &&StationView| station.id == station_id)
+            .map(|station: &StationView| (phase, station))
+    })
+}
+
+fn fix_rounds(phase: &PhaseView) -> usize {
+    phase
+        .stations
+        .iter()
+        .filter(|station: &&StationView| station.stage == FIX_STAGE)
+        .count()
+}
+
+/// Fix-Runde (Modell und Skill der letzten Umsetzungs-Station der Phase, sonst der meldenden) und
+/// danach noch einmal die Stufe der meldenden Station.
+fn fix_stations(phase: &PhaseView, reporting: &StationView) -> Vec<StationRow> {
+    let builder: &StationView = phase
+        .stations
+        .iter()
+        .rev()
+        .find(|station: &&StationView| station.stage == BUILD_STAGE)
+        .unwrap_or(reporting);
+    let row = |stage: String, source: &StationView, brief: String| StationRow {
+        id: uuid::Uuid::new_v4().to_string(),
+        phase_id: phase.id.clone(),
+        position: 0,
+        stage,
+        model: source.model,
+        by_user: false,
+        skill: source.skill.clone(),
+        brief,
+        session_id: None,
+        started_at: None,
+        completed_at: None,
+        result: None,
+    };
+    vec![
+        row(FIX_STAGE.to_owned(), builder, FIX_BRIEF.to_owned()),
+        row(reporting.stage.clone(), reporting, reporting.brief.clone()),
+    ]
 }
 
 /// Was eine Station von ihrer Session wissen muss; die Registry liest es kurz unter der
@@ -40,11 +278,13 @@ pub struct SessionLive {
 }
 
 /// Baut die Ansicht aus den Zeilen. `live` enthält die Sessions der Stationen, `numbers` die
-/// Nummern aller Sessions des Vorhabens (für Plan-Änderungen).
+/// Nummern aller Sessions des Vorhabens (für Plan-Änderungen), `countdowns` das Ende der laufenden
+/// Countdowns je Station.
 pub fn build_view(
     stored: &StoredImplementation,
     live: &HashMap<String, SessionLive>,
     numbers: &HashMap<String, u32>,
+    countdowns: &HashMap<String, f64>,
 ) -> ImplementationView {
     let row = &stored.row;
     let mut phases: Vec<PhaseView> = stored
@@ -65,7 +305,7 @@ pub fn build_view(
                 .collect(),
         })
         .collect();
-    settle_waiting(&mut phases, row.auto_start);
+    settle_waiting(&mut phases, countdowns);
     let all_stations: Vec<&StationView> = phases
         .iter()
         .flat_map(|phase: &PhaseView| phase.stations.iter())
@@ -175,8 +415,9 @@ fn state_of(status: SessionStatus) -> StationState {
 }
 
 /// Stationen ohne Session, die starten dürfen: eine Station des Benutzers wartet auf ihn, eine des
-/// Agenten ist bei ausgeschalteter Automatik bereit.
-fn settle_waiting(phases: &mut [PhaseView], auto_start: bool) {
+/// Agenten zählt herunter oder ist bereit (▶). Nach einem App-Neustart läuft kein Countdown mehr;
+/// die Station ist dann bereit.
+fn settle_waiting(phases: &mut [PhaseView], countdowns: &HashMap<String, f64>) {
     let startable: Vec<String> = phases
         .iter()
         .flat_map(|phase: &PhaseView| phase.stations.iter())
@@ -195,7 +436,10 @@ fn settle_waiting(phases: &mut [PhaseView], auto_start: bool) {
         }
         if station.by_user {
             station.state = StationState::WaitsForYou;
-        } else if !auto_start {
+        } else if let Some(&ends_at) = countdowns.get(&station.id) {
+            station.state = StationState::Countdown;
+            station.starts_at = Some(ends_at);
+        } else {
             station.state = StationState::Ready;
         }
     }

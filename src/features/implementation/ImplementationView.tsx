@@ -12,6 +12,14 @@ import {
 import { ReportPanel } from '@/features/implementation/ReportPanel';
 import { Timeline } from '@/features/implementation/Timeline';
 import type { ImplementationView as Implementation } from '@/lib/bindings/ImplementationView';
+import {
+  cancelStationCountdown,
+  completeStationByUser,
+  setImplementationAutoStart,
+  setImplementationStopAfterCurrent,
+  startStation,
+} from '@/lib/implementation';
+import { useActionError } from '@/lib/useActionError';
 import { useImplementationStore } from '@/stores/implementation';
 import { useSessionsStore, type ImplementationViewKind } from '@/stores/sessions';
 import './ImplementationView.css';
@@ -62,6 +70,7 @@ export function ImplementationView({
   const setFocused = useImplementationStore((state) => state.setFocused);
   const clearFocused = useImplementationStore((state) => state.clearFocused);
   const selectSession = useSessionsStore((state) => state.selectSession);
+  const { error: actionError, run } = useActionError(implementation.id);
 
   const stations: StationRef[] = useMemo(() => flatStations(implementation), [implementation]);
   const isFlow: boolean = !(activeView === 'changes' && hasChanges);
@@ -114,6 +123,17 @@ export function ImplementationView({
     }
   }
 
+  function renderActionError(): ReactElement | null {
+    if (actionError === null) {
+      return null;
+    }
+    return (
+      <div className="implementation-view__error" role="alert">
+        {actionError}
+      </div>
+    );
+  }
+
   function renderCards(): ReactElement | null {
     if (focusedId === null) {
       return null;
@@ -134,6 +154,15 @@ export function ImplementationView({
         onOpenChat={openChat}
         onShowChanges={(): void => {
           onShowView('changes');
+        }}
+        onStart={(stationId: string): void => {
+          run(() => startStation(implementationId, stationId), 'Start fehlgeschlagen');
+        }}
+        onCancelCountdown={(stationId: string): void => {
+          run(() => cancelStationCountdown(implementationId, stationId));
+        }}
+        onCompleteByUser={(stationId: string, result: string): void => {
+          run(() => completeStationByUser(implementationId, stationId, result));
         }}
       />
     );
@@ -183,7 +212,16 @@ export function ImplementationView({
         onShowView={onShowView}
         onOpenProject={onOpenProject}
       />
-      <ImplementationBar implementation={implementation} />
+      <ImplementationBar
+        implementation={implementation}
+        onSetAutoStart={(enabled: boolean): void => {
+          run(() => setImplementationAutoStart(implementationId, enabled));
+        }}
+        onSetStopAfterCurrent={(enabled: boolean): void => {
+          run(() => setImplementationStopAfterCurrent(implementationId, enabled));
+        }}
+      />
+      {renderActionError()}
       {renderBody()}
     </>
   );

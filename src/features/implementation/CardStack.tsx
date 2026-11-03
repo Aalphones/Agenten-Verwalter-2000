@@ -26,6 +26,9 @@ interface CardStackProps {
   onBackToCurrent: () => void;
   onOpenChat: (stationId: string) => void;
   onShowChanges: () => void;
+  onStart: (stationId: string) => void;
+  onCancelCountdown: (stationId: string) => void;
+  onCompleteByUser: (stationId: string, result: string) => void;
 }
 
 /** Die Kartei: groß die Station im Fokus, darüber bis zu drei vorige, darunter bis zu drei kommende. */
@@ -39,6 +42,9 @@ export function CardStack({
   onBackToCurrent,
   onOpenChat,
   onShowChanges,
+  onStart,
+  onCancelCountdown,
+  onCompleteByUser,
 }: CardStackProps): ReactElement | null {
   const focused: StationRef | undefined = flatStations(implementation).find(
     (ref: StationRef) => ref.station.id === focusedId,
@@ -91,6 +97,9 @@ export function CardStack({
           changesCount={changesCount}
           onOpenChat={onOpenChat}
           onShowChanges={onShowChanges}
+          onStart={onStart}
+          onCancelCountdown={onCancelCountdown}
+          onCompleteByUser={onCompleteByUser}
         />
       </div>
       <div className="card-stack__next">{around.next.map(renderSmall)}</div>

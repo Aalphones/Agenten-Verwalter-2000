@@ -10,7 +10,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|---|
 | 1 | [Core: Datenmodell, Werkzeuge anlegen/lesen/beschreiben, Zeile in der Sidebar, Lagebericht als Text; ADR 048, Migration 17](phase-1-core-und-werkzeuge.md) | heikel | 1 | L | complete |
 | 2 | [Ansicht: Zeitleiste mit gekoppelter Kartei, Kopfzeile, Reiter Changes](phase-2-zeitleiste-und-kartei.md) | standard | 2 | L | complete |
-| 3 | [Stationen starten: Fertigmeldung, Nachfolger, erste Nachricht, Countdown, Fix-Runde, Fehler](phase-3-stationen-starten.md) | heikel | 3 | L | pending |
+| 3 | [Stationen starten: Fertigmeldung, Nachfolger, erste Nachricht, Countdown, Fix-Runde, Fehler](phase-3-stationen-starten.md) | heikel | 3 | L | complete |
 | 4 | [Wellen (parallele Phasen) und Plan-Änderung mit Karte „Plan ändern?“](phase-4-wellen-und-plan-aenderung.md) | heikel | 4 | L | pending |
 | 5 | [Rückfragen mit Lagebericht als Anhang, Knopf „Lagebericht“](phase-5-rueckfragen-und-lagebericht.md) | standard | 5 | M | pending |
 | 6 | [Doku-Abschluss: Code-Map, Glossar, AGENTS.md, Prüfprogramm in AGENTS.md](phase-6-doku-abschluss.md) | mechanisch | 6 | S | pending |

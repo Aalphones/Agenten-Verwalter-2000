@@ -12,13 +12,16 @@ import './ImplementationBar.css';
 
 interface ImplementationBarProps {
   implementation: ImplementationView;
+  onSetAutoStart: (enabled: boolean) => void;
+  onSetStopAfterCurrent: (enabled: boolean) => void;
 }
 
-function ignoreChange(): void {}
-
-/** Zeile unter der Kopfzeile: Fortschritt und die Schalter der Automatik. Beide sind angezeigt, aber
- *  noch ohne Wirkung, bis die Stationen starten. */
-export function ImplementationBar({ implementation }: ImplementationBarProps): ReactElement {
+/** Zeile unter der Kopfzeile: Fortschritt und die Schalter der Automatik. */
+export function ImplementationBar({
+  implementation,
+  onSetAutoStart,
+  onSetStopAfterCurrent,
+}: ImplementationBarProps): ReactElement {
   const share: number =
     implementation.stationsTotal === 0
       ? 0
@@ -43,8 +46,7 @@ export function ImplementationBar({ implementation }: ImplementationBarProps): R
           checked={implementation.autoStart}
           label={AUTO_START_LABEL}
           title={AUTO_START_TITLE}
-          disabled
-          onChange={ignoreChange}
+          onChange={onSetAutoStart}
         />
       </span>
       <button
@@ -52,7 +54,9 @@ export function ImplementationBar({ implementation }: ImplementationBarProps): R
         className="implementation-bar__button"
         aria-pressed={implementation.stopAfterCurrent}
         title={STOP_AFTER_TITLE}
-        disabled
+        onClick={(): void => {
+          onSetStopAfterCurrent(!implementation.stopAfterCurrent);
+        }}
       >
         {STOP_AFTER_LABEL}
       </button>

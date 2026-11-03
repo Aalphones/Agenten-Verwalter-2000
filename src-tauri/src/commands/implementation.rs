@@ -1,6 +1,8 @@
+use tauri::AppHandle;
+
 use crate::error::CommandError;
-use crate::implementation::model::ImplementationView;
-use crate::implementation::{now_ms, report};
+use crate::implementation::model::{ImplementationView, PhaseView, StationView};
+use crate::implementation::{self, announce, now_ms, report, start};
 use crate::sessions::registry::SessionRegistry;
 
 /// Alle Umsetzungen nicht archivierter Vorhaben, neueste zuerst (ADR 048). `async`, damit die
@@ -20,4 +22,91 @@ pub async fn implementation_report(
 ) -> Result<String, CommandError> {
     let view = registry.implementation_view(&id)?;
     Ok(report::text(&view, now_ms(), false))
+}
+
+/// Schaltet „Automatisch weiter“. Aus: laufende Countdowns enden. An: Stationen, die starten
+/// dürfen, bekommen einen Countdown.
+#[tauri::command]
+pub async fn implementation_set_auto_start(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+    enabled: bool,
+) -> Result<(), CommandError> {
+    let view = registry.implementation_view(&id)?;
+    registry.store_implementation_flags(&id, enabled, view.stop_after_current, view.finished_at)?;
+    if enabled {
+        start::schedule_ready(&app, &id)?;
+    } else {
+        for station in view
+            .phases
+            .iter()
+            .flat_map(|phase: &PhaseView| phase.stations.iter())
+        {
+            let _ = registry.cancel_countdown(&station.id);
+        }
+    }
+    announce(&app, &registry.implementation_view(&id)?);
+    Ok(())
+}
+
+/// „Anhalten nach dieser Session“: die nächste Fertigmeldung startet nichts mehr.
+#[tauri::command]
+pub async fn implementation_set_stop_after_current(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+    enabled: bool,
+) -> Result<(), CommandError> {
+    let view = registry.implementation_view(&id)?;
+    registry.store_implementation_flags(&id, view.auto_start, enabled, view.finished_at)?;
+    announce(&app, &registry.implementation_view(&id)?);
+    Ok(())
+}
+
+/// ▶: startet die Station sofort, auch mit laufendem Countdown.
+#[tauri::command]
+pub async fn implementation_start_station(
+    app: AppHandle,
+    id: String,
+    station_id: String,
+) -> Result<(), CommandError> {
+    start::start_now(&app, &id, &station_id)
+}
+
+/// „Abbrechen“: der Countdown endet, die Station bleibt bereit.
+#[tauri::command]
+pub async fn implementation_cancel_countdown(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+    station_id: String,
+) -> Result<(), CommandError> {
+    let _ = registry.cancel_countdown(&station_id);
+    announce(&app, &registry.implementation_view(&id)?);
+    Ok(())
+}
+
+/// „Erledigt“ für eine Station des Benutzers.
+#[tauri::command]
+pub async fn implementation_complete_station(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+    station_id: String,
+    result: String,
+) -> Result<(), CommandError> {
+    let view = registry.implementation_view(&id)?;
+    let is_by_user: bool = view
+        .phases
+        .iter()
+        .flat_map(|phase: &PhaseView| phase.stations.iter())
+        .any(|station: &StationView| station.id == station_id && station.by_user);
+    if !is_by_user {
+        return Err(CommandError::Implementation(
+            "Diese Station meldet der Agent selbst.".to_owned(),
+        ));
+    }
+    implementation::complete_station(&app, &id, &station_id, &result, false)?;
+    Ok(())
 }

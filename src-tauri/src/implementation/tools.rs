@@ -19,6 +19,8 @@ const DESCRIBE_PHASE: &str = "implementation_describe_phase";
 const COMPLETE_STATION: &str = "implementation_complete_station";
 const NO_REGISTRY: &str = "Der Verwalter startet noch";
 const NOT_YET: &str = "Noch nicht verfügbar.";
+const NOT_A_STATION: &str = "Diese Session ist keine Station.";
+const MAX_RESULT_CHARS: usize = 200;
 
 pub struct ImplementationTools;
 
@@ -95,7 +97,7 @@ impl ToolSet for ImplementationTools {
                 input_schema: json!({
                     "type": "object",
                     "properties": {
-                        "result": { "type": "string", "minLength": 1, "maxLength": 200 },
+                        "result": { "type": "string", "minLength": 1, "maxLength": MAX_RESULT_CHARS },
                         "fix_needed": { "type": "boolean" },
                     },
                     "required": ["result"],
@@ -113,7 +115,8 @@ impl ToolSet for ImplementationTools {
             CREATE => create(call, &registry),
             GET => get(call, &registry),
             DESCRIBE_PHASE => describe_phase(call, &registry),
-            SET_PHASES | COMPLETE_STATION => Err(NOT_YET.to_owned()),
+            COMPLETE_STATION => complete_station(call, &registry),
+            SET_PHASES => Err(NOT_YET.to_owned()),
             other => Err(format!("Unbekanntes Werkzeug: {other}")),
         };
         outcome.unwrap_or_else(ToolResult::Err)
@@ -184,6 +187,8 @@ fn create(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, Str
         .create_implementation(call.session_id, &arguments.name, &source, &arguments.phases)
         .map_err(|error| error.to_string())?;
     announce(call, &view);
+    // Die erste Station darf sofort starten; die Automatik ist bei einer neuen Umsetzung an.
+    super::start::schedule_ready(call.app, &view.id).map_err(|error| error.to_string())?;
     Ok(answer(&view))
 }
 
@@ -215,6 +220,38 @@ fn describe_phase(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolRes
     announce(call, &view);
     Ok(ToolResult::Ok {
         text: format!("Phase {key} beschrieben."),
+        structured: None,
+    })
+}
+
+#[derive(Deserialize)]
+struct CompleteArguments {
+    #[serde(default)]
+    result: String,
+    #[serde(default)]
+    fix_needed: bool,
+}
+
+/// Die Station wird über die aufrufende Session gefunden, nie über eine Angabe des Agenten.
+fn complete_station(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, String> {
+    let arguments: CompleteArguments = parse(call.arguments)?;
+    check_length("result", arguments.result.trim(), 1, MAX_RESULT_CHARS)?;
+    let Some((implementation_id, station_id)) = registry
+        .station_of_session(call.session_id)
+        .map_err(|error| error.to_string())?
+    else {
+        return Err(NOT_A_STATION.to_owned());
+    };
+    let outcome = super::complete_station(
+        call.app,
+        &implementation_id,
+        &station_id,
+        &arguments.result,
+        arguments.fix_needed,
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(ToolResult::Ok {
+        text: outcome.text(),
         structured: None,
     })
 }

@@ -391,6 +391,50 @@ pub fn complete_station(
     Ok(())
 }
 
+/// Meldet die Station fertig und hängt `followups` direkt dahinter in dieselbe Phase (Fix-Runde
+/// und zweites Review); alles in einem Zug. Die Stationen dahinter rücken nach.
+pub fn complete_station_with_followups(
+    connection: &mut Connection,
+    station_id: &str,
+    completed_at: f64,
+    result: &str,
+    followups: &[StationRow],
+) -> Result<(), CommandError> {
+    let transaction = connection.transaction()?;
+    complete_station(&transaction, station_id, completed_at, result)?;
+    if !followups.is_empty() {
+        let (phase_id, position): (String, u32) = transaction.query_row(
+            "SELECT phase_id, position FROM implementation_stations WHERE id = ?1",
+            params![station_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        let shift = u32::try_from(followups.len()).unwrap_or(u32::MAX);
+        transaction.execute(
+            "UPDATE implementation_stations SET position = position + ?3 \
+             WHERE phase_id = ?1 AND position > ?2",
+            params![phase_id, position, shift],
+        )?;
+        for (offset, followup) in (1..).zip(followups) {
+            transaction.execute(
+                "INSERT INTO implementation_stations (id, phase_id, position, stage, model, \
+                     by_user, skill, brief) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    followup.id,
+                    phase_id,
+                    position + offset,
+                    followup.stage,
+                    followup.model.as_ref().map(enum_to_text).transpose()?,
+                    followup.by_user,
+                    followup.skill,
+                    followup.brief,
+                ],
+            )?;
+        }
+    }
+    transaction.commit()?;
+    Ok(())
+}
+
 pub fn set_flags(
     connection: &Connection,
     implementation_id: &str,

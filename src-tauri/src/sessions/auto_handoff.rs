@@ -35,6 +35,10 @@ pub(crate) struct ScheduledHandoff {
 /// startet dann den Zeitgeber. Nie unter einer Sperre aufrufen: nimmt Vorhaben- und Session-Sperren
 /// selbst, nacheinander.
 pub fn consider(app: &AppHandle, session: &Arc<Session>) {
+    // Eine Station meldet sich selbst fertig; ihre Folgesession startet die Umsetzung.
+    if session.is_station() {
+        return;
+    }
     let registry = app.state::<SessionRegistry>();
     if !registry.project_auto_handoff(session.project_id()) {
         return;

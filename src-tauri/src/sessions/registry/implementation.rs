@@ -4,14 +4,18 @@
 //! Sperren: erst die Datenbank lesen, dann jede Station-Session einzeln und kurz sperren — nie zwei
 //! Session-Sperren zugleich, nie `Database::with` unter einer Session-Sperre.
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard, PoisonError};
 
-use super::{PendingRequest, ProjectState, Session, SessionRegistry, now_ms};
+use tauri::AppHandle;
+
+use super::{
+    Outbox, PendingRequest, ProjectState, Session, SessionRegistry, SessionState, now_ms, update,
+};
 use crate::agents::event::Question;
 use crate::db::implementations::{self as implementation_rows, StationRow, StoredImplementation};
 use crate::error::CommandError;
 use crate::implementation::model::{ImplementationView, PhaseInput, PhaseView};
-use crate::implementation::{SessionLive, build_view, new_rows};
+use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
 use crate::sessions::model::SessionStatus;
 
 const NO_IMPLEMENTATION: &str = "In diesem Vorhaben gibt es keine Umsetzung.";
@@ -125,6 +129,114 @@ impl SessionRegistry {
         self.implementation_view(&view.id)
     }
 
+    /// (Umsetzung, Station) einer Session, die eine Station ist.
+    pub fn station_of_session(
+        &self,
+        session_id: &str,
+    ) -> Result<Option<(String, String)>, CommandError> {
+        self.database
+            .with(|connection| implementation_rows::station_of_session(connection, session_id))
+    }
+
+    /// Bindet die Station an ihre frische Session und merkt die Session als Station. Die
+    /// Datenbank-Zeile zuerst, damit eine Fertigmeldung der Session die Station schon findet.
+    pub fn bind_station(
+        &self,
+        app: &AppHandle,
+        implementation_id: &str,
+        station_id: &str,
+        session_id: &str,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        self.database.with(|connection| {
+            implementation_rows::set_station_session(connection, station_id, session_id, now_ms())
+        })?;
+        update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                state.station_of = Some(implementation_id.to_owned());
+                outbox.summary_dirty = true;
+                Ok(())
+            },
+        )
+    }
+
+    /// Schreibt eine Zeile ins Protokoll der Session; unbekannte Sessions bleiben still.
+    pub fn log_session_line(&self, session_id: &str, line: String) {
+        if let Ok(session) = self.get(session_id) {
+            session.log_line(line);
+        }
+    }
+
+    /// Meldet die Station fertig und hängt `followups` dahinter an (eine Datenbank-Transaktion).
+    pub fn store_station_completion(
+        &self,
+        station_id: &str,
+        result: &str,
+        followups: &[StationRow],
+    ) -> Result<(), CommandError> {
+        self.database.with(|connection| {
+            implementation_rows::complete_station_with_followups(
+                connection,
+                station_id,
+                now_ms(),
+                result,
+                followups,
+            )
+        })
+    }
+
+    /// Setzt Automatik, Halt-Schalter und Abschluss der Umsetzung.
+    pub fn store_implementation_flags(
+        &self,
+        implementation_id: &str,
+        auto_start: bool,
+        stop_after_current: bool,
+        finished_at: Option<f64>,
+    ) -> Result<(), CommandError> {
+        self.database.with(|connection| {
+            implementation_rows::set_flags(
+                connection,
+                implementation_id,
+                auto_start,
+                stop_after_current,
+                finished_at,
+            )
+        })
+    }
+
+    /// Beginnt den Countdown der Station; ein laufender wird ersetzt. Gibt die Marke zurück.
+    pub fn begin_countdown(&self, station_id: &str, ends_at: f64) -> u64 {
+        self.lock_countdowns().begin(station_id, ends_at)
+    }
+
+    /// `true`, wenn der Countdown mit dieser Marke noch galt; er ist danach weg.
+    pub fn take_countdown(&self, station_id: &str, token: u64) -> bool {
+        self.lock_countdowns().take(station_id, token)
+    }
+
+    /// `true`, wenn ein Countdown lief.
+    pub fn cancel_countdown(&self, station_id: &str) -> bool {
+        self.lock_countdowns().cancel(station_id)
+    }
+
+    /// Hat nur der erste Aufrufer Erfolg, bis `release_start` folgt: schützt vor zwei Sessions für
+    /// dieselbe Station (Zeitgeber und ▶ zugleich).
+    pub fn claim_start(&self, station_id: &str) -> bool {
+        self.lock_countdowns().claim_start(station_id)
+    }
+
+    pub fn release_start(&self, station_id: &str) {
+        self.lock_countdowns().release_start(station_id);
+    }
+
+    fn lock_countdowns(&self) -> MutexGuard<'_, Countdowns> {
+        self.implementation_countdowns
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
     /// Name des Vorhabens für Kopfzeilen; leer für ein unbekanntes.
     pub fn project_name(&self, project_id: &str) -> String {
         self.lock_projects()
@@ -140,6 +252,7 @@ impl SessionRegistry {
             .map(|member: &Arc<Session>| (member.id.clone(), member.number))
             .collect();
         let now = now_ms();
+        let countdowns: HashMap<String, f64> = self.lock_countdowns().ends();
         let live: HashMap<String, SessionLive> = members
             .iter()
             .filter(|member: &&Arc<Session>| {
@@ -149,7 +262,7 @@ impl SessionRegistry {
             })
             .map(|member: &Arc<Session>| (member.id.clone(), live_of(member, now)))
             .collect();
-        build_view(stored, &live, &numbers)
+        build_view(stored, &live, &numbers, &countdowns)
     }
 }
 

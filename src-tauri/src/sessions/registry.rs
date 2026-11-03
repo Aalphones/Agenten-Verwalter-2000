@@ -55,6 +55,7 @@ use crate::db::{
 use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
+use crate::implementation::Countdowns;
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::mcp_access::McpAccess;
 use crate::notices::model::{Denial, Notice};
@@ -126,6 +127,8 @@ pub struct SessionRegistry {
     /// vor der Sessions-Map und der Session-Sperre.
     viewed: Mutex<Option<String>>,
     database: Arc<Database>,
+    /// Countdowns der Stationen (ADR 048); wird nie zusammen mit einer anderen Sperre gehalten.
+    implementation_countdowns: Mutex<Countdowns>,
 }
 
 /// Was ein Vorhaben selbst trägt; Workspace und Repositories liegen gleich an jeder seiner Sessions.
@@ -394,6 +397,7 @@ impl SessionRegistry {
             projects: Mutex::new(HashMap::new()),
             viewed: Mutex::new(None),
             database,
+            implementation_countdowns: Mutex::new(Countdowns::default()),
         }
     }
 
@@ -596,22 +600,28 @@ impl SessionRegistry {
     /// Denkaufwand, Modus, Workspace und Repositories kommen von der Session mit der höchsten
     /// Nummer. Gibt es schon eine nicht gestartete Session, kommt diese zurück.
     pub fn create_in_project(&self, project_id: &str) -> Result<SessionSummary, CommandError> {
-        let mut members: Vec<Arc<Session>> = self
-            .lock_sessions()
-            .values()
-            .filter(|session: &&Arc<Session>| session.project_id == project_id)
-            .cloned()
-            .collect();
-        members.sort_by_key(|session: &Arc<Session>| session.number);
-        let Some(latest) = members.last().cloned() else {
-            return Err(project_not_found(project_id));
-        };
-        for member in &members {
+        for member in self.project_sessions(project_id) {
             let state = member.lock();
             if state.status == SessionStatus::New {
-                return Ok(summarize(member, &state));
+                return Ok(summarize(&member, &state));
             }
         }
+        self.create_fresh_in_project(project_id)
+    }
+
+    /// Wie `create_in_project`, legt aber immer eine neue Session an — auch wenn eine im Status
+    /// „Neu“ wartet (Stationen einer Umsetzung, ADR 048).
+    pub fn create_fresh_in_project(
+        &self,
+        project_id: &str,
+    ) -> Result<SessionSummary, CommandError> {
+        let Some(latest) = self
+            .project_sessions(project_id)
+            .into_iter()
+            .max_by_key(|session: &Arc<Session>| session.number)
+        else {
+            return Err(project_not_found(project_id));
+        };
         let (model, codex_model, effort, mode) = {
             let state = latest.lock();
             (
@@ -2176,6 +2186,11 @@ impl Session {
 
     pub(crate) fn project_id(&self) -> &str {
         &self.project_id
+    }
+
+    /// Diese Session ist die Station einer Umsetzung (ADR 048).
+    pub(crate) fn is_station(&self) -> bool {
+        self.lock().station_of.is_some()
     }
 
     pub(crate) fn log_line(&self, line: String) {

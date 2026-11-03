@@ -1,7 +1,10 @@
 //! Legt eine Umsetzung (ADR 048) in einer **Kopie** der Datenbank an oder zeigt sie, ohne App und
 //! ohne Registry. Aufruf:
 //! `cargo run --manifest-path src-tauri/Cargo.toml --example implementation-probe -- <Datenbank-Kopie> create <Session-ID> <JSON-Datei>`
-//! bzw. `… -- <Datenbank-Kopie> show <Umsetzungs-ID>`.
+//! bzw. `… -- <Datenbank-Kopie> show <Umsetzungs-ID>`
+//! bzw. `… -- <Datenbank-Kopie> complete <Umsetzungs-ID> <Station-ID> "<Ergebnis>" [--fix]`
+//! (meldet die Station fertig, ohne etwas zu starten, und druckt, welche Stationen danach starten
+//! dürfen).
 //! Die JSON-Datei hat die Form der Eingabe von `implementation_create` (`name`, `source`, `phases`).
 //! Druckt den Lagebericht; Stationen gelten als nicht gestartet, weil keine Session läuft. Fehler
 //! als `FEHLER: <Satz>`.
@@ -16,12 +19,13 @@ use verwalter_lib::db::Database;
 use verwalter_lib::db::implementations::{self, StoredImplementation};
 use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::error::CommandError;
+use verwalter_lib::implementation::model::{ImplementationView, StationState};
 use verwalter_lib::implementation::model::{
     MAX_NAME_CHARS, MAX_SOURCE_CHARS, PhaseInput, check_length, validate,
 };
-use verwalter_lib::implementation::{build_view, new_rows, now_ms, report};
+use verwalter_lib::implementation::{build_view, new_rows, now_ms, plan_completion, report};
 
-const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID>";
+const USAGE: &str = "Aufruf: implementation-probe <Datenbank-Kopie> create <Session-ID> <JSON-Datei> | show <Umsetzungs-ID> | complete <Umsetzungs-ID> <Station-ID> \"<Ergebnis>\" [--fix]";
 
 #[derive(Deserialize)]
 struct CreateInput {
@@ -52,6 +56,22 @@ fn main() -> ExitCode {
         arguments.get(2),
         arguments.get(3),
     ) {
+        (Some("complete"), Some(implementation_id), Some(station_id)) => {
+            let Some(result) = arguments.get(4) else {
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            };
+            let fix_needed: bool = arguments
+                .get(5)
+                .is_some_and(|flag: &String| flag == "--fix");
+            complete(
+                &database_path,
+                implementation_id,
+                station_id,
+                result,
+                fix_needed,
+            )
+        }
         (Some("create"), Some(session_id), Some(json_file)) => {
             create(&database_path, session_id, Path::new(json_file))
         }
@@ -116,17 +136,85 @@ fn create(database_path: &Path, session_id: &str, json_file: &Path) -> Result<St
     Ok(format!("Umsetzung {id} angelegt.\n\n{text}"))
 }
 
+fn complete(
+    database_path: &Path,
+    implementation_id: &str,
+    station_id: &str,
+    result: &str,
+    fix_needed: bool,
+) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(|error| error.to_string())?;
+    let before = view_of(&database, implementation_id)?;
+    let (followups, hint) = plan_completion(&before, station_id, fix_needed)?;
+    database
+        .with(|connection| {
+            implementations::complete_station_with_followups(
+                connection,
+                station_id,
+                now_ms(),
+                result,
+                &followups,
+            )
+        })
+        .map_err(|error| error.to_string())?;
+    let after = view_of(&database, implementation_id)?;
+    let startable: Vec<String> = after
+        .phases
+        .iter()
+        .flat_map(|phase| phase.stations.iter().map(move |station| (phase, station)))
+        .filter(|(_, station)| station.state == StationState::Ready)
+        .map(|(phase, station)| format!("  Phase {} · {}", phase.key, station.stage))
+        .collect();
+    let hint_line = hint
+        .map(|text: String| {
+            format!(
+                "
+Hinweis: {text}"
+            )
+        })
+        .unwrap_or_default();
+    let next = if startable.is_empty() {
+        "  (keine)".to_owned()
+    } else {
+        startable.join(
+            "
+",
+        )
+    };
+    Ok(format!(
+        "VORHER
+{}
+
+NACHHER
+{}
+
+Darf starten:
+{next}{hint_line}",
+        report::text(&before, now_ms(), false),
+        report::text(&after, now_ms(), false),
+    ))
+}
+
+fn view_of(database: &Database, implementation_id: &str) -> Result<ImplementationView, String> {
+    let stored: StoredImplementation = database
+        .with(|connection| implementations::load(connection, implementation_id))
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| format!("Umsetzung nicht gefunden: {implementation_id}"))?;
+    Ok(build_view(
+        &stored,
+        &HashMap::new(),
+        &HashMap::new(),
+        &HashMap::new(),
+    ))
+}
+
 fn show(database_path: &Path, implementation_id: &str) -> Result<String, String> {
     let database = Database::open(database_path).map_err(|error| error.to_string())?;
     report_of(&database, implementation_id)
 }
 
 fn report_of(database: &Database, implementation_id: &str) -> Result<String, String> {
-    let stored: StoredImplementation = database
-        .with(|connection| implementations::load(connection, implementation_id))
-        .map_err(|error| error.to_string())?
-        .ok_or_else(|| format!("Umsetzung nicht gefunden: {implementation_id}"))?;
-    let view = build_view(&stored, &HashMap::new(), &HashMap::new());
+    let view = view_of(database, implementation_id)?;
     Ok(report::text(&view, now_ms(), false))
 }
 
