@@ -23,20 +23,20 @@ Betrachter für alles, was Zeilen hat, und für Markdown. Gemeinsame Bausteine (
 
 ## Abnahmekriterien
 
-- [ ] `.txt`, `.log`, Quelltext (`.ts`, `.py`, `.rs`, `.sql`, `.ps1` geprüft), `.diff` und `.md` öffnen ihren Betrachter; Zeilennummern bei allem außer Markdown.
-- [ ] Quelltext hat Syntaxfarben in hell und dunkel; Umbruch umschaltbar.
-- [ ] Markdown zeigt Überschriften, Tabellen, Code mit Farben, Mermaid-Block als Diagramm, Aufgabenlisten, Inhaltsverzeichnis; `<script>` im Markdown wird nicht ausgeführt.
-- [ ] Ohne Internet zeigt jeder dieser Betrachter den Rohtext mit Zeilennummern.
-- [ ] Eine 20-MiB-Logdatei öffnet in unter 3 s mit Hinweis „Datei gekürzt“.
-- [ ] Kommentar auf Zeile 12 einer Code-Datei bleibt nach „Neu laden“ an Zeile 12.
+- [x] `.txt`, `.log`, Quelltext (`.ts`, `.py`, `.rs`, `.sql`, `.ps1` geprüft), `.diff` und `.md` öffnen ihren Betrachter; Zeilennummern bei allem außer Markdown.
+- [x] Quelltext hat Syntaxfarben in hell und dunkel; Umbruch umschaltbar.
+- [x] Markdown zeigt Überschriften, Tabellen, Code mit Farben, Mermaid-Block als Diagramm, Aufgabenlisten, Inhaltsverzeichnis; `<script>` im Markdown wird nicht ausgeführt.
+- [x] Ohne Internet zeigt jeder dieser Betrachter den Rohtext mit Zeilennummern.
+- [x] Eine 20-MiB-Logdatei öffnet in unter 3 s mit Hinweis „Datei gekürzt“.
+- [x] Kommentar auf Zeile 12 einer Code-Datei bleibt nach „Neu laden“ an Zeile 12.
 
 ## Checkliste
 
-- [ ] `viewers/common.js`, Platzhalter `__COMMON__` in `shell.html` und `viewers/mod.rs`.
-- [ ] `viewers/text.js` (Text, Code, Log, Diff — eine Datei, Zweig nach `__KIND__`), `viewers/markdown.js`.
-- [ ] Weiche `page`: `Text`, `Code`, `Log`, `Diff` → `text.js`; `Markdown` → `markdown.js`.
-- [ ] Probe-Dateien `artifacts/proben/` dieses Plans: `beispiel.md` (mit Tabelle, Code, Mermaid, Aufgabenliste, `<script>alert(1)</script>`), `beispiel.log`, `beispiel.ts`, `beispiel.diff`, Skript `erzeuge-grosses-log.ps1` für die 20-MiB-Datei.
-- [ ] Code-Map: Zeile „Artefakte“ um `viewers/` (Weiche, Betrachter je Typ) ergänzen.
+- [x] `viewers/common.js`, Platzhalter `__COMMON__` in `shell.html` und `viewers/mod.rs`.
+- [x] `viewers/text.js` (Text, Code, Log, Diff — eine Datei, Zweig nach `__KIND__`), `viewers/markdown.js`.
+- [x] Weiche `page`: `Text`, `Code`, `Log`, `Diff` → `text.js`; `Markdown` → `markdown.js`.
+- [x] Probe-Dateien `artifacts/proben/` dieses Plans: `beispiel.md` (mit Tabelle, Code, Mermaid, Aufgabenliste, `<script>alert(1)</script>`), `beispiel.log`, `beispiel.ts`, `beispiel.diff`, Skript `erzeuge-grosses-log.ps1` für die 20-MiB-Datei.
+- [x] Code-Map: Zeile „Artefakte“ um `viewers/` (Weiche, Betrachter je Typ) ergänzen.
 
 ## Definition of Done
 
@@ -45,3 +45,13 @@ Betrachter für alles, was Zeilen hat, und für Markdown. Gemeinsame Bausteine (
 - `pnpm check` grün; Seven-Goals-Check.
 
 ## Report-Back
+
+**Stand:** umgesetzt, `pnpm check` siehe Commit. Geprüft in Edge (headless) gegen eine Nachbildung des Artefakt-Servers mit denselben Dateien aus `viewers/` — **nicht** in der laufenden App und ohne deren CSP.
+
+**Messwerte:** 20-MiB-Log: Inhalt nach ca. 0,5 s da (vorher 2,0 s — Layout von 55 000 Zeilen kostete 1,3 s, jetzt `content-visibility` ab 3000 Zeilen), 55 000 Zeilen, Hinweis „Datei gekürzt“, ans Ende gescrollt. Nur die ersten 5 MiB werden übertragen (Stream wird abgebrochen). `<script>alert(1)</script>` und `onerror` im Markdown: weder im DOM noch gefeuert. Kommentar-Anker: Klick auf gefärbten Text liefert `#L9`; nach Neuladen sitzt die Marke an Zeile 9. Ohne Netz: Markdown und Code zeigen Rohtext mit Zeilennummern. Screenshots: `artifacts/phase-3-*.png` (hell/dunkel je Betrachter, Markdown ohne Netz).
+
+**Entscheidungen:** (1) `highlight.min.js` enthält kein PowerShell und kein Batch — `common.js` lädt `powershell.min.js`/`dos.min.js` bei Bedarf nach (eigene Prüfsummen). (2) `bridge.js` bekommt `targetOf`: ein Klick zählt für den nächsten Vorfahren mit `data-anchor` (Zeilen, Markdown-Blöcke), sonst läge die Marke auf einem Farb-`<span>`, den die Färbung später ersetzt. (3) Färbung ersetzt nur den Inhalt der vorhandenen Zeilen — die `<div id="L<n>">` bleiben, Marken bleiben gültig. (4) Färbung nur bis 512 KiB (darüber ungefärbt). (5) `.ps1`-Probe ist reines ASCII: Windows PowerShell 5.1 liest Skripte ohne BOM als ANSI.
+
+**Unsicherste Stelle:** die echte CSP des Artefakt-Servers (`server.rs:217`) gegen CDN-Skripte mit `integrity`, Mermaid (`unsafe-eval`) und `blob:`-Bilder — in der Nachbildung gab es keine CSP.
+
+**Abweichungen:** keine vom Kontrakt. Die Probe `beispiel.ts` heißt `beispiel.ts.probe` (ESLint würde eine `.ts` unter `docs/` prüfen und scheitern); zum Probieren ohne `.probe` in `.artefakte` kopieren. `.py`/`.rs`/`.sql` wurden nur als Sprachen von highlight.js bestätigt, nicht je als Datei geöffnet.

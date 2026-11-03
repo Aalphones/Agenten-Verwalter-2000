@@ -4,9 +4,12 @@
 use super::model::ArtifactKind;
 
 const SHELL: &str = include_str!("shell.html");
+const COMMON: &str = include_str!("common.js");
 const IMAGE: &str = include_str!("image.js");
 const VIDEO: &str = include_str!("video.js");
 const AUDIO: &str = include_str!("audio.js");
+const TEXT: &str = include_str!("text.js");
+const MARKDOWN: &str = include_str!("markdown.js");
 
 /// Das Skript des Betrachters für den Typ; `None` → die Oberfläche zeigt die Rest-Karte. Ein neuer
 /// Betrachter ist eine `.js` daneben und eine Zeile hier.
@@ -15,6 +18,10 @@ pub fn page(kind: ArtifactKind) -> Option<&'static str> {
         ArtifactKind::Image => Some(IMAGE),
         ArtifactKind::Video => Some(VIDEO),
         ArtifactKind::Audio => Some(AUDIO),
+        ArtifactKind::Text | ArtifactKind::Code | ArtifactKind::Log | ArtifactKind::Diff => {
+            Some(TEXT)
+        }
+        ArtifactKind::Markdown => Some(MARKDOWN),
         _ => None,
     }
 }
@@ -22,10 +29,11 @@ pub fn page(kind: ArtifactKind) -> Option<&'static str> {
 /// Die fertige Betrachter-Seite für `file`, ohne Kommentar-Brücke (die hängt der Server an).
 pub fn render(kind: ArtifactKind, file: &str) -> Option<String> {
     let script = page(kind)?;
-    // Erst das eigene Skript, zuletzt der Dateiname: so kann kein Name einen Platzhalter tragen,
+    // Erst die Skripte, zuletzt der Dateiname: so kann kein Name einen Platzhalter tragen,
     // der danach noch ersetzt würde.
     Some(
         SHELL
+            .replace("__COMMON__", COMMON)
             .replace("__SCRIPT__", script)
             .replace("__KIND__", &script_string(kind.as_str()))
             .replace("__FILE__", &script_string(file)),

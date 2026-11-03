@@ -10,7 +10,7 @@ Der Verwalter bekommt einen eigenen MCP-Zugang, über den Agenten Werkzeuge des 
 |---|---|---|---|---|---|
 | 1 | [MCP-Zugang des Verwalters](phase-1-mcp-zugang.md) | heikel | 1 | L | umgesetzt, Laufzeitbelege offen |
 | 2 | [Typ-Erkennung, Gruppierung nach Session, Medien](phase-2-typen-und-gruppen.md) | heikel | 2 | L | umgesetzt, Laufzeitbelege offen |
-| 3 | [Text, Code, Log, Diff, Markdown](phase-3-text-und-markdown.md) | standard | 3 | M | pending |
+| 3 | [Text, Code, Log, Diff, Markdown](phase-3-text-und-markdown.md) | standard | 3 | M | umgesetzt, Laufzeitbelege in der App offen |
 | 4 | [Strukturierte Daten: JSON, JSON Lines, YAML, TOML/INI/.env, XML, CSV](phase-4-daten.md) | standard | 4 | M | pending |
 | 5 | [PDF, Mermaid, Ordner](phase-5-pdf-diagramme-ordner.md) | standard | 5 | L | pending |
 | 6 | [Doku, Anweisung an den Agenten, Release](phase-6-doku-und-release.md) | mechanisch | 6 | S | pending |
