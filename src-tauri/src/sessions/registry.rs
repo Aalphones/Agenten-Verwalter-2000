@@ -92,6 +92,7 @@ mod overlaps;
 mod restore;
 mod retro;
 mod side;
+mod terminal;
 mod tldr;
 
 use self::implementation::ReportUpdate;

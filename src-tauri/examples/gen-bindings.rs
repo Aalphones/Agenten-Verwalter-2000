@@ -52,6 +52,7 @@ use verwalter_lib::{
     settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
+    terminal::model::{TerminalChanged, TerminalInfo, TerminalOutput},
     tldr::model::{
         HandoffBrief, ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr,
         SessionTldrView, TldrChangedEvent,
@@ -207,5 +208,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ImplementationView::export_all(&cfg)?;
     ImplementationChangedEvent::export_all(&cfg)?;
     InquiryCreated::export_all(&cfg)?;
+    TerminalInfo::export_all(&cfg)?;
+    TerminalOutput::export_all(&cfg)?;
+    TerminalChanged::export_all(&cfg)?;
     Ok(())
 }

@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | [Core: Pseudo-Terminal je Terminal, Shell je Betriebssystem, Puffer, Commands, Lebensdauer; ADR 052](phase-1-core.md) | heikel | pending |
+| 1 | [Core: Pseudo-Terminal je Terminal, Shell je Betriebssystem, Puffer, Commands, Lebensdauer; ADR 052](phase-1-core.md) | heikel | complete |
 | 2 | [Einstellungen „Terminal“ (unten/rechts) und gemerkte Größe in Core und Einstellungsseite](phase-2-einstellung.md) | mechanisch | pending |
 | 3 | [Oberfläche: Terminal-Dock unten/rechts, xterm.js, Knopf und Strg+Ö; Doku-Abschluss](phase-3-dock.md) | standard | pending |
 

@@ -15,14 +15,14 @@
 
 ## Checkliste
 
-- [ ] `portable-pty = "0.9.0"` in `src-tauri/Cargo.toml` unter `[dependencies]`.
-- [ ] `CommandError::Terminal(String)` mit `#[error("{0}")]` und Doc-Kommentar („Ein Satz über ein Terminal (ADR 052).“) in `src-tauri/src/error.rs`, direkt nach `Implementation`.
-- [ ] `src-tauri/src/terminal/model.rs`: Typen aus dem Kontrakt.
-- [ ] `src-tauri/src/terminal/shell.rs`: `pub struct ShellCommand { pub program: PathBuf, pub args: Vec<String>, pub label: String }` und `pub fn shell_command() -> ShellCommand` mit drei Zweigen: `#[cfg(windows)]` (`ComSpec`, sonst `cmd.exe`, keine Argumente), `#[cfg(target_os = "macos")]` (`SHELL`, sonst `/bin/zsh`, `["-l"]`), `#[cfg(all(unix, not(target_os = "macos")))]` (`SHELL`, sonst `/bin/bash`, `["-l"]`). Leere Umgebungsvariable zählt wie fehlend. Label = `Path::file_stem` des Programms, klein geschrieben (Windows ergibt `cmd`).
-- [ ] `src-tauri/src/terminal/buffer.rs`:
+- [x] `portable-pty = "0.9.0"` in `src-tauri/Cargo.toml` unter `[dependencies]`.
+- [x] `CommandError::Terminal(String)` mit `#[error("{0}")]` und Doc-Kommentar („Ein Satz über ein Terminal (ADR 052).“) in `src-tauri/src/error.rs`, direkt nach `Implementation`.
+- [x] `src-tauri/src/terminal/model.rs`: Typen aus dem Kontrakt.
+- [x] `src-tauri/src/terminal/shell.rs`: `pub struct ShellCommand { pub program: PathBuf, pub args: Vec<String>, pub label: String }` und `pub fn shell_command() -> ShellCommand` mit drei Zweigen: `#[cfg(windows)]` (`ComSpec`, sonst `cmd.exe`, keine Argumente), `#[cfg(target_os = "macos")]` (`SHELL`, sonst `/bin/zsh`, `["-l"]`), `#[cfg(all(unix, not(target_os = "macos")))]` (`SHELL`, sonst `/bin/bash`, `["-l"]`). Leere Umgebungsvariable zählt wie fehlend. Label = `Path::file_stem` des Programms, klein geschrieben (Windows ergibt `cmd`).
+- [x] `src-tauri/src/terminal/buffer.rs`:
   - `pub struct Utf8Carry { pending: Vec<u8> }` mit `pub fn decode(&mut self, bytes: &[u8]) -> String`: `pending` + `bytes` zusammenfügen; Schleife über `std::str::from_utf8`: gültigen Teil anhängen; bei `error_len() == Some(n)` ein `'\u{FFFD}'` anhängen und `n` Bytes überspringen; bei `None` den Rest (≤ 3 Bytes) in `pending` behalten und enden.
   - `pub struct ScrollBuffer { text: String }` mit `const CAPACITY: usize = 1024 * 1024;`, `push(&mut self, chunk: &str)` (anhängen; ist `text.len() > CAPACITY`, vorne bis zur ersten Zeichengrenze ab `text.len() - CAPACITY` abschneiden, `is_char_boundary`), `snapshot(&self) -> String`.
-- [ ] `src-tauri/src/terminal/mod.rs`:
+- [x] `src-tauri/src/terminal/mod.rs`:
   - `pub mod model; pub mod shell; mod buffer;`; `const MAX_RUNNING: usize = 8;`, `const READ_CHUNK: usize = 8192;`, `pub const CHANGED_EVENT: &str = "terminal://changed";`
   - `struct Terminal { info: Mutex<TerminalInfo>, io: Mutex<TerminalIo>, output: Mutex<OutputState> }`; `struct TerminalIo { writer: Box<dyn Write + Send>, master: Option<Box<dyn MasterPty + Send>>, killer: Box<dyn ChildKiller + Send + Sync> }`; `struct OutputState { buffer: ScrollBuffer, channel: Option<Channel<TerminalOutput>> }`.
   - `pub struct TerminalService { terminals: Mutex<HashMap<String, Arc<Terminal>>>, numbers: Mutex<HashMap<String, u32>> }` mit `new()`. Regel: Map-Sperre nur zum Holen/Einfügen/Entfernen der `Arc`, nie während eine Terminal-Sperre genommen wird; je Terminal nie zwei seiner Sperren zugleich. Vergiftete Sperren wie im übrigen Core behandeln (Muster `lock_sessions` in `sessions/registry.rs`).
@@ -36,12 +36,14 @@
   - `pub fn resize(&self, id: &str, cols: u16, rows: u16) -> Result<(), CommandError>`: nur mit `Some(master)`.
   - `pub fn close(&self, app: &AppHandle, id: &str)`: aus der Map entfernen; `killer.kill()` (Fehler ignorieren); `master.take()`; Ereignis.
   - `pub fn close_project(&self, app: &AppHandle, project_id: &str)` und `pub fn close_all(&self)`: IDs sammeln, je ID wie `close` (bei `close_all` ohne Ereignis).
-- [ ] `src-tauri/src/sessions/registry/terminal.rs` (als Modul eintragen wie `artifacts`): `pub fn project_workspace(&self, project_id: &str) -> Result<PathBuf, CommandError>` = `workspace` der ersten Session aus `project_members`; leer → `project_not_found(project_id)`.
-- [ ] `src-tauri/src/commands/terminal.rs`: sieben Commands aus dem Kontrakt, je `#[tauri::command] pub async fn` mit `tauri::State<'_, TerminalService>` (`terminal_open` zusätzlich `SessionRegistry` und `AppHandle`); in `commands/mod.rs` eintragen.
-- [ ] `src-tauri/src/lib.rs`: `mod terminal;`; `app.manage(terminal::TerminalService::new());` im Setup; Commands im `invoke_handler`; `.run(tauri::generate_context!()).expect(…)` ersetzen durch `.build(tauri::generate_context!()).expect("Tauri-Laufzeit konnte nicht starten").run(|app, event| { if let tauri::RunEvent::Exit = event { app.state::<terminal::TerminalService>().close_all(); } });`.
-- [ ] `src-tauri/src/commands/projects.rs` `project_archive`: Parameter `terminals: tauri::State<'_, TerminalService>`; nach erfolgreichem `archive_project` `terminals.close_project(&app, &project_id)`.
-- [ ] `src-tauri/examples/gen-bindings.rs`: drei Typen exportieren; `pnpm bindings`.
-- [ ] `docs/decisions/052-terminal.md`: Kontext / Optionen (extern, eingebettet als Reiter, eingebettet als Dock unten/rechts, `!`-Befehle im Chat) / Entscheidung / Konsequenzen (nur im Speicher, 1 MiB Puffer, neu abgespielt nur nach Neuladen der Oberfläche, xterm-Instanzen leben bis zum Ende ihres Terminals — bewusste Ausnahme von Critical Rule 3, macOS/Linux ungeprüft, Enkelprozesse).
-- [ ] Commit `feat(terminal): Pseudo-Terminal je Vorhaben im Core`.
+- [x] `src-tauri/src/sessions/registry/terminal.rs` (als Modul eintragen wie `artifacts`): `pub fn project_workspace(&self, project_id: &str) -> Result<PathBuf, CommandError>` = `workspace` der ersten Session aus `project_members`; leer → `project_not_found(project_id)`.
+- [x] `src-tauri/src/commands/terminal.rs`: sieben Commands aus dem Kontrakt, je `#[tauri::command] pub async fn` mit `tauri::State<'_, TerminalService>` (`terminal_open` zusätzlich `SessionRegistry` und `AppHandle`); in `commands/mod.rs` eintragen.
+- [x] `src-tauri/src/lib.rs`: `mod terminal;`; `app.manage(terminal::TerminalService::new());` im Setup; Commands im `invoke_handler`; `.run(tauri::generate_context!()).expect(…)` ersetzen durch `.build(tauri::generate_context!()).expect("Tauri-Laufzeit konnte nicht starten").run(|app, event| { if let tauri::RunEvent::Exit = event { app.state::<terminal::TerminalService>().close_all(); } });`.
+- [x] `src-tauri/src/commands/projects.rs` `project_archive`: Parameter `terminals: tauri::State<'_, TerminalService>`; nach erfolgreichem `archive_project` `terminals.close_project(&app, &project_id)`.
+- [x] `src-tauri/examples/gen-bindings.rs`: drei Typen exportieren; `pnpm bindings`.
+- [x] `docs/decisions/052-terminal.md`: Kontext / Optionen (extern, eingebettet als Reiter, eingebettet als Dock unten/rechts, `!`-Befehle im Chat) / Entscheidung / Konsequenzen (nur im Speicher, 1 MiB Puffer, neu abgespielt nur nach Neuladen der Oberfläche, xterm-Instanzen leben bis zum Ende ihres Terminals — bewusste Ausnahme von Critical Rule 3, macOS/Linux ungeprüft, Enkelprozesse).
+- [x] Commit `feat(terminal): Pseudo-Terminal je Vorhaben im Core`.
 
 ## Report-Back
+
+Status: complete. `pnpm check` grün, Bindings erzeugt. Abweichung: das Ende der Shell (`exit`) liegt in `OutputState` statt nur in `info`, damit `attach` es unter der Ausgabe-Sperre sieht und `Exit` nicht verloren geht. `CommandError::Terminal` ergänzt in `src/lib/bindings/CommandError.ts` (generiert). Laufzeit ungeprüft (Wackelstellen README).
