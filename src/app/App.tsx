@@ -30,6 +30,8 @@ import { OverlapBar } from '@/features/sessions/OverlapBar';
 import { useSessionOverlaps } from '@/features/sessions/useSessionOverlaps';
 import { useSessionSummaries } from '@/features/sessions/useSessionSummaries';
 import { openSide } from '@/features/side/openSide';
+import { TerminalDock } from '@/features/terminal/TerminalDock';
+import { useProjectTerminals } from '@/features/terminal/useProjectTerminals';
 import { useViewedSession } from '@/features/sessions/useViewedSession';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
@@ -47,6 +49,8 @@ import type { ProjectCreated } from '@/lib/bindings/ProjectCreated';
 import type { ProjectRestored } from '@/lib/bindings/ProjectRestored';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import type { TerminalInfo } from '@/lib/bindings/TerminalInfo';
+import type { TerminalPlacement } from '@/lib/bindings/TerminalPlacement';
 import { onHandoffStarted } from '@/lib/sessions';
 import { useArtifactsStore } from '@/stores/artifacts';
 import { useBackgroundStore } from '@/stores/background';
@@ -57,6 +61,7 @@ import {
   type SessionView,
 } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
+import { useTerminalStore } from '@/stores/terminal';
 import './App.css';
 
 export function App(): ReactElement {
@@ -279,6 +284,78 @@ export function App(): ReactElement {
     [backgroundItems],
   );
 
+  // Das Terminal-Dock gehört dem sichtbaren Vorhaben (Session oder Übersicht); in „Neues Vorhaben“ und den
+  // Einstellungen gibt es keins.
+  const terminalProjectId: string | null = isMainReplaced
+    ? null
+    : (currentSession?.projectId ?? null);
+  const {
+    terminals,
+    isLoaded: areTerminalsLoaded,
+    error: terminalsError,
+  } = useProjectTerminals(terminalProjectId);
+  const runningTerminalCount: number = terminals.filter(
+    (terminal: TerminalInfo) => terminal.running,
+  ).length;
+  const terminalPlacement: TerminalPlacement = useSettingsStore(
+    (state) => state.settings?.terminalPlacement ?? 'bottom',
+  );
+  const isTerminalOpen: boolean = useTerminalStore((state) => state.isOpen);
+  const isTerminalMaximized: boolean = useTerminalStore((state) => state.isMaximized);
+  const toggleTerminalOpen = useTerminalStore((state) => state.toggle);
+  const closeTerminalDock = useTerminalStore((state) => state.close);
+  const closeBackground = useBackgroundStore((state) => state.close);
+  const isDockShown: boolean = isTerminalOpen && terminalProjectId !== null;
+  const isDockFilling: boolean =
+    isDockShown && isTerminalMaximized && terminalPlacement === 'bottom';
+
+  // Rechts teilen sich Dock und Hintergrund-Panel den Platz: das eine schließt das andere.
+  const handleToggleTerminal = useCallback((): void => {
+    if (!isTerminalOpen && terminalPlacement === 'right') {
+      closeBackground();
+    }
+    toggleTerminalOpen();
+  }, [isTerminalOpen, terminalPlacement, closeBackground, toggleTerminalOpen]);
+
+  function handleToggleBackground(): void {
+    if (!isBackgroundOpen && terminalPlacement === 'right') {
+      closeTerminalDock();
+    }
+    toggleBackground();
+  }
+
+  useEffect(() => {
+    if (terminalProjectId === null) {
+      return undefined;
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'ö') {
+        event.preventDefault();
+        handleToggleTerminal();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return (): void => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [terminalProjectId, handleToggleTerminal]);
+
+  function renderTerminalDock(): ReactElement | null {
+    if (terminalProjectId === null) {
+      return null;
+    }
+    return (
+      <TerminalDock
+        key={terminalProjectId}
+        projectId={terminalProjectId}
+        terminals={terminals}
+        isLoaded={areTerminalsLoaded}
+        listError={terminalsError}
+        placement={terminalPlacement}
+      />
+    );
+  }
+
   // Strg+; öffnet die Nebenfrage der Session, deren Chat gerade vor der Eingabeleiste steht. Auf deutscher
   // Tastatur liegt das Semikolon auf Umschalt+Komma: `shiftKey` darf die Abfrage nicht ausschließen.
   const chatSessionId: string | null =
@@ -359,6 +436,9 @@ export function App(): ReactElement {
           changesCount={changes === null ? null : countChangedFiles(changes)}
           artifactCount={artifactCount}
           onShowView={showProjectView}
+          terminalCount={runningTerminalCount}
+          isTerminalOpen={isTerminalOpen}
+          onToggleTerminal={handleToggleTerminal}
         />
         {renderOverviewBody(project, latestSession)}
       </Fragment>
@@ -529,7 +609,10 @@ export function App(): ReactElement {
             artifactCount={artifactCount}
             runningBackgroundCount={countRunning(backgroundItems)}
             isBackgroundOpen={isBackgroundOpen}
-            onToggleBackground={toggleBackground}
+            onToggleBackground={handleToggleBackground}
+            terminalCount={runningTerminalCount}
+            isTerminalOpen={isTerminalOpen}
+            onToggleTerminal={handleToggleTerminal}
             onShowView={showView}
             onOpenProject={(): void => {
               selectProject(currentSession.projectId);
@@ -568,7 +651,13 @@ export function App(): ReactElement {
         onArchived={handleArchived}
         onSessionDeleted={handleSessionDeleted}
       />
-      <main className="app__main">{renderMain()}</main>
+      <main className="app__main">
+        <div className={`app__content${isDockFilling ? ' app__content--hidden' : ''}`}>
+          {renderMain()}
+        </div>
+        {isDockShown && terminalPlacement === 'bottom' && renderTerminalDock()}
+      </main>
+      {isDockShown && terminalPlacement === 'right' && renderTerminalDock()}
       {isBackgroundOpen && visibleSession !== null && (
         <BackgroundPanel
           key={visibleSession.id}
