@@ -225,6 +225,19 @@ impl SessionRegistry {
         })
     }
 
+    /// Gibt der Umsetzung den Namen, den der Nutzer gewählt hat.
+    pub fn rename_implementation(
+        &self,
+        implementation_id: &str,
+        name: &str,
+    ) -> Result<(), CommandError> {
+        let name = super::trimmed_name(name)?;
+        self.implementation_view(implementation_id)?;
+        self.database.with(|connection| {
+            implementation_rows::rename(connection, implementation_id, &name)
+        })
+    }
+
     /// Nummer der Session im Vorhaben; 0 für eine unbekannte.
     pub fn session_number(&self, session_id: &str) -> u32 {
         self.get(session_id)

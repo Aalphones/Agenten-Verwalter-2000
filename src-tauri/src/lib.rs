@@ -197,6 +197,7 @@ pub fn run() {
             commands::implementation::implementation_list,
             commands::implementation::implementation_report,
             commands::implementation::implementation_new_inquiry,
+            commands::implementation::implementation_rename,
             commands::implementation::implementation_set_auto_start,
             commands::implementation::implementation_set_stop_after_current,
             commands::implementation::implementation_start_station,

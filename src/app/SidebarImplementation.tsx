@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { MouseEvent, ReactElement } from 'react';
+import { RenameField } from '@/app/SidebarItem';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import {
@@ -14,7 +15,11 @@ import './SidebarImplementation.css';
 interface SidebarImplementationProps {
   implementation: ImplementationView;
   isActive: boolean;
+  isRenaming: boolean;
   onSelect: () => void;
+  onStartRename: () => void;
+  onCommitRename: (name: string) => void;
+  onCancelRename: () => void;
   onNewInquiry: () => void;
 }
 
@@ -22,11 +27,27 @@ interface SidebarImplementationProps {
 export function SidebarImplementation({
   implementation,
   isActive,
+  isRenaming,
   onSelect,
+  onStartRename,
+  onCommitRename,
+  onCancelRename,
   onNewInquiry,
 }: SidebarImplementationProps): ReactElement {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const progress: string = progressShort(implementation);
+  if (isRenaming) {
+    return (
+      <div className="sidebar-item">
+        <RenameField
+          name={implementation.name}
+          label="Neuer Name der Umsetzung"
+          onCommit={onCommitRename}
+          onCancel={onCancelRename}
+        />
+      </div>
+    );
+  }
   return (
     <div className="sidebar-implementation">
       <button
@@ -35,6 +56,7 @@ export function SidebarImplementation({
         aria-current={isActive ? 'page' : undefined}
         title={`Umsetzung ${implementation.name} · ${stateLabel(implementation.urgency)} · ${progress} Sessions fertig`}
         onClick={onSelect}
+        onDoubleClick={onStartRename}
         onContextMenu={(event: MouseEvent<HTMLButtonElement>): void => {
           event.preventDefault();
           setIsMenuOpen(true);
@@ -69,6 +91,17 @@ export function SidebarImplementation({
             setIsMenuOpen(false);
           }}
         >
+          <button
+            type="button"
+            role="menuitem"
+            className="sidebar-implementation__menu-item"
+            onClick={(): void => {
+              setIsMenuOpen(false);
+              onStartRename();
+            }}
+          >
+            Umbenennen
+          </button>
           <button
             type="button"
             role="menuitem"
