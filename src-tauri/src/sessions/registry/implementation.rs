@@ -233,9 +233,8 @@ impl SessionRegistry {
     ) -> Result<(), CommandError> {
         let name = super::trimmed_name(name)?;
         self.implementation_view(implementation_id)?;
-        self.database.with(|connection| {
-            implementation_rows::rename(connection, implementation_id, &name)
-        })
+        self.database
+            .with(|connection| implementation_rows::rename(connection, implementation_id, &name))
     }
 
     /// Nummer der Session im Vorhaben; 0 für eine unbekannte.
