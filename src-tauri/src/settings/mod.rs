@@ -25,6 +25,7 @@ const KEY_DEFAULT_MODE: &str = "default_mode";
 const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
+const KEY_MASTER_DIR: &str = "master_dir";
 const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
 const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
 const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
@@ -61,6 +62,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     operating_mode: OperatingMode::Claude,
     local_model: None,
     default_codex_model: None,
+    master_dir: None,
     mark_unsourced: true,
     terminal_placement: TerminalPlacement::Bottom,
     terminal_height: 260,
@@ -89,6 +91,11 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .map(str::to_owned),
         default_codex_model: stored
             .get(KEY_DEFAULT_CODEX_MODEL)
+            .map(|text: &String| text.trim())
+            .filter(|text: &&str| !text.is_empty())
+            .map(str::to_owned),
+        master_dir: stored
+            .get(KEY_MASTER_DIR)
             .map(|text: &String| text.trim())
             .filter(|text: &&str| !text.is_empty())
             .map(str::to_owned),
@@ -166,6 +173,14 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
                 setting_rows::write(
                     &transaction,
                     KEY_DEFAULT_CODEX_MODEL,
+                    value.as_deref().map_or("", str::trim),
+                )?;
+            }
+            SettingsChange::MasterDir { value } => {
+                // Leer = kein Master-Ordner; `load` liest leere Texte als „nicht gesetzt“.
+                setting_rows::write(
+                    &transaction,
+                    KEY_MASTER_DIR,
                     value.as_deref().map_or("", str::trim),
                 )?;
             }

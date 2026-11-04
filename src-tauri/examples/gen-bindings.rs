@@ -25,6 +25,9 @@ use verwalter_lib::{
     context::model::{
         ContextBreakdown, ContextCategory, ContextChangedEvent, ContextFile, SessionContext,
     },
+    environment::model::{
+        BrokenLink, EnvironmentStatus, LinkCheck, MirrorDiff, MirrorKind, MirrorRun, MirrorState,
+    },
     error::CommandError,
     git::model::{
         GitBranch, GitBusySession, GitEntryStatus, GitForeignFile, GitLog, GitLogCommit,
@@ -217,5 +220,12 @@ fn main() -> Result<(), ts_rs::ExportError> {
     TerminalInfo::export_all(&cfg)?;
     TerminalOutput::export_all(&cfg)?;
     TerminalChanged::export_all(&cfg)?;
+    BrokenLink::export_all(&cfg)?;
+    LinkCheck::export_all(&cfg)?;
+    MirrorKind::export_all(&cfg)?;
+    MirrorState::export_all(&cfg)?;
+    MirrorDiff::export_all(&cfg)?;
+    MirrorRun::export_all(&cfg)?;
+    EnvironmentStatus::export_all(&cfg)?;
     Ok(())
 }

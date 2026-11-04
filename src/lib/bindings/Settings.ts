@@ -21,6 +21,11 @@ localModel: string | null,
  */
 defaultCodexModel: string | null, 
 /**
+ * Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`, mit dem die
+ * Umgebung abgeglichen wird (ADR 038); `None`, solange keiner gewählt ist.
+ */
+masterDir: string | null, 
+/**
  * Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
  */
 markUnsourced: boolean, terminalPlacement: TerminalPlacement, 

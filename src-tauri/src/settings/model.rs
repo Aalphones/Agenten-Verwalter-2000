@@ -71,6 +71,9 @@ pub struct Settings {
     pub local_model: Option<String>,
     /// Modell für neue Vorhaben in der Betriebsart Codex; `None` = Standardmodell von Codex.
     pub default_codex_model: Option<String>,
+    /// Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`, mit dem die
+    /// Umgebung abgeglichen wird (ADR 038); `None`, solange keiner gewählt ist.
+    pub master_dir: Option<String>,
     /// Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
     pub mark_unsourced: bool,
     pub terminal_placement: TerminalPlacement,
@@ -122,6 +125,10 @@ pub enum SettingsChange {
     },
     /// `None` setzt zurück auf das Standardmodell von Codex.
     DefaultCodexModel {
+        value: Option<String>,
+    },
+    /// `None` oder ein leerer Text entfernt den Master-Ordner.
+    MasterDir {
         value: Option<String>,
     },
     MarkUnsourced {
