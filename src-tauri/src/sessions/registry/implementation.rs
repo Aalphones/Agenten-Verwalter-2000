@@ -461,5 +461,6 @@ fn live_of(session: &Session, now: f64) -> SessionLive {
         question,
         last_activity_at: state.last_activity_at,
         unread: state.last_activity_at > state.seen_at,
+        awaits_script: state.awaited_script().is_some(),
     }
 }

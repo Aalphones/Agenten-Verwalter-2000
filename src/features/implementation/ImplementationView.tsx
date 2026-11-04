@@ -85,7 +85,7 @@ export function ImplementationView({
   const stations: StationRef[] = useMemo(() => flatStations(implementation), [implementation]);
   const isFlow: boolean = !(activeView === 'changes' && hasChanges);
   const isTicking: boolean = stations.some((ref: StationRef) =>
-    ['running', 'starting', 'countdown'].includes(ref.station.state),
+    ['running', 'starting', 'waitsForScript', 'countdown'].includes(ref.station.state),
   );
   const now: number = useNow(isTicking);
 
