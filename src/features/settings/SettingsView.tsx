@@ -18,6 +18,7 @@ import {
 import { useCodexModels } from '@/features/codex/useCodexModels';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
+import { TerminalPlacementSegment } from '@/features/settings/TerminalPlacementSegment';
 import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
 import { OperatingModeSegment } from '@/features/settings/OperatingModeSegment';
 import { SelectButton } from '@/features/settings/SelectButton';
@@ -211,6 +212,17 @@ export function SettingsView({
               value={current.colorScheme}
               onChange={(scheme): void => {
                 save({ kind: 'colorScheme', value: scheme }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+          <SettingRow
+            label="Terminal"
+            info="Wo das Terminal neben dem Chat erscheint: unten unter der Ansicht oder als Spalte rechts. Ein- und ausblenden mit dem Knopf >_ oder Strg+Ö."
+          >
+            <TerminalPlacementSegment
+              value={current.terminalPlacement}
+              onChange={(placement): void => {
+                save({ kind: 'terminalPlacement', value: placement }).catch(() => undefined);
               }}
             />
           </SettingRow>

@@ -13,7 +13,9 @@ use crate::db::{Database, enum_from_text, enum_to_text};
 use crate::error::CommandError;
 use crate::filesystem::workspace::{WORKSPACES_DIR, data_dir, home_dir};
 use crate::skills::{self, model::SkillKind, model::SkillOrigin};
-use model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview};
+use model::{
+    ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview, TerminalPlacement,
+};
 
 const KEY_COLOR_SCHEME: &str = "color_scheme";
 const KEY_DEFAULT_MODEL: &str = "default_model";
@@ -23,6 +25,12 @@ const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
 const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
+const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
+const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
+const KEY_TERMINAL_WIDTH: &str = "terminal_width";
+
+/// Grenzen für die gemerkte Größe des Terminal-Docks in Pixeln.
+const TERMINAL_SIZE_RANGE: std::ops::RangeInclusive<u32> = 100..=10000;
 
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
 const DEFAULT_SETTINGS: Settings = Settings {
@@ -34,6 +42,9 @@ const DEFAULT_SETTINGS: Settings = Settings {
     local_model: None,
     default_codex_model: None,
     mark_unsourced: true,
+    terminal_placement: TerminalPlacement::Bottom,
+    terminal_height: 260,
+    terminal_width: 460,
 };
 
 pub fn load(database: &Database) -> Result<Settings, CommandError> {
@@ -59,6 +70,19 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .get(KEY_MARK_UNSOURCED)
             .and_then(|text: &String| text.parse::<bool>().ok())
             .unwrap_or(DEFAULT_SETTINGS.mark_unsourced),
+        terminal_placement: stored_or(
+            &stored,
+            KEY_TERMINAL_PLACEMENT,
+            DEFAULT_SETTINGS.terminal_placement,
+        ),
+        terminal_height: stored
+            .get(KEY_TERMINAL_HEIGHT)
+            .and_then(|text: &String| text.parse::<u32>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.terminal_height),
+        terminal_width: stored
+            .get(KEY_TERMINAL_WIDTH)
+            .and_then(|text: &String| text.parse::<u32>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.terminal_width),
     })
 }
 
@@ -68,6 +92,14 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
         && value.trim().is_empty()
     {
         return Err(CommandError::Internal("Modellname leer".to_owned()));
+    }
+    if let SettingsChange::TerminalHeight { value } | SettingsChange::TerminalWidth { value } =
+        &change
+        && !TERMINAL_SIZE_RANGE.contains(value)
+    {
+        return Err(CommandError::Internal(
+            "Terminalgröße außerhalb 100–10000 px".to_owned(),
+        ));
     }
     database.with(|connection| {
         let transaction = connection.transaction()?;
@@ -98,6 +130,15 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             }
             SettingsChange::MarkUnsourced { value } => {
                 setting_rows::write(&transaction, KEY_MARK_UNSOURCED, &value.to_string())?;
+            }
+            SettingsChange::TerminalPlacement { value } => {
+                setting_rows::write(&transaction, KEY_TERMINAL_PLACEMENT, &enum_to_text(&value)?)?;
+            }
+            SettingsChange::TerminalHeight { value } => {
+                setting_rows::write(&transaction, KEY_TERMINAL_HEIGHT, &value.to_string())?;
+            }
+            SettingsChange::TerminalWidth { value } => {
+                setting_rows::write(&transaction, KEY_TERMINAL_WIDTH, &value.to_string())?;
             }
         }
         transaction.commit()?;

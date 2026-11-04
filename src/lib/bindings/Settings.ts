@@ -4,6 +4,7 @@ import type { Effort } from "./Effort";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
 import type { OperatingMode } from "./OperatingMode";
+import type { TerminalPlacement } from "./TerminalPlacement";
 
 /**
  * Werte, die für die ganze App gelten. Modell, Modus und Denkaufwand gelten für die erste Session
@@ -21,4 +22,12 @@ defaultCodexModel: string | null,
 /**
  * Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
  */
-markUnsourced: boolean, };
+markUnsourced: boolean, terminalPlacement: TerminalPlacement, 
+/**
+ * Gezogene Höhe des Terminal-Docks in Pixeln.
+ */
+terminalHeight: number, 
+/**
+ * Gezogene Breite des Terminal-Docks in Pixeln.
+ */
+terminalWidth: number, };

@@ -49,7 +49,9 @@ use verwalter_lib::{
         AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionOverlap,
         SessionStatus, SessionSummary,
     },
-    settings::model::{ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview},
+    settings::model::{
+        ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview, TerminalPlacement,
+    },
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
     terminal::model::{TerminalChanged, TerminalInfo, TerminalOutput},
@@ -167,6 +169,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     SideChangedEvent::export_all(&cfg)?;
     ColorScheme::export_all(&cfg)?;
     OperatingMode::export_all(&cfg)?;
+    TerminalPlacement::export_all(&cfg)?;
     LocalModelKind::export_all(&cfg)?;
     LocalModel::export_all(&cfg)?;
     LocalModels::export_all(&cfg)?;

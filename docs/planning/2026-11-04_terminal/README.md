@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Core: Pseudo-Terminal je Terminal, Shell je Betriebssystem, Puffer, Commands, Lebensdauer; ADR 052](phase-1-core.md) | heikel | complete |
-| 2 | [Einstellungen „Terminal“ (unten/rechts) und gemerkte Größe in Core und Einstellungsseite](phase-2-einstellung.md) | mechanisch | pending |
+| 2 | [Einstellungen „Terminal“ (unten/rechts) und gemerkte Größe in Core und Einstellungsseite](phase-2-einstellung.md) | mechanisch | complete |
 | 3 | [Oberfläche: Terminal-Dock unten/rechts, xterm.js, Knopf und Strg+Ö; Doku-Abschluss](phase-3-dock.md) | standard | pending |
 
 **Rahmen:** strikt 1 → 2 → 3, direkt auf `main`, ein Commit pro Phase, Scope `terminal` (Phase 2: `settings`). `pnpm check` grün vor jedem Commit, `%USERPROFILE%\.cargo\bin` im PATH, `pnpm bindings` nach Phase 1 und 2, Bindings mitcommitten. Neue Abhängigkeiten genau diese: `portable-pty = "0.9.0"` (Core), `@xterm/xterm@6.0.0` und `@xterm/addon-fit@0.11.0` (Oberfläche, exakt ohne `^`). Keine Migration (Tabelle `settings` ist Schlüssel/Text). Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version). ADR-Nummer 052 (034 und 038 sind von geparkten Plänen reserviert, 051 ist die höchste auf Platte).

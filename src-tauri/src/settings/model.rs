@@ -12,6 +12,14 @@ pub enum ColorScheme {
     System,
 }
 
+/// Wo das Terminal-Dock sitzt (ADR 052): unter der Hauptfläche oder als Spalte rechts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum TerminalPlacement {
+    Bottom,
+    Right,
+}
+
 /// Woher die Modellanfragen der Agenten kommen (ADR 016). `ClaudeCodeLocal` startet dieselbe
 /// Claude-Kommandozeile, schickt die Anfragen aber an LM Studio. `Standalone` („Autark“, ADR 017)
 /// startet statt der Claude-Kommandozeile den eigenen Agenten des Verwalters. `Codex` (ADR 031)
@@ -41,6 +49,11 @@ pub struct Settings {
     pub default_codex_model: Option<String>,
     /// Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
     pub mark_unsourced: bool,
+    pub terminal_placement: TerminalPlacement,
+    /// Gezogene Höhe des Terminal-Docks in Pixeln.
+    pub terminal_height: u32,
+    /// Gezogene Breite des Terminal-Docks in Pixeln.
+    pub terminal_width: u32,
 }
 
 /// Was die Einstellungsseite zeigt: die Werte und die Ordner, die sie nur anzeigt.
@@ -87,5 +100,14 @@ pub enum SettingsChange {
     },
     MarkUnsourced {
         value: bool,
+    },
+    TerminalPlacement {
+        value: TerminalPlacement,
+    },
+    TerminalHeight {
+        value: u32,
+    },
+    TerminalWidth {
+        value: u32,
     },
 }

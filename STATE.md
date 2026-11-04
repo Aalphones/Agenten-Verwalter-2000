@@ -1,8 +1,8 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-11-04_terminal/`
-**Phase:** 1/3 — Core (complete, committet); nächste: 2/3 Einstellung
-**Nächster Schritt:** Phase 2 aus `phase-2-einstellung.md` umsetzen (Einstellungen `terminal_placement`/`terminal_height`/`terminal_width`).
+**Phase:** 2/3 — Einstellung (complete, committet); nächste: 3/3 Oberfläche
+**Nächster Schritt:** Phase 3 aus `phase-3-dock.md` umsetzen (Terminal-Dock, xterm.js).
 **Zuletzt abgeschlossen (neu):** `docs/archive/2026-11/2026-11-03_regel-spuren.md` (ADR 050, keine Migration); die Dev-App-Läufe der AK und der Beleg des Sperr-Präfixes an einer echten Session stehen aus.
 **Prüfkette auf diesem Rechner:** `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC ab 14.4x), `%USERPROFILE%\.cargo\bin` im PATH; kein CMake, kein LLVM nötig.
 **Danach im Backlog:** `2026-10-22_umgebung` — fasst wie „Automatisch weiter“ und „Parallele Sessions“ die Funktion `send` an, wer umsetzt, liest sie neu.
