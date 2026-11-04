@@ -29,15 +29,24 @@ interface DragState {
 /** Die Füllfläche neben der Leiste (`data-resize-fill`) darf bis auf null schrumpfen; Leiste plus Füllfläche
  *  ergibt die Obergrenze. Gelesen beim Anfassen, nicht beim Rendern. */
 function measureMax(handle: HTMLElement, edge: 'start' | 'end', fallback: number): number {
+  return measurePanel(handle, edge, fallback).max;
+}
+
+/** Tatsächliche Breite der Leiste (die CSS-Regel kann sie unter die gemerkte Breite drücken) und ihre Obergrenze. */
+function measurePanel(
+  handle: HTMLElement,
+  edge: 'start' | 'end',
+  fallback: number,
+): { current: number; max: number } {
   const panel: Element | null =
     edge === 'end' ? handle.previousElementSibling : handle.nextElementSibling;
   const fill: Element | null | undefined = handle.parentElement?.querySelector(
     ':scope > [data-resize-fill]',
   );
   if (!(panel instanceof HTMLElement) || !(fill instanceof HTMLElement)) {
-    return fallback;
+    return { current: fallback, max: fallback };
   }
-  return panel.offsetWidth + fill.offsetWidth;
+  return { current: panel.offsetWidth, max: panel.offsetWidth + fill.offsetWidth };
 }
 
 export function ResizeHandle({
@@ -77,14 +86,15 @@ export function ResizeHandle({
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
+    const measured = measurePanel(event.currentTarget, edge, width);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      startWidth: width,
-      max: measureMax(event.currentTarget, edge, width),
+      startWidth: measured.current,
+      max: measured.max,
       hasMoved: false,
     };
-    lastWidthRef.current = width;
+    lastWidthRef.current = measured.current;
     document.documentElement.classList.add(RESIZING_CLASS);
     setIsActive(true);
   }
