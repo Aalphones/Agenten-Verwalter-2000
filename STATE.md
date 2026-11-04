@@ -1,7 +1,8 @@
 # STATE
 
-**Aktiver Plan:** (kein aktiver Plan)
-**Nächster Schritt:** nächsten Plan aus `docs/planning/` wählen.
+**Aktiver Plan:** `docs/planning/2026-11-04_verschiebbare-leisten.md`
+**Phase:** 2/2 — Griff, Hook, Einbau, Doku (pending)
+**Nächster Schritt:** Phase 2 umsetzen (`src/lib/panelWidths.ts` zuerst).
 **Zuletzt abgeschlossen (neu):** `docs/archive/2026-11/2026-11-04_terminal/` (ADR 052, keine Migration), Release `v0.46.0`; die Laufzeitbelege in der echten App (Wackelstellen in der README, Auswahlfarbe, Hell/Dunkel) stehen aus; davor `docs/archive/2026-11/2026-11-03_regel-spuren.md` (ADR 050, keine Migration); die Dev-App-Läufe der AK und der Beleg des Sperr-Präfixes an einer echten Session stehen aus.
 **Prüfkette auf diesem Rechner:** `VsDevCmd.bat -arch=amd64` von VS 2022 Build Tools (MSVC ab 14.4x), `%USERPROFILE%\.cargo\bin` im PATH; kein CMake, kein LLVM nötig.
 **Danach im Backlog:** `2026-10-22_umgebung` — fasst wie „Automatisch weiter“ und „Parallele Sessions“ die Funktion `send` an, wer umsetzt, liest sie neu.

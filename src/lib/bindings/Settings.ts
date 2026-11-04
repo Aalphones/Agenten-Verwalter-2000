@@ -4,6 +4,7 @@ import type { Effort } from "./Effort";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
 import type { OperatingMode } from "./OperatingMode";
+import type { PanelWidths } from "./PanelWidths";
 import type { TerminalPlacement } from "./TerminalPlacement";
 
 /**
@@ -30,4 +31,8 @@ terminalHeight: number,
 /**
  * Gezogene Breite des Terminal-Docks in Pixeln.
  */
-terminalWidth: number, };
+terminalWidth: number, 
+/**
+ * Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche (ADR 053).
+ */
+panelWidths: PanelWidths, };

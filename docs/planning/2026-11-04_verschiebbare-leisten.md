@@ -4,7 +4,7 @@ Die vier festen Leisten — Seitenleiste (Vorhaben), Dateibaum der Changes, List
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | Breiten im Core speichern (Einstellungen, ADR 053) | standard | pending |
+| 1 | Breiten im Core speichern (Einstellungen, ADR 053) | standard | complete |
 | 2 | Griff, Breiten-Hook, Einbau in die vier Leisten, Doku | standard | pending |
 
 ## Entscheidungen
@@ -39,12 +39,12 @@ Die vier festen Leisten — Seitenleiste (Vorhaben), Dateibaum der Changes, List
 
 **Kontext:** `src-tauri/src/settings/model.rs` (`Settings`, `SettingsChange`), `src-tauri/src/settings/mod.rs` (`KEY_*`, `load`, `update`), `src-tauri/src/db/settings.rs` (`read_all`, `write`), `docs/decisions/012-einstellungen-farbschema-und-listen.md`, `docs/conventions/rust.md`. Fehlerklassen geprüft (React, TypeScript): keine einschlägig.
 
-- [ ] `model.rs`: `enum PanelId { Sidebar, ChangesTree, ArtifactsList, Background }` (`serde(rename_all = "camelCase")`, `TS`, Doc-Kommentar je Variante mit der Leiste); `struct PanelWidths { sidebar, changes_tree, artifacts_list, background: Option<u32> }` (`camelCase`, `TS`); Feld `pub panel_widths: PanelWidths` in `Settings` mit Doc-Kommentar „Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche (ADR 053)“.
-- [ ] `SettingsChange::PanelWidth { panel: PanelId, value: Option<u32> }` — `None` löscht den Schlüssel (Doppelklick = Standard).
-- [ ] `mod.rs`: Schlüssel `panel_width.sidebar`, `panel_width.changes_tree`, `panel_width.artifacts_list`, `panel_width.background` (eine Funktion `panel_key(PanelId) -> &'static str`). `load`: unlesbarer oder fehlender Text → `None`. `update`: `Some(v)` außerhalb `120..=10000` → `CommandError` mit Satz „Leistenbreite außerhalb 120–10000 px“; `Some` schreibt, `None` löscht den Schlüssel. `db/settings.rs` kennt kein Löschen: `pub fn delete(connection: &Connection, key: &str) -> Result<(), CommandError>` neben `write` anlegen, Stil wie `write`.
-- [ ] `pnpm bindings` — erzeugt `PanelId.ts`, `PanelWidths.ts`, erweitert `Settings.ts`/`SettingsChange.ts`.
-- [ ] ADR `docs/decisions/053-verschiebbare-leisten.md` (Kontext / Optionen / Entscheidung / Konsequenzen) aus dem Abschnitt „Entscheidungen“ oben.
-- [ ] `pnpm check` grün (Clippy beanstandet ein ungenutztes Feld nicht, weil `Settings` serialisiert wird).
+- [x] `model.rs`: `enum PanelId { Sidebar, ChangesTree, ArtifactsList, Background }` (`serde(rename_all = "camelCase")`, `TS`, Doc-Kommentar je Variante mit der Leiste); `struct PanelWidths { sidebar, changes_tree, artifacts_list, background: Option<u32> }` (`camelCase`, `TS`); Feld `pub panel_widths: PanelWidths` in `Settings` mit Doc-Kommentar „Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche (ADR 053)“.
+- [x] `SettingsChange::PanelWidth { panel: PanelId, value: Option<u32> }` — `None` löscht den Schlüssel (Doppelklick = Standard).
+- [x] `mod.rs`: Schlüssel `panel_width.sidebar`, `panel_width.changes_tree`, `panel_width.artifacts_list`, `panel_width.background` (eine Funktion `panel_key(PanelId) -> &'static str`). `load`: unlesbarer oder fehlender Text → `None`. `update`: `Some(v)` außerhalb `120..=10000` → `CommandError` mit Satz „Leistenbreite außerhalb 120–10000 px“; `Some` schreibt, `None` löscht den Schlüssel. `db/settings.rs` kennt kein Löschen: `pub fn delete(connection: &Connection, key: &str) -> Result<(), CommandError>` neben `write` anlegen, Stil wie `write`.
+- [x] `pnpm bindings` — erzeugt `PanelId.ts`, `PanelWidths.ts`, erweitert `Settings.ts`/`SettingsChange.ts`.
+- [x] ADR `docs/decisions/053-verschiebbare-leisten.md` (Kontext / Optionen / Entscheidung / Konsequenzen) aus dem Abschnitt „Entscheidungen“ oben.
+- [x] `pnpm check` grün (Clippy beanstandet ein ungenutztes Feld nicht, weil `Settings` serialisiert wird).
 
 ## Phase 2 — Griff, Hook, Einbau, Doku
 

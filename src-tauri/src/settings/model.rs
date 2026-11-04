@@ -20,6 +20,30 @@ pub enum TerminalPlacement {
     Right,
 }
 
+/// Eine der vier seitlichen Leisten, deren Breite die Oberfläche verschieben lässt (ADR 053).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum PanelId {
+    /// Seitenleiste mit den Vorhaben.
+    Sidebar,
+    /// Dateibaum der Changes.
+    ChangesTree,
+    /// Liste der Artefakte.
+    ArtifactsList,
+    /// Hintergrund-Leiste.
+    Background,
+}
+
+/// Gezogene Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PanelWidths {
+    pub sidebar: Option<u32>,
+    pub changes_tree: Option<u32>,
+    pub artifacts_list: Option<u32>,
+    pub background: Option<u32>,
+}
+
 /// Woher die Modellanfragen der Agenten kommen (ADR 016). `ClaudeCodeLocal` startet dieselbe
 /// Claude-Kommandozeile, schickt die Anfragen aber an LM Studio. `Standalone` („Autark“, ADR 017)
 /// startet statt der Claude-Kommandozeile den eigenen Agenten des Verwalters. `Codex` (ADR 031)
@@ -54,6 +78,8 @@ pub struct Settings {
     pub terminal_height: u32,
     /// Gezogene Breite des Terminal-Docks in Pixeln.
     pub terminal_width: u32,
+    /// Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche (ADR 053).
+    pub panel_widths: PanelWidths,
 }
 
 /// Was die Einstellungsseite zeigt: die Werte und die Ordner, die sie nur anzeigt.
@@ -109,5 +135,10 @@ pub enum SettingsChange {
     },
     TerminalWidth {
         value: u32,
+    },
+    /// `None` löscht die gemerkte Breite und stellt die Standardbreite wieder her.
+    PanelWidth {
+        panel: PanelId,
+        value: Option<u32>,
     },
 }

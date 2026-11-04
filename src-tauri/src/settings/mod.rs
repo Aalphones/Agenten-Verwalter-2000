@@ -14,7 +14,8 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{WORKSPACES_DIR, data_dir, home_dir};
 use crate::skills::{self, model::SkillKind, model::SkillOrigin};
 use model::{
-    ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview, TerminalPlacement,
+    ColorScheme, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange, SettingsOverview,
+    TerminalPlacement,
 };
 
 const KEY_COLOR_SCHEME: &str = "color_scheme";
@@ -32,6 +33,25 @@ const KEY_TERMINAL_WIDTH: &str = "terminal_width";
 /// Grenzen für die gemerkte Größe des Terminal-Docks in Pixeln.
 const TERMINAL_SIZE_RANGE: std::ops::RangeInclusive<u32> = 100..=10000;
 
+/// Grenzen für die gemerkte Breite einer Leiste in Pixeln. Die eigentlichen Mindest- und
+/// Standardbreiten kennt nur die Oberfläche (ADR 053).
+const PANEL_WIDTH_RANGE: std::ops::RangeInclusive<u32> = 120..=10000;
+
+fn panel_key(panel: PanelId) -> &'static str {
+    match panel {
+        PanelId::Sidebar => "panel_width.sidebar",
+        PanelId::ChangesTree => "panel_width.changes_tree",
+        PanelId::ArtifactsList => "panel_width.artifacts_list",
+        PanelId::Background => "panel_width.background",
+    }
+}
+
+fn stored_panel_width(stored: &HashMap<String, String>, panel: PanelId) -> Option<u32> {
+    stored
+        .get(panel_key(panel))
+        .and_then(|text: &String| text.parse::<u32>().ok())
+}
+
 /// „Neues Vorhaben“ startet mit denselben Werten, solange die Einstellungen nicht geladen sind.
 const DEFAULT_SETTINGS: Settings = Settings {
     color_scheme: ColorScheme::System,
@@ -45,6 +65,12 @@ const DEFAULT_SETTINGS: Settings = Settings {
     terminal_placement: TerminalPlacement::Bottom,
     terminal_height: 260,
     terminal_width: 460,
+    panel_widths: PanelWidths {
+        sidebar: None,
+        changes_tree: None,
+        artifacts_list: None,
+        background: None,
+    },
 };
 
 pub fn load(database: &Database) -> Result<Settings, CommandError> {
@@ -83,6 +109,12 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .get(KEY_TERMINAL_WIDTH)
             .and_then(|text: &String| text.parse::<u32>().ok())
             .unwrap_or(DEFAULT_SETTINGS.terminal_width),
+        panel_widths: PanelWidths {
+            sidebar: stored_panel_width(&stored, PanelId::Sidebar),
+            changes_tree: stored_panel_width(&stored, PanelId::ChangesTree),
+            artifacts_list: stored_panel_width(&stored, PanelId::ArtifactsList),
+            background: stored_panel_width(&stored, PanelId::Background),
+        },
     })
 }
 
@@ -99,6 +131,15 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
     {
         return Err(CommandError::Internal(
             "Terminalgröße außerhalb 100–10000 px".to_owned(),
+        ));
+    }
+    if let SettingsChange::PanelWidth {
+        value: Some(width), ..
+    } = &change
+        && !PANEL_WIDTH_RANGE.contains(width)
+    {
+        return Err(CommandError::Internal(
+            "Leistenbreite außerhalb 120–10000 px".to_owned(),
         ));
     }
     database.with(|connection| {
@@ -140,6 +181,12 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             SettingsChange::TerminalWidth { value } => {
                 setting_rows::write(&transaction, KEY_TERMINAL_WIDTH, &value.to_string())?;
             }
+            SettingsChange::PanelWidth { panel, value } => match value {
+                Some(width) => {
+                    setting_rows::write(&transaction, panel_key(panel), &width.to_string())?;
+                }
+                None => setting_rows::delete(&transaction, panel_key(panel))?,
+            },
         }
         transaction.commit()?;
         Ok(())

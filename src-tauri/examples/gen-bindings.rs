@@ -50,7 +50,8 @@ use verwalter_lib::{
         SessionStatus, SessionSummary,
     },
     settings::model::{
-        ColorScheme, OperatingMode, Settings, SettingsChange, SettingsOverview, TerminalPlacement,
+        ColorScheme, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange,
+        SettingsOverview, TerminalPlacement,
     },
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
@@ -170,6 +171,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ColorScheme::export_all(&cfg)?;
     OperatingMode::export_all(&cfg)?;
     TerminalPlacement::export_all(&cfg)?;
+    PanelId::export_all(&cfg)?;
+    PanelWidths::export_all(&cfg)?;
     LocalModelKind::export_all(&cfg)?;
     LocalModel::export_all(&cfg)?;
     LocalModels::export_all(&cfg)?;
