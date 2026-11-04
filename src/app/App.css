@@ -12,7 +12,7 @@
   &__main {
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
+    flex: 1 1 0;
     min-width: 0;
     container: main / inline-size;
   }

@@ -41,6 +41,8 @@ interface RankedProject extends SidebarProjectEntry {
 }
 
 interface SidebarProps {
+  /** Gezogene Breite in Pixeln. */
+  width: number;
   projects: readonly ProjectSummary[];
   sessions: readonly SessionSummary[];
   implementations: readonly ImplementationView[];
@@ -64,6 +66,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({
+  width,
   projects,
   sessions,
   implementations,
@@ -368,7 +371,7 @@ export function Sidebar({
   }
 
   return (
-    <nav className="sidebar" aria-label="Vorhaben">
+    <nav className="sidebar" aria-label="Vorhaben" style={{ width }}>
       <div className="sidebar__brand">
         <svg
           width="16"

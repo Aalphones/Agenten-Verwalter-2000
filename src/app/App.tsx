@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import { ProjectHeader } from '@/app/ProjectHeader';
 import { SessionActionError } from '@/app/SessionActionError';
+import { ResizeHandle } from '@/components/ResizeHandle';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
 import { useAppUpdateCheck } from '@/features/appupdate/useAppUpdate';
@@ -52,6 +53,7 @@ import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { TerminalInfo } from '@/lib/bindings/TerminalInfo';
 import type { TerminalPlacement } from '@/lib/bindings/TerminalPlacement';
 import { onHandoffStarted } from '@/lib/sessions';
+import { usePanelWidth } from '@/lib/usePanelWidth';
 import { useArtifactsStore } from '@/stores/artifacts';
 import { useBackgroundStore } from '@/stores/background';
 import {
@@ -110,6 +112,8 @@ export function App(): ReactElement {
   const isClaude: boolean = useSettingsStore(
     (state) => (state.settings?.operatingMode ?? 'claude') === 'claude',
   );
+  const sidebarWidth = usePanelWidth('sidebar');
+  const backgroundWidth = usePanelWidth('background');
   useVoiceModel();
   useRetroProgress();
   // Die Abfrage beim Start füllt den Store; der Punkt an „Einstellungen“ liest ihn.
@@ -635,6 +639,7 @@ export function App(): ReactElement {
   return (
     <div className="app">
       <Sidebar
+        width={sidebarWidth.width}
         projects={projects}
         sessions={sessions}
         implementations={implementations}
@@ -655,7 +660,8 @@ export function App(): ReactElement {
         onArchived={handleArchived}
         onSessionDeleted={handleSessionDeleted}
       />
-      <main className="app__main">
+      <ResizeHandle edge="end" label="Breite der Seitenleiste" {...sidebarWidth.handleProps} />
+      <main className="app__main" data-resize-fill>
         <div className={`app__content${isDockFilling ? ' app__content--hidden' : ''}`}>
           {renderMain()}
         </div>
@@ -663,12 +669,20 @@ export function App(): ReactElement {
       </main>
       {isDockShown && terminalPlacement === 'right' && renderTerminalDock()}
       {isBackgroundOpen && visibleSession !== null && (
-        <BackgroundPanel
-          key={visibleSession.id}
-          session={visibleSession}
-          background={background}
-          error={backgroundError}
-        />
+        <>
+          <ResizeHandle
+            edge="start"
+            label="Breite des Hintergrunds"
+            {...backgroundWidth.handleProps}
+          />
+          <BackgroundPanel
+            key={visibleSession.id}
+            width={backgroundWidth.width}
+            session={visibleSession}
+            background={background}
+            error={backgroundError}
+          />
+        </>
       )}
       {isArchiveOpen && (
         <ArchiveDialog
