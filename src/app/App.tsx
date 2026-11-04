@@ -458,6 +458,7 @@ export function App(): ReactElement {
           activeView={isChangesView ? 'changes' : 'flow'}
           hasChanges={hasProjectRepositories}
           changesCount={changes === null ? null : countChangedFiles(changes)}
+          sessions={sessions}
           changes={
             <ChangesView
               key={latestSession.id}
