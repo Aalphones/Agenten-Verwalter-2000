@@ -41,7 +41,7 @@
 - [ ] `src-tauri/src/lib.rs`: `mod terminal;`; `app.manage(terminal::TerminalService::new());` im Setup; Commands im `invoke_handler`; `.run(tauri::generate_context!()).expect(…)` ersetzen durch `.build(tauri::generate_context!()).expect("Tauri-Laufzeit konnte nicht starten").run(|app, event| { if let tauri::RunEvent::Exit = event { app.state::<terminal::TerminalService>().close_all(); } });`.
 - [ ] `src-tauri/src/commands/projects.rs` `project_archive`: Parameter `terminals: tauri::State<'_, TerminalService>`; nach erfolgreichem `archive_project` `terminals.close_project(&app, &project_id)`.
 - [ ] `src-tauri/examples/gen-bindings.rs`: drei Typen exportieren; `pnpm bindings`.
-- [ ] `docs/decisions/052-terminal.md`: Kontext / Optionen (extern, eingebettet als Reiter, eingebettet als Dock unten/rechts, `!`-Befehle im Chat) / Entscheidung / Konsequenzen (nur im Speicher, 1 MiB Puffer, Vollbild-Programme nach Neuabspielen, macOS/Linux ungeprüft, Enkelprozesse).
+- [ ] `docs/decisions/052-terminal.md`: Kontext / Optionen (extern, eingebettet als Reiter, eingebettet als Dock unten/rechts, `!`-Befehle im Chat) / Entscheidung / Konsequenzen (nur im Speicher, 1 MiB Puffer, neu abgespielt nur nach Neuladen der Oberfläche, xterm-Instanzen leben bis zum Ende ihres Terminals — bewusste Ausnahme von Critical Rule 3, macOS/Linux ungeprüft, Enkelprozesse).
 - [ ] Commit `feat(terminal): Pseudo-Terminal je Vorhaben im Core`.
 
 ## Report-Back
