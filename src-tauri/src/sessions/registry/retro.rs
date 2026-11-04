@@ -16,7 +16,7 @@ use crate::error::CommandError;
 use crate::retro::findings::{self, SessionResult};
 use crate::retro::model::{RetroExport, RetroProgress, SessionFindings};
 use crate::retro::prompt::{RETRO_PARALLEL, RETRO_TIMEOUT, SESSION_SCHEMA, SESSION_SYSTEM_PROMPT};
-use crate::retro::traces;
+use crate::retro::traces::{self, HookBlock};
 use crate::retro::transcript::{is_retro_session, retro_transcript, session_file, tool_counts};
 use crate::sessions::model::SessionStatus;
 
@@ -25,6 +25,8 @@ const RETRO_DIR: &str = ".retro";
 const FINDINGS_FILE: &str = "befunde.md";
 const ALREADY_RUNNING: &str = "Für dieses Vorhaben läuft schon eine Retro.";
 const NO_HISTORY: &str = "Noch keine Session mit Verlauf.";
+/// Wie `traces::skills_line` ohne Skills, für Sessions, deren Spuren nicht lesbar waren.
+const NO_SKILLS: &str = "keine";
 
 /// Ergebnis der Mini-Retro einer Session oder ihr Fehlertext.
 type MiniRetro = Result<SessionFindings, String>;
@@ -37,6 +39,8 @@ struct PreparedSession {
     model: ModelId,
     counts: (u32, u32, u32),
     truncated: bool,
+    skills: String,
+    hook_blocks: Vec<HookBlock>,
     /// Fehlertext, wenn der Verlauf nicht lesbar war — dann läuft keine Mini-Retro.
     texts: Result<SessionTexts, String>,
 }
@@ -127,6 +131,8 @@ impl SessionRegistry {
                     model: session.model,
                     counts: session.counts,
                     truncated: session.truncated,
+                    skills: session.skills,
+                    hook_blocks: session.hook_blocks,
                     outcome,
                 },
             )
@@ -175,6 +181,8 @@ fn prepare_session(session: &Session) -> Option<PreparedSession> {
                 model,
                 counts: (0, 0, 0),
                 truncated: false,
+                skills: NO_SKILLS.to_owned(),
+                hook_blocks: Vec::new(),
                 texts: Err(format!("Verlauf nicht lesbar: {error}")),
             });
         }
@@ -195,6 +203,8 @@ fn prepare_session(session: &Session) -> Option<PreparedSession> {
                 model,
                 counts: (0, 0, 0),
                 truncated: false,
+                skills: NO_SKILLS.to_owned(),
+                hook_blocks: Vec::new(),
                 texts: Err(format!("Regel-Spuren nicht lesbar: {error}")),
             });
         }
@@ -215,6 +225,8 @@ fn prepare_session(session: &Session) -> Option<PreparedSession> {
         model: state.model,
         counts: tool_counts(&state.entries),
         truncated,
+        skills: traces::skills_line(&traces),
+        hook_blocks: traces.hook_blocks,
         texts: Ok(SessionTexts { file, transcript }),
     })
 }

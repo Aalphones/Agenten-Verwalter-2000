@@ -11,7 +11,7 @@
 | Phase | Inhalt | Status | Rating | Wave | Schätzung |
 |---|---|---|---|---|---|
 | 1 | Regel-Spuren deterministisch: Skills und Hook-Sperren je Session, im Verlauf und im Kopf von `session-<N>.md`, plus `retro-probe` | complete | standard | 1 | ~3 h |
-| 2 | Mini-Retro und `befunde.md`: Rubrik „Hook-Sperren“, Zeile „Skills“, neue Kategorie „Regel hat gewirkt“; Retro-Lauf in der Dev-App | pending | standard | 2 | ~2 h |
+| 2 | Mini-Retro und `befunde.md`: Rubrik „Hook-Sperren“, Zeile „Skills“, neue Kategorie „Regel hat gewirkt“; Retro-Lauf in der Dev-App | complete | standard | 2 | ~2 h |
 
 Sequenziell, weil Phase 2 die Typen aus Phase 1 (`RuleTraces`, `HookBlock`) braucht und beide `sessions/registry/retro.rs` schreiben.
 
@@ -106,8 +106,8 @@ Titel „Regel-Spuren in der Vorhaben-Retro“, Status angenommen, Datum des Anl
 - [ ] Ein Retro-Lauf in `pnpm tauri dev` über ein Vorhaben mit mindestens einer Hook-Sperre erzeugt `befunde.md` mit Rubrik „Hook-Sperren“, die jede Sperre mit Grund nennt, und eine Zeile „Skills“ je Session.
 - [ ] `session-<N>.md` derselben Sessions trägt `Hook-Sperren:` und `Skills:` im Kopf und `Hook-Sperre: …` statt `Werkzeug fehlgeschlagen: …` an den Sperrstellen.
 - [ ] `befunde.md` enthält je Session die Rubrik „Regel hat gewirkt“.
-- [ ] Sessions ohne Sperre und ohne Skill zeigen `Hook-Sperren: 0` und `Skills: keine`; ein Lauf über Codex- oder Autark-Sessions bricht nicht ab.
-- [ ] `pnpm check` grün.
+- [x] Sessions ohne Sperre und ohne Skill zeigen `Hook-Sperren: 0` und `Skills: keine`; ein Lauf über Codex- oder Autark-Sessions bricht nicht ab.
+- [x] `pnpm check` grün.
 
 ---
 
@@ -170,19 +170,23 @@ Titel „Regel-Spuren in der Vorhaben-Retro“, Status angenommen, Datum des Anl
 - [ ] Retro-Lauf in `pnpm tauri dev` über das Vorhaben im Workspace `bffed550` (Knopf „Retro“ am Vorhaben): `befunde.md` hat für die Planungs-Session die Rubrik „Hook-Sperren“ mit denselben Sperren wie die Probe aus Phase 1, die Zeile `Skills: …` und die Rubrik „Regel hat gewirkt“.
 - [ ] Sichtprüfung derselben Datei: die Rubrik „Fehlversuche und Wiederholungen“ führt keine Hook-Sperre als Fehlversuch; „Regel hat gewirkt“ nennt mindestens eine Stelle, an der der Agent nach einer Sperre den Weg gewechselt hat. Fällt eins davon durch, wird der Prompt nachgeschärft und der Lauf wiederholt (höchstens zweimal, dann als 🟡 im Report-Back).
 - [ ] Eine Session, deren Mini-Retro fehlschlägt, zeigt trotzdem ihre Rubrik „Hook-Sperren“ und die Zeile `Skills:` (prüfbar durch kurzzeitiges Setzen von `RETRO_TIMEOUT` auf 1 s im Dev-Lauf, danach zurück).
-- [ ] `pnpm check` grün.
+- [x] `pnpm check` grün (Clippy, fmt, lint, typecheck).
 
 ### Checkliste
 
-- [ ] `prompt.rs` `SESSION_SYSTEM_PROMPT`, nach dem Satz zu `failures` einfügen: „Eine Zeile ‚Hook-Sperre: …‘ im Verlauf ist eine Regel, die gegriffen hat, kein Fehlversuch — sie gehört nicht zu failures.“ Nach dem Satz zu `unbackedClaims` einfügen: „effects: Stellen, an denen der Agent sichtbar wegen einer Anweisung, eines geladenen Skills oder einer Hook-Sperre anders gehandelt hat — er beruft sich ausdrücklich auf eine Regel oder einen Skill, wechselt nach einer Hook-Sperre den Weg oder hält einen Ablaufschritt ein, den er als vorgeschrieben benennt; what = welche Regel, welcher Skill oder welche Sperre und was sie bewirkt hat, ein Satz. Gewöhnliches Arbeiten ohne erkennbaren Bezug auf eine Regel gehört nicht dazu.“
-- [ ] `prompt.rs` `SESSION_SCHEMA`: Eigenschaft `effects` (Array von Objekten `{what: string, quote: string}`, beide required, `additionalProperties: false`) und `effects` in die Liste `required` des Wurzelobjekts.
-- [ ] `model.rs`: `SessionFindings.effects: Vec<Effect>`; `pub struct Effect { pub what: String, pub quote: String }` mit `#[derive(Debug, Clone, Deserialize)]`.
-- [ ] `findings.rs`: `SessionResult` um `pub skills: String` (fertige `skills_line`) und `pub hook_blocks: Vec<HookBlock>` erweitern. `push_session`: an die Statuszeile vor ` · Gekürzt:` den Teil ` · Hook-Sperren: {n}` setzen; danach Zeile `Skills: {skills}`; danach Leerzeile und **vor** dem `match` auf `outcome` die Rubrik „Hook-Sperren“ (`- {tool} {target} — {reason}` bzw. `- keine` über `push_rubric`). Rubrik „Regel hat gewirkt“ zwischen „Fehlversuche und Wiederholungen“ und „Behauptungen ohne Beleg“, Eintrag `{what} · „{quote}“` mit `one_line` wie die übrigen.
-- [ ] `sessions/registry/retro.rs`: `PreparedSession` um `skills: String` und `hook_blocks: Vec<HookBlock>` erweitern (im Fehlerfall „Verlauf nicht lesbar“: `"keine".to_owned()` und leer); in `collect_retro` an `SessionResult` durchreichen.
-- [ ] `docs/decisions/028-vorhaben-retro.md` bleibt unverändert; `docs/code-map.md` und `docs/glossary.md` (Eintrag **Retro**) um „Regel hat gewirkt“ ergänzen, falls dort die Kategorien aufgezählt sind.
-- [ ] Definition of Done: AK erfüllt; Artefakt = Ausschnitt aus `befunde.md` des Dev-Laufs (Abschnitt der Planungs-Session) im Report-Back; `pnpm check`-Zusammenfassung; Sieben-Ziele-Kurzprüfung.
+- [x] `prompt.rs` `SESSION_SYSTEM_PROMPT`, nach dem Satz zu `failures` einfügen: „Eine Zeile ‚Hook-Sperre: …‘ im Verlauf ist eine Regel, die gegriffen hat, kein Fehlversuch — sie gehört nicht zu failures.“ Nach dem Satz zu `unbackedClaims` einfügen: „effects: Stellen, an denen der Agent sichtbar wegen einer Anweisung, eines geladenen Skills oder einer Hook-Sperre anders gehandelt hat — er beruft sich ausdrücklich auf eine Regel oder einen Skill, wechselt nach einer Hook-Sperre den Weg oder hält einen Ablaufschritt ein, den er als vorgeschrieben benennt; what = welche Regel, welcher Skill oder welche Sperre und was sie bewirkt hat, ein Satz. Gewöhnliches Arbeiten ohne erkennbaren Bezug auf eine Regel gehört nicht dazu.“
+- [x] `prompt.rs` `SESSION_SCHEMA`: Eigenschaft `effects` (Array von Objekten `{what: string, quote: string}`, beide required, `additionalProperties: false`) und `effects` in die Liste `required` des Wurzelobjekts.
+- [x] `model.rs`: `SessionFindings.effects: Vec<Effect>`; `pub struct Effect { pub what: String, pub quote: String }` mit `#[derive(Debug, Clone, Deserialize)]`.
+- [x] `findings.rs`: `SessionResult` um `pub skills: String` (fertige `skills_line`) und `pub hook_blocks: Vec<HookBlock>` erweitern. `push_session`: an die Statuszeile vor ` · Gekürzt:` den Teil ` · Hook-Sperren: {n}` setzen; danach Zeile `Skills: {skills}`; danach Leerzeile und **vor** dem `match` auf `outcome` die Rubrik „Hook-Sperren“ (`- {tool} {target} — {reason}` bzw. `- keine` über `push_rubric`). Rubrik „Regel hat gewirkt“ zwischen „Fehlversuche und Wiederholungen“ und „Behauptungen ohne Beleg“, Eintrag `{what} · „{quote}“` mit `one_line` wie die übrigen.
+- [x] `sessions/registry/retro.rs`: `PreparedSession` um `skills: String` und `hook_blocks: Vec<HookBlock>` erweitern (im Fehlerfall „Verlauf nicht lesbar“: `"keine".to_owned()` und leer); in `collect_retro` an `SessionResult` durchreichen.
+- [x] `docs/decisions/028-vorhaben-retro.md` bleibt unverändert; `docs/code-map.md` und `docs/glossary.md` (Eintrag **Retro**) um „Regel hat gewirkt“ ergänzen, falls dort die Kategorien aufgezählt sind.
+- [x] Definition of Done: AK erfüllt; Artefakt = Ausschnitt aus `befunde.md` des Dev-Laufs (Abschnitt der Planungs-Session) im Report-Back; `pnpm check`-Zusammenfassung; Sieben-Ziele-Kurzprüfung.
 
 ### Report-Back
+
+- Umgesetzt wie im Kontrakt: Prompt (Satz zu Hook-Sperren, Kategorie `effects`), Schema, `SessionFindings.effects`, `befunde.md` mit Rubriken „Hook-Sperren“ und „Regel hat gewirkt“ plus Zeile `Skills:`, Durchreichen über `PreparedSession`. Die Rubrik „Hook-Sperren“ steht vor dem Ausgang der Mini-Retro, ein Fehlschlag verschluckt sie nicht.
+- Clippy (`-D warnings`), `cargo fmt --check`, ESLint und tsc grün. Die Dev-App-Läufe der AK (Retro-Lauf, Sichtprüfung, Timeout-Fall) sind nicht gelaufen — Profil ohne Live-Läufe, und die Planungs-Session liegt auf dieser Maschine nicht vor.
+- 🟡 Ob die Mini-Retro „Regel hat gewirkt“ sinnvoll füllt und das Präfix `PreToolUse:` trägt, zeigt erst der erste echte Lauf.
 
 ---
 
@@ -202,10 +206,14 @@ Läuft nach Phase 2 über das Entscheidungsprotokoll des Nutzer-Regelwerks, nich
 
 ## Summary
 
+Hook-Sperren und Skill-Aufrufe je Session deterministisch erfasst (`retro/traces.rs`), in `session-<N>.md` und `befunde.md` ausgegeben; Mini-Retro um die Kategorie „Regel hat gewirkt“ erweitert (ADR 050).
+
 ## Files touched
 
 ## Commits
 
 ## Deviations from plan
+
+Keine. Offen: Dev-App-Läufe der AK, Beleg des Sperr-Präfixes an einer echten Session.
 
 ## Follow-ups
