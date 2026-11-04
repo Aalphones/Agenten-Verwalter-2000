@@ -10,7 +10,7 @@
 
 | Phase | Inhalt | Status | Rating |
 |---|---|---|---|
-| 1 | Core: Command `tldr_handoff_brief` mit Haiku-Übergabe und Rückfall ohne Modell, ADR 051 | pending | standard |
+| 1 | Core: Command `tldr_handoff_brief` mit Haiku-Übergabe und Rückfall ohne Modell, ADR 051 | complete | standard |
 | 2 | Oberfläche: Knopf im Cache-Hinweis verdrahten, Doku, Release | pending | standard |
 
 Sequenziell: Phase 2 braucht den Typ `HandoffBrief` aus Phase 1 (`pnpm bindings`).
@@ -162,15 +162,15 @@ Tooltip (`CONTINUE_TITLE`): „Haiku fasst den Gesprächstext dieser Session zus
 
 ### Checkliste
 
-- [ ] `transcript.rs`: `truncated` und `labelled_lines` auf `pub(crate)` stellen (nichts sonst ändern).
-- [ ] `tldr/brief.rs` neu: `BriefInput`, `HandoffSummary`, `summarized_text`, `fallback_text`, `fallback_body` laut Kontrakt; Schlusssätze und Kopfzeilen als `const`. In `tldr/mod.rs` `pub mod brief;` ergänzen und den Modul-Kommentar um die Übergabe erweitern.
-- [ ] `tldr/prompt.rs`: `HANDOFF_SYSTEM_PROMPT`, `HANDOFF_SCHEMA` wörtlich aus dem Kontrakt.
-- [ ] `tldr/model.rs`: `HandoffBrief`.
-- [ ] `sessions/registry/tldr.rs`: `handoff_brief_input`.
-- [ ] `commands/tldr.rs`: `tldr_handoff_brief`; in `lib.rs` registrieren.
-- [ ] `pnpm bindings`, `pnpm check`.
-- [ ] `docs/decisions/051-uebergabe-bei-kaltem-cache.md`: Kontext (Hinweis aus ADR 033 legte leere Session an; Cache-Neuschreiben teuer), Optionen (a) Nebenfrage auf einer Kopie der Session (ADR 044) — günstig nur bei warmem Cache, bei kaltem schreibt sie den ganzen Verlauf; (b) Haiku über den Gesprächstext wie das TL;DR — unabhängig vom Cache; (c) nur Auszüge ohne Modell — Gewählt (b) mit (c) als Rückfall; Entscheidung: nichts gespeichert, Entwurf statt Senden (wie ADR 027), Rückfall statt Fehler, damit Kontingent-Ende und Netzausfall eine Session ergeben; Konsequenzen: Haiku kennt keine Werkzeug-Ausgaben (die neue Session liest Dateien selbst nach), jeder Klick ist ein Haiku-Aufruf, bei leerem Kontingent wartet der Klick bis zu `TLDR_TIMEOUT` auf den Rückfall, wenn die Kommandozeile nicht sofort ablehnt.
-- [ ] `docs/decisions/033-warnhinweise.md`: im Kopf „teilweise abgelöst durch ADR 051 (Knopf im Cache-Hinweis)“ ergänzen, wie in ADR 027 vorgemacht.
+- [x] `transcript.rs`: `truncated` und `labelled_lines` auf `pub(crate)` stellen (nichts sonst ändern).
+- [x] `tldr/brief.rs` neu: `BriefInput`, `HandoffSummary`, `summarized_text`, `fallback_text`, `fallback_body` laut Kontrakt; Schlusssätze und Kopfzeilen als `const`. In `tldr/mod.rs` `pub mod brief;` ergänzen und den Modul-Kommentar um die Übergabe erweitern.
+- [x] `tldr/prompt.rs`: `HANDOFF_SYSTEM_PROMPT`, `HANDOFF_SCHEMA` wörtlich aus dem Kontrakt.
+- [x] `tldr/model.rs`: `HandoffBrief`.
+- [x] `sessions/registry/tldr.rs`: `handoff_brief_input`.
+- [x] `commands/tldr.rs`: `tldr_handoff_brief`; in `lib.rs` registrieren.
+- [x] `pnpm bindings`, `pnpm check`.
+- [x] `docs/decisions/051-uebergabe-bei-kaltem-cache.md`: Kontext (Hinweis aus ADR 033 legte leere Session an; Cache-Neuschreiben teuer), Optionen (a) Nebenfrage auf einer Kopie der Session (ADR 044) — günstig nur bei warmem Cache, bei kaltem schreibt sie den ganzen Verlauf; (b) Haiku über den Gesprächstext wie das TL;DR — unabhängig vom Cache; (c) nur Auszüge ohne Modell — Gewählt (b) mit (c) als Rückfall; Entscheidung: nichts gespeichert, Entwurf statt Senden (wie ADR 027), Rückfall statt Fehler, damit Kontingent-Ende und Netzausfall eine Session ergeben; Konsequenzen: Haiku kennt keine Werkzeug-Ausgaben (die neue Session liest Dateien selbst nach), jeder Klick ist ein Haiku-Aufruf, bei leerem Kontingent wartet der Klick bis zu `TLDR_TIMEOUT` auf den Rückfall, wenn die Kommandozeile nicht sofort ablehnt.
+- [x] `docs/decisions/033-warnhinweise.md`: im Kopf „teilweise abgelöst durch ADR 051 (Knopf im Cache-Hinweis)“ ergänzen, wie in ADR 027 vorgemacht.
 
 ## Phase 2 — Oberfläche, Doku, Release
 
@@ -208,5 +208,7 @@ Tooltip (`CONTINUE_TITLE`): „Haiku fasst den Gesprächstext dieser Session zus
 ## Commits
 
 ## Deviations from plan
+
+Phase 1: `labelled_lines` blieb privat (`brief.rs` formatiert die Felder selbst, wegen der Mehrzeilen-Regel); stattdessen `BLOCK_SEPARATOR` auf `pub(crate)`.
 
 ## Follow-ups

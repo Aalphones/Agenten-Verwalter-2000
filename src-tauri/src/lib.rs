@@ -189,6 +189,7 @@ pub fn run() {
             commands::side::side_dismiss,
             commands::tldr::tldr_session_load,
             commands::tldr::tldr_session_create,
+            commands::tldr::tldr_handoff_brief,
             commands::tldr::tldr_project_load,
             commands::tldr::tldr_project_create,
             commands::tldr::tldr_set_carry,

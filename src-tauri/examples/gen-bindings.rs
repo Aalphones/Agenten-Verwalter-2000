@@ -53,8 +53,8 @@ use verwalter_lib::{
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
     tldr::model::{
-        ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr, SessionTldrView,
-        TldrChangedEvent,
+        HandoffBrief, ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr,
+        SessionTldrView, TldrChangedEvent,
     },
     usage::model::{
         UsageAlert, UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot, UsageStatus,
@@ -159,6 +159,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ProjectSessionTldr::export_all(&cfg)?;
     ProjectTldrView::export_all(&cfg)?;
     TldrChangedEvent::export_all(&cfg)?;
+    HandoffBrief::export_all(&cfg)?;
     SideState::export_all(&cfg)?;
     SideUsage::export_all(&cfg)?;
     SideQuestion::export_all(&cfg)?;
