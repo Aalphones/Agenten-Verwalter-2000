@@ -11,7 +11,7 @@
 | Phase | Inhalt | Status | Rating |
 |---|---|---|---|
 | 1 | Core: Command `tldr_handoff_brief` mit Haiku-Übergabe und Rückfall ohne Modell, ADR 051 | complete | standard |
-| 2 | Oberfläche: Knopf im Cache-Hinweis verdrahten, Doku, Release | pending | standard |
+| 2 | Oberfläche: Knopf im Cache-Hinweis verdrahten, Doku, Release | complete | standard |
 
 Sequenziell: Phase 2 braucht den Typ `HandoffBrief` aus Phase 1 (`pnpm bindings`).
 
@@ -188,12 +188,12 @@ Tooltip (`CONTINUE_TITLE`): „Haiku fasst den Gesprächstext dieser Session zus
 
 ### Checkliste
 
-- [ ] `src/lib/tldr.ts`: `createHandoffBrief` laut Kontrakt.
-- [ ] `CacheColdHint.tsx`: Zustand `phase: 'idle' | 'summarizing' | 'creating'` ersetzt `isCreating`. `continueInNewSession`: `phase = 'summarizing'`, `createHandoffBrief(session.id)` — bei Fehler `errorMessage` setzen, `phase = 'idle'`, Ende; dann `phase = 'creating'`, `createSessionInProject(session.projectId)` — bei Fehler wie bisher; `onSessionCreated(created)`; Modell: erste Zeile aus `session.handoffLines` mit `kind === 'session'`, ist ihr `model` nicht `null` und ungleich `created.model`, `setSessionModel(created.id, model)` (Fehlertext wie in `HandoffButton`, Ablauf geht weiter); `setHandoffDraft(created.id, brief.text)`; `focusComposer()`; `phase = 'idle'`. Knopftext: `idle` „In neuer Session weiter“, `summarizing` „Fasse zusammen …“, `creating` „Lege Session an …“; `disabled` bei `phase !== 'idle'`. `CONTINUE_TITLE` laut Kontrakt.
-- [ ] `pnpm check`.
-- [ ] `docs/code-map.md`: Zeile „TL;DR“ um `tldr/brief.rs` (Übergabe für die Folgesession) und den Command `tldr_handoff_brief` ergänzen; Zeile „Prompt-Cache“: `CacheColdHint` legt die Folgesession mit Übergabe im Entwurf an (ADR 051).
-- [ ] `docs/glossary.md`: Begriff **Übergabe** — „Von Haiku aus dem Gesprächstext einer Session geschriebene Zusammenfassung, die der Knopf im Hinweis bei kaltem Cache in den Entwurf der Folgesession setzt; ohne Haiku ein Auszug aus erster Nachricht und letzten Beiträgen (ADR 051). Nicht zu verwechseln mit der Einstiegszeile, die der Agent selbst schreibt.“
-- [ ] Plan archivieren und Release nach `docs/conventions/releases.md` (Minor-Version).
+- [x] `src/lib/tldr.ts`: `createHandoffBrief` laut Kontrakt.
+- [x] `CacheColdHint.tsx`: Zustand `phase: 'idle' | 'summarizing' | 'creating'` ersetzt `isCreating`. `continueInNewSession`: `phase = 'summarizing'`, `createHandoffBrief(session.id)` — bei Fehler `errorMessage` setzen, `phase = 'idle'`, Ende; dann `phase = 'creating'`, `createSessionInProject(session.projectId)` — bei Fehler wie bisher; `onSessionCreated(created)`; Modell: erste Zeile aus `session.handoffLines` mit `kind === 'session'`, ist ihr `model` nicht `null` und ungleich `created.model`, `setSessionModel(created.id, model)` (Fehlertext wie in `HandoffButton`, Ablauf geht weiter); `setHandoffDraft(created.id, brief.text)`; `focusComposer()`; `phase = 'idle'`. Knopftext: `idle` „In neuer Session weiter“, `summarizing` „Fasse zusammen …“, `creating` „Lege Session an …“; `disabled` bei `phase !== 'idle'`. `CONTINUE_TITLE` laut Kontrakt.
+- [x] `pnpm check`.
+- [x] `docs/code-map.md`: Zeile „TL;DR“ um `tldr/brief.rs` (Übergabe für die Folgesession) und den Command `tldr_handoff_brief` ergänzen; Zeile „Prompt-Cache“: `CacheColdHint` legt die Folgesession mit Übergabe im Entwurf an (ADR 051).
+- [x] `docs/glossary.md`: Begriff **Übergabe** — „Von Haiku aus dem Gesprächstext einer Session geschriebene Zusammenfassung, die der Knopf im Hinweis bei kaltem Cache in den Entwurf der Folgesession setzt; ohne Haiku ein Auszug aus erster Nachricht und letzten Beiträgen (ADR 051). Nicht zu verwechseln mit der Einstiegszeile, die der Agent selbst schreibt.“
+- [x] Plan archivieren und Release nach `docs/conventions/releases.md` (Minor-Version).
 
 ## Konfidenz-Ausweis (Wackelstellen)
 
@@ -203,12 +203,20 @@ Tooltip (`CONTINUE_TITLE`): „Haiku fasst den Gesprächstext dieser Session zus
 
 ## Summary
 
+Der Knopf „In neuer Session weiter“ im Hinweis bei kaltem Cache lässt Haiku den Gesprächstext zusammenfassen und setzt die Übergabe in den Entwurf der neuen Session; scheitert Haiku, kommt ein Auszug als Rückfall (ADR 051).
+
 ## Files touched
 
+`src-tauri/src/tldr/` (`brief.rs`, `prompt.rs`, `model.rs`), `commands/tldr.rs`, `sessions/registry/tldr.rs`, `src/lib/tldr.ts`, `src/features/promptcache/CacheColdHint.tsx`, `docs/` (ADR 051, Code-Map, Glossar).
+
 ## Commits
+
+Phase 1 `a568d5f`; Phase 2 und Release siehe Log.
 
 ## Deviations from plan
 
 Phase 1: `labelled_lines` blieb privat (`brief.rs` formatiert die Felder selbst, wegen der Mehrzeilen-Regel); stattdessen `BLOCK_SEPARATOR` auf `pub(crate)`.
 
 ## Follow-ups
+
+Wackelstellen aus dem Konfidenz-Ausweis (Dauer bei leerem Kontingent, Qualität der Übergabe aus reinem Gesprächstext) stehen für den Betrieb aus.
