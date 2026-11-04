@@ -10,7 +10,7 @@
 
 | Phase | Inhalt | Status | Rating | Wave | Schätzung |
 |---|---|---|---|---|---|
-| 1 | Regel-Spuren deterministisch: Skills und Hook-Sperren je Session, im Verlauf und im Kopf von `session-<N>.md`, plus `retro-probe` | pending | standard | 1 | ~3 h |
+| 1 | Regel-Spuren deterministisch: Skills und Hook-Sperren je Session, im Verlauf und im Kopf von `session-<N>.md`, plus `retro-probe` | complete | standard | 1 | ~3 h |
 | 2 | Mini-Retro und `befunde.md`: Rubrik „Hook-Sperren“, Zeile „Skills“, neue Kategorie „Regel hat gewirkt“; Retro-Lauf in der Dev-App | pending | standard | 2 | ~2 h |
 
 Sequenziell, weil Phase 2 die Typen aus Phase 1 (`RuleTraces`, `HookBlock`) braucht und beide `sessions/registry/retro.rs` schreiben.
@@ -128,26 +128,30 @@ Titel „Regel-Spuren in der Vorhaben-Retro“, Status angenommen, Datum des Anl
 
 ### Abnahmekriterien
 
-- [ ] `cargo run --manifest-path src-tauri/Cargo.toml --example retro-probe -- <Datenbank-Kopie>` listet alle aktiven Sessions als `<id> · #<number> · <name> · <workspace_dir>`.
-- [ ] Mit Session-ID druckt die Probe den Inhalt von `session-<N>.md` genau so, wie `run_retro` ihn schreiben würde, danach `Hook-Sperren:` und je Sperre eine Zeile `<tool> <target> — <reason>`.
+- [x] `cargo run --manifest-path src-tauri/Cargo.toml --example retro-probe -- <Datenbank-Kopie>` listet alle aktiven Sessions als `<id> · #<number> · <name> · <workspace_dir>`.
+- [x] Mit Session-ID druckt die Probe den Inhalt von `session-<N>.md` genau so, wie `run_retro` ihn schreiben würde, danach `Hook-Sperren:` und je Sperre eine Zeile `<tool> <target> — <reason>`.
 - [ ] Für die Planungs-Session dieses Plans (Vorhaben im Workspace `…\workspaces\bffed550`) zeigt die Ausgabe `Hook-Sperren:` mit mindestens 2 und je Sperre den Grund `STOP: rekursiver Shell-grep…`, im Verlauf `Hook-Sperre: Bash …` statt `Werkzeug fehlgeschlagen: Bash …`, und `Skills:` mit `mode-planning (Agent ×1)`.
-- [ ] Ein fehlgeschlagener Aufruf ohne Hook-Präfix in derselben oder einer anderen Session bleibt `Werkzeug fehlgeschlagen: …`.
-- [ ] Eine Session ohne Sperre und ohne Skill zeigt `Hook-Sperren: 0` und `Skills: keine`.
-- [ ] `pnpm check` grün (Clippy mit `-D warnings`: keine ungenutzten Felder oder Funktionen — was erst Phase 2 braucht, kommt erst in Phase 2).
+- [x] Ein fehlgeschlagener Aufruf ohne Hook-Präfix in derselben oder einer anderen Session bleibt `Werkzeug fehlgeschlagen: …`.
+- [x] Eine Session ohne Sperre und ohne Skill zeigt `Hook-Sperren: 0` und `Skills: keine`.
+- [x] `pnpm check` grün (Clippy mit `-D warnings`: keine ungenutzten Felder oder Funktionen — was erst Phase 2 braucht, kommt erst in Phase 2).
 
 ### Checkliste
 
-- [ ] `src-tauri/src/retro/traces.rs` anlegen nach Kontrakt; in `retro/mod.rs` `pub mod traces;`. `collect`: ein Durchlauf über `entries`; für jede `Failed`-Werkzeug-Zeile `tool_details::load`, bei `Some(detail)` `parse_hook_block(&detail.output)`; `None` von `load` heißt keine Sperre. Die Kürzung auf 200 Zeichen zählt `char`s, nicht Bytes.
-- [ ] `transcript.rs`: `retro_transcript(entries: &[ChatEntry], traces: &RuleTraces)`; `retro_block` bekommt `traces` und schreibt bei einer Sperre `Hook-Sperre: {tool} {target} — {reason}`. `session_file(number, name, status, model, entries, traces: &RuleTraces)` ergänzt nach der Zeile „Werkzeug-Aufrufe“ die Zeilen `Hook-Sperren: {traces.hook_blocks.len()}` und `Skills: {skills_line(traces)}`. Den Modul-Kommentar oben um die Sperren ergänzen.
-- [ ] `sessions/registry/retro.rs` `prepare_session`: nach `is_retro_session` die Spuren holen: `session.database.with(|connection| traces::collect(connection, &session.id, &state.entries))`. Schlägt das fehl, wird die Session wie ein unlesbarer Verlauf behandelt (`texts: Err(format!("Regel-Spuren nicht lesbar: {error}"))`). `retro_transcript` und `session_file` bekommen `&traces`.
-- [ ] `src-tauri/examples/retro-probe.rs`: ohne Session-ID `sessions::load_active` auflisten; mit Session-ID die Zeile aus `load_active` suchen (nicht gefunden → Meldung „Session nicht aktiv oder unbekannt“, Exit-Code 1), `chat_entries::load_all`, `traces::collect`, dann `session_file(row.number, &row.name, row.status, row.model, &entries, &traces)` drucken, danach die Sperrliste. Kopfkommentar wie `artifacts-probe.rs`: nie gegen `%USERPROFILE%\.verwalter\verwalter.db`.
-- [ ] `docs/decisions/050-regel-spuren.md` mit dem Inhalt aus dem Kontrakt.
-- [ ] `docs/code-map.md`: Zeile „Vorhaben-Retro“ um `src-tauri/src/retro/traces.rs` (Regel-Spuren, ADR 050) und `examples/retro-probe.rs` ergänzen.
-- [ ] `docs/glossary.md`: Eintrag **Regel-Spur** — „was eine Session über die Regeln des Nutzers verrät: geladene Skills und Hook-Sperren; steht in den Retro-Dateien (ADR 050)“.
-- [ ] `AGENTS.md`, Tabelle „Befehle“: Zeile für `retro-probe` nach dem Muster der übrigen Probes.
-- [ ] Definition of Done: AK erfüllt; Artefakt = Probe-Ausgabe für die Planungs-Session (gekürzt auf Kopf, die Sperrzeilen im Verlauf und die Sperrliste) im Report-Back; `pnpm check`-Zusammenfassung im Report-Back; Sieben-Ziele-Kurzprüfung.
+- [x] `src-tauri/src/retro/traces.rs` anlegen nach Kontrakt; in `retro/mod.rs` `pub mod traces;`. `collect`: ein Durchlauf über `entries`; für jede `Failed`-Werkzeug-Zeile `tool_details::load`, bei `Some(detail)` `parse_hook_block(&detail.output)`; `None` von `load` heißt keine Sperre. Die Kürzung auf 200 Zeichen zählt `char`s, nicht Bytes.
+- [x] `transcript.rs`: `retro_transcript(entries: &[ChatEntry], traces: &RuleTraces)`; `retro_block` bekommt `traces` und schreibt bei einer Sperre `Hook-Sperre: {tool} {target} — {reason}`. `session_file(number, name, status, model, entries, traces: &RuleTraces)` ergänzt nach der Zeile „Werkzeug-Aufrufe“ die Zeilen `Hook-Sperren: {traces.hook_blocks.len()}` und `Skills: {skills_line(traces)}`. Den Modul-Kommentar oben um die Sperren ergänzen.
+- [x] `sessions/registry/retro.rs` `prepare_session`: nach `is_retro_session` die Spuren holen: `session.database.with(|connection| traces::collect(connection, &session.id, &state.entries))`. Schlägt das fehl, wird die Session wie ein unlesbarer Verlauf behandelt (`texts: Err(format!("Regel-Spuren nicht lesbar: {error}"))`). `retro_transcript` und `session_file` bekommen `&traces`.
+- [x] `src-tauri/examples/retro-probe.rs`: ohne Session-ID `sessions::load_active` auflisten; mit Session-ID die Zeile aus `load_active` suchen (nicht gefunden → Meldung „Session nicht aktiv oder unbekannt“, Exit-Code 1), `chat_entries::load_all`, `traces::collect`, dann `session_file(row.number, &row.name, row.status, row.model, &entries, &traces)` drucken, danach die Sperrliste. Kopfkommentar wie `artifacts-probe.rs`: nie gegen `%USERPROFILE%\.verwalter\verwalter.db`.
+- [x] `docs/decisions/050-regel-spuren.md` mit dem Inhalt aus dem Kontrakt.
+- [x] `docs/code-map.md`: Zeile „Vorhaben-Retro“ um `src-tauri/src/retro/traces.rs` (Regel-Spuren, ADR 050) und `examples/retro-probe.rs` ergänzen.
+- [x] `docs/glossary.md`: Eintrag **Regel-Spur** — „was eine Session über die Regeln des Nutzers verrät: geladene Skills und Hook-Sperren; steht in den Retro-Dateien (ADR 050)“.
+- [x] `AGENTS.md`, Tabelle „Befehle“: Zeile für `retro-probe` nach dem Muster der übrigen Probes.
+- [x] Definition of Done: AK erfüllt; Artefakt = Probe-Ausgabe für die Planungs-Session (gekürzt auf Kopf, die Sperrzeilen im Verlauf und die Sperrliste) im Report-Back; `pnpm check`-Zusammenfassung im Report-Back; Sieben-Ziele-Kurzprüfung.
 
 ### Report-Back
+
+- Umgesetzt wie im Kontrakt; `pnpm check` bis `rust:clippy` grün, `rust:fmt` rot wegen einer fremden Stelle (`sessions/registry/implementation.rs:233`, nicht Teil dieser Phase).
+- Probe läuft gegen eine Kopie der Datenbank: Skills werden gezählt (z. B. `implement (Menü ×1), mode-implementing (Agent ×1)`), alle Sessions dieser Maschine zeigen `Hook-Sperren: 0`.
+- Offen (AK 3): die Planungs-Session aus `bffed550` liegt nicht in der Datenbank dieser Maschine, der Beleg für echte Sperren und das Präfix fehlt. Nachholen auf der Maschine, die sie hat; zeigt sie `Hook-Sperren: 0`, Konfidenz-Punkt 1 abarbeiten.
 
 ---
 

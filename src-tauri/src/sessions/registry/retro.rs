@@ -16,6 +16,7 @@ use crate::error::CommandError;
 use crate::retro::findings::{self, SessionResult};
 use crate::retro::model::{RetroExport, RetroProgress, SessionFindings};
 use crate::retro::prompt::{RETRO_PARALLEL, RETRO_TIMEOUT, SESSION_SCHEMA, SESSION_SYSTEM_PROMPT};
+use crate::retro::traces;
 use crate::retro::transcript::{is_retro_session, retro_transcript, session_file, tool_counts};
 use crate::sessions::model::SessionStatus;
 
@@ -181,13 +182,31 @@ fn prepare_session(session: &Session) -> Option<PreparedSession> {
     if is_retro_session(&state.entries) {
         return None;
     }
-    let (transcript, truncated) = retro_transcript(&state.entries);
+    let traces = match session
+        .database
+        .with(|connection| traces::collect(connection, &session.id, &state.entries))
+    {
+        Ok(traces) => traces,
+        Err(error) => {
+            return Some(PreparedSession {
+                number: session.number,
+                name,
+                status,
+                model,
+                counts: (0, 0, 0),
+                truncated: false,
+                texts: Err(format!("Regel-Spuren nicht lesbar: {error}")),
+            });
+        }
+    };
+    let (transcript, truncated) = retro_transcript(&state.entries, &traces);
     let file = session_file(
         session.number,
         &state.name,
         state.status,
         state.model,
         &state.entries,
+        &traces,
     );
     Some(PreparedSession {
         number: session.number,
