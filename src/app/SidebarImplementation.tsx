@@ -3,11 +3,7 @@ import type { MouseEvent, ReactElement } from 'react';
 import { RenameField } from '@/app/SidebarItem';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
-import {
-  INQUIRY_LABEL,
-  INQUIRY_TITLE,
-  progressShort,
-} from '@/features/implementation/implementationTexts';
+import { progressShort } from '@/features/implementation/implementationTexts';
 import { stateIcon, stateLabel } from '@/features/implementation/stationState';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import './SidebarImplementation.css';
@@ -20,7 +16,6 @@ interface SidebarImplementationProps {
   onStartRename: () => void;
   onCommitRename: (name: string) => void;
   onCancelRename: () => void;
-  onNewInquiry: () => void;
 }
 
 /** Eine Umsetzung im aufgeklappten Baum eines Vorhabens, vor seinen Sessions (ADR 048). */
@@ -32,7 +27,6 @@ export function SidebarImplementation({
   onStartRename,
   onCommitRename,
   onCancelRename,
-  onNewInquiry,
 }: SidebarImplementationProps): ReactElement {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const progress: string = progressShort(implementation);
@@ -101,18 +95,6 @@ export function SidebarImplementation({
             }}
           >
             Umbenennen
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="sidebar-implementation__menu-item"
-            title={INQUIRY_TITLE}
-            onClick={(): void => {
-              setIsMenuOpen(false);
-              onNewInquiry();
-            }}
-          >
-            {INQUIRY_LABEL}
           </button>
         </Popover>
       )}

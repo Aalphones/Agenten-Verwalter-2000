@@ -56,7 +56,6 @@ interface SidebarProps {
   onSelectProject: (projectId: string) => void;
   onSelectImplementation: (implementationId: string) => void;
   /** Legt eine Rückfrage zur Umsetzung an und öffnet sie. */
-  onNewInquiry: (implementationId: string) => Promise<void>;
   onNew: () => void;
   onOpenSettings: () => void;
   onOpenArchive: () => void;
@@ -77,7 +76,6 @@ export function Sidebar({
   onSelectSession,
   onSelectProject,
   onSelectImplementation,
-  onNewInquiry,
   onNew,
   onOpenSettings,
   onOpenArchive,
@@ -331,9 +329,6 @@ export function Sidebar({
             commitRename('implementation', implementation.id, name);
           }}
           onCancelRename={stopRename}
-          onNewInquiry={(): void => {
-            run(() => onNewInquiry(implementation.id), 'Rückfrage nicht angelegt');
-          }}
         />
       </div>
     );
