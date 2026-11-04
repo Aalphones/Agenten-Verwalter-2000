@@ -471,6 +471,9 @@ export function App(): ReactElement {
             />
           }
           onNewInquiry={startInquiry}
+          terminalCount={runningTerminalCount}
+          isTerminalOpen={isTerminalOpen}
+          onToggleTerminal={handleToggleTerminal}
           onShowView={showImplementationView}
           onOpenProject={(): void => {
             selectProject(project.id);

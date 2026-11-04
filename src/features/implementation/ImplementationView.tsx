@@ -45,6 +45,10 @@ interface ImplementationViewProps {
   onNewInquiry: (implementationId: string) => Promise<void>;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
+  /** Laufende Terminals des Vorhabens. */
+  terminalCount: number;
+  isTerminalOpen: boolean;
+  onToggleTerminal: () => void;
 }
 
 function isTextTarget(target: EventTarget | null): boolean {
@@ -75,6 +79,9 @@ export function ImplementationView({
   onNewInquiry,
   onShowView,
   onOpenProject,
+  terminalCount,
+  isTerminalOpen,
+  onToggleTerminal,
 }: ImplementationViewProps): ReactElement {
   // Text des geöffneten Lageberichts; `null`: das Fenster ist zu.
   const [report, setReport] = useState<string | null>(null);
@@ -272,6 +279,9 @@ export function ImplementationView({
         changesCount={changesCount}
         onShowView={onShowView}
         onOpenProject={onOpenProject}
+        terminalCount={terminalCount}
+        isTerminalOpen={isTerminalOpen}
+        onToggleTerminal={onToggleTerminal}
       />
       <ImplementationBar
         implementation={implementation}
