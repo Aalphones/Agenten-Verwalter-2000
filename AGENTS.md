@@ -42,7 +42,7 @@ Begründungen: [docs/decisions/001-stack-und-plattform.md](docs/decisions/001-st
 | Befehl | Wirkung |
 |---|---|
 | `pnpm tauri dev` | App im Entwicklungsmodus |
-| `pnpm check` | gesamte Prüfkette (Lint, Typecheck, Format, Build, rustfmt, Clippy) — vor jedem Commit grün |
+| `pnpm check` | gesamte Prüfkette (Lint, Typecheck, Format, Build, rustfmt, Clippy) — vor jedem Commit grün; läuft unter Windows direkt aus PowerShell, ohne Visual-Studio-Umgebung (kein `vswhere`/`VsDevCmd`); fehlt `cargo` im `PATH`, vorher `$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"` |
 | `pnpm bindings` | TS-Typen aus Rust neu erzeugen — nach jeder Änderung an Typen, die die Tauri-Grenze überqueren |
 | `pnpm format` | Prettier schreibt `src/` neu |
 | `cargo run --manifest-path src-tauri/Cargo.toml --example changes-probe -- <Datenbank-Kopie> <Session-ID> [session\|project] [<Schlüssel> <Pfad> [<von> <bis>]]` | zeigt, was die Changes einer Session aus einer Kopie der Datenbank ermitteln (Einträge, Diff mit Zeilenzahl der neuen Fassung, mit `<von> <bis>` zusätzlich diese Zeilen, Suchordner der Commit-Suche; `PROBE_SCOPE=committed\|uncommitted` wählt einen anderen Blickwinkel als „alles“); nie gegen `%USERPROFILE%\.verwalter\verwalter.db` |
