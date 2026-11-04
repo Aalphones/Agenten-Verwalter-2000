@@ -7,9 +7,9 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | Core: Verknüpfungen prüfen, Abgleich, Spiegeln, Einstellung Master-Ordner; ADR 038 | standard | pending |
-| 2 | Oberfläche: Abschnitt „Umgebung“, Punkt am Knopf „Einstellungen“; Doku-Abschluss | standard | pending |
+| 2 | Oberfläche: Abschnitt „Umgebung“, Punkt am Knopf „Einstellungen“; Doku-Abschluss | standard | pending, wartet auf den Plan „Einstellungen gliedern und durchsuchen“ |
 
-**Rahmen:** strikt 1 → 2, direkt auf `main`, ein Commit pro Phase, Scope `settings`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten (nur `std::fs`), Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).
+**Rahmen:** strikt 1 → 2, dazwischen der neue Plan „Einstellungen gliedern und durchsuchen“ (User-Entscheidung 2026-11-04: vier Kategorien links, Suchfeld oben; die Einstellungen sollen nicht flach weiterwachsen). Phase 2 wird nach diesem Plan neu geschnitten: der Abschnitt „Umgebung“ landet in dessen Kategorie „Skills & Umgebung“ statt flach zwischen „Skills“ und „Ordner“, AK 1 und der Entwurf passen sich dann an. Phase 1 ist reiner Core und davon unberührt. Direkt auf `main`, ein Commit pro Phase, Scope `settings`. `pnpm check` grün vor jedem Commit, `cargo` im PATH, keine neuen Abhängigkeiten (nur `std::fs`), Bindings mitcommitten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version).
 
 ## Festgelegte Entscheidungen
 
