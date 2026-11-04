@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Core: Pseudo-Terminal je Terminal, Shell je Betriebssystem, Puffer, Commands, Lebensdauer; ADR 052](phase-1-core.md) | heikel | pending |
-| 2 | [Einstellung „Terminal“ (unten/rechts) in Core und Einstellungsseite](phase-2-einstellung.md) | mechanisch | pending |
+| 2 | [Einstellungen „Terminal“ (unten/rechts) und gemerkte Größe in Core und Einstellungsseite](phase-2-einstellung.md) | mechanisch | pending |
 | 3 | [Oberfläche: Terminal-Dock unten/rechts, xterm.js, Knopf und Strg+Ö; Doku-Abschluss](phase-3-dock.md) | standard | pending |
 
 **Rahmen:** strikt 1 → 2 → 3, direkt auf `main`, ein Commit pro Phase, Scope `terminal` (Phase 2: `settings`). `pnpm check` grün vor jedem Commit, `%USERPROFILE%\.cargo\bin` im PATH, `pnpm bindings` nach Phase 1 und 2, Bindings mitcommitten. Neue Abhängigkeiten genau diese: `portable-pty = "0.9.0"` (Core), `@xterm/xterm@6.0.0` und `@xterm/addon-fit@0.11.0` (Oberfläche, exakt ohne `^`). Keine Migration (Tabelle `settings` ist Schlüssel/Text). Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version). ADR-Nummer 052 (034 und 038 sind von geparkten Plänen reserviert, 051 ist die höchste auf Platte).
@@ -22,8 +22,10 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 - **Variante A „Unten“ (Standard):** Dock unter der Hauptfläche (`app__main`), über der vollen Breite der Hauptfläche, links von einem offenen Hintergrund-Panel. Höhe per Ziehkante (120 px bis Höhe der Hauptfläche − 160 px, Start 260 px), Knopf „Maximieren“ füllt die Hauptfläche (Inhalt darüber bleibt eingehängt, nur ausgeblendet).
 - **Variante B „Rechts“:** Dock als eigene Spalte zwischen Hauptfläche und Hintergrund-Panel. Breite per Ziehkante (320 px bis 60 % der Fensterbreite, Start 460 px). Dock und Hintergrund-Panel sind in B nie zugleich offen: Öffnen des einen schließt das andere. Kein Maximieren.
 - **Einstellung `terminal_placement`** (`bottom` | `right`, Standard `bottom`) in der Tabelle `settings`, Zeile „Terminal“ im Abschnitt „Darstellung“. Wechsel wirkt sofort; ein offenes Dock springt an den neuen Platz, Terminals laufen weiter.
-- **Dock-Zustand flüchtig:** offen/zu, Höhe, Breite, maximiert leben nur in Zustand (`src/stores/terminal.ts`) bis zum App-Ende; beim Start ist das Dock zu.
-- **Nur im Speicher:** Terminals überstehen Ein-/Ausblenden, Vorhabenwechsel, Platzwechsel und Neuladen der Oberfläche (1 MiB Puffer im Core, neu abgespielt in ein frisches xterm); sie enden mit „×“, Archivieren des Vorhabens oder App-Ende. Vollbild-Programme (z. B. `vim`) können nach dem Neuabspielen verzerrt aussehen, bis sie neu zeichnen; hingenommen.
+- **Größe wird gemerkt:** Höhe (unten) und Breite (rechts) liegen als `terminal_height` (Standard 260) und `terminal_width` (Standard 460) in der Tabelle `settings`, gespeichert beim Loslassen der Ziehkante, und überstehen einen Neustart. Liegt ein gespeicherter Wert außerhalb der aktuellen Grenzen (kleineres Fenster), wird er beim Anzeigen auf die Grenze geklemmt, nicht überschrieben.
+- **Flüchtig bleiben:** offen/zu und maximiert (`src/stores/terminal.ts`); beim Start ist das Dock zu.
+- **Ausblenden baut nichts ab:** Die xterm-Ansichten aller Terminals des sichtbaren Vorhabens bleiben eingehängt — auch bei ausgeblendetem Dock und für nicht gewählte Terminals, nur versteckt (`display: none`). Ein laufendes `htop` oder `vim` (auch über `ssh`) sieht nach dem Einblenden aus wie vorher.
+- **Nur im Speicher:** Terminals überstehen außerdem Vorhabenwechsel, Platzwechsel und Neuladen der Oberfläche; dann baut die Oberfläche die Ansicht aus dem Puffer im Core neu (1 MiB, neu abgespielt in ein frisches xterm). Nur in diesen drei Fällen können Vollbild-Programme verzerrt aussehen, bis sie neu zeichnen; hingenommen. Terminals (und damit `ssh`-Verbindungen) enden mit „×“, Archivieren des Vorhabens oder App-Ende.
 - **Zwischenablage:** `Strg+C` kopiert bei Markierung, sonst `^C`; `Strg+V` fügt ein (macOS `Cmd`). Einfügen über das native `paste`-Ereignis, das xterm.js selbst verarbeitet.
 
 ## Kontrakt
@@ -48,8 +50,8 @@ pub struct TerminalChanged { pub project_id: String } // Nutzlast von "terminal:
 
 // src-tauri/src/settings/model.rs — derive wie ColorScheme
 pub enum TerminalPlacement { Bottom, Right }        // serde: "bottom" | "right"
-// Settings bekommt: pub terminal_placement: TerminalPlacement
-// SettingsChange bekommt: TerminalPlacement { value: TerminalPlacement }
+// Settings bekommt: pub terminal_placement: TerminalPlacement, pub terminal_height: u32, pub terminal_width: u32
+// SettingsChange bekommt: TerminalPlacement { value: TerminalPlacement }, TerminalHeight { value: u32 }, TerminalWidth { value: u32 }
 ```
 
 | Command (`src-tauri/src/commands/terminal.rs`) | Argumente | Ergebnis | Wirkung |
@@ -70,10 +72,10 @@ Wrapper `src/lib/terminal.ts`: `listTerminals`, `openTerminal`, `attachTerminal`
 2. Erstes Öffnen in einem Vorhaben ohne Terminal startet `cmd 1` (Windows) im Workspace; `cd` zeigt `…\.verwalter\workspaces\<id>` — den Arbeitsordner des Agenten.
 3. macOS/Linux starten die Shell aus `SHELL` (sonst `/bin/zsh` bzw. `/bin/bash`) mit `-l` — belegt per Code-Blick auf die `cfg`-Zweige; Laufzeit dort ungeprüft.
 4. Einstellungen → Darstellung → „Terminal“: Segment „Unten | Rechts“ mit Erklärung; Standard „Unten“; die Wahl übersteht einen Neustart der App.
-5. „Unten“: Dock unter Chat/Changes/Artefakte/Übersicht, Höhe ziehbar, „Maximieren“ füllt die Hauptfläche und stellt per zweitem Klick zurück; ein offenes Hintergrund-Panel bleibt rechts daneben offen.
-6. „Rechts“: Dock als Spalte rechts, Breite ziehbar; Öffnen des Hintergrund-Panels schließt das Dock und umgekehrt.
+5. „Unten“: Dock unter Chat/Changes/Artefakte/Übersicht, Höhe ab der ersten Version ziehbar, die gezogene Höhe übersteht einen Neustart; „Maximieren“ füllt die Hauptfläche und stellt per zweitem Klick zurück; ein offenes Hintergrund-Panel bleibt rechts daneben offen.
+6. „Rechts“: Dock als Spalte rechts, Breite ab der ersten Version ziehbar, die gezogene Breite übersteht einen Neustart; Öffnen des Hintergrund-Panels schließt das Dock und umgekehrt.
 7. „+“ öffnet ein weiteres Terminal; ein 9. laufendes wird mit dem Satz aus dem Kontrakt abgelehnt, sichtbar im Dock.
-8. Ausblenden und wieder Einblenden, Vorhabenwechsel, Platzwechsel in den Einstellungen und `Strg+R` behalten Terminals und Ausgabe.
+8. Ausblenden und wieder Einblenden sowie Wechsel zwischen den Terminals eines Vorhabens lassen ein laufendes `htop`/`vim` unverändert stehen; Vorhabenwechsel, Platzwechsel in den Einstellungen und `Strg+R` behalten Terminals und Ausgabe.
 9. Farben, Umlaute (`echo äöü`), Größenänderung (Spalten folgen, `mode con`), `Strg+C` bei laufendem `ping -t localhost`, Kopieren und Einfügen funktionieren.
 10. `exit` lässt das Terminal mit „beendet“ stehen; „×“ entfernt es und beendet einen laufenden Prozess; Archivieren und App-Ende lassen keinen Shell-Prozess zurück.
 11. Hell- und Dunkelmodus: das Terminal übernimmt Hintergrund, Schrift und Cursor aus den Tokens und wechselt mit dem Farbschema.
