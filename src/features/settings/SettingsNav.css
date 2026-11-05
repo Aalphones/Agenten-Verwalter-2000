@@ -34,6 +34,21 @@
     }
   }
 
+  &__item--dimmed &__label {
+    font-weight: 500;
+    color: var(--color-fg-secondary);
+  }
+
+  &__badge {
+    flex-shrink: 0;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-text);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+  }
+
   &__text {
     display: flex;
     flex-direction: column;

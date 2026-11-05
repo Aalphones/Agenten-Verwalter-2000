@@ -1,5 +1,5 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
@@ -24,7 +24,15 @@ import { OperatingModeSegment } from '@/features/settings/OperatingModeSegment';
 import { SelectButton } from '@/features/settings/SelectButton';
 import { SettingRow } from '@/features/settings/SettingRow';
 import { SettingsNav } from '@/features/settings/SettingsNav';
-import { groupEntries, initialCategory, shownEntries } from '@/features/settings/settingsCatalog';
+import { SettingsSearchContext } from '@/features/settings/SettingsSearchContext';
+import { SettingsSearchField } from '@/features/settings/SettingsSearchField';
+import {
+  categoryLabel,
+  groupEntries,
+  initialCategory,
+  shownEntries,
+} from '@/features/settings/settingsCatalog';
+import { countByCategory, searchEntries, searchTerms } from '@/features/settings/settingsSearch';
 import type {
   SettingEntry,
   SettingGroup,
@@ -83,6 +91,7 @@ export function SettingsView({
   const [category, setCategory] = useState<SettingsCategoryId>(() =>
     initialCategory(attention, storedCategory),
   );
+  const [query, setQuery] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
   const { repositories, isLoading: areRepositoriesLoading } = useKnownRepositories();
   const { save, error: saveError } = useSettingsUpdate();
@@ -92,6 +101,15 @@ export function SettingsView({
     settings !== null && isLocalOperatingMode(settings.operatingMode);
   const localModels = useLocalModels(isLocalOperation);
   const codexModels = useCodexModels(settings?.operatingMode === 'codex');
+  const terms: string[] = useMemo(() => searchTerms(query), [query]);
+  const isSearching: boolean = terms.length > 0;
+  const hits: SettingEntry[] = searchEntries(
+    settings === null ? [] : shownEntries(settings),
+    terms,
+  );
+  const hitIds: ReadonlySet<SettingId> = new Set(hits.map((entry: SettingEntry) => entry.id));
+  // Vor dem Laden gibt es keine Zeilen, die ein Ergebnis tragen könnten.
+  const isShowingHits: boolean = isSearching && settings !== null && overview !== null;
 
   function toggleMenu(menu: Exclude<OpenMenu, null>): void {
     setOpenMenu(openMenu === menu ? null : menu);
@@ -101,9 +119,16 @@ export function SettingsView({
     setOpenMenu(null);
   }
 
+  function changeQuery(value: string): void {
+    closeMenu();
+    setQuery(value);
+    contentRef.current?.scrollTo({ top: 0 });
+  }
+
   function selectCategory(next: SettingsCategoryId): void {
     // Die Menüs zeichnen per Portal in den body und blieben sonst über einer ausgeblendeten Zeile stehen.
     closeMenu();
+    setQuery('');
     setCategory(next);
     setStoredCategory(next);
     contentRef.current?.scrollTo({ top: 0 });
@@ -395,51 +420,88 @@ export function SettingsView({
     }
   }
 
-  function renderSections(current: Settings, loaded: SettingsOverview): ReactElement[] {
+  function renderSections(
+    current: Settings,
+    loaded: SettingsOverview,
+    hitIds: ReadonlySet<SettingId>,
+  ): ReactElement[] {
     const groups: SettingGroup[] = groupEntries(shownEntries(current));
     // Alle Kategorien bleiben eingehängt (Konto, Version und Claude-Version fragen beim
-    // Einhängen Programme und das Netz ab); die nicht gewählten sind nur ausgeblendet.
-    return groups.map((group: SettingGroup) => (
-      <section
-        key={`${group.category}/${group.section}`}
-        className="settings-view__section"
-        hidden={group.category !== category}
-      >
-        <h2 className="settings-view__section-title">{group.section}</h2>
-        {group.entries.map((entry: SettingEntry) => (
-          <div key={entry.id}>{renderRow(entry.id, current, loaded)}</div>
-        ))}
-      </section>
-    ));
+    // Einhängen Programme und das Netz ab); die nicht gewählten bzw. nicht getroffenen
+    // sind nur ausgeblendet.
+    return groups.map((group: SettingGroup) => {
+      const hasHit: boolean = group.entries.some((entry: SettingEntry) => hitIds.has(entry.id));
+      return (
+        <section
+          key={`${group.category}/${group.section}`}
+          className="settings-view__section"
+          hidden={isSearching ? !hasHit : group.category !== category}
+        >
+          <h2 className="settings-view__section-title">
+            {isSearching ? (
+              <>
+                {categoryLabel(group.category)}{' '}
+                <span className="settings-view__section-path">
+                  › <b>{group.section}</b>
+                </span>
+              </>
+            ) : (
+              group.section
+            )}
+          </h2>
+          {group.entries.map((entry: SettingEntry) => (
+            <div key={entry.id} hidden={isSearching && !hitIds.has(entry.id)}>
+              {renderRow(entry.id, current, loaded)}
+            </div>
+          ))}
+        </section>
+      );
+    });
   }
 
-  function renderBody(): ReactElement | ReactElement[] | null {
+  function renderSearchSummary(hitCount: number): ReactElement {
+    const text: string = query.trim();
+    if (hitCount === 0) {
+      return <p className="settings-view__empty">{`Nichts gefunden für „${text}“.`}</p>;
+    }
+    return <p className="settings-view__count">{`${String(hitCount)} Treffer für „${text}“`}</p>;
+  }
+
+  function renderBody(): ReactElement | null {
     if (settings === null || overview === null) {
       if (loadError !== null) {
         return null;
       }
       return <p className="settings-view__loading">Lädt …</p>;
     }
-    return renderSections(settings, overview);
+    return (
+      <>
+        {isSearching && renderSearchSummary(hits.length)}
+        {renderSections(settings, overview, hitIds)}
+      </>
+    );
   }
 
   return (
     <div className="settings-view">
       <header className="settings-view__header">
         <h1 className="settings-view__title">Einstellungen</h1>
+        <SettingsSearchField value={query} onChange={changeQuery} />
       </header>
       <div className="settings-view__split">
         <SettingsNav
-          active={category}
+          active={isShowingHits ? null : category}
           attention={attention}
-          counts={null}
+          counts={isShowingHits ? countByCategory(hits) : null}
           onSelect={selectCategory}
         />
         <div ref={contentRef} className="settings-view__scroll">
-          <div className="settings-view__content">
-            {renderErrors()}
-            {renderBody()}
-          </div>
+          <SettingsSearchContext.Provider value={terms}>
+            <div className="settings-view__content">
+              {renderErrors()}
+              {renderBody()}
+            </div>
+          </SettingsSearchContext.Provider>
         </div>
       </div>
     </div>

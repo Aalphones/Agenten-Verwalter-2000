@@ -1,6 +1,9 @@
 import type { ReactElement, ReactNode } from 'react';
 import { settingEntry } from '@/features/settings/settingsCatalog';
 import type { SettingId } from '@/features/settings/settingsCatalog';
+import { useSettingsSearchTerms } from '@/features/settings/SettingsSearchContext';
+import { foundInInfo, markParts } from '@/features/settings/settingsSearch';
+import type { TextPart } from '@/features/settings/settingsSearch';
 import './SettingRow.css';
 
 interface SettingRowProps {
@@ -10,12 +13,20 @@ interface SettingRowProps {
   children: ReactNode;
 }
 
+function renderParts(parts: readonly TextPart[]): ReactElement[] {
+  return parts.map((part: TextPart, index: number) =>
+    part.isHit ? <mark key={index}>{part.text}</mark> : <span key={index}>{part.text}</span>,
+  );
+}
+
 export function SettingRow({ id, children }: SettingRowProps): ReactElement {
   const { label, info } = settingEntry(id);
+  const terms: readonly string[] = useSettingsSearchTerms();
+  const found: TextPart[] | null = foundInInfo(label, info, terms);
   return (
     <div className="setting-row">
       <div className="setting-row__label">
-        <span>{label}</span>
+        <span>{renderParts(markParts(label, terms))}</span>
         <button
           type="button"
           className="setting-row__info"
@@ -39,6 +50,11 @@ export function SettingRow({ id, children }: SettingRowProps): ReactElement {
         </button>
       </div>
       <div className="setting-row__control">{children}</div>
+      {found !== null && (
+        <p className="setting-row__found">
+          Im Hilfetext: <span className="setting-row__found-text">{renderParts(found)}</span>
+        </p>
+      )}
     </div>
   );
 }

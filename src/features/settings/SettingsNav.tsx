@@ -24,25 +24,50 @@ interface SettingsNavProps {
 }
 
 /** Die Leiste links auf der Einstellungsseite: eine Schaltfläche je Kategorie. */
-export function SettingsNav({ active, attention, onSelect }: SettingsNavProps): ReactElement {
+export function SettingsNav({
+  active,
+  attention,
+  counts,
+  onSelect,
+}: SettingsNavProps): ReactElement {
   function renderDot(category: SettingsCategory): ReactElement | null {
     const kind: SettingsAttention | undefined = attention[category.id];
-    if (kind === undefined) {
+    if (counts !== null || kind === undefined) {
       return null;
     }
     const { className, label } = ATTENTION[kind];
     return <span className={`settings-nav__dot ${className}`} role="img" aria-label={label} />;
   }
 
+  function renderBadge(count: number): ReactElement | null {
+    if (counts === null || count === 0) {
+      return null;
+    }
+    return (
+      <span className="settings-nav__badge" aria-label={`${String(count)} Treffer`}>
+        {count}
+      </span>
+    );
+  }
+
   return (
     <nav className="settings-nav" aria-label="Kategorien der Einstellungen">
       {SETTINGS_CATEGORIES.map((category: SettingsCategory) => {
         const isActive: boolean = category.id === active;
+        const count: number = counts?.[category.id] ?? 0;
+        const isDimmed: boolean = counts !== null && count === 0;
+        const classNames: string[] = ['settings-nav__item'];
+        if (isActive) {
+          classNames.push('settings-nav__item--active');
+        }
+        if (isDimmed) {
+          classNames.push('settings-nav__item--dimmed');
+        }
         return (
           <button
             key={category.id}
             type="button"
-            className={`settings-nav__item${isActive ? ' settings-nav__item--active' : ''}`}
+            className={classNames.join(' ')}
             aria-current={isActive ? 'page' : undefined}
             onClick={(): void => {
               onSelect(category.id);
@@ -52,6 +77,7 @@ export function SettingsNav({ active, attention, onSelect }: SettingsNavProps): 
               <span className="settings-nav__label">{category.label}</span>
               <span className="settings-nav__summary">{category.summary}</span>
             </span>
+            {renderBadge(count)}
             {renderDot(category)}
           </button>
         );

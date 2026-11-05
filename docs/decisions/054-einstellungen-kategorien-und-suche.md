@@ -20,8 +20,16 @@ Die Einstellungsseite ist ein langer Scroll mit acht Abschnitten; der neunte (Um
 - **Merken** der zuletzt gewählten Kategorie nur im Zustand-Store (`stores/settingsNav.ts`), nicht in der Datenbank: eine Ansichtsvorliebe, deren Verlust beim Neustart nicht weh tut.
 - **Punkte an Kategorien** spiegeln den Punkt am Knopf „Einstellungen“: Update des Verwalters → „App“. Beim Öffnen gilt die erste Kategorie mit Punkt.
 
+## Suche
+
+- Der Suchtext wird getrimmt und an Leerzeichen in Wörter geteilt; jedes Wort muss als Teilstring im Zeilennamen **oder** im ⓘ-Text vorkommen (UND), Groß und klein egal. Abschnittsnamen, Pfade und Zahlen in den Bedienelementen zählen nicht; durchsucht werden nur sichtbare Zeilen. Gefiltert wird bei jedem Tastendruck.
+- Die Treffer sind die echten Zeilen, gruppiert nach Kategorie und Abschnitt; nicht getroffene Zeilen und Gruppen sind `hidden`. Die Leiste zeigt je Kategorie die Trefferzahl, ohne Treffer gedimmt. Ein Klick auf eine Kategorie leert die Suche und öffnet sie.
+- Treffer im Zeilennamen sind markiert. Fehlt ein Suchwort im Namen, zeigt die Zeile „Im Hilfetext: …“: der erste Satz des ⓘ-Textes mit einem fehlenden Wort; ist er länger als 140 Zeichen, 60 Zeichen vor und nach dem ersten Treffer, an Wortgrenzen geschnitten, mit „…“ an den abgeschnittenen Enden.
+- **Verworfen:** Treffer als Kopien der Zeilen. Das wäre eine zweite Instanz je Zeile mit doppelten Abfragen (Konto, Version) und eigenem Zustand.
+- Die Suchwörter erreichen `SettingRow` über einen Context; die Suchfunktionen sind rein (`settingsSearch.ts`).
+
 ## Konsequenzen
 
 - Eine neue Zeile ist ein Katalogeintrag plus ein Zweig in `renderRow`; ein neuer Abschnitt landet in seiner Kategorie. Spätere Pläne bauen keinen Abschnitt hinter die Hülle.
 - Ausgeblendete Zeilen bleiben im DOM; ihre Menüs (Portal in `document.body`) werden beim Wechsel der Kategorie geschlossen.
-- Die Suche (Phase 2) arbeitet auf dem Katalog, nicht auf dem DOM.
+- Die Suche arbeitet auf dem Katalog, nicht auf dem DOM.
