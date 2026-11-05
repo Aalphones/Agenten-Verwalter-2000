@@ -1,5 +1,5 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
@@ -31,9 +31,9 @@ import { SettingsNav } from '@/features/settings/SettingsNav';
 import { SettingsSearchContext } from '@/features/settings/SettingsSearchContext';
 import { SettingsSearchField } from '@/features/settings/SettingsSearchField';
 import {
-  categoryLabel,
   groupEntries,
   initialCategory,
+  SETTINGS_CATEGORIES,
   shownEntries,
 } from '@/features/settings/settingsCatalog';
 import { countByCategory, searchEntries, searchTerms } from '@/features/settings/settingsSearch';
@@ -41,6 +41,7 @@ import type {
   SettingEntry,
   SettingGroup,
   SettingId,
+  SettingsCategory,
   SettingsCategoryId,
 } from '@/features/settings/settingsCatalog';
 import { useCategoryAttention } from '@/features/settings/useCategoryAttention';
@@ -99,6 +100,9 @@ export function SettingsView({
   );
   const [query, setQuery] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
+  const isScrollingToRef = useRef<boolean>(false);
+  const scrollLockRef = useRef<number | undefined>(undefined);
+  const hasScrolledToStartRef = useRef<boolean>(false);
   const { repositories, isLoading: areRepositoriesLoading } = useKnownRepositories();
   const { save, error: saveError } = useSettingsUpdate();
 
@@ -117,6 +121,20 @@ export function SettingsView({
   // Vor dem Laden gibt es keine Zeilen, die ein Ergebnis tragen könnten.
   const isShowingHits: boolean = isSearching && settings !== null && overview !== null;
 
+  const isLoaded: boolean = settings !== null && overview !== null;
+  useEffect(() => {
+    // Erst wenn die Blöcke gezeichnet sind: beim Öffnen zur Kategorie mit Punkt bzw. der zuletzt gewählten.
+    if (!isLoaded || hasScrolledToStartRef.current) {
+      return;
+    }
+    hasScrolledToStartRef.current = true;
+    if (category !== 'general') {
+      scrollToCategory(category, false);
+    }
+    // Nur einmal beim ersten Laden; spätere Wechsel der Kategorie kommen vom Scrollen selbst.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
   function toggleMenu(menu: Exclude<OpenMenu, null>): void {
     setOpenMenu(openMenu === menu ? null : menu);
   }
@@ -131,13 +149,68 @@ export function SettingsView({
     contentRef.current?.scrollTo({ top: 0 });
   }
 
+  /** Springt zum Block der Kategorie; `smooth` nur bei Klick, nicht beim Öffnen. */
+  function scrollToCategory(id: SettingsCategoryId, smooth: boolean): void {
+    const container: HTMLDivElement | null = contentRef.current;
+    const block: Element | null | undefined = container?.querySelector(`[data-category="${id}"]`);
+    if (container === null || block === null || block === undefined) {
+      return;
+    }
+    const top: number =
+      block.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    // Während des Gleitens soll die Hervorhebung nicht über die Zwischenkategorien flackern.
+    isScrollingToRef.current = true;
+    window.clearTimeout(scrollLockRef.current);
+    scrollLockRef.current = window.setTimeout(
+      () => {
+        isScrollingToRef.current = false;
+      },
+      smooth ? 700 : 50,
+    );
+    container.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
   function selectCategory(next: SettingsCategoryId): void {
     // Die Menüs zeichnen per Portal in den body und blieben sonst über einer ausgeblendeten Zeile stehen.
     closeMenu();
+    const wasSearching: boolean = isSearching;
     setQuery('');
     setCategory(next);
     setStoredCategory(next);
-    contentRef.current?.scrollTo({ top: 0 });
+    if (wasSearching) {
+      // Erst nach dem Neuzeichnen: die ausgeblendeten Blöcke ändern die Lage der Überschriften.
+      window.requestAnimationFrame(() => {
+        scrollToCategory(next, false);
+      });
+      return;
+    }
+    scrollToCategory(next, true);
+  }
+
+  /** Die oberste Kategorie, die den oberen Rand erreicht hat, ist die aktive; am Ende die letzte. */
+  function followScroll(): void {
+    const container: HTMLDivElement | null = contentRef.current;
+    if (container === null || isSearching || isScrollingToRef.current) {
+      return;
+    }
+    const blocks: NodeListOf<HTMLElement> =
+      container.querySelectorAll<HTMLElement>('[data-category]');
+    const edge: number = container.getBoundingClientRect().top + 24;
+    let current: SettingsCategoryId | null = null;
+    for (const block of blocks) {
+      if (block.getBoundingClientRect().top <= edge) {
+        current = block.dataset.category as SettingsCategoryId;
+      }
+    }
+    const isAtEnd: boolean =
+      container.scrollTop + container.clientHeight >= container.scrollHeight - 2;
+    if (isAtEnd && blocks.length > 0 && container.scrollTop > 0) {
+      current = blocks[blocks.length - 1]?.dataset.category as SettingsCategoryId;
+    }
+    if (current !== null && current !== category) {
+      setCategory(current);
+      setStoredCategory(current);
+    }
   }
 
   function reveal(path: string): void {
@@ -443,34 +516,46 @@ export function SettingsView({
     hitIds: ReadonlySet<SettingId>,
   ): ReactElement[] {
     const groups: SettingGroup[] = groupEntries(shownEntries(current));
-    // Alle Kategorien bleiben eingehängt (Konto, Version und Claude-Version fragen beim
-    // Einhängen Programme und das Netz ab); die nicht gewählten bzw. nicht getroffenen
-    // sind nur ausgeblendet.
-    return groups.map((group: SettingGroup) => {
-      const hasHit: boolean = group.entries.some((entry: SettingEntry) => hitIds.has(entry.id));
+    // Eine lange Liste: je Kategorie ein Block mit Überschrift, darin ihre Abschnitte. Alles bleibt
+    // eingehängt (Konto, Version und Claude-Version fragen beim Einhängen Programme und das Netz
+    // ab); bei einer Suche sind nur Blöcke, Abschnitte und Zeilen ohne Treffer ausgeblendet.
+    return SETTINGS_CATEGORIES.map((meta: SettingsCategory) => {
+      const categoryGroups: SettingGroup[] = groups.filter(
+        (group: SettingGroup) => group.category === meta.id,
+      );
+      const hasCategoryHit: boolean = categoryGroups.some((group: SettingGroup) =>
+        group.entries.some((entry: SettingEntry) => hitIds.has(entry.id)),
+      );
       return (
         <section
-          key={`${group.category}/${group.section}`}
-          className="settings-view__section"
-          hidden={isSearching ? !hasHit : group.category !== category}
+          key={meta.id}
+          className="settings-view__category"
+          data-category={meta.id}
+          aria-labelledby={`settings-category-${meta.id}`}
+          hidden={isSearching && !hasCategoryHit}
         >
-          <h2 className="settings-view__section-title">
-            {isSearching ? (
-              <>
-                {categoryLabel(group.category)}{' '}
-                <span className="settings-view__section-path">
-                  › <b>{group.section}</b>
-                </span>
-              </>
-            ) : (
-              group.section
-            )}
+          <h2 id={`settings-category-${meta.id}`} className="settings-view__category-title">
+            {meta.label}
           </h2>
-          {group.entries.map((entry: SettingEntry) => (
-            <div key={entry.id} hidden={isSearching && !hitIds.has(entry.id)}>
-              {renderRow(entry.id, current, loaded)}
-            </div>
-          ))}
+          {categoryGroups.map((group: SettingGroup) => {
+            const hasHit: boolean = group.entries.some((entry: SettingEntry) =>
+              hitIds.has(entry.id),
+            );
+            return (
+              <section
+                key={group.section}
+                className="settings-view__section"
+                hidden={isSearching && !hasHit}
+              >
+                <h3 className="settings-view__section-title">{group.section}</h3>
+                {group.entries.map((entry: SettingEntry) => (
+                  <div key={entry.id} hidden={isSearching && !hitIds.has(entry.id)}>
+                    {renderRow(entry.id, current, loaded)}
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </section>
       );
     });
@@ -512,7 +597,7 @@ export function SettingsView({
           counts={isShowingHits ? countByCategory(hits) : null}
           onSelect={selectCategory}
         />
-        <div ref={contentRef} className="settings-view__scroll">
+        <div ref={contentRef} className="settings-view__scroll" onScroll={followScroll}>
           <SettingsSearchContext.Provider value={terms}>
             <div className="settings-view__content">
               {renderErrors()}

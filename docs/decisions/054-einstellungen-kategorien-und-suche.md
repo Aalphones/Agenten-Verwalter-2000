@@ -6,6 +6,8 @@
 
 Die Einstellungsseite ist ein langer Scroll mit acht Abschnitten; der neunte (Umgebung) kommt. Sie soll nicht flach weiterwachsen: vier Kategorien in einer Leiste links, rechts nur die Abschnitte der gewählten Kategorie, später ein Suchfeld über alle Zeilen.
 
+**Nachtrag:** Die Leiste wählt keine Seite mehr, sondern ist Sprungmarke: alle Kategorien stehen als ein langer, gruppierter Scroll untereinander (Option b); ein Klick scrollt zur Kategorie, das Scrollen hebt die aktuelle hervor. Suche und Katalog bleiben unverändert.
+
 ## Optionen
 
 - **Gliederung:** (a) vier Kategorien links; (b) ein Scroll mit Sprungmarken; (c) Reiter oben.
