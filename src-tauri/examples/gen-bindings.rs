@@ -35,7 +35,8 @@ use verwalter_lib::{
     },
     implementation::model::{
         ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationView, InquiryCreated,
-        PendingChange, PhaseInput, PhaseMark, PhaseView, StationInput, StationState, StationView,
+        OpenQuestion, PendingChange, PhaseInput, PhaseMark, PhaseView, StationInput, StationState,
+        StationView,
     },
     lmstudio::model::{LocalModel, LocalModelKind, LocalModels},
     mcp::model::{
@@ -207,6 +208,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     RetroProgress::export_all(&cfg)?;
     StationState::export_all(&cfg)?;
     PhaseMark::export_all(&cfg)?;
+    OpenQuestion::export_all(&cfg)?;
     StationView::export_all(&cfg)?;
     PhaseView::export_all(&cfg)?;
     ChangeSummary::export_all(&cfg)?;

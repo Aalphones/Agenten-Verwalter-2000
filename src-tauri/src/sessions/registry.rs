@@ -4057,6 +4057,9 @@ fn apply_answer(
     outbox.write(state, line)?;
     state.pending.remove(position);
     state.set_question_answer(outbox, seq, label);
+    // Die Karte der Station zeigt die älteste offene Anfrage; bleibt danach eine offen, ändert sich
+    // der Status nicht — die Zusammenfassung muss trotzdem raus.
+    outbox.summary_dirty = true;
     if state.pending.is_empty() && state.status == SessionStatus::Waiting {
         state.set_status(outbox, SessionStatus::Running);
     }

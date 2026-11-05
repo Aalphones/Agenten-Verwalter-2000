@@ -18,8 +18,8 @@ use crate::error::CommandError;
 use crate::sessions::model::SessionStatus;
 use crate::sessions::registry::SessionRegistry;
 use model::{
-    ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationView, PendingChange,
-    PhaseInput, PhaseView, StationState, StationView,
+    ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationView, OpenQuestion,
+    PendingChange, PhaseInput, PhaseView, StationState, StationView,
 };
 
 pub const IMPLEMENTATION_CHANGED_EVENT: &str = "implementation://changed";
@@ -272,8 +272,8 @@ pub struct SessionLive {
     pub number: u32,
     /// Abgeschlossene Abschnitte + laufender.
     pub running_ms: f64,
-    /// Text der ersten offenen Rückfrage.
-    pub question: Option<String>,
+    /// Älteste offene Anfrage — Rückfrage oder Rechte-Abfrage.
+    pub open_question: Option<OpenQuestion>,
     pub last_activity_at: f64,
     pub unread: bool,
     /// Ein Hintergrund-Befehl läuft nach der abgegebenen Antwort noch (ADR 032).
@@ -399,9 +399,9 @@ fn station_view(station: &StationRow, live: &HashMap<String, SessionLive>) -> St
         started_at: station.started_at,
         completed_at: station.completed_at,
         result: station.result.clone(),
-        question: session
+        open_question: session
             .filter(|_| state == StationState::Asking)
-            .and_then(|session: &SessionLive| session.question.clone()),
+            .and_then(|session: &SessionLive| session.open_question.clone()),
         running_ms: session.map_or(0.0, |session: &SessionLive| session.running_ms),
     }
 }

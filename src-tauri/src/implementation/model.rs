@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::agents::event::{Attachment, ModelId};
+use crate::agents::event::{Attachment, ModelId, Question, QuestionKind};
 use crate::db::enum_from_text;
 use crate::sessions::model::SessionSummary;
 
@@ -64,6 +64,16 @@ pub enum PhaseMark {
     Moved,
 }
 
+/// Älteste offene Rückfrage oder Rechte-Abfrage einer Session, so wie der Chat sie zeigt.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenQuestion {
+    pub seq: u32,
+    pub request_id: String,
+    pub question_kind: QuestionKind,
+    pub questions: Vec<Question>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct StationView {
@@ -85,8 +95,8 @@ pub struct StationView {
     #[ts(type = "number | null")]
     pub completed_at: Option<f64>,
     pub result: Option<String>,
-    /// Text der ersten offenen Rückfrage der Session; nur bei `Asking`.
-    pub question: Option<String>,
+    /// Älteste offene Anfrage der Session; nur bei `Asking`.
+    pub open_question: Option<OpenQuestion>,
     /// Laufzeit der Session in ms (abgeschlossene Abschnitte + laufender).
     #[ts(type = "number")]
     pub running_ms: f64,

@@ -12,7 +12,7 @@ use super::{
     Outbox, PendingRequest, ProjectState, Session, SessionRegistry, SessionState, now_ms,
     summarize, update,
 };
-use crate::agents::event::{Attachment, Question};
+use crate::agents::event::Attachment;
 use crate::attachments;
 use crate::changes::{self, model::ChangesReach};
 use crate::db::implementations::{
@@ -21,7 +21,7 @@ use crate::db::implementations::{
 use crate::error::CommandError;
 use crate::file_links;
 use crate::implementation::model::{
-    ImplementationView, InquiryCreated, PendingChange, PhaseInput, PhaseView,
+    ImplementationView, InquiryCreated, OpenQuestion, PendingChange, PhaseInput, PhaseView,
 };
 use crate::implementation::report::{self, Extras};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
@@ -449,16 +449,23 @@ fn live_of(session: &Session, now: f64) -> SessionLive {
         + state
             .running_since
             .map_or(0.0, |since: f64| (now - since).max(0.0));
-    let question = state
-        .pending
-        .first()
-        .and_then(|(_, request): &(String, PendingRequest)| request.questions.first())
-        .map(|question: &Question| question.question.clone());
+    let open_question =
+        state
+            .pending
+            .first()
+            .map(
+                |(request_id, request): &(String, PendingRequest)| OpenQuestion {
+                    seq: request.seq,
+                    request_id: request_id.clone(),
+                    question_kind: request.question_kind,
+                    questions: request.questions.clone(),
+                },
+            );
     SessionLive {
         status,
         number: session.number,
         running_ms,
-        question,
+        open_question,
         last_activity_at: state.last_activity_at,
         unread: state.last_activity_at > state.seen_at,
         awaits_script: state.awaited_script().is_some(),

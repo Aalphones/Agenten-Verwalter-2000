@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | Kern: die älteste offene Anfrage vollständig an die Station, Nachzug bei mehreren offenen Anfragen | standard | pending |
+| 1 | Kern: die älteste offene Anfrage vollständig an die Station, Nachzug bei mehreren offenen Anfragen | standard | complete |
 | 2 | Oberfläche: Antworten auf Rückfragen als gemeinsamer Baustein aus dem Chat lösen | standard | pending |
 | 3 | Oberfläche: Karte beantwortet Rückfragen; ADR 055, Doku | standard | pending |
 

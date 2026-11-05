@@ -42,10 +42,11 @@ export function StationCard({
   const number: string = station.sessionNumber === null ? '' : `#${String(station.sessionNumber)}`;
 
   function renderQuestion(): ReactElement | null {
-    if (station.state !== 'asking' || station.question === null) {
+    const text: string | undefined = station.openQuestion?.questions[0]?.question;
+    if (station.state !== 'asking' || text === undefined) {
       return null;
     }
-    return <p className="station-card__question">{station.question}</p>;
+    return <p className="station-card__question">{text}</p>;
   }
 
   function renderResult(): ReactElement | null {

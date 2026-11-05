@@ -1,6 +1,6 @@
 # Phase 1 — Kern: die älteste offene Anfrage vollständig an die Station
 
-Rating **standard** · Status: pending
+Rating **standard** · Status: complete
 
 ## Kontext
 
@@ -26,14 +26,16 @@ Rating **standard** · Status: pending
 
 ## Checkliste
 
-- [ ] `model.rs`: Struct `OpenQuestion` nach Kontrakt mit Doc-Kommentar „Älteste offene Rückfrage oder Rechte-Abfrage einer Session, so wie der Chat sie zeigt.“; `Question` und `QuestionKind` in den bestehenden Import `use crate::agents::event::{Attachment, ModelId};` aufnehmen. In `StationView` das Feld `question` samt Kommentar ersetzen durch `open_question: Option<OpenQuestion>` mit Kommentar „Älteste offene Anfrage der Session; nur bei `Asking`.“
-- [ ] `mod.rs`: in `SessionLive` `question` ersetzen durch `open_question: Option<OpenQuestion>` (Kommentar „Älteste offene Anfrage — Rückfrage oder Rechte-Abfrage.“); `OpenQuestion` in `use model::{…}` aufnehmen; in `station_view` `question: …` ersetzen durch `open_question: session.filter(|_| state == StationState::Asking).and_then(|session: &SessionLive| session.open_question.clone())`.
-- [ ] `registry/implementation.rs`, `live_of`: `let open_question = state.pending.first().map(|(request_id, request): &(String, PendingRequest)| OpenQuestion { seq: request.seq, request_id: request_id.clone(), question_kind: request.question_kind, questions: request.questions.clone() });` und im `SessionLive { … }` `open_question` statt `question`. `OpenQuestion` in den Import `use crate::implementation::model::{…}` aufnehmen; `Question` aus `use crate::agents::event::{Attachment, Question}` entfernen, falls danach unbenutzt (der Compiler meldet es).
-- [ ] `report.rs`, `now_lines`: `if let Some(question) = &station.question { entries.push(format!("{INDENT}{}", first_line(question))); }` ersetzen durch `if let Some(question) = station.open_question.as_ref().and_then(|open: &OpenQuestion| open.questions.first()) { entries.push(format!("{INDENT}{}", first_line(&question.question))); }`; `OpenQuestion` importieren wie die übrigen Modelltypen in der Datei.
-- [ ] `registry.rs`, `apply_answer`: direkt nach `state.set_question_answer(outbox, seq, label);` die Zeile `outbox.summary_dirty = true;` mit Kommentar „Die Karte der Station zeigt die älteste offene Anfrage; bleibt danach eine offen, ändert sich der Status nicht — die Zusammenfassung muss trotzdem raus.“ `set_status` bleibt unverändert (die frühe Rückkehr verhindert Zusammenfassungen ohne Änderung bei jedem Ereignis).
-- [ ] `examples/gen-bindings.rs`: `OpenQuestion` in den Import `implementation::model::{…}` aufnehmen, `OpenQuestion::export_all(&cfg)?;` direkt vor `StationView::export_all(&cfg)?;`. Danach `pnpm bindings`.
-- [ ] `StationCard.tsx`, `renderQuestion` (Übergang bis Phase 3): `const text: string | undefined = station.openQuestion?.questions[0]?.question;` — bei `station.state !== 'asking' || text === undefined` `null`, sonst `<p className="station-card__question">{text}</p>`.
-- [ ] Doc: noch nichts (Phase 3).
-- [ ] `pnpm check` grün, Commit `feat(implementation): offene Anfrage vollständig an die Station`.
+- [x] `model.rs`: Struct `OpenQuestion` nach Kontrakt mit Doc-Kommentar „Älteste offene Rückfrage oder Rechte-Abfrage einer Session, so wie der Chat sie zeigt.“; `Question` und `QuestionKind` in den bestehenden Import `use crate::agents::event::{Attachment, ModelId};` aufnehmen. In `StationView` das Feld `question` samt Kommentar ersetzen durch `open_question: Option<OpenQuestion>` mit Kommentar „Älteste offene Anfrage der Session; nur bei `Asking`.“
+- [x] `mod.rs`: in `SessionLive` `question` ersetzen durch `open_question: Option<OpenQuestion>` (Kommentar „Älteste offene Anfrage — Rückfrage oder Rechte-Abfrage.“); `OpenQuestion` in `use model::{…}` aufnehmen; in `station_view` `question: …` ersetzen durch `open_question: session.filter(|_| state == StationState::Asking).and_then(|session: &SessionLive| session.open_question.clone())`.
+- [x] `registry/implementation.rs`, `live_of`: `let open_question = state.pending.first().map(|(request_id, request): &(String, PendingRequest)| OpenQuestion { seq: request.seq, request_id: request_id.clone(), question_kind: request.question_kind, questions: request.questions.clone() });` und im `SessionLive { … }` `open_question` statt `question`. `OpenQuestion` in den Import `use crate::implementation::model::{…}` aufnehmen; `Question` aus `use crate::agents::event::{Attachment, Question}` entfernen, falls danach unbenutzt (der Compiler meldet es).
+- [x] `report.rs`, `now_lines`: `if let Some(question) = &station.question { entries.push(format!("{INDENT}{}", first_line(question))); }` ersetzen durch `if let Some(question) = station.open_question.as_ref().and_then(|open: &OpenQuestion| open.questions.first()) { entries.push(format!("{INDENT}{}", first_line(&question.question))); }`; `OpenQuestion` importieren wie die übrigen Modelltypen in der Datei.
+- [x] `registry.rs`, `apply_answer`: direkt nach `state.set_question_answer(outbox, seq, label);` die Zeile `outbox.summary_dirty = true;` mit Kommentar „Die Karte der Station zeigt die älteste offene Anfrage; bleibt danach eine offen, ändert sich der Status nicht — die Zusammenfassung muss trotzdem raus.“ `set_status` bleibt unverändert (die frühe Rückkehr verhindert Zusammenfassungen ohne Änderung bei jedem Ereignis).
+- [x] `examples/gen-bindings.rs`: `OpenQuestion` in den Import `implementation::model::{…}` aufnehmen, `OpenQuestion::export_all(&cfg)?;` direkt vor `StationView::export_all(&cfg)?;`. Danach `pnpm bindings`.
+- [x] `StationCard.tsx`, `renderQuestion` (Übergang bis Phase 3): `const text: string | undefined = station.openQuestion?.questions[0]?.question;` — bei `station.state !== 'asking' || text === undefined` `null`, sonst `<p className="station-card__question">{text}</p>`.
+- [x] Doc: noch nichts (Phase 3).
+- [x] `pnpm check` grün, Commit `feat(implementation): offene Anfrage vollständig an die Station`.
 
 ## Report-Back
+
+Nach Plan umgesetzt, keine Abweichung. `cargo fmt` hat den Aufruf in `live_of` anders umbrochen als im Plan skizziert; sonst unverändert. `pnpm check` grün. Kein Befund für spätere Phasen.

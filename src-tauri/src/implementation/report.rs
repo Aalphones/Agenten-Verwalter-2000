@@ -4,7 +4,9 @@ use std::fs;
 use chrono::{DateTime, Local, TimeZone};
 
 use super::changes::describe;
-use super::model::{ChangeView, ImplementationView, PhaseView, StationState, StationView};
+use super::model::{
+    ChangeView, ImplementationView, OpenQuestion, PhaseView, StationState, StationView,
+};
 use crate::file_links::{self, LinkRoots};
 
 const INQUIRY_LINE: &str =
@@ -209,8 +211,12 @@ fn now_lines(view: &ImplementationView) -> Vec<String> {
             station.stage,
             number_in_brackets(station)
         ));
-        if let Some(question) = &station.question {
-            entries.push(format!("{INDENT}{}", first_line(question)));
+        if let Some(question) = station
+            .open_question
+            .as_ref()
+            .and_then(|open: &OpenQuestion| open.questions.first())
+        {
+            entries.push(format!("{INDENT}{}", first_line(&question.question)));
         }
     }
     entries
