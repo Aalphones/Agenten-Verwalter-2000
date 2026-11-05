@@ -9,7 +9,7 @@ Ziel: Das `/`-Menü zeigt neben den Skills und Befehlen aus den Dateien auch die
 - Codex `0.162.0-alpha.17.2`, live gegen `codex app-server`. Protokoll der Probe: [artifacts/codex-probe.log](artifacts/codex-probe.log).
   - `thread/compact/start {threadId}` antwortet `{}`. Danach kommen `turn/started` (neue Turn-ID), `item/started` und `item/completed` mit `type: "contextCompaction"`, `thread/tokenUsage/updated` (`last.totalTokens` = Stand nach dem Zusammenfassen) und `turn/completed` mit derselben Turn-ID.
   - `review/start {threadId, delivery: "inline", target: {type: "custom", instructions}}` antwortet mit `turn.id` = **A**. Danach kommen `enteredReviewMode`, `turn/started` mit einer **anderen** ID **B**, ein `agentMessage`, das nur startet und nie endet, dann `exitedReviewMode` (`review` = Ergebnis-Text) und ein vollständiges `agentMessage` mit demselben Text. Den Abschluss bildet `turn/completed` mit ID **A**.
-- `/compact` im Druckmodus der Claude-Kommandozeile: `system/compact_boundary` mit `compact_metadata` (`trigger`, `pre_tokens`, `post_tokens`), danach `result`. Eine `assistant`-Zeile kommt nicht; der Verwalter zeigt deshalb heute nach `/compact` in „Claude“ nichts außer der eigenen Nachricht. Die Trennlinie im Verlauf bringt der geparkte Plan [Warnhinweise](../2026-10-21_warnhinweise/README.md), Phase 4, und zwar für jede Betriebsart, die `compact_boundary` schickt.
+- `/compact` im Druckmodus der Claude-Kommandozeile: `system/compact_boundary` mit `compact_metadata` (`trigger`, `pre_tokens`, `post_tokens`), danach `result`. Eine `assistant`-Zeile kommt nicht; der Verwalter zeigt deshalb heute nach `/compact` in „Claude“ nichts außer der eigenen Nachricht. Die Trennlinie im Verlauf bringt der geparkte Plan [Warnhinweise](../../2026-10/2026-10-21_warnhinweise/README.md), Phase 4, und zwar für jede Betriebsart, die `compact_boundary` schickt.
 
 Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md](../../code-map.md), [docs/glossary.md](../../glossary.md), die Konventionen unter [docs/conventions/](../../conventions/), [ADR 007](../../decisions/007-anhaenge-skills-hintergrund.md) (Skills im Menü), [ADR 017](../../decisions/017-autarker-agent.md) (Autark), [ADR 031](../../decisions/031-codex.md) (Codex), [docs/knowledge/claude-stream-json.md](../../knowledge/claude-stream-json.md), [docs/knowledge/codex-app-server.md](../../knowledge/codex-app-server.md). Fehlerklassen geprüft (Vault: TypeScript, React, Claude Code): keine einschlägig; für Rust, Tauri und Codex gibt es keine Einträge.
 
@@ -20,7 +20,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | 1 | Autark: `/compact` von Hand, `compact_boundary` mit Tokenständen | [phase-1-autark-compact.md](phase-1-autark-compact.md) | standard | complete |
 | 2 | Codex: `/compact` und `/codex-review` im Übersetzer | [phase-2-codex-befehle.md](phase-2-codex-befehle.md) | standard | complete |
 | 3 | Core: Liste der mitgelieferten Befehle je Betriebsart (Claude-Liste merken, feste Listen, Ausblenden, Beschreibungen); ADR 034 | [phase-3-befehlsliste-core.md](phase-3-befehlsliste-core.md) | standard | complete |
-| 4 | Oberfläche: Abschnitt „Mitgeliefert“ im `/`-Menü; Doku-Abschluss | [phase-4-menue.md](phase-4-menue.md) | standard | pending |
+| 4 | Oberfläche: Abschnitt „Mitgeliefert“ im `/`-Menü; Doku-Abschluss | [phase-4-menue.md](phase-4-menue.md) | standard | complete |
 
 **Reihenfolge:** strikt 1 → 4. Erst müssen die Befehle in „Autark“ und „Codex“ funktionieren, dann bietet das Menü sie an. Umsetzung direkt auf `main`, ein Commit pro Phase; Scopes: Phase 1 `standalone`, Phase 2 `codex`, Phase 3 und 4 `skills`. Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten. Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Keine automatisierten Tests (Profil des Projekts). Erkenntnisse nach [FINDINGS.md](FINDINGS.md). Planabschluss mit Versions-Tag (Minor-Version), Ablauf nach [releases.md](../../conventions/releases.md).
 
@@ -92,10 +92,25 @@ Wackelstellen zuerst:
 
 ## Summary
 
+Das `/`-Menü zeigt je Betriebsart einen Abschnitt „Mitgeliefert“: in „Claude“ und „Claude Code + LM Studio“ die zuletzt gemeldete Liste der Kommandozeile (gespeichert unter `claude_slash_commands`), in „Autark“ `/compact`, in „Codex“ `/compact` und `/codex-review`. `/compact` läuft jetzt in „Autark“ und „Codex“ selbst (mit `compact_boundary`), damit auch der Compact-Knopf. ADR 034.
+
 ## Files touched
+
+- Autark: `src-tauri/src/standalone/` (`/compact`, `output.rs` `compact_boundary`)
+- Codex: `src-tauri/src/agents/codex/` (`/compact`, `/codex-review`)
+- Core: `src-tauri/src/skills/builtin.rs`, `model.rs` (`SkillOrigin::Builtin`), `agents/claude/protocol.rs` (`slash_commands`), Bindings
+- Oberfläche: `src/features/chat/commandMenuRows.ts` (Abschnitt „Mitgeliefert“)
+- Doku: ADR 034, `code-map.md`, `glossary.md`, `claude-stream-json.md`, `codex-app-server.md`
 
 ## Commits
 
+f165e50 (Phase 1), a397694 (Phase 2), b687064 (Phase 3), 22fbc34 (Phase 4)
+
 ## Deviations from plan
 
+Keine. `rowOrigin` und `skillUses` kannten `builtin` schon aus Phase 3; Phase 4 musste nur `rowKey` und die Abschnitte ergänzen. `EMPTY_SKILLS_HINT` greift nur bei `sections.length === 0`, also wenn beide Abschnitte leer sind; keine Änderung nötig.
+
 ## Follow-ups
+
+- Laufzeitbelege in der echten App stehen aus (Wackelstellen der Smoke-Liste oben: Esc im Codex-Review, Sandbox-Zugriff des Reviews, `/compact` in kurzer Autark-Session, Menü gegen echte `system/init`-Liste).
+- FINDINGS: Phase 1 MINOR (Trennzeile vor Transkript-Umschreiben), Phase 2 MINOR (Esc vor `turn/started`).
