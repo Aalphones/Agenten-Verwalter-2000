@@ -16,3 +16,7 @@ Erkenntnisse während der Umsetzung, getaggt mit der Phase, die sie betreffen. F
 - [x] → Phase 3 Review (Commit b687064): AK 1–7 am Diff abgeglichen, keine Abweichung, kein Scope-Drift; ADR 034, ADR-007-Zusatz, code-map und claude-stream-json vorhanden. `apply_event` hat nur den Aufrufer in `update`, Speichern liegt nach der Sperre. Keine CRITICAL/WARNING.
 - [ ] → Phase 3 (INFO): `names_for` verschluckt Lesefehler der Datenbank still (`unwrap_or_default`), wie die AK es für „unlesbar“ verlangt; ein defekter Wert fällt nirgends auf. Kein Handlungsbedarf.
 - [ ] → Phase 3 (Konfidenz): `pnpm check` nicht selbst gelaufen (Grün aus dem Bericht); Menü gegen echte `system/init`-Liste nicht gesehen (Smoke 4/5 gehören zu Phase 4).
+
+- [x] → Phase 4 Review (Commit 22fbc34, Tag v0.52.0 auf 47ca5c0): AK 1–6 am Diff abgeglichen, keine Abweichung, kein Scope-Drift; glossary und code-map nachgezogen. `pnpm check` selbst gelaufen: grün auf HEAD 9e469b6 (der Tag liegt einen Lint-Fix davor, der Fix betrifft nur `eslint.config.js`). Keine CRITICAL/WARNING.
+- [x] → Gesamtplan gegen finale AK 1–6 (README): Menü-Aufbau (Abschnitte, Marke, Filter, Neue Session, Session-Befehl oben) im Code belegt; AK 1–3 in der Menülogik, AK 4–6 laut Phasen-Reviews 1–3 erfüllt.
+- [ ] → Gesamtplan (Konfidenz): Smoke-Liste 1–9 ohne Oberfläche nicht durchführbar, alle offen. Zuerst Punkte 1 und 2 (Esc im Codex-Review, Sandbox-Zugriff des Reviews) und 3 (`/compact` in kurzer Autark-Session); sie entscheiden, ob die zwei MINOR/INFO aus Phase 2 echte Fehler sind.
