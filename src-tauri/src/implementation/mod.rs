@@ -6,6 +6,9 @@ pub mod schedule;
 pub mod start;
 pub mod tools;
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
