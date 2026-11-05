@@ -88,10 +88,25 @@ Die Faktenzeile des Entwurfs unter der Karte (Modell, Läuft seit, Zuletzt), „
 
 ## Summary
 
+Die große Karte einer Station im Zustand „fragt dich“ zeigt den Rückfrage-Kasten des Chats und nimmt dort die Antwort entgegen, samt Fehlerzeile der Session. Die Ansicht der Station trägt dafür die ganze älteste offene Anfrage (`OpenQuestion`); jede Antwort meldet eine Änderung, damit die Karte bei mehreren offenen Anfragen die nächste zeigt. Der Antwortweg (`useQuestionAnswer`, `useQuestionKeys`) ist ein gemeinsamer Baustein von Chat und Karte, halbe Entwürfe liegen im Chat-Store. ADR 055, keine Migration.
+
 ## Files touched
+
+- `src-tauri/src/implementation/` (`model.rs`, `mod.rs`, `report.rs`), `src-tauri/src/sessions/registry.rs` und `registry/implementation.rs`, `src-tauri/examples/gen-bindings.rs`; generiert `src/lib/bindings/OpenQuestion.ts`, `StationView.ts`
+- `src/features/chat/` (`useQuestionAnswer.ts`, `useQuestionKeys.ts`, `ChatTimeline.tsx`, `QuestionBlock.tsx`), `src/stores/chat.ts`, `src/lib/keyTargets.ts`
+- `src/features/implementation/` (`StationQuestion.tsx`, `StationCard.tsx`/`.css`, `ImplementationView.tsx`)
+- `docs/decisions/055-rueckfrage-auf-der-karte.md`, `docs/code-map.md`, `docs/glossary.md`
 
 ## Commits
 
+- `b501d77` feat(implementation): offene Anfrage vollständig an die Station
+- `8cc041d` refactor(chat): Antworten auf Rückfragen als gemeinsamer Baustein
+- `5e7b684` feat(implementation): Rückfragen auf der Karte der Station beantworten
+
 ## Deviations from plan
 
+Keine. Eine Folge aus Phase 2 ist sichtbar: die vereinigte Fassung von `isTextTarget` kennt `select`, im Chat wirken Ziffern und Enter bei Fokus in einem Auswahlfeld deshalb nicht mehr.
+
 ## Follow-ups
+
+- Laufzeitbelege in der echten App stehen aus (Wackelstellen oben): Antworten auf der Karte, Kasten gesperrt bis „läuft“ erscheint, kein Fehlersatz; zwei parallele Rechte-Abfragen, die Karte zeigt nach der ersten Antwort sofort die zweite; Höhe der Karte mit offenem Kasten; angefangene Notiz überlebt den Wechsel zwischen Karte und Chat.
