@@ -12,6 +12,7 @@ import {
   START_NOW_TITLE,
   stateText,
 } from '@/features/implementation/implementationTexts';
+import { StationQuestion } from '@/features/implementation/StationQuestion';
 import { stateTone } from '@/features/implementation/stationState';
 import './StationCard.css';
 
@@ -27,7 +28,7 @@ interface StationCardProps {
   onCompleteByUser: (stationId: string, result: string) => void;
 }
 
-/** Die große Karte der Station im Fokus. Fragen werden im Chat beantwortet, nicht hier. */
+/** Die große Karte der Station im Fokus; eine offene Rückfrage wird hier beantwortet wie im Chat (ADR 055). */
 export function StationCard({
   stationRef,
   now,
@@ -42,11 +43,17 @@ export function StationCard({
   const number: string = station.sessionNumber === null ? '' : `#${String(station.sessionNumber)}`;
 
   function renderQuestion(): ReactElement | null {
-    const text: string | undefined = station.openQuestion?.questions[0]?.question;
-    if (station.state !== 'asking' || text === undefined) {
+    if (station.state !== 'asking' || station.openQuestion === null || station.sessionId === null) {
       return null;
     }
-    return <p className="station-card__question">{text}</p>;
+    // Der Schlüssel setzt Sende-Sperre und Tasten je Anfrage neu auf; Entwürfe liegen im Store und bleiben.
+    return (
+      <StationQuestion
+        key={station.openQuestion.requestId}
+        sessionId={station.sessionId}
+        openQuestion={station.openQuestion}
+      />
+    );
   }
 
   function renderResult(): ReactElement | null {

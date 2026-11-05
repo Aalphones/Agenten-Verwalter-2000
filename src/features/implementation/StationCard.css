@@ -49,7 +49,6 @@
 
   &__phase,
   &__state,
-  &__question,
   &__result {
     margin: 0;
   }
@@ -61,14 +60,6 @@
 
   &__state {
     color: var(--color-fg-secondary);
-  }
-
-  &__question {
-    padding: var(--space-md) var(--space-lg);
-    border-radius: var(--radius-md);
-    background: var(--color-status-waiting-subtle);
-    color: var(--color-fg-primary);
-    white-space: pre-wrap;
   }
 
   &__result {

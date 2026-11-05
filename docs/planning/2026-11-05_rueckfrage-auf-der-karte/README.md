@@ -8,7 +8,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|
 | 1 | Kern: die älteste offene Anfrage vollständig an die Station, Nachzug bei mehreren offenen Anfragen | standard | complete |
 | 2 | Oberfläche: Antworten auf Rückfragen als gemeinsamer Baustein aus dem Chat lösen | standard | complete |
-| 3 | Oberfläche: Karte beantwortet Rückfragen; ADR 055, Doku | standard | pending |
+| 3 | Oberfläche: Karte beantwortet Rückfragen; ADR 055, Doku | standard | complete |
 
 **Rahmen:** strikt 1 → 2 → 3. Keine Migration (die Ansicht der Umsetzung wird nicht gespeichert). ADR 055 ist für diesen Plan reserviert.
 
