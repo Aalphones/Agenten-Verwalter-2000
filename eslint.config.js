@@ -10,7 +10,7 @@ export default tseslint.config(
       'dist',
       'src-tauri',
       'src/lib/bindings',
-      'docs/planning/2026-10-21_mitgelieferte-befehle/artifacts/codex-probe.cjs',
+      'docs/archive/2026-11/2026-10-21_mitgelieferte-befehle/artifacts/codex-probe.cjs',
     ],
   },
   js.configs.recommended,
