@@ -7,7 +7,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Rating | Status |
 |---|---|---|---|
 | 1 | [Kategorien](phase-1-kategorien.md): Katalog aller Zeilen, Leiste links, Punkte an Kategorien; ADR 054 | standard | complete |
-| 2 | [Suche](phase-2-suche.md): Suchfeld, Trefferansicht, Markierung und Fundstelle; Doku-Abschluss | standard | pending |
+| 2 | [Suche](phase-2-suche.md): Suchfeld, Trefferansicht, Markierung und Fundstelle; Doku-Abschluss | standard | complete |
 
 **Rahmen:** strikt 1 → 2. Direkt auf `main`, ein Commit pro Phase, Scope `settings`. `pnpm check` grün vor jedem Commit, `cargo` im PATH (die Prüfkette baut Rust mit, angefasst wird es nicht). Reine Oberfläche: kein Rust, keine Bindings, keine Migration, keine neuen Abhängigkeiten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version, [releases.md](../../conventions/releases.md)). Danach wird Phase 2 des Plans Umgebung neu geschnitten (STATE.md, „Nächster Schritt“).
 
@@ -90,10 +90,25 @@ Die Zeile: `SettingRow({ id, children })` in `SettingRow.tsx`; `AccountRowView` 
 
 ## Summary
 
+Die Einstellungsseite hat links eine Leiste mit vier Kategorien und oben ein Suchfeld. Ein Katalog (`settingsCatalog.ts`) hält Name, ⓘ-Text, Kategorie und Abschnitt aller 15 Zeilen; alle Zeilen bleiben eingehängt und werden nur ausgeblendet. Die Suche filtert bei jedem Tastendruck nach Wörtern (UND, Teilstring) in Zeilenname und ⓘ-Text, zeigt die echten Zeilen gruppiert, markiert Treffer und nennt bei Treffern nur im Hilfetext die Fundstelle. ADR 054.
+
 ## Files touched
+
+- `src/features/settings/`: `settingsCatalog.ts`, `settingsSearch.ts`, `SettingsSearchContext.ts`, `SettingsSearchField.tsx`/`.css`, `SettingsNav.tsx`/`.css`, `SettingRow.tsx`/`.css`, `SettingsView.tsx`/`.css`, `useCategoryAttention.ts`; `src/stores/settingsNav.ts`
+- Konto-, Versions- und Claude-Versions-Zeilen (Texte aus dem Katalog)
+- `docs/decisions/054-einstellungen-kategorien-und-suche.md`, `docs/code-map.md`
 
 ## Commits
 
+- `85a4fdd` feat(settings): Einstellungen in vier Kategorien gliedern
+- `c01e5ff` feat(settings): Einstellungen durchsuchen
+
 ## Deviations from plan
 
+Keine. Die Prüffälle der AK (3 Treffer für „ordner“, 2 für „konto claude“, keiner für „xyzzy“) wurden aus dem Katalog hergeleitet, nicht in der laufenden App geprüft.
+
 ## Follow-ups
+
+- Laufzeitbeleg in der echten App steht aus: Suche „ordner“ gegen den Entwurf, Menüs schließen beim Tippen, „Anmeldung läuft …“ überlebt Suchen.
+- Schmales Fenster ungeprüft (bewusst nicht gebaut).
+- Plan Umgebung Phase 2 neu schneiden (Hinweise in dessen README).
