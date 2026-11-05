@@ -19,6 +19,8 @@ Stand: `codex-cli 0.162.0-alpha.2` (aus der VS-Code-Erweiterung `openai.chatgpt-
 | `thread/resume` | Thread fortsetzen | `threadId`, `cwd`, `developerInstructions` |
 | `turn/start` | Nachricht senden | `threadId`, `input` (Einträge `text`, `image`, `skill`), `model`, `effort`, `approvalPolicy`, `sandboxPolicy`, `outputSchema`; Antwort `turn.id` |
 | `turn/interrupt` | Turn abbrechen | `threadId`, `turnId`; der Turn endet danach mit `turn/completed` `interrupted` |
+| `thread/compact/start` | Thread zusammenfassen (`/compact`) | `threadId`; Antwort `{}`, die Turn-ID kommt mit `turn/started` |
+| `review/start` | Prüfung starten (`/codex-review`) | `threadId`, `delivery: "inline"`, `target: {type: "custom", instructions}`; Antwort `turn.id` |
 | `model/list` | Modelle | `id`, `displayName`, `isDefault`, `hidden`, `supportedReasoningEfforts`, `defaultReasoningEffort` |
 | `account/read` | Konto | `account.type` (`chatgpt`), `planType`, `email` |
 | `account/login/start` | Anmeldung | `type: "chatgpt"`; Antwort enthält die Anmelde-Adresse; Ende über `account/login/completed` |
@@ -27,7 +29,7 @@ Stand: `codex-cli 0.162.0-alpha.2` (aus der VS-Code-Erweiterung `openai.chatgpt-
 
 ## Benutzte Benachrichtigungen
 
-`item/started`, `item/completed` (Elemente `agentMessage`, `reasoning`, `commandExecution`, `fileChange`, `mcpToolCall`, `webSearch`), `turn/plan/updated`, `thread/tokenUsage/updated` (`last.inputTokens`, `last.outputTokens`, `modelContextWindow`), `turn/completed` (`status` `completed`/`failed`/`interrupted`, `error.message`), `error` (`willRetry`), `serverRequest/resolved`, `account/login/completed`. Alles andere — Stück-für-Stück-Ausgaben (`…/delta`), Statusmeldungen (`thread/status/changed`, `mcpServer/startupStatus/updated`), `turn/started`, `turn/diff/updated` — überliest der Übersetzer still. Eine unbekannte Benachrichtigung steht einmal auf stderr.
+`item/started`, `item/completed` (Elemente `agentMessage`, `reasoning`, `commandExecution`, `fileChange`, `mcpToolCall`, `webSearch`, `contextCompaction` als Trennzeile `compact_boundary`, `enteredReviewMode` und `exitedReviewMode` still), `turn/started` (der Übersetzer übernimmt die Turn-ID für `turn/interrupt`), `turn/plan/updated`, `thread/tokenUsage/updated` (`last.inputTokens`, `last.outputTokens`, `modelContextWindow`), `turn/completed` (`status` `completed`/`failed`/`interrupted`, `error.message`), `error` (`willRetry`), `serverRequest/resolved`, `account/login/completed`. Alles andere — Stück-für-Stück-Ausgaben (`…/delta`), Statusmeldungen (`thread/status/changed`, `mcpServer/startupStatus/updated`), `turn/diff/updated` — überliest der Übersetzer still. Eine unbekannte Benachrichtigung steht einmal auf stderr.
 
 `thread/tokenUsage/updated` kommt **nach** der `agentMessage` des Turns, nicht davor.
 
@@ -48,4 +50,6 @@ Stand: `codex-cli 0.162.0-alpha.2` (aus der VS-Code-Erweiterung `openai.chatgpt-
 - **`effort`** in `turn/start` ist nur gegen das Schema gebaut; Codex bestätigt ihn nicht.
 - **PDF-Anhänge** nimmt `input` nicht an.
 - **Druckmodus:** `thread/start` mit `ephemeral: true` und `baseInstructions`, `turn/start` mit `outputSchema`; die Antwort steht als JSON-Text in der letzten `agentMessage`. Belegt mit einem Schema `{summary: string}`.
+- **Review: zwei Turn-IDs** (belegt mit `0.162.0-alpha.17.2` am 2026-10-21). `review/start` antwortet mit `turn.id` A, danach meldet `turn/started` eine andere ID B; `turn/completed` trägt wieder A. Das Ergebnis steht als `exitedReviewMode` und zusätzlich als vollständiges `agentMessage`; das davor gestartete `agentMessage` endet nie. Abgebrochen wird mit B.
+- **Zusammenfassen:** `thread/tokenUsage/updated` meldet danach `last` mit `inputTokens: 0` und `outputTokens: 0`; nur `totalTokens` trägt den Stand (`0.162.0-alpha.17.2`, 2026-10-21). Die Meldung kommt nach dem Element `contextCompaction`.
 - **`codex.exe` unter Windows:** liegt in der VS-Code-Erweiterung unter `%USERPROFILE%\.vscode\extensions\openai.chatgpt-<Version>-win32-x64\bin\windows-x86_64\`.

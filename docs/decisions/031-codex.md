@@ -42,4 +42,5 @@ Der Benutzer hat neben dem Claude-Abo ein ChatGPT-Abo mit OpenAI Codex. Er will 
 - Der Verwalter hängt am JSON-RPC-Protokoll von `codex app-server`, das OpenAI ohne Versionszusage ändern kann; das Schema einer installierten Version erzeugt `codex app-server generate-json-schema --out <Ordner>`. Geprüft gegen `codex-cli 0.162.0-alpha.2`.
 - Nach einem Wechsel der Betriebsart beginnt der Verlauf neu; Codex-Threads und Claude-Transkripte liegen nebeneinander.
 - Das Protokoll und die benutzten Methoden stehen in [docs/knowledge/codex-app-server.md](../knowledge/codex-app-server.md).
+- `/compact` und `/codex-review` setzt der Übersetzer selbst um (ADR 034).
 - Nicht live geprüft, nur gegen das Schema gebaut: `turn/plan/updated`, `mcpToolCall`, `item/tool/requestUserInput`, `account/login/start`. Unbeantwortet (JSON-RPC-Fehler „nicht unterstützt“) bleiben `item/permissions/requestApproval`, `mcpServer/elicitation/request` und `item/tool/call`.

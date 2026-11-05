@@ -18,7 +18,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Autark: `/compact` von Hand, `compact_boundary` mit Tokenständen | [phase-1-autark-compact.md](phase-1-autark-compact.md) | standard | complete |
-| 2 | Codex: `/compact` und `/codex-review` im Übersetzer | [phase-2-codex-befehle.md](phase-2-codex-befehle.md) | standard | pending |
+| 2 | Codex: `/compact` und `/codex-review` im Übersetzer | [phase-2-codex-befehle.md](phase-2-codex-befehle.md) | standard | complete |
 | 3 | Core: Liste der mitgelieferten Befehle je Betriebsart (Claude-Liste merken, feste Listen, Ausblenden, Beschreibungen); ADR 034 | [phase-3-befehlsliste-core.md](phase-3-befehlsliste-core.md) | standard | pending |
 | 4 | Oberfläche: Abschnitt „Mitgeliefert“ im `/`-Menü; Doku-Abschluss | [phase-4-menue.md](phase-4-menue.md) | standard | pending |
 

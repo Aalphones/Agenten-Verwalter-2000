@@ -18,6 +18,62 @@ const SKILL_FILE: &str = "SKILL.md";
 /// Codex nimmt nur Bilder an; die PDF-Blöcke des Verwalters würden sonst stumm verschwinden.
 const DOCUMENT_NOTE: &str = "[PDF-Anhang nicht übertragen: Codex nimmt nur Bilder an.]";
 
+/// Befehle, die der Übersetzer selbst umsetzt, statt sie als Text an das Modell zu schicken.
+const COMPACT_COMMAND: &str = "/compact";
+const REVIEW_COMMAND: &str = "/codex-review";
+
+/// Ein Befehl des Übersetzers aus dem ersten Text einer Nachricht.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Command {
+    Compact,
+    /// Der Text nach `/codex-review`, leer ohne Zusatz.
+    Review(String),
+}
+
+/// Erkennt `/compact` und `/codex-review` im ersten Textblock; alles andere (auch `/compactx`) ist
+/// keiner und geht den üblichen Weg.
+pub fn command(content: &Value) -> Option<Command> {
+    let blocks = blocks_of(content);
+    let first_text = blocks
+        .iter()
+        .find(|block: &&Value| block.get("type").and_then(Value::as_str) == Some(TEXT_BLOCK))?
+        .get("text")
+        .and_then(Value::as_str)?
+        .trim_start();
+    if after_command(first_text, COMPACT_COMMAND).is_some() {
+        return Some(Command::Compact);
+    }
+    after_command(first_text, REVIEW_COMMAND)
+        .map(|rest: &str| Command::Review(rest.trim().to_owned()))
+}
+
+/// Der Rest nach `name`, wenn der Text genau mit dem Befehl beginnt: danach Ende oder Leerraum.
+fn after_command<'a>(text: &'a str, name: &str) -> Option<&'a str> {
+    let rest = text.strip_prefix(name)?;
+    if rest.is_empty() || rest.starts_with(char::is_whitespace) {
+        return Some(rest);
+    }
+    None
+}
+
+/// Die Anweisung für `review/start`: Codex prüft per `target: custom`, weil der Arbeitsordner der
+/// Session kein Git-Repository ist; die Repository-Ordner nennt die Anweisung selbst.
+pub fn review_instructions(add_dirs: &[PathBuf], extra: &str) -> String {
+    let folders: Vec<String> = add_dirs
+        .iter()
+        .map(|folder: &PathBuf| format!("- {}", folder.display()))
+        .collect();
+    let mut text = format!(
+        "Prüfe die noch nicht committeten Änderungen (git status, git diff, neue Dateien) in diesen Ordnern:\n{}\nNenne Fehler, Risiken und Verbesserungen jeweils mit Datei und Zeile. Ändere nichts.",
+        folders.join("\n")
+    );
+    if !extra.is_empty() {
+        text.push_str("\n\nZusätzlich: ");
+        text.push_str(extra);
+    }
+    text
+}
+
 /// Einträge für `turn/start`. Ist der erste Text ein `/name …`, wird er ersetzt: ein Skill geht als
 /// `skill`-Eintrag samt Argumenten, ein Befehl als gerenderter Text. Leere Textblöcke entfallen.
 pub fn user_input(content: &Value, home: &Path, roots: &[(String, PathBuf)]) -> Vec<Value> {

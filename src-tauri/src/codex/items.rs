@@ -28,7 +28,13 @@ const PLAN_UPDATED: &str = "Aufgabenliste aktualisiert.";
 
 /// Elemente, die der Chat nicht zeigt: die Eingabe des Benutzers, Codex' Plantext (der Plan kommt
 /// als `turn/plan/updated`) und der Hinweis auf eine Verlaufs-Verdichtung.
-const SILENT_TYPES: [&str; 3] = ["userMessage", "plan", "contextCompaction"];
+const SILENT_TYPES: [&str; 5] = [
+    "userMessage",
+    "plan",
+    "contextCompaction",
+    "enteredReviewMode",
+    "exitedReviewMode",
+];
 /// Elemente, die nur beim Abschluss etwas zeigen — oder, wie `agentMessage`, die Sitzung selbst
 /// behandelt.
 const COMPLETION_ONLY_TYPES: [&str; 3] = ["agentMessage", "reasoning", "webSearch"];

@@ -35,15 +35,16 @@ const EMPTY_MESSAGE: &str = "Die Nachricht enthält nichts, das Codex bekommen k
 
 const AGENT_MESSAGE: &str = "agentMessage";
 const FILE_CHANGE: &str = "fileChange";
+const CONTEXT_COMPACTION: &str = "contextCompaction";
+const NO_REVIEW_FOLDER: &str = "/codex-review braucht mindestens ein Repository in der Session.";
 /// Benachrichtigungen, die der Verwalter nicht braucht: Stück-für-Stück-Ausgaben (er zeigt fertige
 /// Blöcke) und Statusmeldungen.
-const SILENT_NOTIFICATIONS: [&str; 9] = [
+const SILENT_NOTIFICATIONS: [&str; 8] = [
     "item/autoApprovalReview/started",
     "item/autoApprovalReview/completed",
     "guardianWarning",
     "mcpServer/startupStatus/updated",
     "thread/status/changed",
-    "turn/started",
     "turn/diff/updated",
     "item/mcpToolCall/progress",
     "item/fileChange/patchUpdated",
@@ -58,14 +59,39 @@ enum Input {
     StdinClosed,
 }
 
+/// Was ein Turn ist: eine gewöhnliche Nachricht oder einer der Befehle des Übersetzers.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TurnKind {
+    Message,
+    Compact,
+    Review,
+}
+
 /// Ein laufender Turn. Nach `interrupt` ist er für den Verwalter schon beendet (`is_aborted`), bis
 /// Codex ihn mit `turn/completed` abschließt — erst dann beginnt der nächste.
 struct ActiveTurn {
+    /// Leer, bis `turn/started` die ID nennt: `thread/compact/start` antwortet ohne.
     id: String,
     last_text: String,
     /// Fehlersatz aus einer `error`-Benachrichtigung, falls `turn/completed` selbst keinen trägt.
     error: Option<String>,
     is_aborted: bool,
+    kind: TurnKind,
+    /// Tokenstand beim Start eines Zusammenfassens, für `pre_tokens` der Trennzeile.
+    compact_before: Option<u64>,
+}
+
+impl ActiveTurn {
+    fn new(id: String, kind: TurnKind) -> ActiveTurn {
+        ActiveTurn {
+            id,
+            last_text: String::new(),
+            error: None,
+            is_aborted: false,
+            kind,
+            compact_before: None,
+        }
+    }
 }
 
 struct Session {
@@ -469,6 +495,11 @@ impl Session {
     }
 
     fn start_turn(&mut self, content: &Value) {
+        match input::command(content) {
+            Some(input::Command::Compact) => return self.start_compact(),
+            Some(input::Command::Review(extra)) => return self.start_review(&extra),
+            None => {}
+        }
         let entries = input::user_input(content, &self.home, &self.skill_roots);
         if entries.is_empty() {
             self.output.line(&self.result_error(EMPTY_MESSAGE));
@@ -506,13 +537,45 @@ impl Session {
                 if let Some(model) = &self.requested_model {
                     model.clone_into(&mut self.model);
                 }
-                self.turn = Some(ActiveTurn {
-                    id,
-                    last_text: String::new(),
-                    error: None,
-                    is_aborted: false,
-                });
+                self.turn = Some(ActiveTurn::new(id, TurnKind::Message));
             }
+            Err(error) => self.output.line(&self.result_error(&error)),
+        }
+    }
+
+    /// `/compact`: Codex fasst den Thread selbst zusammen. Die Turn-ID nennt erst `turn/started`.
+    fn start_compact(&mut self) {
+        let params = json!({ "threadId": self.thread_id });
+        match self.rpc.call("thread/compact/start", params, CALL_TIMEOUT) {
+            Ok(_) => self.turn = Some(ActiveTurn::new(String::new(), TurnKind::Compact)),
+            Err(error) => self.output.line(&self.result_error(&error)),
+        }
+    }
+
+    /// `/codex-review`: prüft per `target: custom` die Repository-Ordner der Session.
+    fn start_review(&mut self, extra: &str) {
+        if self.add_dirs.is_empty() {
+            self.output.line(&self.result_error(NO_REVIEW_FOLDER));
+            return;
+        }
+        let params = json!({
+            "threadId": self.thread_id,
+            "delivery": "inline",
+            "target": {
+                "type": "custom",
+                "instructions": input::review_instructions(&self.add_dirs, extra),
+            },
+        });
+        let started = self.rpc.call("review/start", params, CALL_TIMEOUT);
+        let turn_id = started.and_then(|result: Value| {
+            result
+                .pointer("/turn/id")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+                .ok_or_else(|| "review/start: Antwort ohne turn.id".to_owned())
+        });
+        match turn_id {
+            Ok(id) => self.turn = Some(ActiveTurn::new(id, TurnKind::Review)),
             Err(error) => self.output.line(&self.result_error(&error)),
         }
     }
@@ -527,11 +590,13 @@ impl Session {
         }
         turn.is_aborted = true;
         let params = json!({ "threadId": self.thread_id, "turnId": turn.id });
+        let has_turn_id = !turn.id.is_empty();
         // Offene Rückfragen zuerst abbrechen: Codex wartet sonst auf Antworten, die nie kommen.
         for answer in self.approvals.cancel_all() {
             self.send_answer(&answer);
         }
-        if let Err(error) = self.rpc.call("turn/interrupt", params, CALL_TIMEOUT) {
+        // Vor `turn/started` kennt der Übersetzer die ID nicht; Codex bekäme eine leere.
+        if has_turn_id && let Err(error) = self.rpc.call("turn/interrupt", params, CALL_TIMEOUT) {
             eprintln!("{error}");
         }
         self.output.line(&self.result_aborted());
@@ -544,6 +609,7 @@ impl Session {
         match method {
             "item/started" => self.item_started(params.get("item").unwrap_or(&Value::Null)),
             "item/completed" => self.item_completed(params.get("item").unwrap_or(&Value::Null)),
+            "turn/started" => self.turn_started(params.get("turn").unwrap_or(&Value::Null)),
             "turn/plan/updated" => self.plan_updated(params),
             "thread/tokenUsage/updated" => self.token_usage_updated(params),
             "serverRequest/resolved" => {
@@ -588,11 +654,37 @@ impl Session {
             .is_some_and(|turn: &ActiveTurn| !turn.is_aborted)
     }
 
+    /// Übernimmt die ID des laufenden Turns: beim Zusammenfassen gibt es sonst keine, und beim Review
+    /// ist es nicht die der Antwort auf `review/start`, sondern die, die Codex tatsächlich abbricht.
+    fn turn_started(&mut self, started: &Value) {
+        let Some(turn) = &mut self.turn else {
+            return;
+        };
+        if let Some(id) = started.get("id").and_then(Value::as_str) {
+            id.clone_into(&mut turn.id);
+        }
+    }
+
+    /// Die Zählung des Threads als eine Zahl: Eingabe plus Ausgabe des letzten Aufrufs.
+    fn used_tokens(&self) -> Option<u64> {
+        self.tokens
+            .map(|count: TokenCount| count.input + count.output)
+    }
+
     fn item_started(&mut self, item: &Value) {
         if !self.is_turn_open() {
             return;
         }
-        if item.get("type").and_then(Value::as_str) == Some(FILE_CHANGE) {
+        let item_type = item.get("type").and_then(Value::as_str);
+        if item_type == Some(CONTEXT_COMPACTION) {
+            // Die Zählung nach dem Zusammenfassen kommt erst danach.
+            let before = self.used_tokens();
+            if let Some(turn) = &mut self.turn {
+                turn.compact_before = before;
+            }
+            return;
+        }
+        if item_type == Some(FILE_CHANGE) {
             let item_id = item.get("id").and_then(Value::as_str).unwrap_or_default();
             self.changed_files
                 .insert(item_id.to_owned(), items::change_paths(&self.cwd, item));
@@ -607,14 +699,37 @@ impl Session {
         if !self.is_turn_open() {
             return;
         }
-        if item.get("type").and_then(Value::as_str) == Some(AGENT_MESSAGE) {
+        let item_type = item.get("type").and_then(Value::as_str);
+        if item_type == Some(AGENT_MESSAGE) {
             self.agent_message(item);
+            return;
+        }
+        if item_type == Some(CONTEXT_COMPACTION) {
+            self.compaction_completed();
             return;
         }
         match items::completed(&self.session_id, &self.cwd, item) {
             Some(lines) => self.write_lines(&lines),
             None => self.report_unknown_item(item),
         }
+    }
+
+    /// Die Trennzeile wie bei der Claude-Kommandozeile; `manual` nur, wenn der Benutzer `/compact`
+    /// geschickt hat, sonst hat Codex mitten im Turn selbst zusammengefasst.
+    fn compaction_completed(&mut self) {
+        let Some(turn) = &self.turn else {
+            return;
+        };
+        let trigger = if turn.kind == TurnKind::Compact {
+            "manual"
+        } else {
+            "auto"
+        };
+        let saturate = |tokens: u64| u32::try_from(tokens).unwrap_or(u32::MAX);
+        let before = turn.compact_before.map(saturate);
+        let after = self.used_tokens().map(saturate);
+        self.output
+            .line(&output::compact_boundary(trigger, before, after));
     }
 
     fn agent_message(&mut self, item: &Value) {

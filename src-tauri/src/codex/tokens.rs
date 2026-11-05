@@ -18,12 +18,20 @@ impl TokenCount {
     pub fn from_notification(params: &Value) -> Option<TokenCount> {
         let usage = params.get("tokenUsage")?;
         let last = usage.get("last")?;
+        let mut input = last.get("inputTokens").and_then(Value::as_u64)?;
+        let output = last
+            .get("outputTokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        // Nach dem Zusammenfassen meldet Codex `inputTokens` und `outputTokens` mit 0 und nur
+        // `totalTokens` mit dem Stand; ohne diesen Ausweg stünde der Kontext danach bei 0.
+        let total = last.get("totalTokens").and_then(Value::as_u64).unwrap_or(0);
+        if input == 0 && output == 0 && total > 0 {
+            input = total;
+        }
         Some(TokenCount {
-            input: last.get("inputTokens").and_then(Value::as_u64)?,
-            output: last
-                .get("outputTokens")
-                .and_then(Value::as_u64)
-                .unwrap_or(0),
+            input,
+            output,
             window: usage.get("modelContextWindow").and_then(Value::as_u64),
         })
     }
