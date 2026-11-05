@@ -26,6 +26,7 @@ import {
   setImplementationStopAfterCurrent,
   startStation,
 } from '@/lib/implementation';
+import { isTextTarget } from '@/lib/keyTargets';
 import { useActionError } from '@/lib/useActionError';
 import { useImplementationStore } from '@/stores/implementation';
 import { useSessionsStore, type ImplementationViewKind } from '@/stores/sessions';
@@ -49,14 +50,6 @@ interface ImplementationViewProps {
   terminalCount: number;
   isTerminalOpen: boolean;
   onToggleTerminal: () => void;
-}
-
-function isTextTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !==
-      null
-  );
 }
 
 /** Schritt in der Stationsfolge für eine Taste; 0, wenn sie nicht blättert. */

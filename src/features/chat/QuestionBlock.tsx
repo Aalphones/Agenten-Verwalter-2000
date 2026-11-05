@@ -27,6 +27,8 @@ interface QuestionBlockProps {
   entry: QuestionEntry;
   draft: QuestionDraft;
   isSending: boolean;
+  /** Der Satz „Oder schreib unten eine eigene Antwort.“ steht nur, wo darunter eine Eingabeleiste ist. */
+  showsComposerHint: boolean;
   onPick: (questionIndex: number, optionIndex: number) => void;
   onSubmit: (answer: QuestionAnswer) => void;
   /** Alles außer Wahl und Senden: aufgeklappte Frage, Notizen, eigene Antworten. */
@@ -37,6 +39,7 @@ export function QuestionBlock({
   entry,
   draft,
   isSending,
+  showsComposerHint,
   onPick,
   onSubmit,
   onDraft,
@@ -87,13 +90,23 @@ export function QuestionBlock({
             </div>
           );
         })}
-        <div className="question-block__footer">
-          {isAnsweredEntry
-            ? `Antwort: ${entry.answer ?? ''}`
-            : 'Oder schreib unten eine eigene Antwort.'}
-        </div>
+        {renderPermissionFooter()}
       </div>
     );
+  }
+
+  function renderPermissionFooter(): ReactElement | null {
+    if (isAnsweredEntry) {
+      return <div className="question-block__footer">{`Antwort: ${entry.answer ?? ''}`}</div>;
+    }
+    return renderComposerHint();
+  }
+
+  function renderComposerHint(): ReactElement | null {
+    if (!showsComposerHint) {
+      return null;
+    }
+    return <div className="question-block__footer">Oder schreib unten eine eigene Antwort.</div>;
   }
 
   function renderHead(showsCount: boolean): ReactElement {
@@ -175,9 +188,9 @@ export function QuestionBlock({
     );
   }
 
-  function renderFooter(): ReactElement {
+  function renderFooter(): ReactElement | null {
     if (!needsSubmit(entry, draft)) {
-      return <div className="question-block__footer">Oder schreib unten eine eigene Antwort.</div>;
+      return renderComposerHint();
     }
     const isReady: boolean = isComplete(entry, draft);
     const doneCount: number = entry.questions.filter((_question: Question, index: number) =>

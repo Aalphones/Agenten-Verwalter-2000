@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent, ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
@@ -13,21 +13,14 @@ import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import { NoticeBlock } from '@/features/notices/NoticeBlock';
 import { SelectionMenu } from '@/features/side/SelectionMenu';
 import { selectedChatText } from '@/features/side/selectionText';
-import {
-  draftAnswer,
-  emptyDraft,
-  isComplete,
-  needsSubmit,
-  pickOption,
-  type PickResult,
-  type QuestionDraft,
-  type QuestionEntry,
-} from '@/features/chat/questionDraft';
+import type { QuestionDraft, QuestionEntry } from '@/features/chat/questionDraft';
 import { TextBlock } from '@/features/chat/TextBlock';
 import { ThinkingBlock } from '@/features/chat/ThinkingBlock';
 import { TodoList } from '@/features/chat/TodoList';
 import { ToolGroup } from '@/features/chat/ToolGroup';
 import { UserMessage } from '@/features/chat/UserMessage';
+import { useQuestionAnswer, type QuestionAnswering } from '@/features/chat/useQuestionAnswer';
+import { useQuestionKeys } from '@/features/chat/useQuestionKeys';
 import { WorkingIndicator } from '@/features/chat/WorkingIndicator';
 import type { Artifact } from '@/lib/bindings/Artifact';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
@@ -38,10 +31,8 @@ import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { TodoItem } from '@/lib/bindings/TodoItem';
-import { answerQuestion } from '@/lib/chat';
-import { commandErrorText } from '@/lib/errors';
+import { isTextTarget } from '@/lib/keyTargets';
 import { useArtifactsStore } from '@/stores/artifacts';
-import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { useSessionsStore } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
 import './ChatTimeline.css';
@@ -62,8 +53,6 @@ function toolKey(toolUseId: string): string {
 }
 /** Solange der Agent arbeitet oder die Session leer ist, steht unter der Antwort kein „Weiter“-Knopf. */
 const HANDOFF_HIDDEN_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'new'];
-const DIGIT_KEYS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-const ENTER_KEY = 'Enter';
 
 interface ChatTimelineProps {
   session: SessionSummary;
@@ -113,19 +102,15 @@ export function ChatTimeline({
   bottomInset,
 }: ChatTimelineProps): ReactElement {
   const [containerHeight, setContainerHeight] = useState<number>(0);
-  // Auf-/Zugeklappt und halbe Antworten leben hier, nicht im Block: ein Block verlässt beim Scrollen das DOM.
+  // Auf-/Zugeklappt lebt hier, nicht im Block: ein Block verlässt beim Scrollen das DOM.
+  // Halbe Antworten liegen aus demselben Grund im Chat-Store (`questionDrafts`).
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(() => new Set<string>());
-  const [drafts, setDrafts] = useState<ReadonlyMap<string, QuestionDraft>>(
-    () => new Map<string, QuestionDraft>(),
-  );
-  const [sendingIds, setSendingIds] = useState<ReadonlySet<string>>(() => new Set<string>());
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
   const operatingMode: OperatingMode = useSettingsStore(
     (state) => state.settings?.operatingMode ?? 'claude',
   );
   const isClaude: boolean = operatingMode === 'claude';
-  const reportSessionError = useSessionErrorsStore((state) => state.report);
-  const clearSessionError = useSessionErrorsStore((state) => state.clear);
+  const answering: QuestionAnswering = useQuestionAnswer(session.id);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef<boolean>(true);
   const layoutMarkRef = useRef<LayoutMark>({ firstSeq: null, scrollHeight: 0 });
@@ -174,6 +159,8 @@ export function ChatTimeline({
       ? lastUserBlock.entry.text
       : null;
 
+  useQuestionKeys(oldestOpenQuestion, answering);
+
   useEffect(() => {
     const element: HTMLDivElement | null = scrollRef.current;
     if (element === null) {
@@ -219,49 +206,6 @@ export function ChatTimeline({
       onLoadOlder();
     }
   }, [hasMore, loadingOlder, olderError, containerHeight, totalSize, onLoadOlder]);
-
-  const handleDigit = useEffectEvent((event: KeyboardEvent): void => {
-    if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) {
-      return;
-    }
-    if (isTextTarget(event.target) || oldestOpenQuestion === null) {
-      return;
-    }
-    if (sendingIds.has(oldestOpenQuestion.requestId)) {
-      return;
-    }
-    const draft: QuestionDraft = draftFor(oldestOpenQuestion);
-    if (event.key === ENTER_KEY) {
-      // Auf einem Knopf oder Link löst Enter dessen Klick aus, nicht das Senden.
-      if (
-        event.shiftKey ||
-        isControlTarget(event.target) ||
-        !needsSubmit(oldestOpenQuestion, draft) ||
-        !isComplete(oldestOpenQuestion, draft)
-      ) {
-        return;
-      }
-      event.preventDefault();
-      submit(oldestOpenQuestion, draftAnswer(draft));
-      return;
-    }
-    const optionIndex: number = DIGIT_KEYS.indexOf(event.key);
-    if (optionIndex === -1) {
-      return;
-    }
-    event.preventDefault();
-    pick(oldestOpenQuestion, draft.active, optionIndex);
-  });
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent): void {
-      handleDigit(event);
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return (): void => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
 
   function handleScroll(): void {
     const element: HTMLDivElement | null = scrollRef.current;
@@ -333,53 +277,6 @@ export function ChatTimeline({
     });
   }
 
-  function draftFor(entry: QuestionEntry): QuestionDraft {
-    return drafts.get(entry.requestId) ?? emptyDraft(entry);
-  }
-
-  function submit(entry: QuestionEntry, answer: QuestionAnswer): void {
-    const requestId: string = entry.requestId;
-    setSendingIds((current: ReadonlySet<string>) => new Set<string>(current).add(requestId));
-    answerQuestion(session.id, requestId, answer)
-      .then(() => {
-        clearSessionError(session.id);
-      })
-      .catch((reason: unknown) => {
-        console.error('Rückfrage nicht beantwortbar', reason);
-        reportSessionError(session.id, `Antwort nicht gesendet: ${commandErrorText(reason)}`);
-      })
-      .finally(() => {
-        setSendingIds((current: ReadonlySet<string>) => {
-          const next = new Set<string>(current);
-          next.delete(requestId);
-          return next;
-        });
-      });
-  }
-
-  function pick(entry: QuestionEntry, questionIndex: number, optionIndex: number): void {
-    const result: PickResult | null = pickOption(
-      entry,
-      draftFor(entry),
-      questionIndex,
-      optionIndex,
-    );
-    if (result === null) {
-      return;
-    }
-    if (result.kind === 'answer') {
-      submit(entry, result.answer);
-      return;
-    }
-    storeDraft(entry, result.draft);
-  }
-
-  function storeDraft(entry: QuestionEntry, draft: QuestionDraft): void {
-    setDrafts((current: ReadonlyMap<string, QuestionDraft>) =>
-      new Map<string, QuestionDraft>(current).set(entry.requestId, draft),
-    );
-  }
-
   function renderEntry(key: string, entry: Exclude<ChatEntry, { kind: 'tool' }>): ReactElement {
     switch (entry.kind) {
       case 'user':
@@ -442,16 +339,17 @@ export function ChatTimeline({
         return (
           <QuestionBlock
             entry={entry}
-            draft={draftFor(entry)}
-            isSending={sendingIds.has(entry.requestId)}
+            draft={answering.draftFor(entry)}
+            isSending={answering.isSending(entry)}
+            showsComposerHint
             onPick={(questionIndex: number, optionIndex: number): void => {
-              pick(entry, questionIndex, optionIndex);
+              answering.pick(entry, questionIndex, optionIndex);
             }}
             onSubmit={(answer: QuestionAnswer): void => {
-              submit(entry, answer);
+              answering.submit(entry, answer);
             }}
             onDraft={(next: QuestionDraft): void => {
-              storeDraft(entry, next);
+              answering.storeDraft(entry, next);
             }}
           />
         );
@@ -596,19 +494,6 @@ function findLastUserBlockIndex(blocks: readonly ChatBlock[]): number {
     }
   }
   return -1;
-}
-
-function isTextTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  return (
-    target.closest('input, textarea, [contenteditable]:not([contenteditable="false"])') !== null
-  );
-}
-
-function isControlTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && target.closest('button, a, [role="button"]') !== null;
 }
 
 function isLinkTarget(target: EventTarget | null): boolean {
