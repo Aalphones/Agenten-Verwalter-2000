@@ -7,6 +7,7 @@ import { ResizeHandle } from '@/components/ResizeHandle';
 import { SessionHeader } from '@/app/SessionHeader';
 import { Sidebar } from '@/app/Sidebar';
 import { useAppUpdateCheck } from '@/features/appupdate/useAppUpdate';
+import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { ArchiveDialog } from '@/features/archive/ArchiveDialog';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
 import { countRunning, indexByToolUseId } from '@/features/background/backgroundItems';
@@ -118,6 +119,8 @@ export function App(): ReactElement {
   useRetroProgress();
   // Die Abfrage beim Start füllt den Store; der Punkt an „Einstellungen“ liest ihn.
   useAppUpdateCheck();
+  // Dito für die Umgebung: der Punkt an „Einstellungen“ liest den Store.
+  useEnvironmentCheck();
 
   // „Automatisch weiter“ (ADR 040): wer gerade die alte Session ansieht, landet in der neuen. Die
   // neue Session selbst kommt über `session://changed` in die Liste.

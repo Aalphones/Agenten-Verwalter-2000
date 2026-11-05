@@ -19,7 +19,7 @@ export interface SettingsCategory {
 export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   { id: 'general', label: 'Allgemein', summary: 'Konto · Darstellung' },
   { id: 'agent', label: 'Agent', summary: 'Betriebsart · Modelle · Modus · Claude Code' },
-  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills' },
+  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Umgebung' },
   { id: 'app', label: 'App', summary: 'Version · Ordner · Rechte' },
 ];
 
@@ -39,6 +39,10 @@ function isNotStandalone(settings: Settings): boolean {
 
 function isLocalMode(settings: Settings): boolean {
   return isLocalOperatingMode(settings.operatingMode);
+}
+
+function hasMasterDir(settings: Settings): boolean {
+  return settings.masterDir !== null;
 }
 
 // Die Schlüsselreihenfolge ist die Anzeigereihenfolge.
@@ -117,6 +121,25 @@ const ENTRY_DATA = {
     section: 'Skills',
     label: 'Projekt-Skills',
     info: 'Skills aus den .claude\\skills-Ordnern der Repositories einer Session. Welche gelten, hängt davon ab, welche Repositories die Session umfasst.',
+  },
+  environmentLinks: {
+    category: 'skills',
+    section: 'Umgebung',
+    label: 'Verknüpfungen',
+    info: 'Junctions und symbolische Links direkt unter ~\\.claude und direkt in dessen Unterordnern, deren Ziel nicht erreichbar ist.',
+  },
+  masterDir: {
+    category: 'skills',
+    section: 'Umgebung',
+    label: 'Master-Ordner',
+    info: 'Ordner mit den Originalen deiner Skills, Befehle, Ausgabestile und der Datei CLAUDE.md, z. B. auf einem synchronisierten Laufwerk. Erwartet mindestens einen der Unterordner skills, commands, output-styles oder die Datei CLAUDE.md.',
+  },
+  environmentMirror: {
+    category: 'skills',
+    section: 'Umgebung',
+    label: 'Abgleich',
+    info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Master-Ordner mit ~\\.claude nach Inhalt. Die Änderungszeit entscheidet nur, welche Seite neuer ist. „Spiegeln“ kopiert, was im Master neuer ist oder lokal fehlt, und löscht nie.',
+    isShown: hasMasterDir,
   },
   appVersion: {
     category: 'app',

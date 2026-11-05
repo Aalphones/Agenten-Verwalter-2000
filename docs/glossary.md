@@ -111,3 +111,5 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Portable** | Die lose `verwalter.exe` ohne Installer; ein Update ersetzt sie am selben Pfad ([ADR 041](decisions/041-app-update.md)). |
 | **Prüfsumme** | SHA-256 einer Release-Datei, von GitHub je Datei genannt; ohne Treffer wird nichts installiert ([ADR 041](decisions/041-app-update.md)). |
 | **Schreib-Ordner** | Ordner, in dem eine Session tatsächlich schreibt: ihre benutzten Ticket-Worktrees und der Haupt-Checkout, wenn sie dort Dateien geändert hat ([ADR 037](decisions/037-parallele-sessions.md)). |
+| **Master-Ordner** | Frei gewählter Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`; der Verwalter vergleicht `~\.claude` damit und spiegelt auf Klick ([ADR 038](decisions/038-umgebung.md)). |
+| **Spiegeln** | Kopiert aus dem Master-Ordner, was dort neuer ist oder lokal fehlt; löscht nie ([ADR 038](decisions/038-umgebung.md)). |

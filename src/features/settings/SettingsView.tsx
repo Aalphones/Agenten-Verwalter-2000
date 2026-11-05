@@ -16,6 +16,10 @@ import {
   selectedCodexModel,
 } from '@/features/codex/codexModels';
 import { useCodexModels } from '@/features/codex/useCodexModels';
+import { EnvironmentLinksRow } from '@/features/environment/EnvironmentLinksRow';
+import { EnvironmentMirrorRow } from '@/features/environment/EnvironmentMirrorRow';
+import { MasterDirRow } from '@/features/environment/MasterDirRow';
+import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
 import { TerminalPlacementSegment } from '@/features/settings/TerminalPlacementSegment';
@@ -87,6 +91,8 @@ export function SettingsView({
   const storedSettings: Settings | null = useSettingsStore((state) => state.settings);
   const storedCategory: SettingsCategoryId | null = useSettingsNavStore((state) => state.category);
   const setStoredCategory = useSettingsNavStore((state) => state.setCategory);
+  // Die Seite wird bei jedem Öffnen der Einstellungen eingehängt: das ist das Prüfen beim Öffnen.
+  useEnvironmentCheck();
   const attention = useCategoryAttention();
   const [category, setCategory] = useState<SettingsCategoryId>(() =>
     initialCategory(attention, storedCategory),
@@ -396,6 +402,17 @@ export function SettingsView({
             </span>
           </SettingRow>
         );
+      case 'environmentLinks':
+        return <EnvironmentLinksRow />;
+      case 'masterDir':
+        return (
+          <MasterDirRow
+            masterDir={current.masterDir}
+            onSave={(value: string | null): Promise<boolean> => save({ kind: 'masterDir', value })}
+          />
+        );
+      case 'environmentMirror':
+        return <EnvironmentMirrorRow />;
       case 'appVersion':
         return <AppVersionRow runningSessions={runningSessionCount(sessions)} />;
       case 'workspaces':

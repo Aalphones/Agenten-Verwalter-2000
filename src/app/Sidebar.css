@@ -176,6 +176,14 @@
     &--update {
       background: var(--color-accent);
     }
+
+    &--environment {
+      background: var(--color-status-waiting);
+    }
+
+    & + & {
+      margin-left: var(--space-xs);
+    }
   }
 
   &__empty {

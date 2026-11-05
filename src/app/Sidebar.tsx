@@ -20,7 +20,9 @@ import { renameImplementation } from '@/lib/implementation';
 import { archiveProject, renameProject } from '@/lib/projects';
 import { deleteSession, renameSession } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
+import { needsAttention } from '@/features/environment/environmentTexts';
 import { useAppUpdateStore } from '@/stores/appUpdate';
+import { useEnvironmentStore } from '@/stores/environment';
 import { useSessionsStore } from '@/stores/sessions';
 import type { RenameKind, RenameTarget } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
@@ -100,6 +102,9 @@ export function Sidebar({
     return operatingMode === 'claude' || operatingMode === 'codex';
   });
   const hasAppUpdate: boolean = useAppUpdateStore((state) => state.status?.hasUpdate === true);
+  const needsEnvironmentAttention: boolean = useEnvironmentStore((state) =>
+    needsAttention(state.status),
+  );
   const { error: actionError, run } = useActionError('sidebar');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -482,6 +487,13 @@ export function Sidebar({
               className="sidebar__settings-dot sidebar__settings-dot--update"
               role="img"
               aria-label="Neue Version verfügbar"
+            />
+          )}
+          {needsEnvironmentAttention && (
+            <span
+              className="sidebar__settings-dot sidebar__settings-dot--environment"
+              role="img"
+              aria-label="Umgebung braucht Aufmerksamkeit"
             />
           )}
         </button>
