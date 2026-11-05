@@ -20,8 +20,10 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use super::args::{self, AgentArgs, Start};
+use super::compact;
 use super::context::{self, ContextMeasure};
 use super::hooks::Hooks;
+use super::llm::LlmError;
 use super::mcp::{self, McpAccess, McpServers};
 use super::output::{self, Output};
 use super::paths::{self, Roots};
@@ -36,12 +38,28 @@ use super::{
     settings,
 };
 
+/// Der Schwerpunkt, wenn die Nachricht `/compact` ist (leer ohne Text dahinter); sonst `None`.
+fn compact_request(content: &Value) -> Option<String> {
+    let rest = invocation::first_text(content)?
+        .trim_start()
+        .strip_prefix(COMPACT_COMMAND)?;
+    if rest.is_empty() {
+        return Some(String::new());
+    }
+    if rest.starts_with(char::is_whitespace) {
+        return Some(rest.trim().to_owned());
+    }
+    None
+}
+
 /// Takt der Hauptschleife, solange weder eine Zeile noch eine Antwort ankommt.
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// Steht nach einer unterbrochenen Antwort im Verlauf, damit das Modell im nächsten Turn weiß,
 /// dass seine letzte Antwort nie ankam. Wortlaut wie bei der Claude-Kommandozeile.
 const INTERRUPTED_MARKER: &str = "[Request interrupted by user]";
 const BYTE_ORDER_MARK: char = '\u{feff}';
+/// Fasst den Verlauf von Hand zusammen; Text dahinter ist ein Schwerpunkt für die Zusammenfassung.
+const COMPACT_COMMAND: &str = "/compact";
 /// Unterordner des Scratchpads für die Ausgaben der Hintergrundprozesse.
 const TASKS_DIR: &str = "tasks";
 
@@ -60,6 +78,9 @@ struct ActiveTurn {
     is_aborted: bool,
     /// Scheiterte das Schreiben ins Transkript, wird der Turn abgebrochen und endet mit diesem Fehler.
     transcript_error: Option<String>,
+    /// Ein von Hand ausgelöstes Zusammenfassen: es gab keine Benutzer-Nachricht, die ein Abbruch-Marker
+    /// im Transkript abschließen müsste.
+    is_compact: bool,
 }
 
 struct Session {
@@ -489,7 +510,84 @@ impl Session {
         ));
     }
 
+    /// Fasst den Verlauf im Hintergrund-Thread zusammen. Die Ereignisse gehen denselben Weg wie die
+    /// eines Turns, also nehmen `poll_turn` und `finish_turn` sie an.
+    fn start_compact(&mut self, focus: &str) {
+        if self.transcript.messages.is_empty() {
+            self.shared.output.line(&output::result_success(
+                &self.shared.session_id,
+                "",
+                &self.model,
+                self.shared.context_window,
+            ));
+            return;
+        }
+        let before = self.measure.tokens;
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (event_sender, event_receiver) = mpsc::channel::<TurnEvent>();
+        let shared = Arc::clone(&self.shared);
+        let model = self.model.clone();
+        let system_text = self.system_prompt.text.clone();
+        let history = self.transcript.messages.clone();
+        let focus = focus.to_owned();
+        let thread_cancel = Arc::clone(&cancel);
+        let spawned = thread::Builder::new()
+            .name("agent-compact".to_owned())
+            .spawn(move || {
+                let result = compact::compact(
+                    &shared.base_url,
+                    &model,
+                    &history,
+                    &thread_cancel,
+                    Some(&focus),
+                );
+                let outcome = match result {
+                    // Kam das Ergebnis erst nach Esc, hat der Verwalter den Turn schon beendet.
+                    Ok(_) if thread_cancel.load(Ordering::SeqCst) => Outcome::Aborted,
+                    Ok(compacted) => {
+                        let mut messages: Vec<Value> =
+                            vec![json!({ "role": "system", "content": system_text })];
+                        messages.extend(compacted.iter().cloned());
+                        let measure = ContextMeasure::estimated(&messages);
+                        shared.output.line(&output::compact_boundary(
+                            "manual",
+                            Some(before),
+                            Some(measure.tokens),
+                        ));
+                        let _ = event_sender.send(TurnEvent::Compacted(compacted));
+                        let _ = event_sender.send(TurnEvent::Measured(measure));
+                        Outcome::Completed(String::new())
+                    }
+                    Err(LlmError::Cancelled) => Outcome::Aborted,
+                    Err(LlmError::Failed(message)) => {
+                        Outcome::Failed(format!("Verdichten fehlgeschlagen: {message}"))
+                    }
+                };
+                let _ = event_sender.send(TurnEvent::Done(outcome));
+            });
+        if let Err(error) = spawned {
+            self.shared.output.line(&output::result_error(
+                &self.shared.session_id,
+                &format!("Arbeits-Thread startet nicht: {error}"),
+                &self.model,
+                self.shared.context_window,
+            ));
+            return;
+        }
+        self.turn = Some(ActiveTurn {
+            cancel,
+            events: event_receiver,
+            is_aborted: false,
+            transcript_error: None,
+            is_compact: true,
+        });
+    }
+
     fn start_turn(&mut self, content: &Value) {
+        if let Some(focus) = compact_request(content) {
+            self.start_compact(&focus);
+            return;
+        }
         // Ein getipptes `/name` wird zum Inhalt des Skills; ins Transkript geht der ersetzte Text.
         let content = invocation::expand_message(content, &self.home, &self.skill_roots);
         let message = content::user_message(&content, self.has_vision);
@@ -538,6 +636,7 @@ impl Session {
             events: event_receiver,
             is_aborted: false,
             transcript_error: None,
+            is_compact: false,
         });
     }
 
@@ -610,6 +709,9 @@ impl Session {
         };
         if turn.is_aborted {
             // Der Verwalter hat `result` schon bei Esc bekommen.
+            if turn.is_compact {
+                return;
+            }
             if let Err(error) = self
                 .transcript
                 .append(json!({ "role": "user", "content": INTERRUPTED_MARKER }))

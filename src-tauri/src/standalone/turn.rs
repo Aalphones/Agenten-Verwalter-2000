@@ -245,7 +245,7 @@ fn make_room(job: &mut TurnJob) -> Result<(), Outcome> {
     let Some((system, history)) = job.messages.split_first() else {
         return Ok(());
     };
-    let compacted = compact::compact(&job.shared.base_url, &job.model, history, &job.cancel)
+    let compacted = compact::compact(&job.shared.base_url, &job.model, history, &job.cancel, None)
         .map_err(|error: LlmError| match error {
             LlmError::Cancelled => Outcome::Aborted,
             LlmError::Failed(message) => Outcome::Failed(format!(
@@ -263,7 +263,11 @@ fn make_room(job: &mut TurnJob) -> Result<(), Outcome> {
     }
     eprintln!("Verdichtet: {before} → {} Token", measure.tokens);
     if job.is_main() {
-        job.shared.output.line(&output::compact_boundary());
+        job.shared.output.line(&output::compact_boundary(
+            "auto",
+            Some(before),
+            Some(measure.tokens),
+        ));
     }
     job.notify(TurnEvent::Compacted(compacted));
     job.notify(TurnEvent::Measured(measure));

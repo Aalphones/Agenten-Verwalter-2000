@@ -435,7 +435,7 @@ fn cache_used(message_id: Option<String>, usage: &Usage) -> Option<AgentEvent> {
     })
 }
 
-/// Der Agent „Autark“ schickt `compact_boundary` ohne `compact_metadata`.
+/// Ohne `compact_metadata` bleiben alle Angaben leer.
 fn compacted(system: SystemLine) -> AgentEvent {
     let Some(metadata) = system.compact_metadata else {
         return AgentEvent::Compacted {

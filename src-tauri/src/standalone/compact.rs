@@ -19,19 +19,21 @@ const TOOL_ROLE: &str = "tool";
 /// `messages` ist der Verlauf ohne Systemprompt. Der laufende Turn — alles ab der letzten
 /// Benutzer-Nachricht eines Menschen, samt Werkzeug-Aufrufen und -Ergebnissen — bleibt wörtlich
 /// erhalten; alles davor fasst das Modell zusammen. Gibt es davor nichts, kürzt das Verdichten
-/// stattdessen die Werkzeug-Ergebnisse des Turns.
+/// stattdessen die Werkzeug-Ergebnisse des Turns. `focus` ist ein Schwerpunkt für die
+/// Zusammenfassung.
 pub fn compact(
     base_url: &str,
     model: &str,
     messages: &[Value],
     cancel: &AtomicBool,
+    focus: Option<&str>,
 ) -> Result<Vec<Value>, LlmError> {
     let turn_start = messages.iter().rposition(content::starts_turn).unwrap_or(0);
     let (head, tail) = messages.split_at(turn_start);
     if head.is_empty() {
         return Ok(tail.iter().map(shortened_tool_result).collect());
     }
-    let summary = summarize(base_url, model, head, cancel)?;
+    let summary = summarize(base_url, model, head, cancel, focus)?;
     let mut compacted: Vec<Value> = vec![
         json!({ "role": "user", "content": format!("{SUMMARY_PREFIX}{summary}") }),
         json!({ "role": "assistant", "content": SUMMARY_ACKNOWLEDGEMENT }),
@@ -45,15 +47,20 @@ fn summarize(
     model: &str,
     head: &[Value],
     cancel: &AtomicBool,
+    focus: Option<&str>,
 ) -> Result<String, LlmError> {
     let mut request_messages: Vec<Value> =
         vec![json!({ "role": "system", "content": SUMMARY_SYSTEM_PROMPT })];
     for message in head {
         content::push_merged(&mut request_messages, &content::without_images(message));
     }
+    let request_text = match focus.map(str::trim) {
+        Some(focus) if !focus.is_empty() => format!("{SUMMARY_REQUEST} Focus on: {focus}"),
+        _ => SUMMARY_REQUEST.to_owned(),
+    };
     content::push_merged(
         &mut request_messages,
-        &json!({ "role": "user", "content": SUMMARY_REQUEST }),
+        &json!({ "role": "user", "content": request_text }),
     );
     let request = ChatRequest {
         base_url,

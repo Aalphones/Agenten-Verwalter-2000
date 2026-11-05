@@ -70,7 +70,7 @@ pub fn expand_message(content: &Value, home: &Path, roots: &[(String, PathBuf)])
     }
 }
 
-fn first_text(content: &Value) -> Option<&str> {
+pub(super) fn first_text(content: &Value) -> Option<&str> {
     match content {
         Value::String(text) => Some(text.as_str()),
         Value::Array(blocks) => blocks.iter().find_map(|block: &Value| {

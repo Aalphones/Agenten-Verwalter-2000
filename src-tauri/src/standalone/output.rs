@@ -130,9 +130,18 @@ pub fn control_error(request_id: &str, error: &str) -> Value {
     })
 }
 
-/// Der Verwalter ignoriert die Zeile; im Protokoll zeigt sie, wo der Verlauf ersetzt wurde.
-pub fn compact_boundary() -> Value {
-    json!({ "type": "system", "subtype": "compact_boundary" })
+/// `system/compact_boundary` wie die Claude-Kommandozeile; der Verwalter liest die Angaben für die
+/// Trennlinie im Verlauf (Plan Warnhinweise). Unbekannte Tokenstände gehen als `null` raus.
+pub fn compact_boundary(trigger: &str, pre_tokens: Option<u32>, post_tokens: Option<u32>) -> Value {
+    json!({
+        "type": "system",
+        "subtype": "compact_boundary",
+        "compact_metadata": {
+            "trigger": trigger,
+            "pre_tokens": pre_tokens,
+            "post_tokens": post_tokens,
+        },
+    })
 }
 
 /// Die einzige Zeile des Druckmodus: `raw` ist der Text des Modells, `structured` sein Inhalt als

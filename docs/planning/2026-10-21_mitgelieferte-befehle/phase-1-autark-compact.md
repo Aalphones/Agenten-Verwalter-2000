@@ -21,12 +21,12 @@ Heute: `start_turn` schickt jede Nachricht nach `invocation::expand_message` als
 
 ## Checkliste
 
-- [ ] `output.rs`: `compact_boundary` bekommt die Signatur aus dem Kontrakt der README; Doc-Kommentar „wie die Claude-Kommandozeile; der Verwalter liest die Angaben für die Trennlinie im Verlauf (Plan Warnhinweise)“. Ausgabe: `compact_metadata` mit `trigger`, `pre_tokens`, `post_tokens` (`None` → `null`).
-- [ ] `turn.rs` `make_room`: Aufruf auf `output::compact_boundary("auto", Some(before), Some(measure.tokens))` umstellen; `compact::compact(…, None)` (neuer Parameter, siehe unten).
-- [ ] `compact.rs`: `compact` und `summarize` bekommen `focus: Option<&str>`. In `summarize` wird die letzte Anfrage `SUMMARY_REQUEST` bei `Some(focus)` mit nicht leerem `focus.trim()` zu `format!("{SUMMARY_REQUEST} Focus on: {}", focus.trim())`.
-- [ ] `session.rs`: Konstante `COMPACT_COMMAND: &str = "/compact"` und freie Funktion `compact_request(content: &Value) -> Option<String>`. Sie nimmt den ersten Textblock (wie `invocation::first_text`; die Funktion dort auf `pub(super)` stellen und wiederverwenden) und prüft `trim_start()`: genau `/compact` → `Some(String::new())`; beginnt mit `/compact` + Leerraum → `Some(rest.trim().to_owned())`; sonst `None`.
-- [ ] `session.rs` `start_turn`: als erste Zeile `if let Some(focus) = compact_request(content) { self.start_compact(&focus); return; }`.
-- [ ] `session.rs` neue Methode `start_compact(&mut self, focus: &str)`:
+- [x] `output.rs`: `compact_boundary` bekommt die Signatur aus dem Kontrakt der README; Doc-Kommentar „wie die Claude-Kommandozeile; der Verwalter liest die Angaben für die Trennlinie im Verlauf (Plan Warnhinweise)“. Ausgabe: `compact_metadata` mit `trigger`, `pre_tokens`, `post_tokens` (`None` → `null`).
+- [x] `turn.rs` `make_room`: Aufruf auf `output::compact_boundary("auto", Some(before), Some(measure.tokens))` umstellen; `compact::compact(…, None)` (neuer Parameter, siehe unten).
+- [x] `compact.rs`: `compact` und `summarize` bekommen `focus: Option<&str>`. In `summarize` wird die letzte Anfrage `SUMMARY_REQUEST` bei `Some(focus)` mit nicht leerem `focus.trim()` zu `format!("{SUMMARY_REQUEST} Focus on: {}", focus.trim())`.
+- [x] `session.rs`: Konstante `COMPACT_COMMAND: &str = "/compact"` und freie Funktion `compact_request(content: &Value) -> Option<String>`. Sie nimmt den ersten Textblock (wie `invocation::first_text`; die Funktion dort auf `pub(super)` stellen und wiederverwenden) und prüft `trim_start()`: genau `/compact` → `Some(String::new())`; beginnt mit `/compact` + Leerraum → `Some(rest.trim().to_owned())`; sonst `None`.
+- [x] `session.rs` `start_turn`: als erste Zeile `if let Some(focus) = compact_request(content) { self.start_compact(&focus); return; }`.
+- [x] `session.rs` neue Methode `start_compact(&mut self, focus: &str)`:
   - Ist `self.transcript.messages` leer → `output::result_success(&self.shared.session_id, "", &self.model, self.shared.context_window)` schreiben, Ende.
   - `before = self.measure.tokens`; Cancel-Flag, Kanal `(event_sender, event_receiver)` und `ActiveTurn { cancel, events: event_receiver, is_aborted: false, transcript_error: None }` wie in `start_turn`.
   - Thread `agent-compact` mit Klonen von `Arc<Shared>`, `self.model`, `self.system_prompt.text`, `self.transcript.messages`, `focus`, `before`. Darin: `compact::compact(&shared.base_url, &model, &history, &cancel, focus_option)`.
@@ -35,9 +35,10 @@ Heute: `start_turn` schickt jede Nachricht nach `invocation::expand_message` als
     - `Err(LlmError::Failed(m))`: `Done(Outcome::Failed(format!("Verdichten fehlgeschlagen: {m}")))`.
   - Die Ereignisse gehen über denselben Weg wie `TurnJob::notify`. Gibt es keinen `TurnJob`, sendet der Thread direkt über `event_sender`; Sendefehler werden ignoriert.
   - `poll_turn` und `finish_turn` bleiben unverändert und nehmen die Ereignisse an. Ausnahme: `finish_turn` hängt bei `is_aborted` den `INTERRUPTED_MARKER` an das Transkript. Nach einem abgebrochenen Zusammenfassen darf er **nicht** angehängt werden, denn es gab keine Benutzer-Nachricht. Dafür bekommt `ActiveTurn` das Feld `is_compact: bool`; `finish_turn` überspringt den Marker bei `is_compact`.
-- [ ] Spawn-Fehler des Threads → `result_error` wie in `start_turn`.
-- [ ] Doc: `docs/code-map.md` Zeile „Autarker Agent“: bei `compact` ergänzen „auch von Hand über `/compact`“.
-- [ ] Doc: `docs/decisions/017-autarker-agent.md` unter Konsequenzen ein Satz: „`/compact` fasst den Verlauf auch von Hand zusammen; Text danach ist ein Schwerpunkt (ADR 034).“
-- [ ] `pnpm check` grün; Commit `feat(standalone): /compact von Hand und Tokenstände in compact_boundary`.
+- [x] Spawn-Fehler des Threads → `result_error` wie in `start_turn`.
+- [x] Doc: `docs/code-map.md` Zeile „Autarker Agent“: bei `compact` ergänzen „auch von Hand über `/compact`“.
+- [x] Doc: `docs/decisions/017-autarker-agent.md` unter Konsequenzen ein Satz: „`/compact` fasst den Verlauf auch von Hand zusammen; Text danach ist ein Schwerpunkt (ADR 034).“
+- [x] `pnpm check` grün; Commit `feat(standalone): /compact von Hand und Tokenstände in compact_boundary`.
 
 ## Report-Back
+Umgesetzt wie geplant. Zusätzlich: `Ok` nach Esc zählt im Thread als `Aborted` (wie `ask_model`), und der veraltete Kommentar zu `compacted` in `agents/claude/translate.rs` ist angepasst. `pnpm check` grün.
