@@ -6,7 +6,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 
 | # | Phase | Rating | Status |
 |---|---|---|---|
-| 1 | [Kategorien](phase-1-kategorien.md): Katalog aller Zeilen, Leiste links, Punkte an Kategorien; ADR 054 | standard | pending |
+| 1 | [Kategorien](phase-1-kategorien.md): Katalog aller Zeilen, Leiste links, Punkte an Kategorien; ADR 054 | standard | complete |
 | 2 | [Suche](phase-2-suche.md): Suchfeld, Trefferansicht, Markierung und Fundstelle; Doku-Abschluss | standard | pending |
 
 **Rahmen:** strikt 1 → 2. Direkt auf `main`, ein Commit pro Phase, Scope `settings`. `pnpm check` grün vor jedem Commit, `cargo` im PATH (die Prüfkette baut Rust mit, angefasst wird es nicht). Reine Oberfläche: kein Rust, keine Bindings, keine Migration, keine neuen Abhängigkeiten. Keine automatisierten Tests, keine Smoke-Checkliste. Planabschluss mit Versions-Tag (Minor-Version, [releases.md](../../conventions/releases.md)). Danach wird Phase 2 des Plans Umgebung neu geschnitten (STATE.md, „Nächster Schritt“).

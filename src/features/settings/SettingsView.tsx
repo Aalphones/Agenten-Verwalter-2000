@@ -1,5 +1,5 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
@@ -23,6 +23,15 @@ import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
 import { OperatingModeSegment } from '@/features/settings/OperatingModeSegment';
 import { SelectButton } from '@/features/settings/SelectButton';
 import { SettingRow } from '@/features/settings/SettingRow';
+import { SettingsNav } from '@/features/settings/SettingsNav';
+import { groupEntries, initialCategory, shownEntries } from '@/features/settings/settingsCatalog';
+import type {
+  SettingEntry,
+  SettingGroup,
+  SettingId,
+  SettingsCategoryId,
+} from '@/features/settings/settingsCatalog';
+import { useCategoryAttention } from '@/features/settings/useCategoryAttention';
 import { useLocalModels } from '@/features/settings/useLocalModels';
 import { useSettingsUpdate } from '@/features/settings/useSettingsUpdate';
 import type { CodexModel } from '@/lib/bindings/CodexModel';
@@ -44,6 +53,7 @@ import {
   modelName,
 } from '@/lib/labels';
 import { useSettingsStore } from '@/stores/settings';
+import { useSettingsNavStore } from '@/stores/settingsNav';
 import './SettingsView.css';
 
 const NO_CODEX_MODELS: readonly CodexModel[] = [];
@@ -67,6 +77,13 @@ export function SettingsView({
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [revealError, setRevealError] = useState<string | null>(null);
   const storedSettings: Settings | null = useSettingsStore((state) => state.settings);
+  const storedCategory: SettingsCategoryId | null = useSettingsNavStore((state) => state.category);
+  const setStoredCategory = useSettingsNavStore((state) => state.setCategory);
+  const attention = useCategoryAttention();
+  const [category, setCategory] = useState<SettingsCategoryId>(() =>
+    initialCategory(attention, storedCategory),
+  );
+  const contentRef = useRef<HTMLDivElement>(null);
   const { repositories, isLoading: areRepositoriesLoading } = useKnownRepositories();
   const { save, error: saveError } = useSettingsUpdate();
 
@@ -82,6 +99,14 @@ export function SettingsView({
 
   function closeMenu(): void {
     setOpenMenu(null);
+  }
+
+  function selectCategory(next: SettingsCategoryId): void {
+    // Die Menüs zeichnen per Portal in den body und blieben sonst über einer ausgeblendeten Zeile stehen.
+    closeMenu();
+    setCategory(next);
+    setStoredCategory(next);
+    contentRef.current?.scrollTo({ top: 0 });
   }
 
   function reveal(path: string): void {
@@ -173,7 +198,8 @@ export function SettingsView({
     );
   }
 
-  function renderSections(current: Settings, loaded: SettingsOverview): ReactElement {
+  /** Das Bedienelement einer Zeile; Name und ⓘ-Text stehen im Katalog. */
+  function renderRow(id: SettingId, current: Settings, loaded: SettingsOverview): ReactElement {
     const currentMode = modeOption(current.defaultMode);
     const isCodex: boolean = current.operatingMode === 'codex';
     const codexList: readonly CodexModel[] = codexModels.models?.models ?? NO_CODEX_MODELS;
@@ -185,29 +211,14 @@ export function SettingsView({
       codexModels.models === null
         ? 'Modelle werden geladen …'
         : (codexModels.models.error ?? 'Keine Modelle verfügbar.');
-    return (
-      <>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Konto</h2>
-          {current.operatingMode !== 'standalone' && <AccountRow />}
-          <CodexAccountRow />
-        </section>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Agenten Verwalter</h2>
-          <AppVersionRow runningSessions={runningSessionCount(sessions)} />
-        </section>
-        {current.operatingMode !== 'standalone' && (
-          <section className="settings-view__section">
-            <h2 className="settings-view__section-title">Claude Code</h2>
-            <CliVersionRow />
-          </section>
-        )}
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Darstellung</h2>
-          <SettingRow
-            label="Farbschema"
-            info="System folgt der Windows-Einstellung für hell oder dunkel."
-          >
+    switch (id) {
+      case 'claudeAccount':
+        return <AccountRow />;
+      case 'codexAccount':
+        return <CodexAccountRow />;
+      case 'colorScheme':
+        return (
+          <SettingRow id={id}>
             <ColorSchemeSegment
               value={current.colorScheme}
               onChange={(scheme): void => {
@@ -215,10 +226,10 @@ export function SettingsView({
               }}
             />
           </SettingRow>
-          <SettingRow
-            label="Terminal"
-            info="Wo das Terminal neben dem Chat erscheint: unten unter der Ansicht oder als Spalte rechts. Ein- und ausblenden mit dem Knopf >_ oder Strg+Ö."
-          >
+        );
+      case 'terminalPlacement':
+        return (
+          <SettingRow id={id}>
             <TerminalPlacementSegment
               value={current.terminalPlacement}
               onChange={(placement): void => {
@@ -226,43 +237,38 @@ export function SettingsView({
               }}
             />
           </SettingRow>
-        </section>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Agent</h2>
-          <SettingRow
-            label="Betriebsart"
-            info="Claude: Modellanfragen gehen an dein Claude-Abo. Claude Code + LM Studio: dieselbe Claude-Kommandozeile mit Werkzeugen, Skills und Anweisungen, aber das Modell läuft lokal in LM Studio — für die Zeit, in der das Kontingent aufgebraucht ist. Autark: ohne Claude-Kommandozeile und ohne Anthropic — ein eigener, kleinerer Agent des Verwalters mit dem lokalen Modell. Codex: Sessions arbeiten mit OpenAI Codex und deinem ChatGPT-Konto. Gilt ab der nächsten Nachricht jeder Session."
-          >
+        );
+      case 'operatingMode':
+        return (
+          <SettingRow id={id}>
             <OperatingModeSegment value={current.operatingMode} onChange={saveOperatingMode} />
           </SettingRow>
-          {isLocalOperatingMode(current.operatingMode) && (
-            <SettingRow
+        );
+      case 'localModel':
+        return (
+          <SettingRow id={id}>
+            <SelectButton
               label="Lokales Modell"
-              info="Ein in LM Studio geladenes Modell. Die Kontextlänge, mit der es dort geladen ist, gilt als Kontextfenster der Sessions. Adresse des Servers: Umgebungsvariable VERWALTER_LMSTUDIO_URL, sonst http://localhost:1234."
+              value={localModelLabel(current.localModel)}
+              isOpen={openMenu === 'localModel'}
+              onToggle={(): void => {
+                toggleMenu('localModel');
+              }}
             >
-              <SelectButton
-                label="Lokales Modell"
-                value={localModelLabel(current.localModel)}
-                isOpen={openMenu === 'localModel'}
-                onToggle={(): void => {
-                  toggleMenu('localModel');
-                }}
-              >
-                <LocalModelMenu
-                  value={current.localModel}
-                  models={localModels.models}
-                  isLoading={localModels.isLoading}
-                  onChange={saveLocalModel}
-                  onReload={localModels.reload}
-                  onClose={closeMenu}
-                />
-              </SelectButton>
-            </SettingRow>
-          )}
-          <SettingRow
-            label="Standardmodell"
-            info="Mit diesem Modell startet die erste Session eines neuen Vorhabens; weitere Sessions im Vorhaben übernehmen den Stand der letzten. In der Session jederzeit über die Eingabeleiste änderbar."
-          >
+              <LocalModelMenu
+                value={current.localModel}
+                models={localModels.models}
+                isLoading={localModels.isLoading}
+                onChange={saveLocalModel}
+                onReload={localModels.reload}
+                onClose={closeMenu}
+              />
+            </SelectButton>
+          </SettingRow>
+        );
+      case 'defaultModel':
+        return (
+          <SettingRow id={id}>
             <SelectButton
               label="Standardmodell"
               value={
@@ -299,10 +305,10 @@ export function SettingsView({
               )}
             </SelectButton>
           </SettingRow>
-          <SettingRow
-            label="Standard-Modus"
-            info="Wie selbstständig Claude arbeitet und wie gründlich es nachdenkt. Gilt für neue Vorhaben; in der Session mit Umschalt + Tab bzw. über die Eingabeleiste wechselbar."
-          >
+        );
+      case 'defaultMode':
+        return (
+          <SettingRow id={id}>
             <SelectButton
               label="Standard-Modus"
               value={`${currentMode.label} · Denkaufwand ${effortLabel(current.defaultEffort)}`}
@@ -327,10 +333,10 @@ export function SettingsView({
               />
             </SelectButton>
           </SettingRow>
-          <SettingRow
-            label="Angaben ohne Fundstelle"
-            info="Unterstreicht Pfade, Datei:Zeile und Zahlen ab zwei Ziffern, die in keiner Werkzeug-Ausgabe derselben Antwort vorkommen."
-          >
+        );
+      case 'markUnsourced':
+        return (
+          <SettingRow id={id}>
             <Switch
               checked={current.markUnsourced}
               label="markieren"
@@ -339,13 +345,12 @@ export function SettingsView({
               }}
             />
           </SettingRow>
-        </section>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Skills</h2>
-          <SettingRow
-            label="Benutzer-Skills"
-            info="Skills aus deinem Benutzerordner stehen in jeder Session zur Verfügung."
-          >
+        );
+      case 'cliVersion':
+        return <CliVersionRow />;
+      case 'userSkills':
+        return (
+          <SettingRow id={id}>
             <span className="settings-view__path-text">
               <span className="settings-view__path" title={loaded.userSkillsDir}>
                 {loaded.userSkillsDir}
@@ -354,10 +359,10 @@ export function SettingsView({
             </span>
             {renderRevealButton(loaded.userSkillsDir)}
           </SettingRow>
-          <SettingRow
-            label="Projekt-Skills"
-            info="Skills aus den .claude\skills-Ordnern der Repositories einer Session. Welche gelten, hängt davon ab, welche Repositories die Session umfasst."
-          >
+        );
+      case 'projectSkills':
+        return (
+          <SettingRow id={id}>
             <span className="settings-view__path-text">
               <span className="settings-view__plain">{projectSkillsText()}</span>
               {!areRepositoriesLoading && hasProjectSkills(repositories) && (
@@ -365,13 +370,12 @@ export function SettingsView({
               )}
             </span>
           </SettingRow>
-        </section>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Ordner</h2>
-          <SettingRow
-            label="Workspaces"
-            info="Hier legt die App den Workspace jedes Vorhabens an: Arbeitsordner seiner Sessions und Ablage der Anhänge."
-          >
+        );
+      case 'appVersion':
+        return <AppVersionRow runningSessions={runningSessionCount(sessions)} />;
+      case 'workspaces':
+        return (
+          <SettingRow id={id}>
             <span className="settings-view__path-text">
               <span className="settings-view__path" title={loaded.workspacesDir}>
                 {loaded.workspacesDir}
@@ -379,21 +383,37 @@ export function SettingsView({
             </span>
             {renderRevealButton(loaded.workspacesDir)}
           </SettingRow>
-        </section>
-        <section className="settings-view__section">
-          <h2 className="settings-view__section-title">Rechte</h2>
-          <SettingRow
-            label="Dateizugriff"
-            info="Ein Agent arbeitet im Workspace seines Vorhabens, in den Haupt-Checkouts von dessen Repositories und in deren Ticket-Worktrees — nicht im übrigen Benutzerverzeichnis."
-          >
+        );
+      case 'fileAccess':
+        return (
+          <SettingRow id={id}>
             <span className="settings-view__plain">Workspace und Repositories des Vorhabens</span>
           </SettingRow>
-        </section>
-      </>
-    );
+        );
+      default:
+        return assertNever(id);
+    }
   }
 
-  function renderBody(): ReactElement | null {
+  function renderSections(current: Settings, loaded: SettingsOverview): ReactElement[] {
+    const groups: SettingGroup[] = groupEntries(shownEntries(current));
+    // Alle Kategorien bleiben eingehängt (Konto, Version und Claude-Version fragen beim
+    // Einhängen Programme und das Netz ab); die nicht gewählten sind nur ausgeblendet.
+    return groups.map((group: SettingGroup) => (
+      <section
+        key={`${group.category}/${group.section}`}
+        className="settings-view__section"
+        hidden={group.category !== category}
+      >
+        <h2 className="settings-view__section-title">{group.section}</h2>
+        {group.entries.map((entry: SettingEntry) => (
+          <div key={entry.id}>{renderRow(entry.id, current, loaded)}</div>
+        ))}
+      </section>
+    ));
+  }
+
+  function renderBody(): ReactElement | ReactElement[] | null {
     if (settings === null || overview === null) {
       if (loadError !== null) {
         return null;
@@ -408,14 +428,26 @@ export function SettingsView({
       <header className="settings-view__header">
         <h1 className="settings-view__title">Einstellungen</h1>
       </header>
-      <div className="settings-view__scroll">
-        <div className="settings-view__content">
-          {renderErrors()}
-          {renderBody()}
+      <div className="settings-view__split">
+        <SettingsNav
+          active={category}
+          attention={attention}
+          counts={null}
+          onSelect={selectCategory}
+        />
+        <div ref={contentRef} className="settings-view__scroll">
+          <div className="settings-view__content">
+            {renderErrors()}
+            {renderBody()}
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Zeile ohne Zweig in renderRow: ${String(value)}`);
 }
 
 function skillCountLabel(count: number): string {

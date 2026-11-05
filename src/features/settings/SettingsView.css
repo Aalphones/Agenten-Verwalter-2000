@@ -20,8 +20,15 @@
     font-weight: 600;
   }
 
-  &__scroll {
+  &__split {
+    display: grid;
     flex-grow: 1;
+    grid-template-columns: 216px minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  &__scroll {
+    min-width: 0;
     min-height: 0;
     overflow-y: auto;
   }
@@ -33,7 +40,7 @@
     box-sizing: border-box;
     width: 100%;
     max-width: 780px;
-    margin: 0 auto;
+    margin: 0;
     padding: var(--space-3xl) var(--space-5xl);
   }
 
@@ -59,6 +66,10 @@
   &__section {
     display: flex;
     flex-direction: column;
+
+    &[hidden] {
+      display: none;
+    }
   }
 
   &__section-title {

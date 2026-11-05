@@ -1,15 +1,17 @@
 import type { ReactElement, ReactNode } from 'react';
+import { settingEntry } from '@/features/settings/settingsCatalog';
+import type { SettingId } from '@/features/settings/settingsCatalog';
 import './SettingRow.css';
 
 interface SettingRowProps {
-  label: string;
-  /** Die Erklärung hinter dem ⓘ. */
-  info: string;
+  /** Name und ⓘ-Text kommen aus dem Katalog. */
+  id: SettingId;
   /** Das Bedienelement. */
   children: ReactNode;
 }
 
-export function SettingRow({ label, info, children }: SettingRowProps): ReactElement {
+export function SettingRow({ id, children }: SettingRowProps): ReactElement {
+  const { label, info } = settingEntry(id);
   return (
     <div className="setting-row">
       <div className="setting-row__label">
