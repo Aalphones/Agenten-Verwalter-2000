@@ -394,6 +394,8 @@ struct Outbox {
     /// Die Antwort endete als abgeschlossen; nach dem Freigeben der Sperre prüft „Automatisch
     /// weiter“ die Einstiegszeile (ADR 040).
     turn_completed: bool,
+    /// Befehlsliste aus `system/init`; gespeichert nach dem Freigeben der Sperre.
+    slash_commands: Option<Vec<String>>,
 }
 
 impl SessionRegistry {
@@ -2912,7 +2914,10 @@ impl SessionState {
 
     fn apply_event(&mut self, outbox: &mut Outbox, event: AgentEvent) {
         match event {
-            AgentEvent::Ready { .. } => {
+            AgentEvent::Ready { slash_commands, .. } => {
+                if slash_commands.is_some() {
+                    outbox.slash_commands = slash_commands;
+                }
                 if !self.has_agent_history {
                     self.has_agent_history = true;
                     outbox.summary_dirty = true;
@@ -3605,6 +3610,11 @@ fn update<R>(
         result
     };
     outbox.emit(app, session);
+    if let Some(names) = outbox.slash_commands.take()
+        && let Err(error) = skills::builtin::remember_claude_commands(&session.database, &names)
+    {
+        session.log_line(format!("Befehlsliste nicht gespeichert: {error}"));
+    }
     // Git gehört nicht unter die Session-Sperre.
     let windows = std::mem::take(&mut outbox.commit_windows);
     if !windows.is_empty() {

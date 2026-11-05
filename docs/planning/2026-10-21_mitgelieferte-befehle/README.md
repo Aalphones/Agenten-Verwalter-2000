@@ -19,7 +19,7 @@ Kontext für jeden Umsetzer: [AGENTS.md](../../../AGENTS.md), [docs/code-map.md]
 |---|---|---|---|---|
 | 1 | Autark: `/compact` von Hand, `compact_boundary` mit Tokenständen | [phase-1-autark-compact.md](phase-1-autark-compact.md) | standard | complete |
 | 2 | Codex: `/compact` und `/codex-review` im Übersetzer | [phase-2-codex-befehle.md](phase-2-codex-befehle.md) | standard | complete |
-| 3 | Core: Liste der mitgelieferten Befehle je Betriebsart (Claude-Liste merken, feste Listen, Ausblenden, Beschreibungen); ADR 034 | [phase-3-befehlsliste-core.md](phase-3-befehlsliste-core.md) | standard | pending |
+| 3 | Core: Liste der mitgelieferten Befehle je Betriebsart (Claude-Liste merken, feste Listen, Ausblenden, Beschreibungen); ADR 034 | [phase-3-befehlsliste-core.md](phase-3-befehlsliste-core.md) | standard | complete |
 | 4 | Oberfläche: Abschnitt „Mitgeliefert“ im `/`-Menü; Doku-Abschluss | [phase-4-menue.md](phase-4-menue.md) | standard | pending |
 
 **Reihenfolge:** strikt 1 → 4. Erst müssen die Befehle in „Autark“ und „Codex“ funktionieren, dann bietet das Menü sie an. Umsetzung direkt auf `main`, ein Commit pro Phase; Scopes: Phase 1 `standalone`, Phase 2 `codex`, Phase 3 und 4 `skills`. Vor jedem Commit `pnpm check` grün; `cargo` im PATH (`$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`). Keine neuen Abhängigkeiten. Bindings nach Änderungen an Typen über die Tauri-Grenze neu erzeugen (`pnpm bindings`) und mitcommitten. Keine automatisierten Tests (Profil des Projekts). Erkenntnisse nach [FINDINGS.md](FINDINGS.md). Planabschluss mit Versions-Tag (Minor-Version), Ablauf nach [releases.md](../../conventions/releases.md).
