@@ -21,6 +21,8 @@ interface ImplementationHeaderProps {
   hasChanges: boolean;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
+  /** Artefakte aus Sessions der Umsetzung; „Artefakte“ erscheint erst ab dem ersten. */
+  artifactCount: number;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
   /** Laufende Terminals des Vorhabens. */
@@ -29,13 +31,15 @@ interface ImplementationHeaderProps {
   onToggleTerminal: () => void;
 }
 
-/** Kopfzeile „<Vorhaben> › Umsetzung <Name>“ mit den Reitern „Ablauf · Changes“ und dem Fortschritt. */
+/** Kopfzeile „<Vorhaben> › Umsetzung <Name>“ mit den Reitern „Ablauf · Changes · Artefakte“ und dem
+ *  Fortschritt. */
 export function ImplementationHeader({
   implementation,
   projectName,
   activeView,
   hasChanges,
   changesCount,
+  artifactCount,
   onShowView,
   onOpenProject,
   terminalCount,
@@ -43,7 +47,10 @@ export function ImplementationHeader({
   onToggleTerminal,
 }: ImplementationHeaderProps): ReactElement {
   const views: readonly ImplementationViewKind[] = IMPLEMENTATION_VIEWS.filter(
-    (view: ImplementationViewKind) => view === 'flow' || hasChanges,
+    (view: ImplementationViewKind) =>
+      view === 'flow' ||
+      (view === 'changes' && hasChanges) ||
+      (view === 'artifacts' && artifactCount > 0),
   );
   const activeLanes: number = activeLaneCount(implementation);
   return (
@@ -97,6 +104,9 @@ export function ImplementationHeader({
             {VIEW_LABEL[view]}
             {view === 'changes' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+            )}
+            {view === 'artifacts' && (
+              <span className="session-header__tab-count">{formatCount(artifactCount)}</span>
             )}
           </button>
         ))}
