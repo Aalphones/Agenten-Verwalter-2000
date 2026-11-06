@@ -18,7 +18,7 @@
 
 ## Checkliste
 
-- [ ] Neu `src/features/implementation/StationTrail.tsx` + `StationTrail.css`, BEM-Block `station-trail`.
+- [x] Neu `src/features/implementation/StationTrail.tsx` + `StationTrail.css`, BEM-Block `station-trail`.
   ```ts
   interface StationTrailProps {
     implementation: ImplementationView;
@@ -33,14 +33,16 @@
   - Rückweg-Knopf: `onOpenImplementation(implementation.id)`.
   - Texte als Konstanten in `implementationTexts.ts` (`TRAIL_BACK_TITLE = 'Zurück zur Umsetzung'`, Funktion `trailTargetTitle(direction: 'previous' | 'next', target: StationRef | undefined): string` mit den Sätzen aus AK 4).
   - CSS: `display: flex; align-items: center; gap: var(--space-md); height: 28px; padding: 0 var(--space-3xl); font-size: var(--font-size-xs); color: var(--color-fg-muted)`; Rückweg-Knopf in `var(--color-accent)`, ohne Rahmen; ‹ › als kleine Knöpfe 22×22 px mit Rahmen `var(--color-border-subtle)`, `:disabled` mit `opacity: 0.4; cursor: default`; Fokus-Ring wie `sidebar-implementation__button:focus-visible`. Die Phasen-Zeile `min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1`.
-- [ ] `App.tsx`, Zweig `if (currentSession !== undefined)`: zwischen `<SessionHeader …/>` und `<SessionActionError …/>`
+- [x] `App.tsx`, Zweig `if (currentSession !== undefined)`: zwischen `<SessionHeader …/>` und `<SessionActionError …/>`
   ```tsx
   {trailImplementation !== undefined && (
     <StationTrail implementation={trailImplementation} sessionId={currentSession.id} onOpenImplementation={selectImplementation} />
   )}
   ```
   mit `const trailImplementation = currentSession.stationOf === null ? undefined : implementations.find((i) => i.id === currentSession.stationOf);` direkt vor dem `return` dieses Zweigs. `selectImplementation` ist in `App.tsx` schon vorhanden (an die Sidebar übergeben).
-- [ ] `docs/code-map.md`: Zeile der Umsetzung um `StationTrail.tsx` (Rückweg-Leiste) ergänzen.
-- [ ] `docs/glossary.md`: Eintrag **Rückweg-Leiste** — Leiste über dem Chat einer Station: zurück zur Umsetzung, ‹ › zur vorigen/nächsten aktiven Station.
+- [x] `docs/code-map.md`: Zeile der Umsetzung um `StationTrail.tsx` (Rückweg-Leiste) ergänzen.
+- [x] `docs/glossary.md`: Eintrag **Rückweg-Leiste** — Leiste über dem Chat einer Station: zurück zur Umsetzung, ‹ › zur vorigen/nächsten aktiven Station.
 
 ## Report-Back
+
+Status: complete. `StationTrail` (Rückweg, Phasenzeile, ‹ ›) steht zwischen Kopfzeile und Fehlerleiste in `App.tsx`; Texte in `implementationTexts.ts`; Code-Map, Glossar und ADR 056 nachgezogen; `pnpm check` grün. Abweichung: ‹ liest die letzte Vorgängerin per `filter().pop()`, weil `findLast` in `lib: ES2020` fehlt; der Rückweg-Knopf hat `max-width: 40%` mit Ellipse, damit ein langer Vorhabenname die Pfeile nicht verdrängt. Unsicherste Stelle: `StationTrail.css` (`__back` gegen `__phase` bei schmalem Fenster) — Beleg erst in der echten App.

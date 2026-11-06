@@ -1,3 +1,5 @@
+import type { StationRef } from '@/features/implementation/implementationOrder';
+import { stateLabel } from '@/features/implementation/stationState';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { PhaseMark } from '@/lib/bindings/PhaseMark';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
@@ -131,6 +133,21 @@ export function durationText(milliseconds: number): string {
 export function stationLabel(station: StationView): string {
   const number: number | null = station.sessionNumber;
   return number === null ? station.stage : `${station.stage} #${String(number)}`;
+}
+
+export const TRAIL_BACK_TITLE = 'Zurück zur Umsetzung';
+
+/** „Vorige aktive Station: Review #7 · läuft“ am ‹ bzw. › der Rückweg-Leiste; ohne Ziel „Keine vorige aktive Station“. */
+export function trailTargetTitle(
+  direction: 'previous' | 'next',
+  target: StationRef | undefined,
+): string {
+  const noun: string = direction === 'previous' ? 'vorige' : 'nächste';
+  if (target === undefined) {
+    return `Keine ${noun} aktive Station`;
+  }
+  const lead: string = direction === 'previous' ? 'Vorige' : 'Nächste';
+  return `${lead} aktive Station: ${stationLabel(target.station)} · ${stateLabel(target.station.state)}`;
 }
 
 /** Zustand der Station als Satz für die große Karte („läuft seit 12 min“, „fertig · 24 min“). */
