@@ -23,7 +23,7 @@ use crate::sessions::model::SessionStatus;
 use crate::sessions::registry::SessionRegistry;
 use model::{
     ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationView, OpenQuestion,
-    PendingChange, PhaseInput, PhaseView, StationState, StationView,
+    PendingChange, PhaseInput, PhaseView, StationInput, StationState, StationView,
 };
 
 pub const IMPLEMENTATION_CHANGED_EVENT: &str = "implementation://changed";
@@ -554,23 +554,7 @@ pub fn phase_rows(
     let mut stations: Vec<StationRow> = Vec::new();
     for (offset, input) in (first_position..).zip(inputs) {
         let phase_id = uuid::Uuid::new_v4().to_string();
-        for (position, station) in (0..).zip(&input.stations) {
-            stations.push(StationRow {
-                id: uuid::Uuid::new_v4().to_string(),
-                phase_id: phase_id.clone(),
-                position,
-                stage: station.stage.trim().to_owned(),
-                model: station.model_id(),
-                effort: station.effort_id(),
-                by_user: station.is_by_user(),
-                skill: station.skill_name(),
-                brief: station.brief.clone().unwrap_or_default().trim().to_owned(),
-                session_id: None,
-                started_at: None,
-                completed_at: None,
-                result: None,
-            });
-        }
+        stations.extend(station_rows(&phase_id, &input.stations));
         phases.push(PhaseRow {
             id: phase_id,
             implementation_id: implementation_id.to_owned(),
@@ -588,4 +572,26 @@ pub fn phase_rows(
         });
     }
     (phases, stations)
+}
+
+/// Neue Stationen der Phase `phase_id`, Positionen ab 0 in Eingabe-Reihenfolge.
+pub fn station_rows(phase_id: &str, inputs: &[StationInput]) -> Vec<StationRow> {
+    (0..)
+        .zip(inputs)
+        .map(|(position, station): (u32, &StationInput)| StationRow {
+            id: uuid::Uuid::new_v4().to_string(),
+            phase_id: phase_id.to_owned(),
+            position,
+            stage: station.stage.trim().to_owned(),
+            model: station.model_id(),
+            effort: station.effort_id(),
+            by_user: station.is_by_user(),
+            skill: station.skill_name(),
+            brief: station.brief.clone().unwrap_or_default().trim().to_owned(),
+            session_id: None,
+            started_at: None,
+            completed_at: None,
+            result: None,
+        })
+        .collect()
 }
