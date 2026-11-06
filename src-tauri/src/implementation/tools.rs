@@ -1,6 +1,6 @@
 //! Werkzeuge der Umsetzung im MCP-Zugang (ADR 048): der Agent legt eine Umsetzung an, liest ihren
 //! Lagebericht und beschreibt Phasen. Jeder Aufruf wirkt im Vorhaben der aufrufenden Session.
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tauri::{Emitter, Manager};
 
@@ -55,10 +55,15 @@ impl ToolSet for ImplementationTools {
                 name: GET,
                 description: "Liefert den Lagebericht der Umsetzung, zu der diese Session gehört \
                               (sonst der neuesten des Vorhabens): Stand, was läuft, was fertig \
-                              ist, was offen ist.",
+                              ist, was offen ist. Ohne details nur der Lagebericht als Text.",
                 input_schema: json!({
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "details": {
+                            "type": "boolean",
+                            "description": "true liefert zusätzlich alle Felder der Umsetzung als JSON (Phasen, Stationen mit IDs, Modell, Aufwand, Auftrag) — nur für Planänderungen nötig.",
+                        },
+                    },
                     "additionalProperties": false,
                 }),
             },
@@ -176,16 +181,10 @@ struct SetPhasesArguments {
 fn set_phases(call: &ToolCall) -> Result<ToolResult, String> {
     let arguments: SetPhasesArguments = parse(call.arguments)?;
     let text = changes::propose(call.app, call.session_id, &arguments.phases)?;
-    let structured = call
-        .app
-        .try_state::<SessionRegistry>()
-        .and_then(|registry: tauri::State<'_, SessionRegistry>| {
-            registry
-                .require_implementation_of_session(call.session_id)
-                .ok()
-        })
-        .and_then(|view: ImplementationView| serde_json::to_value(view).ok());
-    Ok(ToolResult::Ok { text, structured })
+    Ok(ToolResult::Ok {
+        text,
+        structured: None,
+    })
 }
 
 #[derive(Deserialize)]
@@ -210,14 +209,21 @@ fn create(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, Str
     announce(call, &view);
     // Die erste Station steht bereit (▶): wann die Umsetzung beginnt, entscheidet der Benutzer. Die
     // Automatik, die danach die Folgestationen startet, ist an.
-    Ok(answer(registry, &view))
+    Ok(answer(registry, &view, false))
+}
+
+#[derive(Deserialize)]
+struct GetArguments {
+    #[serde(default)]
+    details: bool,
 }
 
 fn get(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, String> {
+    let arguments: GetArguments = parse(call.arguments)?;
     let view = registry
         .require_implementation_of_session(call.session_id)
         .map_err(|error| error.to_string())?;
-    Ok(answer(registry, &view))
+    Ok(answer(registry, &view, arguments.details))
 }
 
 fn describe_phase(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, String> {
@@ -282,10 +288,20 @@ fn parse<T: for<'de> Deserialize<'de>>(arguments: &Value) -> Result<T, String> {
         .map_err(|error| format!("Eingabe nicht lesbar: {error}"))
 }
 
-fn answer(registry: &SessionRegistry, view: &ImplementationView) -> ToolResult {
+fn answer(registry: &SessionRegistry, view: &ImplementationView, details: bool) -> ToolResult {
     ToolResult::Ok {
         text: registry.report_text(view, false, super::now_ms()),
-        structured: serde_json::to_value(view).ok(),
+        structured: structured_if(details, view),
+    }
+}
+
+/// Der ganze View nur auf ausdrücklichen Wunsch: Claude reicht `structuredContent` statt des
+/// Texts an das Modell weiter (ADR 058, gemessen 37 900 Zeichen je Aufruf).
+fn structured_if<T: Serialize>(details: bool, value: &T) -> Option<Value> {
+    if details {
+        serde_json::to_value(value).ok()
+    } else {
+        None
     }
 }
 

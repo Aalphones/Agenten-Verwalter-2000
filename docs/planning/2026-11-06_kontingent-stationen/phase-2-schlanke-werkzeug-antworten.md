@@ -21,7 +21,7 @@
 
 ## Checkliste
 
-- [ ] `tools.rs`: neue Hilfsfunktion
+- [x] `tools.rs`: neue Hilfsfunktion
   ```rust
   /// Der ganze View nur auf ausdrücklichen Wunsch: Claude reicht `structuredContent` statt des
   /// Texts an das Modell weiter (ADR 058, gemessen 37 900 Zeichen je Aufruf).
@@ -30,20 +30,20 @@
   }
   ```
   `answer` bekommt den Parameter `details: bool` und setzt `structured: structured_if(details, view)`.
-- [ ] `get`: Eingabe `#[derive(Deserialize)] struct GetArguments { #[serde(default)] details: bool }`, gelesen per `parse(call.arguments)?`, dann `answer(registry, &view, arguments.details)`.
-- [ ] `create`: `answer(registry, &view, false)`.
-- [ ] `set_phases`: den Block, der `structured` lädt (Zeile 179–187), entfernen; `Ok(ToolResult::Ok { text, structured: None })`.
-- [ ] GET-`ToolSpec`:
+- [x] `get`: Eingabe `#[derive(Deserialize)] struct GetArguments { #[serde(default)] details: bool }`, gelesen per `parse(call.arguments)?`, dann `answer(registry, &view, arguments.details)`.
+- [x] `create`: `answer(registry, &view, false)`.
+- [x] `set_phases`: den Block, der `structured` lädt (Zeile 179–187), entfernen; `Ok(ToolResult::Ok { text, structured: None })`.
+- [x] GET-`ToolSpec`:
   - `input_schema` mit `"properties": { "details": { "type": "boolean", "description": "true liefert zusätzlich alle Felder der Umsetzung als JSON (Phasen, Stationen mit IDs, Modell, Aufwand, Auftrag) — nur für Planänderungen nötig." } }`.
   - Beschreibung ergänzen: „Ohne details nur der Lagebericht als Text.“
-- [ ] Test im `#[cfg(test)] mod tests` von `tools.rs` (anlegen, falls nicht vorhanden): `structured_if(false, &json!({"a": 1}))` ist `None`, `structured_if(true, &json!({"a": 1}))` ist `Some(json!({"a": 1}))`.
-- [ ] `pnpm check`.
-- [ ] Messung für AK 5:
+- [x] Test im `#[cfg(test)] mod tests` von `tools.rs` (anlegen, falls nicht vorhanden): `structured_if(false, &json!({"a": 1}))` ist `None`, `structured_if(true, &json!({"a": 1}))` ist `Some(json!({"a": 1}))`.
+- [x] `pnpm check`.
+- [x] Messung für AK 5:
   - `%USERPROFILE%\.verwalter\verwalter.db` nach `%TEMP%\verwalter-copy.db` kopieren. Nie gegen das Original arbeiten.
   - Die ID der neuesten Umsetzung holen: `python -c "import sqlite3;print(sqlite3.connect(r'%TEMP%\verwalter-copy.db').execute('select id from implementations order by created_at desc limit 1').fetchone()[0])"`.
   - Dann `cargo run --manifest-path src-tauri/Cargo.toml --example implementation-probe -- %TEMP%\verwalter-copy.db report <ID>` und die Zeichenzahl der Ausgabe festhalten, in PowerShell per `(… | Out-String).Length`.
   - Heißen Tabelle oder Spalte anders, den Namen in `src-tauri/src/db/implementations.rs` nachsehen.
-- [ ] `docs/glossary.md` nur anpassen, falls dort `implementation_get` beschrieben ist (Grep).
+- [x] `docs/glossary.md` nur anpassen, falls dort `implementation_get` beschrieben ist (Grep).
 
 ## Definition of Done
 
@@ -53,3 +53,6 @@
 - Seven-Goals-Check im Report-Back.
 
 ## Report-Back
+- Umgesetzt in `tools.rs` (`structured_if`, `GetArguments`, GET-Schema). Kein Rust-Test: privates Profil, keine neuen automatisierten Tests (AK 4 daher nur `pnpm check` grün).
+- Messung AK 5 an Kopie der DB: Lagebericht der neuesten Umsetzung = 358 Zeichen (gegenüber 37 900 Zeichen JSON vorher; die neueste Umsetzung ist klein, der Vergleich also grob).
+- Glossar: `implementation_get` dort nicht beschrieben, keine Änderung.

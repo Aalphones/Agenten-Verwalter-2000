@@ -6,8 +6,8 @@ Stationen einer Umsetzung verbrauchen das meiste Kontingent über lange Verläuf
 
 | Phase | Inhalt | Rating | Modell | Wave | Schätzung | Status |
 |---|---|---|---|---|---|---|
-| 1 | [Automatisch zusammenfassen in Stationen](phase-1-auto-zusammenfassen.md), ADR 058 | standard | sonnet | 1 | 2 h | pending |
-| 2 | [Schlanke Antworten der Umsetzungs-Werkzeuge](phase-2-schlanke-werkzeug-antworten.md) | standard | sonnet | 1 | 45 min | pending |
+| 1 | [Automatisch zusammenfassen in Stationen](phase-1-auto-zusammenfassen.md), ADR 058 | standard | sonnet | 1 | 2 h | complete |
+| 2 | [Schlanke Antworten der Umsetzungs-Werkzeuge](phase-2-schlanke-werkzeug-antworten.md) | standard | sonnet | 1 | 45 min | complete |
 | 3 | [Git-Lage in der ersten Stationsnachricht](phase-3-git-lage.md) | standard | sonnet | 2 | 1 h | pending |
 | 4 | [Schlanker Ausgabestil in Stationen](phase-4-stationsstil.md) | mechanisch | sonnet | 2 | 30 min | pending |
 
