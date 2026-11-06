@@ -9,8 +9,9 @@ Stationen einer Umsetzung verbrauchen das meiste Kontingent über lange Verläuf
 | 1 | [Automatisch zusammenfassen in Stationen](phase-1-auto-zusammenfassen.md), ADR 058 | standard | sonnet | 1 | 2 h | pending |
 | 2 | [Schlanke Antworten der Umsetzungs-Werkzeuge](phase-2-schlanke-werkzeug-antworten.md) | standard | sonnet | 1 | 45 min | pending |
 | 3 | [Git-Lage in der ersten Stationsnachricht](phase-3-git-lage.md) | standard | sonnet | 2 | 1 h | pending |
+| 4 | [Schlanker Ausgabestil in Stationen](phase-4-stationsstil.md) | mechanisch | sonnet | 2 | 30 min | pending |
 
-Phase 1 und 2 berühren getrennte Dateien und laufen parallel. Phase 3 wartet auf Phase 2, weil beide `src-tauri/src/implementation/` und dessen Tests anfassen.
+Phase 1 und 2 berühren getrennte Dateien und laufen parallel. Phase 3 wartet auf Phase 2, weil beide `src-tauri/src/implementation/` und dessen Tests anfassen. Phase 4 wartet auf Phase 1, weil beide `SpawnOptions`, `common_args`, `start_process` und `side.rs` anfassen; mit Phase 3 teilt sie keine Datei.
 
 ## Entscheidungen (getroffen, nicht offen)
 
@@ -22,6 +23,7 @@ Phase 1 und 2 berühren getrennte Dateien und laufen parallel. Phase 3 wartet au
 - **Regler als neue Komponente** `src/components/Slider.tsx`. Eine Zahleneingabe oder einen Regler gibt es in der App noch nicht; der Wert wird erst beim Loslassen gespeichert, nicht bei jeder Bewegung.
 - **`implementation_get` liefert standardmäßig nur den Lagebericht als Text**, kein `structuredContent`. Grund: Claude Code reicht bei vorhandenem `structuredContent` diesen an das Modell weiter; gemessen kamen in einer Station 37 900 Zeichen JSON an. Mit `details: true` kommt der View wie bisher. `implementation_create` und `implementation_set_phases` antworten nur noch mit Text.
 - **Git-Lage** in der ersten Nachricht aus `status::session_status` mit `ChangesReach::Project`, also über alle Sessions des Vorhabens einschließlich ihrer Ticket-Worktrees. Je Eintrag eine Zeile, höchstens 3 Commit-Betreffs.
+- **Schlanker Ausgabestil (Phase 4, nachgetragen am 06.11.2026):** Stationen starten mit `--settings {"outputStyle":"station"}`, wenn `station.md` im Ordner `output-styles` der Claude-Konfiguration liegt; die Datei ist der Schalter, eine eigene Einstellung gibt es nicht. Nebenfragen an eine Station bekommen denselben Stil, sonst lesen sie den Prompt-Cache nicht (ADR 044). Der Stil selbst liegt im Config-Master des Benutzers.
 - **Nicht in diesem Plan:**
   - MCP-Server je Station filtern: Die Studio-Server kommen aus der `.mcp.json` des Repos, und die claude.ai-Connectoren ließen sich in der Probe nicht nachweisen.
   - Ein Knopf „Zusammenfassen“ für Einzel-Sessions: `/compact` gibt es dort schon.
@@ -67,5 +69,5 @@ pub struct SpawnOptions { /* … */ pub auto_compact_window: Option<u32> }
 
 ## Follow-ups
 
-- Skills außerhalb dieses Repos nachziehen (Master `mode-implementing`, facepass `project-implementing`): `implementation_get` am Stationsstart nur bei Bedarf aufrufen, `details: true` nur für Planänderungen; in den Stationstabellen `effort` je Rolle setzen (Bau mittel, Review/Planung hoch).
+- Skills außerhalb dieses Repos nachziehen (Master `mode-implementing`, facepass `project-implementing`): `implementation_get` am Stationsstart nur bei Bedarf aufrufen, `details: true` nur für Planänderungen; in den Stationstabellen `effort` je Rolle setzen (Bau mittel, Review/Planung hoch). Stand 06.11.2026: `effort` im Master eingetragen, der Rest offen.
 - MCP-Server je Station filtern — bewusst nicht geplant. Messung vom 06.11.2026 an 1 531 Aufrufen laufender Stationen: Werkzeuglisten und Anweisungen aller MCP-Server machen geschätzt 1,7 % des gelesenen Kontexts aus. Davon liegen rund 1 % auf Servern, die keine Station aufgerufen hat: die Studio-Server und `test-control` aus der Repo-`.mcp.json` sowie die claude.ai-Connectoren Gamma und Docs. Genutzt wurden nur `manager` und `verwalter`. Möglicher Weg: je Repo wählbar, welche Server Stationen bekommen, über eine gefilterte Kopie der `.mcp.json` unter `%USERPROFILE%\.verwalter\mcp\`. Erst angehen, wenn die größeren Hebel umgesetzt sind.
