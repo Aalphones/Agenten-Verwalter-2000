@@ -506,18 +506,35 @@ pub fn set_pending_change(
     Ok(())
 }
 
-/// Ersetzt die kommenden Phasen: löscht `removed_phase_ids` samt ihren Stationen, legt
-/// `phases`/`stations` neu an (die Positionen der Phasen zählen ab 0 und werden hinter die
-/// verbleibenden gesetzt), verwirft einen offenen Vorschlag und hält die Änderung fest.
+/// Eine begonnene Phase, deren noch nicht gestartete Stationen ein Vorschlag ersetzt (ADR 059).
+#[derive(Debug, Clone)]
+pub struct BegunPhaseChange {
+    pub phase_id: String,
+    pub title: String,
+    pub description: String,
+    pub removed_station_ids: Vec<String>,
+    /// Positionen ab 0; `replace_upcoming_phases` setzt sie hinter die verbleibenden Stationen.
+    pub stations: Vec<StationRow>,
+}
+
+/// Ersetzt die kommenden Phasen: löscht `removed_phase_ids` samt ihren Stationen, ersetzt in jeder
+/// Phase aus `begun` die noch nicht gestarteten Stationen und übernimmt Titel und Beschreibung,
+/// legt `phases`/`stations` neu an (die Positionen der Phasen zählen ab 0 und werden hinter die
+/// verbleibenden gesetzt), verwirft einen offenen Vorschlag und hält die Änderung fest. Alles oder
+/// nichts: hat eine zu löschende Station inzwischen begonnen, bleibt die Datenbank unverändert.
 pub fn replace_upcoming_phases(
     connection: &mut Connection,
     implementation_id: &str,
     removed_phase_ids: &[String],
+    begun: &[BegunPhaseChange],
     phases: &[PhaseRow],
     stations: &[StationRow],
     change: Option<&ChangeRow>,
 ) -> Result<(), CommandError> {
     let transaction = connection.transaction()?;
+    for phase in begun {
+        replace_upcoming_stations(&transaction, phase)?;
+    }
     for phase_id in removed_phase_ids {
         transaction.execute(
             "DELETE FROM implementation_phases WHERE id = ?1",
@@ -544,6 +561,45 @@ pub fn replace_upcoming_phases(
     set_pending_change(&transaction, implementation_id, None)?;
     transaction.commit()?;
     Ok(())
+}
+
+/// Löscht nur Stationen ohne Session und Fertigmeldung; fehlt eine, scheitert der ganze Zug.
+fn replace_upcoming_stations(
+    connection: &Connection,
+    phase: &BegunPhaseChange,
+) -> Result<(), CommandError> {
+    for station_id in &phase.removed_station_ids {
+        let deleted: usize = connection.execute(
+            "DELETE FROM implementation_stations \
+             WHERE id = ?1 AND phase_id = ?2 AND session_id IS NULL AND completed_at IS NULL",
+            params![station_id, phase.phase_id],
+        )?;
+        if deleted == 0 {
+            return Err(CommandError::Implementation(
+                "Eine Station hat seit dem Vorschlag begonnen; bitte neu vorschlagen.".to_owned(),
+            ));
+        }
+    }
+    update_phase_text(
+        connection,
+        &phase.phase_id,
+        &phase.title,
+        &phase.description,
+    )?;
+    let first_position: u32 = connection.query_row(
+        "SELECT COALESCE(MAX(position) + 1, 0) FROM implementation_stations WHERE phase_id = ?1",
+        params![phase.phase_id],
+        |row| row.get(0),
+    )?;
+    let shifted: Vec<StationRow> = phase
+        .stations
+        .iter()
+        .map(|station: &StationRow| StationRow {
+            position: first_position + station.position,
+            ..station.clone()
+        })
+        .collect();
+    insert_phases(connection, &[], &shifted)
 }
 
 /// Nimmt die Marke „neu“/„vorgezogen“ von der Phase, sobald ihre erste Station startet.

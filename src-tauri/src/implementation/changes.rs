@@ -1,46 +1,88 @@
-//! Plan-Änderungen (ADR 048): `implementation_set_phases` ersetzt die kommenden Phasen. Vor dem
-//! ersten Start gilt die Liste sofort, danach liegt sie als Vorschlag bereit, bis der Benutzer sie
-//! übernimmt oder verwirft.
-use std::collections::HashMap;
+//! Plan-Änderungen (ADR 048, ADR 059): `implementation_set_phases` ersetzt die kommenden Phasen und
+//! die noch nicht gestarteten Stationen genannter begonnener Phasen. Vor dem ersten Start gilt die
+//! Liste sofort, danach liegt sie als Vorschlag bereit, bis der Benutzer sie übernimmt oder
+//! verwirft. Solange sie bereitliegt, startet keine Station, die sie ersetzen würde.
+use std::collections::{HashMap, HashSet};
 
 use tauri::{AppHandle, Manager};
 
 use super::model::{
     ChangeSummary, ImplementationView, PendingChange, PhaseInput, PhaseMark, PhaseView,
-    StationState, StationView, validate,
+    StationInput, StationState, StationView, validate,
 };
-use super::{announce, now_ms, phase_rows, start};
-use crate::db::implementations::{ChangeRow, PhaseRow, StationRow};
+use super::{announce, now_ms, phase_rows, start, station_rows};
+use crate::db::implementations::{BegunPhaseChange, ChangeRow, PhaseRow, StationRow};
 use crate::error::CommandError;
 use crate::sessions::registry::SessionRegistry;
 
 const NO_PROPOSAL: &str = "Es liegt kein Vorschlag vor.";
 const IS_FINISHED: &str = "Die Umsetzung ist fertig; es gibt nichts mehr zu ändern.";
 const APPLIED: &str = "Übernommen.";
+/// Nur erreichbar, wenn eine gemerkte Station ganz verschwunden ist.
+const PLAN_CHANGED: &str = "Der Plan hat sich seit dem Vorschlag geändert; bitte neu vorschlagen.";
 
-/// Eine Phase hat begonnen, sobald eine ihrer Stationen eine Session hat oder fertig gemeldet ist.
+/// Eine Station hat begonnen, sobald sie eine Session hat oder fertig gemeldet ist; dann ändert
+/// keine Plan-Änderung sie mehr.
+pub fn is_station_begun(station: &StationView) -> bool {
+    station.session_id.is_some() || station.completed_at.is_some()
+}
+
+/// Eine Phase hat begonnen, sobald eine ihrer Stationen begonnen hat.
 pub fn is_begun(phase: &PhaseView) -> bool {
+    phase.stations.iter().any(is_station_begun)
+}
+
+/// Alle Stationen der Phase sind fertig gemeldet.
+pub fn is_finished(phase: &PhaseView) -> bool {
+    !phase.stations.is_empty()
+        && phase
+            .stations
+            .iter()
+            .all(|station: &StationView| station.completed_at.is_some())
+}
+
+/// Schlüssel der begonnenen Phasen; nur sie dürfen im Vorschlag ohne Stationen stehen.
+pub fn begun_keys(view: &ImplementationView) -> Vec<&str> {
+    view.phases
+        .iter()
+        .filter(|phase: &&PhaseView| is_begun(phase))
+        .map(|phase: &PhaseView| phase.key.as_str())
+        .collect()
+}
+
+fn upcoming_stations(phase: &PhaseView) -> impl Iterator<Item = &StationView> {
     phase
         .stations
         .iter()
-        .any(|station: &StationView| station.session_id.is_some() || station.completed_at.is_some())
+        .filter(|station: &&StationView| !is_station_begun(station))
 }
 
-/// Unterschiede zwischen den kommenden Phasen und dem Vorschlag. Fehler, wenn der Vorschlag den
-/// Schlüssel einer begonnenen Phase enthält.
-pub fn diff(view: &ImplementationView, proposed: &[PhaseInput]) -> Result<ChangeSummary, String> {
-    for phase in view
-        .phases
+/// Die begonnenen Phasen, die der Vorschlag nennt, mit ihrer Eingabe, in der Reihenfolge des
+/// Vorschlags.
+fn named_begun<'a>(
+    view: &'a ImplementationView,
+    proposed: &'a [PhaseInput],
+) -> Vec<(&'a PhaseView, &'a PhaseInput)> {
+    proposed
         .iter()
-        .filter(|phase: &&PhaseView| is_begun(phase))
-    {
-        if proposed
-            .iter()
-            .any(|input: &PhaseInput| input.key.trim() == phase.key)
-        {
-            return Err(format!("Phase {} hat schon begonnen.", phase.key));
-        }
-    }
+        .filter_map(|input: &PhaseInput| {
+            view.phases
+                .iter()
+                .find(|phase: &&PhaseView| phase.key == input.key.trim() && is_begun(phase))
+                .map(|phase: &PhaseView| (phase, input))
+        })
+        .collect()
+}
+
+/// Unterschiede zwischen dem heutigen Plan und dem Vorschlag. Fehler, wenn der Vorschlag eine
+/// fertige Phase nennt oder eine begonnene hinter einer kommenden oder außer der Reihe.
+pub fn diff(view: &ImplementationView, proposed: &[PhaseInput]) -> Result<ChangeSummary, String> {
+    check_begun_order(view, proposed)?;
+    let named = named_begun(view, proposed);
+    let named_keys: HashSet<&str> = named
+        .iter()
+        .map(|(phase, _): &(&PhaseView, &PhaseInput)| phase.key.as_str())
+        .collect();
     let current: Vec<&str> = view
         .phases
         .iter()
@@ -50,6 +92,7 @@ pub fn diff(view: &ImplementationView, proposed: &[PhaseInput]) -> Result<Change
     let keys: Vec<&str> = proposed
         .iter()
         .map(|input: &PhaseInput| input.key.trim())
+        .filter(|key: &&str| !named_keys.contains(key))
         .collect();
     let index_in = |list: &[&str], key: &str| list.iter().position(|entry: &&str| *entry == key);
     let mut summary = ChangeSummary::default();
@@ -71,15 +114,137 @@ pub fn diff(view: &ImplementationView, proposed: &[PhaseInput]) -> Result<Change
         .filter(|key: &&&str| !keys.contains(*key))
         .map(|key: &&str| (*key).to_owned())
         .collect();
+    summary.changed = named
+        .iter()
+        .filter(|(phase, input): &&(&PhaseView, &PhaseInput)| !has_same_upcoming(phase, input))
+        .map(|(phase, _): &(&PhaseView, &PhaseInput)| phase.key.clone())
+        .collect();
     Ok(summary)
+}
+
+/// Genannte begonnene Phasen stehen vor allen kommenden und untereinander in ihrer heutigen
+/// Reihenfolge; eine fertige darf der Vorschlag nicht nennen.
+fn check_begun_order(view: &ImplementationView, proposed: &[PhaseInput]) -> Result<(), String> {
+    let mut has_upcoming_before = false;
+    let mut last_index: Option<usize> = None;
+    for input in proposed {
+        let key = input.key.trim();
+        let Some(index) = view
+            .phases
+            .iter()
+            .position(|phase: &PhaseView| phase.key == key && is_begun(phase))
+        else {
+            has_upcoming_before = true;
+            continue;
+        };
+        if is_finished(&view.phases[index]) {
+            return Err(format!("Phase {key} ist fertig."));
+        }
+        let is_out_of_order = last_index.is_some_and(|last: usize| index < last);
+        if has_upcoming_before || is_out_of_order {
+            return Err(format!(
+                "Phase {key} hat begonnen und steht vor allen kommenden Phasen."
+            ));
+        }
+        last_index = Some(index);
+    }
+    Ok(())
+}
+
+/// Die noch nicht gestarteten Stationen gleichen der Eingabe Station für Station.
+fn has_same_upcoming(phase: &PhaseView, input: &PhaseInput) -> bool {
+    let upcoming: Vec<&StationView> = upcoming_stations(phase).collect();
+    upcoming.len() == input.stations.len()
+        && upcoming.iter().zip(&input.stations).all(
+            |(station, wanted): (&&StationView, &StationInput)| is_same_station(station, wanted),
+        )
+}
+
+fn is_same_station(station: &StationView, wanted: &StationInput) -> bool {
+    station.stage == wanted.stage.trim()
+        && station.model == wanted.model_id()
+        && station.effort == wanted.effort_id()
+        && station.by_user == wanted.is_by_user()
+        && station.skill == wanted.skill_name()
+        && station.brief == wanted.brief.as_deref().unwrap_or_default().trim()
+}
+
+/// Die Stationen, die ein offener Vorschlag ersetzen würde und die deshalb nicht starten: alle
+/// Stationen nicht begonnener Phasen und die noch nicht gestarteten genannter begonnener Phasen.
+pub fn held_in(phases: &[PhaseView], pending: &PendingChange) -> HashSet<String> {
+    let named: HashSet<&str> = pending
+        .phases
+        .iter()
+        .map(|input: &PhaseInput| input.key.trim())
+        .collect();
+    phases
+        .iter()
+        .flat_map(|phase: &PhaseView| {
+            let is_named_begun = is_begun(phase) && named.contains(phase.key.as_str());
+            let is_upcoming_phase = !is_begun(phase);
+            phase.stations.iter().filter(move |station: &&StationView| {
+                is_upcoming_phase || (is_named_begun && !is_station_begun(station))
+            })
+        })
+        .map(|station: &StationView| station.id.clone())
+        .collect()
+}
+
+pub fn held_station_ids(view: &ImplementationView, pending: &PendingChange) -> HashSet<String> {
+    held_in(&view.phases, pending)
+}
+
+/// Die noch nicht gestarteten Stationen der genannten begonnenen Phasen, die sich der Vorschlag
+/// merkt.
+fn seen_station_ids(view: &ImplementationView, proposed: &[PhaseInput]) -> Vec<String> {
+    named_begun(view, proposed)
+        .iter()
+        .flat_map(|(phase, _): &(&PhaseView, &PhaseInput)| upcoming_stations(phase))
+        .map(|station: &StationView| station.id.clone())
+        .collect()
+}
+
+/// Je genannter begonnener Phase müssen die noch nicht gestarteten Stationen dieselben sein wie
+/// beim Vorschlagen, sonst ersetzte die Übernahme etwas, das der Agent nicht gesehen hat (etwa eine
+/// Fix-Runde).
+fn check_seen(view: &ImplementationView, pending: &PendingChange) -> Result<(), String> {
+    let seen: HashSet<&str> = pending
+        .seen_station_ids
+        .iter()
+        .map(String::as_str)
+        .collect();
+    let mut found: usize = 0;
+    for (phase, _) in named_begun(view, &pending.phases) {
+        let today: HashSet<&str> = upcoming_stations(phase)
+            .map(|station: &StationView| station.id.as_str())
+            .collect();
+        let seen_here: HashSet<&str> = phase
+            .stations
+            .iter()
+            .map(|station: &StationView| station.id.as_str())
+            .filter(|id: &&str| seen.contains(id))
+            .collect();
+        if today != seen_here {
+            return Err(format!(
+                "Phase {} hat sich seit dem Vorschlag geändert; bitte neu vorschlagen.",
+                phase.key
+            ));
+        }
+        found += seen_here.len();
+    }
+    if found != seen.len() {
+        return Err(PLAN_CHANGED.to_owned());
+    }
+    Ok(())
 }
 
 /// Die Unterschiede als Satzteil für den Agenten und den Lagebericht: „neu 5/6, entfallen 7“.
 pub fn describe(summary: &ChangeSummary) -> String {
-    let groups: [(&str, &Vec<String>); 3] = [
+    let groups: [(&str, &Vec<String>); 4] = [
         ("neu", &summary.added),
         ("vorgezogen", &summary.moved),
         ("entfallen", &summary.removed),
+        ("geändert", &summary.changed),
     ];
     let parts: Vec<String> = groups
         .iter()
@@ -93,13 +258,14 @@ pub fn describe(summary: &ChangeSummary) -> String {
 }
 
 /// `implementation_set_phases`: gilt sofort, solange keine Station je gestartet ist, sonst liegt
-/// der Vorschlag bereit. Gibt den Satz für den Agenten zurück.
+/// der Vorschlag bereit und hält die Stationen an, die er ersetzen würde. Gibt den Satz für den
+/// Agenten zurück.
 pub fn propose(app: &AppHandle, session_id: &str, inputs: &[PhaseInput]) -> Result<String, String> {
-    validate(inputs)?;
     let registry = app.state::<SessionRegistry>();
     let view = registry
         .require_implementation_of_session(session_id)
         .map_err(|error: CommandError| error.to_string())?;
+    validate(inputs, &begun_keys(&view))?;
     if view.finished_at.is_some() {
         return Err(IS_FINISHED.to_owned());
     }
@@ -115,10 +281,16 @@ pub fn propose(app: &AppHandle, session_id: &str, inputs: &[PhaseInput]) -> Resu
         at: now_ms(),
         summary: summary.clone(),
         phases: inputs.to_vec(),
+        seen_station_ids: seen_station_ids(&view, inputs),
     };
+    // Erst ablegen, dann Countdowns abbrechen: ein Zeitgeber, der dazwischen feuert, sieht den
+    // Vorschlag schon und startet nicht (`start::start_now`).
     registry
         .store_pending_change(&view.id, Some(&pending))
         .map_err(|error: CommandError| error.to_string())?;
+    for station_id in held_station_ids(&view, &pending) {
+        let _ = registry.cancel_countdown(&station_id);
+    }
     let fresh = registry
         .implementation_view(&view.id)
         .map_err(|error: CommandError| error.to_string())?;
@@ -129,7 +301,8 @@ pub fn propose(app: &AppHandle, session_id: &str, inputs: &[PhaseInput]) -> Resu
     ))
 }
 
-/// „Übernehmen“ (`accept`) oder „Verwerfen“ des offenen Vorschlags.
+/// „Übernehmen“ (`accept`) oder „Verwerfen“ des offenen Vorschlags. Scheitert das Übernehmen,
+/// bleibt der Vorschlag liegen, damit er sich verwerfen lässt.
 pub fn decide(app: &AppHandle, implementation_id: &str, accept: bool) -> Result<(), CommandError> {
     let registry = app.state::<SessionRegistry>();
     let view = registry.implementation_view(implementation_id)?;
@@ -138,9 +311,11 @@ pub fn decide(app: &AppHandle, implementation_id: &str, accept: bool) -> Result<
     };
     if !accept {
         registry.store_pending_change(implementation_id, None)?;
-        announce(app, &registry.implementation_view(implementation_id)?);
-        return Ok(());
+        let fresh = registry.implementation_view(implementation_id)?;
+        announce(app, &fresh);
+        return schedule_if_running(app, &fresh);
     }
+    check_seen(&view, &pending).map_err(CommandError::Implementation)?;
     // Seit dem Vorschlag kann eine Phase begonnen haben: gegen den heutigen Stand neu rechnen.
     let summary = diff(&view, &pending.phases).map_err(CommandError::Implementation)?;
     let record = Record {
@@ -151,13 +326,99 @@ pub fn decide(app: &AppHandle, implementation_id: &str, accept: bool) -> Result<
 }
 
 /// Wer die Änderung vorschlug und was sie bewirkt; fehlt er, wird nichts vermerkt.
-struct Record {
-    session_id: String,
-    summary: ChangeSummary,
+pub struct Record {
+    pub session_id: String,
+    pub summary: ChangeSummary,
 }
 
-/// Ersetzt die kommenden Phasen, vermerkt die Änderung (mit `record`) und plant die Stationen, die
-/// danach starten dürfen.
+/// Alles, was eine Übernahme schreibt; `replace_upcoming_phases` legt es in einem Zug ab.
+pub struct PlanChange {
+    pub removed_phase_ids: Vec<String>,
+    pub begun: Vec<BegunPhaseChange>,
+    pub phases: Vec<PhaseRow>,
+    pub stations: Vec<StationRow>,
+    pub change: Option<ChangeRow>,
+    /// Stationen, die wegfallen; ihre Countdowns sind abzubrechen.
+    pub dropped_station_ids: Vec<String>,
+}
+
+/// Rechnet die Übernahme aus, ohne etwas zu schreiben: nicht begonnene Phasen ersetzt der
+/// Vorschlag ganz, genannte begonnene nur in ihren noch nicht gestarteten Stationen, nicht
+/// genannte begonnene bleiben unberührt.
+pub fn plan_change(
+    view: &ImplementationView,
+    inputs: &[PhaseInput],
+    record: Option<&Record>,
+) -> PlanChange {
+    let named = named_begun(view, inputs);
+    let named_keys: HashSet<&str> = named
+        .iter()
+        .map(|(phase, _): &(&PhaseView, &PhaseInput)| phase.key.as_str())
+        .collect();
+    let removed: Vec<&PhaseView> = view
+        .phases
+        .iter()
+        .filter(|phase: &&PhaseView| !is_begun(phase))
+        .collect();
+    let upcoming_inputs: Vec<PhaseInput> = inputs
+        .iter()
+        .filter(|input: &&PhaseInput| !named_keys.contains(input.key.trim()))
+        .cloned()
+        .collect();
+    let (mut phases, mut stations) = phase_rows(&view.id, &upcoming_inputs, 0);
+    keep_known_ids(&removed, &mut phases, &mut stations);
+    set_marks(&removed, record, &mut phases);
+    let begun: Vec<BegunPhaseChange> = named
+        .iter()
+        .map(
+            |(phase, input): &(&PhaseView, &PhaseInput)| BegunPhaseChange {
+                phase_id: phase.id.clone(),
+                title: input.title.trim().to_owned(),
+                description: input
+                    .description
+                    .as_deref()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_owned(),
+                removed_station_ids: upcoming_stations(phase)
+                    .map(|station: &StationView| station.id.clone())
+                    .collect(),
+                stations: station_rows(&phase.id, &input.stations),
+            },
+        )
+        .collect();
+    let dropped_station_ids: Vec<String> = removed
+        .iter()
+        .flat_map(|phase: &&PhaseView| phase.stations.iter())
+        .map(|station: &StationView| station.id.clone())
+        .chain(
+            begun
+                .iter()
+                .flat_map(|change: &BegunPhaseChange| change.removed_station_ids.iter().cloned()),
+        )
+        .collect();
+    let added_count: usize = stations.len()
+        + begun
+            .iter()
+            .map(|change: &BegunPhaseChange| change.stations.len())
+            .sum::<usize>();
+    let change = record
+        .map(|record: &Record| change_row(view, dropped_station_ids.len(), added_count, record));
+    PlanChange {
+        removed_phase_ids: removed
+            .iter()
+            .map(|phase: &&PhaseView| phase.id.clone())
+            .collect(),
+        begun,
+        phases,
+        stations,
+        change,
+        dropped_station_ids,
+    }
+}
+
+/// Schreibt die Übernahme, vermerkt sie (mit `record`) und plant die Stationen, die danach starten
+/// dürfen.
 fn apply(
     app: &AppHandle,
     registry: &SessionRegistry,
@@ -165,38 +426,32 @@ fn apply(
     inputs: &[PhaseInput],
     record: Option<Record>,
 ) -> Result<(), CommandError> {
-    let removed: Vec<&PhaseView> = view
-        .phases
-        .iter()
-        .filter(|phase: &&PhaseView| !is_begun(phase))
-        .collect();
-    for station in removed
-        .iter()
-        .flat_map(|phase: &&PhaseView| phase.stations.iter())
-    {
-        let _ = registry.cancel_countdown(&station.id);
+    let plan = plan_change(view, inputs, record.as_ref());
+    for station_id in &plan.dropped_station_ids {
+        let _ = registry.cancel_countdown(station_id);
     }
-    let (mut phases, mut stations) = phase_rows(&view.id, inputs, 0);
-    keep_known_ids(&removed, &mut phases, &mut stations);
-    set_marks(&removed, record.as_ref(), &mut phases);
-    let change = record
-        .as_ref()
-        .map(|record: &Record| change_row(view, &removed, &stations, record));
-    let removed_ids: Vec<String> = removed
-        .iter()
-        .map(|phase: &&PhaseView| phase.id.clone())
-        .collect();
-    registry.store_plan_change(&view.id, &removed_ids, &phases, &stations, change.as_ref())?;
+    registry.store_plan_change(
+        &view.id,
+        &plan.removed_phase_ids,
+        &plan.begun,
+        &plan.phases,
+        &plan.stations,
+        plan.change.as_ref(),
+    )?;
     let fresh = registry.implementation_view(&view.id)?;
     announce(app, &fresh);
-    // Eine Umsetzung, deren erste Station der Benutzer noch nicht gestartet hat, beginnt auch nach
-    // einer Plan-Änderung nicht von selbst.
-    let has_begun: bool = fresh
+    schedule_if_running(app, &fresh)
+}
+
+/// Plant die bereiten Stationen, wenn die Automatik an ist. Eine Umsetzung, deren erste Station
+/// der Benutzer noch nicht gestartet hat, beginnt auch nach einer Plan-Änderung nicht von selbst.
+fn schedule_if_running(app: &AppHandle, view: &ImplementationView) -> Result<(), CommandError> {
+    let has_begun: bool = view
         .phases
         .iter()
         .flat_map(|phase: &PhaseView| phase.stations.iter())
         .any(|station: &StationView| station.session_id.is_some());
-    if has_begun && fresh.auto_start && !fresh.stop_after_current {
+    if has_begun && view.auto_start && !view.stop_after_current {
         start::schedule_ready(app, &view.id)?;
     }
     Ok(())
@@ -241,11 +496,12 @@ fn set_marks(removed: &[&PhaseView], record: Option<&Record>, phases: &mut [Phas
     }
 }
 
-/// Die Marke steht nach der letzten fertigen Station zum Zeitpunkt der Übernahme.
+/// Die Marke steht nach der letzten fertigen Station zum Zeitpunkt der Übernahme. Die
+/// Stationszahl danach zählt gestrichene offene Stationen begonnener Phasen mit.
 fn change_row(
     view: &ImplementationView,
-    removed: &[&PhaseView],
-    new_stations: &[StationRow],
+    dropped_count: usize,
+    added_count: usize,
     record: &Record,
 ) -> ChangeRow {
     let after_station_id: Option<String> = view
@@ -254,10 +510,6 @@ fn change_row(
         .flat_map(|phase: &PhaseView| phase.stations.iter())
         .rfind(|station: &&StationView| station.state == StationState::Done)
         .map(|station: &StationView| station.id.clone());
-    let removed_count: usize = removed
-        .iter()
-        .map(|phase: &&PhaseView| phase.stations.len())
-        .sum();
     let total: usize = usize::try_from(view.stations_total).unwrap_or(usize::MAX);
     ChangeRow {
         id: uuid::Uuid::new_v4().to_string(),
@@ -267,7 +519,7 @@ fn change_row(
         summary: serde_json::to_string(&record.summary).unwrap_or_default(),
         after_station_id,
         stations_before: view.stations_total,
-        stations_after: u32::try_from(total - removed_count + new_stations.len())
+        stations_after: u32::try_from(total.saturating_sub(dropped_count) + added_count)
             .unwrap_or(u32::MAX),
     }
 }

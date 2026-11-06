@@ -16,7 +16,8 @@ use crate::agents::event::{Attachment, Effort, ModelId};
 use crate::attachments;
 use crate::changes::{self, model::ChangesReach};
 use crate::db::implementations::{
-    self as implementation_rows, ChangeRow, PhaseRow, StationRow, StoredImplementation,
+    self as implementation_rows, BegunPhaseChange, ChangeRow, PhaseRow, StationRow,
+    StoredImplementation,
 };
 use crate::error::CommandError;
 use crate::file_links;
@@ -282,6 +283,7 @@ impl SessionRegistry {
         &self,
         implementation_id: &str,
         removed_phase_ids: &[String],
+        begun: &[BegunPhaseChange],
         phases: &[PhaseRow],
         stations: &[StationRow],
         change: Option<&ChangeRow>,
@@ -291,6 +293,7 @@ impl SessionRegistry {
                 connection,
                 implementation_id,
                 removed_phase_ids,
+                begun,
                 phases,
                 stations,
                 change,

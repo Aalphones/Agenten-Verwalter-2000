@@ -52,17 +52,29 @@ interface CardStackProps {
   onApplyChange: (accept: boolean) => void;
 }
 
-function isBegun(phase: PhaseView): boolean {
-  return phase.stations.some(
-    (station: StationView) => station.sessionId !== null || station.completedAt !== null,
-  );
+function isStationBegun(station: StationView): boolean {
+  return station.sessionId !== null || station.completedAt !== null;
 }
 
-/** Stationen nach einer Übernahme: die begonnener Phasen plus die des Vorschlags. */
+function isBegun(phase: PhaseView): boolean {
+  return phase.stations.some(isStationBegun);
+}
+
+/**
+ * Stationen nach einer Übernahme: die begonnener Phasen plus die des Vorschlags. Von einer
+ * begonnenen Phase, die der Vorschlag nennt, bleiben nur die begonnenen Stationen; ihre offenen
+ * ersetzt er (ADR 059).
+ */
 function stationsAfterProposal(implementation: ImplementationView, pending: PendingChange): number {
+  const named: Set<string> = new Set(pending.phases.map((phase: PhaseInput) => phase.key.trim()));
   const kept: number = implementation.phases
     .filter(isBegun)
-    .reduce((sum: number, phase: PhaseView) => sum + phase.stations.length, 0);
+    .reduce((sum: number, phase: PhaseView) => {
+      if (named.has(phase.key)) {
+        return sum + phase.stations.filter(isStationBegun).length;
+      }
+      return sum + phase.stations.length;
+    }, 0);
   const proposed: number = pending.phases.reduce(
     (sum: number, phase: PhaseInput) => sum + phase.stations.length,
     0,

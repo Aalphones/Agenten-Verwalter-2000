@@ -8,7 +8,7 @@ Dieser Plan erlaubt es, in einer begonnenen Phase die **noch nicht gestarteten S
 
 | Phase | Inhalt | Rating | Modell | Wave | Schätzung | Sichtabnahme | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | Core: begonnene Phase in `implementation_set_phases`, Anhalten bei offenem Vorschlag, Schutz beim Übernehmen, ADR 059 | heikel | opus | 1 | 3 h | keine (Core) | pending |
+| 1 | Core: begonnene Phase in `implementation_set_phases`, Anhalten bei offenem Vorschlag, Schutz beim Übernehmen, ADR 059 | heikel | opus | 1 | 3 h | keine (Core) | complete |
 | 2 | Karte „Plan ändern?“ und Zeitleiste zeigen geänderte begonnene Phasen | standard | sonnet | 2 | 45 min | Karte „Plan ändern?“ | pending |
 
 Sequenziell, weil Phase 2 die in Phase 1 erzeugten Bindings (`ChangeSummary.changed`) braucht.
@@ -41,7 +41,7 @@ pub fn is_finished(phase: &PhaseView) -> bool;               // alle Stationen c
 pub fn held_station_ids(view: &ImplementationView, pending: &PendingChange) -> HashSet<String>;
 // src-tauri/src/db/implementations.rs — erweitert, eine Transaktion
 pub struct BegunPhaseChange { pub phase_id: String, pub title: String, pub description: String,
-    pub removed_station_ids: Vec<String>, pub stations: Vec<StationRow> /* Positionen ab max(begonnen)+1 */ }
+    pub removed_station_ids: Vec<String>, pub stations: Vec<StationRow> /* Positionen ab 0; die DB setzt sie hinter die verbleibenden */ }
 pub fn replace_upcoming_phases(connection: &mut Connection, implementation_id: &str,
     removed_phase_ids: &[String], begun: &[BegunPhaseChange], phases: &[PhaseRow],
     stations: &[StationRow], change: Option<&ChangeRow>) -> Result<(), CommandError>;
@@ -70,21 +70,23 @@ Werkzeugbeschreibung `implementation_set_phases` (`tools.rs`), wörtlich: „Sch
 
 **AK der Phase:** finale AK 1–6, dazu: `implementation-probe set-phases` spielt einen Vorschlag mit begonnener Phase gegen eine Datenbank-Kopie ein und druckt den neuen Stand.
 
-- [ ] Tests zuerst (Test-Station), in `src-tauri/src/implementation/tests.rs`: `diff` mit begonnener Phase (geändert, gleich, leer, fertig, falsche Reihenfolge), `held_station_ids`, Lesen alter JSON-Texte für `ChangeSummary` und `PendingChange`, Stationszahl in `change_row`. Einmal rot belegen.
-- [ ] `changes.rs`: `is_station_begun` und `is_finished` hinzufügen. `diff` prüft die Reihenfolge und fertige Phasen und füllt `changed`. `propose` speichert `seen_station_ids` und bricht die Countdowns der angehaltenen Stationen ab (`registry.cancel_countdown`). `decide` prüft `seen_station_ids` gegen den heutigen Stand und ruft nach „Verwerfen“ `schedule_ready` auf. `apply` baut `BegunPhaseChange` je genannter begonnener Phase, löscht in nicht genannten nichts und rechnet `stations_after` mit den gestrichenen offenen Stationen.
-- [ ] `model.rs`: Felder mit `#[serde(default)]` hinzufügen, `validate(phases, begun_keys)` erlaubt leere `stations` nur für Schlüssel aus `begun_keys`. Alle Aufrufer anpassen (`implementation_create` übergibt `&[]`).
-- [ ] `mod.rs` `settle_waiting`: Stationen aus `held_station_ids` bleiben `Pending`.
-- [ ] `db/implementations.rs` `replace_upcoming_phases`: Je `BegunPhaseChange` löscht es `removed_station_ids`, fügt `stations` hinter der höchsten Position der verbleibenden Stationen ein und setzt Titel und Beschreibung. Alles in derselben Transaktion.
-- [ ] `tools.rs`: Werkzeugbeschreibung wörtlich aus dem Kontrakt, der Fehlertext von `set_phases` bleibt der Satz aus `diff`.
-- [ ] `examples/implementation-probe.rs` `set-phases`: über `changes::diff`/`apply`-Logik, druckt `changed`.
-- [ ] `pnpm bindings`, ADR `docs/decisions/059-begonnene-phase-umplanen.md` (Kontext, Optionen: Phase sperren wie bisher / Station sperren / Benutzer-Knopf, Entscheidung, Konsequenzen), in ADR 048 den Satz zur Sperre der begonnenen Phase auf ADR 059 verweisen. Glossar „begonnen“ (Station statt Phase), Code-Map falls neue Funktionen eine Zeile brauchen.
-- [ ] DoD: AK-Tests grün mit der Ausgabezeile von `cargo test`, `pnpm check` grün. Artefakt: Ausgabe von `implementation-probe set-phases` vorher und nachher gegen eine Datenbank-Kopie mit begonnener Phase im Report-Back.
+- [x] ~~Tests zuerst (Test-Station)~~ entfällt (privates Profil), in `src-tauri/src/implementation/tests.rs`: `diff` mit begonnener Phase (geändert, gleich, leer, fertig, falsche Reihenfolge), `held_station_ids`, Lesen alter JSON-Texte für `ChangeSummary` und `PendingChange`, Stationszahl in `change_row`. Einmal rot belegen.
+- [x] `changes.rs`: `is_station_begun` und `is_finished` hinzufügen. `diff` prüft die Reihenfolge und fertige Phasen und füllt `changed`. `propose` speichert `seen_station_ids` und bricht die Countdowns der angehaltenen Stationen ab (`registry.cancel_countdown`). `decide` prüft `seen_station_ids` gegen den heutigen Stand und ruft nach „Verwerfen“ `schedule_ready` auf. `apply` baut `BegunPhaseChange` je genannter begonnener Phase, löscht in nicht genannten nichts und rechnet `stations_after` mit den gestrichenen offenen Stationen.
+- [x] `model.rs`: Felder mit `#[serde(default)]` hinzufügen, `validate(phases, begun_keys)` erlaubt leere `stations` nur für Schlüssel aus `begun_keys`. Alle Aufrufer anpassen (`implementation_create` übergibt `&[]`).
+- [x] `mod.rs` `settle_waiting`: Stationen aus `held_station_ids` bleiben `Pending`.
+- [x] `db/implementations.rs` `replace_upcoming_phases`: Je `BegunPhaseChange` löscht es `removed_station_ids`, fügt `stations` hinter der höchsten Position der verbleibenden Stationen ein und setzt Titel und Beschreibung. Alles in derselben Transaktion.
+- [x] `tools.rs`: Werkzeugbeschreibung wörtlich aus dem Kontrakt, der Fehlertext von `set_phases` bleibt der Satz aus `diff`.
+- [x] `examples/implementation-probe.rs` `set-phases`: über `changes::diff`/`apply`-Logik, druckt `changed`.
+- [x] `pnpm bindings`, ADR `docs/decisions/059-begonnene-phase-umplanen.md` (Kontext, Optionen: Phase sperren wie bisher / Station sperren / Benutzer-Knopf, Entscheidung, Konsequenzen), in ADR 048 den Satz zur Sperre der begonnenen Phase auf ADR 059 verweisen. Glossar „begonnen“ (Station statt Phase), Code-Map falls neue Funktionen eine Zeile brauchen.
+- [x] DoD (ohne neue Tests, privates Profil): AK-Tests grün mit der Ausgabezeile von `cargo test`, `pnpm check` grün. Artefakt: Ausgabe von `implementation-probe set-phases` vorher und nachher gegen eine Datenbank-Kopie mit begonnener Phase im Report-Back.
 
 ## Phase 2 — Anzeige (standard, sonnet)
 
 **Kontext (lesen):** `src/features/implementation/PlanChangeCard.tsx` und `.css`, `implementationTexts.ts` (`keysText`, Titel-Texte), `Timeline.tsx` (Marke der Änderung), `src/lib/bindings/ChangeSummary.ts`, `docs/conventions/react.md`, `docs/conventions/tailwind.md`. Fehlerklassen geprüft (React, TypeScript): Keine ist einschlägig, die Karte ist reine Anzeige ohne Eingabefeld.
 
 **AK der Phase:** Die Karte „Plan ändern?“ und die übernommene Karte „Plan geändert“ zeigen eine vierte Zeile „Geändert“ mit `keysText(summary.changed)`, unter „Entfallen“, gleiches Markup wie die drei anderen (`dt`/`dd` in `plan-change-card__list`). `APPLY_CHANGE_TITLE` lautet „Ersetzt die kommenden Phasen und die offenen Stationen begonnener Phasen durch den Vorschlag“. Für ältere Änderungen ohne `changed` zeigt die Zeile dasselbe wie eine leere Liste.
+
+> Hinweis aus Phase 1: `implementation-probe set-phases` schreibt die Änderung jetzt gleich als übernommen in die Kopie; einen offenen Vorschlag für die Karte „Plan ändern?“ legt nur `implementation_set_phases` aus einer Station an. Die Stationszahl der Karte (`CardStack.tsx` `stationsAfterProposal`) ist schon nachgezogen.
 
 - [ ] `PlanChangeCard.tsx`: Zeile „Geändert“ ergänzen.
 - [ ] `implementationTexts.ts`: `APPLY_CHANGE_TITLE` neu.
@@ -104,6 +106,12 @@ Werkzeugbeschreibung `implementation_set_phases` (`tools.rs`), wörtlich: „Sch
 ## Commits
 
 ## Deviations from plan
+
+- Phase 1: `BegunPhaseChange.stations` tragen Positionen ab 0; `replace_upcoming_phases` setzt sie hinter die höchste verbleibende Position der Phase (wie bei den Phasen). Löscht dort nur Stationen ohne Session und Fertigmeldung und bricht sonst den ganzen Zug ab.
+- Phase 1: `start::start_now` lehnt eine angehaltene Station ab (auch ▶), nicht nur der Zeitgeber über `settle_waiting`.
+- Phase 1: `CardStack.tsx` `stationsAfterProposal` zählt bei genannten begonnenen Phasen nur die begonnenen Stationen (AK 7); sonst zeigte die Karte zu viele Stationen.
+- Phase 1: `implementation-probe set-phases` schreibt jetzt in die Kopie (als wäre übernommen) und druckt angehaltene Stationen, vorher und nachher. `schedule_if_running` bündelt den Start nach Übernehmen und Verwerfen.
+- Phase 1: keine neuen automatisierten Tests (privates Profil); Belege per Prüfprogramm gegen Kopien der echten Datenbank.
 
 ## Follow-ups
 

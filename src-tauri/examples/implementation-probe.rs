@@ -6,12 +6,13 @@
 //! bzw. `… -- <Datenbank-Kopie> complete <Umsetzungs-ID> <Station-ID> "<Ergebnis>" [--fix]`
 //! (meldet die Station fertig, ohne etwas zu starten, und druckt, welche Stationen danach starten
 //! dürfen).
-//! bzw. `… -- <Datenbank-Kopie> set-phases <Umsetzungs-ID> <JSON-Datei>` (druckt die Unterschiede
-//! eines Vorschlags `{ "phases": [...] }`, schreibt nichts).
+//! bzw. `… -- <Datenbank-Kopie> set-phases <Umsetzungs-ID> <JSON-Datei>` (spielt einen Vorschlag
+//! `{ "phases": [...] }` ein, als wäre er übernommen, und druckt Unterschiede, die bis dahin
+//! angehaltenen Stationen und die Stationen vorher und nachher).
 //! Die JSON-Datei hat die Form der Eingabe von `implementation_create` (`name`, `source`, `phases`).
 //! Druckt den Lagebericht; Stationen gelten als nicht gestartet, weil keine Session läuft. Fehler
 //! als `FEHLER: <Satz>`.
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -23,7 +24,9 @@ use verwalter_lib::db::implementations::{self, StoredImplementation};
 use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::error::CommandError;
 use verwalter_lib::file_links::LinkRoots;
-use verwalter_lib::implementation::model::{ImplementationView, StationState};
+use verwalter_lib::implementation::model::{
+    ImplementationView, PendingChange, PhaseView, StationState, StationView,
+};
 use verwalter_lib::implementation::model::{
     MAX_NAME_CHARS, MAX_SOURCE_CHARS, PhaseInput, check_length, validate,
 };
@@ -120,7 +123,7 @@ fn create(database_path: &Path, session_id: &str, json_file: &Path) -> Result<St
     check_length("name", input.name.trim(), 1, MAX_NAME_CHARS)?;
     let source = input.source.unwrap_or_default();
     check_length("source", source.trim(), 0, MAX_SOURCE_CHARS)?;
-    validate(&input.phases)?;
+    validate(&input.phases, &[])?;
     let database = Database::open(database_path).map_err(|error| error.to_string())?;
     let id = database
         .with(|connection| {
@@ -214,7 +217,9 @@ Darf starten:
     ))
 }
 
-/// Druckt die Unterschiede eines Vorschlags, ohne etwas zu schreiben.
+/// Spielt einen Vorschlag gegen die Kopie ein, als hätte der Benutzer ihn übernommen, und druckt
+/// Unterschiede, die bis dahin angehaltenen Stationen und den Stand vorher und nachher. Startet
+/// nichts.
 fn set_phases(
     database_path: &Path,
     implementation_id: &str,
@@ -224,24 +229,70 @@ fn set_phases(
         .map_err(|error| format!("{} nicht lesbar: {error}", json_file.display()))?;
     let input: SetPhasesInput =
         serde_json::from_str(&json).map_err(|error| format!("Eingabe nicht lesbar: {error}"))?;
-    validate(&input.phases)?;
     let database = Database::open(database_path).map_err(|error| error.to_string())?;
-    let view = view_of(&database, implementation_id)?;
-    let summary = changes::diff(&view, &input.phases)?;
-    let effect = if view.phases.iter().any(changes::is_begun) {
-        "wartet als Vorschlag auf Übernehmen"
-    } else {
-        "gälte sofort (noch keine Station gestartet)"
+    let before = view_of(&database, implementation_id)?;
+    validate(&input.phases, &changes::begun_keys(&before))?;
+    let summary = changes::diff(&before, &input.phases)?;
+    let is_proposal: bool = before.phases.iter().any(changes::is_begun);
+    let pending = PendingChange {
+        session_id: PROBE_SESSION.to_owned(),
+        session_number: 0,
+        at: now_ms(),
+        summary: summary.clone(),
+        phases: input.phases.clone(),
+        seen_station_ids: Vec::new(),
     };
+    let held: HashSet<String> = changes::held_station_ids(&before, &pending);
+    let record = is_proposal.then(|| changes::Record {
+        session_id: PROBE_SESSION.to_owned(),
+        summary: summary.clone(),
+    });
+    let plan = changes::plan_change(&before, &input.phases, record.as_ref());
+    database
+        .with(|connection| {
+            implementations::replace_upcoming_phases(
+                connection,
+                implementation_id,
+                &plan.removed_phase_ids,
+                &plan.begun,
+                &plan.phases,
+                &plan.stations,
+                plan.change.as_ref(),
+            )
+        })
+        .map_err(|error| error.to_string())?;
+    let after = view_of(&database, implementation_id)?;
+    let effect = if is_proposal {
+        "Vorschlag, hier gleich übernommen; bis dahin angehalten:"
+    } else {
+        "gilt sofort (noch keine Station gestartet)"
+    };
+    let held_lines: Vec<String> = station_lines(&before)
+        .into_iter()
+        .filter(|(id, _): &(String, String)| is_proposal && held.contains(id))
+        .map(|(_, line): (String, String)| format!("  {line}"))
+        .collect();
+    let counted_after = plan
+        .change
+        .as_ref()
+        .map(|change| change.stations_after.to_string())
+        .unwrap_or_else(|| "ohne Vermerk".to_owned());
     Ok(format!(
-        "Neu: {}\nVorgezogen: {}\nEntfallen: {}\nStationen {} → {}\nWirkung: {effect}",
+        "Neu: {}\nVorgezogen: {}\nEntfallen: {}\nGeändert: {}\nWirkung: {effect}\n{}\n\
+         Stationen {} → {counted_after} (vermerkt), {} (gezählt)\n\nVORHER\n{}\n\nNACHHER\n{}",
         list_or_nothing(&summary.added),
         list_or_nothing(&summary.moved),
         list_or_nothing(&summary.removed),
-        view.stations_total,
-        stations_after(&view, &input.phases),
+        list_or_nothing(&summary.changed),
+        held_lines.join("\n"),
+        before.stations_total,
+        after.stations_total,
+        plan_text(&before),
+        plan_text(&after),
     ))
 }
+
+const PROBE_SESSION: &str = "implementation-probe";
 
 fn list_or_nothing(keys: &[String]) -> String {
     if keys.is_empty() {
@@ -250,18 +301,39 @@ fn list_or_nothing(keys: &[String]) -> String {
     keys.join(", ")
 }
 
-/// Stationen der begonnenen Phasen plus die des Vorschlags.
-fn stations_after(view: &ImplementationView, proposed: &[PhaseInput]) -> usize {
-    let kept: usize = view
-        .phases
+/// Je Station (ID, „Phase · Stufe · Zustand · ID-Anfang“) in Plan-Reihenfolge; der Zustand folgt
+/// aus den Zeilen, weil ohne App keine Session lebt.
+fn station_lines(view: &ImplementationView) -> Vec<(String, String)> {
+    view.phases
         .iter()
-        .filter(|phase| changes::is_begun(phase))
-        .map(|phase| phase.stations.len())
-        .sum();
-    kept + proposed
-        .iter()
-        .map(|phase| phase.stations.len())
-        .sum::<usize>()
+        .flat_map(|phase: &PhaseView| {
+            phase.stations.iter().map(move |station: &StationView| {
+                let state = if station.completed_at.is_some() {
+                    "fertig"
+                } else if station.session_id.is_some() {
+                    "begonnen"
+                } else {
+                    "offen"
+                };
+                let short_id: String = station.id.chars().take(8).collect();
+                (
+                    station.id.clone(),
+                    format!(
+                        "Phase {} · {} · {state} · {short_id}",
+                        phase.key, station.stage
+                    ),
+                )
+            })
+        })
+        .collect()
+}
+
+fn plan_text(view: &ImplementationView) -> String {
+    station_lines(view)
+        .into_iter()
+        .map(|(_, line): (String, String)| format!("  {line}"))
+        .collect::<Vec<String>>()
+        .join("\n")
 }
 
 fn view_of(database: &Database, implementation_id: &str) -> Result<ImplementationView, String> {

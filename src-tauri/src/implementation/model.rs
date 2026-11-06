@@ -115,13 +115,18 @@ pub struct PhaseView {
     pub stations: Vec<StationView>,
 }
 
-/// Schlüssel der Phasen, die eine Plan-Änderung hinzufügt, vorzieht oder streicht.
+/// Schlüssel der Phasen, die eine Plan-Änderung hinzufügt, vorzieht oder streicht, und der
+/// begonnenen Phasen, deren noch nicht gestartete Stationen sie ändert.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangeSummary {
     pub added: Vec<String>,
     pub moved: Vec<String>,
     pub removed: Vec<String>,
+    /// Begonnene Phasen, deren noch nicht gestartete Stationen sich ändern (ADR 059).
+    // `default`: gespeicherte Zusammenfassungen ohne das Feld; ohne läse `change_view` sie leer.
+    #[serde(default)]
+    pub changed: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -148,6 +153,11 @@ pub struct PendingChange {
     pub at: f64,
     pub summary: ChangeSummary,
     pub phases: Vec<PhaseInput>,
+    /// Die noch nicht gestarteten Stationen der genannten begonnenen Phasen beim Vorschlagen;
+    /// weicht der Stand beim Übernehmen ab, wird neu vorgeschlagen (ADR 059).
+    // `default`: gespeicherte Vorschläge ohne das Feld; ohne fiele der Vorschlag beim Lesen weg.
+    #[serde(default)]
+    pub seen_station_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -260,7 +270,9 @@ impl StationInput {
 }
 
 /// Prüft Längen, Eindeutigkeit der Schlüssel, Modell- und Bearbeiter-Namen. Der Satz nennt das Feld.
-pub fn validate(phases: &[PhaseInput]) -> Result<(), String> {
+/// Ohne Stationen darf nur eine Phase aus `begun_keys` stehen: dort streicht die leere Liste die
+/// noch nicht gestarteten Stationen (ADR 059).
+pub fn validate(phases: &[PhaseInput], begun_keys: &[&str]) -> Result<(), String> {
     if phases.is_empty() {
         return Err("phases: mindestens eine Phase".to_owned());
     }
@@ -290,7 +302,7 @@ pub fn validate(phases: &[PhaseInput]) -> Result<(), String> {
         if phase.wave == Some(0) {
             return Err(format!("{field}.wave: mindestens 1"));
         }
-        if phase.stations.is_empty() {
+        if phase.stations.is_empty() && !begun_keys.contains(&key) {
             return Err(format!("{field}.stations: mindestens eine Station"));
         }
         for (station_index, station) in phase.stations.iter().enumerate() {

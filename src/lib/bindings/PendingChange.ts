@@ -2,4 +2,9 @@
 import type { ChangeSummary } from "./ChangeSummary";
 import type { PhaseInput } from "./PhaseInput";
 
-export type PendingChange = { sessionId: string, sessionNumber: number, at: number, summary: ChangeSummary, phases: Array<PhaseInput>, };
+export type PendingChange = { sessionId: string, sessionNumber: number, at: number, summary: ChangeSummary, phases: Array<PhaseInput>, 
+/**
+ * Die noch nicht gestarteten Stationen der genannten begonnenen Phasen beim Vorschlagen;
+ * weicht der Stand beim Übernehmen ab, wird neu vorgeschlagen (ADR 059).
+ */
+seenStationIds: Array<string>, };

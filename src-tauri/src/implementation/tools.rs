@@ -45,7 +45,7 @@ impl ToolSet for ImplementationTools {
                             "maxLength": MAX_SOURCE_CHARS,
                             "description": "Woher der Plan stammt, z. B. Pfad des Plan-Ordners",
                         },
-                        "phases": phases_schema(),
+                        "phases": phases_schema(1),
                     },
                     "required": ["name", "phases"],
                     "additionalProperties": false,
@@ -69,12 +69,15 @@ impl ToolSet for ImplementationTools {
             },
             ToolSpec {
                 name: SET_PHASES,
-                description: "Schlägt die vollständige Liste der kommenden Phasen vor (alle \
-                              Phasen ohne gestartete Station); der Benutzer übernimmt oder \
-                              verwirft sie.",
+                description: "Schlägt die kommenden Phasen vor; der Benutzer übernimmt oder \
+                              verwirft sie. Nicht begonnene Phasen ersetzt die Liste vollständig. \
+                              Eine begonnene Phase darf vorn stehen: ihre stations ersetzen nur \
+                              die noch nicht gestarteten Stationen (leer = alle streichen); \
+                              gestartete und fertige bleiben. Nicht genannte begonnene Phasen \
+                              bleiben unverändert.",
                 input_schema: json!({
                     "type": "object",
-                    "properties": { "phases": phases_schema() },
+                    "properties": { "phases": phases_schema(0) },
                     "required": ["phases"],
                     "additionalProperties": false,
                 }),
@@ -127,7 +130,9 @@ impl ToolSet for ImplementationTools {
     }
 }
 
-fn phases_schema() -> Value {
+/// `min_stations` 0 nur für Vorschläge: dort streicht eine leere Liste die offenen Stationen einer
+/// begonnenen Phase (ADR 059).
+fn phases_schema(min_stations: u32) -> Value {
     json!({
         "type": "array",
         "minItems": 1,
@@ -140,7 +145,7 @@ fn phases_schema() -> Value {
                 "wave": { "type": "integer", "minimum": 1, "description": "Aufeinanderfolgende Phasen derselben Welle laufen parallel" },
                 "stations": {
                     "type": "array",
-                    "minItems": 1,
+                    "minItems": min_stations,
                     "items": {
                         "type": "object",
                         "properties": {
@@ -202,7 +207,7 @@ fn create(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, Str
     check_length("name", arguments.name.trim(), 1, MAX_NAME_CHARS)?;
     let source = arguments.source.unwrap_or_default();
     check_length("source", source.trim(), 0, MAX_SOURCE_CHARS)?;
-    validate(&arguments.phases)?;
+    validate(&arguments.phases, &[])?;
     let view = registry
         .create_implementation(call.session_id, &arguments.name, &source, &arguments.phases)
         .map_err(|error| error.to_string())?;
