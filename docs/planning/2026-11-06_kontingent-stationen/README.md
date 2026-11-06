@@ -68,4 +68,4 @@ pub struct SpawnOptions { /* … */ pub auto_compact_window: Option<u32> }
 ## Follow-ups
 
 - Skills außerhalb dieses Repos nachziehen (Master `mode-implementing`, facepass `project-implementing`): `implementation_get` am Stationsstart nur bei Bedarf aufrufen, `details: true` nur für Planänderungen; in den Stationstabellen `effort` je Rolle setzen (Bau mittel, Review/Planung hoch).
-- MCP-Server je Station filtern (Studio-Server aus der Repo-`.mcp.json`, claude.ai-Connectoren) — erst nach eigener Probe.
+- MCP-Server je Station filtern — bewusst nicht geplant. Messung vom 06.11.2026 an 1 531 Aufrufen laufender Stationen: Werkzeuglisten und Anweisungen aller MCP-Server machen geschätzt 1,7 % des gelesenen Kontexts aus. Davon liegen rund 1 % auf Servern, die keine Station aufgerufen hat: die Studio-Server und `test-control` aus der Repo-`.mcp.json` sowie die claude.ai-Connectoren Gamma und Docs. Genutzt wurden nur `manager` und `verwalter`. Möglicher Weg: je Repo wählbar, welche Server Stationen bekommen, über eine gefilterte Kopie der `.mcp.json` unter `%USERPROFILE%\.verwalter\mcp\`. Erst angehen, wenn die größeren Hebel umgesetzt sind.
