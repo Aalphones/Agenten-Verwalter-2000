@@ -9,9 +9,9 @@
 - Code Kern:
   - `src-tauri/src/agents/claude/process.rs`: `SpawnOptions` Zeile 18–48, `common_args` Zeile 145–222.
   - `src-tauri/src/sessions/registry.rs`:
-    - `start_process` ab etwa Zeile 3777; dort wird `SpawnOptions` in Zeile 3850–3869 befüllt, mit den Variablen `backend` und `codex_exe`.
-    - Das Feld `SessionState.station_of` steht in Zeile 334, `Session::is_station` in Zeile 2222.
-    - `Session` hat das private Feld `database: Arc<Database>` in Zeile 199.
+    - `start_process` ab Zeile 3797; dort wird `SpawnOptions` in Zeile 3871–3889 befüllt, mit den Variablen `backend` und `codex_exe`.
+    - Das Feld `SessionState.station_of` steht in Zeile 338, `Session::is_station` in Zeile 2239.
+    - `Session` hat das private Feld `database: Arc<Database>` in Zeile 200.
   - `src-tauri/src/sessions/registry/side.rs`: Befüllung von `SpawnOptions` in Zeile 110–128.
   - `src-tauri/examples/side-probe.rs`: Zeile 70 baut ebenfalls `SpawnOptions`.
   - `src-tauri/src/settings/model.rs`: `Settings` Zeile 62–86, `SettingsChange` Zeile 103–151.
