@@ -27,9 +27,24 @@ const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
 const KEY_MASTER_DIR: &str = "master_dir";
 const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
+const KEY_AUTO_COMPACT_STATIONS: &str = "auto_compact_stations";
+const KEY_AUTO_COMPACT_THRESHOLD: &str = "auto_compact_threshold";
 const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
 const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
 const KEY_TERMINAL_WIDTH: &str = "terminal_width";
+
+/// Grenzen für die Schwelle des automatischen Zusammenfassens in Tokens (ADR 058).
+pub const AUTO_COMPACT_THRESHOLD_RANGE: std::ops::RangeInclusive<u32> = 150_000..=500_000;
+
+/// Abstand zwischen Fenster und Schwelle; gemessen 06.11.2026: 283 000 → 250 000, 280 000 → 247 000.
+pub const AUTO_COMPACT_BUFFER: u32 = 33_000;
+
+/// Fenster für `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; `None`, wenn der Schalter aus ist.
+pub fn auto_compact_window(settings: &Settings) -> Option<u32> {
+    settings
+        .auto_compact_stations
+        .then(|| settings.auto_compact_threshold + AUTO_COMPACT_BUFFER)
+}
 
 /// Grenzen für die gemerkte Größe des Terminal-Docks in Pixeln.
 const TERMINAL_SIZE_RANGE: std::ops::RangeInclusive<u32> = 100..=10000;
@@ -64,6 +79,8 @@ const DEFAULT_SETTINGS: Settings = Settings {
     default_codex_model: None,
     master_dir: None,
     mark_unsourced: true,
+    auto_compact_stations: true,
+    auto_compact_threshold: 250_000,
     terminal_placement: TerminalPlacement::Bottom,
     terminal_height: 260,
     terminal_width: 460,
@@ -103,6 +120,15 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .get(KEY_MARK_UNSOURCED)
             .and_then(|text: &String| text.parse::<bool>().ok())
             .unwrap_or(DEFAULT_SETTINGS.mark_unsourced),
+        auto_compact_stations: stored
+            .get(KEY_AUTO_COMPACT_STATIONS)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.auto_compact_stations),
+        auto_compact_threshold: stored
+            .get(KEY_AUTO_COMPACT_THRESHOLD)
+            .and_then(|text: &String| text.parse::<u32>().ok())
+            .filter(|value: &u32| AUTO_COMPACT_THRESHOLD_RANGE.contains(value))
+            .unwrap_or(DEFAULT_SETTINGS.auto_compact_threshold),
         terminal_placement: stored_or(
             &stored,
             KEY_TERMINAL_PLACEMENT,
@@ -138,6 +164,13 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
     {
         return Err(CommandError::Internal(
             "Terminalgröße außerhalb 100–10000 px".to_owned(),
+        ));
+    }
+    if let SettingsChange::AutoCompactThreshold { value } = &change
+        && !AUTO_COMPACT_THRESHOLD_RANGE.contains(value)
+    {
+        return Err(CommandError::Internal(
+            "Schwelle außerhalb 150 000–500 000 Tokens".to_owned(),
         ));
     }
     if let SettingsChange::PanelWidth {
@@ -186,6 +219,12 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             }
             SettingsChange::MarkUnsourced { value } => {
                 setting_rows::write(&transaction, KEY_MARK_UNSOURCED, &value.to_string())?;
+            }
+            SettingsChange::AutoCompactStations { value } => {
+                setting_rows::write(&transaction, KEY_AUTO_COMPACT_STATIONS, &value.to_string())?;
+            }
+            SettingsChange::AutoCompactThreshold { value } => {
+                setting_rows::write(&transaction, KEY_AUTO_COMPACT_THRESHOLD, &value.to_string())?;
             }
             SettingsChange::TerminalPlacement { value } => {
                 setting_rows::write(&transaction, KEY_TERMINAL_PLACEMENT, &enum_to_text(&value)?)?;

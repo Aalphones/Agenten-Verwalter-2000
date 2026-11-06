@@ -1,0 +1,27 @@
+.slider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+
+  &__input {
+    width: 160px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  &__value {
+    min-width: 8ch;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-fg-muted);
+  }
+}

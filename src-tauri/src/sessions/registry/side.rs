@@ -125,6 +125,8 @@ impl SessionRegistry {
                     chrome,
                     codex_exe: None,
                     verwalter_mcp,
+                    // Nebenfragen fassen nie zusammen.
+                    auto_compact_window: None,
                 },
                 prompt: prompt(question, quote.as_deref()),
                 timeout,

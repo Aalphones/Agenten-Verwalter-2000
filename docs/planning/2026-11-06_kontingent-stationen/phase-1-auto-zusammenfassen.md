@@ -39,7 +39,7 @@
 
 ## Checkliste
 
-- [ ] **Probe zuerst** (vor dem Code, damit ein Fehlschlag die Phase stoppt). Im Repo-Wurzelordner in PowerShell:
+- [x] **Probe zuerst** (vor dem Code, damit ein Fehlschlag die Phase stoppt). Im Repo-Wurzelordner in PowerShell:
   ```powershell
   $env:CLAUDE_CODE_AUTO_COMPACT_WINDOW = '100000'
   '{"type":"user","message":{"role":"user","content":"Lies nacheinander mit dem Read-Werkzeug vollständig: docs/konzept.md, docs/glossary.md, docs/code-map.md, docs/PROJECT.md, docs/knowledge/claude-stream-json.md. Nenne danach je Datei die Zeilenzahl."}}' | claude -p --input-format stream-json --output-format stream-json --verbose --model claude-sonnet-5-5 --max-turns 15 > $env:TEMP\probe-compact.jsonl
@@ -48,17 +48,17 @@
   - Aus der Ausgabe nur die Zeile mit `"subtype":"compact_boundary"` und die `result`-Zeile, gekürzt auf je 300 Zeichen, nach `docs/planning/2026-11-06_kontingent-stationen/artifacts/phase-1-probe-compact.txt` schreiben. Die ganze Ausgabe nicht committen.
   - Erwartet: `compact_boundary` mit `"trigger":"auto"` steht **vor** `result`.
   - Fehlt sie: Eintrag in `FINDINGS.md`, Phase anhalten, Rückfrage an den Benutzer. Ohne Zusammenfassen mitten im Durchlauf wirkt der Hebel nicht.
-- [ ] `src-tauri/src/settings/model.rs`:
+- [x] `src-tauri/src/settings/model.rs`:
   - `Settings` um `pub auto_compact_stations: bool` und `pub auto_compact_threshold: u32` erweitern, jeweils mit Doc-Kommentar.
   - `SettingsChange` um `AutoCompactStations { value: bool }` und `AutoCompactThreshold { value: u32 }` erweitern.
-- [ ] `src-tauri/src/settings/mod.rs`:
+- [x] `src-tauri/src/settings/mod.rs`:
   - Konstanten `KEY_AUTO_COMPACT_STATIONS = "auto_compact_stations"`, `KEY_AUTO_COMPACT_THRESHOLD = "auto_compact_threshold"` sowie die beiden `pub const` aus dem Kontrakt. Kommentar am Puffer: „Abstand zwischen Fenster und Schwelle; gemessen 06.11.2026: 283 000 → 250 000, 280 000 → 247 000“.
   - `DEFAULT_SETTINGS`: `auto_compact_stations: true`, `auto_compact_threshold: 250_000`.
   - `load`: den Wahrheitswert wie `mark_unsourced` lesen; die Zahl wie `terminal_height`, zusätzlich `.filter(|value| AUTO_COMPACT_THRESHOLD_RANGE.contains(value))`.
   - `update`: Bereichsprüfung wie bei `TerminalHeight` mit dem Fehlertext aus AK 2; zwei neue Zweige im `match`, geschrieben per `setting_rows::write`.
   - Neue Funktion `pub fn auto_compact_window(settings: &Settings) -> Option<u32>`: `settings.auto_compact_stations.then(|| settings.auto_compact_threshold + AUTO_COMPACT_BUFFER)`.
   - Tests im vorhandenen bzw. neuen `#[cfg(test)] mod tests` der Datei: Standardwerte; `auto_compact_window` an/aus.
-- [ ] `src-tauri/src/agents/claude/process.rs`:
+- [x] `src-tauri/src/agents/claude/process.rs`:
   - `SpawnOptions` um `pub auto_compact_window: Option<u32>` erweitern. Doc-Kommentar: „Nur Stationen in der Betriebsart Claude (ADR 058): Fenster für das automatische Zusammenfassen; `None` = Standard der Kommandozeile.“
   - In `common_args` direkt nach der Zeile mit `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD`:
     ```rust
@@ -67,7 +67,7 @@
     }
     ```
   - Test (`#[cfg(test)] mod tests` am Dateiende, anlegen falls nicht vorhanden): `SpawnOptions` mit allen Feldern bauen, `common_args(&mut command, &opts, "default")` aufrufen. Prüfen, dass `command.get_envs()` den Schlüssel `CLAUDE_CODE_AUTO_COMPACT_WINDOW` mit `283000` enthält; mit `None` fehlt der Schlüssel.
-- [ ] `src-tauri/src/sessions/registry.rs`, `start_process`: vor `spawn(SpawnOptions { … })`
+- [x] `src-tauri/src/sessions/registry.rs`, `start_process`: vor `spawn(SpawnOptions { … })`
   ```rust
   // Nur Stationen fassen automatisch zusammen (ADR 058); Einzel-Sessions steuert der Benutzer.
   let auto_compact_window =
@@ -80,24 +80,24 @@
       };
   ```
   Dann in `SpawnOptions { … }` `auto_compact_window,` ergänzen; der Import ist `crate::settings`. Steht `backend` dort unter anderem Namen, die Variable verwenden, aus der `local: backend.cloned()` gebildet wird.
-- [ ] `src-tauri/src/sessions/registry/side.rs` und `src-tauri/examples/side-probe.rs`: `auto_compact_window: None` mit Kommentar „Nebenfragen fassen nie zusammen“. Danach per Grep auf `SpawnOptions {` prüfen, dass keine weitere Stelle fehlt.
-- [ ] `src/components/Slider.tsx` und `Slider.css` (neu, Muster `Switch`):
+- [x] `src-tauri/src/sessions/registry/side.rs` und `src-tauri/examples/side-probe.rs`: `auto_compact_window: None` mit Kommentar „Nebenfragen fassen nie zusammen“. Danach per Grep auf `SpawnOptions {` prüfen, dass keine weitere Stelle fehlt.
+- [x] `src/components/Slider.tsx` und `Slider.css` (neu, Muster `Switch`):
   - Props: `value: number`, `min: number`, `max: number`, `step: number`, `label: string` (zugänglicher Name), `format: (value: number) => string`, `disabled?: boolean`, `onCommit: (value: number) => void`.
   - Aufbau: `<div className="slider">`, darin `<input type="range" className="slider__input" aria-label={label} aria-valuetext={format(draft)} …>` und `<span className="slider__value">{format(draft)}</span>`.
   - `draft` per `useState(value)`; ein `useEffect` gleicht `draft` an, wenn sich `value` ändert. `onChange` setzt nur `draft`. `onPointerUp`, `onKeyUp` und `onBlur` rufen `onCommit(draft)`, wenn `draft !== value`.
   - CSS: Breite 160px, Akzentfarbe über `accent-color: var(--color-accent)`, Fokusrahmen wie `.switch:focus-visible`, `&:disabled` wie bei `.switch`, Wert rechts daneben mit `font-variant-numeric: tabular-nums`.
-- [ ] `src/features/settings/settingsCatalog.ts`: zwei Einträge direkt hinter `markUnsourced`, Kategorie `'agent'`, Abschnitt `'Umsetzungen'`, beide mit `isShown: (settings) => settings.operatingMode === 'claude'`; der Regler zusätzlich nur bei `settings.autoCompactStations`.
+- [x] `src/features/settings/settingsCatalog.ts`: zwei Einträge direkt hinter `markUnsourced`, Kategorie `'agent'`, Abschnitt `'Umsetzungen'`, beide mit `isShown: (settings) => settings.operatingMode === 'claude'`; der Regler zusätzlich nur bei `settings.autoCompactStations`.
   - `autoCompactStations`, Label „Automatisch zusammenfassen“, ⓘ: „Fasst den Verlauf einer Station automatisch zusammen, sobald ihr Kontext die Schwelle erreicht; danach arbeitet sie mit einer Kurzfassung weiter. Spart Kontingent, weil jeder weitere Schritt weniger Verlauf mitliest. Gilt nur für Stationen einer Umsetzung, nie für einzelne Sessions — dort fasst du mit /compact selbst zusammen. Wirkt ab dem nächsten Start einer Station.“
   - `autoCompactThreshold`, Label „Zusammenfassen ab“, ⓘ: „Kontextgröße, ab der eine Station zusammenfasst. Niedriger spart mehr, fasst aber öfter zusammen, und jede Zusammenfassung verliert Einzelheiten. Bei 250k fasst eine Station meist höchstens zweimal zusammen.“
-- [ ] `src/features/settings/SettingsView.tsx`, `renderRow`:
+- [x] `src/features/settings/SettingsView.tsx`, `renderRow`:
   - `case 'autoCompactStations'` als `Switch` nach dem Muster von `markUnsourced`, gespeichert mit `save({ kind: 'autoCompactStations', value })`.
   - `case 'autoCompactThreshold'` mit `<Slider value={current.autoCompactThreshold} min={150000} max={500000} step={10000} label="Schwelle" format={(value) => `${Math.round(value / 1000)}k Tokens`} onCommit={(value) => { save({ kind: 'autoCompactThreshold', value }).catch(() => undefined); }} />`.
-- [ ] `pnpm bindings`; `pnpm check`.
-- [ ] `docs/decisions/058-auto-zusammenfassen-in-stationen.md` nach dem ADR-057-Muster:
+- [x] `pnpm bindings`; `pnpm check`.
+- [x] `docs/decisions/058-auto-zusammenfassen-in-stationen.md` nach dem ADR-057-Muster:
   - Kontext: Messung aus der README.
   - Optionen: (a) globale Einstellung in `~/.claude/settings.json` — verworfen, wirkt auch in Einzel-Sessions; (b) Verwalter schickt `/compact` — verworfen, weil eine Station ein Durchlauf ist; (c) Umgebungsvariable je Stationsprozess — gewählt.
   - Entscheidung und Konsequenzen wie in der README.
-- [ ] `docs/code-map.md`: Zeile für `src/components/Slider.tsx`, falls die Map Komponenten führt. `docs/glossary.md`: Eintrag „Zusammenfassung (Verlauf)“ um einen Satz ergänzen: „In Stationen fasst Claude automatisch ab der Schwelle aus den Einstellungen zusammen (ADR 058).“
+- [x] `docs/code-map.md`: Zeile für `src/components/Slider.tsx`, falls die Map Komponenten führt. `docs/glossary.md`: Eintrag „Zusammenfassung (Verlauf)“ um einen Satz ergänzen: „In Stationen fasst Claude automatisch ab der Schwelle aus den Einstellungen zusammen (ADR 058).“
 - [ ] Selbstprüfung in `pnpm tauri dev`: Einstellungen → Agent → Umsetzungen. Schalter aus → Regler verschwindet. Schalter an → Regler auf 300k ziehen, App neu starten, der Wert ist 300k. Screenshot nach `artifacts/phase-1-einstellungen.png`.
 
 ## Definition of Done
@@ -108,3 +108,5 @@
 - Seven-Goals-Check im Report-Back.
 
 ## Report-Back
+
+Stand 06.11.2026: Probe belegt (Zusammenfassen bei Fenster 100000, vorher 164 925 Tokens, danach 22 070). Rust-Tests und Screenshot entfallen im privaten Profil (keine automatisierten Tests, keine Live-Läufe); AK 3/4 sind per Code-Durchsicht belegt, `pnpm check` grün.

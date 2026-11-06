@@ -45,6 +45,9 @@ pub struct SpawnOptions {
     pub codex_exe: Option<PathBuf>,
     /// Konfigurationsdatei des MCP-Zugangs der Session (ADR 046); `None`: ohne Zugang.
     pub verwalter_mcp: Option<PathBuf>,
+    /// Nur Stationen in der Betriebsart Claude (ADR 058): Fenster für das automatische
+    /// Zusammenfassen; `None` = Standard der Kommandozeile.
+    pub auto_compact_window: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -164,6 +167,9 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
         .arg(permission_mode)
         // Ohne die Variable lädt Claude die `CLAUDE.md` eines `--add-dir`-Ordners nicht.
         .env("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1");
+    if let Some(window) = opts.auto_compact_window {
+        command.env("CLAUDE_CODE_AUTO_COMPACT_WINDOW", window.to_string());
+    }
     if let Some(backend) = &opts.local {
         local::apply(command, backend);
         // Der autarke Agent braucht den Ordner für die Ausgaben seiner Hintergrundprozesse, und den

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ModeMenu } from '@/components/ModeMenu';
 import { ModelMenu } from '@/components/ModelMenu';
+import { Slider } from '@/components/Slider';
 import { Switch } from '@/components/Switch';
 import { AccountRow } from '@/features/account/AccountRow';
 import { runningSessionCount } from '@/features/appupdate/appUpdateTexts';
@@ -448,6 +449,34 @@ export function SettingsView({
               label="markieren"
               onChange={(checked: boolean): void => {
                 save({ kind: 'markUnsourced', value: checked }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+        );
+      case 'autoCompactStations':
+        return (
+          <SettingRow id={id}>
+            <Switch
+              checked={current.autoCompactStations}
+              label="automatisch zusammenfassen"
+              onChange={(checked: boolean): void => {
+                save({ kind: 'autoCompactStations', value: checked }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+        );
+      case 'autoCompactThreshold':
+        return (
+          <SettingRow id={id}>
+            <Slider
+              value={current.autoCompactThreshold}
+              min={150000}
+              max={500000}
+              step={10000}
+              label="Schwelle"
+              format={(value: number): string => `${String(Math.round(value / 1000))}k Tokens`}
+              onCommit={(value: number): void => {
+                save({ kind: 'autoCompactThreshold', value }).catch(() => undefined);
               }}
             />
           </SettingRow>

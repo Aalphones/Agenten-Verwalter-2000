@@ -41,6 +41,10 @@ function isLocalMode(settings: Settings): boolean {
   return isLocalOperatingMode(settings.operatingMode);
 }
 
+function isClaudeMode(settings: Settings): boolean {
+  return settings.operatingMode === 'claude';
+}
+
 function hasMasterDir(settings: Settings): boolean {
   return settings.masterDir !== null;
 }
@@ -102,6 +106,21 @@ const ENTRY_DATA = {
     section: 'Agent',
     label: 'Angaben ohne Fundstelle',
     info: 'Unterstreicht Pfade, Datei:Zeile und Zahlen ab zwei Ziffern, die in keiner Werkzeug-Ausgabe derselben Antwort vorkommen.',
+  },
+  autoCompactStations: {
+    category: 'agent',
+    section: 'Umsetzungen',
+    label: 'Automatisch zusammenfassen',
+    info: 'Fasst den Verlauf einer Station automatisch zusammen, sobald ihr Kontext die Schwelle erreicht; danach arbeitet sie mit einer Kurzfassung weiter. Spart Kontingent, weil jeder weitere Schritt weniger Verlauf mitliest. Gilt nur für Stationen einer Umsetzung, nie für einzelne Sessions — dort fasst du mit /compact selbst zusammen. Wirkt ab dem nächsten Start einer Station.',
+    isShown: isClaudeMode,
+  },
+  autoCompactThreshold: {
+    category: 'agent',
+    section: 'Umsetzungen',
+    label: 'Zusammenfassen ab',
+    info: 'Kontextgröße, ab der eine Station zusammenfasst. Niedriger spart mehr, fasst aber öfter zusammen, und jede Zusammenfassung verliert Einzelheiten. Bei 250k fasst eine Station meist höchstens zweimal zusammen.',
+    isShown: (settings: Settings): boolean =>
+      isClaudeMode(settings) && settings.autoCompactStations,
   },
   cliVersion: {
     category: 'agent',

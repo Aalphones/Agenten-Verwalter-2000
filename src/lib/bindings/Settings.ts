@@ -28,7 +28,15 @@ masterDir: string | null,
 /**
  * Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
  */
-markUnsourced: boolean, terminalPlacement: TerminalPlacement, 
+markUnsourced: boolean, 
+/**
+ * Ob Stationen einer Umsetzung ihren Verlauf selbst zusammenfassen (ADR 058).
+ */
+autoCompactStations: boolean, 
+/**
+ * Kontextgröße in Tokens, ab der eine Station zusammenfasst (ADR 058).
+ */
+autoCompactThreshold: number, terminalPlacement: TerminalPlacement, 
 /**
  * Gezogene Höhe des Terminal-Docks in Pixeln.
  */

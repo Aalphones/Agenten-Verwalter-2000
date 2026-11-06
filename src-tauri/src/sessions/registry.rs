@@ -76,7 +76,7 @@ use crate::sessions::model::{
 };
 use crate::sessions::{MAX_NAME_CHARS, handoff, name_from_task};
 use crate::settings;
-use crate::settings::model::OperatingMode;
+use crate::settings::model::{OperatingMode, Settings};
 use crate::side::model::SideQuestion;
 use crate::skills::{self, model::SkillRef};
 use crate::sourcing::{self, Sources};
@@ -3863,6 +3863,15 @@ fn start_process(
     let verwalter_mcp = app
         .try_state::<Arc<McpAccess>>()
         .and_then(|access| access.config_for(&session.id));
+    // Nur Stationen fassen automatisch zusammen (ADR 058); Einzel-Sessions steuert der Benutzer.
+    let auto_compact_window =
+        if state.station_of.is_some() && backend.is_none() && codex_exe.is_none() {
+            settings::load(&session.database)
+                .ok()
+                .and_then(|loaded: Settings| settings::auto_compact_window(&loaded))
+        } else {
+            None
+        };
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -3886,6 +3895,7 @@ fn start_process(
             chrome: state.chrome,
             codex_exe,
             verwalter_mcp,
+            auto_compact_window,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);

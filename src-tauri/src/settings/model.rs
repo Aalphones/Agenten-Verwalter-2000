@@ -76,6 +76,10 @@ pub struct Settings {
     pub master_dir: Option<String>,
     /// Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
     pub mark_unsourced: bool,
+    /// Ob Stationen einer Umsetzung ihren Verlauf selbst zusammenfassen (ADR 058).
+    pub auto_compact_stations: bool,
+    /// Kontextgröße in Tokens, ab der eine Station zusammenfasst (ADR 058).
+    pub auto_compact_threshold: u32,
     pub terminal_placement: TerminalPlacement,
     /// Gezogene Höhe des Terminal-Docks in Pixeln.
     pub terminal_height: u32,
@@ -133,6 +137,12 @@ pub enum SettingsChange {
     },
     MarkUnsourced {
         value: bool,
+    },
+    AutoCompactStations {
+        value: bool,
+    },
+    AutoCompactThreshold {
+        value: u32,
     },
     TerminalPlacement {
         value: TerminalPlacement,

@@ -91,6 +91,8 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         // Ohne laufende App gibt es keinen MCP-Zugang; die Werkzeugliste weicht dann von der des
         // Hauptprozesses ab.
         verwalter_mcp: None,
+        // Nebenfragen fassen nie zusammen.
+        auto_compact_window: None,
     };
     let request = SideRequest {
         options,
