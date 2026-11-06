@@ -20,7 +20,7 @@ Ein freigegebener Plan wird heute Phase für Phase in frischen Sessions umgesetz
 - **Ein Präfix je Werkzeugsatz:** `implementation_create`, `implementation_get`, `implementation_set_phases`, `implementation_describe_phase`, `implementation_complete_station` — der Vertrag `ToolSet` kennt genau einen Präfix.
 - **Bindung an die aufrufende Session:** ein Werkzeug wirkt auf die Umsetzung, deren Station die Session ist, sonst auf die neueste ihres Vorhabens.
 - **Lagebericht als Text** (`implementation/report.rs`), gleich für Agent und Oberfläche; die Uhrzeit „Stand HH:MM“ ist Ortszeit (über `chrono`, das schon im Abhängigkeitsbaum lag).
-- **Sidebar:** die Umsetzung ist eine Zeile unter ihrem Vorhaben vor den Sessions; Stationen bekommen keine eigene Session-Zeile (`SessionSummary.station_of`), zählen aber in Aktivität und Ungelesen des Vorhabens.
+- **Sidebar:** die Umsetzung ist eine Zeile unter ihrem Vorhaben vor den Sessions; Stationen bekommen keine eigene Session-Zeile (`SessionSummary.station_of`), zählen aber in Aktivität und Ungelesen des Vorhabens. Geändert durch [ADR 056](056-stationen-in-der-sidebar.md): aktive Stationen stehen als Zeilen unter der Umsetzung.
 
 ## Konsequenzen
 

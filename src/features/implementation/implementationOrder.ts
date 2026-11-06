@@ -19,7 +19,19 @@ const ACTIVE_STATES: readonly StationState[] = [
   'asking',
   'waitsForYou',
 ];
-const NEEDS_USER_STATES: readonly StationState[] = ['asking', 'waitsForYou'];
+/** Zustände, in denen eine Station auf den Benutzer wartet. */
+export const NEEDS_USER_STATES: readonly StationState[] = ['asking', 'waitsForYou'];
+/** Zustände einer aktiven Station: Sidebar, Rückweg-Leiste, Zeitleisten-Sprung (ADR 056). */
+export const LIVE_STATES: readonly StationState[] = [
+  'ready',
+  'countdown',
+  'starting',
+  'running',
+  'waitsForScript',
+  'asking',
+  'waitsForYou',
+  'error',
+];
 
 export interface StationRef {
   station: StationView;
@@ -58,6 +70,13 @@ export function flatStations(implementation: ImplementationView): StationRef[] {
     }
   }
   return refs;
+}
+
+/** Aktive Stationen (ADR 056) in Plan-Reihenfolge. */
+export function liveStations(implementation: ImplementationView): StationRef[] {
+  return flatStations(implementation).filter((ref: StationRef) =>
+    LIVE_STATES.includes(ref.station.state),
+  );
 }
 
 /** Gruppen wie im Core (`schedule::groups`): gleiche Welle in Folge = eine Gruppe. */

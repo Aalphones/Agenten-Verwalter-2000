@@ -1,3 +1,8 @@
+import {
+  liveStations,
+  NEEDS_USER_STATES,
+  type StationRef,
+} from '@/features/implementation/implementationOrder';
 import { visibleSessions } from '@/features/projects/projectStatus';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
@@ -17,6 +22,15 @@ export type SidebarRow =
       isExpanded: boolean;
     }
   | { kind: 'implementation'; key: string; implementation: ImplementationView; isLast: boolean }
+  | {
+      kind: 'station';
+      key: string;
+      implementationId: string;
+      entry: StationRef;
+      /** `true`: eine Ebene unter der Umsetzung; `false`: auf Höhe der Umsetzungen (zugeklapptes Vorhaben). */
+      isNested: boolean;
+      isLast: boolean;
+    }
   | { kind: 'session'; key: string; session: SessionSummary; isLast: boolean }
   | {
       kind: 'more';
@@ -29,7 +43,8 @@ export type SidebarRow =
 
 export interface SidebarProjectEntry {
   project: ProjectSummary;
-  /** Sessions des Vorhabens samt Stationen, zuletzt aktive zuerst; Stationen bekommen keine Zeile. */
+  /** Sessions des Vorhabens samt Stationen, zuletzt aktive zuerst; Stationen bekommen keine Session-Zeile,
+   *  aktive erscheinen als Stationszeile (ADR 056). */
   sessions: readonly SessionSummary[];
   /** Umsetzungen des Vorhabens, neueste zuerst (ADR 048). */
   implementations: readonly ImplementationView[];
@@ -41,50 +56,98 @@ export interface SidebarProjectEntry {
 }
 
 /** Die flache Zeilenliste der Sidebar: je Vorhaben seine Zeile, bei aufgeklappten Vorhaben darunter
- *  ihre Umsetzungen und Sessions. */
+ *  ihre Umsetzungen samt aktiven Stationen und Sessions, bei zugeklappten die Stationen, die auf den
+ *  Benutzer warten. */
 export function buildSidebarRows(projects: readonly SidebarProjectEntry[]): SidebarRow[] {
   const rows: SidebarRow[] = [];
-  for (const { project, sessions, implementations, isExpanded, showAll, pinnedIds } of projects) {
-    rows.push({ kind: 'project', key: `project:${project.id}`, project, sessions, isExpanded });
-    if (!isExpanded) {
-      continue;
-    }
-    const ownSessions: SessionSummary[] = visibleSessions(sessions);
-    implementations.forEach((implementation: ImplementationView, index: number) => {
-      rows.push({
-        kind: 'implementation',
-        key: `implementation:${implementation.id}`,
-        implementation,
-        isLast: ownSessions.length === 0 && index === implementations.length - 1,
-      });
-    });
-    const isLong: boolean = ownSessions.length >= COLLAPSE_FROM;
-    const shown: SessionSummary[] =
-      isLong && !showAll
-        ? ownSessions.filter(
-            (session: SessionSummary, index: number) =>
-              index < VISIBLE_COUNT || pinnedIds.has(session.id),
-          )
-        : ownSessions;
-    const hiddenCount: number = ownSessions.length - shown.length;
-    const hasMoreRow: boolean = isLong && (showAll || hiddenCount > 0);
-    shown.forEach((session: SessionSummary, index: number) => {
-      rows.push({
-        kind: 'session',
-        key: `session:${session.id}`,
-        session,
-        isLast: !hasMoreRow && index === shown.length - 1,
-      });
-    });
-    if (hasMoreRow) {
-      rows.push({
-        kind: 'more',
-        key: `more:${project.id}`,
-        projectId: project.id,
-        hiddenCount: showAll ? ownSessions.length - VISIBLE_COUNT : hiddenCount,
-        isShowingAll: showAll,
-      });
-    }
+  for (const entry of projects) {
+    const { project, sessions, isExpanded } = entry;
+    const projectRow: SidebarRow = {
+      kind: 'project',
+      key: `project:${project.id}`,
+      project,
+      sessions,
+      isExpanded,
+    };
+    const children: SidebarRow[] = isExpanded ? expandedChildren(entry) : waitingChildren(entry);
+    rows.push(projectRow, ...markLast(children));
   }
   return rows;
+}
+
+function expandedChildren({
+  project,
+  sessions,
+  implementations,
+  showAll,
+  pinnedIds,
+}: SidebarProjectEntry): SidebarRow[] {
+  const children: SidebarRow[] = [];
+  for (const implementation of implementations) {
+    children.push({
+      kind: 'implementation',
+      key: `implementation:${implementation.id}`,
+      implementation,
+      isLast: false,
+    });
+    for (const entry of liveStations(implementation)) {
+      children.push(stationRow(implementation.id, entry, true));
+    }
+  }
+  const ownSessions: SessionSummary[] = visibleSessions(sessions);
+  const isLong: boolean = ownSessions.length >= COLLAPSE_FROM;
+  const shown: SessionSummary[] =
+    isLong && !showAll
+      ? ownSessions.filter(
+          (session: SessionSummary, index: number) =>
+            index < VISIBLE_COUNT || pinnedIds.has(session.id),
+        )
+      : ownSessions;
+  const hiddenCount: number = ownSessions.length - shown.length;
+  for (const session of shown) {
+    children.push({ kind: 'session', key: `session:${session.id}`, session, isLast: false });
+  }
+  if (isLong && (showAll || hiddenCount > 0)) {
+    children.push({
+      kind: 'more',
+      key: `more:${project.id}`,
+      projectId: project.id,
+      hiddenCount: showAll ? ownSessions.length - VISIBLE_COUNT : hiddenCount,
+      isShowingAll: showAll,
+    });
+  }
+  return children;
+}
+
+/** Zugeklappt bleiben nur die Stationen sichtbar, die auf den Benutzer warten. */
+function waitingChildren({ implementations }: SidebarProjectEntry): SidebarRow[] {
+  const children: SidebarRow[] = [];
+  for (const implementation of implementations) {
+    for (const entry of liveStations(implementation)) {
+      if (NEEDS_USER_STATES.includes(entry.station.state)) {
+        children.push(stationRow(implementation.id, entry, false));
+      }
+    }
+  }
+  return children;
+}
+
+function stationRow(implementationId: string, entry: StationRef, isNested: boolean): SidebarRow {
+  return {
+    kind: 'station',
+    key: `station:${entry.station.id}`,
+    implementationId,
+    entry,
+    isNested,
+    isLast: false,
+  };
+}
+
+/** Die letzte Kindzeile schließt die Baumlinie ab; `more` kennt keine Linie und bleibt unberührt. */
+function markLast(children: SidebarRow[]): SidebarRow[] {
+  const last: SidebarRow | undefined = children[children.length - 1];
+  if (last === undefined || last.kind === 'project' || last.kind === 'more') {
+    return children;
+  }
+  return [...children.slice(0, -1), { ...last, isLast: true }];
 }
