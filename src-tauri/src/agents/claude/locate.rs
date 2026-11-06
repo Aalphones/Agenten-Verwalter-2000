@@ -87,6 +87,11 @@ pub fn has_transcript(session_id: &str) -> bool {
         .any(|entry: std::fs::DirEntry| entry.path().join(&file_name).is_file())
 }
 
+/// Liegt der schlanke Ausgabestil `station` im Konfigurationsordner? Die Datei ist der Schalter.
+pub fn station_style_installed() -> bool {
+    config_dir().is_some_and(|dir: PathBuf| dir.join("output-styles").join("station.md").is_file())
+}
+
 fn config_dir() -> Option<PathBuf> {
     if let Some(explicit) = env::var_os(CONFIG_DIR_VAR) {
         return Some(PathBuf::from(explicit));

@@ -48,6 +48,9 @@ pub struct SpawnOptions {
     /// Nur Stationen in der Betriebsart Claude (ADR 058): Fenster für das automatische
     /// Zusammenfassen; `None` = Standard der Kommandozeile.
     pub auto_compact_window: Option<u32>,
+    /// Nur Stationen in der Betriebsart Claude, nur wenn der Stil `station` installiert ist:
+    /// schlanker Ausgabestil statt des Benutzer-Stils.
+    pub station_style: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -161,6 +164,11 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
             })
             // Unter `-p` schaltet die Kommandozeile das Artefakt-Werkzeug sonst ab.
             .env("CLAUDE_CODE_ARTIFACT", "1");
+        if opts.station_style {
+            command
+                .arg("--settings")
+                .arg(r#"{"outputStyle":"station"}"#);
+        }
     }
     command
         .arg("--permission-mode")
@@ -356,4 +364,55 @@ fn wait_for_exit(child: &Mutex<Child>) -> Option<i32> {
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn options(station_style: bool) -> SpawnOptions {
+        SpawnOptions {
+            exe: PathBuf::from("claude"),
+            leading_args: Vec::new(),
+            cwd: PathBuf::from("."),
+            session_id: "s".to_owned(),
+            resume: false,
+            model: ModelId::Sonnet,
+            codex_model: None,
+            effort: Effort::Medium,
+            mode: Mode::Auto,
+            add_dirs: Vec::new(),
+            allowed_rules: Vec::new(),
+            local: None,
+            scratchpad: None,
+            artifacts: None,
+            chrome: false,
+            codex_exe: None,
+            verwalter_mcp: None,
+            auto_compact_window: None,
+            station_style,
+        }
+    }
+
+    fn args(station_style: bool) -> Vec<String> {
+        let mut command = Command::new("claude");
+        common_args(&mut command, &options(station_style), "auto");
+        command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn station_style_adds_settings_argument() {
+        let with = args(true);
+        let position = with.iter().position(|arg| arg == "--settings");
+        assert_eq!(
+            position
+                .and_then(|index| with.get(index + 1))
+                .map(String::as_str),
+            Some(r#"{"outputStyle":"station"}"#)
+        );
+        assert!(!args(false).iter().any(|arg| arg == "--settings"));
+    }
 }

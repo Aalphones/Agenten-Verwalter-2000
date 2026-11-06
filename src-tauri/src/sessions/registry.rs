@@ -3872,6 +3872,10 @@ fn start_process(
         } else {
             None
         };
+    let station_style = state.station_of.is_some()
+        && backend.is_none()
+        && codex_exe.is_none()
+        && locate::station_style_installed();
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -3896,6 +3900,7 @@ fn start_process(
             codex_exe,
             verwalter_mcp,
             auto_compact_window,
+            station_style,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);

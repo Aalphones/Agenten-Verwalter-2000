@@ -22,13 +22,13 @@
 
 ## Checkliste
 
-- [ ] `process.rs`: `SpawnOptions` um `pub station_style: bool` erweitern. Doc-Kommentar: „Nur Stationen in der Betriebsart Claude, nur wenn der Stil `station` installiert ist: schlanker Ausgabestil statt des Benutzer-Stils.“
-- [ ] `common_args`: im Zweig `opts.local.is_none()` bei `opts.station_style` die Argumente `--settings` und `{"outputStyle":"station"}` anhängen.
-- [ ] `registry.rs`, `start_process`: `station_style` = `state.station_of.is_some() && backend.is_none() && codex_exe.is_none() && <config_dir>\output-styles\station.md existiert`. Die Prüfung als öffentliche Funktion `station_style_installed()` in `locate.rs`, damit `side.rs` sie mitbenutzt.
-- [ ] `side.rs`: `station_style` nach derselben Regel für die Session der Nebenfrage. `side-probe.rs`: `station_style: false`. Danach per Grep auf `SpawnOptions {` prüfen, dass keine Stelle fehlt.
-- [ ] Test wie AK 4 im `#[cfg(test)] mod tests` von `process.rs` (aus Phase 1 vorhanden).
-- [ ] `docs/glossary.md`: Eintrag „Station“ um einen Satz ergänzen: „Stationen laufen mit dem schlanken Ausgabestil `station`, wenn er installiert ist.“
-- [ ] `pnpm check`.
+- [x] `process.rs`: `SpawnOptions` um `pub station_style: bool` erweitern. Doc-Kommentar: „Nur Stationen in der Betriebsart Claude, nur wenn der Stil `station` installiert ist: schlanker Ausgabestil statt des Benutzer-Stils.“
+- [x] `common_args`: im Zweig `opts.local.is_none()` bei `opts.station_style` die Argumente `--settings` und `{"outputStyle":"station"}` anhängen.
+- [x] `registry.rs`, `start_process`: `station_style` = `state.station_of.is_some() && backend.is_none() && codex_exe.is_none() && <config_dir>\output-styles\station.md existiert`. Die Prüfung als öffentliche Funktion `station_style_installed()` in `locate.rs`, damit `side.rs` sie mitbenutzt.
+- [x] `side.rs`: `station_style` nach derselben Regel für die Session der Nebenfrage. `side-probe.rs`: `station_style: false`. Danach per Grep auf `SpawnOptions {` prüfen, dass keine Stelle fehlt.
+- [x] Test wie AK 4 im `#[cfg(test)] mod tests` von `process.rs` (aus Phase 1 vorhanden).
+- [x] `docs/glossary.md`: Eintrag „Station“ um einen Satz ergänzen: „Stationen laufen mit dem schlanken Ausgabestil `station`, wenn er installiert ist.“
+- [x] `pnpm check`.
 
 ## Definition of Done
 

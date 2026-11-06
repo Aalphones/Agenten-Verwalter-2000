@@ -93,6 +93,7 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         verwalter_mcp: None,
         // Nebenfragen fassen nie zusammen.
         auto_compact_window: None,
+        station_style: false,
     };
     let request = SideRequest {
         options,

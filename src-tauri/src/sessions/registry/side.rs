@@ -86,6 +86,9 @@ impl SessionRegistry {
             } else {
                 (state.effort, state.chrome)
             };
+            let station_style = state.station_of.is_some()
+                && backend.is_none()
+                && locate::station_style_installed();
             let timeout = if backend.is_some() {
                 TIMEOUT_LOCAL
             } else {
@@ -127,6 +130,8 @@ impl SessionRegistry {
                     verwalter_mcp,
                     // Nebenfragen fassen nie zusammen.
                     auto_compact_window: None,
+                    // Gleicher Stil wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).
+                    station_style,
                 },
                 prompt: prompt(question, quote.as_deref()),
                 timeout,
