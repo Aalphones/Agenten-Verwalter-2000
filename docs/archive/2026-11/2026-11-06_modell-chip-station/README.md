@@ -54,7 +54,26 @@ Fehler des Befehls (Text als `CommandError::Implementation`): „Die Station hat
 ## Bottom-Sektionen (beim Archivieren füllen)
 
 ## Summary
+
+Jede Station trägt jetzt ein optionales Denkaufwand-Feld neben dem Modell (Migration 018), der Start setzt Modell und Aufwand, ein neuer Befehl ändert den Plan einer noch nicht begonnenen Station. Die Karte der Station im Fokus zeigt oben rechts den Chip „Modell · Aufwand“ (vor dem Start gestrichelt als Plan, danach der Ist-Wert der Session, bei Abweichung gelb mit „geplant: …“); ein Klick öffnet das Menü aus dem Chat. Vor dem Start wirkt die Auswahl auf den Plan, bei laufender Station auf die Session. ADR 057 hält die Änderung fest.
+
 ## Files touched
+
+- `src-tauri/src/implementation/` (`model.rs`, `mod.rs`, `start.rs`, `tools.rs`, `tests.rs`), `src-tauri/src/db/` (`implementations.rs`, `migrations.rs`, `migrations/018_station_effort.sql`), `src-tauri/src/commands/implementation.rs`, `src-tauri/src/sessions/registry/implementation.rs`, `src-tauri/src/lib.rs`
+- `src/features/implementation/` (`StationModelChip.tsx`/`.css`, `StationCard.tsx`/`.css`, `CardStack.tsx`, `ImplementationView.tsx`, `implementationTexts.ts`, `stationState.ts`), `src/components/ModelMenu.tsx`/`.css`, `src/features/promptcache/CacheAwareModelMenu.tsx`, `src/lib/implementation.ts`, `src/lib/bindings/`
+- `docs/decisions/057-modell-und-aufwand-der-station.md`, `docs/code-map.md`, `docs/glossary.md`
+
 ## Commits
+
+- `41038dc` feat(implementation): Denkaufwand je Station und Befehl zum Ändern des Plans
+- `a036b53` feat(implementation): Modell-Chip auf der Stationskarte
+- `5f25941` chore(release): v0.55.0
+
 ## Deviations from plan
+
+- Keine.
+
 ## Follow-ups
+
+- Laufzeitbeleg in der echten App steht aus: Chip und Menü auf der Karte (Klick vor und nach dem Start, gelbe Abweichung samt „Auf Plan zurücksetzen“, Neustart behält den Plan).
+- Nicht umgesetzt (bewusst): Ausweichmodell des Sicherheitsfilters (`fallbackModelId`) im Chip.
