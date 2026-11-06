@@ -4,6 +4,7 @@ import { useNow } from '@/features/background/useNow';
 import type { StationRef } from '@/features/implementation/implementationOrder';
 import { stationLabel, stationMeta } from '@/features/implementation/implementationTexts';
 import { stateIcon, stateLabel } from '@/features/implementation/stationState';
+import { WAITING_JUMP_HINT } from '@/features/waiting/waitingTexts';
 import type { StationState } from '@/lib/bindings/StationState';
 import './SidebarStation.css';
 
@@ -44,7 +45,7 @@ export function SidebarStation({
         type="button"
         className={`sidebar-station__button${isActive ? ' sidebar-station__button--active' : ''}`}
         aria-current={isActive ? 'page' : undefined}
-        title={`${label} · Phase ${phase.key} ${phase.title} · ${stateLabel(station.state)} · ${opening}`}
+        title={`${label} · Phase ${phase.key} ${phase.title} · ${stateLabel(station.state)} · ${opening}${WAITING_JUMP_HINT}`}
         onClick={onSelect}
       >
         <span className="sidebar-station__status">

@@ -77,6 +77,7 @@ Features: `projects` (Vorhaben), `terminal`, `sessions`, `tldr`, `chat`, `attach
 | Geteilte UI-Bausteine | `src/components/` (`StatusIcon`, `Popover` (`autoFocus`, Breite `anchor`), `ModelMenu` (`title`), `ModeMenu` (`align`), `Dialog` (modal, Portal, Fokus bleibt im Feld), `Switch`, `EffortDots`, `Markdown`, `CodeBlock`, `ExternalLink`, `FileLink`) | — |
 | Fokus-Selektor für Menüs und Dialoge | `src/lib/focus.ts` | — |
 | Sidebar-Zeilen (Vorhaben: Umbenennen, Archivieren; Session: Umbenennen, Löschen mit Bestätigung; aktive Station: öffnen) | `src/app/SidebarProject.tsx` (Vorhaben-Zeile), `src/app/SidebarItem.tsx` (Session-Zeile im Baum, `RenameField`), `src/app/SidebarStation.tsx` (Stationszeile, [ADR 056](decisions/056-stationen-in-der-sidebar.md)), `src/app/SessionDeleteDialog.tsx`; Core `delete_session` in `sessions/registry.rs` | — |
+| Sprung zur nächsten wartenden Session oder Station (`Ctrl J`, Einblendung; [ADR 056](decisions/056-stationen-in-der-sidebar.md)) | `src/features/waiting/` (Warteliste, Kürzel-Hook, Einblendung), eingehängt in `src/app/App.tsx` | — |
 | Anzeige-Texte für Modell, Modus, Denkaufwand | `src/lib/labels.ts` | — |
 
 ## Wo was wohnt — Faustregeln

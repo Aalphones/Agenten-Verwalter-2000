@@ -18,6 +18,7 @@ Der Weg in den Chat einer Station führte über zwei bis vier Klicks: Vorhaben a
 - **Ein Klick** wählt die Session der Station; eine Station ohne Session („durch dich“) öffnet die Umsetzung mit ihrer Karte vorn (`useOpenStation`).
 - **Genau eine Markierung:** im Chat einer Station ihre Stationszeile, sonst — fertig oder ohne Zeile — die Zeile ihrer Umsetzung.
 - **Rückweg-Leiste:** über dem Chat einer Station führt eine schmale Leiste zurück zur Umsetzung und mit ‹ › zur vorigen bzw. nächsten aktiven Station (`StationTrail`).
+- **`Ctrl J`:** springt über alle Vorhaben zur Session oder Station, die am längsten auf dich wartet (erst „fragt“, dann „wartet auf dich“); erneut gedrückt zur nächsten, am Ende von vorn. Eine kurze Einblendung nennt die Stelle („1 von 3 warten auf dich“). Im Terminal bleibt `Ctrl J` ein Zeilenumbruch. Die Liste wird bei jedem Druck neu berechnet (`src/features/waiting/`).
 - Ändert den Punkt „Sidebar“ aus ADR 048: Stationen bekommen weiterhin keine **Session**-Zeile, aktive aber eine Stationszeile.
 
 ## Konsequenzen

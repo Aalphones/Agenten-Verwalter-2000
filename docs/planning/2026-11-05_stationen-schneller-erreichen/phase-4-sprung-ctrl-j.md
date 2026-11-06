@@ -19,7 +19,7 @@
 
 ## Checkliste
 
-- [ ] Neu `src/features/waiting/waitingQueue.ts` (reine Funktionen, kein React):
+- [x] Neu `src/features/waiting/waitingQueue.ts` (reine Funktionen, kein React):
   ```ts
   export interface WaitingEntry {
     key: string;                       // `session:<id>` bzw. `station:<id>`
@@ -34,10 +34,12 @@
   export function nextWaitingIndex(queue: readonly WaitingEntry[], shownSessionId: string | null, shownStationId: string | null): number | null;
   ```
   Sortierung `rank` aufsteigend, dann `since` aufsteigend. `nextWaitingIndex`: Position des Eintrags mit `sessionId === shownSessionId` (falls nicht `null`) oder `station?.id === shownStationId`; gefunden → `(pos + 1) % length`, sonst `0`.
-- [ ] Neu `src/features/waiting/useWaitingJump.ts`: `useWaitingJump(sessions, implementations, shown: { sessionId: string | null; stationId: string | null }): string | null` — registriert den `keydown`-Handler am `window` (Muster `Ctrl N` in `App.tsx`; Abbruch, wenn `event.target` in `.xterm` liegt), berechnet Liste und Ziel, springt (`selectSession` bzw. `useOpenStation`) und gibt den Text der Einblendung zurück; setzt ihn nach 2500 ms per `setTimeout` auf `null` (Timer beim nächsten Druck und beim Unmount löschen).
-- [ ] Neu `src/features/waiting/WaitingJumpNotice.tsx` + `.css`: rendert den Text in `.waiting-jump-notice` (`position: absolute; bottom: var(--space-3xl); left: 50%; transform: translateX(-50%)`, Hintergrund `var(--color-bg-popover)`; Rand `var(--color-border-subtle)`, Radius `var(--radius-md)`, `font-size: var(--font-size-xs)`, `pointer-events: none`). Texte in `src/features/waiting/waitingTexts.ts`.
-- [ ] `App.tsx`: `useWaitingJump(sessions, implementations, shown)` mit `shown.sessionId` = gezeigte Session (wie die an die Sidebar übergebene `activeSessionId`) und `shown.stationId` = bei offener Umsetzung die Station im Fokus (`useImplementationStore((s) => s.focused[shownImplementation.id])`, sonst `null`). `<WaitingJumpNotice text={…} />` innerhalb von `<main className="app__main">`; In `App.css` an `&__main` `position: relative;` ergänzen (fehlt heute).
-- [ ] Tooltips: `SidebarStation.tsx` und `StationTrail.tsx` hängen `WAITING_JUMP_HINT` (` · Ctrl J: nächste, die auf dich wartet`, aus `waitingTexts.ts`) an ihren `title`.
-- [ ] `docs/code-map.md`: neue Zeile „Sprung zur nächsten wartenden (`Ctrl J`)“ → `src/features/waiting/`. `docs/glossary.md`: Eintrag **Warteliste** — Sessions und Stationen, die auf dich warten, in der Reihenfolge von `Ctrl J`.
+- [x] Neu `src/features/waiting/useWaitingJump.ts`: `useWaitingJump(sessions, implementations, shown: { sessionId: string | null; stationId: string | null }): string | null` — registriert den `keydown`-Handler am `window` (Muster `Ctrl N` in `App.tsx`; Abbruch, wenn `event.target` in `.xterm` liegt), berechnet Liste und Ziel, springt (`selectSession` bzw. `useOpenStation`) und gibt den Text der Einblendung zurück; setzt ihn nach 2500 ms per `setTimeout` auf `null` (Timer beim nächsten Druck und beim Unmount löschen).
+- [x] Neu `src/features/waiting/WaitingJumpNotice.tsx` + `.css`: rendert den Text in `.waiting-jump-notice` (`position: absolute; bottom: var(--space-3xl); left: 50%; transform: translateX(-50%)`, Hintergrund `var(--color-bg-popover)`; Rand `var(--color-border-subtle)`, Radius `var(--radius-md)`, `font-size: var(--font-size-xs)`, `pointer-events: none`). Texte in `src/features/waiting/waitingTexts.ts`.
+- [x] `App.tsx`: `useWaitingJump(sessions, implementations, shown)` mit `shown.sessionId` = gezeigte Session (wie die an die Sidebar übergebene `activeSessionId`) und `shown.stationId` = bei offener Umsetzung die Station im Fokus (`useImplementationStore((s) => s.focused[shownImplementation.id])`, sonst `null`). `<WaitingJumpNotice text={…} />` innerhalb von `<main className="app__main">`; In `App.css` an `&__main` `position: relative;` ergänzen (fehlt heute).
+- [x] Tooltips: `SidebarStation.tsx` und `StationTrail.tsx` hängen `WAITING_JUMP_HINT` (` · Ctrl J: nächste, die auf dich wartet`, aus `waitingTexts.ts`) an ihren `title`.
+- [x] `docs/code-map.md`: neue Zeile „Sprung zur nächsten wartenden (`Ctrl J`)“ → `src/features/waiting/`. `docs/glossary.md`: Eintrag **Warteliste** — Sessions und Stationen, die auf dich warten, in der Reihenfolge von `Ctrl J`.
 
 ## Report-Back
+
+Status: complete. `src/features/waiting/` (`waitingQueue.ts`, `useWaitingJump.ts`, `WaitingJumpNotice.tsx`/`.css`, `waitingTexts.ts`); `App.tsx` hängt Hook und Einblendung ein, `.app__main` ist `position: relative`; Tooltips an Stationszeile und ‹ ›; Code-Map, Glossar (Warteliste) und ADR 056 nachgezogen; `pnpm check` grün. Abweichungen: bei genau einem Eintrag steht „1 von 1 wartet auf dich“ (Singular); der Rahmen der Einblendung (`role="status"`) steht immer im DOM und nur der Textkasten darin wechselt, damit Vorlesen die Änderung meldet; gehaltenes `Ctrl J` (`event.repeat`) springt nur beim ersten Druck. Unsicherste Stelle: `useWaitingJump.ts`, `preventDefault` auf `Ctrl J` — ob WebView2 den Download-Dialog tatsächlich unterdrückt und ob das Kürzel im Terminal-Fokus (`.xterm`) als Zeilenumbruch ankommt, ist erst in der echten App belegt.
