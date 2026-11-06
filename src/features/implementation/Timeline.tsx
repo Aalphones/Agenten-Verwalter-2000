@@ -152,6 +152,7 @@ export function Timeline({
     context: LaneContext,
     segments: LineSegments,
     mark: PhaseMark | null,
+    anchorId: string | undefined,
   ): ReactElement {
     const isFocused: boolean = ref.station.id === focusedId;
     return (
@@ -159,6 +160,8 @@ export function Timeline({
         key={ref.station.id}
         role="listitem"
         className={`timeline__row${laneClass(context.lane)}`}
+        data-focus-id={ref.station.id}
+        data-scroll-anchor={anchorId}
       >
         {renderThrough(context.through)}
         {renderLines(segments)}
@@ -189,7 +192,12 @@ export function Timeline({
     const focusId: string = changeFocusId(change);
     const isFocused: boolean = focusId === focusedId;
     return (
-      <div key={focusId} role="listitem" className={`timeline__row${laneClass(context.lane)}`}>
+      <div
+        key={focusId}
+        role="listitem"
+        className={`timeline__row${laneClass(context.lane)}`}
+        data-focus-id={focusId}
+      >
         {renderThrough(context.through)}
         <span className={lineClass('full', tone)} />
         <button
@@ -222,9 +230,17 @@ export function Timeline({
       .map((change: ChangeView) => renderMarker(change, tone, context));
   }
 
-  function renderPhase(phase: PhaseView, context: LaneContext): ReactElement {
+  /** `isAnchor`: Diese Phase trägt ihren Anker selbst; die erste Phase einer Welle überlässt ihn der
+   *  Wellen-Überschrift, damit die Welle beim Scrollen mit ihrem Kopf oben steht. */
+  function renderPhase(phase: PhaseView, context: LaneContext, isAnchor: boolean): ReactElement {
     const phaseRefs: StationRef[] = refs.filter((ref: StationRef) => ref.phase.id === phase.id);
-    const stationRow = (ref: StationRef, label: string, meta: string): ReactElement => {
+    const anchorId: string | undefined = isAnchor ? phase.id : undefined;
+    const stationRow = (
+      ref: StationRef,
+      label: string,
+      meta: string,
+      rowAnchorId?: string,
+    ): ReactElement => {
       const indexInPhase: number = phase.stations.findIndex(
         (station: StationView) => station.id === ref.station.id,
       );
@@ -241,6 +257,7 @@ export function Timeline({
             context,
             { above: isFirstOverall ? null : toneOf(ref.station.id), below: following },
             mark,
+            rowAnchorId,
           )}
           {markersAfter(ref.station.id, following ?? toneOf(ref.station.id), context)}
         </Fragment>
@@ -248,14 +265,23 @@ export function Timeline({
     };
     const [only] = phaseRefs;
     if (only !== undefined && phaseRefs.length === 1) {
-      return stationRow(only, `${phase.key} ${phase.title}`, stationMeta(only.station, now));
+      return stationRow(
+        only,
+        `${phase.key} ${phase.title}`,
+        stationMeta(only.station, now),
+        anchorId,
+      );
     }
     const firstId: string | undefined = phaseRefs[0]?.station.id;
     const headingTone: StationTone | null =
       firstId === undefined || firstId === firstStationId ? null : toneOf(firstId);
     return (
       <Fragment key={phase.id}>
-        <div role="listitem" className={`timeline__row timeline__phase${laneClass(context.lane)}`}>
+        <div
+          role="listitem"
+          className={`timeline__row timeline__phase${laneClass(context.lane)}`}
+          data-scroll-anchor={anchorId}
+        >
           {renderThrough(context.through)}
           {headingTone !== null && <span className={lineClass('full', headingTone)} />}
           <span className="timeline__phase-title">
@@ -312,6 +338,7 @@ export function Timeline({
         key={`wave-${group.phases[0]?.id ?? ''}`}
         role="listitem"
         className="timeline__row timeline__wave"
+        data-scroll-anchor={group.phases[0]?.id}
       >
         {headLines}
         <span className="timeline__wave-title">{waveTitle(wave, group.phases)}</span>
@@ -354,7 +381,7 @@ export function Timeline({
     const wave: number | null = group.wave;
     const [onlyPhase] = group.phases;
     if (wave === null && onlyPhase !== undefined) {
-      return renderPhase(onlyPhase, { lane: 1, through: [], isWave: false });
+      return renderPhase(onlyPhase, { lane: 1, through: [], isWave: false }, true);
     }
     return (
       <div
@@ -363,11 +390,15 @@ export function Timeline({
       >
         {renderWaveHeader(group, wave ?? 0)}
         {group.phases.map((phase: PhaseView, index: number) =>
-          renderPhase(phase, {
-            lane: laneOf(index),
-            through: throughLines(group, index),
-            isWave: true,
-          }),
+          renderPhase(
+            phase,
+            {
+              lane: laneOf(index),
+              through: throughLines(group, index),
+              isWave: true,
+            },
+            index > 0,
+          ),
         )}
         {renderMerge(group)}
       </div>

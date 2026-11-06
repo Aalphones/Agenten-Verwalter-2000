@@ -79,6 +79,19 @@ export function liveStations(implementation: ImplementationView): StationRef[] {
   );
 }
 
+/** Phase, bei der die Zeitleiste öffnet: die der ersten aktiven Station, sonst die erste nicht fertige;
+ *  `null`, wenn alles fertig ist. */
+export function openingPhase(implementation: ImplementationView): PhaseView | null {
+  const firstLive: StationRef | undefined = liveStations(implementation)[0];
+  if (firstLive !== undefined) {
+    return firstLive.phase;
+  }
+  if (implementation.stationsDone === implementation.stationsTotal) {
+    return null;
+  }
+  return implementation.phases[implementation.currentPhase - 1] ?? null;
+}
+
 /** Gruppen wie im Core (`schedule::groups`): gleiche Welle in Folge = eine Gruppe. */
 export function phaseGroups(phases: readonly PhaseView[]): PhaseGroup[] {
   const groups: PhaseGroup[] = [];

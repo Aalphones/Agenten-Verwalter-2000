@@ -18,19 +18,21 @@
 
 ## Checkliste
 
-- [ ] `Timeline.tsx`:
+- [x] `Timeline.tsx`:
   - Phasenkopf-Zeile (`timeline__phase`) und die Zeile einer Phase mit nur einer Station (Zweig `only !== undefined && phaseRefs.length === 1`) bekommen `data-scroll-anchor={phase.id}` — **außer** die Phase ist die erste ihrer Welle (`context.isWave` und Index 0 in `group.phases`); dann trägt die Wellen-Überschrift aus `renderWaveHeader` `data-scroll-anchor={group.phases[0].id}`. Dafür `renderPhase` einen Parameter `isAnchor: boolean` geben: `renderGroup` übergibt `true` für Phasen ohne Welle und für Wellen-Phasen mit Index > 0, `false` für Index 0 einer Welle. Ergebnis: je Phase genau ein Element mit ihrem Anker.
   - `renderStation` setzt am Zeilen-Div `data-focus-id={ref.station.id}`, `renderMarker` `data-focus-id={focusId}`.
-- [ ] `implementationOrder.ts`: neue Funktion
+- [x] `implementationOrder.ts`: neue Funktion
   ```ts
   /** Phase, bei der die Zeitleiste öffnet: die der ersten aktiven Station, sonst die erste nicht fertige; `null`, wenn alles fertig ist. */
   export function openingPhase(implementation: ImplementationView): PhaseView | null
   ```
   Körper: `liveStations(implementation)[0]?.phase` → sonst `implementation.stationsDone === implementation.stationsTotal ? null : (implementation.phases[implementation.currentPhase - 1] ?? null)`.
-- [ ] `ImplementationView.tsx`:
+- [x] `ImplementationView.tsx`:
   - `const timelineRef = useRef<HTMLDivElement>(null)` an `<div className="implementation-view__timeline">`.
   - `useLayoutEffect`, Abhängigkeiten `[implementationId, isFlow]` (verkürzt, mit Kommentar „Nur das Öffnen scrollt, nicht jede neue Fassung der Umsetzung“ und `// eslint-disable-next-line react-hooks/exhaustive-deps` wie in `Sidebar.tsx`): wenn `!isFlow` → nichts. `const phase = openingPhase(implementation)`; `null` → nichts. `const container = timelineRef.current`; `const anchor = container?.querySelector<HTMLElement>(`[data-scroll-anchor="${CSS.escape(phase.id)}"]`)`; fehlt einer → nichts. Sonst `container.scrollTop += anchor.getBoundingClientRect().top - container.getBoundingClientRect().top`. (Im schmalen Layout hat das Div `overflow-y: visible`; `scrollTop` bleibt dort wirkungslos — gewollt, AK 5.)
   - In `handleKeyDown` nach `setFocused(implementationId, target)`: `requestAnimationFrame(() => { timelineRef.current?.querySelector<HTMLElement>(`[data-focus-id="${CSS.escape(target)}"]`)?.scrollIntoView({ block: 'nearest' }); })`.
-- [ ] Keine Doku-Änderung außer dem Kommentar an `openingPhase`; die Code-Map nennt die Dateien schon.
+- [x] Keine Doku-Änderung außer dem Kommentar an `openingPhase`; die Code-Map nennt die Dateien schon.
 
 ## Report-Back
+
+Status: complete. `openingPhase` in `implementationOrder.ts`; `Timeline` setzt `data-scroll-anchor` (je Phase genau ein Element, bei der ersten Phase einer Welle die Wellen-Überschrift) und `data-focus-id` an Stations- und Markenzeilen; `ImplementationView` scrollt per `useLayoutEffect` (`[implementationId, isFlow]`) beim Öffnen und holt per Pfeiltaste die Zeile mit `scrollIntoView({ block: 'nearest' })` ins Bild; `pnpm check` grün. Keine Abweichung. Unsicherste Stelle: `ImplementationView.tsx`, `useLayoutEffect` — ob die Zeitleiste beim Öffnen schon ihre endgültige Höhe hat (Zeilen kommen sofort mit den Props, aber Schrift und Layout sind erst in der echten App belegt); Beleg dort.

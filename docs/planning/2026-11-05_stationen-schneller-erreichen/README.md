@@ -8,7 +8,7 @@ Weniger Klicks bis in den Chat einer Station: aktive Stationen stehen als Zeilen
 |---|---|---|---|
 | 1 | [Gemeinsame Bausteine + Stationen in der Sidebar](phase-1-sidebar-stationen.md), ADR 056 | standard | complete |
 | 2 | [Rückweg-Leiste im Chat einer Station](phase-2-rueckweg-leiste.md) | standard | complete |
-| 3 | [Zeitleiste öffnet bei der ersten aktiven Phase](phase-3-zeitleiste-scrollen.md) | standard | pending |
+| 3 | [Zeitleiste öffnet bei der ersten aktiven Phase](phase-3-zeitleiste-scrollen.md) | standard | complete |
 | 4 | [`Ctrl J`: nächste, die auf dich wartet](phase-4-sprung-ctrl-j.md) | standard | pending |
 
 Reihenfolge fest: 2 und 4 bauen auf den Bausteinen aus Phase 1 auf, 3 auf `liveStations` aus Phase 1.
