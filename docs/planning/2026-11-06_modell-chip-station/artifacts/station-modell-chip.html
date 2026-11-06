@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stationskarte mit Modell-Chip</title>
+<style>
+/* Tokens 1:1 aus src/styles/theme.css des Verwalters */
+:root {
+  --bg-base: #f7f7f7; --bg-surface: #ffffff; --bg-popover: #ffffff; --bg-hover: #f0f0f0;
+  --border-subtle: #e5e5e5; --border: #cecece;
+  --fg-primary: #3c3c3c; --fg-secondary: #555555; --fg-muted: #6e6e6e;
+  --accent: #c4572f; --cold: #3d6fa8; --cold-subtle: color-mix(in srgb, #3d6fa8 10%, transparent);
+  --ok: #2f7d46; --ok-subtle: color-mix(in srgb, #2f7d46 14%, transparent);
+  --warn: #9a5b00; --warn-subtle: color-mix(in srgb, #c98a1b 18%, transparent);
+  --shadow-popover: 0 10px 30px rgb(0 0 0 / 0.14);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-base: #1f1f1f; --bg-surface: #252526; --bg-popover: #252526; --bg-hover: #2e2e30;
+    --border-subtle: #2b2b2b; --border: #3c3c3c;
+    --fg-primary: #d4d4d4; --fg-secondary: #b0b0b0; --fg-muted: #8f8f8f;
+    --accent: #e0825c; --cold: #8ab8ea; --cold-subtle: color-mix(in srgb, #8ab8ea 12%, transparent);
+    --ok: #8fd6a1; --ok-subtle: color-mix(in srgb, #8fd6a1 14%, transparent);
+    --warn: #f2c27a; --warn-subtle: color-mix(in srgb, #f2c27a 16%, transparent);
+    --shadow-popover: 0 10px 30px rgb(0 0 0 / 0.45);
+  }
+}
+:root[data-theme="dark"] {
+  --bg-base: #1f1f1f; --bg-surface: #252526; --bg-popover: #252526; --bg-hover: #2e2e30;
+  --border-subtle: #2b2b2b; --border: #3c3c3c;
+  --fg-primary: #d4d4d4; --fg-secondary: #b0b0b0; --fg-muted: #8f8f8f;
+  --accent: #e0825c; --cold: #8ab8ea; --cold-subtle: color-mix(in srgb, #8ab8ea 12%, transparent);
+  --ok: #8fd6a1; --ok-subtle: color-mix(in srgb, #8fd6a1 14%, transparent);
+  --warn: #f2c27a; --warn-subtle: color-mix(in srgb, #f2c27a 16%, transparent);
+  --shadow-popover: 0 10px 30px rgb(0 0 0 / 0.45);
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px 16px 48px; background: var(--bg-base); color: var(--fg-primary);
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.lead { color: var(--fg-muted); margin: 0 0 20px; font-size: 14px; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); margin: 28px 0 8px; }
+.case { margin-bottom: 20px; }
+.case > p { margin: 0 0 6px; font-size: 12px; color: var(--fg-muted); }
+
+/* Karte */
+.card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-left: 4px solid var(--border);
+  border-radius: 8px; padding: 14px 16px; }
+.card--run { border-left-color: var(--accent); }
+.card--done { border-left-color: var(--ok); }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.title { font-weight: 650; font-size: 14px; }
+.right { display: flex; align-items: center; gap: 10px; position: relative; }
+.num { color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.phase, .state { margin: 2px 0 0; }
+.phase { color: var(--fg-muted); }
+.staterow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hint { font-size: 12px; color: var(--warn); }
+.actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn { font: inherit; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--fg-primary); }
+.btn--p { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Chip */
+.chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 10px; border-radius: 999px; border: 1px solid transparent;
+  background: var(--bg-hover); color: var(--fg-primary); font: inherit; font-weight: 600; }
+button.chip { cursor: pointer; }
+button.chip:hover, button.chip[aria-expanded="true"] { border-color: var(--accent); }
+button.chip::after { content: "▾"; font-size: 10px; opacity: .7; }
+.chip small { font-weight: 400; opacity: .85; }
+.chip--plan { background: transparent; color: var(--fg-muted); border: 1px dashed var(--border); }
+.chip--ok { background: var(--ok-subtle); color: var(--ok); }
+.chip--warn { background: var(--warn-subtle); color: var(--warn); }
+
+/* Popover wie Popover.css */
+.popover { position: absolute; z-index: 10; top: calc(100% + 8px); right: 0; width: 340px; max-width: calc(100vw - 32px);
+  display: flex; flex-direction: column; gap: 1px; padding: 4px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-popover); box-shadow: var(--shadow-popover); color: var(--fg-primary); }
+
+/* EffortDots.css */
+.effort-dots { display: flex; align-items: center; gap: 12px; padding: 6px 10px; }
+.effort-dots__title { flex-grow: 1; }
+.effort-dots__value { color: var(--fg-muted); }
+.effort-dots__group { display: flex; align-items: center; padding: 3px 6px; border-radius: 999px; background: var(--bg-hover); }
+.effort-dots__button { display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.effort-dots__button:focus-visible, .model-menu__item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.effort-dots__dot { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--fg-muted); }
+.effort-dots__dot--max { background: var(--accent); }
+.effort-dots__dot--selected { width: 12px; height: 12px; background: var(--fg-primary); }
+
+/* ModelMenu.css */
+.model-menu__head, .model-menu__foot { font-size: 12px; color: var(--fg-muted); }
+.model-menu__head { padding: 6px 10px 4px; }
+.model-menu__sep { margin: 3px 0; border-top: 1px solid var(--border-subtle); }
+.model-menu__foot { margin-top: 3px; padding: 7px 10px 5px; border-top: 1px solid var(--border-subtle); }
+.model-menu__item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--fg-primary); font: inherit; text-align: left; cursor: pointer; }
+.model-menu__item:hover, .model-menu__item--checked { background: var(--bg-hover); }
+.model-menu__text { display: flex; flex-grow: 1; flex-direction: column; gap: 1px; }
+.model-menu__name { font-weight: 500; }
+.model-menu__hint { font-size: 12px; color: var(--fg-muted); }
+.model-menu__warning { display: flex; align-items: flex-start; gap: 8px; margin: 6px; padding: 8px 10px; border-radius: 6px;
+  background: var(--cold-subtle); font-size: 12px; color: var(--fg-secondary); }
+.model-menu__warning strong { font-weight: 600; color: var(--fg-primary); }
+.model-menu__warning-icon { flex-shrink: 0; color: var(--cold); }
+.model-menu__reset { font: inherit; font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 10px 6px; text-align: left; }
+
+ul { padding-left: 18px; color: var(--fg-muted); }
+li { margin: 3px 0; }
+code { background: var(--bg-hover); padding: 0 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Stationskarte mit Modell-Chip</h1>
+  <p class="lead">Entwurf zum Anklicken. Das Menü nutzt Denkaufwand-Punkte und Modellliste aus dem Chat. Auswahl gilt sofort; Esc oder Klick daneben schließt.</p>
+
+  <div id="cards"></div>
+
+  <h2>Was ein Klick bewirkt</h2>
+  <ul>
+    <li><b>Bereit oder Countdown:</b> ändert den Plan der Station (neuer Befehl nötig). Der Start nutzt die neuen Werte.</li>
+    <li><b>Läuft:</b> wirkt sofort auf die Session (vorhandene Befehle <code>session_set_model</code> / <code>session_set_effort</code>). Der Plan bleibt stehen, Abweichung wird gelb.</li>
+    <li><b>Fertig:</b> Chip nicht klickbar, zeigt nur, womit die Station lief.</li>
+    <li>Bei laufender Station warnt das Menü wie im Chat vor dem Prompt-Cache.</li>
+  </ul>
+</main>
+
+<script>
+(function () {
+  // Aus src/lib/labels.ts
+  var MODELS = [
+    { id: 'fable', name: 'Fable 5.1', hint: 'Am stärksten, für Planung und Architektur' },
+    { id: 'opus', name: 'Opus 5.5', hint: 'Gründlich, für schwierige Umsetzung' },
+    { id: 'opusplan', name: 'Opus Plan', hint: 'Opus plant, Sonnet setzt um' },
+    { id: 'sonnet', name: 'Sonnet 5.5', hint: 'Schnell und ausgewogen' },
+    { id: 'haiku', name: 'Haiku 5.5', hint: 'Am schnellsten, für Kleinkram' }
+  ];
+  var EFFORTS = [
+    { id: 'low', label: 'Niedrig' }, { id: 'medium', label: 'Mittel' }, { id: 'high', label: 'Hoch' },
+    { id: 'xhigh', label: 'Sehr hoch' }, { id: 'max', label: 'Max' }
+  ];
+  function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
+
+  var cards = [
+    { label: '1 · Bereit: Klick ändert den Plan', state: 'ready', title: 'Phase 2 · Umsetzung', phase: 'Anzeige im Frontend', text: 'Startet in 0:42', num: '',
+      plan: { model: 'sonnet', effort: 'high' }, actual: null },
+    { label: '2 · Läuft wie geplant: Klick ändert die laufende Session', state: 'run', title: 'Phase 2 · Umsetzung', phase: 'Anzeige im Frontend', text: 'Läuft seit 12:08', num: '#7',
+      plan: { model: 'sonnet', effort: 'high' }, actual: { model: 'sonnet', effort: 'high' } },
+    { label: '3 · Läuft anders als geplant: Warnfarbe, Zurücksetzen möglich', state: 'run', title: 'Phase 3 · Review', phase: 'Prüfung', text: 'Läuft seit 3:20', num: '#9',
+      plan: { model: 'sonnet', effort: 'high' }, actual: { model: 'opus', effort: 'xhigh' } },
+    { label: '4 · Fertig: nicht klickbar', state: 'done', title: 'Phase 1 · Umsetzung', phase: 'Grundlage', text: 'Fertig nach 21:47', num: '#5',
+      plan: { model: 'sonnet', effort: 'high' }, actual: { model: 'sonnet', effort: 'high' } }
+  ];
+
+  var root = document.getElementById('cards');
+  var open = -1;
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function label(v) { return byId(MODELS, v.model).name + ' · ' + byId(EFFORTS, v.effort).label.toLowerCase(); }
+  function differs(c) { return c.actual && (c.actual.model !== c.plan.model || c.actual.effort !== c.plan.effort); }
+  function target(c) { return c.state === 'run' ? c.actual : c.plan; }
+
+  function checkMark() {
+    var s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('width', '14'); s.setAttribute('height', '14'); s.setAttribute('viewBox', '0 0 12 12');
+    var p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', 'M2.4 6.3 4.9 8.7 9.6 3.4'); p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
+    p.setAttribute('stroke-width', '1.6'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round');
+    s.appendChild(p);
+    return s;
+  }
+
+  function effortDots(t) {
+    var box = el('div', 'effort-dots');
+    var title = el('span', 'effort-dots__title', 'Denkaufwand ');
+    title.appendChild(el('span', 'effort-dots__value', '(' + byId(EFFORTS, t.effort).label + ')'));
+    box.appendChild(title);
+    var group = el('div', 'effort-dots__group');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Denkaufwand');
+    EFFORTS.forEach(function (o) {
+      var b = el('button', 'effort-dots__button');
+      b.type = 'button';
+      b.setAttribute('aria-label', 'Denkaufwand ' + o.label);
+      b.setAttribute('aria-pressed', String(o.id === t.effort));
+      b.addEventListener('click', function () { t.effort = o.id; render(); });
+      var cls = 'effort-dots__dot' + (o.id === t.effort ? ' effort-dots__dot--selected' : '') + (o.id === 'max' ? ' effort-dots__dot--max' : '');
+      b.appendChild(el('span', cls));
+      group.appendChild(b);
+    });
+    box.appendChild(group);
+    return box;
+  }
+
+  function popover(c) {
+    var m = el('div', 'popover');
+    m.setAttribute('role', 'dialog');
+    m.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    var t = target(c);
+    m.appendChild(effortDots(t));
+    m.appendChild(el('div', 'model-menu__sep'));
+    m.appendChild(el('div', 'model-menu__head', 'Modell für diese Session'));
+    MODELS.forEach(function (o) {
+      var checked = o.id === t.model;
+      var b = el('button', 'model-menu__item' + (checked ? ' model-menu__item--checked' : ''));
+      b.type = 'button';
+      b.setAttribute('role', 'menuitemradio');
+      b.setAttribute('aria-checked', String(checked));
+      var txt = el('span', 'model-menu__text');
+      txt.appendChild(el('span', 'model-menu__name', o.name));
+      txt.appendChild(el('span', 'model-menu__hint', o.hint));
+      b.appendChild(txt);
+      if (checked) b.appendChild(checkMark());
+      b.addEventListener('click', function () { t.model = o.id; render(); });
+      m.appendChild(b);
+    });
+    if (c.state === 'run') {
+      var w = el('div', 'model-menu__warning');
+      w.setAttribute('role', 'note');
+      w.appendChild(el('span', 'model-menu__warning-icon', '❄'));
+      var wt = el('span');
+      wt.appendChild(el('strong', null, 'Prompt-Cache kühlt aus.'));
+      wt.appendChild(document.createTextNode(' Ein Wechsel mitten im Lauf macht das nächste Senden teurer.'));
+      w.appendChild(wt);
+      m.appendChild(w);
+      if (differs(c)) {
+        var r = el('button', 'model-menu__reset', 'Auf Plan zurücksetzen (' + label(c.plan) + ')');
+        r.type = 'button';
+        r.addEventListener('click', function () { c.actual = { model: c.plan.model, effort: c.plan.effort }; render(); });
+        m.appendChild(r);
+      }
+      m.appendChild(el('div', 'model-menu__foot', 'Wirkt sofort auf die laufende Session.'));
+    } else {
+      m.appendChild(el('div', 'model-menu__foot', 'Ändert den Plan dieser Station. Der Start nutzt diese Werte.'));
+    }
+    return m;
+  }
+
+  function chip(c, i) {
+    var clickable = c.state !== 'done';
+    var cls = c.state === 'ready' ? 'chip chip--plan' : (differs(c) ? 'chip chip--warn' : 'chip chip--ok');
+    var node = el(clickable ? 'button' : 'span', cls);
+    node.appendChild(document.createTextNode(label(c.state === 'ready' ? c.plan : c.actual)));
+    if (c.state === 'ready') node.appendChild(el('small', null, '(Plan)'));
+    if (clickable) {
+      node.type = 'button';
+      node.setAttribute('aria-haspopup', 'true');
+      node.setAttribute('aria-expanded', String(open === i));
+      node.addEventListener('click', function (ev) { ev.stopPropagation(); open = open === i ? -1 : i; render(); });
+    }
+    return node;
+  }
+
+  function render() {
+    root.textContent = '';
+    cards.forEach(function (c, i) {
+      var wrap = el('div', 'case');
+      wrap.appendChild(el('p', null, c.label));
+      var card = el('article', 'card card--' + c.state);
+      var head = el('div', 'head');
+      head.appendChild(el('span', 'title', c.title));
+      var right = el('div', 'right');
+      right.appendChild(chip(c, i));
+      right.appendChild(el('span', 'num', c.num));
+      if (open === i) right.appendChild(popover(c));
+      head.appendChild(right);
+      card.appendChild(head);
+      card.appendChild(el('p', 'phase', c.phase));
+      var srow = el('div', 'staterow');
+      srow.appendChild(el('p', 'state', c.text));
+      if (differs(c)) srow.appendChild(el('span', 'hint', 'geplant: ' + label(c.plan)));
+      card.appendChild(srow);
+      var act = el('div', 'actions');
+      act.appendChild(el('button', 'btn btn--p', c.state === 'ready' ? 'Jetzt starten' : 'Chat öffnen'));
+      card.appendChild(act);
+      wrap.appendChild(card);
+      root.appendChild(wrap);
+    });
+  }
+
+  document.addEventListener('click', function () { if (open !== -1) { open = -1; render(); } });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && open !== -1) { open = -1; render(); } });
+  render();
+})();
+</script>
+</body>
+</html>
