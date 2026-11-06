@@ -11,6 +11,7 @@ import {
   isAnswered,
   isComplete,
   needsSubmit,
+  nextActive,
   questionHeader,
   setActive,
   toggleCustom,
@@ -176,8 +177,16 @@ export function QuestionBlock({
             onDraft(editCustom(entry, draft, questionIndex, text));
           },
           onEnter: (): void => {
-            if (!isSending && isComplete(entry, draft)) {
+            if (isSending) {
+              return;
+            }
+            if (isComplete(entry, draft)) {
               onSubmit(draftAnswer(draft));
+              return;
+            }
+            // Eigene Antwort bestätigt: weiter zur nächsten offenen Frage.
+            if (isAnswered(draft, questionIndex)) {
+              onDraft(setActive(draft, nextActive(entry, draft, questionIndex)));
             }
           },
         }}

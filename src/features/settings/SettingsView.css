@@ -115,7 +115,6 @@
     color: var(--color-fg-muted);
   }
 
-
   &__segment {
     display: flex;
     gap: var(--space-2xs);

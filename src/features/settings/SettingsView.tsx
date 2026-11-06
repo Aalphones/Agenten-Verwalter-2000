@@ -157,7 +157,9 @@ export function SettingsView({
       return;
     }
     const top: number =
-      block.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+      block.getBoundingClientRect().top -
+      container.getBoundingClientRect().top +
+      container.scrollTop;
     // Während des Gleitens soll die Hervorhebung nicht über die Zwischenkategorien flackern.
     isScrollingToRef.current = true;
     window.clearTimeout(scrollLockRef.current);

@@ -22,7 +22,7 @@ export interface QuestionExtras {
   onEditNote: (name: string, text: string) => void;
   onToggleCustom: () => void;
   onEditCustom: (text: string) => void;
-  /** Enter in einem Feld: sendet, sobald jede Frage beantwortet ist. */
+  /** Enter in einem Feld: sendet, sobald jede Frage beantwortet ist, sonst weiter zur nächsten offenen Frage. */
   onEnter: () => void;
 }
 
