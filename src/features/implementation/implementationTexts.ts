@@ -59,7 +59,8 @@ export const NO_PHASES = 'Diese Umsetzung hat noch keine Phasen.';
 export const PLAN_PROPOSAL_TITLE = 'Plan ändern?';
 export const PLAN_CHANGED_TITLE = 'Plan geändert';
 export const APPLY_CHANGE_LABEL = 'Übernehmen';
-export const APPLY_CHANGE_TITLE = 'Ersetzt die kommenden Phasen durch den Vorschlag';
+export const APPLY_CHANGE_TITLE =
+  'Ersetzt die kommenden Phasen und die offenen Stationen begonnener Phasen durch den Vorschlag';
 export const DISCARD_CHANGE_LABEL = 'Verwerfen';
 export const DISCARD_CHANGE_TITLE = 'Lässt die kommenden Phasen, wie sie sind';
 export const SHOW_PENDING_LABEL = 'Vorschlag ansehen';

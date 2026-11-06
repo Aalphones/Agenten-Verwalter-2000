@@ -101,6 +101,8 @@ export function PlanChangeCard({
         <dd>{keysText(summary.moved)}</dd>
         <dt>Entfallen</dt>
         <dd>{keysText(summary.removed)}</dd>
+        <dt>Geändert</dt>
+        <dd>{keysText(summary.changed)}</dd>
       </dl>
       <p className="station-card__state">
         Stationen {String(stationsBefore)} → {String(stationsAfter)}

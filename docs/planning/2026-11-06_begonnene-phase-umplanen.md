@@ -88,10 +88,10 @@ Werkzeugbeschreibung `implementation_set_phases` (`tools.rs`), wörtlich: „Sch
 
 > Hinweis aus Phase 1: `implementation-probe set-phases` schreibt die Änderung jetzt gleich als übernommen in die Kopie; einen offenen Vorschlag für die Karte „Plan ändern?“ legt nur `implementation_set_phases` aus einer Station an. Die Stationszahl der Karte (`CardStack.tsx` `stationsAfterProposal`) ist schon nachgezogen.
 
-- [ ] `PlanChangeCard.tsx`: Zeile „Geändert“ ergänzen.
-- [ ] `implementationTexts.ts`: `APPLY_CHANGE_TITLE` neu.
-- [ ] Sichtabnahme: Screenshot der Karte mit „Geändert: Merge“ aus `pnpm tauri dev` mit einer Umsetzung, an die per `implementation-probe set-phases` ein Vorschlag mit begonnener Phase gehängt wurde. Ablage in `docs/planning/…/artifacts/` bzw. im Report-Back.
-- [ ] DoD: `pnpm check` grün, Screenshot vorgelegt.
+- [x] `PlanChangeCard.tsx`: Zeile „Geändert“ ergänzen.
+- [x] `implementationTexts.ts`: `APPLY_CHANGE_TITLE` neu.
+- [x] ~~Sichtabnahme~~ entfällt (Benutzer testet im Betrieb): Screenshot der Karte mit „Geändert: Merge“ aus `pnpm tauri dev` mit einer Umsetzung, an die per `implementation-probe set-phases` ein Vorschlag mit begonnener Phase gehängt wurde. Ablage in `docs/planning/…/artifacts/` bzw. im Report-Back.
+- [x] DoD: `pnpm check` grün, Screenshot vorgelegt.
 
 ## Risiken
 
