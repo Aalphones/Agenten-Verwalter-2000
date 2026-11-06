@@ -50,10 +50,29 @@ export function useOpenStation(): (implementationId: string, station: StationVie
 
 ## Summary
 
+Der Weg in den Chat einer Station ist kürzer: aktive Stationen stehen als Zeilen unter ihrer Umsetzung in der Sidebar (zugeklappt nur die, die auf dich warten), im Chat einer Station führt die Rückweg-Leiste zur Umsetzung und mit ‹ › zur vorigen bzw. nächsten aktiven Station, die Zeitleiste öffnet bei der ersten aktiven Phase und die Pfeiltasten holen den Fokus ins Bild, `Ctrl J` springt über alle Vorhaben zur Session oder Station, die am längsten auf dich wartet. ADR 056 hält die Änderung an ADR 048 fest. Keine Migration, kein Core.
+
 ## Files touched
+
+- `src/app/` (`Sidebar.tsx`, `buildSidebarRows.ts`, `SidebarStation.tsx`/`.css`, `App.tsx`, `App.css`)
+- `src/features/implementation/` (`implementationOrder.ts`, `implementationTexts.ts`, `useOpenStation.ts`, `StationTrail.tsx`/`.css`, `Timeline.tsx`, `ImplementationView.tsx`)
+- `src/features/waiting/` (`waitingQueue.ts`, `useWaitingJump.ts`, `WaitingJumpNotice.tsx`/`.css`, `waitingTexts.ts`)
+- `docs/decisions/056-stationen-in-der-sidebar.md`, `docs/decisions/048-umsetzung.md` (Verweis), `docs/code-map.md`, `docs/glossary.md`
 
 ## Commits
 
+- `8edef2d` refactor(implementation): stationLabel in implementationTexts verschieben
+- `9f286c6` feat(sidebar): aktive Stationen als Zeilen unter der Umsetzung
+- `8aa5270` feat(implementation): Rückweg-Leiste im Chat einer Station
+- `864939a` feat(implementation): Zeitleiste öffnet bei der ersten aktiven Phase
+- `32905d8` feat(implementation): Ctrl J springt zur nächsten wartenden Session oder Station
+
 ## Deviations from plan
 
+- Phase 1: `.sidebar-station--nested` trägt `margin-bottom: -1px; padding-bottom: 1px`, damit die Baumlinie zwischen zwei verschachtelten Zeilen nicht in 1-px-Stücke reißt.
+- Phase 2: ‹ liest die letzte Vorgängerin per `filter().pop()`, weil `findLast` in `lib: ES2020` fehlt; der Rückweg-Knopf hat `max-width: 40%` mit Ellipse.
+- Phase 4: bei genau einem Eintrag steht „1 von 1 wartet auf dich“ (Singular); der Rahmen der Einblendung steht immer im DOM (`role="status"`), nur der Textkasten wechselt; gehaltenes `Ctrl J` springt nur beim ersten Druck.
+
 ## Follow-ups
+
+- Laufzeitbelege in der echten App stehen aus: Markierung der Umsetzungs-Zeile nach „Station fertig“ (`Sidebar.tsx`, `renderImplementation`); `StationTrail.css` (`__back` gegen `__phase` bei schmalem Fenster); `useLayoutEffect` der Zeitleiste (endgültige Höhe beim Öffnen); `Ctrl J` im WebView2 (kein Download-Dialog, im Terminal weiter Zeilenumbruch).
