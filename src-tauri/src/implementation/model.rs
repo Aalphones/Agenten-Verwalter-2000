@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::agents::event::{Attachment, ModelId, Question, QuestionKind};
+use crate::agents::event::{Attachment, Effort, ModelId, Question, QuestionKind};
 use crate::db::enum_from_text;
 use crate::sessions::model::SessionSummary;
 
@@ -81,6 +81,7 @@ pub struct StationView {
     pub position: u32,
     pub stage: String,
     pub model: Option<ModelId>,
+    pub effort: Option<Effort>,
     pub by_user: bool,
     pub skill: Option<String>,
     pub brief: String,
@@ -212,6 +213,10 @@ pub struct StationInput {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional, type = "'fable' | 'opusplan' | 'opus' | 'sonnet' | 'haiku'")]
     pub model: Option<String>,
+    /// Wie `model` als Text, damit `validate` ein unbekanntes Wort mit seinem Feld meldet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "'low' | 'medium' | 'high' | 'xhigh' | 'max'")]
+    pub effort: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional, type = "'agent' | 'you'")]
     pub by: Option<String>,
@@ -232,6 +237,13 @@ impl StationInput {
         self.model
             .as_deref()
             .and_then(|name: &str| enum_from_text::<ModelId>(name).ok())
+    }
+
+    /// Nur nach `validate` aufrufen: dann ist ein gesetzter Name bekannt.
+    pub fn effort_id(&self) -> Option<Effort> {
+        self.effort
+            .as_deref()
+            .and_then(|name: &str| enum_from_text::<Effort>(name).ok())
     }
 
     pub fn is_by_user(&self) -> bool {
@@ -300,6 +312,13 @@ fn validate_station(field: &str, station: &StationInput) -> Result<(), String> {
     {
         return Err(format!(
             "{field}.model: unbekanntes Modell „{model}“ (fable, opusplan, opus, sonnet, haiku)"
+        ));
+    }
+    if let Some(effort) = &station.effort
+        && enum_from_text::<Effort>(effort).is_err()
+    {
+        return Err(format!(
+            "{field}.effort: unbekannter Denkaufwand „{effort}“ (low, medium, high, xhigh, max)"
         ));
     }
     if let Some(by) = &station.by

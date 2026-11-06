@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::agents::event::ModelId;
+use crate::agents::event::{Effort, ModelId};
 use crate::db::implementations::{
     ChangeRow, ImplementationRow, PhaseRow, StationRow, StoredImplementation,
 };
@@ -246,9 +246,9 @@ fn fix_rounds(phase: &PhaseView) -> usize {
         .count()
 }
 
-/// Fix-Runde (Modell und Skill der letzten Umsetzungs-Station der Phase, sonst der letzten
-/// Abschluss-Station, sonst `implement` auf Sonnet) und danach noch einmal die Stufe der meldenden
-/// Station.
+/// Fix-Runde (Modell, Aufwand und Skill der letzten Umsetzungs-Station der Phase, sonst der
+/// letzten Abschluss-Station, sonst `implement` auf Sonnet) und danach noch einmal die Stufe der
+/// meldenden Station.
 fn fix_stations(phase: &PhaseView, reporting: &StationView) -> Vec<StationRow> {
     let last_of = |stage: &str| {
         phase
@@ -257,39 +257,46 @@ fn fix_stations(phase: &PhaseView, reporting: &StationView) -> Vec<StationRow> {
             .rev()
             .find(|station: &&StationView| station.stage == stage)
     };
-    let (fix_model, fix_skill): (Option<ModelId>, Option<String>) =
+    let (fix_model, fix_effort, fix_skill): (Option<ModelId>, Option<Effort>, Option<String>) =
         match last_of(BUILD_STAGE).or_else(|| last_of(CLOSING_STAGE)) {
-            Some(source) => (source.model, source.skill.clone()),
+            Some(source) => (source.model, source.effort, source.skill.clone()),
             None => (
                 Some(FALLBACK_FIX_MODEL),
+                None,
                 Some(FALLBACK_FIX_SKILL.to_owned()),
             ),
         };
-    let row =
-        |stage: String, model: Option<ModelId>, skill: Option<String>, brief: String| StationRow {
-            id: uuid::Uuid::new_v4().to_string(),
-            phase_id: phase.id.clone(),
-            position: 0,
-            stage,
-            model,
-            by_user: false,
-            skill,
-            brief,
-            session_id: None,
-            started_at: None,
-            completed_at: None,
-            result: None,
-        };
+    let row = |stage: String,
+               model: Option<ModelId>,
+               effort: Option<Effort>,
+               skill: Option<String>,
+               brief: String| StationRow {
+        id: uuid::Uuid::new_v4().to_string(),
+        phase_id: phase.id.clone(),
+        position: 0,
+        stage,
+        model,
+        effort,
+        by_user: false,
+        skill,
+        brief,
+        session_id: None,
+        started_at: None,
+        completed_at: None,
+        result: None,
+    };
     vec![
         row(
             FIX_STAGE.to_owned(),
             fix_model,
+            fix_effort,
             fix_skill,
             FIX_BRIEF.to_owned(),
         ),
         row(
             reporting.stage.clone(),
             reporting.model,
+            reporting.effort,
             reporting.skill.clone(),
             reporting.brief.clone(),
         ),
@@ -421,6 +428,7 @@ fn station_view(station: &StationRow, live: &HashMap<String, SessionLive>) -> St
         position: station.position,
         stage: station.stage.clone(),
         model: station.model,
+        effort: station.effort,
         by_user: station.by_user,
         skill: station.skill.clone(),
         brief: station.brief.clone(),
@@ -553,6 +561,7 @@ pub fn phase_rows(
                 position,
                 stage: station.stage.trim().to_owned(),
                 model: station.model_id(),
+                effort: station.effort_id(),
                 by_user: station.is_by_user(),
                 skill: station.skill_name(),
                 brief: station.brief.clone().unwrap_or_default().trim().to_owned(),

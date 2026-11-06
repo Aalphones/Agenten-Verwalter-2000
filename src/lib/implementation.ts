@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
+import type { Effort } from '@/lib/bindings/Effort';
+import type { ModelId } from '@/lib/bindings/ModelId';
 import type { ImplementationChangedEvent } from '@/lib/bindings/ImplementationChangedEvent';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { InquiryCreated } from '@/lib/bindings/InquiryCreated';
@@ -76,6 +78,17 @@ export async function completeStationByUser(
   result: string,
 ): Promise<void> {
   await invoke('implementation_complete_station', { id, stationId, result });
+}
+
+/** Ändert Modell und Denkaufwand einer Station, die noch keine Session hat; `null` heißt Standard.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (Station hat begonnen oder ist des Benutzers), `database` */
+export async function setStationPlan(
+  id: string,
+  stationId: string,
+  model: ModelId | null,
+  effort: Effort | null,
+): Promise<void> {
+  await invoke('implementation_set_station_plan', { id, stationId, model, effort });
 }
 
 /** „Übernehmen“ (`accept`) oder „Verwerfen“ des Vorschlags „Plan ändern?“.

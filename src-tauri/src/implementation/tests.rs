@@ -9,6 +9,7 @@ fn station(stage: &str, model: ModelId, skill: &str) -> StationView {
         position: 0,
         stage: stage.to_owned(),
         model: Some(model),
+        effort: None,
         by_user: false,
         skill: Some(skill.to_owned()),
         brief: format!("Auftrag der Stufe {stage}"),

@@ -19,27 +19,29 @@
 
 ## Checkliste
 
-- [ ] `src-tauri/src/db/migrations/018_station_effort.sql`: `ALTER TABLE implementation_stations ADD COLUMN effort TEXT;`. In `migrations.rs` die Liste von `[&str; 17]` auf `[&str; 18]` verlängern und `include_str!("migrations/018_station_effort.sql"),` hinter die 017-Zeile setzen.
-- [ ] `db/implementations.rs`:
+- [x] `src-tauri/src/db/migrations/018_station_effort.sql`: `ALTER TABLE implementation_stations ADD COLUMN effort TEXT;`. In `migrations.rs` die Liste von `[&str; 17]` auf `[&str; 18]` verlängern und `include_str!("migrations/018_station_effort.sql"),` hinter die 017-Zeile setzen.
+- [x] `db/implementations.rs`:
   - `StationRow` bekommt `pub effort: Option<Effort>` (Import von `Effort` wie der von `ModelId`).
   - `STATION_COLUMNS` um `s.effort` am Ende erweitern (Index 12); `StoredStation::read` liest ihn als `Option<String>` in ein zweites Hilfsfeld `effort: Option<String>`, `into_row` wandelt ihn wie `model` per `enum_from_text`.
   - Den INSERT in `insert_phases` und den in `complete_station_with_followups` um die Spalte `effort` erweitern (Platzhalter nachzählen), Wert `station.effort.as_ref().map(enum_to_text).transpose()?`.
   - Neue Funktion `set_station_plan(connection, station_id, model: Option<ModelId>, effort: Option<Effort>)`: `UPDATE implementation_stations SET model = ?2, effort = ?3 WHERE id = ?1 AND session_id IS NULL AND completed_at IS NULL`; liefert die Zahl der geänderten Zeilen zurück (`usize`).
-- [ ] `implementation/model.rs`: `StationInput.effort: Option<String>` mit `#[serde(default, skip_serializing_if = "Option::is_none")]` und `#[ts(optional, type = "'low' | 'medium' | 'high' | 'xhigh' | 'max'")]`; Methode `effort_id()` analog `model_id()`; in `validate_station` die Prüfung analog zum Modell (Fehlertext aus AK 2); `StationView.effort: Option<Effort>`.
-- [ ] `implementation/mod.rs`: `station_view` setzt `effort: station.effort`; `phase_rows` setzt `effort: station.effort_id()`; die Fix-Stationen (`row`-Closure) bekommen einen Parameter `effort: Option<Effort>` und erhalten für Fix `source.effort`, für Reporting `reporting.effort` (Fallback-Fix: `None`).
-- [ ] `implementation/tools.rs`: in `phases_schema` neben `model` `"effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"] }` ergänzen.
-- [ ] `implementation/start.rs`, `start_claimed`: nach dem `set_model`-Block
+- [x] `implementation/model.rs`: `StationInput.effort: Option<String>` mit `#[serde(default, skip_serializing_if = "Option::is_none")]` und `#[ts(optional, type = "'low' | 'medium' | 'high' | 'xhigh' | 'max'")]`; Methode `effort_id()` analog `model_id()`; in `validate_station` die Prüfung analog zum Modell (Fehlertext aus AK 2); `StationView.effort: Option<Effort>`.
+- [x] `implementation/mod.rs`: `station_view` setzt `effort: station.effort`; `phase_rows` setzt `effort: station.effort_id()`; die Fix-Stationen (`row`-Closure) bekommen einen Parameter `effort: Option<Effort>` und erhalten für Fix `source.effort`, für Reporting `reporting.effort` (Fallback-Fix: `None`).
+- [x] `implementation/tools.rs`: in `phases_schema` neben `model` `"effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"] }` ergänzen.
+- [x] `implementation/start.rs`, `start_claimed`: nach dem `set_model`-Block
   ```rust
   if let Some(effort) = station.effort && effort != created.effort {
       registry.set_effort(app, &created.id, effort)?;
   }
   ```
   Schlägt es fehl, wie bei `set_model` per `registry.log_session_line(...)` vermerken (neue Hilfsfunktion `set_effort` neben `set_model`, Meldung „Denkaufwand nicht umgestellt: …“).
-- [ ] `commands/implementation.rs` + `lib.rs`: Befehl `implementation_set_station_plan` nach dem Kontrakt. Ablauf: `view = registry.implementation_view(&id)?`; Station suchen (wie `implementation_complete_station`); `by_user` → Fehler „Diese Station erledigst du selbst.“; `session_id.is_some()` oder `state == Done` → „Die Station hat schon begonnen.“; sonst `registry.set_station_plan(...)` (dünner Wrapper in `sessions/registry/implementation.rs` über `database.with(...)` wie die anderen Schreibzugriffe dort), danach `announce(&app, &registry.implementation_view(&id)?)`. In die Befehlsliste in `lib.rs` hinter `implementation_cancel_countdown` eintragen.
-- [ ] `src/lib/implementation.ts`: `setStationPlan` nach dem Kontrakt, mit `@throws`-Kommentar im Stil der Nachbarn.
-- [ ] `pnpm bindings` (erzeugt `StationView.ts`, `StationInput.ts` neu); `pnpm check`.
-- [ ] Probe: `implementation-probe create` mit einer JSON-Datei, in der eine Station `effort` trägt, gegen eine **Kopie** der Datenbank; `show` zeigt den Wert.
-- [ ] `docs/decisions/057-modell-und-aufwand-der-station.md`, 10 Zeilen: Kontext (Karte zeigt kein Modell), Optionen (nur Ist-Anzeige / Plan-Aufwand mit Schema-Feld; Live-Werte im Core / aus der Session in der Oberfläche), Entscheidung (Feld `effort`, Live-Werte aus der Session), Konsequenzen (Migration 018, alte Stationen `NULL`).
-- [ ] Doc-Updates: `docs/models.md` (Spalte `effort`), `docs/routes.md` bzw. die Befehlsliste in `docs/clients.md` (neuer Befehl und `setStationPlan`), `docs/code-map.md` nur, falls eine neue Datei entstand (hier: keine).
+- [x] `commands/implementation.rs` + `lib.rs`: Befehl `implementation_set_station_plan` nach dem Kontrakt. Ablauf: `view = registry.implementation_view(&id)?`; Station suchen (wie `implementation_complete_station`); `by_user` → Fehler „Diese Station erledigst du selbst.“; `session_id.is_some()` oder `state == Done` → „Die Station hat schon begonnen.“; sonst `registry.set_station_plan(...)` (dünner Wrapper in `sessions/registry/implementation.rs` über `database.with(...)` wie die anderen Schreibzugriffe dort), danach `announce(&app, &registry.implementation_view(&id)?)`. In die Befehlsliste in `lib.rs` hinter `implementation_cancel_countdown` eintragen.
+- [x] `src/lib/implementation.ts`: `setStationPlan` nach dem Kontrakt, mit `@throws`-Kommentar im Stil der Nachbarn.
+- [x] `pnpm bindings` (erzeugt `StationView.ts`, `StationInput.ts` neu); `pnpm check`.
+- [x] Probe: `implementation-probe create` mit einer JSON-Datei, in der eine Station `effort` trägt, gegen eine **Kopie** der Datenbank; `show` zeigt den Wert.
+- [x] `docs/decisions/057-modell-und-aufwand-der-station.md`, 10 Zeilen: Kontext (Karte zeigt kein Modell), Optionen (nur Ist-Anzeige / Plan-Aufwand mit Schema-Feld; Live-Werte im Core / aus der Session in der Oberfläche), Entscheidung (Feld `effort`, Live-Werte aus der Session), Konsequenzen (Migration 018, alte Stationen `NULL`).
+- [x] Doc-Updates: `docs/models.md` (Spalte `effort`), `docs/routes.md` bzw. die Befehlsliste in `docs/clients.md` (neuer Befehl und `setStationPlan`), `docs/code-map.md` nur, falls eine neue Datei entstand (hier: keine).
 
 ## Report-Back
+
+Status: complete. Migration 018, `effort` durch Eingabe/Validierung/Schema/Start/Fix-Stationen, Befehl `implementation_set_station_plan`, `setStationPlan`, ADR 057. Abweichungen: `docs/models.md`, `routes.md`, `clients.md` gibt es im Repo nicht — Doc-Updates entfallen; `code-map.md` unverändert (keine neue Quelldatei). Probe gegen Kopie der Datenbank: Migration auf 18, `effort = high` gespeichert, ungültiger Wert mit Feldnamen abgelehnt (`show` druckt den Aufwand nicht, geprüft per Abfrage). Der Befehl selbst lief nur durch Kompilierung und Clippy, nicht in der App.

@@ -12,7 +12,7 @@ use super::{
     Outbox, PendingRequest, ProjectState, Session, SessionRegistry, SessionState, now_ms,
     summarize, update,
 };
-use crate::agents::event::Attachment;
+use crate::agents::event::{Attachment, Effort, ModelId};
 use crate::attachments;
 use crate::changes::{self, model::ChangesReach};
 use crate::db::implementations::{
@@ -204,6 +204,25 @@ impl SessionRegistry {
                 followups,
             )
         })
+    }
+
+    /// Ändert Modell und Aufwand einer Station, die noch nicht begonnen hat. Hat sie zwischen
+    /// Prüfung und Schreiben begonnen, ändert die Datenbank nichts und es kommt derselbe Fehler.
+    pub fn set_station_plan(
+        &self,
+        station_id: &str,
+        model: Option<ModelId>,
+        effort: Option<Effort>,
+    ) -> Result<(), CommandError> {
+        let changed: usize = self.database.with(|connection| {
+            implementation_rows::set_station_plan(connection, station_id, model, effort)
+        })?;
+        if changed == 0 {
+            return Err(CommandError::Implementation(
+                "Die Station hat schon begonnen.".to_owned(),
+            ));
+        }
+        Ok(())
     }
 
     /// Setzt Automatik, Halt-Schalter und Abschluss der Umsetzung.

@@ -7,7 +7,7 @@ use tauri::{AppHandle, Manager};
 
 use super::model::{ImplementationView, PhaseView, StationState, StationView};
 use super::{START_DELAY, StationRef, announce, find_station, now_ms, schedule};
-use crate::agents::event::ModelId;
+use crate::agents::event::{Effort, ModelId};
 use crate::error::CommandError;
 use crate::sessions::model::SessionSummary;
 use crate::sessions::registry::SessionRegistry;
@@ -213,6 +213,11 @@ fn start_claimed(
     {
         set_model(app, registry, &created.id, model)?;
     }
+    if let Some(effort) = station.effort
+        && effort != created.effort
+    {
+        set_effort(app, registry, &created.id, effort)?;
+    }
     announce(app, &registry.implementation_view(implementation_id)?);
     let message: String = first_message(&view, phase, station);
     if let Err(error) = registry.send(app, &created.id, &message, &[], &[]) {
@@ -235,6 +240,20 @@ fn set_model(
         .set_model(app, session_id, model)
         .map_err(|error: CommandError| {
             registry.log_session_line(session_id, format!("Modell nicht umgestellt: {error}"));
+            error
+        })
+}
+
+fn set_effort(
+    app: &AppHandle,
+    registry: &SessionRegistry,
+    session_id: &str,
+    effort: Effort,
+) -> Result<(), CommandError> {
+    registry
+        .set_effort(app, session_id, effort)
+        .map_err(|error: CommandError| {
+            registry.log_session_line(session_id, format!("Denkaufwand nicht umgestellt: {error}"));
             error
         })
 }

@@ -141,6 +141,7 @@ fn phases_schema() -> Value {
                         "properties": {
                             "stage": { "type": "string", "minLength": 1, "maxLength": 40, "description": "z. B. Test, Umsetzung, Review" },
                             "model": { "type": "string", "enum": ["fable", "opusplan", "opus", "sonnet", "haiku"] },
+                            "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"], "description": "Denkaufwand der Session; ohne Angabe gilt der Standard" },
                             "by": { "type": "string", "enum": ["agent", "you"], "description": "\"you\": der Benutzer erledigt die Station selbst" },
                             "skill": { "type": "string", "minLength": 1, "maxLength": 40, "description": "Skill ohne \"/\", mit dem die Session beginnt" },
                             "brief": { "type": "string", "maxLength": 1000, "description": "Auftrag an die Session" },

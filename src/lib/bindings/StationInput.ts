@@ -4,4 +4,8 @@ export type StationInput = { stage: string,
 /**
  * Als Text, damit ein unbekannter Name in `validate` mit seinem Feld gemeldet wird.
  */
-model?: 'fable' | 'opusplan' | 'opus' | 'sonnet' | 'haiku', by?: 'agent' | 'you', skill?: string, brief?: string, };
+model?: 'fable' | 'opusplan' | 'opus' | 'sonnet' | 'haiku', 
+/**
+ * Wie `model` als Text, damit `validate` ein unbekanntes Wort mit seinem Feld meldet.
+ */
+effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max', by?: 'agent' | 'you', skill?: string, brief?: string, };

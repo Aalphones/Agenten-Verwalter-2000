@@ -3,7 +3,7 @@
 //! ihrer Session.
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use crate::agents::event::ModelId;
+use crate::agents::event::{Effort, ModelId};
 use crate::db::{enum_from_text, enum_to_text};
 use crate::error::CommandError;
 use crate::implementation::model::PhaseMark;
@@ -49,6 +49,7 @@ pub struct StationRow {
     pub started_at: Option<f64>,
     pub completed_at: Option<f64>,
     pub result: Option<String>,
+    pub effort: Option<Effort>,
 }
 
 #[derive(Debug, Clone)]
@@ -77,7 +78,7 @@ const IMPLEMENTATION_COLUMNS: &str = "id, project_id, name, source, created_by_s
      created_at, finished_at, auto_start, stop_after_current, pending_change";
 const PHASE_COLUMNS: &str = "id, implementation_id, position, key, title, description, wave, mark";
 const STATION_COLUMNS: &str = "s.id, s.phase_id, s.position, s.stage, s.model, s.by_user, \
-     s.skill, s.brief, s.session_id, s.started_at, s.completed_at, s.result";
+     s.skill, s.brief, s.session_id, s.started_at, s.completed_at, s.result, s.effort";
 
 /// Legt die Umsetzung mit ihren Phasen und Stationen in einem Zug an.
 pub fn insert(
@@ -136,8 +137,8 @@ fn insert_phases(
     for station in stations {
         connection.execute(
             "INSERT INTO implementation_stations (id, phase_id, position, stage, model, by_user, \
-                 skill, brief, session_id, started_at, completed_at, result) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                 skill, brief, session_id, started_at, completed_at, result, effort) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 station.id,
                 station.phase_id,
@@ -151,6 +152,7 @@ fn insert_phases(
                 station.started_at,
                 station.completed_at,
                 station.result,
+                station.effort.as_ref().map(enum_to_text).transpose()?,
             ],
         )?;
     }
@@ -316,10 +318,11 @@ impl StoredPhase {
     }
 }
 
-/// Die Zeile, wie sie in der Datenbank steht; `model` wird erst danach umgewandelt.
+/// Die Zeile, wie sie in der Datenbank steht; `model` und `effort` werden erst danach umgewandelt.
 struct StoredStation {
     row: StationRow,
     model: Option<String>,
+    effort: Option<String>,
 }
 
 impl StoredStation {
@@ -338,14 +341,17 @@ impl StoredStation {
                 started_at: row.get(9)?,
                 completed_at: row.get(10)?,
                 result: row.get(11)?,
+                effort: None,
             },
             model: row.get(4)?,
+            effort: row.get(12)?,
         })
     }
 
     fn into_row(self) -> Result<StationRow, CommandError> {
         Ok(StationRow {
             model: self.model.as_deref().map(enum_from_text).transpose()?,
+            effort: self.effort.as_deref().map(enum_from_text).transpose()?,
             ..self.row
         })
     }
@@ -376,6 +382,26 @@ pub fn set_station_session(
         params![station_id, session_id, started_at],
     )?;
     Ok(())
+}
+
+/// Ändert den Plan einer Station, die noch keine Session hat und nicht fertig ist; die Zahl
+/// der geänderten Zeilen ist 0, wenn die Station schon begonnen hat.
+pub fn set_station_plan(
+    connection: &Connection,
+    station_id: &str,
+    model: Option<ModelId>,
+    effort: Option<Effort>,
+) -> Result<usize, CommandError> {
+    let changed: usize = connection.execute(
+        "UPDATE implementation_stations SET model = ?2, effort = ?3 \
+         WHERE id = ?1 AND session_id IS NULL AND completed_at IS NULL",
+        params![
+            station_id,
+            model.as_ref().map(enum_to_text).transpose()?,
+            effort.as_ref().map(enum_to_text).transpose()?,
+        ],
+    )?;
+    Ok(changed)
 }
 
 pub fn complete_station(
@@ -417,7 +443,7 @@ pub fn complete_station_with_followups(
         for (offset, followup) in (1..).zip(followups) {
             transaction.execute(
                 "INSERT INTO implementation_stations (id, phase_id, position, stage, model, \
-                     by_user, skill, brief) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                     by_user, skill, brief, effort) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 params![
                     followup.id,
                     phase_id,
@@ -427,6 +453,7 @@ pub fn complete_station_with_followups(
                     followup.by_user,
                     followup.skill,
                     followup.brief,
+                    followup.effort.as_ref().map(enum_to_text).transpose()?,
                 ],
             )?;
         }

@@ -1,7 +1,10 @@
 use tauri::AppHandle;
 
+use crate::agents::event::{Effort, ModelId};
 use crate::error::CommandError;
-use crate::implementation::model::{ImplementationView, InquiryCreated, PhaseView, StationView};
+use crate::implementation::model::{
+    ImplementationView, InquiryCreated, PhaseView, StationState, StationView,
+};
 use crate::implementation::{self, announce, changes, now_ms, start};
 use crate::sessions::registry::SessionRegistry;
 
@@ -106,6 +109,41 @@ pub async fn implementation_cancel_countdown(
     station_id: String,
 ) -> Result<(), CommandError> {
     let _ = registry.cancel_countdown(&station_id);
+    announce(&app, &registry.implementation_view(&id)?);
+    Ok(())
+}
+
+/// Ändert Modell und Denkaufwand einer Station, die noch keine Session hat (ADR 057). Danach
+/// zeigt die Karte den neuen Plan.
+#[tauri::command]
+pub async fn implementation_set_station_plan(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+    station_id: String,
+    model: Option<ModelId>,
+    effort: Option<Effort>,
+) -> Result<(), CommandError> {
+    let view = registry.implementation_view(&id)?;
+    let station: &StationView = view
+        .phases
+        .iter()
+        .flat_map(|phase: &PhaseView| phase.stations.iter())
+        .find(|station: &&StationView| station.id == station_id)
+        .ok_or_else(|| {
+            CommandError::Implementation("Diese Station gehört nicht zur Umsetzung.".to_owned())
+        })?;
+    if station.by_user {
+        return Err(CommandError::Implementation(
+            "Diese Station erledigst du selbst.".to_owned(),
+        ));
+    }
+    if station.session_id.is_some() || station.state == StationState::Done {
+        return Err(CommandError::Implementation(
+            "Die Station hat schon begonnen.".to_owned(),
+        ));
+    }
+    registry.set_station_plan(&station_id, model, effort)?;
     announce(&app, &registry.implementation_view(&id)?);
     Ok(())
 }

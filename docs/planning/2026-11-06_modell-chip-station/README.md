@@ -6,7 +6,7 @@ Die Karte der Station im Fokus zeigt oben rechts einen Chip mit Modell und Denka
 
 | Phase | Inhalt | Rating | Status |
 |---|---|---|---|
-| 1 | [Plan-Aufwand an der Station + Befehl „Plan der Station ändern“](phase-1-kern-aufwand-und-befehl.md), Migration 018, ADR 057 | standard | pending |
+| 1 | [Plan-Aufwand an der Station + Befehl „Plan der Station ändern“](phase-1-kern-aufwand-und-befehl.md), Migration 018, ADR 057 | standard | complete |
 | 2 | [Chip und Menü auf der Karte](phase-2-chip-und-menue.md) | standard | pending |
 
 Reihenfolge fest: Phase 2 braucht das Feld `effort` und den Befehl aus Phase 1.
