@@ -16,6 +16,7 @@ import {
   PHASE_MARK_TITLE,
   phaseMeta,
   stampText,
+  stationLabel,
   stationMeta,
   TIMELINE_LABEL,
   waveTitle,
@@ -67,12 +68,6 @@ function laneClass(lane: number): string {
 function lineClass(kind: 'above' | 'below' | 'full', tone: StationTone, lane?: number): string {
   const laneSuffix: string = lane === undefined ? '' : laneClass(lane);
   return `timeline__line timeline__line--${kind} timeline__line--${tone}${laneSuffix}`;
-}
-
-/** „Review #7“; solange die Station keine Session hat, nur die Stufe. */
-function stationLabel(ref: StationRef): string {
-  const number: number | null = ref.station.sessionNumber;
-  return number === null ? ref.station.stage : `${ref.station.stage} #${String(number)}`;
 }
 
 function isPhaseDone(phase: PhaseView): boolean {
@@ -271,7 +266,7 @@ export function Timeline({
           <span className="timeline__meta">{phaseMeta(phase)}</span>
         </div>
         {phaseRefs.map((ref: StationRef) =>
-          stationRow(ref, stationLabel(ref), stationMeta(ref.station, now)),
+          stationRow(ref, stationLabel(ref.station), stationMeta(ref.station, now)),
         )}
       </Fragment>
     );
