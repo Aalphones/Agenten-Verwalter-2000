@@ -18,10 +18,13 @@ import { PlanChangeCard } from '@/features/implementation/PlanChangeCard';
 import { StationCard } from '@/features/implementation/StationCard';
 import { StationDot } from '@/features/implementation/StationDot';
 import type { ChangeView } from '@/lib/bindings/ChangeView';
+import type { Effort } from '@/lib/bindings/Effort';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
+import type { ModelId } from '@/lib/bindings/ModelId';
 import type { PendingChange } from '@/lib/bindings/PendingChange';
 import type { PhaseInput } from '@/lib/bindings/PhaseInput';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
+import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { StationView } from '@/lib/bindings/StationView';
 import './CardStack.css';
 
@@ -33,6 +36,11 @@ interface CardStackProps {
   isManualFocus: boolean;
   now: number;
   changesCount: number | null;
+  /** Session der Station im Fokus; `null` ohne Session. */
+  session: SessionSummary | null;
+  onPickPlan: (stationId: string, model: ModelId | null, effort: Effort | null) => void;
+  onPickModel: (stationId: string, model: ModelId) => void;
+  onPickEffort: (stationId: string, effort: Effort) => void;
   onFocus: (focusId: string) => void;
   onBackToCurrent: () => void;
   onOpenChat: (stationId: string) => void;
@@ -69,6 +77,10 @@ export function CardStack({
   isManualFocus,
   now,
   changesCount,
+  session,
+  onPickPlan,
+  onPickModel,
+  onPickEffort,
   onFocus,
   onBackToCurrent,
   onOpenChat,
@@ -147,6 +159,10 @@ export function CardStack({
         stationRef={focusedStation}
         now={now}
         changesCount={changesCount}
+        session={session}
+        onPickPlan={onPickPlan}
+        onPickModel={onPickModel}
+        onPickEffort={onPickEffort}
         onOpenChat={onOpenChat}
         onShowChanges={onShowChanges}
         onStart={onStart}

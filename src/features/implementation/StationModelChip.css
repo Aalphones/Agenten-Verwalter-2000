@@ -1,0 +1,74 @@
+.station-chip {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: var(--color-bg-hover);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+
+  &__anchor {
+    position: relative;
+  }
+
+  &__suffix {
+    color: var(--color-fg-muted);
+  }
+
+  &--plan {
+    border-style: dashed;
+    border-color: var(--color-border);
+    color: var(--color-fg-muted);
+  }
+
+  &--ok {
+    background: color-mix(in srgb, var(--color-status-completed) 16%, transparent);
+  }
+
+  &--warn {
+    background: color-mix(in srgb, var(--color-status-waiting) 20%, transparent);
+  }
+
+  &__reset {
+    display: block;
+    width: 100%;
+    padding: var(--space-sm) var(--space-lg);
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--color-status-waiting);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+}
+
+button.station-chip {
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    border-color: var(--color-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}

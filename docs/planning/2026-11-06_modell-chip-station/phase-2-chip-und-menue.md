@@ -20,9 +20,9 @@
 
 ## Checkliste
 
-- [ ] `ModelMenu.tsx`: neue optionale Prop `leading?: ReactNode`; wenn gesetzt, steht sie als erstes Kind im `Popover` und danach ein Trenner `<div className="model-menu__sep" />` (CSS: `margin: 3px 0; border-top: 1px solid var(--color-border-subtle)`). `CacheAwareModelMenu.tsx` reicht `leading` durch (neue optionale Prop). Bestehende Aufrufer bleiben unverändert.
-- [ ] `ModelMenu` kann die Lage selbst bestimmen: `placement` ist Pflicht-Prop — die Karte übergibt `'below'`; `align` bleibt im Popover fest `start`, deshalb neue optionale Prop `align?: 'start' | 'end'` (Standard `'start'`), die an `Popover` geht. Die Karte übergibt `'end'`.
-- [ ] Neu `src/features/implementation/StationModelChip.tsx` + `StationModelChip.css`, BEM-Block `station-chip`.
+- [x] `ModelMenu.tsx`: neue optionale Prop `leading?: ReactNode`; wenn gesetzt, steht sie als erstes Kind im `Popover` und danach ein Trenner `<div className="model-menu__sep" />` (CSS: `margin: 3px 0; border-top: 1px solid var(--color-border-subtle)`). `CacheAwareModelMenu.tsx` reicht `leading` durch (neue optionale Prop). Bestehende Aufrufer bleiben unverändert.
+- [x] `ModelMenu` kann die Lage selbst bestimmen: `placement` ist Pflicht-Prop — die Karte übergibt `'below'`; `align` bleibt im Popover fest `start`, deshalb neue optionale Prop `align?: 'start' | 'end'` (Standard `'start'`), die an `Popover` geht. Die Karte übergibt `'end'`.
+- [x] Neu `src/features/implementation/StationModelChip.tsx` + `StationModelChip.css`, BEM-Block `station-chip`.
   ```ts
   interface StationModelChipProps {
     station: StationView;
@@ -40,14 +40,15 @@
   - Menü laufend: `CacheAwareModelMenu` mit `session`, `leading`, `note`, `onChange={onPickModel}`; `EffortDots` mit `session.effort` und `onChange={onPickEffort}`.
   - Texte als Konstanten in `implementationTexts.ts`: `CHIP_PLAN_TITLE`, `CHIP_LIVE_TITLE`, `CHIP_NOTE_PLAN`, `CHIP_NOTE_LIVE`, `CHIP_PLAN_SUFFIX = '(Plan)'`, `CHIP_DEFAULT = 'Standard'`, `CHIP_RESET_LABEL` (Funktion mit Plan-Text), `plannedHint(station)`.
   - CSS: Chip wie `composer__model` (Pille, `var(--color-bg-hover)`), Zustände `--plan` (gestrichelt `var(--color-border)`, `var(--color-fg-muted)`), `--ok` (`color-mix` aus `var(--color-status-completed)`), `--warn` (aus `var(--color-status-waiting)`); Fokus-Ring wie `station-card__button:focus-visible`.
-- [ ] `StationCard.tsx`: neue Props `session: SessionSummary | null`, `onPickPlan`, `onPickModel`, `onPickEffort`; Kopfzeile wie in AK 1 (rechter Container mit Chip und `station-card__number`), Statuszeile als Flex-Zeile mit `plannedHint`. Die `title`-Texte aus AK 7 hier und im Chip konsistent halten.
-- [ ] `CardStack.tsx`: Props durchreichen (`session`, `onPickPlan`, `onPickModel`, `onPickEffort`).
-- [ ] `ImplementationView.tsx`: `focusedSession` an `CardStack` geben; Rückrufe nach dem Muster von `onStart`:
+- [x] `StationCard.tsx`: neue Props `session: SessionSummary | null`, `onPickPlan`, `onPickModel`, `onPickEffort`; Kopfzeile wie in AK 1 (rechter Container mit Chip und `station-card__number`), Statuszeile als Flex-Zeile mit `plannedHint`. Die `title`-Texte aus AK 7 hier und im Chip konsistent halten.
+- [x] `CardStack.tsx`: Props durchreichen (`session`, `onPickPlan`, `onPickModel`, `onPickEffort`).
+- [x] `ImplementationView.tsx`: `focusedSession` an `CardStack` geben; Rückrufe nach dem Muster von `onStart`:
   - `onPickPlan` → `run(() => setStationPlan(implementationId, stationId, model, effort), 'Plan nicht geändert')`,
   - `onPickModel` / `onPickEffort` → `run(() => setSessionModel(sessionId, model))` bzw. `setSessionEffort`.
   Die Rückrufe bekommen `stationId` als erstes Argument wie `onStart`.
-- [ ] Idiotensicherheits-Gate: Chip trägt Tooltip (AK 7); das Menü erklärt sich durch Fußnote und Warnkasten; keine weitere Doku.
-- [ ] Doc-Updates: `docs/code-map.md` — Zeile der Umsetzung um `StationModelChip.tsx` (Modell-Chip der Karte) ergänzen; `docs/glossary.md` — Eintrag **Modell-Chip** (Chip auf der Stationskarte: Modell und Denkaufwand, Plan vor dem Start, Session danach).
-- [ ] Selbstabgleich am Plan-Ende: AK 1–7 und die finalen AK der README am Code und im laufenden Verwalter durchgehen; die Wackelstellen stehen unten in „Follow-ups“ der README, nicht als Abnahmeliste.
+- [x] Idiotensicherheits-Gate: Chip trägt Tooltip (AK 7); das Menü erklärt sich durch Fußnote und Warnkasten; keine weitere Doku.
+- [x] Doc-Updates: `docs/code-map.md` — Zeile der Umsetzung um `StationModelChip.tsx` (Modell-Chip der Karte) ergänzen; `docs/glossary.md` — Eintrag **Modell-Chip** (Chip auf der Stationskarte: Modell und Denkaufwand, Plan vor dem Start, Session danach).
+- [x] Selbstabgleich am Plan-Ende: AK 1–7 und die finalen AK der README am Code und im laufenden Verwalter durchgehen; die Wackelstellen stehen unten in „Follow-ups“ der README, nicht als Abnahmeliste.
 
 ## Report-Back
+nChip, Menü (`leading`, `align`) und Verdrahtung stehen; `pnpm check` grün. Laufzeitbeleg in der echten App steht aus.

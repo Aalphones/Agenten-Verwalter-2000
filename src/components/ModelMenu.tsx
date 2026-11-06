@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { ModelOption } from '@/lib/labels';
 import { Popover } from '@/components/Popover';
 import { SnowflakeIcon } from '@/components/SnowflakeIcon';
@@ -25,6 +25,10 @@ interface ModelMenuProps<Id extends string> {
   emptyText?: string;
   /** Warnt vor den Folgen eines Wechsels (Prompt-Cache); fehlt sie, steht kein Kasten da. */
   warning?: ModelMenuWarning | undefined;
+  /** Steht über der Überschrift, durch einen Trenner abgesetzt (Denkaufwand-Punkte). */
+  leading?: ReactNode;
+  /** Kante, an der das Menü am Auslöser hängt. Standard `'start'`. */
+  align?: 'start' | 'end';
 }
 
 export function ModelMenu<Id extends string>({
@@ -37,15 +41,23 @@ export function ModelMenu<Id extends string>({
   title = 'Modell für diese Session',
   emptyText = 'Keine Modelle verfügbar.',
   warning,
+  leading,
+  align = 'start',
 }: ModelMenuProps<Id>): ReactElement {
   return (
     <Popover
       label="Modell"
       placement={placement}
-      align="start"
+      align={align}
       width={MODEL_MENU_WIDTH}
       onClose={onClose}
     >
+      {leading !== undefined && (
+        <>
+          {leading}
+          <div className="model-menu__sep" />
+        </>
+      )}
       <div className="model-menu__head">{title}</div>
       {options.length === 0 && <div className="model-menu__empty">{emptyText}</div>}
       {options.map((option: ModelOption<Id>) => {

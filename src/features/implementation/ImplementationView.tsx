@@ -16,7 +16,9 @@ import {
 } from '@/features/implementation/implementationOrder';
 import { ReportPanel } from '@/features/implementation/ReportPanel';
 import { Timeline } from '@/features/implementation/Timeline';
+import type { Effort } from '@/lib/bindings/Effort';
 import type { ImplementationView as Implementation } from '@/lib/bindings/ImplementationView';
+import type { ModelId } from '@/lib/bindings/ModelId';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import {
@@ -26,9 +28,11 @@ import {
   loadImplementationReport,
   setImplementationAutoStart,
   setImplementationStopAfterCurrent,
+  setStationPlan,
   startStation,
 } from '@/lib/implementation';
 import { isTextTarget } from '@/lib/keyTargets';
+import { setSessionEffort, setSessionModel } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
 import { useImplementationStore } from '@/stores/implementation';
 import { useSessionsStore, type ImplementationViewKind } from '@/stores/sessions';
@@ -208,9 +212,14 @@ export function ImplementationView({
     );
   }
 
+  function sessionIdOf(stationId: string): string | null {
+    return (
+      stations.find((ref: StationRef) => ref.station.id === stationId)?.station.sessionId ?? null
+    );
+  }
+
   function openChat(stationId: string): void {
-    const sessionId: string | null =
-      stations.find((ref: StationRef) => ref.station.id === stationId)?.station.sessionId ?? null;
+    const sessionId: string | null = sessionIdOf(stationId);
     if (sessionId !== null) {
       selectSession(sessionId);
     }
@@ -248,6 +257,25 @@ export function ImplementationView({
         isManualFocus={isManualFocus}
         now={now}
         changesCount={hasChanges ? stationChangesCount : null}
+        session={focusedSession}
+        onPickPlan={(stationId: string, model: ModelId | null, effort: Effort | null): void => {
+          run(
+            () => setStationPlan(implementationId, stationId, model, effort),
+            'Plan nicht geändert',
+          );
+        }}
+        onPickModel={(stationId: string, model: ModelId): void => {
+          const sessionId: string | null = sessionIdOf(stationId);
+          if (sessionId !== null) {
+            run(() => setSessionModel(sessionId, model), 'Modell nicht gewechselt');
+          }
+        }}
+        onPickEffort={(stationId: string, effort: Effort): void => {
+          const sessionId: string | null = sessionIdOf(stationId);
+          if (sessionId !== null) {
+            run(() => setSessionEffort(sessionId, effort), 'Denkaufwand nicht geändert');
+          }
+        }}
         onFocus={(focusId: string): void => {
           setFocused(implementationId, focusId);
         }}

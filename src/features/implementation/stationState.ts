@@ -1,5 +1,7 @@
 import type { DisplayStatus } from '@/features/sessions/sessionStatus';
 import type { StationState } from '@/lib/bindings/StationState';
+import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import type { StationView } from '@/lib/bindings/StationView';
 
 const LABEL: Record<StationState, string> = {
   pending: 'wartet',
@@ -72,4 +74,15 @@ export function stateLabel(state: StationState): string {
 
 export function stateIcon(state: StationState): DisplayStatus {
   return ICON[state];
+}
+
+/** Die laufende Session weicht in Modell oder Aufwand vom Plan der Station ab; ein leerer Plan-Wert zählt nie als Abweichung. */
+export function deviatesFromPlan(station: StationView, session: SessionSummary | null): boolean {
+  if (session === null) {
+    return false;
+  }
+  return (
+    (station.model !== null && station.model !== session.model) ||
+    (station.effort !== null && station.effort !== session.effort)
+  );
 }

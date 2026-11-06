@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { ModelMenu } from '@/components/ModelMenu';
 import type { ModelMenuWarning } from '@/components/ModelMenu';
 import { useNow } from '@/features/background/useNow';
@@ -15,6 +15,10 @@ interface CacheAwareModelMenuProps {
   onChange: (model: ModelId) => void;
   onClose: () => void;
   note: string;
+  /** Wie bei `ModelMenu`: steht über der Modellliste. */
+  leading?: ReactNode;
+  align?: 'start' | 'end';
+  placement?: 'above' | 'below';
 }
 
 /** Das Modell-Menü für Claude-Modelle; warnt, solange ein Modellwechsel einen warmen Cache verwirft. */
@@ -23,6 +27,9 @@ export function CacheAwareModelMenu({
   onChange,
   onClose,
   note,
+  leading,
+  align = 'start',
+  placement = 'above',
 }: CacheAwareModelMenuProps): ReactElement {
   // Eine eigene Uhr, die nur läuft, solange das Menü offen ist: die Eingabeleiste rendert nicht jede Sekunde mit.
   const now: number = useNow(true);
@@ -43,9 +50,11 @@ export function CacheAwareModelMenu({
       value={session.model}
       onChange={onChange}
       onClose={onClose}
-      placement="above"
+      placement={placement}
       note={note}
       warning={warning}
+      leading={leading}
+      align={align}
     />
   );
 }

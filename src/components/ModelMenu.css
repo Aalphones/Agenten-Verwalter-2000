@@ -15,6 +15,11 @@
     border-top: 1px solid var(--color-border-subtle);
   }
 
+  &__sep {
+    margin: 3px 0;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
   &__item {
     display: flex;
     align-items: center;

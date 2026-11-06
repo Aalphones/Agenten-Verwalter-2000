@@ -1,10 +1,13 @@
 import type { StationRef } from '@/features/implementation/implementationOrder';
 import { stateLabel } from '@/features/implementation/stationState';
+import type { Effort } from '@/lib/bindings/Effort';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
+import type { ModelId } from '@/lib/bindings/ModelId';
 import type { PhaseMark } from '@/lib/bindings/PhaseMark';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { StationState } from '@/lib/bindings/StationState';
 import type { StationView } from '@/lib/bindings/StationView';
+import { effortLabel, modelName } from '@/lib/labels';
 import type { ImplementationViewKind } from '@/stores/sessions';
 
 export const VIEW_LABEL: Record<ImplementationViewKind, string> = {
@@ -239,4 +242,28 @@ function countdownText(station: StationView, now: number): string {
 
 export function implementationTitle(implementation: ImplementationView): string {
   return `Umsetzung ${implementation.name}`;
+}
+
+export const CHIP_PLAN_TITLE = 'Modell und Denkaufwand dieser Station (Plan)';
+export const CHIP_LIVE_TITLE = 'Modell und Denkaufwand dieser Session';
+export const CHIP_NOTE_PLAN = 'Ändert den Plan dieser Station. Der Start nutzt diese Werte.';
+export const CHIP_NOTE_LIVE = 'Wirkt sofort auf die laufende Session.';
+export const CHIP_PLAN_SUFFIX = '(Plan)';
+export const CHIP_DEFAULT = 'Standard';
+
+/** „Sonnet 5.5 · hoch“; ein fehlender Wert steht als „Standard“. */
+export function chipText(model: ModelId | null, effort: Effort | null): string {
+  const modelText: string = model === null ? CHIP_DEFAULT : modelName(model);
+  const effortText: string = effort === null ? CHIP_DEFAULT : effortLabel(effort).toLowerCase();
+  return `${modelText} · ${effortText}`;
+}
+
+/** „geplant: Sonnet 5.5 · hoch“ in der Statuszeile, wenn die Session vom Plan abweicht. */
+export function plannedHint(station: StationView): string {
+  return `geplant: ${chipText(station.model, station.effort)}`;
+}
+
+/** „Auf Plan zurücksetzen (Sonnet 5.5 · hoch)“ im Menü der laufenden Station. */
+export function chipResetLabel(station: StationView): string {
+  return `Auf Plan zurücksetzen (${chipText(station.model, station.effort)})`;
 }

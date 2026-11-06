@@ -41,9 +41,28 @@
     font-size: 15px;
   }
 
+  &__head-end {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+  }
+
   &__number {
     color: var(--color-fg-muted);
     font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+  }
+
+  &__status {
+    display: flex;
+    gap: var(--space-md);
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  &__planned {
+    margin: 0;
+    color: var(--color-status-waiting);
     font-size: var(--font-size-xs);
   }
 
