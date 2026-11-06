@@ -9,7 +9,7 @@ Dieser Plan erlaubt es, in einer begonnenen Phase die **noch nicht gestarteten S
 | Phase | Inhalt | Rating | Modell | Wave | Schätzung | Sichtabnahme | Status |
 |---|---|---|---|---|---|---|---|
 | 1 | Core: begonnene Phase in `implementation_set_phases`, Anhalten bei offenem Vorschlag, Schutz beim Übernehmen, ADR 059 | heikel | opus | 1 | 3 h | keine (Core) | complete |
-| 2 | Karte „Plan ändern?“ und Zeitleiste zeigen geänderte begonnene Phasen | standard | sonnet | 2 | 45 min | Karte „Plan ändern?“ | pending |
+| 2 | Karte „Plan ändern?“ und Zeitleiste zeigen geänderte begonnene Phasen | standard | sonnet | 2 | 45 min | Karte „Plan ändern?“ | complete |
 
 Sequenziell, weil Phase 2 die in Phase 1 erzeugten Bindings (`ChangeSummary.changed`) braucht.
 
@@ -101,9 +101,21 @@ Werkzeugbeschreibung `implementation_set_phases` (`tools.rs`), wörtlich: „Sch
 
 ## Summary
 
+Eine begonnene Phase sperrt nicht mehr als Ganzes: gesperrt ist die einzelne Station mit Session oder Fertigmeldung (ADR 059). `implementation_set_phases` darf eine begonnene Phase nennen; ihre `stations` ersetzen nur die noch nicht gestarteten (leer = alle streichen). Solange ein Vorschlag offen ist, starten die von ihm ersetzten Stationen nicht; beim Übernehmen schützt `seen_station_ids` vor einer zwischenzeitlichen Fix-Runde. Die Karte „Plan ändern?“ zeigt eine Zeile „Geändert“. Keine Migration; alte gespeicherte Daten lesen über `serde(default)`. Belege per Prüfprogramm gegen Datenbank-Kopien (AK 1/2/3/6), keine neuen automatisierten Tests (privates Profil). Release v0.57.0.
+
 ## Files touched
 
+- `src-tauri/src/implementation/` — `changes.rs` (diff, propose, decide, apply), `model.rs`, `mod.rs`, `start.rs`, `tools.rs`
+- `src-tauri/src/db/implementations.rs`, `src-tauri/src/sessions/registry/implementation.rs`, `src-tauri/examples/implementation-probe.rs`
+- `src/features/implementation/` — `CardStack.tsx`, `PlanChangeCard.tsx`, `implementationTexts.ts`; erzeugte Bindings `ChangeSummary.ts`, `PendingChange.ts`
+- Docs: ADR 059, ADR 048, `glossary.md`, `code-map.md`, `AGENTS.md`, `STATE.md`
+
 ## Commits
+
+- fb651ea refactor(implementation): Stationszeilen aus Eingaben in station_rows
+- df13e1e feat(implementation): offene Stationen begonnener Phasen umplanen
+- ff1d067 feat(implementation): Zeile Geändert in der Karte Plan ändern, neuer Titeltext
+- Archiv-Commit und chore(release): v0.57.0 folgen
 
 ## Deviations from plan
 
