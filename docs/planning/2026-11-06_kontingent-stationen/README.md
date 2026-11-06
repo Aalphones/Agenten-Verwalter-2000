@@ -8,7 +8,7 @@ Stationen einer Umsetzung verbrauchen das meiste Kontingent über lange Verläuf
 |---|---|---|---|---|---|---|
 | 1 | [Automatisch zusammenfassen in Stationen](phase-1-auto-zusammenfassen.md), ADR 058 | standard | sonnet | 1 | 2 h | complete |
 | 2 | [Schlanke Antworten der Umsetzungs-Werkzeuge](phase-2-schlanke-werkzeug-antworten.md) | standard | sonnet | 1 | 45 min | complete |
-| 3 | [Git-Lage in der ersten Stationsnachricht](phase-3-git-lage.md) | standard | sonnet | 2 | 1 h | pending |
+| 3 | [Git-Lage in der ersten Stationsnachricht](phase-3-git-lage.md) | standard | sonnet | 2 | 1 h | complete |
 | 4 | [Schlanker Ausgabestil in Stationen](phase-4-stationsstil.md) | mechanisch | sonnet | 2 | 30 min | pending |
 
 Phase 1 und 2 berühren getrennte Dateien und laufen parallel. Phase 3 wartet auf Phase 2, weil beide `src-tauri/src/implementation/` und dessen Tests anfassen. Phase 4 wartet auf Phase 1, weil beide `SpawnOptions`, `common_args`, `start_process` und `side.rs` anfassen; mit Phase 3 teilt sie keine Datei.

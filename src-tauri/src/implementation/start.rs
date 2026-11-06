@@ -8,9 +8,15 @@ use tauri::{AppHandle, Manager};
 use super::model::{ImplementationView, PhaseView, StationState, StationView};
 use super::{START_DELAY, StationRef, announce, find_station, now_ms, schedule};
 use crate::agents::event::{Effort, ModelId};
+use crate::changes::model::ChangesReach;
 use crate::error::CommandError;
+use crate::git::model::{GitEntryStatus, GitOperation, GitOwnCommit, GitSessionStatus};
+use crate::git::status;
 use crate::sessions::model::SessionSummary;
 use crate::sessions::registry::SessionRegistry;
+
+/// Mehr Commit-Betreffe je Eintrag würden die erste Nachricht aufblähen.
+const MAX_GIT_COMMITS: usize = 3;
 
 const FIRST_MESSAGE_FOOTER: &str = "Melde diese Station mit dem Werkzeug \
     implementation_complete_station fertig, mit einer Zeile Ergebnis. Endet deine Antwort ohne \
@@ -22,6 +28,7 @@ pub fn first_message(
     view: &ImplementationView,
     phase: &PhaseView,
     station: &StationView,
+    git_lines: &[String],
 ) -> String {
     let mut lines: Vec<String> = Vec::new();
     if let Some(skill) = &station.skill {
@@ -71,9 +78,53 @@ pub fn first_message(
         lines.push("Vorgänger:".to_owned());
         lines.extend(predecessors);
     }
+    if !git_lines.is_empty() {
+        lines.push("Git-Lage:".to_owned());
+        lines.extend(git_lines.iter().cloned());
+    }
     lines.push(String::new());
     lines.push(FIRST_MESSAGE_FOOTER.to_owned());
     lines.join("\n")
+}
+
+/// Die Git-Lage des Vorhabens für die erste Nachricht: eine Zeile je Eintrag der Changes.
+pub fn git_lines(status: &GitSessionStatus) -> Vec<String> {
+    status.entries.iter().map(entry_line).collect()
+}
+
+fn entry_line(entry: &GitEntryStatus) -> String {
+    if let Some(error) = &entry.error {
+        return format!("- {}: Git-Zustand nicht lesbar ({error})", entry.key);
+    }
+    let branch: &str = entry.branch.as_deref().unwrap_or("losgelöster HEAD");
+    let mut line: String = format!("- {}: Branch {branch}", entry.key);
+    if let Some(upstream) = &entry.upstream {
+        line.push_str(&format!(" → {upstream}"));
+    }
+    line.push_str(&format!(
+        ", ↑{} ↓{}, {} fremde Änderungen",
+        entry.ahead,
+        entry.behind,
+        entry.foreign.len()
+    ));
+    if !entry.conflicted.is_empty() {
+        line.push_str(&format!(", Konflikte: {}", entry.conflicted.len()));
+    }
+    match entry.operation {
+        GitOperation::None => {}
+        GitOperation::Merge => line.push_str(", Merge läuft"),
+        GitOperation::Rebase => line.push_str(", Rebase läuft"),
+    }
+    if !entry.commits.is_empty() {
+        let recent: Vec<String> = entry
+            .commits
+            .iter()
+            .take(MAX_GIT_COMMITS)
+            .map(|commit: &GitOwnCommit| format!("{} {}", commit.short_id, commit.subject))
+            .collect();
+        line.push_str(&format!("; zuletzt: {}", recent.join("; ")));
+    }
+    line
 }
 
 /// Plant für jede Station, die jetzt starten darf, einen Countdown; gibt die geplanten zurück.
@@ -219,7 +270,19 @@ fn start_claimed(
         set_effort(app, registry, &created.id, effort)?;
     }
     announce(app, &registry.implementation_view(implementation_id)?);
-    let message: String = first_message(&view, phase, station);
+    let git: Vec<String> = match registry
+        .changes_input(&created.id, ChangesReach::Project)
+        .and_then(|input| {
+            let busy = registry.busy_in_project(&created.id)?;
+            Ok(status::session_status(&input, busy))
+        }) {
+        Ok(found) => git_lines(&found),
+        Err(error) => {
+            registry.log_session_line(&created.id, format!("Git-Lage nicht ermittelt: {error}"));
+            Vec::new()
+        }
+    };
+    let message: String = first_message(&view, phase, station, &git);
     if let Err(error) = registry.send(app, &created.id, &message, &[], &[]) {
         registry.log_session_line(
             &created.id,

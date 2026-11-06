@@ -63,3 +63,5 @@
 - Seven-Goals-Check im Report-Back.
 
 ## Report-Back
+
+Umgesetzt in `start.rs`: `git_lines`, `entry_line`, Parameter `git_lines` an `first_message`, Ermittlung in `start_claimed`. Keine Tests (privates Profil); `pnpm check` grün.
