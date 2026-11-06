@@ -61,11 +61,27 @@ pub struct SpawnOptions { /* … */ pub auto_compact_window: Option<u32> }
 
 ## Summary
 
+Stationen sparen Kontingent an drei Stellen. Das automatische Zusammenfassen läuft nur in Stationen der Betriebsart Claude (Schalter und Regler in den Einstellungen, Variable `CLAUDE_CODE_AUTO_COMPACT_WINDOW` beim Prozessstart, ADR 058). `implementation_get` antwortet standardmäßig nur mit dem Lagebericht als Text (358 statt 37 900 Zeichen), `create` und `set_phases` ebenso. Die erste Stationsnachricht trägt den Block „Git-Lage:“. Dazu starten Stationen mit dem Ausgabestil `station`, wenn dessen Datei installiert ist. Die Probe (`compact_boundary` mitten im Durchlauf) liegt in `artifacts/`.
+
 ## Files touched
+
+- Rust: `settings/{mod,model}.rs`, `agents/claude/{process,locate}.rs`, `implementation/{tools,start}.rs`, `sessions/registry.rs`, `sessions/registry/side.rs`, `examples/side-probe.rs`
+- Oberfläche: `components/Slider.{tsx,css}`, `features/settings/{SettingsView.tsx,settingsCatalog.ts}`, erzeugte Bindings `Settings.ts`, `SettingsChange.ts`
+- Docs: ADR 058, `code-map.md`, `glossary.md`
 
 ## Commits
 
+- `709433b` Schlanke Antworten der Umsetzungs-Werkzeuge (Phase 2)
+- `861840d` Stationen fassen automatisch zusammen, ADR 058 (Phase 1)
+- `bcb1763` Git-Lage in der ersten Stationsnachricht (Phase 3)
+- `aa87372` Stationen starten mit dem Ausgabestil `station` (Phase 4)
+- Archiv-Commit und `chore(release): v0.56.0` folgen.
+
 ## Deviations from plan
+
+- Phase 4 wurde nachträglich ergänzt (06.11.2026); der Plan hatte ursprünglich drei Phasen.
+- Der Ausgabestil `station` selbst liegt im Config-Master des Benutzers, nicht in diesem Repo.
+- Keine weiteren Abweichungen.
 
 ## Follow-ups
 

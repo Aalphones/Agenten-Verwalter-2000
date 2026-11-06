@@ -15,7 +15,7 @@ Dieser Plan führt **Abbrechen** als normalen Weg ein und **Löschen** für abge
 
 Die Phasen laufen nacheinander, weil Phase 2 die Bindings und Befehle aus Phase 1 braucht.
 
-**Reihenfolge zu anderen Plänen:** Erst nach `2026-11-06_kontingent-stationen` und `2026-11-06_begonnene-phase-umplanen` umsetzen. Alle drei ändern `implementation/tools.rs`, `implementation/start.rs` und `sessions/registry/implementation.rs`. Dort sind auch ADR 058 und 059 vergeben.
+**Reihenfolge zu anderen Plänen:** Erst nach `2026-11-06_kontingent-stationen` (umgesetzt, archiviert, `v0.56.0`) und `2026-11-06_begonnene-phase-umplanen` umsetzen. Alle drei ändern `implementation/tools.rs`, `implementation/start.rs` und `sessions/registry/implementation.rs`. Dort sind auch ADR 058 und 059 vergeben.
 
 ## Phase 1 — Core: Abbrechen, Löschen, Anfrage per Werkzeug
 

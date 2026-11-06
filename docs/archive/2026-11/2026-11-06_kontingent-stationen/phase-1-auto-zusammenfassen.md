@@ -45,7 +45,7 @@
   '{"type":"user","message":{"role":"user","content":"Lies nacheinander mit dem Read-Werkzeug vollständig: docs/konzept.md, docs/glossary.md, docs/code-map.md, docs/PROJECT.md, docs/knowledge/claude-stream-json.md. Nenne danach je Datei die Zeilenzahl."}}' | claude -p --input-format stream-json --output-format stream-json --verbose --model claude-sonnet-5-5 --max-turns 15 > $env:TEMP\probe-compact.jsonl
   Remove-Item Env:CLAUDE_CODE_AUTO_COMPACT_WINDOW
   ```
-  - Aus der Ausgabe nur die Zeile mit `"subtype":"compact_boundary"` und die `result`-Zeile, gekürzt auf je 300 Zeichen, nach `docs/planning/2026-11-06_kontingent-stationen/artifacts/phase-1-probe-compact.txt` schreiben. Die ganze Ausgabe nicht committen.
+  - Aus der Ausgabe nur die Zeile mit `"subtype":"compact_boundary"` und die `result`-Zeile, gekürzt auf je 300 Zeichen, nach `docs/archive/2026-11/2026-11-06_kontingent-stationen/artifacts/phase-1-probe-compact.txt` schreiben. Die ganze Ausgabe nicht committen.
   - Erwartet: `compact_boundary` mit `"trigger":"auto"` steht **vor** `result`.
   - Fehlt sie: Eintrag in `FINDINGS.md`, Phase anhalten, Rückfrage an den Benutzer. Ohne Zusammenfassen mitten im Durchlauf wirkt der Hebel nicht.
 - [x] `src-tauri/src/settings/model.rs`:
