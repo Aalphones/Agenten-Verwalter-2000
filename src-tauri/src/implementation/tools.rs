@@ -5,8 +5,8 @@ use serde_json::{Value, json};
 use tauri::{Emitter, Manager};
 
 use super::model::{
-    ImplementationChangedEvent, ImplementationView, MAX_DESCRIPTION_CHARS, MAX_NAME_CHARS,
-    MAX_SOURCE_CHARS, MAX_TITLE_CHARS, PhaseInput, check_length, validate,
+    ImplementationChangedEvent, ImplementationView, MAX_CANCEL_REASON_CHARS, MAX_DESCRIPTION_CHARS,
+    MAX_NAME_CHARS, MAX_SOURCE_CHARS, MAX_TITLE_CHARS, PhaseInput, check_length, validate,
 };
 use super::{IMPLEMENTATION_CHANGED_EVENT, changes};
 use crate::mcp_access::tools::{ToolCall, ToolResult, ToolSet, ToolSpec};
@@ -17,6 +17,7 @@ const GET: &str = "implementation_get";
 const SET_PHASES: &str = "implementation_set_phases";
 const DESCRIBE_PHASE: &str = "implementation_describe_phase";
 const COMPLETE_STATION: &str = "implementation_complete_station";
+const CANCEL: &str = "implementation_cancel";
 const NO_REGISTRY: &str = "Der Verwalter startet noch";
 const NOT_A_STATION: &str = "Diese Session ist keine Station.";
 const MAX_RESULT_CHARS: usize = 200;
@@ -98,6 +99,30 @@ impl ToolSet for ImplementationTools {
                 }),
             },
             ToolSpec {
+                name: CANCEL,
+                description: "Fragt beim Benutzer an, die Umsetzung dieser Session (sonst die \
+                              neueste des Vorhabens) abzubrechen und mit delete danach zu \
+                              löschen. Wirkt nicht sofort: bis der Benutzer bestätigt oder \
+                              verwirft, startet keine Station. Sessions bleiben erhalten.",
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": MAX_CANCEL_REASON_CHARS,
+                            "description": "Warum abbrechen; der Benutzer liest es auf der Karte",
+                        },
+                        "delete": {
+                            "type": "boolean",
+                            "description": "true: nach dem Abbrechen löschen (Phasen, Stationen, Verlauf)",
+                        },
+                    },
+                    "required": ["reason"],
+                    "additionalProperties": false,
+                }),
+            },
+            ToolSpec {
                 name: COMPLETE_STATION,
                 description: "Meldet die Station dieser Session fertig, mit einer Zeile Ergebnis; \
                               `fix_needed` bei einem Review, das eine Fix-Runde braucht.",
@@ -123,6 +148,7 @@ impl ToolSet for ImplementationTools {
             GET => get(call, &registry),
             DESCRIBE_PHASE => describe_phase(call, &registry),
             COMPLETE_STATION => complete_station(call, &registry),
+            CANCEL => cancel(call, &registry),
             SET_PHASES => set_phases(call),
             other => Err(format!("Unbekanntes Werkzeug: {other}")),
         };
@@ -284,6 +310,31 @@ fn complete_station(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolR
     .map_err(|error| error.to_string())?;
     Ok(ToolResult::Ok {
         text: outcome.text(),
+        structured: None,
+    })
+}
+
+#[derive(Deserialize)]
+struct CancelArguments {
+    #[serde(default)]
+    reason: String,
+    #[serde(default)]
+    delete: bool,
+}
+
+/// Nur eine Anfrage: abbrechen oder löschen kann allein der Benutzer (ADR 060).
+fn cancel(call: &ToolCall, registry: &SessionRegistry) -> Result<ToolResult, String> {
+    let arguments: CancelArguments = parse(call.arguments)?;
+    check_length(
+        "reason",
+        arguments.reason.trim(),
+        1,
+        MAX_CANCEL_REASON_CHARS,
+    )?;
+    let view = registry.request_cancel(call.session_id, &arguments.reason, arguments.delete)?;
+    announce(call, &view);
+    Ok(ToolResult::Ok {
+        text: "Anfrage liegt beim Benutzer.".to_owned(),
         structured: None,
     })
 }

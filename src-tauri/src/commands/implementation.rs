@@ -5,7 +5,7 @@ use crate::error::CommandError;
 use crate::implementation::model::{
     ImplementationView, InquiryCreated, PhaseView, StationState, StationView,
 };
-use crate::implementation::{self, announce, changes, now_ms, start};
+use crate::implementation::{self, announce, announce_removed, changes, now_ms, start};
 use crate::sessions::registry::SessionRegistry;
 
 /// Alle Umsetzungen nicht archivierter Vorhaben, neueste zuerst (ADR 048). `async`, damit die
@@ -156,6 +156,75 @@ pub async fn implementation_apply_change(
     accept: bool,
 ) -> Result<(), CommandError> {
     changes::decide(&app, &id, accept)
+}
+
+/// „Abbrechen…“ (ADR 060): danach lässt sich im Vorhaben eine neue Umsetzung anlegen.
+#[tauri::command]
+pub async fn implementation_cancel(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+) -> Result<ImplementationView, CommandError> {
+    let view = registry.cancel_implementation(&id)?;
+    announce(&app, &view);
+    Ok(view)
+}
+
+/// „Löschen…“ einer abgebrochenen oder nie gestarteten Umsetzung (ADR 060).
+#[tauri::command]
+pub async fn implementation_delete(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+) -> Result<(), CommandError> {
+    registry.delete_implementation(&app, &id)?;
+    announce_removed(&app, &id);
+    Ok(())
+}
+
+/// „Bestätigen“ der Anfrage eines Agenten: abbrechen, bei `delete` danach löschen; `None` nach dem
+/// Löschen. Scheitert es, bleibt die Anfrage liegen — außer die Umsetzung ist inzwischen regulär
+/// fertig, dann gibt es nichts mehr abzubrechen.
+#[tauri::command]
+pub async fn implementation_apply_cancel(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+) -> Result<Option<ImplementationView>, CommandError> {
+    let view = registry.implementation_view(&id)?;
+    let Some(pending) = view.pending_cancel else {
+        return Err(CommandError::Implementation(
+            "Es liegt keine Anfrage zum Abbrechen vor.".to_owned(),
+        ));
+    };
+    if view.finished_at.is_some() {
+        let fresh = registry.discard_cancel(&id)?;
+        announce(&app, &fresh);
+        return Err(CommandError::Implementation(
+            "Umsetzung ist schon abgeschlossen.".to_owned(),
+        ));
+    }
+    let cancelled = registry.cancel_implementation(&id)?;
+    announce(&app, &cancelled);
+    if !pending.delete {
+        return Ok(Some(cancelled));
+    }
+    registry.delete_implementation(&app, &id)?;
+    announce_removed(&app, &id);
+    Ok(None)
+}
+
+/// „Verwerfen“ der Anfrage: alles wie vorher, die Stationen werden neu geplant.
+#[tauri::command]
+pub async fn implementation_discard_cancel(
+    app: AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    id: String,
+) -> Result<ImplementationView, CommandError> {
+    let view = registry.discard_cancel(&id)?;
+    announce(&app, &view);
+    changes::schedule_if_running(&app, &view)?;
+    registry.implementation_view(&id)
 }
 
 /// „Erledigt“ für eine Station des Benutzers.

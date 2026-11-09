@@ -22,11 +22,14 @@ use crate::error::CommandError;
 use crate::sessions::model::SessionStatus;
 use crate::sessions::registry::SessionRegistry;
 use model::{
-    ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationView, OpenQuestion,
-    PendingChange, PhaseInput, PhaseView, StationInput, StationState, StationView,
+    ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationRemovedEvent,
+    ImplementationView, OpenQuestion, PendingCancel, PendingChange, PhaseInput, PhaseView,
+    StationInput, StationState, StationView,
 };
 
 pub const IMPLEMENTATION_CHANGED_EVENT: &str = "implementation://changed";
+/// Nach dem Löschen einer Umsetzung (ADR 060), mit `ImplementationRemovedEvent`.
+pub const IMPLEMENTATION_REMOVED_EVENT: &str = "implementation://removed";
 
 /// So lange wartet eine Station nach der Fertigmeldung ihres Vorgängers, bevor sie startet.
 pub const START_DELAY: Duration = Duration::from_secs(10);
@@ -100,6 +103,12 @@ impl Countdowns {
     pub fn release_start(&mut self, station_id: &str) {
         self.starting.remove(station_id);
     }
+
+    /// `true`, solange die Session der Station angelegt wird; ihr Zustand steht dann noch nicht in
+    /// der Ansicht.
+    pub fn is_starting(&self, station_id: &str) -> bool {
+        self.starting.contains(station_id)
+    }
 }
 
 /// Eine Station mit Phase, wie Meldungen an den Agenten sie nennen.
@@ -154,6 +163,14 @@ pub fn announce(app: &AppHandle, view: &ImplementationView) {
     );
 }
 
+/// Meldet der Oberfläche, dass die Umsetzung gelöscht ist.
+pub fn announce_removed(app: &AppHandle, id: &str) {
+    let _ = app.emit(
+        IMPLEMENTATION_REMOVED_EVENT,
+        ImplementationRemovedEvent { id: id.to_owned() },
+    );
+}
+
 /// Meldet die Station fertig, hängt bei `fix_needed` Fix-Runde und zweites Review an und plant
 /// die Stationen, die danach starten dürfen. Läuft im MCP-Thread oder im Tauri-Befehl, ohne dass
 /// eine Sperre gehalten wird: die Registry nimmt Datenbank-, Vorhaben- und Session-Sperren selbst,
@@ -182,6 +199,9 @@ pub fn plan_completion(
     station_id: &str,
     fix_needed: bool,
 ) -> Result<(Vec<StationRow>, Option<String>), String> {
+    if view.cancelled_at.is_some() {
+        return Err("Die Umsetzung ist abgebrochen; es gibt nichts mehr zu melden.".to_owned());
+    }
     let (phase, station) = find_station(view, station_id)
         .ok_or_else(|| "Diese Station gehört nicht zur Umsetzung.".to_owned())?;
     if station.state == StationState::Done {
@@ -355,7 +375,14 @@ pub fn build_view(
         .as_ref()
         .map(|pending: &PendingChange| changes::held_in(&phases, pending))
         .unwrap_or_default();
-    settle_waiting(&mut phases, countdowns, &held);
+    // In einer abgebrochenen Umsetzung startet nichts mehr; ihre offenen Stationen bleiben wartend.
+    if row.cancelled_at.is_none() {
+        settle_waiting(&mut phases, countdowns, &held);
+    }
+    let pending_cancel: Option<PendingCancel> = row
+        .pending_cancel
+        .as_deref()
+        .and_then(|json: &str| serde_json::from_str::<PendingCancel>(json).ok());
     let all_stations: Vec<&StationView> = phases
         .iter()
         .flat_map(|phase: &PhaseView| phase.stations.iter())
@@ -412,6 +439,8 @@ pub fn build_view(
             .map(|change: &ChangeRow| change_view(change, numbers))
             .collect(),
         pending_change,
+        cancelled_at: row.cancelled_at,
+        pending_cancel,
         phases,
     }
 }
@@ -551,6 +580,8 @@ pub fn new_rows(
         auto_start: true,
         stop_after_current: false,
         pending_change: None,
+        cancelled_at: None,
+        pending_cancel: None,
     };
     let (phases, stations) = phase_rows(&id, inputs, 0);
     (row, phases, stations)

@@ -17,6 +17,9 @@ use crate::sessions::registry::SessionRegistry;
 
 const HELD_BY_PROPOSAL: &str =
     "Ein Plan-Vorschlag würde diese Station ersetzen; erst übernehmen oder verwerfen.";
+const HELD_BY_CANCEL: &str =
+    "Eine Anfrage zum Abbrechen liegt vor; erst bestätigen oder verwerfen.";
+const IS_CANCELLED: &str = "Die Umsetzung ist abgebrochen.";
 
 /// Mehr Commit-Betreffe je Eintrag würden die erste Nachricht aufblähen.
 const MAX_GIT_COMMITS: usize = 3;
@@ -139,6 +142,11 @@ pub fn schedule_ready(
     let registry = app.state::<SessionRegistry>();
     let view = registry.implementation_view(implementation_id)?;
     let mut scheduled: Vec<StationRef> = Vec::new();
+    // Abgebrochen oder Anfrage offen (ADR 060): nichts wird geplant.
+    if view.cancelled_at.is_some() || view.pending_cancel.is_some() {
+        announce(app, &view);
+        return Ok(scheduled);
+    }
     for phase in &view.phases {
         for station in &phase.stations {
             if station.state != StationState::Ready || station.by_user {
@@ -234,6 +242,13 @@ fn start_claimed(
 ) -> Result<(), CommandError> {
     let _ = registry.cancel_countdown(station_id);
     let view = registry.implementation_view(implementation_id)?;
+    // Deckt auch den Zeitgeber ab: `fire` startet nur über `start_now`.
+    if view.cancelled_at.is_some() {
+        return Err(CommandError::Implementation(IS_CANCELLED.to_owned()));
+    }
+    if view.pending_cancel.is_some() {
+        return Err(CommandError::Implementation(HELD_BY_CANCEL.to_owned()));
+    }
     let (phase, station) = find_station(&view, station_id).ok_or_else(|| {
         CommandError::Implementation("Diese Station gehört nicht zur Umsetzung.".to_owned())
     })?;

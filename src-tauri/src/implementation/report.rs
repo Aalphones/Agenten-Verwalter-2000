@@ -59,6 +59,20 @@ pub fn text_with(
         view.stations_done,
         view.stations_total
     ));
+    if let Some(cancelled_at) = view.cancelled_at {
+        lines.push(format!("Abgebrochen: {}", stamp(cancelled_at)));
+    }
+    if let Some(pending) = &view.pending_cancel {
+        let action = if pending.delete {
+            "abbrechen und löschen"
+        } else {
+            "abbrechen"
+        };
+        lines.push(format!(
+            "Anfrage aus #{} wartet auf Bestätigen: {action} — {}",
+            pending.session_number, pending.reason
+        ));
+    }
     push_section(&mut lines, "Jetzt", now_lines(view), "nichts läuft");
     push_section(&mut lines, "Fertig", done_lines(view), "noch nichts");
     let open = open_summary(view);

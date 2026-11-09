@@ -6,7 +6,7 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 use crate::agents::event::{Effort, ModelId};
 use crate::db::{enum_from_text, enum_to_text};
 use crate::error::CommandError;
-use crate::implementation::model::PhaseMark;
+use crate::implementation::model::{PendingCancel, PhaseMark};
 
 #[derive(Debug, Clone)]
 pub struct ImplementationRow {
@@ -21,6 +21,10 @@ pub struct ImplementationRow {
     pub stop_after_current: bool,
     /// `PendingChange` als JSON.
     pub pending_change: Option<String>,
+    /// Abgebrochen (ADR 060); dann ist auch `finished_at` gesetzt.
+    pub cancelled_at: Option<f64>,
+    /// `PendingCancel` als JSON.
+    pub pending_cancel: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +79,8 @@ pub struct StoredImplementation {
 }
 
 const IMPLEMENTATION_COLUMNS: &str = "id, project_id, name, source, created_by_session_id, \
-     created_at, finished_at, auto_start, stop_after_current, pending_change";
+     created_at, finished_at, auto_start, stop_after_current, pending_change, cancelled_at, \
+     pending_cancel";
 const PHASE_COLUMNS: &str = "id, implementation_id, position, key, title, description, wave, mark";
 const STATION_COLUMNS: &str = "s.id, s.phase_id, s.position, s.stage, s.model, s.by_user, \
      s.skill, s.brief, s.session_id, s.started_at, s.completed_at, s.result, s.effort";
@@ -91,7 +96,7 @@ pub fn insert(
     transaction.execute(
         &format!(
             "INSERT INTO implementations ({IMPLEMENTATION_COLUMNS}) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
         ),
         params![
             row.id,
@@ -104,6 +109,8 @@ pub fn insert(
             row.auto_start,
             row.stop_after_current,
             row.pending_change,
+            row.cancelled_at,
+            row.pending_cancel,
         ],
     )?;
     insert_phases(&transaction, phases, stations)?;
@@ -284,6 +291,8 @@ fn read_implementation(row: &Row<'_>) -> rusqlite::Result<ImplementationRow> {
         auto_start: row.get(7)?,
         stop_after_current: row.get(8)?,
         pending_change: row.get(9)?,
+        cancelled_at: row.get(10)?,
+        pending_cancel: row.get(11)?,
     })
 }
 
@@ -502,6 +511,47 @@ pub fn set_pending_change(
     connection.execute(
         "UPDATE implementations SET pending_change = ?2 WHERE id = ?1",
         params![implementation_id, pending_change],
+    )?;
+    Ok(())
+}
+
+/// Bricht die Umsetzung ab (ADR 060): abgeschlossen und abgebrochen zugleich, Automatik und Halt
+/// aus, offene Vorschläge und Anfragen verworfen. Phasen, Stationen und Verlauf bleiben.
+pub fn cancel(connection: &Connection, id: &str, at: f64) -> Result<(), CommandError> {
+    connection.execute(
+        "UPDATE implementations SET finished_at = ?2, cancelled_at = ?2, auto_start = 0, \
+             stop_after_current = 0, pending_change = NULL, pending_cancel = NULL \
+         WHERE id = ?1",
+        params![id, at],
+    )?;
+    Ok(())
+}
+
+/// Löscht die Umsetzung; Phasen, Stationen und Änderungen gehen per Kaskade mit. Rückfragen zeigen
+/// danach auf keine Umsetzung mehr, die Sessions selbst bleiben. Ein Zug.
+pub fn delete(connection: &mut Connection, id: &str) -> Result<(), CommandError> {
+    let transaction = connection.transaction()?;
+    transaction.execute(
+        "UPDATE sessions SET inquiry_of = NULL WHERE inquiry_of = ?1",
+        params![id],
+    )?;
+    transaction.execute("DELETE FROM implementations WHERE id = ?1", params![id])?;
+    transaction.commit()?;
+    Ok(())
+}
+
+pub fn set_pending_cancel(
+    connection: &Connection,
+    id: &str,
+    value: Option<&PendingCancel>,
+) -> Result<(), CommandError> {
+    let json: Option<String> = value
+        .map(serde_json::to_string)
+        .transpose()
+        .map_err(|error| CommandError::Implementation(error.to_string()))?;
+    connection.execute(
+        "UPDATE implementations SET pending_cancel = ?2 WHERE id = ?1",
+        params![id, json],
     )?;
     Ok(())
 }

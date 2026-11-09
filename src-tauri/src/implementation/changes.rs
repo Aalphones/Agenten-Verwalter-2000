@@ -32,6 +32,29 @@ pub fn is_begun(phase: &PhaseView) -> bool {
     phase.stations.iter().any(is_station_begun)
 }
 
+/// Die erste Station, deren Session gerade arbeitet, als (Phasen-Schlüssel, Stufe); sie sperrt
+/// Abbrechen und Löschen (ADR 060). Wartet die Session auf den Benutzer, sperrt sie nicht.
+pub fn blocking_station(view: &ImplementationView) -> Option<(String, String)> {
+    view.phases.iter().find_map(|phase: &PhaseView| {
+        phase
+            .stations
+            .iter()
+            .find(|station: &&StationView| {
+                matches!(
+                    station.state,
+                    StationState::Starting | StationState::Running | StationState::WaitsForScript
+                )
+            })
+            .map(|station: &StationView| (phase.key.clone(), station.stage.clone()))
+    })
+}
+
+/// Löschen dürfen nur abgebrochene oder nie begonnene Umsetzungen; eine normal fertige bleibt als
+/// Archiv (ADR 060).
+pub fn may_delete(view: &ImplementationView) -> bool {
+    view.cancelled_at.is_some() || !view.phases.iter().any(is_begun)
+}
+
 /// Alle Stationen der Phase sind fertig gemeldet.
 pub fn is_finished(phase: &PhaseView) -> bool {
     !phase.stations.is_empty()
@@ -445,7 +468,7 @@ fn apply(
 
 /// Plant die bereiten Stationen, wenn die Automatik an ist. Eine Umsetzung, deren erste Station
 /// der Benutzer noch nicht gestartet hat, beginnt auch nach einer Plan-Änderung nicht von selbst.
-fn schedule_if_running(app: &AppHandle, view: &ImplementationView) -> Result<(), CommandError> {
+pub fn schedule_if_running(app: &AppHandle, view: &ImplementationView) -> Result<(), CommandError> {
     let has_begun: bool = view
         .phases
         .iter()

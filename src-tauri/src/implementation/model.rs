@@ -14,6 +14,7 @@ pub const MAX_DESCRIPTION_CHARS: usize = 500;
 pub const MAX_STAGE_CHARS: usize = 40;
 pub const MAX_SKILL_CHARS: usize = 40;
 pub const MAX_BRIEF_CHARS: usize = 1000;
+pub const MAX_CANCEL_REASON_CHARS: usize = 300;
 
 /// Eine neue Rückfrage: die Session und der Lagebericht, der als ungesendeter Anhang an ihr hängt.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -160,6 +161,19 @@ pub struct PendingChange {
     pub seen_station_ids: Vec<String>,
 }
 
+/// Anfrage eines Agenten, die Umsetzung abzubrechen und bei `delete` danach zu löschen (ADR 060);
+/// wirkt erst, wenn der Benutzer sie bestätigt.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingCancel {
+    pub session_id: String,
+    pub session_number: u32,
+    #[ts(type = "number")]
+    pub at: f64,
+    pub reason: String,
+    pub delete: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ImplementationView {
@@ -176,6 +190,11 @@ pub struct ImplementationView {
     pub phases: Vec<PhaseView>,
     pub changes: Vec<ChangeView>,
     pub pending_change: Option<PendingChange>,
+    /// Abgebrochen (ADR 060); dann ist auch `finished_at` gesetzt.
+    #[ts(type = "number | null")]
+    pub cancelled_at: Option<f64>,
+    /// Offene Anfrage eines Agenten; solange sie liegt, startet keine Station.
+    pub pending_cancel: Option<PendingCancel>,
     pub stations_done: u32,
     pub stations_total: u32,
     /// Phase der ersten nicht fertigen Station (1-basiert in Plan-Reihenfolge); `phases.len()`,
@@ -193,6 +212,13 @@ pub struct ImplementationView {
 #[serde(rename_all = "camelCase")]
 pub struct ImplementationChangedEvent {
     pub implementation: ImplementationView,
+}
+
+/// Gesendet als `implementation://removed`, nachdem die Umsetzung gelöscht ist (ADR 060).
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ImplementationRemovedEvent {
+    pub id: String,
 }
 
 /// Eine Phase, wie der Agent sie übergibt. Fehlende Texte werden leer gelesen, damit `validate`

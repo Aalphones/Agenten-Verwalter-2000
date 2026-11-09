@@ -10,7 +10,7 @@ Dieser Plan führt **Abbrechen** als normalen Weg ein und **Löschen** für abge
 
 | Phase | Inhalt | Rating | Modell | Wave | Schätzung | Sichtabnahme | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | Core: Abbrechen, Löschen, Anfrage per Werkzeug, Migration 019, ADR 060 | heikel | opus | 1 | 3 h | keine (Core) | pending |
+| 1 | Core: Abbrechen, Löschen, Anfrage per Werkzeug, Migration 019, ADR 060 | heikel | opus | 1 | 3 h | keine (Core) | complete |
 | 2 | Oberfläche: Knöpfe in der Umsetzungsleiste, Karte „Umsetzung abbrechen?“, Anzeige „abgebrochen“ | standard | sonnet | 2 | 1,5 h | Umsetzungsleiste, Karte | pending |
 
 Die Phasen laufen nacheinander, weil Phase 2 die Bindings und Befehle aus Phase 1 braucht.
@@ -71,11 +71,11 @@ pub fn blocking_station(view: &ImplementationView) -> Option<(String, String)>; 
 pub fn may_delete(view: &ImplementationView) -> bool;                         // cancelled_at.is_some() || !phases.iter().any(is_begun)
 // src-tauri/src/db/implementations.rs
 pub fn cancel(connection: &Connection, id: &str, at: f64) -> Result<(), CommandError>;
-pub fn delete(connection: &Connection, id: &str) -> Result<(), CommandError>;  // inquiry_of leeren + DELETE, eine Transaktion
+pub fn delete(connection: &mut Connection, id: &str) -> Result<(), CommandError>;  // inquiry_of leeren + DELETE, eine Transaktion
 pub fn set_pending_cancel(connection: &Connection, id: &str, value: Option<&PendingCancel>) -> Result<(), CommandError>;
 // src-tauri/src/sessions/registry/implementation.rs
 pub fn cancel_implementation(&self, id: &str) -> Result<ImplementationView, CommandError>;
-pub fn delete_implementation(&self, id: &str) -> Result<(), CommandError>;
+pub fn delete_implementation(&self, app: &AppHandle, id: &str) -> Result<(), CommandError>; // app: Sessions mit geleertem Verweis melden
 pub fn request_cancel(&self, session_id: &str, reason: &str, delete: bool) -> Result<ImplementationView, String>;
 pub fn discard_cancel(&self, id: &str) -> Result<ImplementationView, CommandError>;
 ```
@@ -86,8 +86,8 @@ implementation_cancel(id: string): ImplementationView
 implementation_delete(id: string): void
 implementation_apply_cancel(id: string): ImplementationView | null   // null nach dem Löschen
 implementation_discard_cancel(id: string): ImplementationView
-// Ereignis
-"implementation-removed": { id: string }
+// Ereignis (Binding ImplementationRemovedEvent.ts; Schreibweise wie implementation://changed)
+"implementation://removed": { id: string }
 // MCP-Werkzeug
 implementation_cancel { reason: string /* 1–300 */, delete?: boolean }
 ```
@@ -106,18 +106,24 @@ implementation_cancel { reason: string /* 1–300 */, delete?: boolean }
 
 ### Checkliste
 
-- [ ] Tests zuerst (AK 1–6), rot sehen
-- [ ] Migration 019 und ihre Registrierung
-- [ ] `PendingCancel`, `ImplementationView`-Felder, `blocking_station`, `may_delete`
-- [ ] db-Funktionen `cancel`, `delete`, `set_pending_cancel`, Spalten im Lesen
-- [ ] Registry: `cancel_implementation`, `delete_implementation`, `request_cancel`, `discard_cancel`, Speicher-Bereinigung `inquiry_of`/`station_of`
-- [ ] Start-Sperre bei `pending_cancel` in `schedule_ready`, `fire`, `start_now`
-- [ ] Tauri-Befehle und Registrierung, Ereignis `implementation-removed`
-- [ ] MCP-Werkzeug `implementation_cancel` (Beschreibung nennt: Anfrage, keine sofortige Wirkung)
-- [ ] ADR 060 `docs/decisions/060-umsetzung-abbrechen-und-loeschen.md`, Code-Map und Glossar (Grep „Umsetzung“)
-- [ ] DoD: AK 1–9 belegt; Ergebniszeilen von `cargo test` und `pnpm check` im Report-Back; sichtbar ist für den Reviewer nichts (Core); Seven-Goals-Check
+- [x] ~~Tests zuerst (AK 1–6), rot sehen~~ — entfällt (privates Profil)
+- [x] Migration 019 und ihre Registrierung
+- [x] `PendingCancel`, `ImplementationView`-Felder, `blocking_station`, `may_delete`
+- [x] db-Funktionen `cancel`, `delete`, `set_pending_cancel`, Spalten im Lesen
+- [x] Registry: `cancel_implementation`, `delete_implementation`, `request_cancel`, `discard_cancel`, Speicher-Bereinigung `inquiry_of`/`station_of`
+- [x] Start-Sperre bei `pending_cancel` in `schedule_ready`, `fire`, `start_now`
+- [x] Tauri-Befehle und Registrierung, Ereignis `implementation://removed`
+- [x] MCP-Werkzeug `implementation_cancel` (Beschreibung nennt: Anfrage, keine sofortige Wirkung)
+- [x] ADR 060 `docs/decisions/060-umsetzung-abbrechen-und-loeschen.md`, Code-Map und Glossar (Grep „Umsetzung“)
+- [x] DoD: AK 1–7 und 9 am Code belegt (Tests und Mutationsprobe entfallen, privates Profil); `pnpm check` grün
 
 ### Report-Back
+
+- **Stand 2026-11-09:** Phase 1 umgesetzt. `pnpm check` grün; bestehende Tests `cargo test … implementation`: 9 passed. Bindings `ImplementationView.ts`, neu `PendingCancel.ts` und `ImplementationRemovedEvent.ts`.
+- **Abweichungen vom Kontrakt:** Ereignis heißt `implementation://removed` (Schreibweise aller Ereignisse der App), Typ `ImplementationRemovedEvent`. `delete_implementation` nimmt zusätzlich `app` (geleerte Verweise gehen als Session-Änderung an die Oberfläche), `db::delete` nimmt `&mut Connection` (Transaktion).
+- **Zusätzlich:** Nach dem Abbrechen setzt die Ansicht offene Stationen nicht mehr auf bereit (also kein ▶, keine aktive Station in der Sidebar), `start_now` lehnt „Die Umsetzung ist abgebrochen.“ ab, eine Fertigmeldung einer Station der abgebrochenen Umsetzung wird abgelehnt. Eine Station, deren Session gerade angelegt wird (`Countdowns::is_starting`), sperrt wie eine laufende. Bestätigen bei inzwischen regulär fertiger Umsetzung verwirft die Anfrage. Der Lagebericht nennt Abbruch und offene Anfrage.
+- 🟡 Zwischen Sperrprüfung und Schreiben des Abbruchs bleibt ein kurzes Fenster für einen Zeitgeber, der die Ansicht schon gelesen hat (in ADR 060 unter Konsequenzen).
+- **Für Phase 2:** Stationen einer abgebrochenen Umsetzung in `Asking`/`WaitsForYou`/`Error` bleiben „aktiv“ im Sinne von `LIVE_STATES`; die Sidebar sollte abgebrochene Umsetzungen dort ausblenden (Konfidenz-Punkt Seitenleiste).
 
 ## Phase 2 — Oberfläche: Abbrechen, Löschen, Karte
 

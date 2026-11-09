@@ -21,14 +21,19 @@ use crate::db::implementations::{
 };
 use crate::error::CommandError;
 use crate::file_links;
+use crate::implementation::changes as implementation_changes;
 use crate::implementation::model::{
-    ImplementationView, InquiryCreated, OpenQuestion, PendingChange, PhaseInput, PhaseView,
+    ImplementationView, InquiryCreated, OpenQuestion, PendingCancel, PendingChange, PhaseInput,
+    PhaseView, StationView,
 };
 use crate::implementation::report::{self, Extras};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
 use crate::sessions::model::SessionStatus;
 
 const NO_IMPLEMENTATION: &str = "In diesem Vorhaben gibt es keine Umsetzung.";
+const IS_FINISHED: &str = "Umsetzung ist schon abgeschlossen.";
+const NOT_DELETABLE: &str = "Nur abgebrochene oder nie gestartete Umsetzungen lassen sich löschen.";
+const NO_CANCEL_REQUEST: &str = "Es liegt keine Anfrage zum Abbrechen vor.";
 
 /// Ein neuerer Lagebericht für eine Rückfrage: die Datei und was `send` im Zustand vermerkt.
 pub(super) struct ReportUpdate {
@@ -255,6 +260,139 @@ impl SessionRegistry {
         self.implementation_view(implementation_id)?;
         self.database
             .with(|connection| implementation_rows::rename(connection, implementation_id, &name))
+    }
+
+    /// Bricht die Umsetzung ab (ADR 060): abgeschlossen, Automatik aus, Vorschlag und Anfrage
+    /// verworfen, Countdowns beendet. Eine arbeitende Station sperrt, dann ändert sich nichts.
+    pub fn cancel_implementation(&self, id: &str) -> Result<ImplementationView, CommandError> {
+        let view = self.implementation_view(id)?;
+        if view.finished_at.is_some() {
+            return Err(CommandError::Implementation(IS_FINISHED.to_owned()));
+        }
+        self.check_not_running(&view)?;
+        self.database
+            .with(|connection| implementation_rows::cancel(connection, id, now_ms()))?;
+        self.cancel_countdowns_of(&view);
+        self.implementation_view(id)
+    }
+
+    /// Löscht eine abgebrochene oder nie begonnene Umsetzung samt Phasen, Stationen und Verlauf
+    /// (ADR 060). Die Sessions bleiben; was im Speicher auf die Umsetzung zeigt, wird geleert.
+    pub fn delete_implementation(&self, app: &AppHandle, id: &str) -> Result<(), CommandError> {
+        let view = self.implementation_view(id)?;
+        self.check_not_running(&view)?;
+        if !implementation_changes::may_delete(&view) {
+            return Err(CommandError::Implementation(NOT_DELETABLE.to_owned()));
+        }
+        self.cancel_countdowns_of(&view);
+        self.database
+            .with(|connection| implementation_rows::delete(connection, id))?;
+        for member in self.project_sessions(&view.project_id) {
+            let is_linked: bool = {
+                let state = member.lock();
+                state.station_of.as_deref() == Some(id) || state.inquiry_of.as_deref() == Some(id)
+            };
+            if !is_linked {
+                continue;
+            }
+            update(
+                app,
+                &member,
+                |state: &mut SessionState, outbox: &mut Outbox| {
+                    if state.station_of.as_deref() == Some(id) {
+                        state.station_of = None;
+                    }
+                    if state.inquiry_of.as_deref() == Some(id) {
+                        state.inquiry_of = None;
+                        state.last_report = None;
+                    }
+                    outbox.summary_dirty = true;
+                    Ok(())
+                },
+            )?;
+        }
+        Ok(())
+    }
+
+    /// `implementation_cancel`: legt die Anfrage eines Agenten ab und beendet die Countdowns; sonst
+    /// ändert sich nichts, bis der Benutzer bestätigt (ADR 060).
+    pub fn request_cancel(
+        &self,
+        session_id: &str,
+        reason: &str,
+        delete: bool,
+    ) -> Result<ImplementationView, String> {
+        let view = self
+            .require_implementation_of_session(session_id)
+            .map_err(|error: CommandError| error.to_string())?;
+        if view.finished_at.is_some() {
+            return Err(IS_FINISHED.to_owned());
+        }
+        if delete && !implementation_changes::may_delete(&view) {
+            return Err(NOT_DELETABLE.to_owned());
+        }
+        if view.pending_cancel.is_some() {
+            return Err("Es liegt schon eine Anfrage vor.".to_owned());
+        }
+        let pending = PendingCancel {
+            session_id: session_id.to_owned(),
+            session_number: self.session_number(session_id),
+            at: now_ms(),
+            reason: reason.trim().to_owned(),
+            delete,
+        };
+        // Erst ablegen, dann Countdowns beenden: ein Zeitgeber dazwischen sieht die Anfrage schon.
+        self.database
+            .with(|connection| {
+                implementation_rows::set_pending_cancel(connection, &view.id, Some(&pending))
+            })
+            .map_err(|error: CommandError| error.to_string())?;
+        self.cancel_countdowns_of(&view);
+        self.implementation_view(&view.id)
+            .map_err(|error: CommandError| error.to_string())
+    }
+
+    /// „Verwerfen“ der Anfrage; das Neuplanen der Stationen übernimmt der Aufrufer.
+    pub fn discard_cancel(&self, id: &str) -> Result<ImplementationView, CommandError> {
+        let view = self.implementation_view(id)?;
+        if view.pending_cancel.is_none() {
+            return Err(CommandError::Implementation(NO_CANCEL_REQUEST.to_owned()));
+        }
+        self.database
+            .with(|connection| implementation_rows::set_pending_cancel(connection, id, None))?;
+        self.implementation_view(id)
+    }
+
+    /// Sperrt, solange eine Station arbeitet oder ihre Session gerade angelegt wird.
+    fn check_not_running(&self, view: &ImplementationView) -> Result<(), CommandError> {
+        let starting: Option<(String, String)> = {
+            let countdowns = self.lock_countdowns();
+            view.phases.iter().find_map(|phase: &PhaseView| {
+                phase
+                    .stations
+                    .iter()
+                    .find(|station: &&StationView| countdowns.is_starting(&station.id))
+                    .map(|station: &StationView| (phase.key.clone(), station.stage.clone()))
+            })
+        };
+        match implementation_changes::blocking_station(view).or(starting) {
+            Some((key, stage)) => Err(CommandError::Implementation(format!(
+                "Station „{stage}“ in Phase {key} läuft noch. „Nach dieser anhalten“ einschalten \
+                 und abbrechen, sobald sie fertig ist."
+            ))),
+            None => Ok(()),
+        }
+    }
+
+    fn cancel_countdowns_of(&self, view: &ImplementationView) {
+        let mut countdowns = self.lock_countdowns();
+        for station in view
+            .phases
+            .iter()
+            .flat_map(|phase: &PhaseView| phase.stations.iter())
+        {
+            countdowns.cancel(&station.id);
+        }
     }
 
     /// Nummer der Session im Vorhaben; 0 für eine unbekannte.
