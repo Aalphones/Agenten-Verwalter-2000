@@ -72,10 +72,35 @@ export function flatStations(implementation: ImplementationView): StationRef[] {
   return refs;
 }
 
-/** Aktive Stationen (ADR 056) in Plan-Reihenfolge. */
+/** Aktive Stationen (ADR 056) in Plan-Reihenfolge; eine abgebrochene Umsetzung hat keine (ADR 060). */
 export function liveStations(implementation: ImplementationView): StationRef[] {
+  if (implementation.cancelledAt !== null) {
+    return [];
+  }
   return flatStations(implementation).filter((ref: StationRef) =>
     LIVE_STATES.includes(ref.station.state),
+  );
+}
+
+/** Zustände, in denen die Session einer Station arbeitet; sie sperren Abbrechen und Löschen (ADR 060). */
+const BLOCKING_STATES: readonly StationState[] = ['starting', 'running', 'waitsForScript'];
+
+/** Die erste Station mit arbeitender Session; `undefined`, wenn keine läuft (wie `blocking_station` im Core). */
+export function blockingStation(implementation: ImplementationView): StationRef | undefined {
+  return flatStations(implementation).find((ref: StationRef) =>
+    BLOCKING_STATES.includes(ref.station.state),
+  );
+}
+
+/** Löschen dürfen nur abgebrochene oder nie begonnene Umsetzungen (wie `may_delete` im Core). */
+export function mayDelete(implementation: ImplementationView): boolean {
+  return (
+    implementation.cancelledAt !== null ||
+    !implementation.phases.some((phase: PhaseView) =>
+      phase.stations.some(
+        (station: StationView) => station.sessionId !== null || station.completedAt !== null,
+      ),
+    )
   );
 }
 

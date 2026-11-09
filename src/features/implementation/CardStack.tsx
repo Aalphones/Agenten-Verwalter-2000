@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
+import { CancelRequestCard } from '@/features/implementation/CancelRequestCard';
 import {
+  blockingStation,
   changeIdOf,
   flatStations,
   neighbors,
@@ -8,6 +10,7 @@ import {
   type StationRef,
 } from '@/features/implementation/implementationOrder';
 import {
+  blockedText,
   BACK_TO_CURRENT_LABEL,
   BACK_TO_CURRENT_TITLE,
   SHOW_PENDING_LABEL,
@@ -21,6 +24,7 @@ import type { ChangeView } from '@/lib/bindings/ChangeView';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { ModelId } from '@/lib/bindings/ModelId';
+import type { PendingCancel } from '@/lib/bindings/PendingCancel';
 import type { PendingChange } from '@/lib/bindings/PendingChange';
 import type { PhaseInput } from '@/lib/bindings/PhaseInput';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
@@ -50,6 +54,8 @@ interface CardStackProps {
   onCancelCountdown: (stationId: string) => void;
   onCompleteByUser: (stationId: string, result: string) => void;
   onApplyChange: (accept: boolean) => void;
+  /** „Bestätigen“ (`true`) oder „Verwerfen“ der Anfrage „Umsetzung abbrechen?“. */
+  onApplyCancel: (accept: boolean) => void;
 }
 
 function isStationBegun(station: StationView): boolean {
@@ -102,6 +108,7 @@ export function CardStack({
   onCancelCountdown,
   onCompleteByUser,
   onApplyChange,
+  onApplyCancel,
 }: CardStackProps): ReactElement | null {
   const pending: PendingChange | null = implementation.pendingChange;
   const changeId: string | null = changeIdOf(focusedId);
@@ -184,13 +191,27 @@ export function CardStack({
     );
   }
 
+  const request: PendingCancel | null = implementation.pendingCancel;
+  const blocking: StationRef | undefined = blockingStation(implementation);
+  // Die Anfrage eines Agenten steht über der Kartei, egal welche Karte im Fokus ist.
+  const requestCard: ReactElement | null =
+    request === null ? null : (
+      <CancelRequestCard
+        request={request}
+        blockedText={
+          blocking === undefined ? null : blockedText(blocking.phase.key, blocking.station.stage)
+        }
+        onApply={onApplyCancel}
+      />
+    );
   const current: ReactElement | null = renderCurrent();
   if (current === null) {
-    return null;
+    return requestCard === null ? null : <div className="card-stack">{requestCard}</div>;
   }
   const canShowPending: boolean = pending !== null && focusedId !== PENDING_FOCUS;
   return (
     <div className="card-stack" aria-live="polite">
+      {requestCard}
       <div className="card-stack__bar">
         <span className="card-stack__label">Kartei</span>
         {canShowPending && (

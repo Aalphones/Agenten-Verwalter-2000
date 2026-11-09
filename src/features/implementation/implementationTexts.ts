@@ -63,6 +63,43 @@ export const APPLY_CHANGE_TITLE =
   'Ersetzt die kommenden Phasen und die offenen Stationen begonnener Phasen durch den Vorschlag';
 export const DISCARD_CHANGE_LABEL = 'Verwerfen';
 export const DISCARD_CHANGE_TITLE = 'Lässt die kommenden Phasen, wie sie sind';
+export const CANCEL_LABEL = 'Abbrechen…';
+export const CANCEL_TITLE =
+  'Beendet die Umsetzung; die Sessions bleiben, eine neue lässt sich anlegen';
+export const DELETE_LABEL = 'Löschen…';
+export const DELETE_TITLE = 'Entfernt die Umsetzung samt Phasen, Stationen und Verlauf';
+export const CONFIRM_CANCEL_LABEL = 'Abbrechen';
+export const CONFIRM_DELETE_LABEL = 'Löschen';
+export const CONFIRM_BACK_LABEL = 'Zurück';
+
+/** Rückfrage in der Leiste vor dem Abbrechen. */
+export function cancelQuestion(name: string): string {
+  return `Umsetzung „${name}“ abbrechen? Die Sessions bleiben, danach lässt sich eine neue Umsetzung anlegen.`;
+}
+
+/** Rückfrage in der Leiste vor dem Löschen. */
+export function deleteQuestion(name: string): string {
+  return `Umsetzung „${name}“ endgültig löschen? Phasen, Stationen und Verlauf gehen verloren, die Sessions bleiben.`;
+}
+
+/** „Abgebrochen am 09.11. 14:05“ statt der Schalter in der Leiste. */
+export function cancelledText(at: number): string {
+  return `Abgebrochen am ${stampText(at)}`;
+}
+
+/** Sperrtext, solange eine Station arbeitet (wie im Core, ADR 060). */
+export function blockedText(phaseKey: string, stage: string): string {
+  return `Station „${stage}“ in Phase ${phaseKey} läuft noch. „Nach dieser anhalten“ einschalten und abbrechen, sobald sie fertig ist.`;
+}
+
+export const CANCEL_REQUEST_TITLE = 'Umsetzung abbrechen?';
+export const DELETE_REQUEST_TITLE = 'Umsetzung löschen?';
+export const CONFIRM_REQUEST_LABEL = 'Bestätigen';
+export const CONFIRM_REQUEST_TITLE = 'Führt die Anfrage aus';
+export const DISCARD_REQUEST_LABEL = 'Verwerfen';
+export const DISCARD_REQUEST_TITLE =
+  'Lässt die Umsetzung, wie sie ist, und plant die Stationen neu';
+
 export const SHOW_PENDING_LABEL = 'Vorschlag ansehen';
 export const SHOW_PENDING_TITLE = 'Holt die Karte „Plan ändern?“ nach vorn';
 export const CHANGE_MARKER_TITLE = 'Zeigt diese Plan-Änderung vorn in der Kartei';

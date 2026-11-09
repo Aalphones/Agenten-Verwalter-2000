@@ -3,10 +3,12 @@ import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { ImplementationChangedEvent } from '@/lib/bindings/ImplementationChangedEvent';
+import type { ImplementationRemovedEvent } from '@/lib/bindings/ImplementationRemovedEvent';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { InquiryCreated } from '@/lib/bindings/InquiryCreated';
 
 const IMPLEMENTATION_CHANGED_EVENT = 'implementation://changed';
+const IMPLEMENTATION_REMOVED_EVENT = 'implementation://removed';
 
 /** Alle Umsetzungen nicht archivierter Vorhaben, neueste zuerst (ADR 048).
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `database` */
@@ -89,6 +91,40 @@ export async function setStationPlan(
   effort: Effort | null,
 ): Promise<void> {
   await invoke('implementation_set_station_plan', { id, stationId, model, effort });
+}
+
+/** Meldet, dass eine Umsetzung gelöscht wurde (ADR 060); der Aufrufer nimmt sie aus seinen Listen. */
+export function onImplementationRemoved(callback: (id: string) => void): Promise<UnlistenFn> {
+  return listen<ImplementationRemovedEvent>(
+    IMPLEMENTATION_REMOVED_EVENT,
+    (event: Event<ImplementationRemovedEvent>) => {
+      callback(event.payload.id);
+    },
+  );
+}
+
+/** „Abbrechen…“: die Umsetzung gilt als abgeschlossen, ihre Sessions bleiben (ADR 060).
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (Station läuft noch, schon abgeschlossen), `database` */
+export async function cancelImplementation(id: string): Promise<void> {
+  await invoke('implementation_cancel', { id });
+}
+
+/** „Löschen…“ einer abgebrochenen oder nie gestarteten Umsetzung (ADR 060).
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (Station läuft noch, nicht löschbar), `database` */
+export async function deleteImplementation(id: string): Promise<void> {
+  await invoke('implementation_delete', { id });
+}
+
+/** „Bestätigen“ der Anfrage eines Agenten: abbrechen, bei `delete` danach löschen.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (keine Anfrage, Station läuft noch), `database` */
+export async function applyImplementationCancel(id: string): Promise<void> {
+  await invoke('implementation_apply_cancel', { id });
+}
+
+/** „Verwerfen“ der Anfrage; die Stationen werden neu geplant.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation`, `database` */
+export async function discardImplementationCancel(id: string): Promise<void> {
+  await invoke('implementation_discard_cancel', { id });
 }
 
 /** „Übernehmen“ (`accept`) oder „Verwerfen“ des Vorschlags „Plan ändern?“.

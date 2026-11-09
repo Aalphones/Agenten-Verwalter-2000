@@ -39,6 +39,20 @@
     align-items: center;
   }
 
+  &__cancelled {
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+  }
+
+  &__confirm {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+    color: var(--color-fg-primary);
+  }
+
   &__actions {
     display: inline-flex;
     flex-wrap: wrap;
@@ -90,6 +104,10 @@
       border-color: var(--color-accent);
       background: var(--color-accent-subtle);
       color: var(--color-accent-text);
+    }
+
+    &--danger {
+      border-color: var(--color-status-error);
     }
   }
 }

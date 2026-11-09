@@ -11,7 +11,7 @@ Dieser Plan führt **Abbrechen** als normalen Weg ein und **Löschen** für abge
 | Phase | Inhalt | Rating | Modell | Wave | Schätzung | Sichtabnahme | Status |
 |---|---|---|---|---|---|---|---|
 | 1 | Core: Abbrechen, Löschen, Anfrage per Werkzeug, Migration 019, ADR 060 | heikel | opus | 1 | 3 h | keine (Core) | complete |
-| 2 | Oberfläche: Knöpfe in der Umsetzungsleiste, Karte „Umsetzung abbrechen?“, Anzeige „abgebrochen“ | standard | sonnet | 2 | 1,5 h | Umsetzungsleiste, Karte | pending |
+| 2 | Oberfläche: Knöpfe in der Umsetzungsleiste, Karte „Umsetzung abbrechen?“, Anzeige „abgebrochen“ | standard | sonnet | 2 | 1,5 h | Umsetzungsleiste, Karte | complete |
 
 Die Phasen laufen nacheinander, weil Phase 2 die Bindings und Befehle aus Phase 1 braucht.
 
@@ -148,15 +148,19 @@ implementation_cancel { reason: string /* 1–300 */, delete?: boolean }
 
 ### Checkliste
 
-- [ ] Tests zuerst (AK 1–6), rot sehen
-- [ ] Texte in `implementationTexts.ts`
-- [ ] Knöpfe und Rückfrage in `ImplementationBar.tsx`, Anzeige „Abgebrochen am …“
-- [ ] Karte `CancelRequestCard.tsx` nach dem Muster `PlanChangeCard.tsx`, eingehängt in `CardStack.tsx`
-- [ ] `useImplementations.ts`: Ereignis `implementation-removed`
-- [ ] Code-Map nachziehen
-- [ ] DoD: AK 1–7 belegt; vitest-Ergebniszeile und `pnpm check` im Report-Back; sichtbar ist für den Reviewer „Abbrechen…“ → Rückfrage → Leiste zeigt „Abgebrochen am …“ → „Löschen…“ → Umsetzung ist weg; Seven-Goals-Check
+- [x] ~~Tests zuerst (AK 1–6), rot sehen~~ — entfällt (privates Profil)
+- [x] Texte in `implementationTexts.ts`
+- [x] Knöpfe und Rückfrage in `ImplementationBar.tsx`, Anzeige „Abgebrochen am …“
+- [x] Karte `CancelRequestCard.tsx` nach dem Muster `PlanChangeCard.tsx`, eingehängt in `CardStack.tsx`
+- [x] `useImplementations.ts`: Ereignis `implementation://removed`
+- [x] Code-Map nachziehen
+- [x] DoD: AK 1–5 am Code belegt (AK 6 Tests/Mutationsprobe und AK 7 Sichtabnahme entfallen, privates Profil); `pnpm check` grün
 
 ### Report-Back
+
+- **Stand 2026-11-09:** Phase 2 umgesetzt, `pnpm check` grün. Rückfrage als Inline-Bestätigung in der Leiste (kein Dialog in der App vorhanden). Die Karte steht über der Kartei, unabhängig vom Fokus.
+- **Seitenleiste (ADR 056):** `liveStations` liefert für abgebrochene Umsetzungen nichts; Sidebar, Rückweg-Leiste und Zeitleisten-Sprung blenden deren Stationen damit aus. Die Umsetzungs-Zeile bleibt.
+- 🟡 Eine Station, deren Session gerade angelegt wird, sperrt im Core, die Oberfläche kennt das nicht; der Core lehnt dann mit dem Sperrtext ab, die Meldung erscheint als Fehlerzeile.
 
 ## Finale AK
 

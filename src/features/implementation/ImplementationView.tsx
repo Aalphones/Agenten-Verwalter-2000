@@ -22,9 +22,13 @@ import type { ModelId } from '@/lib/bindings/ModelId';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import {
+  applyImplementationCancel,
   applyImplementationChange,
+  cancelImplementation,
   cancelStationCountdown,
   completeStationByUser,
+  deleteImplementation,
+  discardImplementationCancel,
   loadImplementationReport,
   setImplementationAutoStart,
   setImplementationStopAfterCurrent,
@@ -302,6 +306,15 @@ export function ImplementationView({
             'Übernehmen fehlgeschlagen',
           );
         }}
+        onApplyCancel={(accept: boolean): void => {
+          run(
+            () =>
+              accept
+                ? applyImplementationCancel(implementationId)
+                : discardImplementationCancel(implementationId),
+            accept ? 'Bestätigen fehlgeschlagen' : 'Verwerfen fehlgeschlagen',
+          );
+        }}
       />
     );
   }
@@ -354,7 +367,14 @@ export function ImplementationView({
         onToggleTerminal={onToggleTerminal}
       />
       <ImplementationBar
+        key={implementationId}
         implementation={implementation}
+        onCancel={(): void => {
+          run(() => cancelImplementation(implementationId), 'Abbrechen fehlgeschlagen');
+        }}
+        onDelete={(): void => {
+          run(() => deleteImplementation(implementationId), 'Löschen fehlgeschlagen');
+        }}
         isReportShown={report !== null}
         isInquiryBusy={isInquiryBusy}
         isReportBusy={isReportBusy}
