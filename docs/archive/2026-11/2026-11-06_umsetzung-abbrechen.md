@@ -178,10 +178,30 @@ implementation_cancel { reason: string /* 1–300 */, delete?: boolean }
 
 ## Summary
 
+Eine Umsetzung lässt sich abbrechen (Migration 019, ADR 060) und, wenn abgebrochen oder nie gestartet, löschen; ihre Sessions bleiben. Eine laufende Station sperrt beides im Core und in der Oberfläche. Ein Agent kann per `implementation_cancel` nur anfragen; erst „Bestätigen“ auf der Karte „Umsetzung abbrechen?“ führt aus, „Verwerfen“ lässt alles. Die Leiste hat Knöpfe mit Inline-Rückfrage und zeigt „Abgebrochen am …“; Ereignis `implementation://removed`; die Seitenleiste blendet Stationen abgebrochener Umsetzungen aus. Danach legt `implementation_create` im selben Vorhaben eine neue an. Keine neuen automatisierten Tests (privates Profil). Release v0.58.0.
+
 ## Files touched
+
+- `src-tauri/src/implementation/` — `mod.rs`, `model.rs`, `changes.rs`, `report.rs`, `start.rs`, `tools.rs`, `tests.rs`
+- `src-tauri/src/db/` — `implementations.rs`, `migrations.rs`, `migrations/019_implementation_cancel.sql`
+- `src-tauri/src/commands/implementation.rs`, `src-tauri/src/lib.rs`, `src-tauri/src/sessions/registry/implementation.rs`, `src-tauri/examples/gen-bindings.rs`
+- `src/features/implementation/` — `CancelRequestCard.tsx`, `CardStack.tsx`, `ImplementationBar.tsx/.css`, `ImplementationView.tsx`, `implementationOrder.ts`, `implementationTexts.ts`, `useImplementations.ts`; `src/lib/implementation.ts`; Bindings `PendingCancel.ts`, `ImplementationRemovedEvent.ts`, `ImplementationView.ts`
+- Docs: ADR 060, `glossary.md`, `code-map.md`, `STATE.md`
 
 ## Commits
 
+- 9d4bb7a feat(implementation): Umsetzung abbrechen, löschen und per Werkzeug anfragen
+- 96ee472 feat(implementation): Abbrechen, Löschen und Anfrage-Karte in der Oberfläche
+- Archiv-Commit und chore(release): v0.58.0 folgen
+
 ## Deviations from plan
 
+- Phase 1: Ereignis heißt `implementation://removed` (Schreibweise aller Ereignisse), Typ `ImplementationRemovedEvent`. `delete_implementation` nimmt zusätzlich `app`, `db::delete` nimmt `&mut Connection` (Transaktion).
+- Phase 2: Rückfrage als Inline-Bestätigung in der Leiste, kein Dialog (die App hat keinen).
+- Phase 2: Seitenleiste blendete abgeschlossene Umsetzungen nicht aus; `liveStations` liefert jetzt für abgebrochene nichts.
+- Keine neuen automatisierten Tests (privates Profil); AK 6/7 entfallen.
+
 ## Follow-ups
+
+- Laufzeitbelege in der echten App stehen aus (Abbrechen/Löschen, Karte, Seitenleiste).
+- 🟡 Kurzes Zeitfenster zwischen Sperrprüfung und Schreiben des Abbruchs (ADR 060, Konsequenzen); Oberfläche kennt „Session wird gerade angelegt“ nicht, der Core lehnt dann mit dem Sperrtext ab.
