@@ -22,7 +22,7 @@ pub enum ModelId {
 impl ModelId {
     pub fn cli_id(self) -> &'static str {
         match self {
-            ModelId::Fable => "claude-fable-5-1",
+            ModelId::Fable => "claude-fable-5-2",
             ModelId::Opus => "claude-opus-5-5",
             ModelId::Opusplan => "opusplan",
             ModelId::Sonnet => "claude-sonnet-5-5",
