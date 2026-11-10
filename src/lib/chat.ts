@@ -21,7 +21,7 @@ export function getChatHistory(
  *  dabei aus dem Zwischenordner in den Workspace der Session. Die Review-Kommentare gehen als Block
  *  hinter dem Text an den Agenten.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `sessionClosed`,
- *    `agentStopped`, `attachmentsWhileWaiting`, `commentsWhileWaiting`, `io` (Anhang fehlt oder
+ *    `agentStopped`, `attachmentsWhileWaiting`, `io` (Anhang fehlt oder
  *    ungültige ID), `internal` (Kommentar auf einem Abschnittskopf oder ohne Text) */
 export async function sendMessage(
   sessionId: string,

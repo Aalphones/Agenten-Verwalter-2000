@@ -591,9 +591,6 @@ function describeError(reason: unknown): string {
     if (reason.kind === 'attachmentsWhileWaiting') {
       return 'Anhänge gehen erst, wenn die Rückfrage beantwortet ist.';
     }
-    if (reason.kind === 'commentsWhileWaiting') {
-      return 'Review-Kommentare gehen erst, wenn die Rückfrage beantwortet ist.';
-    }
     if ('message' in reason) {
       return `Aktion fehlgeschlagen: ${reason.message}`;
     }

@@ -1191,18 +1191,25 @@ impl SessionRegistry {
                     _ => {}
                 }
                 if !state.pending.is_empty() {
-                    // Die Antwort auf eine Rückfrage ist reiner Text — Anhänge und Kommentare hätten
-                    // keinen Platz.
-                    if !comments.is_empty() {
-                        return Err(CommandError::CommentsWhileWaiting);
-                    }
+                    // Die Antwort auf eine Rückfrage ist Text — Anhänge hätten keinen Platz, Review-
+                    // Kommentare gehen als Text der Antwort mit.
                     if !attachment_ids.is_empty() {
                         return Err(CommandError::AttachmentsWhileWaiting);
                     }
-                    answer_oldest_with_text(state, outbox, text)?;
+                    let mut answer_comments: Vec<ReviewComment> = comments.to_vec();
+                    for comment in &mut answer_comments {
+                        if let CommentTarget::Image { path, .. } = &mut comment.target {
+                            // Kein Anhang an der Antwort: das Bild kommt in den Arbeitsordner, der Text nennt den Pfad.
+                            *path = attachments::reattach(Path::new(path), &session.workspace)?
+                                .path
+                                .clone();
+                        }
+                    }
+                    let answer_text: String = review::agent_text(text, &answer_comments, &folders);
+                    answer_oldest_with_text(state, outbox, &answer_text)?;
                     // Die Antwort läuft weiter: der Text des Users ist eine Quelle mehr.
-                    state.turn_sources.push_text(text);
-                    state.push_user(outbox, text, Vec::new(), skill, Vec::new());
+                    state.turn_sources.push_text(&answer_text);
+                    state.push_user(outbox, text, Vec::new(), skill, answer_comments);
                     return Ok(());
                 }
                 // Erst nach dem Zweig für Rückfragen: eine offene Rückfrage lässt sich auch dann
