@@ -23,9 +23,11 @@ Lesen vor dem ersten Edit:
 
 ## Checkliste
 
-- [ ] `settingsCatalog.ts`: Eintrag `autoContinueAtLimit` (Kategorie `agent`, Abschnitt „Umsetzungen“, Label und Info nach AK 1, `isShown: isClaudeMode`).
-- [ ] `SettingsView.tsx`: `case 'autoContinueAtLimit'` nach Muster `autoCompactStations`.
-- [ ] `implementationTexts.ts`, `implementationOrder.ts`, `ImplementationView.tsx`, `StationCard.tsx`, `SidebarStation.tsx`: `'waitsForLimit'` nach AK 3.
-- [ ] `docs/code-map.md` Zeile „Umsetzung“ (Oberfläche): Zustand „wartet aufs Kontingent“ ergänzen.
+- [x] `settingsCatalog.ts`: Eintrag `autoContinueAtLimit` (Kategorie `agent`, Abschnitt „Umsetzungen“, Label und Info nach AK 1, `isShown: isClaudeMode`).
+- [x] `SettingsView.tsx`: `case 'autoContinueAtLimit'` nach Muster `autoCompactStations`.
+- [x] `implementationTexts.ts`, `implementationOrder.ts`, `ImplementationView.tsx`, `StationCard.tsx`, `SidebarStation.tsx`: `'waitsForLimit'` nach AK 3.
+- [x] `docs/code-map.md` Zeile „Umsetzung“ (Oberfläche): Zustand „wartet aufs Kontingent“ ergänzen.
 
 ## Report-Back
+
+Umgesetzt nach AK 1–5; `pnpm check` grün. Keine Such-Schlüsselwörter, da der Katalog keine führt (Label und Info enthalten „Kontingent“ und „Nacht“). `waitsForLimit` bewusst nicht in `BLOCKING_STATES`: eine wartende Station lässt sich abbrechen und löschen. Aufgenommen in `ACTIVE_STATES`, `LIVE_STATES`, `TICKING_STATES`, Phasen-Zusatz „läuft“.

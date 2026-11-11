@@ -465,6 +465,18 @@ export function SettingsView({
             />
           </SettingRow>
         );
+      case 'autoContinueAtLimit':
+        return (
+          <SettingRow id={id}>
+            <Switch
+              checked={current.autoContinueAtLimit}
+              label="automatisch weiter"
+              onChange={(checked: boolean): void => {
+                save({ kind: 'autoContinueAtLimit', value: checked }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+        );
       case 'autoCompactThreshold':
         return (
           <SettingRow id={id}>

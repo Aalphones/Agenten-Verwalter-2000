@@ -112,7 +112,9 @@ export function ImplementationView({
   const isArtifactsShown: boolean = activeView === 'artifacts' && artifactCount > 0;
   const isFlow: boolean = !isChangesShown && !isArtifactsShown;
   const isTicking: boolean = stations.some((ref: StationRef) =>
-    ['running', 'starting', 'waitsForScript', 'countdown'].includes(ref.station.state),
+    ['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'].includes(
+      ref.station.state,
+    ),
   );
   const now: number = useNow(isTicking);
 

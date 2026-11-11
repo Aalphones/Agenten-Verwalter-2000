@@ -14,6 +14,7 @@ const TICKING_STATES: readonly StationState[] = [
   'starting',
   'waitsForScript',
   'countdown',
+  'waitsForLimit',
 ];
 
 interface SidebarStationProps {

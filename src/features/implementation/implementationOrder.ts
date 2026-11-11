@@ -16,6 +16,7 @@ const ACTIVE_STATES: readonly StationState[] = [
   'running',
   'starting',
   'waitsForScript',
+  'waitsForLimit',
   'asking',
   'waitsForYou',
 ];
@@ -25,6 +26,7 @@ export const NEEDS_USER_STATES: readonly StationState[] = ['asking', 'waitsForYo
 export const LIVE_STATES: readonly StationState[] = [
   'ready',
   'countdown',
+  'waitsForLimit',
   'starting',
   'running',
   'waitsForScript',

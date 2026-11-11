@@ -1,3 +1,4 @@
+import { formatClock } from '@/features/context/formatTokens';
 import type { StationRef } from '@/features/implementation/implementationOrder';
 import { stateLabel } from '@/features/implementation/stationState';
 import type { Effort } from '@/lib/bindings/Effort';
@@ -200,7 +201,7 @@ export function stateText(station: StationView, now: number): string {
     case 'waitsForScript':
       return 'wartet auf einen Hintergrund-Befehl, etwa den Testlauf';
     case 'waitsForLimit':
-      return 'wartet aufs Kontingent';
+      return limitText(station);
     case 'asking':
       return 'fragt dich';
     case 'waitsForYou':
@@ -228,7 +229,7 @@ export function stationMeta(station: StationView, now: number): string {
     case 'waitsForScript':
       return 'Skript läuft';
     case 'waitsForLimit':
-      return 'Kontingent';
+      return limitText(station);
     case 'asking':
       return 'fragt';
     case 'waitsForYou':
@@ -256,7 +257,7 @@ export function phaseMeta(phase: PhaseView): string {
   const checks: [StationState[], string][] = [
     [['asking', 'waitsForYou'], 'fragt dich'],
     [['error'], 'Fehler'],
-    [['running', 'starting', 'waitsForScript', 'countdown'], 'läuft'],
+    [['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'], 'läuft'],
     [['ready'], 'bereit'],
   ];
   for (const [matching, text] of checks) {
@@ -272,6 +273,14 @@ function runningFor(station: StationView, now: number): number {
     return station.runningMs;
   }
   return Math.max(station.runningMs, now - station.startedAt);
+}
+
+/** „wartet aufs Kontingent · weiter um 07:42“ (lokale Uhrzeit); ohne Zeitpunkt nur der erste Teil. */
+function limitText(station: StationView): string {
+  if (station.resumesAt === null) {
+    return 'wartet aufs Kontingent';
+  }
+  return `wartet aufs Kontingent · weiter um ${formatClock(station.resumesAt)}`;
 }
 
 function countdownText(station: StationView, now: number): string {
