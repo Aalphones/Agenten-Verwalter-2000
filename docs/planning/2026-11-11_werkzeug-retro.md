@@ -272,6 +272,44 @@ Aufrufe: 31 · fehlgeschlagen: 0 · Hook-Sperren: 2
 
 Abweichungen vom Kontrakt: siehe „Deviations from plan“.
 
+### Review (11.11.2026) — FAIL
+
+Geprüft: Diff c5cf984 gegen AK 1–8 und Kontrakt; `pnpm check` selbst gelaufen (grün); `retro-probe --werkzeuge` selbst gegen eine Kopie der Datenbank auf zwei Vorhaben: „Onboarding Inventar“ (39 Sessions, 2823 Aufrufe, 117 Skripte) und das 14-Session-Vorhaben der Umsetzung (843 Aufrufe, 16 Skripte).
+
+| AK | Ergebnis |
+|---|---|
+| 1, 2 | erfüllt (Dateien und Format an beiden Probeläufen) |
+| 3 | **nicht erfüllt**: Gegenprobe auf „Onboarding Inventar“ 4 Treffer (auf dem 14-Session-Vorhaben 0) |
+| 4 | erfüllt, am Code gesichert (`exact_key` leer bei Grundwerkzeugen; die Fenster-Regel lässt höchstens 3 von 5 Grundwerkzeugen zu) |
+| 5 | erfüllt (`tools.rs:590`, Pfadprüfung vor dem Skript) |
+| 6 | erfüllt (beide Aufrufe ohne Modell; ohne `--werkzeuge` unverändert) |
+| 7 | erfüllt: einzige neue Abfrage ist `load_summaries` (`length`, `substr`); `traces::collect` unverändert (lädt wie bisher die volle Ausgabe nur für die Sperr-Erkennung) |
+| 8 | erfüllt |
+
+Befunde:
+
+- **CRITICAL — AK 3, abgeschnittene Pfade bleiben stehen** (`tools.rs:408`): Die Anzeige von Grep/Read/MCP baut auf `target`, das schon vorher mit `…` gekürzt ist. Endet die Kürzung mitten im Benutzerverzeichnis (`in C:\Users\s…`), greift das Pfad-Muster (`tools.rs:205`) nicht. Treffer: `spur-9.md:37`, `spur-17.md:11`, `spur-20.md:28`, `spur-32.md:53` (alle Grep mit langem Muster). Fix: nach den vollen Pfad-Mustern ein allgemeines Muster für `<Laufwerk>:\Users\<Name>`, `C:/Users/…`, `/c/Users/…` auch in gekürzter Form ersetzen, oder die Anzeige aus der ungekürzten Eingabe (`ToolSummary.input`) bilden und erst nach dem Normalisieren kürzen.
+- **WARNING — Benutzername in kodierter Form** (`tools.rs:186`): Der Claude-Projektordner `~\.claude\projects\C--Users-<Name>--verwalter-workspaces-…` geht unverändert durch; 8 Zeilen, u. a. `werkzeuge.md` „Dicke Ausgaben“. AK 3 prüft nur `Users\`/`Users/`, die Absicht („kein Benutzerverzeichnis“) deckt das mit. Fix: kodierte Schreibweise (`:`, `\`, `/`, `.` → `-`) als weitere Variante in `path_pattern`.
+- **WARNING — Familie wird nicht normalisiert, Optionen werden zu Unterbefehlen** (`tools.rs:528–544`): `git_subcommand` und `first_word_without_dash` entfernen führende `-`, statt Optionswörter zu überspringen. `cargo --manifest-path=C:/Users/<Name>/… test` ergäbe die Familie `Bash:cargo manifest-path=C:/Users/<Name>/…` — unnormalisiert in „Werkzeug-Familien“, „Abfolgen“ und „Hook-Sperren … danach“. In beiden Probeläufen nicht vorgekommen. Der Kontrakt („erstes Wort ohne führendes -“, „ohne solches Wort nur der Kopf“) meint das erste Wort, das nicht mit `-` beginnt. Fix: Optionswörter überspringen; Familie zusätzlich durch `Normalizer::full`.
+- **WARNING — doppelte Session-Nummern überschreiben Spuren** (`tools.rs:765`, `tools.rs:755`, `tools_report.rs:135` u. a.): In „Onboarding Inventar“ tragen 7 und 14 je zwei, 21 drei Sessions (keine Nebenfragen, nicht archiviert). Aus 39 Spuren werden 35 Dateien, `skripte\s<N>-…` kann kollidieren, und der Querschnitt zählt Sessions über die Nummer (`BTreeSet<u32>`), also zu wenige. Dasselbe Muster gibt es schon bei `session-<N>.md` (vor dieser Phase); woher die Dubletten in der Datenbank stammen, ist ein eigener Fehler außerhalb dieses Plans. Fix hier: Dateiname und Zählung über einen eindeutigen Schlüssel (z. B. Nummer plus Kurz-ID bei Kollision).
+- **MINOR — `python.exe` ist kein Interpreter-Kopf** (`tools.rs:514`): 38 Aufrufe als `Bash:python.exe` ohne Skriptnamen. Kopf vor dem Vergleich ohne `.exe`.
+- **MINOR — Dateigröße** (LIFT): `tools.rs` 778 Zeilen, `tools_report.rs` 573. Vorschlag: Normalisierung und Shell-Familie in eigene Dateien.
+- **INFO**: `werkzeuge.md` entsteht erst nach mindestens einer gelungenen Mini-Retro (`sessions/registry/retro.rs:156`); scheitern alle, liegen Spuren ohne Querschnitt im Ordner. Mit den AK vereinbar.
+
+Nachbesserung: CRITICAL und die drei WARNINGs; danach Gegenprobe AK 3 auf „Onboarding Inventar“ (lange Grep-Muster, Lesezugriffe unter `~\.claude\projects`), zusätzlich mit dem Muster `C--Users-`.
+
+Unsicherheit des Reviews: Ob die Familien-Lesart des Kontrakts (Optionswörter überspringen) gewollt ist, entscheidet der Plan-Autor — Check: Wortlaut „ohne solches Wort nur der Kopf“ im Kontrakt gegen `tools.rs:541`.
+
+### Nachbesserung (11.11.2026)
+
+CRITICAL und die drei WARNINGs sind behoben, MINOR `python.exe` ebenfalls; `pnpm check` grün (Lint, Typecheck, Format, Build, rustfmt, Clippy).
+
+- AK 3 / Pfade: `replace_paths` ersetzt nach den vollen Mustern jedes `<Laufwerk>:\Users\<Name>` (auch gekürzt, `/c/Users/…`, `\\Users\\…`) durch `~`; die kodierte Schreibweise `C--Users-<Name>--verwalter-workspaces-…` ist fünfte Variante von `path_pattern` (Workspace → `<WS>`, Benutzerverzeichnis → `~`), ein Rest-Muster fängt gekürzte kodierte Namen.
+- Familie: Optionswörter werden übersprungen (`git --no-pager log` → `log`, `cargo --manifest-path=… test` → `test`, Wörter mit Pfadtrenner zählen nicht als Unterbefehl); Interpreter: `python -m pytest` → `python pytest`, vor `-c`/`-e`/`-Command` nur die Option, `<<`-Heredoc ohne Dateiname; `.exe` am Kopf entfällt; die Familie läuft durch `Normalizer::full`.
+- Dubletten: `SessionTrace` trägt `id` und `label` (`assign_labels`: Nummer, bei doppelter Nummer `<N>-<6 Zeichen der ID>`); Dateinamen (`spur-<label>.md`, `s<label>-<hash>`) und Querschnitt zählen über Position in `traces`, nicht über die Nummer.
+- Beleg auf „Onboarding Inventar“ (Kopie der Datenbank): 40 Sessions → 40 `spur-*.md` (7 mit Kurz-ID), 117 Skripte. Gegenprobe `Users\\|Users/`: 1 Treffer, die Gegenprobe selbst als Befehlstext in `spur-36.md:21` (Muster-Literal, kein Pfad); `C--Users-`: 0 Treffer; `Bash:python.exe` entfällt.
+- MINOR Dateigröße (`tools.rs`, `tools_report.rs`) nicht angefasst; Aufteilung in Normalisierung und Shell-Familie bleibt Follow-up.
+
 ## Phase 2 — Werkzeug-Retro mit Haiku je Session
 
 ### Kontext (lesen vor dem Start)
@@ -338,4 +376,9 @@ Wie AK der Phasen 1 und 2, dazu: ADR 062 liegt vor, Glossar, Code-Map und `AGENT
 - Phase 1: Konstanten `TOOLS_FILE` und `SCRIPTS_DIR` liegen in `retro/tools.rs`; dort auch `write_trace_files`, das Retro-Lauf und Probe gemeinsam benutzen. `findings::push_rubric` und `one_line` sind `pub(crate)`.
 - Phase 1: `tools_report::render` rendert Teil B schon jetzt (Signatur trägt `ToolFindings`); Phase 2 prüft und passt an.
 
+- Nachbesserung: `build_trace` nimmt `SessionIdentity { number, id, name }` statt Nummer und Name einzeln (Clippy: höchstens 7 Argumente); `SessionTrace.label` ist die Kennung in Dateinamen und Querschnitt.
+
 ## Follow-ups
+
+- `tools.rs` (~850 Zeilen) und `tools_report.rs` (~575): Normalisierung und Shell-Familie in eigene Dateien.
+- Doppelte Session-Nummern innerhalb eines Vorhabens (7, 14, 21 in „Onboarding Inventar“) stammen aus der Datenbank; auch `session-<N>.md` überschreibt sich dadurch. Eigener Fehler außerhalb dieses Plans.
