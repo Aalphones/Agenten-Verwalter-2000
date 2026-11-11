@@ -316,6 +316,12 @@ export function Sidebar({
         <SidebarProject
           project={project}
           sessions={projectSessions}
+          hasOpenImplementation={implementations.some(
+            (implementation: ImplementationView) =>
+              implementation.projectId === project.id &&
+              implementation.finishedAt === null &&
+              implementation.cancelledAt === null,
+          )}
           isOverviewActive={showProjectOverview && activeProjectId === project.id}
           isExpanded={isExpanded}
           renaming={renaming}

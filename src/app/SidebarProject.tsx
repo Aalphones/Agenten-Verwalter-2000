@@ -22,6 +22,8 @@ interface SidebarProjectProps {
   project: ProjectSummary;
   /** Sessions dieses Vorhabens, zuletzt aktive zuerst. */
   sessions: readonly SessionSummary[];
+  /** Eine Umsetzung des Vorhabens ist noch nicht abgeschlossen oder abgebrochen. */
+  hasOpenImplementation: boolean;
   isOverviewActive: boolean;
   isExpanded: boolean;
   renaming: RenameTarget | null;
@@ -36,6 +38,7 @@ interface SidebarProjectProps {
 export function SidebarProject({
   project,
   sessions,
+  hasOpenImplementation,
   isOverviewActive,
   isExpanded,
   renaming,
@@ -52,6 +55,9 @@ export function SidebarProject({
   const urgent: SessionSummary | null = mostUrgent(sessions);
   const urgentStatus: DisplayStatus =
     urgent === null ? 'completed' : displayStatus(urgent, sessions);
+  const isIdle: boolean = urgentStatus === 'completed' || urgentStatus === 'cancelled';
+  // Eine offene Umsetzung wartet noch: statt des Hakens der gestrichelte Kreis.
+  const iconStatus: DisplayStatus = isIdle && hasOpenImplementation ? 'new' : urgentStatus;
   const now: number = useNow(urgentStatus === 'script');
 
   function renderRow(): ReactElement {
@@ -68,7 +74,7 @@ export function SidebarProject({
       );
     }
     const meta: string | null = projectMetaLine(sessions, now);
-    const isDone: boolean = urgentStatus === 'completed' || urgentStatus === 'cancelled';
+    const isDone: boolean = isIdle && !hasOpenImplementation;
     const isUnread: boolean = hasUnread(sessions);
     const metaClass = `sidebar-project__meta${
       urgent !== null && isMetaHighlighted(urgent.status)
@@ -115,7 +121,7 @@ export function SidebarProject({
           }}
         >
           <span className="sidebar-project__status">
-            <StatusIcon status={urgentStatus} size={12} />
+            <StatusIcon status={iconStatus} size={12} />
           </span>
           <span className="sidebar-project__text">
             <span
