@@ -385,6 +385,15 @@ Befund aus Teil B (Güte): Haiku fand Kontext-Start, Ticket-Abschluss, Testlauf 
 
 Abweichung: Das Vorhaben „GYMID-2668 Update Check“ aus Phase 1 ist in der Datenbank-Kopie nicht mehr unter den aktiven Sessions; das Artefakt läuft auf „GYMID-2150 APK in Release“ (15 Sessions, 5 gewählt). Es ist ein anderes Vorhaben mit derselben Art Arbeit.
 
+### Review (11.11.2026) — PASS
+
+AK 1–6 erfüllt. AK 1: `ask_all` ruft nach der Mini-Retro `ask_haiku::<ToolFindings>` mit `TOOLS_SYSTEM_PROMPT`, `TOOLS_SCHEMA`, `tools::haiku_input` und `RETRO_TIMEOUT` (`sessions/registry/retro.rs`), nur wenn die Spur vorliegt; die Spur liegt genau dann vor, wenn der Verlauf lesbar ist. AK 2: Fehler landet als `Werkzeug-Retro fehlgeschlagen: …` in Teil B, `failed_count` zählt nur Mini-Retros. AK 3: `total` = 2 × Sessions mit lesbarem Verlauf, `emit_progress` nach jedem Aufruf. AK 4: Wortlaut von `TOOLS_SYSTEM_PROMPT` byte-gleich mit dem Plan; Schema nach Kontrakt, `ToolFindings` mit `camelCase`. AK 5: `--haiku`/`--sessions` nach Vorgabe, beide ohne `--werkzeuge` abgewiesen; Gegenprobe ohne Haiku auf GYMID-2150, Sessions 3,6,8,9,11, schreibt 5 Spuren. AK 6: `pnpm check` grün (Review-Lauf). Teil B im Artefakt: kein einzelner Read/Grep/Edit/Write als Handgriff; Reibung belegt (Session #3: 1.17 und 1.47 sind dieselbe cd-Sperre, zweimal, also zulässig; sonst Fehlertext oder „Ursache aus der Spur nicht erkennbar“).
+
+- WARNING `retro/tools_report.rs` `push_findings` (Ziele und Wege) / `retro/prompt.rs`: Haiku erfindet Schritt-Nummern. Session #11 hat in der Spur nur Schritt 1, Teil B listet Schritt 1–5 (alle Handgriff-Aufrufe dort 1.x). Ein Leser von `werkzeuge.md` sucht Schritte, die es nicht gibt. Gegenmittel: im Prompt `step` an die Überschrift „Schritt <k>“ binden (genau ein Eintrag je Schritt), und beim Rendern Einträge mit einer Nummer, die nicht in `trace.steps` vorkommt, verwerfen oder kennzeichnen.
+- MINOR `sessions/registry/retro.rs:360`: Startet der Thread einer Session nicht, steht `None` als Werkzeug-Retro — bei vorhandener Spur fehlt ihr Abschnitt in Teil B dann stumm (AK 2 „je ein Abschnitt pro Session“). `Some(Err("Werkzeug-Retro startet nicht …"))`, wenn `session.trace` vorliegt.
+- MINOR `retro/tools_report.rs:534`, `:541`: `calls` gehen ungefiltert in die Zeile; ein Zeilenumbruch in einer Modell-Nummer bricht die Liste. `one_line` auch auf die verbundenen `calls`.
+- INFO: Die Overview-Tabelle stand schon vor dem Review auf `complete`.
+
 ## Finale AK
 
 Wie AK der Phasen 1 und 2, dazu: ADR 062 liegt vor, Glossar, Code-Map und `AGENTS.md` sind nachgezogen, Version ist nach `docs/conventions/releases.md` angehoben und getaggt.
@@ -397,9 +406,20 @@ Wie AK der Phasen 1 und 2, dazu: ADR 062 liegt vor, Glossar, Code-Map und `AGENT
 
 ## Summary
 
+Abgeschlossen am 11.11.2026, Version 0.60.0. Jeder Retro-Lauf schreibt je Session mit lesbarem Verlauf eine Werkzeug-Spur (`spur-<N>.md`, normalisiert, ohne Benutzerpfade), die Inline-Skripte nach `skripte\` und `werkzeuge.md` mit dem Querschnitt ohne Modell (Teil A) und der Werkzeug-Retro mit Haiku je Session (Teil B: Ziele und Wege, Handgriffe, Reibung, Zweck der Skripte). `retro-probe` kann beides gegen eine Kopie der Datenbank erzeugen (`--werkzeuge`, `--haiku`, `--sessions`). Finale AK: ADR 062 liegt vor, Glossar (Werkzeug-Spur, Werkzeug-Retro, Satz bei Retro), Code-Map (Zeile Vorhaben-Retro) und `AGENTS.md` (Zeile `retro-probe`) sind nachgezogen. Offen aus dem Review von Phase 2: WARNING erfundene Schritt-Nummern in Teil B und zwei MINOR, siehe Follow-ups.
+
 ## Files touched
 
+- Neu: `src-tauri/src/retro/tools.rs`, `src-tauri/src/retro/tools_report.rs`, `docs/decisions/062-werkzeug-retro.md`
+- Geändert: `src-tauri/src/db/tool_details.rs`, `src-tauri/src/retro/{findings,mod,model,prompt}.rs`, `src-tauri/src/sessions/registry/retro.rs`, `src-tauri/examples/retro-probe.rs`, `AGENTS.md`, `docs/code-map.md`, `docs/glossary.md`, `STATE.md`
+- Release: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`
+
 ## Commits
+
+- 98193ba docs(retro): Plan Werkzeug-Retro für die Vorhaben-Retro
+- c5cf984 feat(retro): Werkzeug-Spur je Session und Querschnitt ohne Modell
+- cee5809 fix(retro): Werkzeug-Spur ohne Benutzerpfade, Optionen und doppelte Nummern
+- 3fb4aa7 feat(retro): Werkzeug-Retro mit Haiku je Session und retro-probe --haiku
 
 ## Deviations from plan
 
@@ -413,4 +433,7 @@ Wie AK der Phasen 1 und 2, dazu: ADR 062 liegt vor, Glossar, Code-Map und `AGENT
 ## Follow-ups
 
 - `tools.rs` (~850 Zeilen) und `tools_report.rs` (~575): Normalisierung und Shell-Familie in eigene Dateien.
+- Teil B: Haiku erfindet Schritt-Nummern (Review Phase 2, WARNING) — Prompt an „Schritt <k>“ binden, beim Rendern unbekannte Nummern verwerfen.
+- Teil B: Abschnitt fehlt stumm, wenn der Thread einer Session nicht startet (`sessions/registry/retro.rs`); `calls` ohne `one_line` (`tools_report.rs`).
+- Ersatzmuster `[\\/]+users\b` in `tools.rs` greift zu weit (`tools/users.py` → `tools~.py`).
 - Doppelte Session-Nummern innerhalb eines Vorhabens (7, 14, 21 in „Onboarding Inventar“) stammen aus der Datenbank; auch `session-<N>.md` überschreibt sich dadurch. Eigener Fehler außerhalb dieses Plans.
