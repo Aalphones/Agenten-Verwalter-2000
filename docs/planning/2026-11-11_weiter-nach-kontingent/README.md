@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|---|
 | 1 | Limit-Stopp erkennen (Session bleibt ansprechbar statt „Fehler“), Einstellung `autoContinueAtLimit`, ADR 063 | heikel | 1 | opus | 3 h | complete |
 | 2 | Warten und Weiterschicken für Stationen, Stationszustand „wartet aufs Kontingent“ | heikel | 2 | opus | 4 h | complete |
-| 3 | Windows wachhalten, solange eine Station läuft oder wartet | standard | 3 | sonnet | 2 h | pending |
+| 3 | Windows wachhalten, solange eine Station läuft oder wartet | standard | 3 | sonnet | 2 h | complete |
 | 4 | Oberfläche: Einstellungszeile, Stationszustand auf Karte, Sidebar und Zeitleiste | standard | 3 | sonnet | 2 h | pending |
 
 Sequenziell 1 → 2, weil Phase 2 Erkennung und Einstellung aus Phase 1 verbraucht. Phase 3 und 4 laufen parallel: 3 schreibt nur Core (`keep_awake/`, `lib.rs`, eine Abfrage in `registry.rs`), 4 nur `src/`; beide lesen den Kontrakt unten, keiner liefert dem anderen etwas.

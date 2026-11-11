@@ -24,9 +24,15 @@ Lesen vor dem ersten Edit:
 
 ## Checkliste
 
-- [ ] `keep_awake/mod.rs` neu, Modul-Kommentar: „Hält Windows wach, solange eine Station läuft oder aufs Kontingent wartet und die Einstellung ‚Nach Kontingent-Limit automatisch weiter‘ an ist (ADR 063).“
-- [ ] `lib.rs`: `mod keep_awake;`, in `.setup` nach dem `TerminalService` `KeepAwake::start(app.handle())` und `app.manage(...)`; in `RunEvent::Exit` Freigabe.
-- [ ] `registry.rs`: `stations_busy`.
-- [ ] `docs/code-map.md`: Querschnitt `keep_awake` (Wachhalten, nur Core); ADR 063 um „Umgesetzt mit eigener `extern`-Deklaration, kein Crate“ ergänzen, falls abweichend.
+- [x] `keep_awake/mod.rs` neu, Modul-Kommentar: „Hält Windows wach, solange eine Station läuft oder aufs Kontingent wartet und die Einstellung ‚Nach Kontingent-Limit automatisch weiter‘ an ist (ADR 063).“
+- [x] `lib.rs`: `mod keep_awake;`, in `.setup` nach dem `TerminalService` `KeepAwake::start(app.handle())` und `app.manage(...)`; in `RunEvent::Exit` Freigabe.
+- [x] `registry.rs`: `stations_busy`.
+- [x] `docs/code-map.md`: Querschnitt `keep_awake` (Wachhalten, nur Core); ADR 063 um „Umgesetzt mit eigener `extern`-Deklaration, kein Crate“ ergänzen, falls abweichend (nicht abweichend, ADR unverändert).
 
 ## Report-Back
+
+**Status: complete.** AK 1–4 per Code, AK 6 per `cargo clippy --all-targets -D warnings` und `cargo fmt --check` grün. AK 5 (`powercfg /requests` am Gerät) steht aus — nach Plan-Abschluss im Betrieb.
+
+- `KeepAwake::release` sendet „Exit“ und wartet auf das Ende des Threads; dieser löst den Zustand selbst (gleicher Thread wie beim Setzen).
+- 🟡 Ein Lesefehler der Einstellung zählt als „nicht wachhalten“; der nächste 30-s-Takt korrigiert.
+- 🟡 `stations_busy` sperrt die Sessions nacheinander, nie unter der Map-Sperre (Sperr-Regel der Registry).

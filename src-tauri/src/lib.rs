@@ -18,6 +18,7 @@ pub mod file_links;
 pub mod filesystem;
 pub mod git;
 pub mod implementation;
+pub mod keep_awake;
 pub mod limit_resume;
 pub mod lmstudio;
 pub mod mcp;
@@ -53,6 +54,7 @@ use codex_account::CodexAccountService;
 use db::Database;
 use environment::EnvironmentService;
 use filesystem::workspace::data_dir;
+use keep_awake::KeepAwake;
 use sessions::registry::SessionRegistry;
 use terminal::TerminalService;
 use usage::UsageService;
@@ -87,6 +89,7 @@ pub fn run() {
             app.manage(app_update);
             app.manage(VoiceService::new());
             app.manage(TerminalService::new());
+            app.manage(KeepAwake::start(app.handle()));
             SessionRegistry::start_reaper(app.handle().clone());
             // Ohne Server fehlen nur die Artefakte; `artifacts_list` meldet das.
             match artifacts::server::start(app.handle().clone()) {
@@ -241,11 +244,14 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("Tauri-Laufzeit konnte nicht starten")
         .run(|app: &tauri::AppHandle, event: tauri::RunEvent| {
-            // Kein Shell-Prozess überlebt die App.
-            if let tauri::RunEvent::Exit = event
-                && let Some(terminals) = app.try_state::<TerminalService>()
-            {
-                terminals.close_all();
+            if let tauri::RunEvent::Exit = event {
+                // Kein Shell-Prozess überlebt die App.
+                if let Some(terminals) = app.try_state::<TerminalService>() {
+                    terminals.close_all();
+                }
+                if let Some(keep_awake) = app.try_state::<KeepAwake>() {
+                    keep_awake.release();
+                }
             }
         });
 }

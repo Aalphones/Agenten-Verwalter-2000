@@ -1823,6 +1823,22 @@ impl SessionRegistry {
         Ok(busy)
     }
 
+    /// Eine Station arbeitet (`Starting`, `New`, `Running`) oder wartet aufs Kontingent — dann hält
+    /// der Verwalter Windows wach (ADR 063).
+    pub fn stations_busy(&self) -> bool {
+        // Eine Session nach der anderen sperren — nie zwei zugleich und nie unter der Map-Sperre.
+        let sessions: Vec<Arc<Session>> = self.lock_sessions().values().cloned().collect();
+        let is_station_working: bool = sessions.iter().any(|session: &Arc<Session>| {
+            let state = session.lock();
+            state.station_of.is_some()
+                && matches!(
+                    state.status,
+                    SessionStatus::Starting | SessionStatus::New | SessionStatus::Running
+                )
+        });
+        is_station_working || self.lock_limit_resumes().any_waiting()
+    }
+
     /// Fehler, solange eine Session des Vorhabens arbeitet — für Git-Befehle, die Dateien im
     /// Arbeitsordner ändern.
     pub fn ensure_not_busy(&self, session_id: &str) -> Result<(), CommandError> {
