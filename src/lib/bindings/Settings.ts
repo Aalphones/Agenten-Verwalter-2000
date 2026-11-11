@@ -36,7 +36,12 @@ autoCompactStations: boolean,
 /**
  * Kontextgröße in Tokens, ab der eine Station zusammenfasst (ADR 058).
  */
-autoCompactThreshold: number, terminalPlacement: TerminalPlacement, 
+autoCompactThreshold: number, 
+/**
+ * Ob eine Station nach dem Kontingent-Limit selbst weitermacht und Windows dafür wach bleibt
+ * (ADR 063).
+ */
+autoContinueAtLimit: boolean, terminalPlacement: TerminalPlacement, 
 /**
  * Gezogene Höhe des Terminal-Docks in Pixeln.
  */

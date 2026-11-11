@@ -80,6 +80,9 @@ pub struct Settings {
     pub auto_compact_stations: bool,
     /// Kontextgröße in Tokens, ab der eine Station zusammenfasst (ADR 058).
     pub auto_compact_threshold: u32,
+    /// Ob eine Station nach dem Kontingent-Limit selbst weitermacht und Windows dafür wach bleibt
+    /// (ADR 063).
+    pub auto_continue_at_limit: bool,
     pub terminal_placement: TerminalPlacement,
     /// Gezogene Höhe des Terminal-Docks in Pixeln.
     pub terminal_height: u32,
@@ -143,6 +146,9 @@ pub enum SettingsChange {
     },
     AutoCompactThreshold {
         value: u32,
+    },
+    AutoContinueAtLimit {
+        value: bool,
     },
     TerminalPlacement {
         value: TerminalPlacement,

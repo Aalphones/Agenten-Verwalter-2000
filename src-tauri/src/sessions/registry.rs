@@ -57,6 +57,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
 use crate::implementation::Countdowns;
+use crate::limit_resume::{self, LimitStop};
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::mcp_access::McpAccess;
 use crate::notices::model::{Denial, Notice};
@@ -341,6 +342,8 @@ struct SessionState {
     /// Lagebericht (ohne Zeile „Lage“), den diese Rückfrage zuletzt als Anhang bekam; nur im
     /// Speicher — nach einem Neustart hängt das nächste Senden den Bericht neu an.
     last_report: Option<String>,
+    /// Reset-Zeit aus einem `rejected`-Kontingent-Ereignis der laufenden Antwort (ADR 063).
+    limit_reset_at: Option<i64>,
 }
 
 /// Eine Session, wie `SessionRegistry::restore` sie aus der Datenbank liest.
@@ -398,6 +401,8 @@ struct Outbox {
     /// Die Antwort endete als abgeschlossen; nach dem Freigeben der Sperre prüft „Automatisch
     /// weiter“ die Einstiegszeile (ADR 040).
     turn_completed: bool,
+    /// Die Antwort endete am Kontingent-Limit (ADR 063).
+    limit_stop: Option<LimitStop>,
     /// Befehlsliste aus `system/init`; gespeichert nach dem Freigeben der Sperre.
     slash_commands: Option<Vec<String>>,
 }
@@ -2341,6 +2346,7 @@ impl SessionState {
             station_of: None,
             inquiry_of: None,
             last_report: None,
+            limit_reset_at: None,
         }
     }
 
@@ -2806,6 +2812,7 @@ impl SessionState {
         skill: Option<SkillRef>,
         comments: Vec<ReviewComment>,
     ) {
+        self.limit_reset_at = None;
         let sent_at = now_ms();
         self.push_entry(outbox, |seq: u32| ChatEntry::User {
             seq,
@@ -3055,6 +3062,11 @@ impl SessionState {
             // Ohne `wake_if_idle`: der Stand des Kontingents ist keine Arbeit des Agenten.
             AgentEvent::RateLimit(info) => {
                 if self.is_claude_process() {
+                    if info.status == "rejected"
+                        && let Some(reset) = info.resets_at
+                    {
+                        self.limit_reset_at = Some(reset);
+                    }
                     outbox.rate_limit = Some(info);
                 }
             }
@@ -3404,9 +3416,26 @@ impl SessionState {
         // Aufschlüsselung und MCP-Liste sind Beiwerk: ein Fehler beim Einreihen darf das Ende der Antwort nicht stören.
         let _ = self.send_control(outbox, get_context_usage());
         let _ = self.send_control(outbox, mcp_status());
+        let reset_at = self.limit_reset_at.take();
         match end {
             TurnEnd::Aborted => self.pause_after_interrupt(outbox),
             _ if self.pause_requested => self.pause_after_interrupt(outbox),
+            // `Completed` statt `Error`: `Error` sperrt jedes weitere Senden, die Session soll nach
+            // dem Limit aber ansprechbar bleiben (ADR 063). `turn_completed` bleibt aus, damit
+            // „Automatisch weiter“ keine Einstiegszeile aus einer abgebrochenen Antwort startet.
+            TurnEnd::Failed(text)
+                if self.is_claude_process() && limit_resume::is_limit_stop(&text, reset_at) =>
+            {
+                self.interrupt_running_tools(outbox);
+                self.abandon_pending(outbox, "Nicht beantwortet");
+                self.push_entry(outbox, |seq: u32| ChatEntry::Error {
+                    seq,
+                    title: "Kontingent aufgebraucht".to_owned(),
+                    text,
+                });
+                self.set_status(outbox, SessionStatus::Completed);
+                outbox.limit_stop = Some(LimitStop { reset_at });
+            }
             TurnEnd::Failed(text) => {
                 self.interrupt_running_tools(outbox);
                 self.abandon_pending(outbox, "Nicht beantwortet");
@@ -3647,6 +3676,13 @@ fn update<R>(
     // Die Session-Sperre ist hier frei: `consider` nimmt Vorhaben- und Session-Sperren selbst.
     if outbox.turn_completed {
         auto_handoff::consider(app, session);
+    }
+    if let Some(stop) = outbox.limit_stop.take() {
+        let reset = match stop.reset_at {
+            Some(seconds) => format!("Reset um {seconds} (Unix-Sekunden)"),
+            None => "ohne Reset-Zeit".to_owned(),
+        };
+        session.log_line(format!("Limit-Stopp: Kontingent aufgebraucht, {reset}"));
     }
     let value = result?;
     outbox.deliver(session)?;

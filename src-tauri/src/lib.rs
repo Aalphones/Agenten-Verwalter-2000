@@ -18,6 +18,7 @@ pub mod file_links;
 pub mod filesystem;
 pub mod git;
 pub mod implementation;
+pub mod limit_resume;
 pub mod lmstudio;
 pub mod mcp;
 pub mod mcp_access;

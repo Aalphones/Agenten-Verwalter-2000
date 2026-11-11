@@ -1,6 +1,6 @@
 # Phase 1 — Limit-Stopp erkennen, Einstellung, ADR 063
 
-**Rating:** heikel · **Wave:** 1 · **Modell:** opus
+**Rating:** heikel · **Wave:** 1 · **Modell:** opus · **Status:** complete
 
 ## Kontext
 
@@ -32,17 +32,24 @@ Lesen vor dem ersten Edit:
 
 ## Checkliste
 
-- [ ] `src-tauri/src/limit_resume/mod.rs` neu, Modul-Kommentar: „Weiter nach dem Kontingent-Limit (ADR 063): erkennt den Limit-Stopp einer Antwort; das Warten und Weiterschicken für Stationen folgt.“ Inhalt: `LimitStop`, `is_limit_stop` nach Kontrakt. In `lib.rs` als `mod limit_resume;` eintragen.
-- [ ] `src-tauri/src/limit_resume/tests.rs` mit den Fällen aus AK 1 (`#[cfg(test)] mod tests;` in `mod.rs`).
-- [ ] `registry.rs`: Feld `limit_reset_at: Option<i64>` in `SessionState` (Doc-Kommentar „Reset-Zeit aus einem `rejected`-Kontingent-Ereignis der laufenden Antwort (ADR 063).“), Initialwert `None` überall, wo `SessionState` gebaut wird.
-- [ ] `registry.rs` `RateLimit`-Zweig: innerhalb `if self.is_claude_process()` zusätzlich `if info.status == "rejected" { if let Some(reset) = info.resets_at { self.limit_reset_at = Some(reset); } }` — vor der Zuweisung an `outbox.rate_limit` (die `info` danach verschieben).
-- [ ] `registry.rs` `push_user`: erste Zeile `self.limit_reset_at = None;`.
-- [ ] `registry.rs` `Outbox`: Feld `limit_stop: Option<LimitStop>`.
-- [ ] `registry.rs` `end_turn`, Zweig `TurnEnd::Failed(text)`: `let reset_at = self.limit_reset_at.take();` dann `if self.is_claude_process() && limit_resume::is_limit_stop(&text, reset_at)` → `interrupt_running_tools`, `abandon_pending(outbox, "Nicht beantwortet")`, Eintrag mit Titel `"Kontingent aufgebraucht"`, `set_status(Completed)`, `outbox.limit_stop = Some(LimitStop { reset_at })`; sonst bisheriger Ablauf.
-- [ ] Einstellung nach Kontrakt in `settings/model.rs` und `settings/mod.rs` (Muster `auto_compact_stations`); `pnpm bindings`.
-- [ ] ADR 063 schreiben: Kontext (Stationen sterben am Limit im Status `Error`; Ziel Nachtlauf), Optionen (a) Claudes `autoContinueAtUsageLimit` durchreichen — verworfen, wirkt nur im interaktiven Dialog, nur aus `userSettings`, serverseitig geschaltet; (b) Verwalter wartet selbst — gewählt; Entscheidung: Erkennung (Ereignis `rejected` oder Text), Status `Completed` statt `Error` für alle Claude-Sessions, Warten nur für Stationen bei Einstellung an, Puffer 2 min, Rückfall 15 min, höchstens 8 Versuche, Wachhalten per `SetThreadExecutionState` nur bei laufender oder wartender Station; Konsequenzen: Einzel-Sessions nach Limit ansprechbar statt „Fehler“; Zuklappen schläft weiter; nach App-Neustart kein Warten (wie Countdown ADR 040).
-- [ ] `docs/glossary.md`: Eintrag **Limit-Stopp** — „Antwort, die das Kontingent-Limit abbricht; die Session bleibt ansprechbar ([ADR 063](decisions/063-weiter-nach-kontingent.md)).“
-- [ ] `docs/code-map.md`: Querschnitts-Liste (Zeile 17) um `limit_resume` (Weiter nach dem Kontingent-Limit, nur Core) ergänzen.
-- [ ] STATE.md: ADR 063 als vergeben eintragen.
+- [x] `src-tauri/src/limit_resume/mod.rs` neu, Modul-Kommentar: „Weiter nach dem Kontingent-Limit (ADR 063): erkennt den Limit-Stopp einer Antwort; das Warten und Weiterschicken für Stationen folgt.“ Inhalt: `LimitStop`, `is_limit_stop` nach Kontrakt. In `lib.rs` als `mod limit_resume;` eintragen.
+- [x] `src-tauri/src/limit_resume/tests.rs` mit den Fällen aus AK 1 (`#[cfg(test)] mod tests;` in `mod.rs`).
+- [x] `registry.rs`: Feld `limit_reset_at: Option<i64>` in `SessionState` (Doc-Kommentar „Reset-Zeit aus einem `rejected`-Kontingent-Ereignis der laufenden Antwort (ADR 063).“), Initialwert `None` überall, wo `SessionState` gebaut wird.
+- [x] `registry.rs` `RateLimit`-Zweig: innerhalb `if self.is_claude_process()` zusätzlich `if info.status == "rejected" { if let Some(reset) = info.resets_at { self.limit_reset_at = Some(reset); } }` — vor der Zuweisung an `outbox.rate_limit` (die `info` danach verschieben).
+- [x] `registry.rs` `push_user`: erste Zeile `self.limit_reset_at = None;`.
+- [x] `registry.rs` `Outbox`: Feld `limit_stop: Option<LimitStop>`.
+- [x] `registry.rs` `end_turn`, Zweig `TurnEnd::Failed(text)`: `let reset_at = self.limit_reset_at.take();` dann `if self.is_claude_process() && limit_resume::is_limit_stop(&text, reset_at)` → `interrupt_running_tools`, `abandon_pending(outbox, "Nicht beantwortet")`, Eintrag mit Titel `"Kontingent aufgebraucht"`, `set_status(Completed)`, `outbox.limit_stop = Some(LimitStop { reset_at })`; sonst bisheriger Ablauf.
+- [x] Einstellung nach Kontrakt in `settings/model.rs` und `settings/mod.rs` (Muster `auto_compact_stations`); `pnpm bindings`.
+- [x] ADR 063 schreiben: Kontext (Stationen sterben am Limit im Status `Error`; Ziel Nachtlauf), Optionen (a) Claudes `autoContinueAtUsageLimit` durchreichen — verworfen, wirkt nur im interaktiven Dialog, nur aus `userSettings`, serverseitig geschaltet; (b) Verwalter wartet selbst — gewählt; Entscheidung: Erkennung (Ereignis `rejected` oder Text), Status `Completed` statt `Error` für alle Claude-Sessions, Warten nur für Stationen bei Einstellung an, Puffer 2 min, Rückfall 15 min, höchstens 8 Versuche, Wachhalten per `SetThreadExecutionState` nur bei laufender oder wartender Station; Konsequenzen: Einzel-Sessions nach Limit ansprechbar statt „Fehler“; Zuklappen schläft weiter; nach App-Neustart kein Warten (wie Countdown ADR 040).
+- [x] `docs/glossary.md`: Eintrag **Limit-Stopp** — „Antwort, die das Kontingent-Limit abbricht; die Session bleibt ansprechbar ([ADR 063](decisions/063-weiter-nach-kontingent.md)).“
+- [x] `docs/code-map.md`: Querschnitts-Liste (Zeile 17) um `limit_resume` (Weiter nach dem Kontingent-Limit, nur Core) ergänzen.
+- [x] STATE.md: ADR 063 als vergeben eintragen.
 
 ## Report-Back
+
+- Erkennung in `limit_resume::is_limit_stop`, Unit-Tests für die vier Fälle aus AK 1 in `limit_resume/tests.rs`.
+- `end_turn` hat einen eigenen Zweig vor dem bisherigen `Failed`: nur Claude-Sessions, Titel „Kontingent aufgebraucht“, Status `Completed`, `outbox.limit_stop` gesetzt, `turn_completed` bleibt aus. `limit_reset_at` wird vor dem `match` per `take()` geleert, also bei jedem Antwortende (auch bei Pause/Abbruch), nicht nur im `Failed`-Zweig.
+- Abweichung: `limit_resume` steht in `lib.rs` als `pub mod` wie alle anderen Module (Checkliste: `mod`).
+- Abweichung: `update` liest `outbox.limit_stop` schon jetzt und schreibt eine Zeile ins Session-Log („Limit-Stopp: Kontingent aufgebraucht, …“). Ohne Leser schlägt `clippy -D warnings` wegen eines nie gelesenen Felds an; Phase 2 hängt das Planen des Weiterschickens an dieselbe Stelle.
+- Einstellung `auto_continue_at_limit` nach Kontrakt, Bindings erzeugt; die Oberfläche zeigt sie noch nicht (Phase 4).
+- ADR 063, Glossar (Limit-Stopp), Code-Map (Querschnitt) nachgezogen.
