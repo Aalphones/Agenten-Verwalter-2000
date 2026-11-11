@@ -28,7 +28,9 @@ use crate::implementation::model::{
 };
 use crate::implementation::report::{self, Extras};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
+use crate::limit_resume::LimitResumes;
 use crate::sessions::model::SessionStatus;
+use crate::settings;
 
 const NO_IMPLEMENTATION: &str = "In diesem Vorhaben gibt es keine Umsetzung.";
 const IS_FINISHED: &str = "Umsetzung ist schon abgeschlossen.";
@@ -273,6 +275,7 @@ impl SessionRegistry {
         self.database
             .with(|connection| implementation_rows::cancel(connection, id, now_ms()))?;
         self.cancel_countdowns_of(&view);
+        self.cancel_limit_resumes_of(&view);
         self.implementation_view(id)
     }
 
@@ -285,6 +288,7 @@ impl SessionRegistry {
             return Err(CommandError::Implementation(NOT_DELETABLE.to_owned()));
         }
         self.cancel_countdowns_of(&view);
+        self.cancel_limit_resumes_of(&view);
         self.database
             .with(|connection| implementation_rows::delete(connection, id))?;
         for member in self.project_sessions(&view.project_id) {
@@ -395,6 +399,19 @@ impl SessionRegistry {
         }
     }
 
+    /// Beendet das Warten aufs Kontingent jeder Station der Umsetzung (ADR 063).
+    fn cancel_limit_resumes_of(&self, view: &ImplementationView) {
+        let mut resumes = self.lock_limit_resumes();
+        for session_id in view
+            .phases
+            .iter()
+            .flat_map(|phase: &PhaseView| phase.stations.iter())
+            .filter_map(|station: &StationView| station.session_id.as_deref())
+        {
+            resumes.cancel(session_id);
+        }
+    }
+
     /// Nummer der Session im Vorhaben; 0 für eine unbekannte.
     pub fn session_number(&self, session_id: &str) -> u32 {
         self.get(session_id)
@@ -467,6 +484,42 @@ impl SessionRegistry {
 
     pub fn release_start(&self, station_id: &str) {
         self.lock_countdowns().release_start(station_id);
+    }
+
+    /// Einstellung „Nach Kontingent-Limit automatisch weiter“; ohne lesbare Einstellungen aus.
+    pub fn auto_continue_at_limit(&self) -> bool {
+        settings::load(&self.database)
+            .is_ok_and(|loaded: settings::model::Settings| loaded.auto_continue_at_limit)
+    }
+
+    /// Beginnt das Warten der Session aufs Kontingent; ein laufendes wird ersetzt, der Versuch
+    /// zählt. Gibt die Marke zurück.
+    pub fn begin_limit_resume(&self, session_id: &str, resume_at: f64) -> u64 {
+        self.lock_limit_resumes().begin(session_id, resume_at)
+    }
+
+    /// `true`, wenn das Warten mit dieser Marke noch galt; es ist danach weg.
+    pub fn take_limit_resume(&self, session_id: &str, token: u64) -> bool {
+        self.lock_limit_resumes().take(session_id, token)
+    }
+
+    pub fn holds_limit_resume(&self, session_id: &str, token: u64) -> bool {
+        self.lock_limit_resumes().holds(session_id, token)
+    }
+
+    /// `true`, wenn die Session wartete.
+    pub fn cancel_limit_resume(&self, session_id: &str) -> bool {
+        self.lock_limit_resumes().cancel(session_id)
+    }
+
+    pub fn limit_resume_attempts(&self, session_id: &str) -> u32 {
+        self.lock_limit_resumes().attempts(session_id)
+    }
+
+    pub(super) fn lock_limit_resumes(&self) -> MutexGuard<'_, LimitResumes> {
+        self.limit_resumes
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
     }
 
     fn lock_countdowns(&self) -> MutexGuard<'_, Countdowns> {
@@ -584,6 +637,7 @@ impl SessionRegistry {
             .collect();
         let now = now_ms();
         let countdowns: HashMap<String, f64> = self.lock_countdowns().ends();
+        let resumes: HashMap<String, f64> = self.lock_limit_resumes().ends();
         let live: HashMap<String, SessionLive> = members
             .iter()
             .filter(|member: &&Arc<Session>| {
@@ -591,14 +645,17 @@ impl SessionRegistry {
                     station.session_id.as_deref() == Some(member.id.as_str())
                 })
             })
-            .map(|member: &Arc<Session>| (member.id.clone(), live_of(member, now)))
+            .map(|member: &Arc<Session>| {
+                let resumes_at: Option<f64> = resumes.get(&member.id).copied();
+                (member.id.clone(), live_of(member, now, resumes_at))
+            })
             .collect();
         build_view(stored, &live, &numbers, &countdowns)
     }
 }
 
 /// Liest unter der Sperre dieser einen Session, ohne den Verlauf zu laden.
-fn live_of(session: &Session, now: f64) -> SessionLive {
+fn live_of(session: &Session, now: f64, resumes_at: Option<f64>) -> SessionLive {
     let state = session.lock();
     let status = if state.is_awaiting_subagent() {
         SessionStatus::Running
@@ -629,5 +686,6 @@ fn live_of(session: &Session, now: f64) -> SessionLive {
         last_activity_at: state.last_activity_at,
         unread: state.last_activity_at > state.seen_at,
         awaits_script: state.awaited_script().is_some(),
+        resumes_at,
     }
 }

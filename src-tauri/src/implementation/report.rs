@@ -214,6 +214,7 @@ fn now_lines(view: &ImplementationView) -> Vec<String> {
         let label = match station.state {
             StationState::Starting | StationState::Running => "läuft",
             StationState::WaitsForScript => "wartet auf einen Hintergrund-Befehl",
+            StationState::WaitsForLimit => "wartet aufs Kontingent",
             StationState::Asking => "fragt dich:",
             StationState::WaitsForYou => "wartet auf dich",
             StationState::Error => "Fehler",

@@ -36,6 +36,8 @@ pub enum StationState {
     /// Antwort abgegeben, ein Hintergrund-Befehl (etwa der Testlauf) läuft noch; der Agent setzt
     /// fort, sobald er endet. Der Benutzer muss nichts tun.
     WaitsForScript,
+    /// Vom Kontingent-Limit gestoppt; läuft zur Reset-Zeit von selbst weiter (ADR 063).
+    WaitsForLimit,
     Asking,
     WaitsForYou,
     Done,
@@ -50,7 +52,10 @@ impl StationState {
             StationState::WaitsForYou => 6,
             StationState::Error => 5,
             StationState::Countdown => 4,
-            StationState::Running | StationState::WaitsForScript | StationState::Starting => 3,
+            StationState::Running
+            | StationState::WaitsForScript
+            | StationState::WaitsForLimit
+            | StationState::Starting => 3,
             StationState::Ready => 2,
             StationState::Pending => 1,
             StationState::Done => 0,
@@ -97,6 +102,9 @@ pub struct StationView {
     #[ts(type = "number | null")]
     pub completed_at: Option<f64>,
     pub result: Option<String>,
+    /// Zeitpunkt des automatischen Weiterschickens, ms seit der Epoche; nur bei `WaitsForLimit`.
+    #[ts(type = "number | null")]
+    pub resumes_at: Option<f64>,
     /// Älteste offene Anfrage der Session; nur bei `Asking`.
     pub open_question: Option<OpenQuestion>,
     /// Laufzeit der Session in ms (abgeschlossene Abschnitte + laufender).

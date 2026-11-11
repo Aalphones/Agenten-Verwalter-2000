@@ -199,6 +199,8 @@ export function stateText(station: StationView, now: number): string {
       return `läuft seit ${durationText(runningFor(station, now))}`;
     case 'waitsForScript':
       return 'wartet auf einen Hintergrund-Befehl, etwa den Testlauf';
+    case 'waitsForLimit':
+      return 'wartet aufs Kontingent';
     case 'asking':
       return 'fragt dich';
     case 'waitsForYou':
@@ -225,6 +227,8 @@ export function stationMeta(station: StationView, now: number): string {
       return `läuft ${durationText(runningFor(station, now))}`;
     case 'waitsForScript':
       return 'Skript läuft';
+    case 'waitsForLimit':
+      return 'Kontingent';
     case 'asking':
       return 'fragt';
     case 'waitsForYou':

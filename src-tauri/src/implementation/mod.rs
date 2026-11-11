@@ -337,6 +337,8 @@ pub struct SessionLive {
     pub unread: bool,
     /// Ein Hintergrund-Befehl läuft nach der abgegebenen Antwort noch (ADR 032).
     pub awaits_script: bool,
+    /// Die Session wartet aufs Kontingent und wird zu diesem Zeitpunkt (ms) weitergeschickt (ADR 063).
+    pub resumes_at: Option<f64>,
 }
 
 /// Baut die Ansicht aus den Zeilen. `live` enthält die Sessions der Stationen, `numbers` die
@@ -454,7 +456,7 @@ fn station_view(station: &StationRow, live: &HashMap<String, SessionLive>) -> St
         StationState::Done
     } else {
         session.map_or(StationState::Pending, |session: &SessionLive| {
-            state_of(session.status, session.awaits_script)
+            state_of(session)
         })
     };
     StationView {
@@ -473,6 +475,9 @@ fn station_view(station: &StationRow, live: &HashMap<String, SessionLive>) -> St
         started_at: station.started_at,
         completed_at: station.completed_at,
         result: station.result.clone(),
+        resumes_at: session
+            .filter(|_| state == StationState::WaitsForLimit)
+            .and_then(|session: &SessionLive| session.resumes_at),
         open_question: session
             .filter(|_| state == StationState::Asking)
             .and_then(|session: &SessionLive| session.open_question.clone()),
@@ -481,10 +486,12 @@ fn station_view(station: &StationRow, live: &HashMap<String, SessionLive>) -> St
 }
 
 /// Fertig heißt gemeldet: eine Antwort ohne Meldung wartet auf den Benutzer — außer ein
-/// Hintergrund-Befehl läuft noch, dann wartet die Station auf den Befehl.
-fn state_of(status: SessionStatus, awaits_script: bool) -> StationState {
-    match status {
-        SessionStatus::Completed if awaits_script => StationState::WaitsForScript,
+/// Hintergrund-Befehl läuft noch, dann wartet die Station auf den Befehl, oder sie wartet nach einem
+/// Limit-Stopp aufs Kontingent.
+fn state_of(session: &SessionLive) -> StationState {
+    match session.status {
+        SessionStatus::Completed if session.resumes_at.is_some() => StationState::WaitsForLimit,
+        SessionStatus::Completed if session.awaits_script => StationState::WaitsForScript,
         SessionStatus::Starting | SessionStatus::New => StationState::Starting,
         SessionStatus::Running => StationState::Running,
         SessionStatus::Waiting => StationState::Asking,

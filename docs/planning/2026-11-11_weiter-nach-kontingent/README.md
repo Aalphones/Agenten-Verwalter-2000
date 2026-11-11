@@ -9,7 +9,7 @@
 | Phase | Inhalt | Rating | Wave | Modell | Schätzung | Status |
 |---|---|---|---|---|---|---|
 | 1 | Limit-Stopp erkennen (Session bleibt ansprechbar statt „Fehler“), Einstellung `autoContinueAtLimit`, ADR 063 | heikel | 1 | opus | 3 h | complete |
-| 2 | Warten und Weiterschicken für Stationen, Stationszustand „wartet aufs Kontingent“ | heikel | 2 | opus | 4 h | pending |
+| 2 | Warten und Weiterschicken für Stationen, Stationszustand „wartet aufs Kontingent“ | heikel | 2 | opus | 4 h | complete |
 | 3 | Windows wachhalten, solange eine Station läuft oder wartet | standard | 3 | sonnet | 2 h | pending |
 | 4 | Oberfläche: Einstellungszeile, Stationszustand auf Karte, Sidebar und Zeitleiste | standard | 3 | sonnet | 2 h | pending |
 

@@ -57,7 +57,7 @@ use crate::error::CommandError;
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
 use crate::implementation::Countdowns;
-use crate::limit_resume::{self, LimitStop};
+use crate::limit_resume::{self, LimitResumes, LimitStop};
 use crate::mcp::model::{McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer};
 use crate::mcp_access::McpAccess;
 use crate::notices::model::{Denial, Notice};
@@ -134,6 +134,9 @@ pub struct SessionRegistry {
     database: Arc<Database>,
     /// Countdowns der Stationen (ADR 048); wird nie zusammen mit einer anderen Sperre gehalten.
     implementation_countdowns: Mutex<Countdowns>,
+    /// Stationen, die nach einem Limit-Stopp auf das Kontingent warten (ADR 063); wird nie zusammen
+    /// mit einer anderen Sperre gehalten.
+    limit_resumes: Mutex<LimitResumes>,
 }
 
 /// Was ein Vorhaben selbst trägt; Workspace und Repositories liegen gleich an jeder seiner Sessions.
@@ -415,6 +418,7 @@ impl SessionRegistry {
             viewed: Mutex::new(None),
             database,
             implementation_countdowns: Mutex::new(Countdowns::default()),
+            limit_resumes: Mutex::new(LimitResumes::default()),
         }
     }
 
@@ -1153,6 +1157,9 @@ impl SessionRegistry {
         comments: &[ReviewComment],
     ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
+        // Eine Nachricht ersetzt das automatische Weiter; der Zeitgeber selbst hat seinen Eintrag
+        // schon entfernt.
+        limit_resume::cancel(app, session_id);
         // Vor `update`: die Abfrage bei LM Studio gehört nicht unter die Session-Sperre.
         let backend_result: Result<(OperatingMode, Option<LocalBackend>), String> = self
             .agent_backend()
@@ -1379,6 +1386,8 @@ impl SessionRegistry {
 
     pub fn cancel(&self, app: &AppHandle, session_id: &str) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
+        limit_resume::cancel(app, session_id);
+        self.lock_limit_resumes().reset_attempts(session_id);
         let cancelled = update(
             app,
             &session,
@@ -3675,14 +3684,14 @@ fn update<R>(
     }
     // Die Session-Sperre ist hier frei: `consider` nimmt Vorhaben- und Session-Sperren selbst.
     if outbox.turn_completed {
+        // Nur eine normal beendete Antwort setzt `turn_completed`: die Folge der Limit-Stopps reißt ab.
+        app.state::<SessionRegistry>()
+            .lock_limit_resumes()
+            .reset_attempts(&session.id);
         auto_handoff::consider(app, session);
     }
     if let Some(stop) = outbox.limit_stop.take() {
-        let reset = match stop.reset_at {
-            Some(seconds) => format!("Reset um {seconds} (Unix-Sekunden)"),
-            None => "ohne Reset-Zeit".to_owned(),
-        };
-        session.log_line(format!("Limit-Stopp: Kontingent aufgebraucht, {reset}"));
+        limit_resume::consider(app, session, stop);
     }
     let value = result?;
     outbox.deliver(session)?;

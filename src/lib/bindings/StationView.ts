@@ -10,6 +10,10 @@ export type StationView = { id: string, position: number, stage: string, model: 
  */
 startsAt: number | null, startedAt: number | null, completedAt: number | null, result: string | null, 
 /**
+ * Zeitpunkt des automatischen Weiterschickens, ms seit der Epoche; nur bei `WaitsForLimit`.
+ */
+resumesAt: number | null, 
+/**
  * Älteste offene Anfrage der Session; nur bei `Asking`.
  */
 openQuestion: OpenQuestion | null, 

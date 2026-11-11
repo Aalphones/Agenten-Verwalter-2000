@@ -17,6 +17,7 @@ fn station(stage: &str, model: ModelId, skill: &str) -> StationView {
         session_number: None,
         state: StationState::Done,
         starts_at: None,
+        resumes_at: None,
         started_at: None,
         completed_at: Some(1.0),
         result: None,

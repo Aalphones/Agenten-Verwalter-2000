@@ -1,6 +1,6 @@
 # Phase 2 — Warten und Weiterschicken für Stationen
 
-**Rating:** heikel · **Wave:** 2 · **Modell:** opus
+**Rating:** heikel · **Wave:** 2 · **Modell:** opus · **Status:** complete
 
 ## Kontext
 
@@ -28,15 +28,23 @@ Lesen vor dem ersten Edit:
 
 ## Checkliste
 
-- [ ] `limit_resume/mod.rs`: `LimitResumes`, Konstanten und `resume_at_ms` nach Kontrakt; Doc-Kommentare je Konstante (Puffer: „Kontingent ist zum Reset-Zeitpunkt nicht immer sofort frei.“; Rückfall: „ohne bekannte Reset-Zeit“; Versuche: „Bremse gegen eine Schleife aus Limit-Stopps.“).
-- [ ] `limit_resume/mod.rs`: `pub fn consider(app: &AppHandle, session: &Arc<Session>, stop: LimitStop)` — prüft Einstellung, `is_station`, Versuche; beginnt das Warten; startet den Thread.
-- [ ] `registry.rs`: Feld `limit_resumes: Mutex<LimitResumes>` in `SessionRegistry` + Wrapper wie `begin_countdown`.
-- [ ] `registry.rs` Ende von `update`: nach dem `auto_handoff`-Block `if let Some(stop) = outbox.limit_stop.take() { limit_resume::consider(app, session, stop); }`.
-- [ ] `registry.rs` `end_turn` Zweig `Completed`: Versuchszähler zurücksetzen (Hinweis an `update` über `Outbox`, falls die Registry dort nicht erreichbar ist).
-- [ ] Abbrechen/Löschen einer Umsetzung und Schließen einer Session: `cancel` für alle betroffenen Session-IDs.
-- [ ] `implementation/model.rs`: `WaitsForLimit` (Doc-Kommentar „Vom Kontingent-Limit gestoppt; läuft zur Reset-Zeit von selbst weiter (ADR 063).“), `urgency_rank` 3; `StationView.resumes_at`.
-- [ ] `implementation/mod.rs` `build_view`: Zustand und `resumes_at` aus `limit_resumes.ends()`.
-- [ ] Tests nach AK 7; `pnpm bindings`.
-- [ ] `docs/code-map.md` Zeile „Umsetzung“: `limit_resume` (Warten am Kontingent-Limit, ADR 063) ergänzen; `docs/glossary.md` **Station**: Zustand „wartet aufs Kontingent“ ergänzen.
+- [x] `limit_resume/mod.rs`: `LimitResumes`, Konstanten und `resume_at_ms` nach Kontrakt; Doc-Kommentare je Konstante (Puffer: „Kontingent ist zum Reset-Zeitpunkt nicht immer sofort frei.“; Rückfall: „ohne bekannte Reset-Zeit“; Versuche: „Bremse gegen eine Schleife aus Limit-Stopps.“).
+- [x] `limit_resume/mod.rs`: `pub fn consider(app: &AppHandle, session: &Arc<Session>, stop: LimitStop)` — prüft Einstellung, `is_station`, Versuche; beginnt das Warten; startet den Thread.
+- [x] `registry.rs`: Feld `limit_resumes: Mutex<LimitResumes>` in `SessionRegistry` + Wrapper wie `begin_countdown`.
+- [x] `registry.rs` Ende von `update`: nach dem `auto_handoff`-Block `if let Some(stop) = outbox.limit_stop.take() { limit_resume::consider(app, session, stop); }`.
+- [x] `registry.rs` `end_turn` Zweig `Completed`: Versuchszähler zurücksetzen (Hinweis an `update` über `Outbox`, falls die Registry dort nicht erreichbar ist).
+- [x] Abbrechen/Löschen einer Umsetzung und Schließen einer Session: `cancel` für alle betroffenen Session-IDs.
+- [x] `implementation/model.rs`: `WaitsForLimit` (Doc-Kommentar „Vom Kontingent-Limit gestoppt; läuft zur Reset-Zeit von selbst weiter (ADR 063).“), `urgency_rank` 3; `StationView.resumes_at`.
+- [x] `implementation/mod.rs` `build_view`: Zustand und `resumes_at` aus `limit_resumes.ends()`.
+- [x] Tests nach AK 7; `pnpm bindings`.
+- [x] `docs/code-map.md` Zeile „Umsetzung“: `limit_resume` (Warten am Kontingent-Limit, ADR 063) ergänzen; `docs/glossary.md` **Station**: Zustand „wartet aufs Kontingent“ ergänzen.
 
 ## Report-Back
+
+- Fertig: `LimitResumes` + Konstanten + `resume_at_ms` + `consider`/`cancel` in `limit_resume/mod.rs`; Zeitgeber-Thread `limit-resume` prüft alle 30 s die Wanduhr und schickt `RESUME_TEXT` über `SessionRegistry::send`.
+- Abweichung: zusätzlich `LimitResumes::holds` (Marke prüfen ohne zu entfernen), damit der Thread nach Verwerfen sofort endet statt bis zum Zeitpunkt weiterzupollen.
+- `resumes_at` kommt über `SessionLive.resumes_at` in `build_view` (statt neuem Parameter); `state_of` nimmt jetzt `&SessionLive`.
+- Verwerfen: `send` (Benutzer), `cancel` (Schließen, auch Löschen/Archivieren), `cancel_implementation`, `delete_implementation`; nicht bei `request_cancel` (die Anfrage selbst bricht nichts ab).
+- Versuchszähler: `begin` zählt, `turn_completed` in `update` setzt zurück, `cancel` der Session auch.
+- Lagebericht (`report.rs`) nennt „wartet aufs Kontingent“.
+- Prüfung: `cargo test` (10 Tests in `limit_resume`), `pnpm check` grün.

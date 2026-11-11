@@ -23,4 +23,5 @@ Eine Umsetzung soll über Nacht ohne Benutzer durchlaufen. Rennt eine Station in
 - Keine Migration; die Einstellung liegt in der Tabelle der Einstellungen.
 - Einzel-Sessions sind nach einem Limit-Stopp ansprechbar statt „Fehler“, werden aber nie automatisch weitergeschickt.
 - Zuklappen des Laptops folgt weiter der Windows-Energieeinstellung „Beim Zuklappen“; `SetThreadExecutionState` verhindert nur den Schlaf durch Untätigkeit.
+- Eine Nachricht des Benutzers an die wartende Station, Abbrechen oder Löschen der Umsetzung und Schließen der Session verwerfen das Warten.
 - Nach einem Neustart der App wartet nichts mehr (wie der Countdown aus ADR 040); die Station steht dann auf „wartet auf dich“.
