@@ -7,7 +7,7 @@ Die Vorhaben-Retro (ADR 028) kennt Werkzeug-Aufrufe heute nur als Zählung und a
 | Phase | Inhalt | Rating | Wave | Modell | Schätzung | Status |
 |---|---|---|---|---|---|---|
 | 1 | Werkzeug-Spur und Querschnitt ohne Modell (`spur-<N>.md`, `werkzeuge.md` Teil A, `skripte/`), `retro-probe --werkzeuge`, ADR 062 | standard | 1 | sonnet | 4 h | complete |
-| 2 | Werkzeug-Retro mit Haiku je Session (`werkzeuge.md` Teil B), `retro-probe --haiku` | standard | 2 | sonnet | 2 h | pending |
+| 2 | Werkzeug-Retro mit Haiku je Session (`werkzeuge.md` Teil B), `retro-probe --haiku` | standard | 2 | sonnet | 2 h | complete |
 
 Phase 2 braucht die Spur aus Phase 1 als Eingabe, deshalb sequenziell.
 
@@ -310,6 +310,30 @@ CRITICAL und die drei WARNINGs sind behoben, MINOR `python.exe` ebenfalls; `pnpm
 - Beleg auf „Onboarding Inventar“ (Kopie der Datenbank): 40 Sessions → 40 `spur-*.md` (7 mit Kurz-ID), 117 Skripte. Gegenprobe `Users\\|Users/`: 1 Treffer, die Gegenprobe selbst als Befehlstext in `spur-36.md:21` (Muster-Literal, kein Pfad); `C--Users-`: 0 Treffer; `Bash:python.exe` entfällt.
 - MINOR Dateigröße (`tools.rs`, `tools_report.rs`) nicht angefasst; Aufteilung in Normalisierung und Shell-Familie bleibt Follow-up.
 
+### Re-Review (11.11.2026) — PASS
+
+Geprüft: Diff cee5809 gegen AK 1–8, die Befunde des ersten Reviews und den Kontrakt; `pnpm check` selbst gelaufen (grün); `retro-probe --werkzeuge` selbst gegen eine frische Kopie der Datenbank auf „Onboarding Inventar“ (41 Sessions, 2924 Aufrufe, 117 Skripte) und das 14-Session-Vorhaben (23 Skripte).
+
+| AK | Ergebnis |
+|---|---|
+| 1, 2 | erfüllt: 41 bzw. 14 `spur-*.md`, `werkzeuge.md` mit Teil A, `skripte\`; 162 Zeilen mit `SPERRE:`/`FEHLER:` |
+| 3 | erfüllt: Gegenprobe `Users\\|Users/` auf „Onboarding Inventar“ 2 Treffer, beide das Suchmuster selbst im Befehlstext (`spur-36.md:21`, `spur-37.md:68`); 14-Session-Vorhaben 0; `C--Users-` 0 |
+| 4 | erfüllt: unter „Wiederholte gleiche Aufrufe“ kein Read/Grep/Glob/Edit/Write; Abfolgen wie im ersten Review |
+| 5 | erfüllt (unverändert, Pfadprüfung vor dem Skript) |
+| 6 | erfüllt (beide Aufrufe ohne Modell) |
+| 7 | erfüllt am Code: `load_summaries` (`length`, `substr`) ist die einzige neue Abfrage; `retro/traces.rs` seit 98193ba unverändert |
+| 8 | erfüllt |
+
+Befunde des ersten Reviews: CRITICAL (gekürzte Pfade), WARNING kodierter Name, WARNING Familie (Optionen übersprungen, `cargo --manifest-path=… test` → `test`, Familie normalisiert) und WARNING Dubletten (7 Spuren mit Kurz-ID, Querschnitt zählt über die Position) sind behoben; MINOR `python.exe` ebenfalls.
+
+Neue Befunde:
+
+- **MINOR — Ersatzmuster für Benutzerverzeichnisse greift zu weit** (`tools.rs:108`, Alternative `[\\/]+users\b`): Jedes Pfad- oder URL-Segment `users` wird zu `~`, auch ohne Laufwerk — `admin_app/mcp/tools/users.py` → `admin_app/mcp/tools~.py`, `https://gitlab…/users/sign_in` → `https://gitlab…~`. In der ganzen Datenbank 4 Eingaben betroffen; nur Lesbarkeit, keine Datenpreisgabe. Fix: dritte Alternative nur am Wortanfang nach Leerraum/Anführungszeichen oder nur mit `\\`-Präfix (JSON) zulassen.
+- **MINOR — Dateigröße** (LIFT, aus dem ersten Review): `tools.rs` 870 Zeilen, `tools_report.rs` 577; steht unter Follow-ups.
+- **INFO**: Git-Autorname erscheint in einem Fehlertext (`spur-32.md:191`, Ausgabe von `git log`); kein Pfad, außerhalb von AK 3.
+
+Unsicherheit des Reviews: Die Familien-Regel ist nur an den zwei Probeläufen und am Code geprüft, nicht an gezielten Eingaben wie `node -e …` oder `python -X utf8 skript.py` (letzteres ergäbe `python utf8`) — Check: eine Spur mit solchen Aufrufen durch `retro-probe --werkzeuge` schicken.
+
 ## Phase 2 — Werkzeug-Retro mit Haiku je Session
 
 ### Kontext (lesen vor dem Start)
@@ -332,14 +356,14 @@ CRITICAL und die drei WARNINGs sind behoben, MINOR `python.exe` ebenfalls; `pnpm
 
 ### Checkliste
 
-- [ ] `retro/prompt.rs`: `TOOLS_SYSTEM_PROMPT` (Wortlaut unten) und `TOOLS_SCHEMA` nach Kontrakt.
-- [ ] `sessions/registry/retro.rs` `ask_all`: im Thread nach der Mini-Retro `ask_haiku::<ToolFindings>` mit der Spur der Session; Rückgabe je Session `(MiniRetro, Option<Result<ToolFindings, String>>)` (`None`, wenn `trace` fehlt); `total` verdoppeln, `emit_progress` nach jedem der beiden Aufrufe. `collect_retro` übergibt die Werkzeug-Ergebnisse an `tools_report::render`.
-- [ ] `retro/tools_report.rs`: Teil B nach Kontrakt; `calls` mit `, ` verbunden; Zeilenumbrüche in Modelltexten wie `findings::one_line` entfernen.
-- [ ] `examples/retro-probe.rs`: Optionen `--haiku` und `--sessions` nach AK 5; `AGENTS.md` Zeile `retro-probe` nachziehen.
-- [ ] `docs/decisions/062-werkzeug-retro.md`: Konsequenz „Laufzeit je Session steigt um den Haiku-Aufruf (Probelauf 36–130 s)“ ergänzen, falls in Phase 1 noch nicht drin.
-- [ ] `docs/glossary.md` Eintrag **Retro**: Satz anhängen „Dazu je Session eine Werkzeug-Retro mit Haiku (ADR 062).“
-- [ ] `pnpm check` grün.
-- [ ] **Artefakt:** `retro-probe --werkzeuge <Ordner> --haiku --sessions …` auf dasselbe Vorhaben wie in Phase 1 mit höchstens 5 Sessions; Teil B von `werkzeuge.md` in den Report-Back.
+- [x] `retro/prompt.rs`: `TOOLS_SYSTEM_PROMPT` (Wortlaut unten) und `TOOLS_SCHEMA` nach Kontrakt.
+- [x] `sessions/registry/retro.rs` `ask_all`: im Thread nach der Mini-Retro `ask_haiku::<ToolFindings>` mit der Spur der Session; Rückgabe je Session `(MiniRetro, Option<Result<ToolFindings, String>>)` (`None`, wenn `trace` fehlt); `total` verdoppeln, `emit_progress` nach jedem der beiden Aufrufe. `collect_retro` übergibt die Werkzeug-Ergebnisse an `tools_report::render`.
+- [x] `retro/tools_report.rs`: Teil B nach Kontrakt; `calls` mit `, ` verbunden; Zeilenumbrüche in Modelltexten wie `findings::one_line` entfernen.
+- [x] `examples/retro-probe.rs`: Optionen `--haiku` und `--sessions` nach AK 5; `AGENTS.md` Zeile `retro-probe` nachziehen.
+- [x] `docs/decisions/062-werkzeug-retro.md`: Konsequenz „Laufzeit je Session steigt um den Haiku-Aufruf (Probelauf 36–130 s)“ ergänzen, falls in Phase 1 noch nicht drin.
+- [x] `docs/glossary.md` Eintrag **Retro**: Satz anhängen „Dazu je Session eine Werkzeug-Retro mit Haiku (ADR 062).“
+- [x] `pnpm check` grün.
+- [x] **Artefakt:** `retro-probe --werkzeuge <Ordner> --haiku --sessions …` auf dasselbe Vorhaben wie in Phase 1 mit höchstens 5 Sessions; Teil B von `werkzeuge.md` in den Report-Back.
 
 Wortlaut `TOOLS_SYSTEM_PROMPT`:
 
@@ -352,6 +376,14 @@ Wortlaut `TOOLS_SYSTEM_PROMPT`:
 - Sichtabnahme: keine.
 
 ### Report-Back
+
+Umgesetzt am 11.11.2026, `pnpm check` grün (Lint, Typecheck, Format, Build, rustfmt, Clippy). Keine neuen Tests.
+
+**Beleg (AK 2, 5)** — `retro-probe <Kopie> <Session-ID> --werkzeuge <Ordner> --haiku --sessions 3,6,8,9,11` druckt `#3: ok`, `#6: ok`, `#8: ok`, `#9: ok`, `#11: ok`; `werkzeuge.md` hat Teil B mit fünf Abschnitten, Gegenprobe `Users` im Artefakt 0 Treffer. Artefakt: `werkzeug-retro-teil-b.md` im Artefakt-Ordner des Vorhabens. AK 1, 3, 4 am Code: `ask_all` ruft nach der Mini-Retro `ask_haiku` mit `TOOLS_SYSTEM_PROMPT`, `TOOLS_SCHEMA`, `tools::haiku_input` und `RETRO_TIMEOUT`; `total` ist 2 × Sessions mit lesbarem Verlauf, `emit_progress` nach jedem Aufruf; `failed_count` zählt nur Mini-Retros.
+
+Befund aus Teil B (Güte): Haiku fand Kontext-Start, Ticket-Abschluss, Testlauf mit Log-Filter, Pipeline-Polling und Basisstand-Vergleich als Handgriffe und meldete Reibung nur bei Fehlertext (z. B. Quoting in `bash -c`, nicht expandierter Pfad). Schwächen: Sperren wie „cd vor git“ erscheinen einmal als Reibung (Session #3, 1.17/1.47, dort mehrfach gelaufen, laut Regel zulässig); bei Skripten ohne erkennbaren Zweck schreibt Haiku „Zweck aus der Spur nicht erkennbar“ statt zu raten; einige `calls`-Nummern in #3 sind lang (bis 10 Einträge). Kein Fehlalarm bei einzelnen Read/Grep/Edit.
+
+Abweichung: Das Vorhaben „GYMID-2668 Update Check“ aus Phase 1 ist in der Datenbank-Kopie nicht mehr unter den aktiven Sessions; das Artefakt läuft auf „GYMID-2150 APK in Release“ (15 Sessions, 5 gewählt). Es ist ein anderes Vorhaben mit derselben Art Arbeit.
 
 ## Finale AK
 
