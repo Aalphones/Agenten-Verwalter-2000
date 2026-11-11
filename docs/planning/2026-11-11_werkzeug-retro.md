@@ -6,7 +6,7 @@ Die Vorhaben-Retro (ADR 028) kennt Werkzeug-Aufrufe heute nur als Zählung und a
 
 | Phase | Inhalt | Rating | Wave | Modell | Schätzung | Status |
 |---|---|---|---|---|---|---|
-| 1 | Werkzeug-Spur und Querschnitt ohne Modell (`spur-<N>.md`, `werkzeuge.md` Teil A, `skripte/`), `retro-probe --werkzeuge`, ADR 062 | standard | 1 | sonnet | 4 h | pending |
+| 1 | Werkzeug-Spur und Querschnitt ohne Modell (`spur-<N>.md`, `werkzeuge.md` Teil A, `skripte/`), `retro-probe --werkzeuge`, ADR 062 | standard | 1 | sonnet | 4 h | complete |
 | 2 | Werkzeug-Retro mit Haiku je Session (`werkzeuge.md` Teil B), `retro-probe --haiku` | standard | 2 | sonnet | 2 h | pending |
 
 Phase 2 braucht die Spur aus Phase 1 als Eingabe, deshalb sequenziell.
@@ -204,19 +204,19 @@ Schema `TOOLS_SCHEMA` (alle Felder Pflicht, `additionalProperties: false`): `ste
 
 ### Checkliste
 
-- [ ] `db/tool_details.rs`: `ToolSummary` und `load_summaries` nach Kontrakt, Doc-Kommentar „Je Aufruf Eingabe und nur Länge und Kopf der Ausgabe; für die Werkzeug-Retro (ADR 062).“
-- [ ] `retro/tools.rs` neu: Typen und Funktionen des Kontrakts, `normalize`, Familien- und Schlüssel-Regeln, Skript-Erkennung, `render_spur`, `haiku_input`, `script_files`; Konstanten `SCRIPT_MIN_LINES = 10`, `HAIKU_INPUT_MAX_CHARS = 60_000`, `SPUR_TEXT_MAX_CHARS = 150`. Modul-Kommentar: „Werkzeug-Spur einer Session für die Werkzeug-Retro (ADR 062): Aufrufe je Nutzer-Auftrag, normalisiert, ohne Modell.“
-- [ ] `retro/tools_report.rs` neu: `render` nach Kontrakt; Teil B nur, wenn mindestens ein Eintrag von `retros` `Some` ist. Konstanten `MIN_TOTAL = 3`, `MIN_SESSIONS = 2`, `BIG_OUTPUT_CHARS = 20_000` und die Höchstzahlen der Rubriken.
-- [ ] `retro/model.rs`: `ToolFindings`, `StepSummary`, `Routine`, `Friction`, `ScriptPurpose` (`Debug`, `Clone`, `Deserialize`, Felder nach Kontrakt „Antwort der Werkzeug-Retro“) — schon hier, weil `tools_report::render` sie in der Signatur trägt.
-- [ ] `retro/mod.rs`: `pub mod tools; pub mod tools_report;`.
-- [ ] `sessions/registry/retro.rs`: in `prepare_session` im selben `database.with`-Aufruf wie `traces::collect` zusätzlich `load_summaries`, dann `build_trace` mit `session.workspace` und `crate::standalone::home_dir()`; neues Feld `PreparedSession.trace: Option<SessionTrace>` (`None` in den beiden Fehlerzweigen). In `collect_retro` direkt nach den `session-<N>.md` die Dateien `spur-<N>.md` und `skripte\…` schreiben; nach `befunde.md` `werkzeuge.md` mit `tools_report::render(project_name, &traces, &retros)`, wobei `retros` je Session `None` ist (`(0..n).map(|_| None).collect()`); Sessions ohne `trace` gehen nicht in `traces` ein. Konstanten `TOOLS_FILE = "werkzeuge.md"`, `SCRIPTS_DIR = "skripte"`.
-- [ ] `examples/retro-probe.rs`: Option `--werkzeuge <Ordner>` nach AK 6; Benutzerverzeichnis dort aus `USERPROFILE` bzw. `HOME` (wie `is_app_database`); `USAGE` ergänzen.
-- [ ] `docs/decisions/062-werkzeug-retro.md` nach Muster ADR 058: Kontext (Probelauf oben), Optionen (nur zählen; Sonnet-Mini-Retro erweitern; eigener Haiku-Aufruf auf verdichteter Spur), Entscheidung (Abschnitt „Entscheidungen“ dieses Plans), Konsequenzen (zwei Einmal-Aufrufe je Session, rund 1–2 Cent mehr; Sessions vor ADR 042 ohne Eingaben, dort nur `target`; ändert Claude Code das Präfix der Hook-Ausgabe, erscheinen Sperren als Fehler).
-- [ ] `docs/glossary.md`: Eintrag **Werkzeug-Spur** („Die Werkzeug-Aufrufe einer Session je Nutzer-Auftrag, normalisiert und ohne Modell verdichtet; `spur-<N>.md` im Retro-Ordner (ADR 062).“) und **Werkzeug-Retro** („Einmal-Aufruf mit Haiku je Session über die Werkzeug-Spur: Ziel, Weg, feste Handgriffe, Reibung, Zweck der Inline-Skripte; steht in `werkzeuge.md`.“).
-- [ ] `docs/code-map.md` Zeile „Vorhaben-Retro“: `tools.rs` (Werkzeug-Spur), `tools_report.rs` (`werkzeuge.md`) und ADR 062 ergänzen.
-- [ ] `AGENTS.md` Zeile `retro-probe`: Aufruf und Wirkung von `--werkzeuge` ergänzen.
-- [ ] `pnpm check` grün.
-- [ ] **Artefakt:** `retro-probe --werkzeuge` gegen eine Kopie der Datenbank auf ein Vorhaben mit mindestens 10 Sessions; `werkzeuge.md` und eine `spur-<N>.md` (Ausschnitt, höchstens 60 Zeilen) plus die Gegenprobe aus AK 3 in den Report-Back.
+- [x] `db/tool_details.rs`: `ToolSummary` und `load_summaries` nach Kontrakt, Doc-Kommentar „Je Aufruf Eingabe und nur Länge und Kopf der Ausgabe; für die Werkzeug-Retro (ADR 062).“
+- [x] `retro/tools.rs` neu: Typen und Funktionen des Kontrakts, `normalize`, Familien- und Schlüssel-Regeln, Skript-Erkennung, `render_spur`, `haiku_input`, `script_files`; Konstanten `SCRIPT_MIN_LINES = 10`, `HAIKU_INPUT_MAX_CHARS = 60_000`, `SPUR_TEXT_MAX_CHARS = 150`. Modul-Kommentar: „Werkzeug-Spur einer Session für die Werkzeug-Retro (ADR 062): Aufrufe je Nutzer-Auftrag, normalisiert, ohne Modell.“
+- [x] `retro/tools_report.rs` neu: `render` nach Kontrakt; Teil B nur, wenn mindestens ein Eintrag von `retros` `Some` ist. Konstanten `MIN_TOTAL = 3`, `MIN_SESSIONS = 2`, `BIG_OUTPUT_CHARS = 20_000` und die Höchstzahlen der Rubriken.
+- [x] `retro/model.rs`: `ToolFindings`, `StepSummary`, `Routine`, `Friction`, `ScriptPurpose` (`Debug`, `Clone`, `Deserialize`, Felder nach Kontrakt „Antwort der Werkzeug-Retro“) — schon hier, weil `tools_report::render` sie in der Signatur trägt.
+- [x] `retro/mod.rs`: `pub mod tools; pub mod tools_report;`.
+- [x] `sessions/registry/retro.rs`: in `prepare_session` im selben `database.with`-Aufruf wie `traces::collect` zusätzlich `load_summaries`, dann `build_trace` mit `session.workspace` und `crate::standalone::home_dir()`; neues Feld `PreparedSession.trace: Option<SessionTrace>` (`None` in den beiden Fehlerzweigen). In `collect_retro` direkt nach den `session-<N>.md` die Dateien `spur-<N>.md` und `skripte\…` schreiben; nach `befunde.md` `werkzeuge.md` mit `tools_report::render(project_name, &traces, &retros)`, wobei `retros` je Session `None` ist (`(0..n).map(|_| None).collect()`); Sessions ohne `trace` gehen nicht in `traces` ein. Konstanten `TOOLS_FILE = "werkzeuge.md"`, `SCRIPTS_DIR = "skripte"`.
+- [x] `examples/retro-probe.rs`: Option `--werkzeuge <Ordner>` nach AK 6; Benutzerverzeichnis dort aus `USERPROFILE` bzw. `HOME` (wie `is_app_database`); `USAGE` ergänzen.
+- [x] `docs/decisions/062-werkzeug-retro.md` nach Muster ADR 058: Kontext (Probelauf oben), Optionen (nur zählen; Sonnet-Mini-Retro erweitern; eigener Haiku-Aufruf auf verdichteter Spur), Entscheidung (Abschnitt „Entscheidungen“ dieses Plans), Konsequenzen (zwei Einmal-Aufrufe je Session, rund 1–2 Cent mehr; Sessions vor ADR 042 ohne Eingaben, dort nur `target`; ändert Claude Code das Präfix der Hook-Ausgabe, erscheinen Sperren als Fehler).
+- [x] `docs/glossary.md`: Eintrag **Werkzeug-Spur** („Die Werkzeug-Aufrufe einer Session je Nutzer-Auftrag, normalisiert und ohne Modell verdichtet; `spur-<N>.md` im Retro-Ordner (ADR 062).“) und **Werkzeug-Retro** („Einmal-Aufruf mit Haiku je Session über die Werkzeug-Spur: Ziel, Weg, feste Handgriffe, Reibung, Zweck der Inline-Skripte; steht in `werkzeuge.md`.“).
+- [x] `docs/code-map.md` Zeile „Vorhaben-Retro“: `tools.rs` (Werkzeug-Spur), `tools_report.rs` (`werkzeuge.md`) und ADR 062 ergänzen.
+- [x] `AGENTS.md` Zeile `retro-probe`: Aufruf und Wirkung von `--werkzeuge` ergänzen.
+- [x] `pnpm check` grün.
+- [x] **Artefakt:** `retro-probe --werkzeuge` gegen eine Kopie der Datenbank auf ein Vorhaben mit mindestens 10 Sessions; `werkzeuge.md` und eine `spur-<N>.md` (Ausschnitt, höchstens 60 Zeilen) plus die Gegenprobe aus AK 3 in den Report-Back.
 
 ### Definition of Done
 
@@ -225,6 +225,52 @@ Schema `TOOLS_SCHEMA` (alle Felder Pflicht, `additionalProperties: false`): `ste
 - Sichtabnahme: keine.
 
 ### Report-Back
+
+Umgesetzt am 11.11.2026, `pnpm check` grün (Lint, Typecheck, Format, Build, rustfmt, Clippy). Keine neuen Tests.
+
+**Beleg (AK 1–6, 8)** — `retro-probe <Kopie> <Session-ID> --werkzeuge <Ordner>` gegen eine Kopie der Datenbank, Vorhaben „GYMID-2668 Update Check“ mit 14 Sessions: 14 × `spur-<N>.md`, `werkzeuge.md`, 16 Dateien in `skripte\`, 843 Aufrufe, kein Modellaufruf. Ohne `--werkzeuge` verhält sich das Programm wie bisher. Gegenprobe AK 3 (`Select-String -Path <Ordner>\spur-*.md,<Ordner>\werkzeuge.md -Pattern 'Users\\|Users/'`): 0 Treffer.
+
+AK 4: unter „Wiederholte gleiche Aufrufe“ stehen nur MCP-Aufrufe und `ToolSearch`; die längste Abfolge besteht aus Bash/Grep-Familien mit mindestens zwei Nicht-Grundwerkzeugen. AK 5: die Skripte `live.py`, `mutate.py`, `plan_probe.py`, `suite-nach-warten.ps1` stammen aus Wegwerf-Ordnern, ein `Write` in das Repository erzeugt keines (Pfadprüfung in `detect_written_script`). AK 7: `load_summaries` ist die einzige neue Abfrage (`length`, `substr`); `traces::collect` ist unverändert.
+
+Ausschnitt `werkzeuge.md` (je Rubrik die ersten Zeilen):
+
+```text
+# Werkzeuge – GYMID- 2668 Update Check
+Sessions: 14 · Aufrufe: 843 · Schwelle für Wiederholung: ≥3× in ≥2 Sessions · Spuren: spur-<N>.md
+### Wiederholte gleiche Aufrufe
+- 22× in 14 Sessions (#1, #2, #3, #4, #5, #6, #7, #8, …): mcp__manager__list_comments
+- 12× in 12 Sessions (#2, #3, #4, #5, #6, #7, #8, #9, …): mcp__verwalter__implementation_complete_station
+### Wiederkehrende Abfolgen
+- 3 Sessions, 3×: Bash:grep → Bash:sed → Bash:sed
+- 3 Sessions, 3×: mcp__manager__get_work_item → mcp__manager__list_comments → mcp__manager__get_wiki_page
+### Hook-Sperren
+- 15× in 14 Sessions: STOP: cd vor git in einer Kette. Stattdessen git -C <absoluter-repo-pfad> <befeh — danach: Bash:git status ×7, Bash:git fetch ×3, Bash:git diff ×1
+- 14× in 13 Sessions: STOP: rekursiver Shell-grep. Der laeuft hier verlaesslich in den <N>-s-Timeout u — danach: Grep ×10, Bash:ls ×1, Bash:sed ×1
+### Werkzeug-Familien
+- Grep: 110 Aufrufe · 0 Fehler · 0 Sperren · 181.4k Ausgabe
+- Bash:sed: 39 Aufrufe · 0 Fehler · 1 Sperren · 112.0k Ausgabe
+### Dicke Ausgaben
+- #3 Schritt 1.10: 35.2k — Read ~\develop\easyfitness\facepass\app-wt-gymid-<N>\tests\postcheck\test_hard_checks.py
+### Inline-Skripte
+- 2× in Sessions #5: inline (d3821de061, 16 Zeilen)
+- 1× in Sessions #13: suite-nach-warten.ps1 (6f10f05c12, 13 Zeilen)
+```
+
+Ausschnitt `spur-6.md`:
+
+```text
+# Werkzeug-Spur – Session #6 – Phase 1 · Review
+Aufrufe: 31 · fehlgeschlagen: 0 · Hook-Sperren: 2
+
+## Schritt 1 – Nutzer: „/project-implementing Station: Phase 1 „P1 Bündel mit harten Prüfungen + Standort-MCP-Werkzeug“ · Review Umsetzung: GYMID-2668 Prüfung nach dem Update, Jetson-Teil — Quelle: GYMID-2668 · Wiki pruefung-nach-dem-update-jetson-teil-gymid-2668…“
+2. Read ~\develop\easyfitness\facepass\.claude\skills\project-implementing\auftraege\phasen-review.md · ok · 5.3k
+4. mcp__manager__list_comments · ok · 23.3k
+6. Bash `cd ~/develop/easyfitness/facepass/app-wt-gymid-<N> && git status --short && git log --oneline -4 && git diff <HASH>..HEAD --stat && git diff <HASH>..HEAD -- fitness_app/` · SPERRE: STOP: cd vor git in einer Kette. Stattdessen git -C <absoluter-repo-pfad> <befehl> -- das Arbeitsverzeichnis ist hier unzuverlaessig, und cd in Kette… · 0.2k
+7. Bash `R=~/develop/easyfitness/facepass/app-wt-gymid-<N>; git -C $R status --short; git -C $R log --oneline -4; …` · ok · 5.0k
+13. Bash `ls tools/testlauf.py ../tools/testlauf.py 2>&1 | head; grep -rn "offline\|pendingQueue\|messageQueue\|queueMessage" ~/develop/…` · SPERRE: STOP: rekursiver Shell-grep. Der laeuft hier verlaesslich in den <N>-s-Timeout und liefert nichts (4 Treffer 07/<N>). Stattdessen das Grep-Werkzeug n… · 0.4k
+```
+
+Abweichungen vom Kontrakt: siehe „Deviations from plan“.
 
 ## Phase 2 — Werkzeug-Retro mit Haiku je Session
 
@@ -286,5 +332,10 @@ Wie AK der Phasen 1 und 2, dazu: ADR 062 liegt vor, Glossar, Code-Map und `AGENT
 ## Commits
 
 ## Deviations from plan
+
+- Phase 1: `Normalizer` (Pfad-Muster einmal je Session) mit `paths` (nur Pfade, für Nutzertext) und `full` (alle sechs Schritte, für Anzeige, Fehlertext, Sperrgrund, Skript-Hash); `normalize(text, workspace, home)` bleibt als Hülle. Nutzertext wird nur pfad-normalisiert, damit Zahlen darin lesbar bleiben.
+- Phase 1: vierte Pfad-Schreibweise (verdoppeltes `\`, wie in JSON-Eingaben); ein einzelnes `&` vor dem Programm (PowerShell-Aufrufoperator) zählt nicht als Kopf der Familie.
+- Phase 1: Konstanten `TOOLS_FILE` und `SCRIPTS_DIR` liegen in `retro/tools.rs`; dort auch `write_trace_files`, das Retro-Lauf und Probe gemeinsam benutzen. `findings::push_rubric` und `one_line` sind `pub(crate)`.
+- Phase 1: `tools_report::render` rendert Teil B schon jetzt (Signatur trägt `ToolFindings`); Phase 2 prüft und passt an.
 
 ## Follow-ups
