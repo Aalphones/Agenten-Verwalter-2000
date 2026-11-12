@@ -70,8 +70,8 @@ impl ToolSet for ImplementationTools {
             },
             ToolSpec {
                 name: SET_PHASES,
-                description: "Schlägt die kommenden Phasen vor; der Benutzer übernimmt oder \
-                              verwirft sie. Nicht begonnene Phasen ersetzt die Liste vollständig. \
+                description: "Setzt die kommenden Phasen; die Änderung gilt sofort, ohne \
+                              Freigabe, und erscheint dem Benutzer als „Plan geändert“. Nicht begonnene Phasen ersetzt die Liste vollständig. \
                               Eine begonnene Phase darf vorn stehen: ihre stations ersetzen nur \
                               die noch nicht gestarteten Stationen (leer = alle streichen); \
                               gestartete und fertige bleiben. Nicht genannte begonnene Phasen \

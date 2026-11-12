@@ -57,7 +57,6 @@ fn view_of(phase: PhaseView) -> ImplementationView {
         stop_after_current: false,
         phases: vec![phase],
         changes: Vec::new(),
-        pending_change: None,
         cancelled_at: None,
         pending_cancel: None,
         stations_done: 0,

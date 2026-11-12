@@ -126,9 +126,3 @@ export async function applyImplementationCancel(id: string): Promise<void> {
 export async function discardImplementationCancel(id: string): Promise<void> {
   await invoke('implementation_discard_cancel', { id });
 }
-
-/** „Übernehmen“ (`accept`) oder „Verwerfen“ des Vorschlags „Plan ändern?“.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `implementation` (kein Vorschlag, Phase hat schon begonnen), `database` */
-export async function applyImplementationChange(id: string, accept: boolean): Promise<void> {
-  await invoke('implementation_apply_change', { id, accept });
-}

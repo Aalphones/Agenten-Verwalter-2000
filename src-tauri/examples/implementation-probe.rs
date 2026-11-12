@@ -6,13 +6,13 @@
 //! bzw. `… -- <Datenbank-Kopie> complete <Umsetzungs-ID> <Station-ID> "<Ergebnis>" [--fix]`
 //! (meldet die Station fertig, ohne etwas zu starten, und druckt, welche Stationen danach starten
 //! dürfen).
-//! bzw. `… -- <Datenbank-Kopie> set-phases <Umsetzungs-ID> <JSON-Datei>` (spielt einen Vorschlag
-//! `{ "phases": [...] }` ein, als wäre er übernommen, und druckt Unterschiede, die bis dahin
-//! angehaltenen Stationen und die Stationen vorher und nachher).
+//! bzw. `… -- <Datenbank-Kopie> set-phases <Umsetzungs-ID> <JSON-Datei>` (spielt eine
+//! Plan-Änderung `{ "phases": [...] }` ein und druckt Unterschiede sowie die Stationen vorher und
+//! nachher).
 //! Die JSON-Datei hat die Form der Eingabe von `implementation_create` (`name`, `source`, `phases`).
 //! Druckt den Lagebericht; Stationen gelten als nicht gestartet, weil keine Session läuft. Fehler
 //! als `FEHLER: <Satz>`.
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,7 +25,7 @@ use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::error::CommandError;
 use verwalter_lib::file_links::LinkRoots;
 use verwalter_lib::implementation::model::{
-    ImplementationView, PendingChange, PhaseView, StationState, StationView,
+    ImplementationView, PhaseView, StationState, StationView,
 };
 use verwalter_lib::implementation::model::{
     MAX_NAME_CHARS, MAX_SOURCE_CHARS, PhaseInput, check_length, validate,
@@ -217,9 +217,8 @@ Darf starten:
     ))
 }
 
-/// Spielt einen Vorschlag gegen die Kopie ein, als hätte der Benutzer ihn übernommen, und druckt
-/// Unterschiede, die bis dahin angehaltenen Stationen und den Stand vorher und nachher. Startet
-/// nichts.
+/// Spielt eine Plan-Änderung gegen die Kopie ein und druckt Unterschiede sowie den Stand vorher
+/// und nachher. Startet nichts.
 fn set_phases(
     database_path: &Path,
     implementation_id: &str,
@@ -234,15 +233,6 @@ fn set_phases(
     validate(&input.phases, &changes::begun_keys(&before))?;
     let summary = changes::diff(&before, &input.phases)?;
     let is_proposal: bool = before.phases.iter().any(changes::is_begun);
-    let pending = PendingChange {
-        session_id: PROBE_SESSION.to_owned(),
-        session_number: 0,
-        at: now_ms(),
-        summary: summary.clone(),
-        phases: input.phases.clone(),
-        seen_station_ids: Vec::new(),
-    };
-    let held: HashSet<String> = changes::held_station_ids(&before, &pending);
     let record = is_proposal.then(|| changes::Record {
         session_id: PROBE_SESSION.to_owned(),
         summary: summary.clone(),
@@ -263,28 +253,22 @@ fn set_phases(
         .map_err(|error| error.to_string())?;
     let after = view_of(&database, implementation_id)?;
     let effect = if is_proposal {
-        "Vorschlag, hier gleich übernommen; bis dahin angehalten:"
+        "gilt sofort, vermerkt als „Plan geändert“"
     } else {
-        "gilt sofort (noch keine Station gestartet)"
+        "gilt sofort (noch keine Station gestartet), ohne Vermerk"
     };
-    let held_lines: Vec<String> = station_lines(&before)
-        .into_iter()
-        .filter(|(id, _): &(String, String)| is_proposal && held.contains(id))
-        .map(|(_, line): (String, String)| format!("  {line}"))
-        .collect();
     let counted_after = plan
         .change
         .as_ref()
         .map(|change| change.stations_after.to_string())
         .unwrap_or_else(|| "ohne Vermerk".to_owned());
     Ok(format!(
-        "Neu: {}\nVorgezogen: {}\nEntfallen: {}\nGeändert: {}\nWirkung: {effect}\n{}\n\
+        "Neu: {}\nVorgezogen: {}\nEntfallen: {}\nGeändert: {}\nWirkung: {effect}\n\
          Stationen {} → {counted_after} (vermerkt), {} (gezählt)\n\nVORHER\n{}\n\nNACHHER\n{}",
         list_or_nothing(&summary.added),
         list_or_nothing(&summary.moved),
         list_or_nothing(&summary.removed),
         list_or_nothing(&summary.changed),
-        held_lines.join("\n"),
         before.stations_total,
         after.stations_total,
         plan_text(&before),

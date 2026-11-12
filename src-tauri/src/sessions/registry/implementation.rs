@@ -23,8 +23,8 @@ use crate::error::CommandError;
 use crate::file_links;
 use crate::implementation::changes as implementation_changes;
 use crate::implementation::model::{
-    ImplementationView, InquiryCreated, OpenQuestion, PendingCancel, PendingChange, PhaseInput,
-    PhaseView, StationView,
+    ImplementationView, InquiryCreated, OpenQuestion, PendingCancel, PhaseInput, PhaseView,
+    StationView,
 };
 use crate::implementation::report::{self, Extras};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
@@ -416,21 +416,6 @@ impl SessionRegistry {
     pub fn session_number(&self, session_id: &str) -> u32 {
         self.get(session_id)
             .map_or(0, |session: Arc<Session>| session.number)
-    }
-
-    /// Legt den Vorschlag ab oder verwirft ihn (`None`).
-    pub fn store_pending_change(
-        &self,
-        implementation_id: &str,
-        pending: Option<&PendingChange>,
-    ) -> Result<(), CommandError> {
-        let json: Option<String> = pending
-            .map(|change: &PendingChange| serde_json::to_string(change))
-            .transpose()
-            .map_err(|error| CommandError::Implementation(error.to_string()))?;
-        self.database.with(|connection| {
-            implementation_rows::set_pending_change(connection, implementation_id, json.as_deref())
-        })
     }
 
     /// Ersetzt die kommenden Phasen in einem Zug (siehe `replace_upcoming_phases`).

@@ -5,9 +5,7 @@ import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { StationState } from '@/lib/bindings/StationState';
 import type { StationView } from '@/lib/bindings/StationView';
 
-/** Fokus-Ziel der offenen Karte „Plan ändern?“; Stationen stehen unter ihrer ID im Fokus, übernommene
- *  Änderungen unter `change:<ID>`. */
-export const PENDING_FOCUS = 'plan:pending';
+/** Stationen stehen unter ihrer ID im Fokus, Plan-Änderungen unter `change:<ID>`. */
 const CHANGE_PREFIX = 'change:';
 /** Spuren einer Welle; ab der vierten Phase teilt sich eine Phase die dritte Spur. */
 const MAX_LANE = 3;
@@ -198,20 +196,13 @@ function currentStationId(implementation: ImplementationView): string | null {
   return best.station.id;
 }
 
-/** Was vorn liegt, solange niemand gewählt hat: ein offener Vorschlag „Plan ändern?“, sonst die
- *  dringendste Station. */
+/** Was vorn liegt, solange niemand gewählt hat: die dringendste Station. */
 export function autoFocus(implementation: ImplementationView): string | null {
-  if (implementation.pendingChange !== null) {
-    return PENDING_FOCUS;
-  }
   return currentStationId(implementation);
 }
 
-/** Gilt das gemerkte Fokus-Ziel noch (Station, Änderung oder Vorschlag gibt es weiter)? */
+/** Gilt das gemerkte Fokus-Ziel noch (gibt es die Station oder die Änderung weiter)? */
 export function isFocusValid(implementation: ImplementationView, focusId: string): boolean {
-  if (focusId === PENDING_FOCUS) {
-    return implementation.pendingChange !== null;
-  }
   const changeId: string | null = changeIdOf(focusId);
   if (changeId !== null) {
     return implementation.changes.some((change: ChangeView) => change.id === changeId);
@@ -268,11 +259,6 @@ export function neighbors(
 ): StationNeighbors {
   const refs: StationRef[] = flatStations(implementation);
   const changeId: string | null = changeIdOf(focusedId);
-  if (focusedId === PENDING_FOCUS) {
-    const currentId: string | null = currentStationId(implementation);
-    const start: number = refs.findIndex((ref: StationRef) => ref.station.id === currentId);
-    return { previous: [], next: start < 0 ? [] : refs.slice(start, start + count) };
-  }
   if (changeId !== null) {
     const change: ChangeView | undefined = implementation.changes.find(
       (candidate: ChangeView) => candidate.id === changeId,

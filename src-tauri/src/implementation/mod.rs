@@ -23,8 +23,8 @@ use crate::sessions::model::SessionStatus;
 use crate::sessions::registry::SessionRegistry;
 use model::{
     ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationRemovedEvent,
-    ImplementationView, OpenQuestion, PendingCancel, PendingChange, PhaseInput, PhaseView,
-    StationInput, StationState, StationView,
+    ImplementationView, OpenQuestion, PendingCancel, PhaseInput, PhaseView, StationInput,
+    StationState, StationView,
 };
 
 pub const IMPLEMENTATION_CHANGED_EVENT: &str = "implementation://changed";
@@ -369,17 +369,9 @@ pub fn build_view(
                 .collect(),
         })
         .collect();
-    let pending_change: Option<PendingChange> = row
-        .pending_change
-        .as_deref()
-        .and_then(|json: &str| serde_json::from_str::<PendingChange>(json).ok());
-    let held: HashSet<String> = pending_change
-        .as_ref()
-        .map(|pending: &PendingChange| changes::held_in(&phases, pending))
-        .unwrap_or_default();
     // In einer abgebrochenen Umsetzung startet nichts mehr; ihre offenen Stationen bleiben wartend.
     if row.cancelled_at.is_none() {
-        settle_waiting(&mut phases, countdowns, &held);
+        settle_waiting(&mut phases, countdowns);
     }
     let pending_cancel: Option<PendingCancel> = row
         .pending_cancel
@@ -440,7 +432,6 @@ pub fn build_view(
             .iter()
             .map(|change: &ChangeRow| change_view(change, numbers))
             .collect(),
-        pending_change,
         cancelled_at: row.cancelled_at,
         pending_cancel,
         phases,
@@ -502,20 +493,13 @@ fn state_of(session: &SessionLive) -> StationState {
 
 /// Stationen ohne Session, die starten dürfen: eine Station des Benutzers wartet auf ihn, eine des
 /// Agenten zählt herunter oder ist bereit (▶). Nach einem App-Neustart läuft kein Countdown mehr;
-/// die Station ist dann bereit. Eine Station, die ein offener Vorschlag ersetzen würde (`held`),
-/// bleibt wartend (ADR 059).
-fn settle_waiting(
-    phases: &mut [PhaseView],
-    countdowns: &HashMap<String, f64>,
-    held: &HashSet<String>,
-) {
+/// die Station ist dann bereit.
+fn settle_waiting(phases: &mut [PhaseView], countdowns: &HashMap<String, f64>) {
     let startable: Vec<String> = phases
         .iter()
         .flat_map(|phase: &PhaseView| phase.stations.iter())
         .filter(|station: &&StationView| {
-            station.session_id.is_none()
-                && station.state == StationState::Pending
-                && !held.contains(&station.id)
+            station.session_id.is_none() && station.state == StationState::Pending
         })
         .filter(|station: &&StationView| schedule::may_start(phases, &station.id))
         .map(|station: &StationView| station.id.clone())
@@ -584,9 +568,9 @@ pub fn new_rows(
         created_by_session_id: Some(created_by_session_id.to_owned()),
         created_at: now_ms,
         finished_at: None,
+        pending_change: None,
         auto_start: true,
         stop_after_current: false,
-        pending_change: None,
         cancelled_at: None,
         pending_cancel: None,
     };

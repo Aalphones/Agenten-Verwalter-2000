@@ -5,8 +5,8 @@ use std::thread;
 
 use tauri::{AppHandle, Manager};
 
-use super::model::{ImplementationView, PendingChange, PhaseView, StationState, StationView};
-use super::{START_DELAY, StationRef, announce, changes, find_station, now_ms, schedule};
+use super::model::{ImplementationView, PhaseView, StationState, StationView};
+use super::{START_DELAY, StationRef, announce, find_station, now_ms, schedule};
 use crate::agents::event::{Effort, ModelId};
 use crate::changes::model::ChangesReach;
 use crate::error::CommandError;
@@ -15,8 +15,6 @@ use crate::git::status;
 use crate::sessions::model::SessionSummary;
 use crate::sessions::registry::SessionRegistry;
 
-const HELD_BY_PROPOSAL: &str =
-    "Ein Plan-Vorschlag würde diese Station ersetzen; erst übernehmen oder verwerfen.";
 const HELD_BY_CANCEL: &str =
     "Eine Anfrage zum Abbrechen liegt vor; erst bestätigen oder verwerfen.";
 const IS_CANCELLED: &str = "Die Umsetzung ist abgebrochen.";
@@ -266,15 +264,6 @@ fn start_claimed(
         return Err(CommandError::Implementation(
             "Die Vorgänger dieser Station sind noch nicht fertig.".to_owned(),
         ));
-    }
-    let is_held: bool = view
-        .pending_change
-        .as_ref()
-        .is_some_and(|pending: &PendingChange| {
-            changes::held_station_ids(&view, pending).contains(station_id)
-        });
-    if is_held {
-        return Err(CommandError::Implementation(HELD_BY_PROPOSAL.to_owned()));
     }
     let created: SessionSummary = registry.create_fresh_in_project(&view.project_id)?;
     registry.bind_station(app, implementation_id, station_id, &created.id)?;

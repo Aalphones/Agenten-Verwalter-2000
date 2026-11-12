@@ -153,22 +153,6 @@ pub struct ChangeView {
     pub stations_after: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct PendingChange {
-    pub session_id: String,
-    pub session_number: u32,
-    #[ts(type = "number")]
-    pub at: f64,
-    pub summary: ChangeSummary,
-    pub phases: Vec<PhaseInput>,
-    /// Die noch nicht gestarteten Stationen der genannten begonnenen Phasen beim Vorschlagen;
-    /// weicht der Stand beim Übernehmen ab, wird neu vorgeschlagen (ADR 059).
-    // `default`: gespeicherte Vorschläge ohne das Feld; ohne fiele der Vorschlag beim Lesen weg.
-    #[serde(default)]
-    pub seen_station_ids: Vec<String>,
-}
-
 /// Anfrage eines Agenten, die Umsetzung abzubrechen und bei `delete` danach zu löschen (ADR 060);
 /// wirkt erst, wenn der Benutzer sie bestätigt.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -197,7 +181,6 @@ pub struct ImplementationView {
     pub stop_after_current: bool,
     pub phases: Vec<PhaseView>,
     pub changes: Vec<ChangeView>,
-    pub pending_change: Option<PendingChange>,
     /// Abgebrochen (ADR 060); dann ist auch `finished_at` gesetzt.
     #[ts(type = "number | null")]
     pub cancelled_at: Option<f64>,

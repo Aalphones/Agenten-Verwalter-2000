@@ -19,7 +19,8 @@ pub struct ImplementationRow {
     pub finished_at: Option<f64>,
     pub auto_start: bool,
     pub stop_after_current: bool,
-    /// `PendingChange` als JSON.
+    /// Altbestand aus der Zeit der Plan-Vorschläge (ADR 059); seit ADR 064 gilt jede Änderung
+    /// sofort, die Spalte wird nur noch geleert und nie gelesen.
     pub pending_change: Option<String>,
     /// Abgebrochen (ADR 060); dann ist auch `finished_at` gesetzt.
     pub cancelled_at: Option<f64>,
@@ -626,7 +627,7 @@ fn replace_upcoming_stations(
         )?;
         if deleted == 0 {
             return Err(CommandError::Implementation(
-                "Eine Station hat seit dem Vorschlag begonnen; bitte neu vorschlagen.".to_owned(),
+                "Eine Station hat inzwischen begonnen; bitte den Plan neu setzen.".to_owned(),
             ));
         }
     }

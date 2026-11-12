@@ -1,25 +1,22 @@
-//! Plan-Änderungen (ADR 048, ADR 059): `implementation_set_phases` ersetzt die kommenden Phasen und
-//! die noch nicht gestarteten Stationen genannter begonnener Phasen. Vor dem ersten Start gilt die
-//! Liste sofort, danach liegt sie als Vorschlag bereit, bis der Benutzer sie übernimmt oder
-//! verwirft. Solange sie bereitliegt, startet keine Station, die sie ersetzen würde.
+//! Plan-Änderungen (ADR 048, ADR 059, ADR 064): `implementation_set_phases` ersetzt die kommenden
+//! Phasen und die noch nicht gestarteten Stationen genannter begonnener Phasen. Die Liste gilt
+//! sofort, ohne Freigabe; war schon eine Station begonnen, steht sie danach als Karte „Plan
+//! geändert“ im Verlauf.
 use std::collections::{HashMap, HashSet};
 
 use tauri::{AppHandle, Manager};
 
 use super::model::{
-    ChangeSummary, ImplementationView, PendingChange, PhaseInput, PhaseMark, PhaseView,
-    StationInput, StationState, StationView, validate,
+    ChangeSummary, ImplementationView, PhaseInput, PhaseMark, PhaseView, StationInput,
+    StationState, StationView, validate,
 };
 use super::{announce, now_ms, phase_rows, start, station_rows};
 use crate::db::implementations::{BegunPhaseChange, ChangeRow, PhaseRow, StationRow};
 use crate::error::CommandError;
 use crate::sessions::registry::SessionRegistry;
 
-const NO_PROPOSAL: &str = "Es liegt kein Vorschlag vor.";
 const IS_FINISHED: &str = "Die Umsetzung ist fertig; es gibt nichts mehr zu ändern.";
 const APPLIED: &str = "Übernommen.";
-/// Nur erreichbar, wenn eine gemerkte Station ganz verschwunden ist.
-const PLAN_CHANGED: &str = "Der Plan hat sich seit dem Vorschlag geändert; bitte neu vorschlagen.";
 
 /// Eine Station hat begonnen, sobald sie eine Session hat oder fertig gemeldet ist; dann ändert
 /// keine Plan-Änderung sie mehr.
@@ -192,75 +189,6 @@ fn is_same_station(station: &StationView, wanted: &StationInput) -> bool {
         && station.brief == wanted.brief.as_deref().unwrap_or_default().trim()
 }
 
-/// Die Stationen, die ein offener Vorschlag ersetzen würde und die deshalb nicht starten: alle
-/// Stationen nicht begonnener Phasen und die noch nicht gestarteten genannter begonnener Phasen.
-pub fn held_in(phases: &[PhaseView], pending: &PendingChange) -> HashSet<String> {
-    let named: HashSet<&str> = pending
-        .phases
-        .iter()
-        .map(|input: &PhaseInput| input.key.trim())
-        .collect();
-    phases
-        .iter()
-        .flat_map(|phase: &PhaseView| {
-            let is_named_begun = is_begun(phase) && named.contains(phase.key.as_str());
-            let is_upcoming_phase = !is_begun(phase);
-            phase.stations.iter().filter(move |station: &&StationView| {
-                is_upcoming_phase || (is_named_begun && !is_station_begun(station))
-            })
-        })
-        .map(|station: &StationView| station.id.clone())
-        .collect()
-}
-
-pub fn held_station_ids(view: &ImplementationView, pending: &PendingChange) -> HashSet<String> {
-    held_in(&view.phases, pending)
-}
-
-/// Die noch nicht gestarteten Stationen der genannten begonnenen Phasen, die sich der Vorschlag
-/// merkt.
-fn seen_station_ids(view: &ImplementationView, proposed: &[PhaseInput]) -> Vec<String> {
-    named_begun(view, proposed)
-        .iter()
-        .flat_map(|(phase, _): &(&PhaseView, &PhaseInput)| upcoming_stations(phase))
-        .map(|station: &StationView| station.id.clone())
-        .collect()
-}
-
-/// Je genannter begonnener Phase müssen die noch nicht gestarteten Stationen dieselben sein wie
-/// beim Vorschlagen, sonst ersetzte die Übernahme etwas, das der Agent nicht gesehen hat (etwa eine
-/// Fix-Runde).
-fn check_seen(view: &ImplementationView, pending: &PendingChange) -> Result<(), String> {
-    let seen: HashSet<&str> = pending
-        .seen_station_ids
-        .iter()
-        .map(String::as_str)
-        .collect();
-    let mut found: usize = 0;
-    for (phase, _) in named_begun(view, &pending.phases) {
-        let today: HashSet<&str> = upcoming_stations(phase)
-            .map(|station: &StationView| station.id.as_str())
-            .collect();
-        let seen_here: HashSet<&str> = phase
-            .stations
-            .iter()
-            .map(|station: &StationView| station.id.as_str())
-            .filter(|id: &&str| seen.contains(id))
-            .collect();
-        if today != seen_here {
-            return Err(format!(
-                "Phase {} hat sich seit dem Vorschlag geändert; bitte neu vorschlagen.",
-                phase.key
-            ));
-        }
-        found += seen_here.len();
-    }
-    if found != seen.len() {
-        return Err(PLAN_CHANGED.to_owned());
-    }
-    Ok(())
-}
-
 /// Die Unterschiede als Satzteil für den Agenten und den Lagebericht: „neu 5/6, entfallen 7“.
 pub fn describe(summary: &ChangeSummary) -> String {
     let groups: [(&str, &Vec<String>); 4] = [
@@ -280,9 +208,9 @@ pub fn describe(summary: &ChangeSummary) -> String {
     parts.join(", ")
 }
 
-/// `implementation_set_phases`: gilt sofort, solange keine Station je gestartet ist, sonst liegt
-/// der Vorschlag bereit und hält die Stationen an, die er ersetzen würde. Gibt den Satz für den
-/// Agenten zurück.
+/// `implementation_set_phases`: gilt sofort (ADR 064). Vor dem ersten Start ist es die erste
+/// Planung ohne Vermerk; danach steht die Änderung als Karte „Plan geändert“ im Verlauf. Gibt den
+/// Satz für den Agenten zurück.
 pub fn propose(app: &AppHandle, session_id: &str, inputs: &[PhaseInput]) -> Result<String, String> {
     let registry = app.state::<SessionRegistry>();
     let view = registry
@@ -298,54 +226,13 @@ pub fn propose(app: &AppHandle, session_id: &str, inputs: &[PhaseInput]) -> Resu
             .map_err(|error: CommandError| error.to_string())?;
         return Ok(APPLIED.to_owned());
     }
-    let pending = PendingChange {
-        session_id: session_id.to_owned(),
-        session_number: registry.session_number(session_id),
-        at: now_ms(),
-        summary: summary.clone(),
-        phases: inputs.to_vec(),
-        seen_station_ids: seen_station_ids(&view, inputs),
-    };
-    // Erst ablegen, dann Countdowns abbrechen: ein Zeitgeber, der dazwischen feuert, sieht den
-    // Vorschlag schon und startet nicht (`start::start_now`).
-    registry
-        .store_pending_change(&view.id, Some(&pending))
-        .map_err(|error: CommandError| error.to_string())?;
-    for station_id in held_station_ids(&view, &pending) {
-        let _ = registry.cancel_countdown(&station_id);
-    }
-    let fresh = registry
-        .implementation_view(&view.id)
-        .map_err(|error: CommandError| error.to_string())?;
-    announce(app, &fresh);
-    Ok(format!(
-        "Vorgeschlagen: {}; wartet auf Übernehmen.",
-        describe(&summary)
-    ))
-}
-
-/// „Übernehmen“ (`accept`) oder „Verwerfen“ des offenen Vorschlags. Scheitert das Übernehmen,
-/// bleibt der Vorschlag liegen, damit er sich verwerfen lässt.
-pub fn decide(app: &AppHandle, implementation_id: &str, accept: bool) -> Result<(), CommandError> {
-    let registry = app.state::<SessionRegistry>();
-    let view = registry.implementation_view(implementation_id)?;
-    let Some(pending) = view.pending_change.clone() else {
-        return Err(CommandError::Implementation(NO_PROPOSAL.to_owned()));
-    };
-    if !accept {
-        registry.store_pending_change(implementation_id, None)?;
-        let fresh = registry.implementation_view(implementation_id)?;
-        announce(app, &fresh);
-        return schedule_if_running(app, &fresh);
-    }
-    check_seen(&view, &pending).map_err(CommandError::Implementation)?;
-    // Seit dem Vorschlag kann eine Phase begonnen haben: gegen den heutigen Stand neu rechnen.
-    let summary = diff(&view, &pending.phases).map_err(CommandError::Implementation)?;
     let record = Record {
-        session_id: pending.session_id,
-        summary,
+        session_id: session_id.to_owned(),
+        summary: summary.clone(),
     };
-    apply(app, &registry, &view, &pending.phases, Some(record))
+    apply(app, &registry, &view, inputs, Some(record))
+        .map_err(|error: CommandError| error.to_string())?;
+    Ok(format!("Übernommen: {}.", describe(&summary)))
 }
 
 /// Wer die Änderung vorschlug und was sie bewirkt; fehlt er, wird nichts vermerkt.

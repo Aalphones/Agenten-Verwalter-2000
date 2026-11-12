@@ -23,7 +23,6 @@ import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import {
   applyImplementationCancel,
-  applyImplementationChange,
   cancelImplementation,
   cancelStationCountdown,
   completeStationByUser,
@@ -301,12 +300,6 @@ export function ImplementationView({
         }}
         onCompleteByUser={(stationId: string, result: string): void => {
           run(() => completeStationByUser(implementationId, stationId, result));
-        }}
-        onApplyChange={(accept: boolean): void => {
-          run(
-            () => applyImplementationChange(implementationId, accept),
-            'Übernehmen fehlgeschlagen',
-          );
         }}
         onApplyCancel={(accept: boolean): void => {
           run(

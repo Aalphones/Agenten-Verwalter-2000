@@ -1,6 +1,6 @@
 # 059 — Begonnene Phase umplanen
 
-**Status:** angenommen · **Datum:** 2026-11-06
+**Status:** angenommen · **Datum:** 2026-11-06 · Vorschlag, Übernehmen/Verwerfen und Anhalten ersetzt durch [ADR 064](064-plan-aenderung-ohne-freigabe.md)
 
 ## Kontext
 

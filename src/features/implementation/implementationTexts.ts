@@ -57,13 +57,7 @@ export const REPORT_TITLE =
 export const TIMELINE_LABEL = 'Zeitleiste der Umsetzung';
 export const NO_PHASES = 'Diese Umsetzung hat noch keine Phasen.';
 
-export const PLAN_PROPOSAL_TITLE = 'Plan ändern?';
 export const PLAN_CHANGED_TITLE = 'Plan geändert';
-export const APPLY_CHANGE_LABEL = 'Übernehmen';
-export const APPLY_CHANGE_TITLE =
-  'Ersetzt die kommenden Phasen und die offenen Stationen begonnener Phasen durch den Vorschlag';
-export const DISCARD_CHANGE_LABEL = 'Verwerfen';
-export const DISCARD_CHANGE_TITLE = 'Lässt die kommenden Phasen, wie sie sind';
 export const CANCEL_LABEL = 'Abbrechen…';
 export const CANCEL_TITLE =
   'Beendet die Umsetzung; die Sessions bleiben, eine neue lässt sich anlegen';
@@ -101,8 +95,6 @@ export const DISCARD_REQUEST_LABEL = 'Verwerfen';
 export const DISCARD_REQUEST_TITLE =
   'Lässt die Umsetzung, wie sie ist, und plant die Stationen neu';
 
-export const SHOW_PENDING_LABEL = 'Vorschlag ansehen';
-export const SHOW_PENDING_TITLE = 'Holt die Karte „Plan ändern?“ nach vorn';
 export const CHANGE_MARKER_TITLE = 'Zeigt diese Plan-Änderung vorn in der Kartei';
 export const PHASE_MARK_LABEL: Record<PhaseMark, string> = {
   new: 'neu',

@@ -170,10 +170,9 @@ pub fn goal_of(source: &str, roots: &LinkRoots) -> Option<String> {
         .map(|line: &str| line.chars().take(MAX_GOAL_CHARS).collect())
 }
 
-/// Übernommene Änderungen in Reihenfolge, dazu ein offener Vorschlag.
+/// Übernommene Änderungen in Reihenfolge.
 fn change_lines(view: &ImplementationView) -> Vec<String> {
-    let mut entries: Vec<String> = view
-        .changes
+    view.changes
         .iter()
         .map(|change: &ChangeView| {
             format!(
@@ -183,15 +182,7 @@ fn change_lines(view: &ImplementationView) -> Vec<String> {
                 describe(&change.summary)
             )
         })
-        .collect();
-    if let Some(pending) = &view.pending_change {
-        entries.push(format!(
-            "Vorschlag aus #{} wartet auf Übernehmen: {}",
-            pending.session_number,
-            describe(&pending.summary)
-        ));
-    }
-    entries
+        .collect()
 }
 
 fn push_section(lines: &mut Vec<String>, title: &str, entries: Vec<String>, empty: &str) {

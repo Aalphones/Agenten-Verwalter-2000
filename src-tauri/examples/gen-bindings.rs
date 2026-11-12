@@ -35,8 +35,8 @@ use verwalter_lib::{
     },
     implementation::model::{
         ChangeSummary, ChangeView, ImplementationChangedEvent, ImplementationRemovedEvent,
-        ImplementationView, InquiryCreated, OpenQuestion, PendingChange, PhaseInput, PhaseMark,
-        PhaseView, StationInput, StationState, StationView,
+        ImplementationView, InquiryCreated, OpenQuestion, PhaseInput, PhaseMark, PhaseView,
+        StationInput, StationState, StationView,
     },
     lmstudio::model::{LocalModel, LocalModelKind, LocalModels},
     mcp::model::{
@@ -213,7 +213,6 @@ fn main() -> Result<(), ts_rs::ExportError> {
     PhaseView::export_all(&cfg)?;
     ChangeSummary::export_all(&cfg)?;
     ChangeView::export_all(&cfg)?;
-    PendingChange::export_all(&cfg)?;
     PhaseInput::export_all(&cfg)?;
     StationInput::export_all(&cfg)?;
     ImplementationView::export_all(&cfg)?;

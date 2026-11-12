@@ -213,7 +213,6 @@ pub fn run() {
             commands::implementation::implementation_start_station,
             commands::implementation::implementation_cancel_countdown,
             commands::implementation::implementation_set_station_plan,
-            commands::implementation::implementation_apply_change,
             commands::implementation::implementation_cancel,
             commands::implementation::implementation_delete,
             commands::implementation::implementation_apply_cancel,

@@ -148,16 +148,6 @@ pub async fn implementation_set_station_plan(
     Ok(())
 }
 
-/// „Übernehmen“ oder „Verwerfen“ des Vorschlags „Plan ändern?“.
-#[tauri::command]
-pub async fn implementation_apply_change(
-    app: AppHandle,
-    id: String,
-    accept: bool,
-) -> Result<(), CommandError> {
-    changes::decide(&app, &id, accept)
-}
-
 /// „Abbrechen…“ (ADR 060): danach lässt sich im Vorhaben eine neue Umsetzung anlegen.
 #[tauri::command]
 pub async fn implementation_cancel(
