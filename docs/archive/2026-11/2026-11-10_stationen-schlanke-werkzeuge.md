@@ -6,7 +6,7 @@ Jede Anfrage einer Station schickt die Beschreibungen aller eingebauten Werkzeug
 
 | Phase | Inhalt | Rating | Modell | Schätzung | Status |
 |---|---|---|---|---|---|
-| 1 | Sperrliste für Stationen und ihre Nebenfragen, ADR 061 | standard | sonnet | 1 h | pending |
+| 1 | Sperrliste für Stationen und ihre Nebenfragen, ADR 061 | standard | sonnet | 1 h | done |
 
 ## Messung (Stand 10.11.2026, Claude Code 2.1.322)
 
@@ -68,19 +68,21 @@ pub struct SpawnOptions { /* … */ pub lean_tools: bool }
 
 ### Checkliste
 
-- [ ] `process.rs`: Konstante `STATION_DISALLOWED_TOOLS` und Feld `SpawnOptions.lean_tools` mit Doc-Kommentar („Nur Stationen in der Betriebsart Claude (ADR 061): selten genutzte Werkzeuge sperren, damit ihre Beschreibungen nicht in jeder Anfrage mitgehen.“).
-- [ ] `process.rs` `common_args`: im Block `if opts.local.is_none()` direkt nach dem `station_style`-Block `if opts.lean_tools { command.arg("--disallowedTools").arg(STATION_DISALLOWED_TOOLS.join(",")); }` mit Kommentar, dass `--permission-mode` die Werteliste beendet.
-- [ ] `process.rs` `common_args`: zweites Argument von `artifacts_prompt` wird `opts.local.is_none() && opts.codex_exe.is_none() && !opts.lean_tools`.
-- [ ] `registry.rs` bei Zeile 3882: `let lean_tools = state.station_of.is_some() && backend.is_none() && codex_exe.is_none();` mit Kommentar „Nur Stationen sperren selten genutzte Werkzeuge (ADR 061).“, an `SpawnOptions` übergeben.
-- [ ] `side.rs` bei Zeile 89: `let lean_tools = state.station_of.is_some() && backend.is_none();`, an `SpawnOptions` übergeben mit Kommentar „Gleiche Werkzeuge wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).“
-- [ ] `examples/side-probe.rs` Zeile 96 und die Test-Hilfsfunktion `options` am Ende von `process.rs`: `lean_tools: false` ergänzen, damit beide weiter kompilieren. Keine neuen Tests.
-- [ ] `docs/decisions/061-schlanke-werkzeuge-in-stationen.md` nach Muster von ADR 058: Kontext (Messung oben), Optionen (Erlaubnisliste, Sperrliste, nichts tun), Entscheidung, Konsequenzen (Liste pflegen, wenn Claude Code Werkzeuge umbenennt; Stationen können nicht mehr veröffentlichen).
-- [ ] `docs/knowledge/claude-stream-json.md`: unter „Kontext und Kontingent abfragen“ einen Absatz „Werkzeugkosten“ mit den Messwerten dieses Plans und dem Befund, dass `--disallowedTools` Werkzeuge aus dem Kontext nimmt und eine Fortsetzung mit gesperrtem, früher benutztem Werkzeug funktioniert.
-- [ ] `docs/glossary.md` Eintrag **Station**: Satz anhängen „Stationen der Betriebsart Claude starten ohne selten genutzte Werkzeuge ([ADR 061](decisions/061-schlanke-werkzeuge-in-stationen.md)).“
-- [ ] `docs/code-map.md` Zeile „Umsetzung“ (Zeile 45): Verweis auf ADR 061 neben ADR 058 ergänzen.
-- [ ] `pnpm check` grün.
+- [x] `process.rs`: Konstante `STATION_DISALLOWED_TOOLS` und Feld `SpawnOptions.lean_tools` mit Doc-Kommentar („Nur Stationen in der Betriebsart Claude (ADR 061): selten genutzte Werkzeuge sperren, damit ihre Beschreibungen nicht in jeder Anfrage mitgehen.“).
+- [x] `process.rs` `common_args`: im Block `if opts.local.is_none()` direkt nach dem `station_style`-Block `if opts.lean_tools { command.arg("--disallowedTools").arg(STATION_DISALLOWED_TOOLS.join(",")); }` mit Kommentar, dass `--permission-mode` die Werteliste beendet.
+- [x] `process.rs` `common_args`: zweites Argument von `artifacts_prompt` wird `opts.local.is_none() && opts.codex_exe.is_none() && !opts.lean_tools`.
+- [x] `registry.rs` bei Zeile 3882: `let lean_tools = state.station_of.is_some() && backend.is_none() && codex_exe.is_none();` mit Kommentar „Nur Stationen sperren selten genutzte Werkzeuge (ADR 061).“, an `SpawnOptions` übergeben.
+- [x] `side.rs` bei Zeile 89: `let lean_tools = state.station_of.is_some() && backend.is_none();`, an `SpawnOptions` übergeben mit Kommentar „Gleiche Werkzeuge wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).“
+- [x] `examples/side-probe.rs` Zeile 96 und die Test-Hilfsfunktion `options` am Ende von `process.rs`: `lean_tools: false` ergänzen, damit beide weiter kompilieren. Keine neuen Tests.
+- [x] `docs/decisions/061-schlanke-werkzeuge-in-stationen.md` nach Muster von ADR 058: Kontext (Messung oben), Optionen (Erlaubnisliste, Sperrliste, nichts tun), Entscheidung, Konsequenzen (Liste pflegen, wenn Claude Code Werkzeuge umbenennt; Stationen können nicht mehr veröffentlichen).
+- [x] `docs/knowledge/claude-stream-json.md`: unter „Kontext und Kontingent abfragen“ einen Absatz „Werkzeugkosten“ mit den Messwerten dieses Plans und dem Befund, dass `--disallowedTools` Werkzeuge aus dem Kontext nimmt und eine Fortsetzung mit gesperrtem, früher benutztem Werkzeug funktioniert.
+- [x] `docs/glossary.md` Eintrag **Station**: Satz anhängen „Stationen der Betriebsart Claude starten ohne selten genutzte Werkzeuge ([ADR 061](decisions/061-schlanke-werkzeuge-in-stationen.md)).“
+- [x] `docs/code-map.md` Zeile „Umsetzung“ (Zeile 45): Verweis auf ADR 061 neben ADR 058 ergänzen.
+- [x] `pnpm check` grün.
 
 ### Report-Back
+
+Umgesetzt wie geplant; `pnpm check` Exit 0. AK 1–4 und 6 am Code geprüft (Argumentliste, Bedingungen), AK 5 (Kontext-Panel einer neu gestarteten Station) nicht live geprüft. Keine neuen Tests. Die Code-Map-Zeile „Umsetzung“ nannte ADR 058 nicht, ADR 061 steht dort neben ADR 048.
 
 ## Finale AK
 
@@ -94,10 +96,20 @@ Wie AK 1–6 von Phase 1, dazu: ADR 061 liegt vor, Glossar, Code-Map und `claude
 
 ## Summary
 
+Stationen der Betriebsart Claude und ihre Nebenfragen starten mit `--disallowedTools` für sechs selten genutzte Werkzeuge (ADR 061). Review ohne Befund.
+
 ## Files touched
+
+`process.rs`, `registry.rs`, `registry/side.rs`, `examples/side-probe.rs`, ADR 061, `claude-stream-json.md`, Glossar, Code-Map.
 
 ## Commits
 
+`888875d`
+
 ## Deviations from plan
 
+Keine.
+
 ## Follow-ups
+
+AK 5 (Systemwerkzeuge im Kontext-Panel einer neuen Station mindestens 15 000 Tokens kleiner als bei einer Einzel-Session) nicht live geprüft.
