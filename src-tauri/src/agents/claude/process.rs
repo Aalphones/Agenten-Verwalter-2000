@@ -14,6 +14,15 @@ use crate::{codex, standalone};
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Erlaubt alle Werkzeuge des MCP-Zugangs (`mcp__verwalter__…`).
 const VERWALTER_MCP_RULE: &str = "mcp__verwalter";
+/// Werkzeuge, die eine Station nie braucht; sie fehlen dann auch im Kontext (ADR 061).
+pub(crate) const STATION_DISALLOWED_TOOLS: &[&str] = &[
+    "Artifact",
+    "Workflow",
+    "ScheduleWakeup",
+    "ReportFindings",
+    "ShareOnboardingGuide",
+    "ListAgents",
+];
 
 pub struct SpawnOptions {
     pub exe: PathBuf,
@@ -51,6 +60,9 @@ pub struct SpawnOptions {
     /// Nur Stationen in der Betriebsart Claude, nur wenn der Stil `station` installiert ist:
     /// schlanker Ausgabestil statt des Benutzer-Stils.
     pub station_style: bool,
+    /// Nur Stationen in der Betriebsart Claude (ADR 061): selten genutzte Werkzeuge sperren, damit
+    /// ihre Beschreibungen nicht in jeder Anfrage mitgehen.
+    pub lean_tools: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +181,12 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
                 .arg("--settings")
                 .arg(r#"{"outputStyle":"station"}"#);
         }
+        // Die nächste Option (`--permission-mode`) beendet die Werteliste.
+        if opts.lean_tools {
+            command
+                .arg("--disallowedTools")
+                .arg(STATION_DISALLOWED_TOOLS.join(","));
+        }
     }
     command
         .arg("--permission-mode")
@@ -203,7 +221,7 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
     if let Some(dir) = &opts.artifacts {
         prompts.push(artifacts_prompt(
             dir,
-            opts.local.is_none() && opts.codex_exe.is_none(),
+            opts.local.is_none() && opts.codex_exe.is_none() && !opts.lean_tools,
             opts.verwalter_mcp.is_some() && opts.codex_exe.is_none(),
         ));
     }
@@ -391,6 +409,7 @@ mod tests {
             verwalter_mcp: None,
             auto_compact_window: None,
             station_style,
+            lean_tools: false,
         }
     }
 

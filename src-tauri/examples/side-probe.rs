@@ -94,6 +94,7 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         // Nebenfragen fassen nie zusammen.
         auto_compact_window: None,
         station_style: false,
+        lean_tools: false,
     };
     let request = SideRequest {
         options,

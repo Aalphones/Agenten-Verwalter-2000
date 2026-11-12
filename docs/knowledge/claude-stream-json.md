@@ -141,6 +141,13 @@ Geprüft am 2026-09-29 mit Claude Code 2.1.284; beide Anfragen stammen aus dem A
   - Der Name im SDK sagt ausdrücklich, dass sich das Format ändern kann — jedes Feld ist optional zu lesen.
 - **Hilfsprozess nur für das Kontingent:** `claude.exe -p --input-format stream-json --output-format stream-json --verbose --strict-mcp-config --no-session-persistence` mit Arbeitsverzeichnis `<Benutzerordner>\.verwalter`, dann sofort `get_usage` senden: Antwort nach rund 1,4 s, danach Prozess beenden. `--strict-mcp-config` ohne `--mcp-config` startet keine MCP-Server. Es entsteht kein Transkript; die Kommandozeile legt nur einmalig einen leeren Ordner `~\.claude\projects\C--Users-<name>--verwalter\memory` an. `--bare` ist ungeeignet (meldet sich nur mit API-Schlüssel an, nicht mit dem Abo).
 
+**Werkzeugkosten** (gemessen am 2026-11-10, Claude Code 2.1.322, Modell Sonnet, leerer Arbeitsordner, `--strict-mcp-config`, `CLAUDE_CODE_ARTIFACT=1`; [ADR 061](../decisions/061-schlanke-werkzeuge-in-stationen.md)):
+
+- `get_context_usage`, Kategorie „System tools“: 21 110 Tokens mit den Startargumenten des Verwalters; 4 357 mit `--disallowedTools Artifact,Workflow,ScheduleWakeup,ReportFindings,ShareOnboardingGuide,ListAgents` (ebenso mit `--tools` und allen übrigen Werkzeugen); nur `--disallowedTools Artifact`: 9 700. „System tools (deferred)“ sinkt von 23 509 auf 16 943.
+- Echte Anfrage: Eingabe gesamt 55 790 Tokens ohne, 38 154 mit Sperre. `--disallowedTools` nimmt die Werkzeuge also aus dem Kontext, nicht nur aus den Rechten.
+- Einzelkosten (je ein Werkzeug weniger): Artifact 11 410, PowerShell 3 746, Workflow 1 979, Agent 1 721, ScheduleWakeup 1 695, Bash 1 480, Grep 1 276, ReportFindings 821, Read 712, ShareOnboardingGuide 491, ListAgents 357; die Werte addieren sich nicht.
+- Fortsetzen: Eine Session, die `ListAgents` aufgerufen hatte, lief mit `--resume … --disallowedTools ListAgents` ohne Fehler weiter.
+
 ## MCP-Server steuern
 
 Gemessen am 2026-10-01 mit der Claude-Kommandozeile im Druckmodus mit `--input-format stream-json`; das Format ist nicht als stabil dokumentiert, jedes Feld ist optional zu lesen.

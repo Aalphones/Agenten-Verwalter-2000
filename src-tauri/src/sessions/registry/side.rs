@@ -89,6 +89,7 @@ impl SessionRegistry {
             let station_style = state.station_of.is_some()
                 && backend.is_none()
                 && locate::station_style_installed();
+            let lean_tools = state.station_of.is_some() && backend.is_none();
             let timeout = if backend.is_some() {
                 TIMEOUT_LOCAL
             } else {
@@ -132,6 +133,8 @@ impl SessionRegistry {
                     auto_compact_window: None,
                     // Gleicher Stil wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).
                     station_style,
+                    // Gleiche Werkzeuge wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).
+                    lean_tools,
                 },
                 prompt: prompt(question, quote.as_deref()),
                 timeout,

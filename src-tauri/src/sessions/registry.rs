@@ -3944,6 +3944,8 @@ fn start_process(
         && backend.is_none()
         && codex_exe.is_none()
         && locate::station_style_installed();
+    // Nur Stationen sperren selten genutzte Werkzeuge (ADR 061).
+    let lean_tools = state.station_of.is_some() && backend.is_none() && codex_exe.is_none();
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -3969,6 +3971,7 @@ fn start_process(
             verwalter_mcp,
             auto_compact_window,
             station_style,
+            lean_tools,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);
