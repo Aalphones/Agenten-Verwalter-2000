@@ -62,6 +62,8 @@ pub struct SessionSummary {
     pub handoff_lines: Vec<HandoffLine>,
     /// Stand der Automatik unter der letzten Antwort (ADR 040); nur im Speicher, `None` ohne.
     pub auto_handoff: Option<AutoHandoff>,
+    /// Zeitpunkt in ms, zu dem der Verwalter die Session nach einem Limit-Stopp selbst weiterschickt (ADR 063); nur im Speicher, `None` ohne Warten.
+    pub limit_resume_at: Option<f64>,
     /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
     pub awaited_script: Option<AwaitedScript>,
     /// Umsetzung, deren Station diese Session ist (ADR 048); die Sidebar zeigt sie nicht als Zeile.

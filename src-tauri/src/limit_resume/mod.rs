@@ -1,5 +1,5 @@
 //! Weiter nach dem Kontingent-Limit (ADR 063): erkennt den Limit-Stopp einer Antwort, lässt eine
-//! Station bis zum Zurücksetzen des Kontingents warten und schickt ihr dann selbst „weiter“. Nur im
+//! Session (Station oder Einzel-Session) bis zum Zurücksetzen des Kontingents warten und schickt ihr dann selbst „weiter“. Nur im
 //! Speicher: nach einem App-Neustart wartet nichts (wie ADR 040).
 
 #[cfg(test)]
@@ -128,19 +128,19 @@ pub fn consider(app: &AppHandle, session: &Arc<Session>, stop: LimitStop) {
         None => "ohne Reset-Zeit".to_owned(),
     };
     session.log_line(format!("Limit-Stopp: Kontingent aufgebraucht, {reset}"));
-    // Einzel-Sessions bleiben nur ansprechbar; weiter schickt der Verwalter nur Stationen.
-    if !session.is_station() || !registry.auto_continue_at_limit() {
+    if !registry.auto_continue_at_limit() {
         return;
     }
     let attempts: u32 = registry.limit_resume_attempts(&session.id);
     if attempts >= MAX_ATTEMPTS {
         session.log_line(format!(
-            "Limit-Stopp: {attempts} Versuche ohne normal beendete Antwort, die Station wartet auf den Benutzer"
+            "Limit-Stopp: {attempts} Versuche ohne normal beendete Antwort, die Session wartet auf den Benutzer"
         ));
         return;
     }
     let resume_at: f64 = resume_at_ms(stop.reset_at, now_ms());
     let token: u64 = registry.begin_limit_resume(&session.id, resume_at);
+    registry.set_limit_resume_at(app, &session.id, Some(resume_at));
     let thread_app: AppHandle = app.clone();
     let thread_session: Arc<Session> = Arc::clone(session);
     let spawned = thread::Builder::new()
@@ -148,6 +148,7 @@ pub fn consider(app: &AppHandle, session: &Arc<Session>, stop: LimitStop) {
         .spawn(move || wait_and_resume(&thread_app, &thread_session, token, resume_at));
     if let Err(error) = spawned {
         let _ = registry.take_limit_resume(&session.id, token);
+        registry.set_limit_resume_at(app, &session.id, None);
         session.log_line(format!("Limit-Stopp: Zeitgeber nicht gestartet: {error}"));
     }
     announce_station(app, &session.id);
@@ -158,6 +159,7 @@ pub fn consider(app: &AppHandle, session: &Arc<Session>, stop: LimitStop) {
 pub fn cancel(app: &AppHandle, session_id: &str) {
     let registry = app.state::<SessionRegistry>();
     if registry.cancel_limit_resume(session_id) {
+        registry.set_limit_resume_at(app, session_id, None);
         announce_station(app, session_id);
     }
 }
@@ -179,6 +181,7 @@ fn wait_and_resume(app: &AppHandle, session: &Arc<Session>, token: u64, resume_a
     if !registry.take_limit_resume(session_id, token) {
         return;
     }
+    registry.set_limit_resume_at(app, session_id, None);
     if let Err(error) = registry.send(app, session_id, RESUME_TEXT, &[], &[]) {
         session.log_line(format!("Limit-Stopp: Weiterschicken gescheitert: {error}"));
     }

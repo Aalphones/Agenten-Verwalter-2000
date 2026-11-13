@@ -21,6 +21,7 @@ import { McpDialog } from '@/features/mcp/McpDialog';
 import { McpProblemChip } from '@/features/mcp/McpProblemChip';
 import { CacheAwareModelMenu } from '@/features/promptcache/CacheAwareModelMenu';
 import { CacheColdHint } from '@/features/promptcache/CacheColdHint';
+import { LimitResumeHint } from './LimitResumeHint';
 import { ReviewCommentList } from '@/features/review/ReviewCommentList';
 import { openSide } from '@/features/side/openSide';
 import { SideWindow } from '@/features/side/SideWindow';
@@ -332,6 +333,7 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
     <div className="composer">
       <SideWindow session={session} />
       <div className={boxClass}>
+        <LimitResumeHint session={session} />
         <CacheColdHint session={session} onSessionCreated={onSessionCreated} />
         <ReviewCommentList sessionId={session.id} />
         {pending.length > 0 && (

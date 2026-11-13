@@ -126,7 +126,7 @@ const ENTRY_DATA = {
     category: 'agent',
     section: 'Umsetzungen',
     label: 'Nach Kontingent-Limit automatisch weiter',
-    info: 'Stoppt das Kontingent-Limit eine Station, wartet der Verwalter, bis es sich zurücksetzt, und schickt die Station dann selbst weiter — so läuft eine Umsetzung über Nacht durch. Solange eine Station läuft oder wartet, geht der Rechner nicht in den Ruhezustand; der Bildschirm darf ausgehen. Zuklappen schickt ihn trotzdem schlafen, das regelt Windows unter „Beim Zuklappen“. Einzelne Sessions schickt der Verwalter nie selbst weiter.',
+    info: 'Stoppt das Kontingent-Limit eine Station oder eine einzelne Session, wartet der Verwalter, bis es sich zurücksetzt, und schickt sie dann selbst weiter — so läuft eine Umsetzung über Nacht durch. Solange eine Station läuft oder eine Session aufs Kontingent wartet, geht der Rechner nicht in den Ruhezustand; der Bildschirm darf ausgehen. Zuklappen schickt ihn trotzdem schlafen, das regelt Windows unter „Beim Zuklappen“. Eine eigene Nachricht an die wartende Session ersetzt das automatische Weiter.',
     isShown: isClaudeMode,
   },
   cliVersion: {

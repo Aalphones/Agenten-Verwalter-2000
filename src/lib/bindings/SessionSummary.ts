@@ -67,6 +67,10 @@ handoffLines: Array<HandoffLine>,
  */
 autoHandoff: AutoHandoff | null, 
 /**
+ * Zeitpunkt in ms, zu dem der Verwalter die Session nach einem Limit-Stopp selbst weiterschickt (ADR 063); nur im Speicher, `None` ohne Warten.
+ */
+limitResumeAt: number | null, 
+/**
  * Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
  */
 awaitedScript: AwaitedScript | null, 

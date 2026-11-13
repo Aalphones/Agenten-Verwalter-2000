@@ -257,6 +257,8 @@ struct SessionState {
     auto_handoff: Option<AutoHandoff>,
     /// Marke des Countdowns: jede Änderung erhöht sie, der Zeitgeber vergleicht sie beim Ablauf.
     auto_handoff_token: u64,
+    /// Zeitpunkt in ms, zu dem der Verwalter die Session nach einem Limit-Stopp weiterschickt (ADR 063); nur im Speicher.
+    limit_resume_at: Option<f64>,
     /// Der wievielte automatische Start in Folge diese Session ist; 0 = von dir gestartet. Nur im Speicher.
     auto_chain: u32,
     /// Wann der User die Session zuletzt gesehen hat.
@@ -927,6 +929,25 @@ impl SessionRegistry {
         if let Ok(session) = self.get(session_id) {
             session.lock().auto_chain = chain;
         }
+    }
+
+    /// Merkt den Zeitpunkt des automatischen Weiter nach einem Limit-Stopp an der Session (`None` =
+    /// wartet nicht mehr) und meldet die Änderung an die Oberfläche. Nie unter einer Sperre aufrufen.
+    pub(crate) fn set_limit_resume_at(&self, app: &AppHandle, session_id: &str, at: Option<f64>) {
+        let Ok(session) = self.get(session_id) else {
+            return;
+        };
+        let _ = update(
+            app,
+            &session,
+            |state: &mut SessionState, outbox: &mut Outbox| {
+                if state.limit_resume_at != at {
+                    state.limit_resume_at = at;
+                    outbox.summary_dirty = true;
+                }
+                Ok(())
+            },
+        );
     }
 
     /// Bricht einen laufenden Countdown ab: `Halted { Cancelled }`; ohne Countdown nichts.
@@ -2321,6 +2342,7 @@ impl SessionState {
             handoff_stop: None,
             auto_handoff: None,
             auto_handoff_token: 0,
+            limit_resume_at: None,
             auto_chain: 0,
             seen_at: now,
             is_viewed: false,
@@ -3837,6 +3859,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         unread: state.last_activity_at > state.seen_at,
         handoff_lines: state.handoff_lines.clone(),
         auto_handoff: state.auto_handoff.clone(),
+        limit_resume_at: state.limit_resume_at,
         awaited_script: state.awaited_script(),
         station_of: state.station_of.clone(),
         inquiry_of: state.inquiry_of.clone(),
