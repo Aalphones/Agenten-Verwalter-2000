@@ -160,6 +160,16 @@ export function Sidebar({
     showProjectOverview,
   ]);
 
+  // Ein Vorhaben, das nur aufgeklappt ist, weil es die offene Session, Übersicht oder Umsetzung
+  // enthält, bleibt aufgeklappt, wenn der Benutzer woandershin wechselt — zu klappt nur sein Klick.
+  useEffect(() => {
+    for (const row of rows) {
+      if (row.kind === 'project' && row.isExpanded && expanded[row.project.id] === undefined) {
+        setExpanded(row.project.id, true);
+      }
+    }
+  }, [rows, expanded, setExpanded]);
+
   // Zeigt die Hauptfläche eine Station ohne eigene Zeile (fertig o. ä.), trägt ihre Umsetzung die Markierung.
   const stationSessionIds: ReadonlySet<string> = useMemo(
     () =>

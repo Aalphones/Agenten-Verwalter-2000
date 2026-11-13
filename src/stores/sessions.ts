@@ -26,7 +26,10 @@ export interface NewSessionPrefill {
 
 interface SessionsState {
   activeSessionId: string | null;
+  /** Reiter der offenen Session; beim Wechsel kommt der zuletzt gewählte Reiter der Ziel-Session zurück. */
   activeView: SessionView;
+  /** Session-ID → zuletzt gewählter Reiter; fehlt ein Eintrag, öffnet die Session im Chat. */
+  viewBySession: Record<string, SessionView>;
   showNewSession: boolean;
   /** Vorbelegung des Dialogs „Neues Vorhaben“; `null` = leerer Dialog. */
   newSessionPrefill: NewSessionPrefill | null;
@@ -66,6 +69,7 @@ interface SessionsState {
 export const useSessionsStore = create<SessionsState>((set) => ({
   activeSessionId: null,
   activeView: 'chat',
+  viewBySession: {},
   showNewSession: false,
   newSessionPrefill: null,
   showSettings: false,
@@ -79,13 +83,14 @@ export const useSessionsStore = create<SessionsState>((set) => ({
   expanded: {},
   showAllSessions: {},
   selectSession: (sessionId: string): void => {
-    set({
+    set((state: SessionsState) => ({
       activeSessionId: sessionId,
+      activeView: state.viewBySession[sessionId] ?? 'chat',
       showNewSession: false,
       showSettings: false,
       showProjectOverview: false,
       showImplementation: false,
-    });
+    }));
   },
   selectProject: (projectId: string): void => {
     set({
@@ -98,7 +103,13 @@ export const useSessionsStore = create<SessionsState>((set) => ({
     });
   },
   showView: (view: SessionView): void => {
-    set({ activeView: view });
+    set((state: SessionsState) => ({
+      activeView: view,
+      viewBySession:
+        state.activeSessionId === null
+          ? state.viewBySession
+          : { ...state.viewBySession, [state.activeSessionId]: view },
+    }));
   },
   showProjectView: (view: ProjectView): void => {
     set({ projectView: view });
