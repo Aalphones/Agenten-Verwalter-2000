@@ -67,6 +67,20 @@ export function undeleteSkin(id: string): Promise<SkinPack> {
   return invoke<SkinPack>('skins_undelete', { id });
 }
 
+/** Schreibt das Paket als ZIP (`skin.json` und `bilder/`) nach `dest`; ohne Endung wird `.zip`
+ *  angehängt. Liefert den Pfad der geschriebenen Datei.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `skin` (Paket fehlt, Datei nicht schreibbar) */
+export function exportSkin(id: string, dest: string): Promise<string> {
+  return invoke<string>('skins_export', { id, dest });
+}
+
+/** Legt aus einer ZIP-Datei ein **neues** Paket an (Name schon vergeben: „ (2)“ usw.). Ein Archiv,
+ *  das die Prüfung nicht besteht, wird abgewiesen und hinterlässt nichts.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `skin` mit einem Satz zum Grund */
+export function importSkin(path: string): Promise<SkinPack> {
+  return invoke<SkinPack>('skins_import', { path });
+}
+
 /** Die 30 häufigsten Werkzeug-Aufrufe der Sessions mit Aktivität in den letzten `days` Tagen.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} wenn der Core ablehnt */
 export function getToolUsage(days: number): Promise<ToolUsage[]> {

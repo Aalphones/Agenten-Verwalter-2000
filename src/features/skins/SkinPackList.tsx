@@ -1,4 +1,5 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { open, save } from '@tauri-apps/plugin-dialog';
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { changedByText, relativeTime } from '@/features/skins/formatChanged';
@@ -10,12 +11,15 @@ import type { SkinKind } from '@/lib/bindings/SkinKind';
 import type { SkinPack } from '@/lib/bindings/SkinPack';
 import type { SkinPackSummary } from '@/lib/bindings/SkinPackSummary';
 import { commandErrorText } from '@/lib/errors';
-import { createSkin, deleteSkin, undeleteSkin } from '@/lib/skins';
+import { createSkin, deleteSkin, exportSkin, importSkin, undeleteSkin } from '@/lib/skins';
 import { useSkinsStore } from '@/stores/skins';
 import './SkinPackList.css';
 
 const COPY_SUFFIX = ' (Kopie)';
 const EMPTY_TEXT = 'Noch keine Pakete. Lege eins an oder importiere eine ZIP-Datei.';
+const ZIP_FILTERS = [{ name: 'ZIP', extensions: ['zip'] }];
+/** Zeichen, die ein Windows-Dateiname nicht trägt. */
+const FORBIDDEN_FILE_CHARS = /[\\/:*?"<>|]/g;
 
 interface SkinPackListProps {
   packs: readonly SkinPackSummary[] | null;
@@ -68,6 +72,8 @@ export function SkinPackList({
   const setOpenSlot = useSkinsStore((state) => state.setOpenSlot);
   const [deleted, setDeleted] = useState<DeletedPack | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Ein Satz zu Export und Import (Erfolg oder Ablehnung), 8 Sekunden ohne Knopf. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   function edit(id: string): void {
     setOpenSlot(null);
@@ -83,6 +89,45 @@ export function SkinPackList({
       .catch((reason: unknown) => {
         console.error('Skin-Paket nicht angelegt', reason);
         setError(commandErrorText(reason));
+      });
+  }
+
+  function exportPack(pack: SkinPackSummary): void {
+    setError(null);
+    setNotice(null);
+    save({
+      defaultPath: `${pack.name.replace(FORBIDDEN_FILE_CHARS, '-')}.zip`,
+      filters: ZIP_FILTERS,
+    })
+      .then((destination: string | null) => {
+        if (destination === null) {
+          return undefined;
+        }
+        return exportSkin(pack.id, destination).then(() => {
+          setNotice(`„${pack.name}“ exportiert.`);
+        });
+      })
+      .catch((reason: unknown) => {
+        console.error('Skin-Paket nicht exportiert', reason);
+        setNotice(commandErrorText(reason));
+      });
+  }
+
+  function importPack(): void {
+    setError(null);
+    setNotice(null);
+    open({ multiple: false, directory: false, filters: ZIP_FILTERS })
+      .then((picked: string | null) => {
+        if (picked === null) {
+          return undefined;
+        }
+        return importSkin(picked).then((pack: SkinPack) => {
+          setNotice(`„${pack.name}“ importiert.`);
+        });
+      })
+      .catch((reason: unknown) => {
+        console.error('Skin-Paket nicht importiert', reason);
+        setNotice(commandErrorText(reason));
       });
   }
 
@@ -164,6 +209,15 @@ export function SkinPackList({
           </button>
           <button
             type="button"
+            className="settings-view__button"
+            onClick={(): void => {
+              exportPack(pack);
+            }}
+          >
+            Als ZIP exportieren
+          </button>
+          <button
+            type="button"
             className="settings-view__button skin-pack-list__delete"
             onClick={(): void => {
               remove(pack);
@@ -198,6 +252,10 @@ export function SkinPackList({
           Neues Stilpaket
         </button>
         <ToolName action="create" />
+        <button type="button" className="settings-view__button" onClick={importPack}>
+          ZIP importieren …
+        </button>
+        <ToolName action="import" />
       </div>
       {packs !== null && packs.length === 0 && (
         <p className="skin-pack-list__empty">{EMPTY_TEXT}</p>
@@ -209,6 +267,14 @@ export function SkinPackList({
         <p className="skin-pack-list__error" role="alert">
           {error ?? loadError}
         </p>
+      )}
+      {notice !== null && (
+        <SkinUndoBar
+          message={notice}
+          onExpire={(): void => {
+            setNotice(null);
+          }}
+        />
       )}
       {deleted !== null && (
         <SkinUndoBar

@@ -11,7 +11,7 @@ Ziel: Die Statuszeile nennt immer das laufende Werkzeug. Wer möchte, gibt dem V
 | 3 | Figuren im Chat: Bühne, Bewegungen, Feier-Momente | [phase-3-figuren.md](phase-3-figuren.md) | standard | complete |
 | 4 | Einstellungsseite „Skins“ mit Paketliste und Editoren | [phase-4-seite.md](phase-4-seite.md) | standard | complete |
 | 5 | Stil anwenden: Farben, Hintergründe, App-Symbol | [phase-5-stil.md](phase-5-stil.md) | standard | complete |
-| 6 | ZIP-Export und -Import | [phase-6-zip.md](phase-6-zip.md) | heikel | pending |
+| 6 | ZIP-Export und -Import | [phase-6-zip.md](phase-6-zip.md) | heikel | complete |
 | 7 | Agenten-Werkzeuge `skin_*` hinter dem Schalter | [phase-7-werkzeuge.md](phase-7-werkzeuge.md) | heikel | pending |
 | 8 | Tipps und Easter Eggs | [phase-8-extras.md](phase-8-extras.md) | mechanisch | pending |
 | 9 | Pakete bauen: je Figuren- und Stilpaket für Pokémon, Disney, Marvel | [phase-9-pakete.md](phase-9-pakete.md) | standard | pending |

@@ -172,6 +172,8 @@ pub fn run() {
             commands::skins::skins_remove_image,
             commands::skins::skins_delete,
             commands::skins::skins_undelete,
+            commands::skins::skins_export,
+            commands::skins::skins_import,
             commands::skins::skins_tool_usage,
             commands::background::background_load,
             commands::background::background_output,

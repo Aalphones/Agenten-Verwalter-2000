@@ -1,5 +1,6 @@
 //! Commands der Skins (ADR 065). Dünn: die Fachlogik und die Prüfung liegen in `crate::skins`.
 //! `async`, damit Datenbank und Bildordner nicht auf dem Haupt-Thread gelesen werden.
+use std::path::Path;
 use std::sync::Arc;
 
 use tauri::AppHandle;
@@ -101,6 +102,29 @@ pub async fn skins_undelete(
     id: String,
 ) -> Result<SkinPack, CommandError> {
     skins::undelete(&app, &database, &id)
+}
+
+/// Schreibt das Paket als ZIP nach `dest` (ohne Endung wird `.zip` angehängt); liefert den Pfad.
+#[tauri::command]
+pub async fn skins_export(
+    app: AppHandle,
+    database: tauri::State<'_, Arc<Database>>,
+    id: String,
+    dest: String,
+) -> Result<String, CommandError> {
+    let written = skins::export(&app, &database, &id, Path::new(&dest))?;
+    Ok(written.to_string_lossy().into_owned())
+}
+
+/// Legt aus einer ZIP-Datei ein neues Paket an; ein Archiv, das die Prüfung nicht besteht, wird
+/// mit einem Satz abgewiesen und hinterlässt nichts.
+#[tauri::command]
+pub async fn skins_import(
+    app: AppHandle,
+    database: tauri::State<'_, Arc<Database>>,
+    path: String,
+) -> Result<SkinPack, CommandError> {
+    skins::import(&app, &database, Path::new(&path))
 }
 
 /// Die häufigsten Werkzeug-Aufrufe der Sessions der letzten `days` Tage.

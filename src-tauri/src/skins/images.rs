@@ -68,7 +68,19 @@ pub fn ingest(dir: &Path, target: &ImageTarget, source: &ImageSource) -> Result<
     let bytes: Vec<u8> = fetch(source)?;
     let extension: &str = sniff(&bytes)
         .ok_or_else(|| "Das ist kein Bild: erwartet wird GIF, PNG oder WebP.".to_owned())?;
-    let is_icon_target: bool = matches!(target, ImageTarget::Icon);
+    check_extension(extension, matches!(target, ImageTarget::Icon))?;
+    fs::create_dir_all(dir)
+        .map_err(|error| format!("Der Paketordner ist nicht anlegbar: {error}"))?;
+    let file_name = format!("{stem}.{extension}");
+    // Erst schreiben, dann das Alte entfernen: scheitert das Schreiben, bleibt das alte Bild.
+    fs::write(dir.join(&file_name), &bytes)
+        .map_err(|error| format!("Das Bild ist nicht speicherbar: {error}"))?;
+    remove_stem_files(dir, &stem, Some(&file_name));
+    Ok(file_name)
+}
+
+/// Ob die Bildart zum Ziel passt: ICO nur als App-Symbol, und das Symbol nur als PNG oder ICO.
+pub fn check_extension(extension: &str, is_icon_target: bool) -> Result<(), String> {
     if extension == "ico" && !is_icon_target {
         return Err(
             "Ein ICO-Bild geht nur als App-Symbol; erwartet wird GIF, PNG oder WebP.".to_owned(),
@@ -78,14 +90,7 @@ pub fn ingest(dir: &Path, target: &ImageTarget, source: &ImageSource) -> Result<
     if is_icon_target && extension != "png" && extension != "ico" {
         return Err("Das App-Symbol muss ein PNG oder ICO sein.".to_owned());
     }
-    fs::create_dir_all(dir)
-        .map_err(|error| format!("Der Paketordner ist nicht anlegbar: {error}"))?;
-    let file_name = format!("{stem}.{extension}");
-    // Erst schreiben, dann das Alte entfernen: scheitert das Schreiben, bleibt das alte Bild.
-    fs::write(dir.join(&file_name), &bytes)
-        .map_err(|error| format!("Das Bild ist nicht speicherbar: {error}"))?;
-    remove_stem_files(dir, &stem, Some(&file_name));
-    Ok(file_name)
+    Ok(())
 }
 
 /// Löscht alle Bilddateien `<stem>.<Endung>` in `dir`, außer `keep`.

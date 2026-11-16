@@ -19,10 +19,16 @@ Rating: heikel (fremde Archive sind Angriffsfläche). Pakete lassen sich als ZIP
 
 ## Checkliste
 
-- [ ] `cargo add zip --no-default-features --features deflate` (aktuelle Version; `mode-dependencies` beachten), Version im Report-Back.
-- [ ] `src-tauri/src/skins/archive.rs`: Konstanten `MAX_ENTRIES = 64`, `MAX_TOTAL_BYTES = 20 * 1024 * 1024`; `export(pack: &SkinPack, dest: &Path) -> Result<PathBuf, String>`; `import(app, database, zip: &Path) -> Result<SkinPack, String>` nach AK 3–5; Lesen jedes Eintrags über `take(MAX_IMAGE_BYTES + 1)`.
-- [ ] Commands `skins_export(id, dest)`, `skins_import(path)` in `commands/skins.rs`, registrieren; Wrapper in `src/lib/skins.ts`.
-- [ ] Oberfläche: Knöpfe in `SkinPackList.tsx` (Paketzeile: „Als ZIP exportieren“; Kopf: „ZIP importieren …“), Fehlersatz in der Rückgängig-Leiste (ohne Knopf).
-- [ ] Doku: `docs/code-map.md`, Format-Beschreibung als Abschnitt in ADR 065 („ZIP-Format, Version 1“).
+- [x] `cargo add zip --no-default-features --features deflate` (aktuelle Version; `mode-dependencies` beachten), Version im Report-Back.
+- [x] `src-tauri/src/skins/archive.rs`: Konstanten `MAX_ENTRIES = 64`, `MAX_TOTAL_BYTES = 20 * 1024 * 1024`; `export(pack: &SkinPack, dest: &Path) -> Result<PathBuf, String>`; `import(app, database, zip: &Path) -> Result<SkinPack, String>` nach AK 3–5; Lesen jedes Eintrags über `take(MAX_IMAGE_BYTES + 1)`.
+- [x] Commands `skins_export(id, dest)`, `skins_import(path)` in `commands/skins.rs`, registrieren; Wrapper in `src/lib/skins.ts`.
+- [x] Oberfläche: Knöpfe in `SkinPackList.tsx` (Paketzeile: „Als ZIP exportieren“; Kopf: „ZIP importieren …“), Fehlersatz in der Rückgängig-Leiste (ohne Knopf).
+- [x] Doku: `docs/code-map.md`, Format-Beschreibung als Abschnitt in ADR 065 („ZIP-Format, Version 1“).
 
 ## Report-Back
+
+Status: complete. `pnpm check` grün; in der echten App nicht gelaufen (Dialoge „Speichern unter“/„Öffnen“, echtes Export-Import-Round-Trip und manipulierte ZIPs ungeprüft; keine Tests im privaten Profil).
+
+- **Abhängigkeit:** `zip 9.6.1` (`default-features = false`, Feature `deflate`).
+- **Abweichungen:** `import` und `export` liefern wie der übrige Kern `Result<_, CommandError>` statt `String`. Der leere Verzeichnis-Eintrag `bilder/` wird toleriert (zählt zu den 64 Einträgen), weil Windows-Explorer es anlegt. Neu: Capability `dialog:allow-save`; `SkinUndoBar.onUndo` ist optional (Satz ohne Knopf für Erfolg und Ablehnung); Export meldet „„X“ exportiert.“; liegengebliebene `.import-*`-Ordner räumt `purge_on_start` weg; `images::check_extension` ist aus `ingest` herausgezogen und gilt auch beim Import.
+- **Wackelstellen:** (1) `skins/archive.rs` `read_archive`: Entrypfade und Grenzen nur per Quelltext geprüft, kein Lauf mit einem manipulierten Archiv (Zip-Bombe, `..`, Doppel-Einträge). (2) `entry.name()` liefert in zip 9 ein `Result`; ein nicht-UTF-8-Name wird abgelehnt. (3) Verschlüsselte Einträge scheitern ohne AES-Feature mit dem Satz „beschädigt oder verschlüsselt“.

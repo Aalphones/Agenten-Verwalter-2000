@@ -1,6 +1,7 @@
 //! Skins (ADR 065): Figurenpakete und Stilpakete des Benutzers. Die Pakete liegen als Zeilen in
 //! `skin_packs`, ihre Bilder unter `<Datenordner>\skins\<Paket-ID>\`. Jede Änderung sendet
 //! `skins://changed`; die Oberfläche liest dann neu.
+pub mod archive;
 pub mod icon;
 pub mod images;
 pub mod model;
@@ -454,6 +455,7 @@ pub fn purge_on_start(app: &AppHandle, database: &Database) -> Result<(), Comman
         // Ein Ordner, der sich nicht löschen lässt, bleibt liegen; die Zeile ist ohnehin weg.
         let _ = fs::remove_dir_all(pack_dir(app, id)?);
     }
+    archive::remove_leftover_import_dirs(&skins_root(app)?);
     let rows: Vec<SkinRow> = database.with(|connection| skin_rows::list(connection))?;
     for row in rows {
         match parse_data(&row) {
@@ -510,6 +512,25 @@ fn remove_unreferenced_files(dir: &Path, data: &SkinData) {
             let _ = fs::remove_file(entry.path());
         }
     }
+}
+
+/// Schreibt das Paket als ZIP nach `dest` und liefert den Pfad der Datei.
+pub fn export(
+    app: &AppHandle,
+    database: &Database,
+    id: &str,
+    dest: &Path,
+) -> Result<PathBuf, CommandError> {
+    archive::export(&reload_pack(app, database, id)?, dest)
+}
+
+/// Legt aus einer ZIP-Datei ein neues Paket an; ein fehlerhaftes Archiv hinterlässt nichts.
+pub fn import(
+    app: &AppHandle,
+    database: &Database,
+    zip_path: &Path,
+) -> Result<SkinPack, CommandError> {
+    archive::import(app, database, zip_path)
 }
 
 /// Die 30 häufigsten Werkzeug-Aufrufe der Sessions mit Aktivität in den letzten `days` Tagen.
