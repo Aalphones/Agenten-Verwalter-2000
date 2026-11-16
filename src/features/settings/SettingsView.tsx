@@ -22,6 +22,9 @@ import { EnvironmentMirrorRow } from '@/features/environment/EnvironmentMirrorRo
 import { MasterDirRow } from '@/features/environment/MasterDirRow';
 import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
+import { SkinPackEditor } from '@/features/skins/SkinPackEditor';
+import { SkinSettingRow } from '@/features/skins/SkinSettingRow';
+import { useSkinPacks } from '@/features/skins/useSkinPacks';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
 import { TerminalPlacementSegment } from '@/features/settings/TerminalPlacementSegment';
 import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
@@ -68,6 +71,7 @@ import {
 } from '@/lib/labels';
 import { useSettingsStore } from '@/stores/settings';
 import { useSettingsNavStore } from '@/stores/settingsNav';
+import { useSkinsStore } from '@/stores/skins';
 import './SettingsView.css';
 
 const NO_CODEX_MODELS: readonly CodexModel[] = [];
@@ -106,6 +110,8 @@ export function SettingsView({
   const hasScrolledToStartRef = useRef<boolean>(false);
   const { repositories, isLoading: areRepositoriesLoading } = useKnownRepositories();
   const { save, error: saveError } = useSettingsUpdate();
+  const skinPacks = useSkinPacks();
+  const editingPackId: string | null = useSkinsStore((state) => state.editingPackId);
 
   const settings: Settings | null = storedSettings ?? overview?.settings ?? null;
   const isLocalOperation: boolean =
@@ -529,6 +535,23 @@ export function SettingsView({
         );
       case 'environmentMirror':
         return <EnvironmentMirrorRow />;
+      case 'skinFigures':
+      case 'skinAnimations':
+      case 'skinCelebrations':
+      case 'skinEasterEggs':
+      case 'skinStyle':
+      case 'skinPacks':
+      case 'skinAgentTools':
+      case 'skinToolNames':
+        return (
+          <SkinSettingRow
+            id={id}
+            settings={current}
+            packs={skinPacks.packs}
+            packsError={skinPacks.error}
+            save={save}
+          />
+        );
       case 'appVersion':
         return <AppVersionRow runningSessions={runningSessionCount(sessions)} />;
       case 'workspaces':
@@ -580,7 +603,12 @@ export function SettingsView({
           <h2 id={`settings-category-${meta.id}`} className="settings-view__category-title">
             {meta.label}
           </h2>
+          {meta.id === 'skins' && editingPackId !== null && !isSearching && (
+            <SkinPackEditor key={editingPackId} packId={editingPackId} />
+          )}
           {categoryGroups.map((group: SettingGroup) => {
+            const isEditorShown: boolean =
+              meta.id === 'skins' && editingPackId !== null && !isSearching;
             const hasHit: boolean = group.entries.some((entry: SettingEntry) =>
               hitIds.has(entry.id),
             );
@@ -588,7 +616,7 @@ export function SettingsView({
               <section
                 key={group.section}
                 className="settings-view__section"
-                hidden={isSearching && !hasHit}
+                hidden={(isSearching && !hasHit) || isEditorShown}
               >
                 <h3 className="settings-view__section-title">{group.section}</h3>
                 {group.entries.map((entry: SettingEntry) => (

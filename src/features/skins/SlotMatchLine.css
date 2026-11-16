@@ -1,0 +1,20 @@
+.slot-match {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+  overflow-wrap: anywhere;
+
+  &--none {
+    font-style: italic;
+    color: var(--color-fg-muted);
+  }
+
+  &__tool {
+    font-weight: 600;
+    color: var(--color-status-completed);
+  }
+
+  &__input {
+    color: var(--color-fg-muted);
+  }
+}

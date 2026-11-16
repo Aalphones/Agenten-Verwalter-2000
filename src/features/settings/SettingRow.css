@@ -6,6 +6,20 @@
   padding: var(--space-md) 0;
   border-top: 1px solid var(--color-border-subtle);
 
+  &--stacked {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+
+  &--stacked &__control {
+    display: block;
+  }
+
+  &--stacked &__found {
+    grid-column: 1;
+  }
+
   &__label {
     display: flex;
     align-items: center;

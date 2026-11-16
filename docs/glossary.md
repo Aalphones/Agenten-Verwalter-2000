@@ -13,6 +13,8 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Figurenpaket** | Ein Skin mit Figur, Bewegung und Texten je Fach der Statuszeile, dazu eigenen Fächern und Feier-Momenten. Im Code `SkinKind::Figures`. |
 | **Stilpaket** | Ein Skin mit Farben für hell und dunkel, Hintergrundbildern für Seitenleiste und Inhalt und einem App-Symbol. Im Code `SkinKind::Style`. |
 | **Eigenes Fach** | Ein Fach, das der Benutzer in einem Figurenpaket selbst anlegt, mit Muster für den Werkzeugnamen (z. B. `mcp__github__*`); das erste passende Fach gewinnt. Im Code `CustomSlot`, ID `c-…`. |
+| **Paketliste** | Die Liste aller Skins im Abschnitt „Pakete“ der Einstellungsseite „Skins“: Vorschaubild, Name, Art, „aktiv“, letzte Änderung, dazu Bearbeiten, Duplizieren, Löschen. Im Code `SkinPackList`. |
+| **Editor** | Die Unteransicht der Seite „Skins“, in der ein Paket bearbeitet wird („‹ Skins“ führt zurück zur Liste): Fächer bei einem Figurenpaket, Farben, Hintergründe und Symbol bei einem Stilpaket. Im Code `SkinPackEditor`. |
 | **Bühne** | Der feste Rahmen einer Figur (57 × 35 px in der Statuszeile, 50 × 31 px in der Meldung; innen 104 × 64): Bild, Bewegung und Zubehör wie Kiste oder Ball. Im Code `SkinStage`. |
 | **Bewegung** | Was die Figur auf der Bühne tut (Wippen, Fliegen, Netz schießen …); 19 stehen zur Wahl, jedes Fach hat eine passende. Im Code `Motion`. |
 | **Feier-Moment** | Kurze Meldung über der Eingabeleiste mit Figur und Text, wenn ein Commit gelingt oder eine Station fertig ist; höchstens einmal je Antwort, nur mit Figurenpaket und eingeschaltetem Schalter. Im Code `useCelebrations`. |

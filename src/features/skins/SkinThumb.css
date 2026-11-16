@@ -1,0 +1,21 @@
+.skin-thumb {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-sidebar);
+
+  &__image {
+    max-width: 34px;
+    max-height: 28px;
+    image-rendering: pixelated;
+  }
+
+  &__empty {
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+}

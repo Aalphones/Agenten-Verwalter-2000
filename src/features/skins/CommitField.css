@@ -1,0 +1,49 @@
+.commit-field {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+
+  &__label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-md);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-fg-secondary);
+  }
+
+  &__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 5px var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-primary);
+    font: inherit;
+    font-size: var(--font-size-md);
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+
+    &[aria-invalid='true'] {
+      border-color: var(--color-status-error);
+    }
+
+    &--multiline {
+      min-height: 64px;
+      line-height: 1.4;
+      resize: vertical;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
+}

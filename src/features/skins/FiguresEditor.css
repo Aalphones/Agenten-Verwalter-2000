@@ -1,0 +1,50 @@
+.figures-editor {
+  display: grid;
+  gap: var(--space-md);
+
+  &__slots {
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-surface);
+    overflow: hidden;
+  }
+
+  &__group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-fg-muted);
+    background: var(--color-bg-hover);
+  }
+
+  &__add {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+
+    &--indent {
+      padding: var(--space-md) var(--space-lg);
+    }
+  }
+
+  &__error {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
+}

@@ -1,0 +1,16 @@
+.custom-slot-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--space-md) var(--space-2xl);
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  &__remove {
+    color: var(--color-status-error);
+  }
+}

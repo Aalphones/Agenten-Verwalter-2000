@@ -1,0 +1,39 @@
+.skin-pack-editor {
+  display: grid;
+  gap: var(--space-xl);
+
+  &__back {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  &__name {
+    font-size: var(--font-size-lg);
+  }
+
+  &__kind {
+    padding: 1px var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__rename {
+    max-width: 420px;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-status-error);
+  }
+}

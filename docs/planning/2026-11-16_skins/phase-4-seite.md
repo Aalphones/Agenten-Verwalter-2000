@@ -26,13 +26,24 @@ Rating: standard (Entwurf liegt vor und ist verbindlich). Neue Kategorie „Skin
 
 ## Checkliste
 
-- [ ] `settingsCatalog.ts`: `SettingsCategoryId` um `'skins'`; Kategorie einfügen (AK 1); Einträge `skinFigures`, `skinAnimations`, `skinCelebrations`, `skinEasterEggs` (Abschnitt „Figuren“), `skinStyle` („Stil“), `skinPacks` („Pakete“), `skinAgentTools`, `skinToolNames` („Agent“) mit `info`-Texten aus dem Entwurf.
-- [ ] `SettingsView.tsx`: Zweige in `renderRow`; ist Kategorie `skins` aktiv und `editingPackId !== null`, statt der Zeilen `<SkinPackEditor />` rendern; Suche zeigt nur die Zeilen.
-- [ ] `src/features/skins/SkinPackList.tsx` (+ `.css`), `useSkinPacks.ts` (Liste + Abo `skins://changed`), `SkinUndoBar.tsx` (8 s, „Rückgängig“).
-- [ ] `src/features/skins/SkinPackEditor.tsx` (Zurück-Zeile, Name, Weiche nach Art), `FiguresEditor.tsx`, `FigureSlotRow.tsx`, `CustomSlotFields.tsx`, `SlotMatchLine.tsx` (`skinsToolUsage(30)` einmal je Editor laden), `StyleEditor.tsx`, `ColorField.tsx`, `contrast.ts` (WCAG-Formel wie `contrast` im Entwurf), `ImageField.tsx`.
-- [ ] `ImageField.tsx`: „Datei wählen“ → Dialog (Filter `gif, png, webp`; beim Symbol `png, ico`) → `skinsSetImage(id, target, { kind: 'path', path })`; „Laden“ → nur `https://`, sonst Fehlersatz „Nur https-Adressen.“ → `{ kind: 'url', url }`; Hineinziehen über `onDragDropEvent` (Muster `useAttachmentInput.ts`), nur wenn der Abwurfpunkt im Rechteck der Zone liegt → `{ kind: 'path' }`; „Entfernen“ → `skinsRemoveImage`.
-- [ ] Speichern: Figuren-/Stil-Änderungen über `skinsSave(id, data)` – Texte und Muster beim Verlassen des Feldes, Auswahl/Farbe/Schieber sofort (Schieber und Farbe entprellt 300 ms).
-- [ ] `src/features/skins/toolNames.ts`: Zuordnung Aktion → Werkzeugname für AK 9; Komponente `ToolName`.
-- [ ] Doku: `docs/code-map.md` (Seite, Editoren), `docs/glossary.md` („Paketliste“, „Editor“).
+- [x] `settingsCatalog.ts`: `SettingsCategoryId` um `'skins'`; Kategorie einfügen (AK 1); Einträge `skinFigures`, `skinAnimations`, `skinCelebrations`, `skinEasterEggs` (Abschnitt „Figuren“), `skinStyle` („Stil“), `skinPacks` („Pakete“), `skinAgentTools`, `skinToolNames` („Agent“) mit `info`-Texten aus dem Entwurf.
+- [x] `SettingsView.tsx`: Zweige in `renderRow`; ist Kategorie `skins` aktiv und `editingPackId !== null`, statt der Zeilen `<SkinPackEditor />` rendern; Suche zeigt nur die Zeilen.
+- [x] `src/features/skins/SkinPackList.tsx` (+ `.css`), `useSkinPacks.ts` (Liste + Abo `skins://changed`), `SkinUndoBar.tsx` (8 s, „Rückgängig“).
+- [x] `src/features/skins/SkinPackEditor.tsx` (Zurück-Zeile, Name, Weiche nach Art), `FiguresEditor.tsx`, `FigureSlotRow.tsx`, `CustomSlotFields.tsx`, `SlotMatchLine.tsx` (`skinsToolUsage(30)` einmal je Editor laden), `StyleEditor.tsx`, `ColorField.tsx`, `contrast.ts` (WCAG-Formel wie `contrast` im Entwurf), `ImageField.tsx`.
+- [x] `ImageField.tsx`: „Datei wählen“ → Dialog (Filter `gif, png, webp`; beim Symbol `png, ico`) → `skinsSetImage(id, target, { kind: 'path', path })`; „Laden“ → nur `https://`, sonst Fehlersatz „Nur https-Adressen.“ → `{ kind: 'url', url }`; Hineinziehen über `onDragDropEvent` (Muster `useAttachmentInput.ts`), nur wenn der Abwurfpunkt im Rechteck der Zone liegt → `{ kind: 'path' }`; „Entfernen“ → `skinsRemoveImage`.
+- [x] Speichern: Figuren-/Stil-Änderungen über `skinsSave(id, data)` – Texte und Muster beim Verlassen des Feldes, Auswahl/Farbe/Schieber sofort (Schieber und Farbe entprellt 300 ms).
+- [x] `src/features/skins/toolNames.ts`: Zuordnung Aktion → Werkzeugname für AK 9; Komponente `ToolName`.
+- [x] Doku: `docs/code-map.md` (Seite, Editoren), `docs/glossary.md` („Paketliste“, „Editor“).
 
 ## Report-Back
+
+Status: complete. `pnpm check` (Lint, Typecheck, Prettier, Build, rustfmt, Clippy) grün; keine Tests (Profil private), nicht in der echten App gelaufen. `pnpm bindings` war nicht nötig (kein Rust geändert). Alle Punkte der Checkliste umgesetzt.
+
+- Seite: Kategorie `skins` in `settingsCatalog.ts` (acht Einträge, ⓘ-Texte aus dem Entwurf); `SkinSettingRow` trägt die acht Zweige von `renderRow`; `SettingsView` zeigt bei `editingPackId` statt der Abschnitte `SkinPackEditor` (nicht bei einer Suche). `SettingRow` bekam die Prop `isStacked` (Paketliste unter dem Namen statt daneben).
+- Speichern: Texte, Namen und Muster beim Verlassen des Feldes (`CommitField`), Auswahl, Schalter und Farbe sofort (Farbe entprellt 300 ms), Deckkraft beim Loslassen des Reglers. Alle Änderungen eines Pakets laufen in `useSkinPack` nacheinander, jede auf dem Stand der vorigen.
+- Abweichung 1: Ein neues eigenes Fach bekommt das Muster `mcp__beispiel__*` statt eines leeren Musters (der Kern lehnt ein Fach ohne Muster ab, der Entwurf legt es leer an); Leeren des Feldes zeigt denselben Fehlersatz wie der Kern.
+- Abweichung 2: Die Deckkraft speichert beim Loslassen (vorhandene `Slider`-Komponente), nicht entprellt während des Ziehens.
+- Abweichung 3: Der Eintrag `skinPacks` heißt „Paketliste“ (der Entwurf hat dort keine Zeilenbeschriftung); ZIP-Knöpfe fehlen laut AK (Phase 6).
+- Löschen einer aktiven Paketwahl hebt die Wahl vorher auf und stellt sie bei „Rückgängig“ wieder her; entfernte Fächer bleiben 8 s zurückholbar (`SkinUndoBar`).
+- FINDINGS-Eintrag zu `skinAnimations` (`bool`): der Entwurf hat keinen Knopf „Folgt Windows“, also keine Änderung am Kern nötig.
+- Wackelstellen (nur per Typcheck/Lint/Build belegt): Hineinziehen von Bildern in `ImageField` (Abwurfpunkt in physischen Pixeln gegen das Rechteck der Zone, über `devicePixelRatio` umgerechnet), die Vorschaubild-Adresse mit `?v=` (Asset-Protokoll) und das Verhalten der Paketliste beim Löschen einer aktiven Wahl. Der Entwurf wurde nur nach Aufbau und Texten verglichen, nicht pixelweise.

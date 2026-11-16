@@ -1,0 +1,15 @@
+.skin-undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding: var(--space-xs) var(--space-md);
+  border-left: 2px solid var(--color-status-waiting);
+  font-size: var(--font-size-xs);
+
+  &__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

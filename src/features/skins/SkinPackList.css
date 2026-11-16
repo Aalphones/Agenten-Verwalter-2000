@@ -1,0 +1,122 @@
+.skin-pack-list {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-surface);
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+
+    & + & {
+      border-top: 1px solid var(--color-border-subtle);
+    }
+  }
+
+  &__swatches {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 36px;
+    height: 30px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+
+    & i {
+      display: block;
+    }
+  }
+
+  &__info {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__mark {
+    padding: 0 var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-2xs);
+    font-weight: 400;
+    color: var(--color-fg-muted);
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-status-script);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+  }
+
+  &__delete {
+    color: var(--color-status-error);
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-status-error);
+  }
+}
+
+@media (max-width: 575px) {
+  .skin-pack-list__row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .skin-pack-list__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}

@@ -11,6 +11,8 @@ interface SettingRowProps {
   id: SettingId;
   /** Das Bedienelement. */
   children: ReactNode;
+  /** Das Bedienelement steht unter dem Namen statt daneben (breite Inhalte wie die Paketliste). */
+  isStacked?: boolean;
 }
 
 function renderParts(parts: readonly TextPart[]): ReactElement[] {
@@ -19,12 +21,12 @@ function renderParts(parts: readonly TextPart[]): ReactElement[] {
   );
 }
 
-export function SettingRow({ id, children }: SettingRowProps): ReactElement {
+export function SettingRow({ id, children, isStacked = false }: SettingRowProps): ReactElement {
   const { label, info } = settingEntry(id);
   const terms: readonly string[] = useSettingsSearchTerms();
   const found: TextPart[] | null = foundInInfo(label, info, terms);
   return (
-    <div className="setting-row">
+    <div className={`setting-row${isStacked ? ' setting-row--stacked' : ''}`}>
       <div className="setting-row__label">
         <span>{renderParts(markParts(label, terms))}</span>
         <button

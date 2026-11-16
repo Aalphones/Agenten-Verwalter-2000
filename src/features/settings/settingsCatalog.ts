@@ -4,7 +4,7 @@ import { isLocalOperatingMode } from '@/lib/labels';
 // Alle Zeilen der Einstellungsseite: Name, ⓘ-Text, Kategorie, Abschnitt (ADR 054).
 // Neue Zeile = Eintrag hier + Zweig in `renderRow`.
 
-export type SettingsCategoryId = 'general' | 'agent' | 'skills' | 'app';
+export type SettingsCategoryId = 'general' | 'agent' | 'skills' | 'skins' | 'app';
 
 /** Wofür ein Punkt an einer Kategorie in der Leiste steht. */
 export type SettingsAttention = 'update' | 'environment';
@@ -20,6 +20,7 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   { id: 'general', label: 'Allgemein', summary: 'Konto · Darstellung' },
   { id: 'agent', label: 'Agent', summary: 'Betriebsart · Modelle · Modus · Claude Code' },
   { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Umgebung' },
+  { id: 'skins', label: 'Skins', summary: 'Figuren · Stil · Pakete' },
   { id: 'app', label: 'App', summary: 'Version · Ordner · Rechte' },
 ];
 
@@ -166,6 +167,54 @@ const ENTRY_DATA = {
     label: 'Abgleich',
     info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Master-Ordner mit ~\\.claude nach Inhalt. Die Änderungszeit entscheidet nur, welche Seite neuer ist. „Spiegeln“ kopiert, was im Master neuer ist oder lokal fehlt, und löscht nie.',
     isShown: hasMasterDir,
+  },
+  skinFigures: {
+    category: 'skins',
+    section: 'Figuren',
+    label: 'Figurenpaket',
+    info: 'Figur, Bewegung und Texte der Statuszeile je Werkzeug. „Aus“ zeigt die sachliche Statuszeile ohne Figur.',
+  },
+  skinAnimations: {
+    category: 'skins',
+    section: 'Figuren',
+    label: 'Animationen',
+    info: 'Ob Figuren und Rückmeldungen sich bewegen. Beim ersten Start wie in Windows unter „Animationen anzeigen“.',
+  },
+  skinCelebrations: {
+    category: 'skins',
+    section: 'Figuren',
+    label: 'Feier-Momente',
+    info: 'Kurze Meldung mit Figur, wenn ein Commit fertig ist oder eine Station abschließt – höchstens eine je Antwort.',
+  },
+  skinEasterEggs: {
+    category: 'skins',
+    section: 'Figuren',
+    label: 'Easter Eggs',
+    info: 'Kleine Überraschungen, nur auf eigene Aktion – nie ungefragt mitten in der Arbeit.',
+  },
+  skinStyle: {
+    category: 'skins',
+    section: 'Stil',
+    label: 'Stilpaket',
+    info: 'Farben, Hintergrundbilder von Seitenleiste und Inhalt und das App-Symbol im Fenster und in der Taskleiste. Schrift und Aufbau bleiben.',
+  },
+  skinPacks: {
+    category: 'skins',
+    section: 'Pakete',
+    label: 'Paketliste',
+    info: 'Alle Figuren- und Stilpakete. „Bearbeiten“ öffnet den Editor des Pakets; „Löschen“ wirkt sofort und lässt sich acht Sekunden lang rückgängig machen, danach bleibt das Paket noch 24 Stunden zurückholbar.',
+  },
+  skinAgentTools: {
+    category: 'skins',
+    section: 'Agent',
+    label: 'Agent darf Skins bearbeiten',
+    info: 'Gibt dem Agenten Werkzeuge, um Pakete anzulegen und zu füllen. Gilt ab dem nächsten Start des Agenten; andere Einstellungen kann er nie ändern.',
+  },
+  skinToolNames: {
+    category: 'skins',
+    section: 'Agent',
+    label: 'Werkzeug-Namen zeigen',
+    info: 'Blendet auf dieser Seite neben jeder Aktion den Namen des passenden Agenten-Werkzeugs ein.',
   },
   appVersion: {
     category: 'app',
