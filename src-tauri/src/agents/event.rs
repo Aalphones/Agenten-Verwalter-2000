@@ -348,6 +348,8 @@ pub enum AgentEvent {
         slash_commands: Option<Vec<String>>,
     },
     Text(String),
+    /// Der Agent beginnt zu denken; der Gedankengang selbst folgt erst als `Thinking`.
+    ThinkingStarted,
     Thinking {
         text: String,
         seconds: u32,

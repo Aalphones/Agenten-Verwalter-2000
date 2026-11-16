@@ -75,6 +75,10 @@ limitResumeAt: number | null,
  */
 awaitedScript: AwaitedScript | null, 
 /**
+ * Zeitpunkt in ms seit Epoche, seit dem der Agent denkt und noch nichts anderes tut; nur im Speicher, `None` ohne Denken.
+ */
+thinkingSince: number | null, 
+/**
  * Umsetzung, deren Station diese Session ist (ADR 048); die Sidebar zeigt sie nicht als Zeile.
  */
 stationOf: string | null, 

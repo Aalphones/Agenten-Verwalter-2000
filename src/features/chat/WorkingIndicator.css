@@ -10,8 +10,23 @@
   }
 
   &__label {
+    flex-shrink: 0;
+    max-width: 60%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    animation: working-indicator-fade-in 200ms ease-out;
+  }
+
+  &__count {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__todo {
     overflow: hidden;
     min-width: 0;
+    color: var(--color-fg-muted);
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -19,5 +34,21 @@
   &__hint {
     flex-shrink: 0;
     color: var(--color-fg-muted);
+  }
+}
+
+@keyframes working-indicator-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-indicator__label {
+    animation: none;
   }
 }

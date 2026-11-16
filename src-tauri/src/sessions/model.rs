@@ -66,6 +66,8 @@ pub struct SessionSummary {
     pub limit_resume_at: Option<f64>,
     /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
     pub awaited_script: Option<AwaitedScript>,
+    /// Zeitpunkt in ms seit Epoche, seit dem der Agent denkt und noch nichts anderes tut; nur im Speicher, `None` ohne Denken.
+    pub thinking_since: Option<f64>,
     /// Umsetzung, deren Station diese Session ist (ADR 048); die Sidebar zeigt sie nicht als Zeile.
     pub station_of: Option<String>,
     /// Umsetzung, zu der diese Session eine Rückfrage ist (ADR 048).

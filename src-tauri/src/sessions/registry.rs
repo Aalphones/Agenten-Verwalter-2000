@@ -259,6 +259,9 @@ struct SessionState {
     auto_handoff_token: u64,
     /// Zeitpunkt in ms, zu dem der Verwalter die Session nach einem Limit-Stopp weiterschickt (ADR 063); nur im Speicher.
     limit_resume_at: Option<f64>,
+    /// Seit wann der Agent denkt (ms seit Epoche), bis Gedankengang, Werkzeug, Text oder das Ende
+    /// des Laufens kommt; nur im Speicher.
+    thinking_since: Option<f64>,
     /// Der wievielte automatische Start in Folge diese Session ist; 0 = von dir gestartet. Nur im Speicher.
     auto_chain: u32,
     /// Wann der User die Session zuletzt gesehen hat.
@@ -2343,6 +2346,7 @@ impl SessionState {
             auto_handoff: None,
             auto_handoff_token: 0,
             limit_resume_at: None,
+            thinking_since: None,
             auto_chain: 0,
             seen_at: now,
             is_viewed: false,
@@ -2817,6 +2821,13 @@ impl SessionState {
         outbox.summary_dirty = true;
     }
 
+    /// Das Denken ist vorbei (Gedankengang, Werkzeug, Text); meldet nur, wenn es lief.
+    fn stop_thinking(&mut self, outbox: &mut Outbox) {
+        if self.thinking_since.take().is_some() {
+            outbox.summary_dirty = true;
+        }
+    }
+
     fn set_status(&mut self, outbox: &mut Outbox, status: SessionStatus) {
         if self.status == status {
             return;
@@ -2833,6 +2844,9 @@ impl SessionState {
         self.idle_since =
             matches!(status, SessionStatus::Completed | SessionStatus::Paused).then_some(now);
         self.status = status;
+        if status != SessionStatus::Running {
+            self.thinking_since = None;
+        }
         outbox.summary_dirty = true;
         if matches!(
             status,
@@ -3004,8 +3018,16 @@ impl SessionState {
                     self.set_status(outbox, SessionStatus::Running);
                 }
             }
+            AgentEvent::ThinkingStarted => {
+                self.wake_if_idle(outbox);
+                if self.status == SessionStatus::Running && self.thinking_since.is_none() {
+                    self.thinking_since = Some(now_ms());
+                    outbox.summary_dirty = true;
+                }
+            }
             AgentEvent::Text(text) => {
                 self.wake_if_idle(outbox);
+                self.stop_thinking(outbox);
                 let lines: Vec<HandoffLine> = handoff::handoff_lines(&text);
                 if self.handoff_lines != lines {
                     self.handoff_lines = lines;
@@ -3022,6 +3044,7 @@ impl SessionState {
             }
             AgentEvent::Thinking { text, seconds } => {
                 self.wake_if_idle(outbox);
+                self.stop_thinking(outbox);
                 self.push_entry(outbox, |seq: u32| ChatEntry::Thinking {
                     seq,
                     text,
@@ -3037,6 +3060,7 @@ impl SessionState {
                 input_truncated,
             } => {
                 self.wake_if_idle(outbox);
+                self.stop_thinking(outbox);
                 outbox
                     .tool_inputs
                     .push((tool_use_id.clone(), input, input_truncated));
@@ -3093,7 +3117,10 @@ impl SessionState {
                 context_window,
                 denials,
                 total_cost_usd,
-            } => self.end_turn(outbox, end, context_window, denials, total_cost_usd),
+            } => {
+                self.stop_thinking(outbox);
+                self.end_turn(outbox, end, context_window, denials, total_cost_usd);
+            }
             AgentEvent::CacheUsed {
                 message_id,
                 tokens,
@@ -3861,6 +3888,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         auto_handoff: state.auto_handoff.clone(),
         limit_resume_at: state.limit_resume_at,
         awaited_script: state.awaited_script(),
+        thinking_since: state.thinking_since,
         station_of: state.station_of.clone(),
         inquiry_of: state.inquiry_of.clone(),
     }

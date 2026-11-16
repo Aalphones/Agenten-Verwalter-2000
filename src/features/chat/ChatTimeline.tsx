@@ -11,6 +11,14 @@ import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import { NoticeBlock } from '@/features/notices/NoticeBlock';
+import { fillText } from '@/features/skins/fillText';
+import {
+  BUILTIN_SLOT_IDS,
+  IDLE_TEXT,
+  PLAIN_TEXTS,
+  type BuiltinSlotId,
+} from '@/features/skins/slotCatalog';
+import { useStatusFigure, type StatusFigure } from '@/features/skins/useStatusFigure';
 import { SelectionMenu } from '@/features/side/SelectionMenu';
 import { selectedChatText } from '@/features/side/selectionText';
 import type { QuestionDraft, QuestionEntry } from '@/features/chat/questionDraft';
@@ -45,7 +53,6 @@ const SURFACE_PADDING_BOTTOM = 12;
 const STICK_TO_BOTTOM_TOLERANCE = 24;
 const LOAD_OLDER_THRESHOLD = 200;
 const WORKING_KEY = 'working';
-const WORKING_FALLBACK_LABEL = 'Claude arbeitet …';
 
 /** Schlüssel eines einzelnen Aufrufs in `expandedKeys`; Gruppen-Schlüssel kommen aus `buildBlocks`. */
 function toolKey(toolUseId: string): string {
@@ -142,7 +149,13 @@ export function ChatTimeline({
   const answerSeq: number | null = useMemo(() => lastAnswerSeq(entries), [entries]);
   const showsHandoff: boolean =
     session.handoffLines.length > 0 && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
-  const workingLabel: string = useMemo(() => findActiveTodoLabel(entries), [entries]);
+  const activeTodo: string | null = useMemo(() => findActiveTodoLabel(entries), [entries]);
+  const statusFigure: StatusFigure = useStatusFigure({
+    entries,
+    isWorking,
+    thinkingSince: session.thinkingSince,
+  });
+  const statusText: string = describeStatus(statusFigure);
   const oldestOpenQuestion: QuestionEntry | null = useMemo(
     () => findOldestOpenQuestion(entries),
     [entries],
@@ -386,7 +399,14 @@ export function ChatTimeline({
 
   function renderBlock(block: ChatBlock | undefined): ReactElement {
     if (block === undefined) {
-      return <WorkingIndicator label={workingLabel} />;
+      return (
+        <WorkingIndicator
+          text={statusText}
+          calls={statusFigure.calls}
+          todo={activeTodo}
+          thinkingSeconds={statusFigure.thinkingSeconds}
+        />
+      );
     }
     if (block.kind === 'tools') {
       return (
@@ -516,17 +536,32 @@ function findLastErrorSeq(entries: readonly ChatEntry[]): number | null {
   return null;
 }
 
-function findActiveTodoLabel(entries: readonly ChatEntry[]): string {
+/** Der Text des Fachs mit eingesetztem Ziel; vor dem ersten Fach der neutrale Text. */
+function describeStatus(figure: StatusFigure): string {
+  if (figure.slot === null) {
+    return IDLE_TEXT;
+  }
+  const template: string = isBuiltinSlot(figure.slot)
+    ? PLAIN_TEXTS[figure.slot]
+    : PLAIN_TEXTS.other;
+  return fillText(template, { ziel: figure.target, zeit: '', commit: '' });
+}
+
+function isBuiltinSlot(slot: string): slot is BuiltinSlotId {
+  return (BUILTIN_SLOT_IDS as readonly string[]).includes(slot);
+}
+
+function findActiveTodoLabel(entries: readonly ChatEntry[]): string | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry: ChatEntry | undefined = entries[index];
     if (entry?.kind === 'todos') {
       const active: TodoItem | undefined = entry.items.find(
         (item: TodoItem) => item.state === 'active',
       );
-      return active === undefined ? WORKING_FALLBACK_LABEL : active.label;
+      return active?.label ?? null;
     }
   }
-  return WORKING_FALLBACK_LABEL;
+  return null;
 }
 
 function findOldestOpenQuestion(entries: readonly ChatEntry[]): QuestionEntry | null {

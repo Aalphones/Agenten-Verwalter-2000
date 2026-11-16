@@ -106,8 +106,11 @@ impl Translator {
                 events
             }
             "thinking_tokens" => {
-                self.thinking_started.get_or_insert_with(Instant::now);
-                Vec::new()
+                if self.thinking_started.is_some() {
+                    return Vec::new();
+                }
+                self.thinking_started = Some(Instant::now());
+                vec![AgentEvent::ThinkingStarted]
             }
             "task_started" => self.task_started(system),
             "task_progress" => task_progress(system).into_iter().collect(),
