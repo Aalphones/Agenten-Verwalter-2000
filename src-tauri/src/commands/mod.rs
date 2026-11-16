@@ -23,6 +23,7 @@ pub mod sessions;
 pub mod settings;
 pub mod side;
 pub mod skills;
+pub mod skins;
 pub mod terminal;
 pub mod tldr;
 pub mod tool_details;

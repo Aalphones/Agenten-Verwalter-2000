@@ -4,15 +4,18 @@ pub mod model;
 
 use std::collections::HashMap;
 
+use rusqlite::Connection;
 use serde::de::DeserializeOwned;
 use tauri::AppHandle;
 
 use crate::agents::event::{Effort, Mode, ModelId};
 use crate::db::settings as setting_rows;
+use crate::db::skins as skin_rows;
 use crate::db::{Database, enum_from_text, enum_to_text};
 use crate::error::CommandError;
 use crate::filesystem::workspace::{WORKSPACES_DIR, data_dir, home_dir};
 use crate::skills::{self, model::SkillKind, model::SkillOrigin};
+use crate::skins::model::SkinKind;
 use model::{
     ColorScheme, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange, SettingsOverview,
     TerminalPlacement,
@@ -33,6 +36,12 @@ const KEY_AUTO_CONTINUE_AT_LIMIT: &str = "auto_continue_at_limit";
 const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
 const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
 const KEY_TERMINAL_WIDTH: &str = "terminal_width";
+const KEY_SKIN_FIGURES: &str = "skin_figures";
+const KEY_SKIN_STYLE: &str = "skin_style";
+const KEY_SKIN_ANIMATIONS: &str = "skin_animations";
+const KEY_SKIN_CELEBRATIONS: &str = "skin_celebrations";
+const KEY_SKIN_EASTER_EGGS: &str = "skin_easter_eggs";
+const KEY_SKIN_AGENT_TOOLS: &str = "skin_agent_tools";
 
 /// Grenzen für die Schwelle des automatischen Zusammenfassens in Tokens (ADR 058).
 pub const AUTO_COMPACT_THRESHOLD_RANGE: std::ops::RangeInclusive<u32> = 150_000..=500_000;
@@ -92,6 +101,12 @@ const DEFAULT_SETTINGS: Settings = Settings {
         artifacts_list: None,
         background: None,
     },
+    skin_figures: None,
+    skin_style: None,
+    skin_animations: None,
+    skin_celebrations: false,
+    skin_easter_eggs: false,
+    skin_agent_tools: false,
 };
 
 pub fn load(database: &Database) -> Result<Settings, CommandError> {
@@ -154,7 +169,73 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             artifacts_list: stored_panel_width(&stored, PanelId::ArtifactsList),
             background: stored_panel_width(&stored, PanelId::Background),
         },
+        skin_figures: active_skin(database, &stored, KEY_SKIN_FIGURES, SkinKind::Figures)?,
+        skin_style: active_skin(database, &stored, KEY_SKIN_STYLE, SkinKind::Style)?,
+        skin_animations: stored
+            .get(KEY_SKIN_ANIMATIONS)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .or(DEFAULT_SETTINGS.skin_animations),
+        skin_celebrations: stored
+            .get(KEY_SKIN_CELEBRATIONS)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.skin_celebrations),
+        skin_easter_eggs: stored
+            .get(KEY_SKIN_EASTER_EGGS)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.skin_easter_eggs),
+        skin_agent_tools: stored
+            .get(KEY_SKIN_AGENT_TOOLS)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.skin_agent_tools),
     })
+}
+
+/// Die gespeicherte ID eines Pakets der Art `kind`; `None`, wenn nichts gewählt ist oder das
+/// Paket fehlt, gelöscht ist oder eine andere Art hat. Der gespeicherte Text bleibt unberührt:
+/// holt der Benutzer das Paket zurück, gilt es wieder.
+fn active_skin(
+    database: &Database,
+    stored: &HashMap<String, String>,
+    key: &str,
+    kind: SkinKind,
+) -> Result<Option<String>, CommandError> {
+    let Some(id) = stored
+        .get(key)
+        .map(|text: &String| text.trim())
+        .filter(|text: &&str| !text.is_empty())
+    else {
+        return Ok(None);
+    };
+    let found: Option<String> = database.with(|connection| skin_rows::kind_of(connection, id))?;
+    let is_matching: bool = found.as_deref() == Some(enum_to_text(&kind)?.as_str());
+    Ok(is_matching.then(|| id.to_owned()))
+}
+
+/// Schreibt die Wahl eines Pakets; eine ID, die es nicht gibt oder die zur falschen Art gehört,
+/// wird mit einem Satz abgelehnt. Leer oder `None` schaltet ab.
+fn write_skin_choice(
+    connection: &Connection,
+    key: &str,
+    kind: SkinKind,
+    id: Option<&str>,
+) -> Result<(), CommandError> {
+    let Some(id) = id.map(str::trim).filter(|text: &&str| !text.is_empty()) else {
+        return setting_rows::write(connection, key, "");
+    };
+    let found: Option<String> = skin_rows::kind_of(connection, id)?;
+    match found {
+        None => Err(CommandError::Skin(
+            "Dieses Paket gibt es nicht (mehr).".to_owned(),
+        )),
+        Some(found_kind) if found_kind != enum_to_text(&kind)? => Err(CommandError::Skin(
+            match kind {
+                SkinKind::Figures => "Das ist kein Figurenpaket.",
+                SkinKind::Style => "Das ist kein Stilpaket.",
+            }
+            .to_owned(),
+        )),
+        Some(_) => setting_rows::write(connection, key, id),
+    }
 }
 
 /// Speichert genau die geänderten Schlüssel und gibt den ganzen neuen Stand zurück.
@@ -250,6 +331,34 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
                 }
                 None => setting_rows::delete(&transaction, panel_key(panel))?,
             },
+            SettingsChange::SkinFigures { value } => {
+                write_skin_choice(
+                    &transaction,
+                    KEY_SKIN_FIGURES,
+                    SkinKind::Figures,
+                    value.as_deref(),
+                )?;
+            }
+            SettingsChange::SkinStyle { value } => {
+                write_skin_choice(
+                    &transaction,
+                    KEY_SKIN_STYLE,
+                    SkinKind::Style,
+                    value.as_deref(),
+                )?;
+            }
+            SettingsChange::SkinAnimations { value } => {
+                setting_rows::write(&transaction, KEY_SKIN_ANIMATIONS, &value.to_string())?;
+            }
+            SettingsChange::SkinCelebrations { value } => {
+                setting_rows::write(&transaction, KEY_SKIN_CELEBRATIONS, &value.to_string())?;
+            }
+            SettingsChange::SkinEasterEggs { value } => {
+                setting_rows::write(&transaction, KEY_SKIN_EASTER_EGGS, &value.to_string())?;
+            }
+            SettingsChange::SkinAgentTools { value } => {
+                setting_rows::write(&transaction, KEY_SKIN_AGENT_TOOLS, &value.to_string())?;
+            }
         }
         transaction.commit()?;
         Ok(())

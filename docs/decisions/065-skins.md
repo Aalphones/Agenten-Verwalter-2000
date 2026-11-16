@@ -1,6 +1,6 @@
 # 065 — Skins: Figurenpakete und Stilpakete als Daten des Benutzers
 
-**Status:** vorgeschlagen · **Datum:** 2026-11-16
+**Status:** angenommen · **Datum:** 2026-11-16
 
 ## Kontext
 

@@ -53,4 +53,29 @@ terminalWidth: number,
 /**
  * Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche (ADR 053).
  */
-panelWidths: PanelWidths, };
+panelWidths: PanelWidths, 
+/**
+ * ID des aktiven Figurenpakets (ADR 065); `None` = keine Figur.
+ */
+skinFigures: string | null, 
+/**
+ * ID des aktiven Stilpakets; `None` = Standardfarben ohne Hintergrundbilder.
+ */
+skinStyle: string | null, 
+/**
+ * Ob Figuren sich bewegen; `None` = die Windows-Einstellung „Animationen“ entscheidet
+ * (`prefers-reduced-motion`).
+ */
+skinAnimations: boolean | null, 
+/**
+ * Ob ein Feier-Moment erscheint, wenn eine Antwort etwas Besonderes enthält.
+ */
+skinCelebrations: boolean, 
+/**
+ * Ob versteckte Überraschungen aktiv sind.
+ */
+skinEasterEggs: boolean, 
+/**
+ * Ob ein neu gestarteter Agent die `skin_*`-Werkzeuge bekommt.
+ */
+skinAgentTools: boolean, };

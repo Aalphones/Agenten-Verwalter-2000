@@ -62,6 +62,9 @@ pub enum CommandError {
     /// Ein Satz über ein Terminal (ADR 052).
     #[error("{0}")]
     Terminal(String),
+    /// Ein Satz über ein Skin-Paket (ADR 065), so wie Benutzer und Agent ihn lesen.
+    #[error("{0}")]
+    Skin(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

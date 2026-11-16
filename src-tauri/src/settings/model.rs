@@ -90,6 +90,19 @@ pub struct Settings {
     pub terminal_width: u32,
     /// Breite je Leiste in Pixeln; `None` = Standardbreite der Oberfläche (ADR 053).
     pub panel_widths: PanelWidths,
+    /// ID des aktiven Figurenpakets (ADR 065); `None` = keine Figur.
+    pub skin_figures: Option<String>,
+    /// ID des aktiven Stilpakets; `None` = Standardfarben ohne Hintergrundbilder.
+    pub skin_style: Option<String>,
+    /// Ob Figuren sich bewegen; `None` = die Windows-Einstellung „Animationen“ entscheidet
+    /// (`prefers-reduced-motion`).
+    pub skin_animations: Option<bool>,
+    /// Ob ein Feier-Moment erscheint, wenn eine Antwort etwas Besonderes enthält.
+    pub skin_celebrations: bool,
+    /// Ob versteckte Überraschungen aktiv sind.
+    pub skin_easter_eggs: bool,
+    /// Ob ein neu gestarteter Agent die `skin_*`-Werkzeuge bekommt.
+    pub skin_agent_tools: bool,
 }
 
 /// Was die Einstellungsseite zeigt: die Werte und die Ordner, die sie nur anzeigt.
@@ -163,5 +176,26 @@ pub enum SettingsChange {
     PanelWidth {
         panel: PanelId,
         value: Option<u32>,
+    },
+    /// `None` schaltet die Figur ab. Die ID muss ein vorhandenes Figurenpaket nennen.
+    SkinFigures {
+        value: Option<String>,
+    },
+    /// `None` stellt Farben und Hintergründe auf Standard. Die ID muss ein vorhandenes Stilpaket
+    /// nennen.
+    SkinStyle {
+        value: Option<String>,
+    },
+    SkinAnimations {
+        value: bool,
+    },
+    SkinCelebrations {
+        value: bool,
+    },
+    SkinEasterEggs {
+        value: bool,
+    },
+    SkinAgentTools {
+        value: bool,
     },
 }

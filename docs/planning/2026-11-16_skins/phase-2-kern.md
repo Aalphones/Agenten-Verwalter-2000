@@ -30,7 +30,7 @@ Rating: heikel (Datenmodell, Herunterladen fremder Bilder). Nach dieser Phase ka
 
 ### Datenbank
 
-- [ ] `migrations/020_skins.sql`:
+- [x] `migrations/020_skins.sql`:
   ```sql
   CREATE TABLE skin_packs (
     id         TEXT PRIMARY KEY,
@@ -43,7 +43,7 @@ Rating: heikel (Datenmodell, Herunterladen fremder Bilder). Nach dieser Phase ka
   );
   ```
   In `migrations.rs` als Migration 20 eintragen.
-- [ ] `src-tauri/src/db/skins.rs`: `list(connection) -> Vec<Row>` (ohne gelöschte, sortiert nach `name COLLATE NOCASE`), `get(connection, id) -> Option<Row>`, `kind_of(connection, id) -> Option<String>` (nur nicht gelöschte), `insert`, `update_data(id, data_json, changed_at, changed_by)`, `rename`, `set_deleted(id, Option<&str>)`, `purge_deleted(before: &str) -> Vec<String>` (gibt gelöschte IDs zurück), `tool_usage(connection, since_ms: f64) -> Vec<(String, String, u32)>`:
+- [x] `src-tauri/src/db/skins.rs`: `list(connection) -> Vec<Row>` (ohne gelöschte, sortiert nach `name COLLATE NOCASE`), `get(connection, id) -> Option<Row>`, `kind_of(connection, id) -> Option<String>` (nur nicht gelöschte), `insert`, `update_data(id, data_json, changed_at, changed_by)`, `rename`, `set_deleted(id, Option<&str>)`, `purge_deleted(before: &str) -> Vec<String>` (gibt gelöschte IDs zurück), `tool_usage(connection, since_ms: f64) -> Vec<(String, String, u32)>`:
   ```sql
   SELECT json_extract(c.payload, '$.tool') AS tool,
          substr(coalesce(json_extract(c.payload, '$.target'), ''), 1, 40) AS head,
@@ -56,27 +56,34 @@ Rating: heikel (Datenmodell, Herunterladen fremder Bilder). Nach dieser Phase ka
 
 ### Modell und Fachlogik (`src-tauri/src/skins/`)
 
-- [ ] `model.rs`: Typen und Grenzen exakt wie im Kontrakt; `Motion` mit `serde(rename_all = "camelCase")`; `impl StyleColors { fn standard_dark(), fn standard_light() }` mit den Werten aus `src/styles/theme.css` (dunkel: base `#1f1f1f`, sidebar `#181818`, surface `#252526`, fg `#d4d4d4`, muted `#8f8f8f`, accent `#e0825c`, border `#3c3c3c`; hell: `#ffffff`, `#f8f8f8`, `#ffffff`, `#3c3c3c`, `#6e6e6e`, `#c4572f`, `#d9d9d9`).
-- [ ] `validate.rs`: `validate_figures(&FiguresData, dir: &Path) -> Result<(), String>` und `validate_style(&StyleData, dir) -> Result<(), String>` (AK 3); Texte werden getrimmt, leere entfernt.
-- [ ] `images.rs`: `sniff(bytes) -> Option<&'static str>` (`gif`, `png`, `webp`, `ico`); `ingest(dir, target, source) -> Result<String, String>` (Dateiname); `file_stem(target)` = `<slot>` / `<slot>-2` / `sidebar` / `content` / `icon`; Adresse über eigenen `ureq::Agent` (Zeitlimits 10 s), Lesen in Blöcken mit Abbruch über 2 MiB; Pfad: Datei lesen, höchstens 2 MiB; Bytes: Base64 dekodieren (`base64`-Crate). Vor dem Schreiben alle Dateien `<stem>.*` im Ordner löschen.
-- [ ] `mod.rs`: `SkinService`-freie Funktionen mit `&AppHandle` und `&Database`: `list`, `get`, `create`, `rename`, `save`, `set_image`, `remove_image`, `delete`, `undelete`, `purge_on_start`, `tool_usage`. `get` füllt `dir` (absoluter Pfad). `list` füllt `thumb` (Figuren: Bild des Fachs `search`, sonst erstes Bild; Stil: `icon`) als absoluter Pfad und `swatches` (Stil: dunkel base, sidebar, accent, fg). `changed_by` setzt nur Phase 7; hier immer `None`. Nach jeder Änderung `app.emit("skins://changed", ())`.
-- [ ] `purge_on_start` in `setup` (`lib.rs`) nach dem Öffnen der Datenbank aufrufen; Fehler nur protokollieren.
+- [x] `model.rs`: Typen und Grenzen exakt wie im Kontrakt; `Motion` mit `serde(rename_all = "camelCase")`; `impl StyleColors { fn standard_dark(), fn standard_light() }` mit den Werten aus `src/styles/theme.css` (dunkel: base `#1f1f1f`, sidebar `#181818`, surface `#252526`, fg `#d4d4d4`, muted `#8f8f8f`, accent `#e0825c`, border `#3c3c3c`; hell: `#ffffff`, `#f8f8f8`, `#ffffff`, `#3c3c3c`, `#6e6e6e`, `#c4572f`, `#d9d9d9`).
+- [x] `validate.rs`: `validate_figures(&FiguresData, dir: &Path) -> Result<(), String>` und `validate_style(&StyleData, dir) -> Result<(), String>` (AK 3); Texte werden getrimmt, leere entfernt.
+- [x] `images.rs`: `sniff(bytes) -> Option<&'static str>` (`gif`, `png`, `webp`, `ico`); `ingest(dir, target, source) -> Result<String, String>` (Dateiname); `file_stem(target)` = `<slot>` / `<slot>-2` / `sidebar` / `content` / `icon`; Adresse über eigenen `ureq::Agent` (Zeitlimits 10 s), Lesen in Blöcken mit Abbruch über 2 MiB; Pfad: Datei lesen, höchstens 2 MiB; Bytes: Base64 dekodieren (`base64`-Crate). Vor dem Schreiben alle Dateien `<stem>.*` im Ordner löschen.
+- [x] `mod.rs`: `SkinService`-freie Funktionen mit `&AppHandle` und `&Database`: `list`, `get`, `create`, `rename`, `save`, `set_image`, `remove_image`, `delete`, `undelete`, `purge_on_start`, `tool_usage`. `get` füllt `dir` (absoluter Pfad). `list` füllt `thumb` (Figuren: Bild des Fachs `search`, sonst erstes Bild; Stil: `icon`) als absoluter Pfad und `swatches` (Stil: dunkel base, sidebar, accent, fg). `changed_by` setzt nur Phase 7; hier immer `None`. Nach jeder Änderung `app.emit("skins://changed", ())`.
+- [x] `purge_on_start` in `setup` (`lib.rs`) nach dem Öffnen der Datenbank aufrufen; Fehler nur protokollieren.
 
 ### Einstellungen
 
-- [ ] `settings/model.rs`: sechs Felder und sechs `SettingsChange`-Varianten laut Kontrakt.
-- [ ] `settings/mod.rs`: Schlüssel `skin_figures`, `skin_style`, `skin_animations`, `skin_celebrations`, `skin_easter_eggs`, `skin_agent_tools`; Standardwerte laut Kontrakt; `skin_animations` als `Option<bool>` (fehlender Schlüssel = `None`); `SkinFigures`/`SkinStyle` prüfen über `db::skins::kind_of`; leer/`None` schreibt `""`. In `load`: verweist `skin_figures`/`skin_style` auf kein (nicht gelöschtes) Paket der passenden Art → `None`.
+- [x] `settings/model.rs`: sechs Felder und sechs `SettingsChange`-Varianten laut Kontrakt.
+- [x] `settings/mod.rs`: Schlüssel `skin_figures`, `skin_style`, `skin_animations`, `skin_celebrations`, `skin_easter_eggs`, `skin_agent_tools`; Standardwerte laut Kontrakt; `skin_animations` als `Option<bool>` (fehlender Schlüssel = `None`); `SkinFigures`/`SkinStyle` prüfen über `db::skins::kind_of`; leer/`None` schreibt `""`. In `load`: verweist `skin_figures`/`skin_style` auf kein (nicht gelöschtes) Paket der passenden Art → `None`.
 
 ### Commands
 
-- [ ] `src-tauri/src/commands/skins.rs`: alle Commands aus dem Kontrakt außer `skins_export`, `skins_import` (Phase 6) und `skins_apply_icon` (Phase 5); in `lib.rs` registrieren.
-- [ ] `src/lib/skins.ts`: Wrapper je Command + `onSkinsChanged(handler)` (Abo auf `skins://changed`, Muster `src/lib/projects.ts`).
-- [ ] `pnpm bindings`.
+- [x] `src-tauri/src/commands/skins.rs`: alle Commands aus dem Kontrakt außer `skins_export`, `skins_import` (Phase 6) und `skins_apply_icon` (Phase 5); in `lib.rs` registrieren.
+- [x] `src/lib/skins.ts`: Wrapper je Command + `onSkinsChanged(handler)` (Abo auf `skins://changed`, Muster `src/lib/projects.ts`).
+- [x] `pnpm bindings`.
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Zeile „Skins“ um Core (`src-tauri/src/skins/`, `db/skins.rs`, Migration 20, `commands/skins.rs`) erweitern.
-- [ ] `docs/glossary.md`: „Skin“, „Figurenpaket“, „Stilpaket“, „eigenes Fach“.
-- [ ] ADR 065 auf „angenommen“ setzen.
+- [x] `docs/code-map.md`: Zeile „Skins“ um Core (`src-tauri/src/skins/`, `db/skins.rs`, Migration 20, `commands/skins.rs`) erweitern.
+- [x] `docs/glossary.md`: „Skin“, „Figurenpaket“, „Stilpaket“, „eigenes Fach“.
+- [x] ADR 065 auf „angenommen“ setzen.
 
 ## Report-Back
+
+Fertig, `pnpm check` grün (Typecheck, Lint, Format, Build, rustfmt, clippy), `pnpm bindings` ausgeführt; nicht in der laufenden App geprüft.
+
+- Abweichung: `validate_figures`/`validate_style` nehmen `&mut` statt `&`, weil sie Texte trimmen und Farben kleinschreiben. `SkinData::Style` ist ein `Box<StyleData>` (clippy `large_enum_variant`); die TypeScript-Form ist unverändert.
+- Neu gegenüber dem Kontrakt: `CommandError::Skin(String)` (Fehlersatz, Kind `skin`); Fach-IDs dürfen nicht auf `-2` enden (kollidiert mit dem Dateinamen der zweiten Pose); Download zusätzlich mit 30 s Zeitlimit für den Inhalt, `https_only`, höchstens 3 Weiterleitungen.
+- `skins_tool_usage` liefert `slot` immer `None`; die Zuordnung zum Fach macht die Oberfläche (`slotCatalog`). Die SQL-Pfade (`kind`, `tool`, `target`) folgen aus der Serialisierung von `ChatEntry` (`tag = "kind"`); gegen eine Kopie der echten Datenbank ließ sich die Abfrage hier nicht laufen lassen (kein sqlite3/Python).
+- Unsicherste Stelle: `src-tauri/src/skins/images.rs` `download` — `https_only` auch bei Weiterleitungen und das Zeitverhalten ist nur gegen die ureq-Doku, nicht live geprüft.

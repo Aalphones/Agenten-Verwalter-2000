@@ -16,6 +16,7 @@ pub mod session_ticket_worktrees;
 pub mod sessions;
 pub mod settings;
 pub mod skill_uses;
+pub mod skins;
 pub mod tldr;
 pub mod tool_details;
 

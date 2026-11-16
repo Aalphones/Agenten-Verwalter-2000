@@ -34,6 +34,7 @@ pub mod sessions;
 pub mod settings;
 pub mod side;
 pub mod skills;
+pub mod skins;
 pub mod sourcing;
 pub mod standalone;
 pub mod terminal;
@@ -73,6 +74,9 @@ pub fn run() {
                 &data_dir(app.handle())?.join(DATABASE_FILE),
             )?);
             attachments::clear_staging(app.handle());
+            if let Err(error) = skins::purge_on_start(app.handle(), &database) {
+                eprintln!("Skin-Pakete nicht aufgeräumt: {error}");
+            }
             let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
             app.manage(registry);
             app.manage(database);
@@ -158,6 +162,16 @@ pub fn run() {
             commands::skills::skill_list_for_session,
             commands::skills::skill_list_for_repositories,
             commands::skills::skill_uses,
+            commands::skins::skins_list,
+            commands::skins::skins_get,
+            commands::skins::skins_create,
+            commands::skins::skins_rename,
+            commands::skins::skins_save,
+            commands::skins::skins_set_image,
+            commands::skins::skins_remove_image,
+            commands::skins::skins_delete,
+            commands::skins::skins_undelete,
+            commands::skins::skins_tool_usage,
             commands::background::background_load,
             commands::background::background_output,
             commands::background::background_stop,

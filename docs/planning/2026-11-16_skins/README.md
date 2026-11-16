@@ -7,7 +7,7 @@ Ziel: Die Statuszeile nennt immer das laufende Werkzeug. Wer möchte, gibt dem V
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Statuszeile nennt das Werkzeug, Taktung, Denken live | [phase-1-statuszeile.md](phase-1-statuszeile.md) | standard | complete |
-| 2 | Speicher, Einstellungen und Bilder im Kern | [phase-2-kern.md](phase-2-kern.md) | heikel | pending |
+| 2 | Speicher, Einstellungen und Bilder im Kern | [phase-2-kern.md](phase-2-kern.md) | heikel | complete |
 | 3 | Figuren im Chat: Bühne, Bewegungen, Feier-Momente | [phase-3-figuren.md](phase-3-figuren.md) | standard | pending |
 | 4 | Einstellungsseite „Skins“ mit Paketliste und Editoren | [phase-4-seite.md](phase-4-seite.md) | standard | pending |
 | 5 | Stil anwenden: Farben, Hintergründe, App-Symbol | [phase-5-stil.md](phase-5-stil.md) | standard | pending |

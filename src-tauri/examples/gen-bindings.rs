@@ -59,6 +59,10 @@ use verwalter_lib::{
     },
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
     skills::model::{SkillInfo, SkillKind, SkillOrigin, SkillRef, SkillUse},
+    skins::model::{
+        BuiltinSlot, BuiltinSlotLook, CustomSlot, FiguresData, ImageSource, ImageTarget, Motion,
+        SkinData, SkinKind, SkinPack, SkinPackSummary, SlotLook, StyleColors, StyleData, ToolUsage,
+    },
     terminal::model::{TerminalChanged, TerminalInfo, TerminalOutput},
     tldr::model::{
         HandoffBrief, ProjectSessionTldr, ProjectTldr, ProjectTldrView, SessionTldr,
@@ -182,6 +186,21 @@ fn main() -> Result<(), ts_rs::ExportError> {
     LocalModels::export_all(&cfg)?;
     CodexModel::export_all(&cfg)?;
     CodexModels::export_all(&cfg)?;
+    SkinKind::export_all(&cfg)?;
+    BuiltinSlot::export_all(&cfg)?;
+    Motion::export_all(&cfg)?;
+    SlotLook::export_all(&cfg)?;
+    BuiltinSlotLook::export_all(&cfg)?;
+    CustomSlot::export_all(&cfg)?;
+    FiguresData::export_all(&cfg)?;
+    StyleColors::export_all(&cfg)?;
+    StyleData::export_all(&cfg)?;
+    SkinData::export_all(&cfg)?;
+    SkinPack::export_all(&cfg)?;
+    SkinPackSummary::export_all(&cfg)?;
+    ImageTarget::export_all(&cfg)?;
+    ImageSource::export_all(&cfg)?;
+    ToolUsage::export_all(&cfg)?;
     Settings::export_all(&cfg)?;
     SettingsOverview::export_all(&cfg)?;
     SettingsChange::export_all(&cfg)?;
