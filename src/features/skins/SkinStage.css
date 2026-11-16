@@ -1,0 +1,70 @@
+/* Bühne: innen 104 × 64, verkleinert auf 57 × 35 (Statuszeile) bzw. 50 × 31 (Meldung). */
+.skin-stage {
+  --skin-vine: #3f9a5c;
+  --skin-zap: #f5d142;
+  --skin-psy: #c48ae0;
+
+  position: relative;
+  flex-shrink: 0;
+  width: 57px;
+  height: 35px;
+  pointer-events: none;
+
+  &--toast {
+    width: 50px;
+    height: 31px;
+  }
+
+  &__inner {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 104px;
+    height: 64px;
+    transform: scale(0.55);
+    transform-origin: left bottom;
+  }
+
+  &__figure {
+    position: absolute;
+    bottom: 0;
+    image-rendering: pixelated;
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* Eingefroren: keine Bewegung; die Endzustände zeigen das Ergebnis statt einer leeren Bühne. */
+  &--still,
+  &--still *,
+  &--still *::before,
+  &--still *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  &--still .skin-a-evo-b {
+    opacity: 1;
+  }
+
+  &--still .skin-a-evo-a,
+  &--still .skin-a-throw,
+  &--still .skin-a-flash,
+  &--still .skin-a-pull,
+  &--still .skin-a-zap {
+    opacity: 0;
+  }
+
+  &--still .skin-a-vine {
+    stroke-dashoffset: 0;
+  }
+}
+
+.skin-stage--toast .skin-stage__inner {
+  transform: scale(0.48);
+}

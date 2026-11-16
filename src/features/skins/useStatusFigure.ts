@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { slotFor } from '@/features/skins/matchSlot';
+import { slotFor, type CustomSlotMatch } from '@/features/skins/matchSlot';
+import { useSecondTick } from '@/features/skins/useSecondTick';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 
 /** So lange bleibt ein Text mindestens stehen, bevor der nächste kommt. */
@@ -17,6 +18,8 @@ export interface StatusFigureInput {
   isWorking: boolean;
   /** Seit wann der Agent denkt (ms seit Epoche); `null` ohne Denken. */
   thinkingSince: number | null;
+  /** Eigene Fächer des aktiven Figurenpakets; leer ohne Paket. Die Liste muss stabil sein (`useMemo`). */
+  custom: readonly CustomSlotMatch[];
 }
 
 export interface StatusFigure {
@@ -30,21 +33,30 @@ export interface StatusFigure {
   calls: number;
   /** Sekunden des Denkens, nur solange das Fach „Denken“ steht. */
   thinkingSeconds: number | null;
+  /** Zufallswert (0 bis 1), gezogen beim Wechsel; wählt den Text, solange kein Index gilt. */
+  roll: number;
 }
 
-interface Shown {
+interface Wanted {
   slot: string;
   target: string;
 }
 
+interface Shown extends Wanted {
+  roll: number;
+}
+
 interface ToolActivity {
-  running: Shown | null;
+  running: Wanted | null;
   calls: number;
 }
 
 /** Läuft ein Werkzeug (der jüngste laufende Aufruf) und wie viele gab es seit der letzten Nachricht des Users. */
-function readToolActivity(entries: readonly ChatEntry[]): ToolActivity {
-  let running: Shown | null = null;
+function readToolActivity(
+  entries: readonly ChatEntry[],
+  custom: readonly CustomSlotMatch[],
+): ToolActivity {
+  let running: Wanted | null = null;
   let calls = 0;
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry: ChatEntry | undefined = entries[index];
@@ -56,30 +68,13 @@ function readToolActivity(entries: readonly ChatEntry[]): ToolActivity {
     }
     calls += 1;
     if (running === null && entry.state === 'running') {
-      running = { slot: slotFor(entry.tool, entry.target, []), target: entry.target || entry.tool };
+      running = {
+        slot: slotFor(entry.tool, entry.target, custom),
+        target: entry.target || entry.tool,
+      };
     }
   }
   return { running, calls };
-}
-
-/** Sekündlicher Takt, solange `isActive`; liefert die aktuelle Zeit in ms. */
-function useSecondTick(isActive: boolean): number {
-  const [now, setNow] = useState<number>(() => Date.now());
-  useEffect(() => {
-    if (!isActive) {
-      return;
-    }
-    const tick = (): void => {
-      setNow(Date.now());
-    };
-    const first: number = window.setTimeout(tick, 0);
-    const timer: number = window.setInterval(tick, SECOND_MS);
-    return (): void => {
-      window.clearTimeout(first);
-      window.clearInterval(timer);
-    };
-  }, [isActive]);
-  return now;
 }
 
 /**
@@ -91,15 +86,16 @@ export function useStatusFigure({
   entries,
   isWorking,
   thinkingSince,
+  custom,
 }: StatusFigureInput): StatusFigure {
   const [shown, setShown] = useState<Shown | null>(null);
   const clockRef = useRef<{ workStart: number | null; lastChange: number | null }>({
     workStart: null,
     lastChange: null,
   });
-  const { running, calls } = useMemo(() => readToolActivity(entries), [entries]);
+  const { running, calls } = useMemo(() => readToolActivity(entries, custom), [entries, custom]);
 
-  const wanted: Shown | null = useMemo(() => {
+  const wanted: Wanted | null = useMemo(() => {
     if (running !== null) {
       return running;
     }
@@ -135,7 +131,7 @@ export function useStatusFigure({
     const timer: number = window.setTimeout(
       (): void => {
         clockRef.current.lastChange = Date.now();
-        setShown({ slot: wantedSlot, target: wantedTarget });
+        setShown({ slot: wantedSlot, target: wantedTarget, roll: Math.random() });
       },
       Math.max(0, earliest - Date.now()),
     );
@@ -153,7 +149,7 @@ export function useStatusFigure({
       : null;
 
   if (!isWorking || shown === null) {
-    return { slot: null, target: '', textIndex: null, calls, thinkingSeconds: null };
+    return { slot: null, target: '', textIndex: null, calls, thinkingSeconds: null, roll: 0 };
   }
   return {
     slot: shown.slot,
@@ -161,5 +157,6 @@ export function useStatusFigure({
     textIndex: thinkingSeconds === null ? null : Math.floor(thinkingSeconds / THINK_TEXT_STEP_S),
     calls,
     thinkingSeconds,
+    roll: shown.roll,
   };
 }

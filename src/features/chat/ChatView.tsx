@@ -5,15 +5,20 @@ import { ChatTimeline } from '@/features/chat/ChatTimeline';
 import { Composer } from '@/features/chat/Composer';
 import { useChatEntries } from '@/features/chat/useChatEntries';
 import { NewSessionIntro } from '@/features/projects/NewSessionIntro';
+import { Celebration } from '@/features/skins/Celebration';
+import { useCelebrations } from '@/features/skins/useCelebrations';
 import { SessionTldrCard } from '@/features/tldr/SessionTldrCard';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import type { SkinPack } from '@/lib/bindings/SkinPack';
 import { commandErrorText } from '@/lib/errors';
 import { pauseSession } from '@/lib/sessions';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
+import { useSettingsStore } from '@/stores/settings';
+import { useSkinsStore } from '@/stores/skins';
 import './ChatView.css';
 
 const INTERRUPTIBLE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'waiting'];
@@ -50,6 +55,15 @@ export function ChatView({
   const { entries, hasMore, loadingOlder, loadError, olderError, loadOlder } = useChatEntries(
     session.id,
   );
+  const activeFigures: SkinPack | null = useSkinsStore((state) => state.activeFigures);
+  const areCelebrationsOn: boolean = useSettingsStore(
+    (state) => state.settings?.skinCelebrations ?? false,
+  );
+  const { celebration, dismiss: dismissCelebration } = useCelebrations({
+    sessionId: session.id,
+    entries,
+    isEnabled: activeFigures !== null && areCelebrationsOn,
+  });
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const canInterrupt: boolean = INTERRUPTIBLE_STATUSES.includes(session.status);
@@ -154,6 +168,14 @@ export function ChatView({
         <SessionTldrCard session={session} entryCount={entryCount(entries)} />
       </div>
       <div ref={bottomRef} className="chat-view__bottom">
+        {celebration !== null && activeFigures !== null && (
+          <Celebration
+            key={celebration.id}
+            celebration={celebration}
+            pack={activeFigures}
+            onDismiss={dismissCelebration}
+          />
+        )}
         <Composer session={session} onSessionCreated={onSessionCreated} />
       </div>
       <SessionImageViewer sessionId={session.id} />

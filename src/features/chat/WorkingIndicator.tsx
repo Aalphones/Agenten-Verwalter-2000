@@ -12,6 +12,8 @@ interface WorkingIndicatorProps {
   thinkingSeconds: number | null;
   /** Figur vor dem Text; ohne Skin leer. */
   figure?: ReactNode;
+  /** „· Esc unterbricht“; beim Warten auf ein Skript läuft nichts, das Esc unterbrechen könnte. */
+  showsHint?: boolean;
 }
 
 function countLabel(calls: number, thinkingSeconds: number | null): string | null {
@@ -30,6 +32,7 @@ export function WorkingIndicator({
   todo,
   thinkingSeconds,
   figure,
+  showsHint = true,
 }: WorkingIndicatorProps): ReactElement {
   const count: string | null = countLabel(calls, thinkingSeconds);
   return (
@@ -53,7 +56,7 @@ export function WorkingIndicator({
       </span>
       {count !== null && <span className="working-indicator__count">{count}</span>}
       {todo !== null && <span className="working-indicator__todo">{todo}</span>}
-      <span className="working-indicator__hint">· Esc unterbricht</span>
+      {showsHint && <span className="working-indicator__hint">· Esc unterbricht</span>}
     </div>
   );
 }

@@ -13,6 +13,9 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Figurenpaket** | Ein Skin mit Figur, Bewegung und Texten je Fach der Statuszeile, dazu eigenen Fächern und Feier-Momenten. Im Code `SkinKind::Figures`. |
 | **Stilpaket** | Ein Skin mit Farben für hell und dunkel, Hintergrundbildern für Seitenleiste und Inhalt und einem App-Symbol. Im Code `SkinKind::Style`. |
 | **Eigenes Fach** | Ein Fach, das der Benutzer in einem Figurenpaket selbst anlegt, mit Muster für den Werkzeugnamen (z. B. `mcp__github__*`); das erste passende Fach gewinnt. Im Code `CustomSlot`, ID `c-…`. |
+| **Bühne** | Der feste Rahmen einer Figur (57 × 35 px in der Statuszeile, 50 × 31 px in der Meldung; innen 104 × 64): Bild, Bewegung und Zubehör wie Kiste oder Ball. Im Code `SkinStage`. |
+| **Bewegung** | Was die Figur auf der Bühne tut (Wippen, Fliegen, Netz schießen …); 19 stehen zur Wahl, jedes Fach hat eine passende. Im Code `Motion`. |
+| **Feier-Moment** | Kurze Meldung über der Eingabeleiste mit Figur und Text, wenn ein Commit gelingt oder eine Station fertig ist; höchstens einmal je Antwort, nur mit Figurenpaket und eingeschaltetem Schalter. Im Code `useCelebrations`. |
 | **Taktung** | Die Ruhe der Statuszeile: erst nach 1 s Arbeit ein Fach, danach höchstens alle 4 s ein neuer Text. Im Code `useStatusFigure`. |
 | **Browser-Zugriff** | Schalter pro Session, der den Agenten mit Claude in Chrome startet (`--chrome`); der Agent bedient dann den echten Chrome des Users mit dessen Anmeldungen. Nur im Claude-Betrieb. Im Code `chrome` ([ADR 030](decisions/030-browser-zugriff.md)). |
 | **TL;DR** | Kurzfassung einer Session bzw. eines Vorhabens in drei, vier Zeilen, per Knopf von Haiku erstellt; zeigt, wie viele Einträge seither dazugekommen sind. Im Code `tldr` ([ADR 011](decisions/011-vorhaben-und-sessions.md)). |

@@ -1,0 +1,41 @@
+.celebration {
+  box-sizing: border-box;
+  display: flex;
+  padding: var(--space-sm) var(--space-5xl) 0;
+
+  &__box {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+    max-width: 100%;
+    padding: 4px var(--space-md);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-status-completed);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-primary);
+    font-size: var(--font-size-xs);
+    pointer-events: auto;
+
+    &--animated {
+      animation: celebration-slide-in 240ms var(--ease-out);
+    }
+  }
+
+  &__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@keyframes celebration-slide-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}

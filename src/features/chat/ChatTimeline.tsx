@@ -3,6 +3,7 @@ import type { MouseEvent, ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
 import { ArtifactCard } from '@/features/artifacts/ArtifactCard';
+import { AwaitedScriptLine } from '@/features/chat/AwaitedScriptLine';
 import { BackgroundLine } from '@/features/chat/BackgroundLine';
 import { buildBlocks, type ChatBlock } from '@/features/chat/buildBlocks';
 import { ErrorBlock } from '@/features/chat/ErrorBlock';
@@ -11,13 +12,9 @@ import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import { NoticeBlock } from '@/features/notices/NoticeBlock';
-import { fillText } from '@/features/skins/fillText';
-import {
-  BUILTIN_SLOT_IDS,
-  IDLE_TEXT,
-  PLAIN_TEXTS,
-  type BuiltinSlotId,
-} from '@/features/skins/slotCatalog';
+import { FigureStage, hasFigure } from '@/features/skins/FigureStage';
+import { customMatchers, lookFor } from '@/features/skins/figureLook';
+import { statusText } from '@/features/skins/statusText';
 import { useStatusFigure, type StatusFigure } from '@/features/skins/useStatusFigure';
 import { SelectionMenu } from '@/features/side/SelectionMenu';
 import { selectedChatText } from '@/features/side/selectionText';
@@ -37,12 +34,15 @@ import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 import type { OperatingMode } from '@/lib/bindings/OperatingMode';
 import type { QuestionAnswer } from '@/lib/bindings/QuestionAnswer';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import type { SkinPack } from '@/lib/bindings/SkinPack';
+import type { SlotLook } from '@/lib/bindings/SlotLook';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { TodoItem } from '@/lib/bindings/TodoItem';
 import { isTextTarget } from '@/lib/keyTargets';
 import { useArtifactsStore } from '@/stores/artifacts';
 import { useSessionsStore } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
+import { useSkinsStore } from '@/stores/skins';
 import './ChatTimeline.css';
 
 const ESTIMATED_BLOCK_HEIGHT = 40;
@@ -127,7 +127,11 @@ export function ChatTimeline({
     [entries, backgroundByToolUseId],
   );
   const isWorking: boolean = session.status === 'starting' || session.status === 'running';
-  const count: number = blocks.length + (isWorking ? 1 : 0);
+  const activeFigures: SkinPack | null = useSkinsStore((state) => state.activeFigures);
+  // Wartet die Session auf ein Skript, steht unter dem Verlauf die Figur des Fachs „Warten“.
+  const hasWaitLine: boolean =
+    !isWorking && session.awaitedScript !== null && activeFigures !== null;
+  const count: number = blocks.length + (isWorking || hasWaitLine ? 1 : 0);
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -150,12 +154,23 @@ export function ChatTimeline({
   const showsHandoff: boolean =
     session.handoffLines.length > 0 && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
   const activeTodo: string | null = useMemo(() => findActiveTodoLabel(entries), [entries]);
+  const customSlots = useMemo(() => customMatchers(activeFigures), [activeFigures]);
   const statusFigure: StatusFigure = useStatusFigure({
     entries,
     isWorking,
     thinkingSince: session.thinkingSince,
+    custom: customSlots,
   });
-  const statusText: string = describeStatus(statusFigure);
+  const statusLook: SlotLook | null =
+    statusFigure.slot === null ? null : lookFor(activeFigures, statusFigure.slot);
+  const statusLine: string = statusText({
+    slot: statusFigure.slot,
+    target: statusFigure.target,
+    textIndex: statusFigure.textIndex,
+    roll: statusFigure.roll,
+    look: statusLook,
+    time: '',
+  });
   const oldestOpenQuestion: QuestionEntry | null = useMemo(
     () => findOldestOpenQuestion(entries),
     [entries],
@@ -397,16 +412,34 @@ export function ChatTimeline({
     }
   }
 
+  /** Die Zeile unter dem Verlauf: Arbeit des Agenten oder, mit Figurenpaket, das Warten auf ein Skript. */
+  function renderStatusLine(): ReactElement {
+    if (!isWorking && session.awaitedScript !== null && activeFigures !== null) {
+      return <AwaitedScriptLine script={session.awaitedScript} pack={activeFigures} />;
+    }
+    return (
+      <WorkingIndicator
+        text={statusLine}
+        calls={statusFigure.calls}
+        todo={activeTodo}
+        thinkingSeconds={statusFigure.thinkingSeconds}
+        figure={
+          activeFigures !== null && hasFigure(statusLook) ? (
+            <FigureStage
+              key={`${statusFigure.slot ?? ''}|${statusFigure.target}|${String(statusFigure.roll)}`}
+              pack={activeFigures}
+              look={statusLook}
+              size="line"
+            />
+          ) : undefined
+        }
+      />
+    );
+  }
+
   function renderBlock(block: ChatBlock | undefined): ReactElement {
     if (block === undefined) {
-      return (
-        <WorkingIndicator
-          text={statusText}
-          calls={statusFigure.calls}
-          todo={activeTodo}
-          thinkingSeconds={statusFigure.thinkingSeconds}
-        />
-      );
+      return renderStatusLine();
     }
     if (block.kind === 'tools') {
       return (
@@ -534,21 +567,6 @@ function findLastErrorSeq(entries: readonly ChatEntry[]): number | null {
     }
   }
   return null;
-}
-
-/** Der Text des Fachs mit eingesetztem Ziel; vor dem ersten Fach der neutrale Text. */
-function describeStatus(figure: StatusFigure): string {
-  if (figure.slot === null) {
-    return IDLE_TEXT;
-  }
-  const template: string = isBuiltinSlot(figure.slot)
-    ? PLAIN_TEXTS[figure.slot]
-    : PLAIN_TEXTS.other;
-  return fillText(template, { ziel: figure.target, zeit: '', commit: '' });
-}
-
-function isBuiltinSlot(slot: string): slot is BuiltinSlotId {
-  return (BUILTIN_SLOT_IDS as readonly string[]).includes(slot);
 }
 
 function findActiveTodoLabel(entries: readonly ChatEntry[]): string | null {

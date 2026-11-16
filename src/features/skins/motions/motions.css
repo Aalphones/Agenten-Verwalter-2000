@@ -1,0 +1,852 @@
+/* Bewegungen der Figuren; Koordinaten gelten in der Bühne 104 × 64 (siehe SkinStage.css). */
+
+@keyframes skin-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes skin-vine {
+  0%,
+  10% {
+    stroke-dashoffset: 60;
+  }
+
+  40%,
+  55% {
+    stroke-dashoffset: 0;
+  }
+
+  85%,
+  100% {
+    stroke-dashoffset: 60;
+  }
+}
+
+@keyframes skin-pull {
+  0%,
+  40% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+
+  45% {
+    opacity: 1;
+  }
+
+  80% {
+    transform: translate(-30px, -18px) rotate(-12deg);
+    opacity: 1;
+  }
+
+  92%,
+  100% {
+    transform: translate(-34px, -20px) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes skin-lid {
+  0%,
+  35% {
+    transform: rotate(0);
+  }
+
+  42%,
+  70% {
+    transform: rotate(-35deg);
+  }
+
+  80%,
+  100% {
+    transform: rotate(0);
+  }
+}
+
+@keyframes skin-lean {
+  0%,
+  30% {
+    transform: none;
+  }
+
+  45%,
+  60% {
+    transform: translateX(2px) rotate(3deg);
+  }
+
+  80%,
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes skin-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+
+@keyframes skin-aura {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes skin-squish {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+
+  25% {
+    transform: scale(1.25, 0.75);
+  }
+
+  50% {
+    transform: scale(0.8, 1.2);
+  }
+
+  75% {
+    transform: scale(1.1, 0.9);
+  }
+}
+
+@keyframes skin-swap-a {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  50%,
+  95% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes skin-swap-b {
+  0%,
+  45% {
+    opacity: 0;
+  }
+
+  50%,
+  95% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes skin-zap {
+  0%,
+  60%,
+  100% {
+    opacity: 0;
+  }
+
+  64%,
+  72%,
+  80% {
+    opacity: 1;
+  }
+
+  68%,
+  76% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes skin-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes skin-charge {
+  0%,
+  55%,
+  100% {
+    filter: none;
+  }
+
+  62%,
+  82% {
+    filter: brightness(1.5) drop-shadow(0 0 3px var(--skin-zap));
+  }
+}
+
+@keyframes skin-soar {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(4px, -6px);
+  }
+
+  50% {
+    transform: translate(8px, -2px);
+  }
+
+  75% {
+    transform: translate(3px, -8px);
+  }
+}
+
+@keyframes skin-wind {
+  0% {
+    stroke-dashoffset: 20;
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: -20;
+    opacity: 0;
+  }
+}
+
+@keyframes skin-throw {
+  0% {
+    transform: translate(-60px, 14px) rotate(0);
+    opacity: 1;
+  }
+
+  35% {
+    transform: translate(-20px, -22px) rotate(300deg);
+    opacity: 1;
+  }
+
+  48% {
+    transform: translate(0, 0) rotate(400deg);
+    opacity: 1;
+  }
+
+  52%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes skin-appear {
+  0%,
+  48% {
+    transform: scale(0);
+    filter: brightness(0) invert(1);
+  }
+
+  58% {
+    transform: scale(1.15);
+    filter: brightness(0) invert(1);
+  }
+
+  70%,
+  100% {
+    transform: scale(1);
+    filter: none;
+  }
+}
+
+@keyframes skin-flash {
+  0%,
+  46% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+
+  52% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  64%,
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes skin-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+
+  50% {
+    transform: scale(1.03, 1.06);
+  }
+}
+
+@keyframes skin-zzz {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(10px, -16px);
+    opacity: 0;
+  }
+}
+
+@keyframes skin-wobble {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+
+  8% {
+    transform: rotate(-18deg);
+  }
+
+  16% {
+    transform: rotate(14deg);
+  }
+
+  24% {
+    transform: rotate(0);
+  }
+
+  36% {
+    transform: rotate(-18deg);
+  }
+
+  44% {
+    transform: rotate(14deg);
+  }
+
+  52% {
+    transform: rotate(0);
+  }
+
+  64% {
+    transform: rotate(-18deg);
+  }
+
+  72% {
+    transform: rotate(10deg);
+  }
+
+  80% {
+    transform: rotate(0);
+  }
+}
+
+@keyframes skin-star {
+  0%,
+  82% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  90% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes skin-evo-a {
+  0%,
+  15% {
+    filter: none;
+    opacity: 1;
+  }
+
+  22%,
+  30%,
+  38%,
+  46% {
+    filter: brightness(0) invert(1);
+  }
+
+  26%,
+  34%,
+  42% {
+    filter: none;
+  }
+
+  55% {
+    filter: brightness(0) invert(1);
+    opacity: 1;
+  }
+
+  56%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes skin-evo-b {
+  0%,
+  55% {
+    filter: brightness(0) invert(1);
+    opacity: 0;
+  }
+
+  56% {
+    filter: brightness(0) invert(1);
+    opacity: 1;
+  }
+
+  64%,
+  72% {
+    filter: none;
+  }
+
+  68% {
+    filter: brightness(0) invert(1);
+  }
+
+  100% {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+@keyframes skin-popin {
+  0% {
+    transform: scale(0);
+  }
+
+  60% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes skin-dot {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translateY(-2px);
+    opacity: 1;
+  }
+}
+
+@keyframes skin-bubble {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes skin-rub {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+
+  25% {
+    transform: rotate(-4deg);
+  }
+
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+/* Netz schießen: Faden läuft aus, am Ende spannt sich ein Netz auf. */
+@keyframes skin-web-line {
+  0% {
+    stroke-dashoffset: 60;
+    opacity: 1;
+  }
+
+  40%,
+  89% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes skin-web-net {
+  0%,
+  44% {
+    transform: scale(0);
+    opacity: 1;
+  }
+
+  70%,
+  89% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Schild-Wurf: Bogen nach rechts und zurück, 720° Drehung je Durchgang. */
+@keyframes skin-shield {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(26px, -20px) rotate(180deg);
+  }
+
+  50% {
+    transform: translate(52px, -4px) rotate(360deg);
+  }
+
+  75% {
+    transform: translate(26px, -20px) rotate(540deg);
+  }
+
+  100% {
+    transform: translate(0, 0) rotate(720deg);
+  }
+}
+
+@keyframes skin-beam {
+  0%,
+  15% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+
+  55%,
+  80% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes skin-beam-source {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+}
+
+@keyframes skin-sparkle {
+  0% {
+    transform: scale(0);
+  }
+
+  20% {
+    transform: scale(1);
+  }
+
+  40%,
+  100% {
+    transform: scale(0);
+  }
+}
+
+@keyframes skin-snowflake {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(60px) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes skin-frost-tint {
+  0%,
+  39%,
+  61%,
+  100% {
+    filter: none;
+  }
+
+  40%,
+  60% {
+    filter: hue-rotate(180deg) saturate(0.6);
+  }
+}
+
+@keyframes skin-wave {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.skin-a-bob {
+  animation: skin-bob 1.6s ease-in-out infinite;
+}
+
+.skin-a-vine {
+  stroke-dasharray: 60;
+  animation: skin-vine 2s ease-in-out infinite;
+}
+
+.skin-a-pull {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-pull 2s ease-in-out infinite;
+}
+
+.skin-a-lid {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: skin-lid 2s ease-in-out infinite;
+}
+
+.skin-a-lean {
+  transform-origin: bottom center;
+  animation: skin-lean 2s ease-in-out infinite;
+}
+
+.skin-a-float {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-float 1.8s ease-in-out infinite;
+}
+
+.skin-a-aura {
+  animation: skin-aura 1.8s ease-in-out infinite;
+}
+
+.skin-a-squish {
+  transform-origin: bottom center;
+  animation: skin-squish 1.6s ease-in-out infinite;
+}
+
+.skin-a-swap-a {
+  animation: skin-swap-a 3.2s steps(1) infinite;
+}
+
+.skin-a-swap-b {
+  animation: skin-swap-b 3.2s steps(1) infinite;
+}
+
+.skin-a-zap {
+  animation: skin-zap 1.6s linear infinite;
+}
+
+.skin-a-blink {
+  animation: skin-blink 1s steps(1) infinite;
+}
+
+.skin-a-charge {
+  animation: skin-charge 1.6s linear infinite;
+}
+
+.skin-a-soar {
+  animation: skin-soar 2.4s ease-in-out infinite;
+}
+
+.skin-a-wind,
+.skin-a-wind-late {
+  stroke-dasharray: 8 12;
+  animation: skin-wind 1.2s linear infinite;
+}
+
+.skin-a-wind-late {
+  animation-delay: 0.4s;
+  animation-fill-mode: backwards;
+}
+
+.skin-a-throw {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-throw 2.6s var(--ease-out) infinite;
+}
+
+.skin-a-appear {
+  transform-origin: bottom center;
+  animation: skin-appear 2.6s var(--ease-out) infinite;
+}
+
+.skin-a-flash {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-flash 2.6s ease-out infinite;
+}
+
+.skin-a-breathe {
+  transform-origin: bottom center;
+  animation: skin-breathe 2.8s ease-in-out infinite;
+}
+
+.skin-a-zzz,
+.skin-a-zzz-late {
+  animation: skin-zzz 2.8s ease-out infinite;
+}
+
+.skin-a-zzz-late {
+  animation-delay: 1.4s;
+  animation-fill-mode: backwards;
+}
+
+.skin-a-wobble {
+  transform-origin: 50% 90%;
+  animation: skin-wobble 1.8s ease-in-out 1 forwards;
+}
+
+.skin-a-star {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-star 1.8s ease-out 1 forwards;
+}
+
+.skin-a-evo-a {
+  animation: skin-evo-a 2.6s linear 1 forwards;
+}
+
+.skin-a-evo-b {
+  opacity: 0;
+  animation: skin-evo-b 2.6s linear 1 forwards;
+}
+
+.skin-a-popin {
+  transform-origin: bottom center;
+  animation: skin-popin 400ms var(--ease-out) 1;
+}
+
+.skin-a-dot {
+  transform-box: fill-box;
+  animation: skin-dot 1.2s ease-in-out infinite;
+
+  &--second {
+    animation-delay: 0.2s;
+    animation-fill-mode: backwards;
+  }
+
+  &--third {
+    animation-delay: 0.4s;
+    animation-fill-mode: backwards;
+  }
+}
+
+.skin-a-bubble {
+  transform-box: fill-box;
+  transform-origin: left bottom;
+  animation: skin-bubble 2.4s ease-in-out infinite;
+}
+
+.skin-a-rub {
+  transform-origin: bottom center;
+  animation: skin-rub 1.6s ease-in-out infinite;
+}
+
+.skin-a-web-line {
+  stroke-dasharray: 60;
+  animation: skin-web-line 2s ease-out infinite;
+}
+
+.skin-a-web-net-inner {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-web-net 2s ease-out infinite;
+}
+
+.skin-a-shield {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-shield 2.4s ease-in-out infinite;
+}
+
+.skin-a-beam {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: skin-beam 1.8s ease-out infinite;
+}
+
+.skin-a-beam-source {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-beam-source 0.9s ease-in-out infinite;
+}
+
+.skin-a-sparkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-sparkle 2s ease-in-out infinite backwards;
+}
+
+.skin-a-snowflake {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: skin-snowflake 3s linear infinite backwards;
+}
+
+.skin-a-frost-tint {
+  animation: skin-frost-tint 3s linear infinite;
+}
+
+.skin-a-wave {
+  stroke-dasharray: 10 6;
+  animation: skin-wave 2.4s linear infinite;
+}
+
+.skin-a-wave-bob {
+  animation: skin-bob 2.4s ease-in-out infinite;
+}

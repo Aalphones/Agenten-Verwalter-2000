@@ -40,6 +40,7 @@ import { useProjectTerminals } from '@/features/terminal/useProjectTerminals';
 import { useViewedSession } from '@/features/sessions/useViewedSession';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
+import { useActiveSkins } from '@/features/skins/useActiveSkins';
 import { UsageAlertBar } from '@/features/usage/UsageAlertBar';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
 import { useWaitingJump } from '@/features/waiting/useWaitingJump';
@@ -123,6 +124,8 @@ export function App(): ReactElement {
   const backgroundWidth = usePanelWidth('background');
   useVoiceModel();
   useRetroProgress();
+  // Die aktiven Skin-Pakete liegen im Store; Statuszeile und Feier-Momente lesen sie dort.
+  useActiveSkins();
   // Die Abfrage beim Start füllt den Store; der Punkt an „Einstellungen“ liest ihn.
   useAppUpdateCheck();
   // Dito für die Umgebung: der Punkt an „Einstellungen“ liest den Store.
