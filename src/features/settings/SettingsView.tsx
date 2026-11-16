@@ -24,6 +24,8 @@ import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { SkinPackEditor } from '@/features/skins/SkinPackEditor';
 import { SkinSettingRow } from '@/features/skins/SkinSettingRow';
+import { ensureVera } from '@/features/skins/unlockVera';
+import { useKonami } from '@/features/skins/useKonami';
 import { useSkinPacks } from '@/features/skins/useSkinPacks';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
 import { TerminalPlacementSegment } from '@/features/settings/TerminalPlacementSegment';
@@ -114,6 +116,16 @@ export function SettingsView({
   const editingPackId: string | null = useSkinsStore((state) => state.editingPackId);
 
   const settings: Settings | null = storedSettings ?? overview?.settings ?? null;
+  useKonami(
+    settings?.skinEasterEggs === true && (category === 'skins' || editingPackId !== null),
+    (): void => {
+      ensureVera()
+        .then((id: string) => save({ kind: 'skinFigures', value: id }))
+        .catch((reason: unknown) => {
+          console.error('Easter Egg „Vera“ nicht angelegt', reason);
+        });
+    },
+  );
   const isLocalOperation: boolean =
     settings !== null && isLocalOperatingMode(settings.operatingMode);
   const localModels = useLocalModels(isLocalOperation);

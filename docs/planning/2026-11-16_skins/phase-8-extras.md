@@ -18,8 +18,16 @@ Rating: mechanisch. Kleine Freuden, nur mit eingeschaltetem Skin bzw. Schalter �
 
 ## Checkliste
 
-- [ ] `src/features/skins/tips.ts` (Liste, `pickTip(date)`), `src/features/skins/SkinTip.tsx`, Einbau in `NewSessionIntro.tsx`.
-- [ ] `src/features/skins/useKonami.ts` (Tastenfolge, Ziel-Prüfung über `src/lib/keyTargets.ts`), Einbau in die Kategorie „Skins“; Paket „Vera“ über `skinsCreate` + `skinsSave` + `SettingsChange.SkinFigures`.
-- [ ] Doku: `docs/code-map.md` (Tipps, Easter Eggs).
+- [x] `src/features/skins/tips.ts` (Liste, `pickTip(date, isEasterEggs, roll)`), `src/features/skins/SkinTip.tsx`, Einbau in `NewSessionIntro.tsx`.
+- [x] `src/features/skins/useKonami.ts` (Tastenfolge, Ziel-Prüfung über `src/lib/keyTargets.ts`), `unlockVera.ts` (Paket „Vera“ über `createSkin` + `saveSkin`), Einbau in `SettingsView` (aktiv bei „Easter Eggs“ an und Kategorie „Skins“ bzw. Editor sichtbar); aktiviert über `save({ kind: 'skinFigures' })`.
+- [x] Doku: `docs/code-map.md` (Tipps, Easter Eggs).
 
 ## Report-Back
+
+Status: complete. `pnpm check` grün, nicht in der echten App gelaufen.
+
+- Bühne der Tipp-Zeile: Größe `toast` (50 × 31); Figur aus Fach „Denken“ mit Bild, sonst „Sonstiges“ mit Bild, sonst nur Text „Tipp: …“.
+- 4. Mai: die Zeile zeigt den Gruß allein (ohne „<Name> weiß:“), nur mit „Easter Eggs“ an und aktivem Figurenpaket (ohne Paket gibt es keine Tipp-Zeile).
+- Session 42: eigene gedämpfte Zeile in `NewSessionIntro`, unabhängig vom Figurenpaket, nur mit „Easter Eggs“ an.
+- Vera: ein vorhandenes Figurenpaket namens „Vera“ wird nur aktiviert, nicht überschrieben. Texte für Suchen, Lesen, Schreiben, Shell, Denken, Commit sind neu formuliert (der Entwurf kürzt sie mit „…“).
+- Wackelstellen: Konami-Taste auf der Seite (Fokus nach Klick auf einen Knopf zählt als „nicht im Eingabefeld“); Zufall der Tipps und Datum nur beim Öffnen der Ansicht gezogen.

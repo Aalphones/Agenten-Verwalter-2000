@@ -13,7 +13,7 @@ Ziel: Die Statuszeile nennt immer das laufende Werkzeug. Wer möchte, gibt dem V
 | 5 | Stil anwenden: Farben, Hintergründe, App-Symbol | [phase-5-stil.md](phase-5-stil.md) | standard | complete |
 | 6 | ZIP-Export und -Import | [phase-6-zip.md](phase-6-zip.md) | heikel | complete |
 | 7 | Agenten-Werkzeuge `skin_*` hinter dem Schalter | [phase-7-werkzeuge.md](phase-7-werkzeuge.md) | heikel | complete |
-| 8 | Tipps und Easter Eggs | [phase-8-extras.md](phase-8-extras.md) | mechanisch | pending |
+| 8 | Tipps und Easter Eggs | [phase-8-extras.md](phase-8-extras.md) | mechanisch | complete |
 | 9 | Pakete bauen: je Figuren- und Stilpaket für Pokémon, Disney, Marvel | [phase-9-pakete.md](phase-9-pakete.md) | standard | pending |
 
 Reihenfolge fest: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. Phase 9 baut keinen Code, sondern Pakete außerhalb des Repositorys mit den Werkzeugen aus Phase 7.

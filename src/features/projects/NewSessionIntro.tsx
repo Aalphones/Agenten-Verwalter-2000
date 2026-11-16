@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
+import { SkinTip } from '@/features/skins/SkinTip';
+import { isSession42, SESSION_42_LINE } from '@/features/skins/tips';
 import { useProjectTldr } from '@/features/tldr/useProjectTldr';
 import { useSessionTldr } from '@/features/tldr/useSessionTldr';
 import { commandErrorText } from '@/lib/errors';
 import { setCarryProjectTldr } from '@/lib/tldr';
+import { useSettingsStore } from '@/stores/settings';
 import './NewSessionIntro.css';
 
 interface NewSessionIntroProps {
@@ -28,6 +31,9 @@ export function NewSessionIntro({
   const previous: number = number - 1;
   const history: string = previous <= 1 ? '#1' : `#1 bis #${String(previous)}`;
   const carries: boolean = chosen ?? sessionView?.carriesProjectTldr ?? true;
+  const isEasterEggs: boolean = useSettingsStore(
+    (state) => state.settings?.skinEasterEggs ?? false,
+  );
 
   function handleChange(event: ChangeEvent<HTMLInputElement>): void {
     const carry: boolean = event.target.checked;
@@ -72,6 +78,10 @@ export function NewSessionIntro({
           sind aus #{previous} übernommen und lassen sich unten vor der ersten Nachricht ändern.
         </p>
         {renderCarry()}
+        {isEasterEggs && isSession42(number) && (
+          <p className="new-session-intro__note">{SESSION_42_LINE}</p>
+        )}
+        <SkinTip />
       </div>
     </div>
   );
