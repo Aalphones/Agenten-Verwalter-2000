@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verwalter: Skins – Entwurf (Figurenpakete und Stilpakete)</title>
+<style>
+  :root {
+    --bg-base: #1f1f1f; --bg-sidebar: #181818; --bg-surface: #252526; --bg-hover: #2e2e30; --bg-selected: #37373d;
+    --border-subtle: #2b2b2b; --border: #3c3c3c;
+    --fg: #d4d4d4; --fg-2: #b0b0b0; --fg-muted: #8f8f8f;
+    --accent: #e0825c; --accent-text: #eea283; --on-accent: #1d130e;
+    --accent-subtle: color-mix(in srgb, var(--accent) 16%, transparent);
+    --ok: #7cc48a; --warn: #e8c15a; --danger: #e57373; --vine: #3f9a5c; --zap: #f5d142; --psy: #c48ae0;
+    --r-sm: 4px; --r-md: 6px; --r-lg: 8px;
+    --t-fast: 140ms; --t-mid: 240ms; --ease-out: cubic-bezier(.2,.8,.2,1);
+    font-family: "Segoe UI", system-ui, sans-serif; font-size: 14px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg-base: #ffffff; --bg-sidebar: #f8f8f8; --bg-surface: #ffffff; --bg-hover: #f0f0f0; --bg-selected: #eef0f3;
+      --border-subtle: #e8e8e8; --border: #d9d9d9; --fg: #3c3c3c; --fg-2: #555555; --fg-muted: #6e6e6e;
+      --accent: #c4572f; --accent-text: #a8461f; --on-accent: #ffffff; --ok: #2e7d43; --warn: #8a6500; --danger: #c0392b; --zap: #d9a800; --psy: #8a4fb0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg-base); color: var(--fg); line-height: 1.5; }
+  .page { max-width: 1320px; margin: 0 auto; padding: 24px 20px 64px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 32px 0 8px; }
+  .lead { color: var(--fg-2); margin: 0 0 4px; max-width: 860px; }
+  .why { color: var(--fg-muted); font-size: 12px; margin: 0 0 12px; } .why b { color: var(--fg-2); }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+  .bp { font-size: 11px; color: var(--fg-muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ===== Rahmen: Einstellungsseite links, Vorschau rechts ===== */
+  .demo { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+  @media (max-width: 1199px) { .demo { grid-template-columns: 1fr; } }
+  .settingsPage { display: grid; grid-template-columns: 190px minmax(0, 1fr); background: var(--bg-base); min-width: 0; border-right: 1px solid var(--border-subtle); }
+  @media (max-width: 1199px) { .settingsPage { border-right: 0; border-bottom: 1px solid var(--border-subtle); } }
+  @media (max-width: 767px) { .settingsPage { grid-template-columns: 1fr; } }
+  .snav { background: var(--bg-sidebar); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border-subtle); }
+  @media (max-width: 767px) { .snav { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border-subtle); } }
+  .snav__item { text-align: left; background: none; border: 0; color: var(--fg); font: inherit; padding: 6px 8px; border-radius: var(--r-md); cursor: default; }
+  .snav__item small { display: block; color: var(--fg-muted); font-size: 11px; }
+  .snav__item--active { background: var(--bg-selected); }
+  .snav__item--dim { opacity: .55; }
+  @media (max-width: 767px) { .snav__item { white-space: nowrap; } .snav__item small { display: none; } }
+  .scontent { padding: 16px 18px 24px; min-width: 0; }
+
+  .section { margin-top: 18px; } .section:first-child { margin-top: 0; }
+  .section__title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 4px; }
+  .row { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 6px 16px; align-items: center; padding: 9px 0; border-top: 1px solid var(--border-subtle); }
+  .section__title + .row { border-top: 0; }
+  @media (max-width: 575px) { .row { grid-template-columns: 1fr; } }
+  .row__label { font-weight: 600; font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  .info { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); color: var(--fg-muted); font-size: 10px; display: inline-grid; place-items: center; cursor: help; flex-shrink: 0; }
+  .row__ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .row__state { color: var(--fg-muted); font-size: 12px; min-width: 0; }
+  .switch { position: relative; width: 34px; height: 20px; flex-shrink: 0; appearance: none; margin: 0; border-radius: 999px; background: var(--border); cursor: pointer; transition: background var(--t-fast); }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform var(--t-fast) var(--ease-out); }
+  .switch:checked { background: var(--accent); } .switch:checked::after { transform: translateX(14px); }
+  .switch:disabled { opacity: .45; cursor: not-allowed; }
+  select, input[type=text], input[type=url], textarea { font: inherit; font-size: 13px; padding: 5px 8px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg); min-width: 0; }
+  textarea { width: 100%; resize: vertical; min-height: 64px; line-height: 1.4; }
+  .btn { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg); cursor: pointer; transition: border-color var(--t-fast), transform 90ms; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); } .btn:active { transform: scale(.96); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-text); background: var(--accent-subtle); }
+  .btn--primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+  .btn--quiet { border-color: transparent; background: transparent; color: var(--fg-2); } .btn--quiet:hover { border-color: var(--border); }
+  .btn--danger { color: var(--danger); } .btn--danger:hover { border-color: var(--danger); }
+  .tool { font-family: "Cascadia Code", Consolas, monospace; font-size: 11px; color: var(--fg-muted); border: 1px dashed var(--border); border-radius: var(--r-sm); padding: 0 4px; white-space: nowrap; }
+  body:not(.show-tools) .tool { display: none; }
+  .undo { display: none; align-items: center; gap: 8px; font-size: 12px; margin-top: 8px; padding: 4px 8px; border-left: 2px solid var(--warn); }
+  .undo.show { display: flex; }
+  .hint { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
+  .err { color: var(--danger); font-size: 12px; }
+  .warnchip { font-size: 11px; color: var(--warn); border: 1px solid currentColor; border-radius: var(--r-sm); padding: 0 4px; white-space: nowrap; }
+
+  /* Paketliste */
+  .packlist { border: 1px solid var(--border-subtle); border-radius: var(--r-md); margin-top: 6px; }
+  .packrow { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 4px 10px; align-items: center; padding: 6px 10px; border-top: 1px solid var(--border-subtle); }
+  .packrow__act { grid-column: 2 / -1; justify-content: flex-start !important; }
+  .packrow:first-child { border-top: 0; }
+  .packrow__name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .packrow__meta { font-size: 11px; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .packrow__meta .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--psy); margin-right: 3px; vertical-align: 1px; }
+  .kind { font-size: 10px; color: var(--fg-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0 4px; margin-left: 6px; font-weight: 400; }
+  .packrow__act { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  @media (max-width: 575px) { .packrow { grid-template-columns: 36px minmax(0,1fr); } .packrow__act { grid-column: 1 / -1; justify-content: flex-start; } }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .thumb { width: 36px; height: 30px; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--bg-sidebar); overflow: hidden; }
+  .thumb img { max-width: 34px; max-height: 28px; image-rendering: pixelated; }
+  .thumb span { font-size: 10px; color: var(--fg-muted); }
+  .swatches { display: flex; gap: 2px; } .swatches i { width: 8px; height: 22px; border-radius: 2px; }
+
+  /* Editor */
+  .back { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+  .back b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slotgroup { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); padding: 8px 10px 4px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .slots { border: 1px solid var(--border-subtle); border-radius: var(--r-md); }
+  .slot { border-top: 1px solid var(--border-subtle); }
+  .slot__head { width: 100%; display: grid; grid-template-columns: 14px 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 10px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .slot__head:hover { background: var(--bg-hover); }
+  .slot.open > .slot__head { background: var(--bg-selected); }
+  .chev { width: 10px; height: 10px; transition: transform var(--t-fast); color: var(--fg-muted); }
+  .slot.open .chev { transform: rotate(90deg); }
+  .slot__name { font-size: 13px; font-weight: 600; }
+  .slot__tools { font-size: 11px; color: var(--fg-muted); font-family: "Cascadia Code", Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .slot__sum { font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+  @media (max-width: 575px) { .slot__sum { display: none; } .slot__head { grid-template-columns: 14px 36px minmax(0,1fr); } }
+  .slot__body { display: none; padding: 10px 10px 12px 34px; gap: 10px; }
+  .slot.open .slot__body { display: grid; }
+  @media (max-width: 575px) { .slot__body { padding-left: 10px; } }
+  .field { display: grid; gap: 4px; min-width: 0; }
+  .field > label, .flabel { font-size: 12px; color: var(--fg-2); font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .imgline { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .imgline input[type=url] { flex: 1 1 180px; }
+  .drop { border: 1px dashed var(--border); border-radius: var(--r-md); padding: 5px 8px; font-size: 12px; color: var(--fg-muted); }
+  .drop.over { border-color: var(--accent); color: var(--accent-text); }
+  .match { font-size: 12px; color: var(--fg-2); } .match b { color: var(--ok); font-weight: 600; } .match i { color: var(--fg-muted); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 14px; }
+  .colorfield { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 8px; align-items: center; font-size: 12px; }
+  .colorfield input[type=color] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; }
+  input[type=range] { accent-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+  .seg button { font: inherit; font-size: 12px; padding: 3px 10px; background: var(--bg-surface); color: var(--fg); border: 0; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent-subtle); color: var(--accent-text); }
+
+  /* ===== Vorschau: Mini-Verwalter ===== */
+  .preview { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; background: var(--bg-sidebar); }
+  .preview__label { font-size: 12px; color: var(--fg-muted); }
+  .app { --a-base:#1f1f1f; --a-side:#181818; --a-surface:#252526; --a-fg:#d4d4d4; --a-muted:#8f8f8f; --a-accent:#e0825c; --a-border:#3c3c3c;
+    border: 1px solid var(--a-border); border-radius: var(--r-md); overflow: hidden; display: grid; grid-template-rows: 26px 1fr; height: 340px; color: var(--a-fg); background: var(--a-base); }
+  .app__title { display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 11px; color: var(--a-muted); background: var(--a-side); border-bottom: 1px solid var(--a-border); }
+  .app__title img, .taskbar img { width: 16px; height: 16px; image-rendering: pixelated; object-fit: contain; }
+  .app__body { display: grid; grid-template-columns: 120px minmax(0,1fr); min-height: 0; }
+  .app__side, .app__main { position: relative; overflow: hidden; }
+  .app__side { background: var(--a-side); border-right: 1px solid var(--a-border); padding: 8px 6px; font-size: 11px; }
+  .app__main { background: var(--a-base); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .bgimg { position: absolute; inset: 0; background-size: cover; background-position: center; pointer-events: none; }
+  .app__side > *:not(.bgimg), .app__main > *:not(.bgimg) { position: relative; }
+  .sideitem { padding: 3px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sideitem--on { background: color-mix(in srgb, var(--a-accent) 22%, transparent); color: var(--a-fg); }
+  .sideitem small { color: var(--a-muted); }
+  .bubble { align-self: flex-end; max-width: 80%; background: var(--a-surface); border: 1px solid var(--a-border); border-radius: 8px; padding: 4px 8px; }
+  .history { display: grid; gap: 1px; font-size: 11px; color: var(--a-muted); overflow: hidden; flex: 1; align-content: end; }
+  .history__group { font-weight: 600; color: var(--a-fg); } .history__group span { font-weight: 400; color: var(--a-muted); }
+  .history__row { padding-left: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .history__row b { color: var(--a-fg); }
+  .history__think { font-style: italic; }
+  .working { display: flex; align-items: center; gap: 6px; min-height: 36px; color: var(--a-accent); font-size: 12px; min-width: 0; }
+  .working__label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+  .working__count, .working__hint { color: var(--a-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .working.idle .working__label { color: var(--a-muted); }
+  .composer { border: 1px solid var(--a-border); border-radius: 6px; padding: 5px 8px; color: var(--a-muted); background: var(--a-surface); display: flex; justify-content: space-between; align-items: center; }
+  .composer span.send { background: var(--a-accent); color: #111; border-radius: 4px; padding: 0 8px; font-weight: 600; }
+  .toast { display: none; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid var(--a-border); border-left: 3px solid #7cc48a; border-radius: 6px; background: var(--a-surface); font-size: 12px; }
+  .toast.show { display: flex; animation: slideIn var(--t-mid) var(--ease-out); }
+  .taskbar { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--fg-muted); }
+  .taskbar span.tb { display: inline-flex; gap: 4px; align-items: center; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; background: var(--bg-surface); color: var(--fg-2); }
+  .pace { font-size: 11px; color: var(--fg-muted); min-height: 16px; }
+  .swap { animation: fadeIn var(--t-mid) var(--ease-out); }
+
+  .stage { position: relative; width: 57px; height: 35px; flex-shrink: 0; }
+  .stage:empty { display: none; }
+  .stage__in { position: absolute; left: 0; bottom: 0; width: 104px; height: 64px; transform: scale(.55); transform-origin: left bottom; }
+  .stage--small { width: 50px; height: 31px; } .stage--small .stage__in { transform: scale(.48); }
+  .spr { position: absolute; bottom: 0; image-rendering: pixelated; }
+  .ov { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+
+  /* Tabellen */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-top: 1px solid var(--border-subtle); }
+  th { color: var(--fg-muted); font-weight: 600; font-size: 12px; border-top: 0; }
+  td:first-child { white-space: nowrap; }
+  @media (max-width: 767px) { table, tbody, tr, td { display: block; } thead { display: none; } tr { border-top: 1px solid var(--border); padding: 8px 0; } td { border: 0; padding: 2px 0; white-space: normal !important; } td[data-k]::before { content: attr(data-k) ": "; color: var(--fg-muted); } }
+  ul.rules { margin: 0; padding-left: 18px; font-size: 13px; color: var(--fg-2); } ul.rules li { margin: 2px 0; }
+  .note { font-size: 12px; color: var(--fg-2); border-left: 2px solid var(--accent); padding: 4px 10px; margin: 12px 0; }
+  pre { font-size: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); padding: 10px; overflow: auto; }
+
+  /* ===== Bewegungen ===== */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  @keyframes vine { 0%,10% { stroke-dashoffset: 60; } 40%,55% { stroke-dashoffset: 0; } 85%,100% { stroke-dashoffset: 60; } }
+  @keyframes pull { 0%,40% { transform: translate(0,0); opacity: 0; } 45% { opacity: 1; } 80% { transform: translate(-30px,-18px) rotate(-12deg); opacity: 1; } 92%,100% { transform: translate(-34px,-20px) rotate(-12deg); opacity: 0; } }
+  @keyframes lid { 0%,35% { transform: rotate(0); } 42%,70% { transform: rotate(-35deg); } 80%,100% { transform: rotate(0); } }
+  @keyframes lean { 0%,30% { transform: none; } 45%,60% { transform: translateX(2px) rotate(3deg); } 80%,100% { transform: none; } }
+  @keyframes float { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+  @keyframes aura { 0%,100% { opacity: .25; } 50% { opacity: .9; } }
+  @keyframes squish { 0%,100% { transform: scale(1,1); } 25% { transform: scale(1.25,.75); } 50% { transform: scale(.8,1.2); } 75% { transform: scale(1.1,.9); } }
+  @keyframes swapA { 0%,45% { opacity: 1; } 50%,95% { opacity: 0; } 100% { opacity: 1; } }
+  @keyframes swapB { 0%,45% { opacity: 0; } 50%,95% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes zap { 0%,60%,100% { opacity: 0; } 64%,72%,80% { opacity: 1; } 68%,76% { opacity: .2; } }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes charge { 0%,55%,100% { filter: none; } 62%,82% { filter: brightness(1.5) drop-shadow(0 0 3px var(--zap)); } }
+  @keyframes soar { 0%,100% { transform: translate(0,0); } 25% { transform: translate(4px,-6px); } 50% { transform: translate(8px,-2px); } 75% { transform: translate(3px,-8px); } }
+  @keyframes wind { 0% { stroke-dashoffset: 20; opacity: 0; } 30% { opacity: 1; } 100% { stroke-dashoffset: -20; opacity: 0; } }
+  @keyframes throw { 0% { transform: translate(-60px,14px) rotate(0); opacity: 1; } 35% { transform: translate(-20px,-22px) rotate(300deg); opacity: 1; } 48% { transform: translate(0,0) rotate(400deg); opacity: 1; } 52%,100% { opacity: 0; } }
+  @keyframes appear { 0%,48% { transform: scale(0); filter: brightness(0) invert(1); } 58% { transform: scale(1.15); filter: brightness(0) invert(1); } 70%,100% { transform: scale(1); filter: none; } }
+  @keyframes flash { 0%,46% { opacity: 0; transform: scale(.2); } 52% { opacity: 1; transform: scale(1); } 64%,100% { opacity: 0; transform: scale(1.4); } }
+  @keyframes breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.03,1.06); } }
+  @keyframes zzz { 0% { transform: translate(0,0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(10px,-16px); opacity: 0; } }
+  @keyframes wobble { 0%,100% { transform: rotate(0); } 8% { transform: rotate(-18deg); } 16% { transform: rotate(14deg); } 24% { transform: rotate(0); } 36% { transform: rotate(-18deg); } 44% { transform: rotate(14deg); } 52% { transform: rotate(0); } 64% { transform: rotate(-18deg); } 72% { transform: rotate(10deg); } 80% { transform: rotate(0); } }
+  @keyframes star { 0%,82% { transform: scale(0); opacity: 0; } 90% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes evoA { 0%,15% { filter: none; opacity: 1; } 22%,30%,38%,46% { filter: brightness(0) invert(1); } 26%,34%,42% { filter: none; } 55% { filter: brightness(0) invert(1); opacity: 1; } 56%,100% { opacity: 0; } }
+  @keyframes evoB { 0%,55% { opacity: 0; filter: brightness(0) invert(1); } 56% { opacity: 1; filter: brightness(0) invert(1); } 64%,72% { filter: none; } 68% { filter: brightness(0) invert(1); } 100% { opacity: 1; filter: none; } }
+  @keyframes popin { 0% { transform: scale(0); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @keyframes dot { 0%,100% { opacity: .2; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+  @keyframes bubbleK { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+  @keyframes rub { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+  .a-bob { animation: bob 1.6s ease-in-out infinite; }
+  .a-vine { stroke-dasharray: 60; animation: vine 2s ease-in-out infinite; }
+  .a-pull { animation: pull 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .a-lid { animation: lid 2s ease-in-out infinite; transform-box: fill-box; transform-origin: 0% 100%; }
+  .a-lean { animation: lean 2s ease-in-out infinite; transform-origin: bottom center; }
+  .a-float { animation: float 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .a-aura { animation: aura 1.8s ease-in-out infinite; }
+  .a-squish { animation: squish 1.6s ease-in-out infinite; transform-origin: bottom center; }
+  .a-swapA { animation: swapA 3.2s steps(1) infinite; } .a-swapB { animation: swapB 3.2s steps(1) infinite; }
+  .a-zap { animation: zap 1.6s linear infinite; } .a-blink { animation: blink 1s steps(1) infinite; } .a-charge { animation: charge 1.6s linear infinite; }
+  .a-soar { animation: soar 2.4s ease-in-out infinite; }
+  .a-wind { stroke-dasharray: 8 12; animation: wind 1.2s linear infinite; } .a-wind2 { stroke-dasharray: 8 12; animation: wind 1.2s linear .4s infinite; }
+  .a-throw { animation: throw 2.6s var(--ease-out) infinite; }
+  .a-appear { animation: appear 2.6s var(--ease-out) infinite; transform-origin: bottom center; }
+  .a-flash { animation: flash 2.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  .a-breathe { animation: breathe 2.8s ease-in-out infinite; transform-origin: bottom center; }
+  .a-zzz { animation: zzz 2.8s ease-out infinite; } .a-zzz2 { animation: zzz 2.8s ease-out 1.4s infinite; }
+  .a-wobble { animation: wobble 1.8s ease-in-out 1 forwards; transform-origin: 50% 90%; }
+  .a-star { animation: star 1.8s ease-out 1 forwards; transform-box: fill-box; transform-origin: center; }
+  .a-evoA { animation: evoA 2.6s linear 1 forwards; } .a-evoB { animation: evoB 2.6s linear 1 forwards; opacity: 0; }
+  .a-popin { animation: popin 400ms var(--ease-out) 1; transform-origin: bottom center; }
+  .a-dot1, .a-dot2, .a-dot3 { animation: dot 1.2s ease-in-out infinite; transform-box: fill-box; } .a-dot2 { animation-delay: .2s; } .a-dot3 { animation-delay: .4s; }
+  .a-bubble { animation: bubbleK 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: left bottom; }
+  .a-rub { animation: rub 1.6s ease-in-out infinite; transform-origin: bottom center; }
+  body.still *, body.still *::before, body.still *::after { animation: none !important; transition: none !important; }
+  body.still .a-evoB { opacity: 1; } body.still .a-evoA, body.still .a-throw, body.still .a-flash, body.still .a-pull, body.still .a-zap { opacity: 0; }
+  body.still .a-vine { stroke-dashoffset: 0; } body.still .a-appear { transform: none; filter: none; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Skins – Figurenpakete und Stilpakete</h1>
+  <p class="lead">Ein Skin ist freiwillig und ab Werk aus. <b>Figurenpakete</b> geben der Statuszeile Figur, Bewegung und Texte je Werkzeug – auch für eigene Auslöser wie <code>mcp__github__*</code>. <b>Stilpakete</b> ändern Farben, die Hintergrundbilder von Seitenleiste und Inhalt und das App-Symbol. Beide pflegt man selbst oder lässt den Agenten sie füllen; beide lassen sich als ZIP teilen.</p>
+  <p class="why"><b>Wofür:</b> auf einen Blick sehen, was der Agent tut, und dem Verwalter das eigene Gesicht geben – ohne dass fremdes Material im Programm steckt. Links die Einstellungsseite, rechts die Vorschau. <span class="bp" id="bp"></span></p>
+
+  <section class="demo" aria-label="Klickdummy">
+    <div class="settingsPage">
+      <nav class="snav" aria-label="Kategorien der Einstellungen">
+        <button class="snav__item snav__item--dim" type="button">Allgemein<small>Konto · Darstellung</small></button>
+        <button class="snav__item snav__item--dim" type="button">Agent<small>Betriebsart · Modelle · Modus</small></button>
+        <button class="snav__item snav__item--dim" type="button">Skills &amp; Umgebung<small>Skills · Umgebung</small></button>
+        <button class="snav__item snav__item--active" type="button" aria-current="page">Skins<small>Figuren · Stil · Pakete</small></button>
+        <button class="snav__item snav__item--dim" type="button">App<small>Version · Ordner · Rechte</small></button>
+      </nav>
+      <div class="scontent" id="scontent"></div>
+    </div>
+
+    <div class="preview">
+      <div class="preview__label">Vorschau – so sieht der Verwalter mit diesen Einstellungen aus:</div>
+      <div class="taskbar">Taskleiste: <span class="tb" id="taskbar"></span></div>
+      <div class="app" id="app">
+        <div class="app__title" id="apptitle"></div>
+        <div class="app__body">
+          <div class="app__side"><div class="bgimg" id="bgSide"></div>
+            <div class="sideitem sideitem--on">Skins planen <small>· läuft</small></div>
+            <div class="sideitem">Retro November</div>
+            <div class="sideitem">Diktat schneller</div>
+            <div class="sideitem">Changes-Ansicht</div>
+          </div>
+          <div class="app__main"><div class="bgimg" id="bgMain"></div>
+            <div class="bubble">Bau mir die Statuszeile um.</div>
+            <div class="history" id="history"></div>
+            <div class="toast" id="toast" role="status"><div class="stage stage--small" id="toast-stage" aria-hidden="true"></div><span id="toast-text"></span></div>
+            <div class="working" id="working" aria-live="polite">
+              <div class="stage" id="stage" aria-hidden="true"></div>
+              <span class="working__label" id="label"></span><span class="working__count" id="count"></span><span class="working__hint">· Esc</span>
+            </div>
+            <div class="composer"><span>Nachricht an den Agenten …</span><span class="send">Senden</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="pace" id="pace"></div>
+      <div class="toolbar">
+        <button class="btn btn--primary" id="chain" type="button">Werkzeugkette abspielen</button>
+        <button class="btn" id="think" type="button">Gedankengang abspielen</button>
+        <button class="btn" id="station" type="button">Station fertig</button>
+        <button class="btn" id="agentDemo" type="button">Agent ergänzt ein Fach (simuliert)</button>
+      </div>
+      <div class="hint" id="agentline"></div>
+    </div>
+  </section>
+
+  <h2>Wie oft sich etwas bewegt</h2>
+  <ul class="rules">
+    <li><b>Ab Werk aus:</b> Figurenpaket „Aus“, Stilpaket „Standard“, Feier-Momente und Easter Eggs aus. Die sachliche Statuszeile („Durchsucht …“, „Liest …“) gilt immer – sie ist Information, kein Skin.</li>
+    <li><b>Eine Stelle:</b> Bewegung nur in der Statuszeile am Ende des Verlaufs; Werkzeug-Gruppen und „Gedankengang · 31 s“ bleiben still.</li>
+    <li><b>Mindest-Standzeit 4 s</b>, Figur erst nach 1 s Arbeit, Zähler „· 9 Aufrufe“ läuft mit; Feier-Momente höchstens einmal je Antwort.</li>
+    <li><b>Denken:</b> eigenes Fach, Sekunden laufen, Texte wechseln alle 10 s der Reihe nach.</li>
+    <li><b>Animationen</b> folgen beim ersten Start der Windows-Einstellung „Animationen anzeigen“; aus = Figuren stehen, Texte bleiben.</li>
+  </ul>
+
+  <h2>Werkzeuge für den Agenten</h2>
+  <p class="lead" style="font-size:13px">Nur vorhanden, wenn „Agent darf Skins bearbeiten“ an ist (ab Werk aus), und erst beim nächsten Start des Agenten. Jede Aktion der Seite hat ein Werkzeug und umgekehrt. Der Schalter selbst und alle übrigen Einstellungen bleiben für den Agenten unerreichbar.</p>
+  <table>
+    <thead><tr><th>Werkzeug</th><th>Tut</th><th>Gegenstück auf der Seite</th></tr></thead>
+    <tbody>
+      <tr><td><code>skin_list</code></td><td data-k="Tut">Alle Pakete beider Arten mit Kennung, Name, Art, aktivem Paket je Art.</td><td data-k="Seite">Abschnitt „Pakete“</td></tr>
+      <tr><td><code>skin_get</code></td><td data-k="Tut">Ein Paket vollständig (Fächer bzw. Farben, Bilder, Symbol).</td><td data-k="Seite">„Bearbeiten“</td></tr>
+      <tr><td><code>skin_create</code></td><td data-k="Tut">Neues Paket einer Art, leer oder als Kopie.</td><td data-k="Seite">„Neues Figurenpaket“, „Neues Stilpaket“, „Duplizieren“</td></tr>
+      <tr><td><code>skin_rename</code></td><td data-k="Tut">Name ändern.</td><td data-k="Seite">Name im Editor</td></tr>
+      <tr><td><code>skin_slot_set</code></td><td data-k="Tut">Fach anlegen oder ändern: Name, Werkzeug-Muster, Eingabe-Muster, Position, Bewegung, Texte. Vorgegebene Fächer: nur Bewegung und Texte.</td><td data-k="Seite">Fach im Figuren-Editor, „Eigenes Fach anlegen“, ↑ ↓</td></tr>
+      <tr><td><code>skin_slot_remove</code></td><td data-k="Tut">Eigenes Fach entfernen.</td><td data-k="Seite">„Fach entfernen“ mit Rückgängig</td></tr>
+      <tr><td><code>skin_style_set</code></td><td data-k="Tut">Farben je Schema (hell, dunkel), Deckkraft der Hintergrundbilder.</td><td data-k="Seite">Stil-Editor</td></tr>
+      <tr><td><code>skin_image_set</code></td><td data-k="Tut">Bild für ein Fach, einen Hintergrund oder das App-Symbol aus lokaler Datei oder https-Adresse; Prüfung von Typ und Größe; leer = entfernen.</td><td data-k="Seite">„Datei wählen“, Adresse, Hineinziehen, „Entfernen“</td></tr>
+      <tr><td><code>skin_delete</code></td><td data-k="Tut">Paket löschen.</td><td data-k="Seite">„Löschen“ mit Rückgängig</td></tr>
+      <tr><td><code>skin_export</code></td><td data-k="Tut">Paket als ZIP in den Arbeitsordner der Session schreiben.</td><td data-k="Seite">„Als ZIP exportieren“</td></tr>
+      <tr><td><code>skin_import</code></td><td data-k="Tut">ZIP aus dem Arbeitsordner einlesen, prüfen, als neues Paket anlegen.</td><td data-k="Seite">„ZIP importieren …“</td></tr>
+      <tr><td><code>skin_activate</code></td><td data-k="Tut">Aktives Figuren- und Stilpaket, Animationen, Feier-Momente, Easter Eggs.</td><td data-k="Seite">Abschnitte „Figuren“ und „Stil“</td></tr>
+      <tr><td><code>skin_tool_usage</code></td><td data-k="Tut">Häufigste Werkzeuge und Befehle der letzten Sessions samt dem Fach, das sie heute fängt – Grundlage für neue Fächer, z. B. aus einem Session-Review.</td><td data-k="Seite">Spalte „Trifft in der Beispielkette“ im Fach</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Paketformat (ZIP)</h2>
+<pre>pokemon.zip
+├─ skin.json          Art, Name, Formatversion, Fächer bzw. Farben, Verweise auf Bilder
+└─ bilder/            nur GIF, PNG, WebP (Symbol: PNG oder ICO), je Datei höchstens 2 MB
+   ├─ search.gif
+   ├─ station-2.gif
+   └─ c-github.gif</pre>
+  <ul class="rules">
+    <li>Import prüft: höchstens 64 Einträge und 20 MB entpackt, keine Pfade mit <code>..</code> oder Laufwerk, nur bekannte Endungen, <code>skin.json</code> gegen das Format; bei gleichem Namen „(2)“ anhängen.</li>
+    <li>Fremde Pakete enthalten nur Daten – keine Skripte, kein CSS, keine Adressen, die nachgeladen werden.</li>
+  </ul>
+
+  <h2>Bewusst nicht</h2>
+  <ul class="rules">
+    <li>Der Verwalter liefert keine fremden Bilder und keine Fandom-Texte aus.</li>
+    <li>Keine Figuren, die über den Chat laufen; keine Töne, keine Pop-ups, kein Konfetti über den Bildschirm.</li>
+    <li>Stilpakete ändern Farben und Bilder, nicht Schrift, Abstände oder Aufbau – die Bedienung bleibt gleich.</li>
+    <li>Das App-Symbol wechselt im laufenden Fenster und in der Taskleiste; das Symbol der exe und der Verknüpfung bleibt.</li>
+  </ul>
+
+  <div class="note"><b>Beispielwerte:</b> Sprites in <code>_spass-sprites/</code> (lokale Kopie, nicht im Repository), Hintergrundbilder von Unsplash. „Marvel (nur Texte)“ zeigt ein Figurenpaket ohne Bilder.</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const S = '_spass-sprites/';
+const T = (...xs) => xs;
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+/* ---------- Fächer, Bewegungen ---------- */
+const SLOTS = [
+  { id:'search', name:'Suchen', tools:'Grep, Glob', demo:'„WorkingIndicator“' },
+  { id:'read', name:'Lesen', tools:'Read', demo:'ChatTimeline.tsx' },
+  { id:'write', name:'Schreiben', tools:'Edit, Write', demo:'WorkingIndicator.tsx' },
+  { id:'shell', name:'Befehl', tools:'Bash, PowerShell', demo:'pnpm check' },
+  { id:'web', name:'Web', tools:'WebSearch, WebFetch', demo:'„reduced motion“' },
+  { id:'agent', name:'Unteragent', tools:'Agent', demo:'Testausgabe zusammenfassen' },
+  { id:'other', name:'Sonstiges', tools:'alle übrigen', demo:'mcp__verwalter__artifact_list' },
+  { id:'wait', name:'Warten', tools:'Kontingent, Countdown, Skript', demo:'' },
+  { id:'think', name:'Denken', tools:'Gedankengang', demo:'' },
+  { id:'commit', name:'Commit', tools:'Feier-Moment: git … commit fertig', party:true },
+  { id:'station', name:'Station fertig', tools:'Feier-Moment', party:true, second:true },
+];
+const BUILTIN_TOOLS = { Grep:'search', Glob:'search', Read:'read', Edit:'write', Write:'write', NotebookEdit:'write', Bash:'shell', PowerShell:'shell', WebSearch:'web', WebFetch:'web', Agent:'agent' };
+const MOTIONS = { none:'Keine', bob:'Wippen', vine:'Ranke holt aus Kiste', float:'Seite schwebt', squish:'Kneten, Code wechselt', zap:'Blitz ins Terminal', fly:'Fliegen', summon:'Ball wirft, Figur erscheint', sleep:'Schlafen', ponder:'Grübeln mit Gedankenblase', wobble:'Ball wackelt dreimal', evolve:'Entwicklung (zweites Bild)', popin:'Aufploppen' };
+const FIT = { search:'vine', read:'float', write:'squish', shell:'zap', web:'fly', agent:'summon', other:'bob', wait:'sleep', think:'ponder', commit:'wobble', station:'evolve' };
+
+const im = (src, cls = '', style = '') => src ? `<img class="spr ${cls}" src="${src}" style="${style}" alt="">` : '';
+function stageHtml(m, a, b) {
+  switch (m) {
+    case 'vine': return im(a,'a-lean','left:2px') + `<svg class="ov" viewBox="0 0 104 64"><path class="a-vine" d="M34 30 C46 14, 62 14, 76 34" stroke="var(--vine)" stroke-width="3" fill="none" stroke-linecap="round"/><g class="a-pull"><rect x="78" y="38" width="12" height="15" rx="1" fill="#f4f4f4" stroke="#8f8f8f" stroke-width=".8"/><path d="M80 42h8M80 45h8M80 48h5" stroke="#e0825c"/></g><rect x="72" y="44" width="26" height="18" rx="2" fill="#a8742f" stroke="#5c3e15"/><rect class="a-lid" x="72" y="40" width="26" height="5" rx="1.5" fill="#c08a3e" stroke="#5c3e15"/></svg>`;
+    case 'float': return `<svg class="ov" viewBox="0 0 104 64"><ellipse class="a-aura" cx="32" cy="34" rx="32" ry="30" fill="none" stroke="var(--psy)" stroke-width="1.5" stroke-dasharray="3 4"/></svg>` + im(a,'','left:0') + `<svg class="ov" viewBox="0 0 104 64"><g class="a-float"><rect x="78" y="10" width="20" height="26" rx="1.5" fill="#f4f4f4" stroke="var(--psy)" stroke-width="1.5"/><path d="M82 16h12M82 20h12M82 24h12M82 28h8" stroke="#8f8f8f"/></g></svg>`;
+    case 'squish': return im(a,'a-squish','left:6px') + `<svg class="ov" viewBox="0 0 104 64"><rect x="62" y="22" width="40" height="22" rx="3" fill="#181818" stroke="#555"/><text class="a-swapA" x="66" y="37" font-family="Consolas,monospace" font-size="9" fill="#e0825c">let x</text><text class="a-swapB" x="66" y="37" font-family="Consolas,monospace" font-size="9" fill="#c48ae0">const x</text></svg>`;
+    case 'zap': return im(a,'a-charge','left:0') + `<svg class="ov" viewBox="0 0 104 64"><rect x="66" y="20" width="36" height="28" rx="3" fill="#181818" stroke="#555"/><path d="M70 29l4 3-4 3" stroke="#7cc48a" stroke-width="1.6" fill="none"/><rect class="a-blink" x="77" y="33" width="6" height="2" fill="#7cc48a"/><path class="a-zap" d="M46 18 L56 26 L52 28 L64 34 L56 30 L60 28 Z" fill="var(--zap)" stroke="#7a5420" stroke-width=".6"/></svg>`;
+    case 'fly': return `<svg class="ov" viewBox="0 0 104 64"><path class="a-wind" d="M2 20h20" stroke="#8f8f8f" stroke-width="1.2"/><path class="a-wind2" d="M0 34h16" stroke="#8f8f8f" stroke-width="1.2"/><circle cx="88" cy="40" r="12" fill="none" stroke="#5aa0d8" stroke-width="1.5"/><ellipse cx="88" cy="40" rx="5" ry="12" fill="none" stroke="#5aa0d8"/></svg>` + im(a,'a-soar','left:14px');
+    case 'summon': return im(a,'a-appear','left:44px') + `<svg class="ov" viewBox="0 0 104 64"><circle class="a-flash" cx="62" cy="40" r="18" fill="#fff" opacity="0"/></svg><img class="spr a-throw" src="${S}poke-ball.png" style="height:20px;left:54px;bottom:16px" alt="">`;
+    case 'sleep': return im(a,'a-breathe','left:4px') + `<svg class="ov" viewBox="0 0 104 64"><text class="a-zzz" x="72" y="22" font-size="13" font-weight="700" fill="#8f8f8f">Z</text><text class="a-zzz2" x="80" y="14" font-size="9" font-weight="700" fill="#8f8f8f">z</text></svg>`;
+    case 'ponder': return im(a,'a-rub','left:2px') + `<svg class="ov" viewBox="0 0 104 64"><circle cx="50" cy="40" r="2.5" fill="#b0b0b0"/><circle cx="57" cy="32" r="3.5" fill="#b0b0b0"/><g class="a-bubble"><rect x="60" y="2" width="42" height="26" rx="13" fill="#252526" stroke="#b0b0b0" stroke-width="2"/><circle class="a-dot1" cx="71" cy="15" r="3.5" fill="#e0825c"/><circle class="a-dot2" cx="81" cy="15" r="3.5" fill="#e0825c"/><circle class="a-dot3" cx="91" cy="15" r="3.5" fill="#e0825c"/></g></svg>`;
+    case 'wobble': return im(a,'a-wobble','left:12px;bottom:4px') + `<svg class="ov" viewBox="0 0 72 52"><path class="a-star" d="M50 6l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5-3.7-3.4 5-.6z" fill="var(--zap)"/></svg>`;
+    case 'evolve': return b ? im(a,'a-evoA','left:12px') + im(b,'a-evoB','left:8px') : im(a,'a-popin','left:12px');
+    case 'popin': return im(a,'a-popin','left:12px');
+    case 'bob': return im(a,'a-bob','left:8px');
+    default: return im(a,'','left:8px');
+  }
+}
+
+/* ---------- Muster: * und ?, Groß/klein egal, Komma trennt ---------- */
+function globToRe(g) { return new RegExp('^' + g.trim().replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'); }
+function matchesAny(patterns, text) { return patterns.split(',').map((p) => p.trim()).filter(Boolean).some((p) => globToRe(p).test(text)); }
+
+/* ---------- Pakete (Beispielwerte) ---------- */
+let packs = [
+  { id:'pokemon', kind:'figures', name:'Pokémon (Beispiel)', by:'Session #3 (Agent) · vor 2 Min.', agent:true,
+    custom: [
+      { id:'github', name:'GitHub', tools:'mcp__github__*', input:'', img:S+'porygon.gif', motion:'bob', texts:T('Porygon surft durch GitHub: {ziel} …') },
+      { id:'pruefkette', name:'Prüfkette', tools:'Bash, PowerShell', input:'pnpm check*', img:S+'machamp.gif', motion:'bob', texts:T('Machomei stemmt die Prüfkette …') },
+    ],
+    slots: {
+      search:{ img:S+'bulbasaur.gif', motion:'vine', texts:T('Bisasam setzt Rankenhieb ein und zieht {ziel} aus der Kiste …') },
+      read:{ img:S+'alakazam.gif', motion:'float', texts:T('Simsala liest {ziel} per Psychokinese …') },
+      write:{ img:S+'ditto.gif', motion:'squish', texts:T('Ditto verwandelt {ziel} …') },
+      shell:{ img:S+'pikachu.gif', motion:'zap', texts:T('Pikachu setzt Donnerblitz auf „{ziel}“ ein …') },
+      web:{ img:S+'pidgeot.gif', motion:'fly', texts:T('Tauboss fliegt los und sucht {ziel} …') },
+      agent:{ img:S+'charmander.gif', motion:'summon', texts:T('Glumanda, du bist dran! {ziel} …') },
+      other:{ texts:T('Ein wildes Werkzeug erscheint: {ziel} …') },
+      wait:{ img:S+'snorlax.gif', motion:'sleep', texts:T('Ein Relaxo blockiert den Weg – weiter um {zeit}') },
+      think:{ img:S+'psyduck.gif', motion:'ponder', texts:T('Enton denkt nach …','Enton bekommt Kopfschmerzen …','Enton hält sich den Kopf – gleich platzt der Knoten …','Enton? … Enton! Gleich ist es so weit …') },
+      commit:{ img:S+'poke-ball.png', motion:'wobble', texts:T('Gefangen! Commit {commit} ist im Ball.') },
+      station:{ img:S+'bulbasaur.gif', img2:S+'ivysaur.gif', motion:'evolve', texts:T('Bisasam entwickelt sich zu Bisaknosp – Station fertig.') } } },
+  { id:'marvel', kind:'figures', name:'Marvel (nur Texte)', by:'du · gestern', custom:[], slots: {
+      search:{ texts:T('J.A.R.V.I.S. scannt nach {ziel} …') }, read:{ texts:T('Doctor Strange liest {ziel} …') }, write:{ texts:T('Shuri lötet an {ziel} …') },
+      shell:{ texts:T('Thor schwingt Mjölnir: {ziel} …') }, web:{ texts:T('Spider-Man schwingt durchs Web: {ziel} …') }, agent:{ texts:T('Avengers, versammelt euch! {ziel} …') },
+      other:{ texts:T('S.H.I.E.L.D. prüft {ziel} …') }, wait:{ texts:T('Der Schnipser hat das Kontingent halbiert – weiter um {zeit}') },
+      think:{ texts:T('Doctor Strange sieht sich mögliche Zukünfte an …','Doctor Strange ist bei Zukunft Nummer 7 000 …') },
+      commit:{ texts:T('Ich bin Iron Man. Commit {commit} steht.') }, station:{ texts:T('Mission erfüllt – Station fertig.') } } },
+  { id:'vertania', kind:'style', name:'Vertania (Beispiel)', by:'du · heute',
+    colors: { dark: { base:'#17211c', side:'#111a15', surface:'#1f2b25', fg:'#dfe9e2', muted:'#93a89b', accent:'#5fc08a', border:'#2f4238' },
+              light:{ base:'#f6fbf7', side:'#eaf4ec', surface:'#ffffff', fg:'#22352a', muted:'#5a6e61', accent:'#2f8a57', border:'#cfe0d4' } },
+    bg: { side:{ img:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500&q=60', opacity:30 }, main:{ img:'https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&q=60', opacity:12 } },
+    icon: S+'bulbasaur.gif' },
+];
+const SACHLICH = { search:'Durchsucht {ziel} …', read:'Liest {ziel} …', write:'Bearbeitet {ziel} …', shell:'Führt {ziel} aus …', web:'Sucht im Web nach {ziel} …', agent:'Unteragent: {ziel} …', other:'Arbeitet mit {ziel} …', wait:'Wartet aufs Kontingent – weiter um {zeit}', think:'Denkt nach …', commit:'Commit {commit} erstellt.', station:'Station fertig.' };
+const DEFAULT_COLORS = { base:'#1f1f1f', side:'#181818', surface:'#252526', fg:'#d4d4d4', muted:'#8f8f8f', accent:'#e0825c', border:'#3c3c3c' };
+const COLOR_FIELDS = [['base','Hintergrund Inhalt'],['side','Hintergrund Seitenleiste'],['surface','Flächen (Karten, Eingabe)'],['fg','Text'],['muted','Text gedämpft'],['accent','Akzent'],['border','Rahmen']];
+
+/* Ab Werk: alles aus */
+const st = { figures:null, style:null, anim:true, celebrate:false, eggs:false, agentTools:false, showTools:false, view:{ mode:'list' }, open:null, scheme:'dark' };
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) st.anim = false;
+const packById = (id) => packs.find((p) => p.id === id);
+const figPack = () => packById(st.figures);
+const stylePack = () => packById(st.style);
+
+/* ---------- Einstellungsseite ---------- */
+function info(text) { return `<span class="info" title="${esc(text)}" aria-label="${esc(text)}" tabindex="0">i</span>`; }
+function row(label, infoText, ctl) { return `<div class="row"><div class="row__label">${label}${info(infoText)}</div><div class="row__ctl">${ctl}</div></div>`; }
+function sw(id, on, stateOn, stateOff, disabled, tool) { return `<input type="checkbox" class="switch" id="${id}" ${on ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span class="row__state">${on ? stateOn : stateOff}</span>${tool ? `<span class="tool">${tool}</span>` : ''}`; }
+function options(kind, current, offLabel) { return `<option value="" ${current ? '' : 'selected'}>${offLabel}</option>` + packs.filter((p) => p.kind === kind).map((p) => `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${esc(p.name)}</option>`).join(''); }
+
+function renderSettings() {
+  const c = $('scontent');
+  if (st.view.mode === 'edit') { c.innerHTML = renderEditor(packById(st.view.id)); bindEditor(); return; }
+  const fig = !!st.figures;
+  c.innerHTML = `
+  <div class="section"><div class="section__title">Figuren</div>
+    ${row('Figurenpaket', 'Figur, Bewegung und Texte der Statuszeile je Werkzeug. „Aus“ zeigt die sachliche Statuszeile ohne Figur.', `<select id="selFig" aria-label="Figurenpaket">${options('figures', st.figures, 'Aus')}</select><span class="tool">skin_activate</span>`)}
+    ${row('Animationen', 'Ob Figuren und Rückmeldungen sich bewegen. Beim ersten Start wie in Windows unter „Animationen anzeigen“.', sw('swAnim', st.anim && fig, 'An – Figuren bewegen sich', fig ? 'Aus – Figuren stehen still' : 'Wirkt erst mit einem Figurenpaket', !fig))}
+    ${row('Feier-Momente', 'Kurze Meldung mit Figur, wenn ein Commit fertig ist oder eine Station abschließt – höchstens eine je Antwort.', sw('swCelebrate', st.celebrate && fig, 'An – Commit und Station werden gefeiert', fig ? 'Aus – Erfolg steht nur im Verlauf' : 'Wirkt erst mit einem Figurenpaket', !fig))}
+    ${row('Easter Eggs', 'Kleine Überraschungen, nur auf eigene Aktion – nie ungefragt mitten in der Arbeit.', sw('swEggs', st.eggs, 'An – nur auf eigene Aktion', 'Aus'))}
+  </div>
+  <div class="section"><div class="section__title">Stil</div>
+    ${row('Stilpaket', 'Farben, Hintergrundbilder von Seitenleiste und Inhalt und das App-Symbol im Fenster und in der Taskleiste. Schrift und Aufbau bleiben.', `<select id="selStyle" aria-label="Stilpaket">${options('style', st.style, 'Standard')}</select><span class="tool">skin_activate</span>`)}
+  </div>
+  <div class="section"><div class="section__title">Pakete</div>
+    <div class="toolbar">
+      <button class="btn" id="newFig" type="button">Neues Figurenpaket</button>
+      <button class="btn" id="newStyle" type="button">Neues Stilpaket</button>
+      <label class="btn">ZIP importieren …<input type="file" accept=".zip,application/zip" hidden id="zipIn"></label>
+      <span class="tool">skin_create</span><span class="tool">skin_import</span>
+    </div>
+    <div class="packlist">${packs.length ? packs.map(packRow).join('') : '<div class="packrow"><span></span><span class="packrow__meta">Noch keine Pakete. Lege eins an oder importiere eine ZIP-Datei.</span></div>'}</div>
+    <div class="undo" id="undo" role="status"><span id="undoText"></span><button class="btn" id="undoBtn" type="button">Rückgängig</button></div>
+  </div>
+  <div class="section"><div class="section__title">Agent</div>
+    ${row('Agent darf Skins bearbeiten', 'Gibt dem Agenten Werkzeuge, um Pakete anzulegen und zu füllen. Gilt ab dem nächsten Start des Agenten; andere Einstellungen kann er nie ändern.', sw('swAgent', st.agentTools, 'An – 13 Werkzeuge ab dem nächsten Start', 'Aus – der Agent sieht keine Skin-Werkzeuge'))}
+    ${row('Werkzeug-Namen zeigen', 'Blendet auf dieser Seite neben jeder Aktion den Namen des passenden Agenten-Werkzeugs ein.', sw('swTools', st.showTools, 'An', 'Aus'))}
+  </div>`;
+  bindSettings();
+}
+function packRow(p) {
+  const thumb = p.kind === 'figures'
+    ? (p.slots.search?.img ? `<img src="${p.slots.search.img}" alt="">` : '<span>Text</span>')
+    : `<span class="swatches">${['base','side','accent','fg'].map((k) => `<i style="background:${p.colors.dark[k]}"></i>`).join('')}</span>`;
+  const active = (p.kind === 'figures' ? st.figures : st.style) === p.id;
+  return `<div class="packrow"><span class="thumb">${thumb}</span>
+    <span style="min-width:0"><span class="packrow__name">${esc(p.name)}<span class="kind">${p.kind === 'figures' ? 'Figuren' : 'Stil'}</span>${active ? '<span class="kind">aktiv</span>' : ''}</span><br>
+    <span class="packrow__meta">${p.agent ? '<span class="dot"></span>' : ''}zuletzt geändert: ${esc(p.by)}</span></span>
+    <span class="packrow__act">
+      <button class="btn" type="button" data-edit="${p.id}">Bearbeiten</button>
+      <button class="btn btn--quiet" type="button" data-dup="${p.id}">Duplizieren</button>
+      <button class="btn btn--quiet" type="button" data-exp="${p.id}">Als ZIP exportieren</button>
+      <button class="btn btn--quiet btn--danger" type="button" data-del="${p.id}">Löschen</button>
+    </span></div>`;
+}
+let undoFn = null, undoTimer;
+function showUndo(text, fn) { undoFn = fn; renderSettings(); $('undoText').textContent = text; $('undo').classList.add('show'); clearTimeout(undoTimer); undoTimer = setTimeout(() => { const u = $('undo'); if (u) u.classList.remove('show'); }, 8000); }
+function bindSettings() {
+  $('selFig').onchange = (e) => { st.figures = e.target.value || null; renderAll(); };
+  $('selStyle').onchange = (e) => { st.style = e.target.value || null; renderAll(); };
+  $('swAnim').onchange = (e) => { st.anim = e.target.checked; renderAll(); };
+  $('swCelebrate').onchange = (e) => { st.celebrate = e.target.checked; renderAll(); };
+  $('swEggs').onchange = (e) => { st.eggs = e.target.checked; renderAll(); };
+  $('swAgent').onchange = (e) => { st.agentTools = e.target.checked; renderAll(); };
+  $('swTools').onchange = (e) => { st.showTools = e.target.checked; document.body.classList.toggle('show-tools', st.showTools); renderAll(); };
+  $('newFig').onclick = () => { const id = 'f' + Date.now(); packs.push({ id, kind:'figures', name:'Neues Figurenpaket', by:'du · gerade eben', custom:[], slots:{} }); st.view = { mode:'edit', id }; renderAll(); };
+  $('newStyle').onclick = () => { const id = 's' + Date.now(); packs.push({ id, kind:'style', name:'Neues Stilpaket', by:'du · gerade eben', colors:{ dark:{ ...DEFAULT_COLORS }, light:{ base:'#ffffff', side:'#f8f8f8', surface:'#ffffff', fg:'#3c3c3c', muted:'#6e6e6e', accent:'#c4572f', border:'#d9d9d9' } }, bg:{ side:{ img:null, opacity:20 }, main:{ img:null, opacity:10 } }, icon:null }); st.view = { mode:'edit', id }; renderAll(); };
+  $('zipIn').onchange = (e) => { const f = e.target.files[0]; if (f) showUndo(`„${f.name}“ wäre jetzt geprüft und als neues Paket angelegt (in der Demo nicht echt).`, null); };
+  document.querySelectorAll('[data-edit]').forEach((b) => b.onclick = () => { st.view = { mode:'edit', id:b.dataset.edit }; st.open = null; renderAll(); });
+  document.querySelectorAll('[data-dup]').forEach((b) => b.onclick = () => { const p = packById(b.dataset.dup); const c = JSON.parse(JSON.stringify(p)); c.id = 'd' + Date.now(); c.name = p.name + ' (Kopie)'; c.by = 'du · gerade eben'; c.agent = false; packs.push(c); renderAll(); });
+  document.querySelectorAll('[data-exp]').forEach((b) => b.onclick = () => showUndo(`„${packById(b.dataset.exp).name}“ als ZIP gespeichert (in der Demo nicht echt).`, null));
+  document.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => {
+    const p = packById(b.dataset.del); const idx = packs.indexOf(p); packs.splice(idx, 1);
+    const wasFig = st.figures === p.id, wasStyle = st.style === p.id; if (wasFig) st.figures = null; if (wasStyle) st.style = null;
+    renderPreviewAll(); showUndo(`Paket „${p.name}“ gelöscht.`, () => { packs.splice(idx, 0, p); if (wasFig) st.figures = p.id; if (wasStyle) st.style = p.id; renderAll(); });
+  });
+  $('undoBtn').onclick = () => { if (undoFn) undoFn(); undoFn = null; $('undo').classList.remove('show'); };
+}
+
+/* ---------- Editor ---------- */
+function backLine(p) { return `<div class="back"><button class="btn btn--quiet" type="button" id="back">‹ Skins</button><b>${esc(p.name)}</b><span class="kind">${p.kind === 'figures' ? 'Figurenpaket' : 'Stilpaket'}</span></div>
+  <div class="row" style="border-top:0">${'<div class="row__label">Name</div>'}<div class="row__ctl"><input type="text" id="pname" value="${esc(p.name)}" style="flex:1 1 200px"><span class="tool">skin_rename</span></div></div>`; }
+function imgField(key, label, cur, tool) {
+  return `<div class="field"><span class="flabel">${label} <span class="tool">${tool}</span></span>
+    <div class="imgline"><span class="thumb">${cur ? `<img src="${cur}" alt="">` : '<span>leer</span>'}</span>
+      <label class="btn">Datei wählen<input type="file" accept="image/gif,image/png,image/webp${key.endsWith('icon') ? ',image/x-icon,.ico' : ''}" hidden data-file="${key}"></label>
+      <input type="url" placeholder="https://… (höchstens 2 MB)" data-url="${key}">
+      <button class="btn" type="button" data-urlgo="${key}">Laden</button>
+      ${cur ? `<button class="btn btn--quiet btn--danger" type="button" data-imgdel="${key}">Entfernen</button>` : ''}</div>
+    <div class="drop" data-drop="${key}">oder Bild hierher ziehen</div><div class="err" data-err="${key}"></div></div>`;
+}
+function slotList(p) { return [...p.custom.map((c) => ({ id:'c:' + c.id, name:c.name, tools:c.tools + (c.input ? ` · Eingabe ${c.input}` : ''), custom:true, def:c })), ...SLOTS]; }
+function slotVal(p, id) { if (id.startsWith('c:')) return p.custom.find((c) => 'c:' + c.id === id); return p.slots[id] || (p.slots[id] = { texts:[] }); }
+const SAMPLE_CALLS = [['Grep','WorkingIndicator'],['Read','ChatTimeline.tsx'],['PowerShell','pnpm check'],['PowerShell','git -C C:\\develop\\verwalter commit -m "feat: skins"'],['mcp__github__get_issue','#42'],['mcp__verwalter__artifact_list',''],['WebFetch','https://tauri.app']];
+function renderEditor(p) {
+  if (p.kind === 'style') return renderStyleEditor(p);
+  const rows = slotList(p).map((s, i, arr) => {
+    const v = slotVal(p, s.id); const isOpen = st.open === s.id; const motion = v.motion || 'none';
+    const head = (i === 0 && s.custom) ? `<div class="slotgroup">Eigene Fächer – zuerst geprüft<button class="btn" type="button" id="addSlot">Eigenes Fach anlegen</button></div>` : (!s.custom && (i === 0 || arr[i - 1].custom) ? (i === 0 ? `<div class="slotgroup">Eigene Fächer<button class="btn" type="button" id="addSlot">Eigenes Fach anlegen</button></div><div class="hint" style="padding:0 10px 6px">Noch keine. Ein eigenes Fach reagiert auf Werkzeuge nach Muster, z. B. <code>mcp__github__*</code> oder Befehle wie <code>pnpm check*</code>.</div>` : '') + '<div class="slotgroup">Vorgegebene Fächer</div>' : '');
+    const sum = `${v.img ? 'Bild' : 'ohne Bild'} · ${MOTIONS[motion]} · ${v.texts.length} Text${v.texts.length === 1 ? '' : 'e'}`;
+    const custom = s.custom ? `
+      <div class="grid2">
+        <div class="field"><label for="cn-${s.id}">Name</label><input type="text" id="cn-${s.id}" data-cname="${s.id}" value="${esc(v.name)}"></div>
+        <div class="field"><label for="ct-${s.id}">Werkzeuge (Muster) <span class="tool">skin_slot_set</span></label><input type="text" id="ct-${s.id}" data-ctools="${s.id}" value="${esc(v.tools)}" placeholder="mcp__github__*, Bash"></div>
+        <div class="field"><label for="ci-${s.id}">Eingabe (Muster, freiwillig)</label><input type="text" id="ci-${s.id}" data-cinput="${s.id}" value="${esc(v.input)}" placeholder="git *commit*"></div>
+      </div>
+      <div class="match" data-match="${s.id}">${matchText(v)}</div>
+      <div class="toolbar"><button class="btn btn--quiet" type="button" data-up="${s.id}" ${i === 0 ? 'disabled' : ''}>↑ nach oben</button><button class="btn btn--quiet" type="button" data-down="${s.id}" ${arr[i + 1]?.custom ? '' : 'disabled'}>↓ nach unten</button><button class="btn btn--quiet btn--danger" type="button" data-cdel="${s.id}">Fach entfernen</button><span class="tool">skin_slot_remove</span></div>` : '';
+    return head + `<div class="slot ${isOpen ? 'open' : ''}">
+      <button class="slot__head" type="button" aria-expanded="${isOpen}" data-open="${s.id}">
+        <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        <span class="thumb">${v.img ? `<img src="${v.img}" alt="">` : '<span>—</span>'}</span>
+        <span style="min-width:0"><span class="slot__name">${esc(s.name)}</span><span class="slot__tools">${esc(s.tools)}</span></span>
+        <span class="slot__sum">${sum}</span></button>
+      <div class="slot__body">${custom}
+        ${imgField(s.id + ':img', 'Bild', v.img, 'skin_image_set')}
+        ${s.second ? imgField(s.id + ':img2', 'Zweites Bild (für „Entwicklung“)', v.img2, 'skin_image_set') : ''}
+        <div class="field"><label for="m-${s.id}">Bewegung <span class="tool">skin_slot_set</span></label><select id="m-${s.id}" data-motion="${s.id}">${Object.entries(MOTIONS).map(([k, n]) => `<option value="${k}" ${k === motion ? 'selected' : ''}>${n}${FIT[s.id] === k ? ' (passt)' : ''}</option>`).join('')}</select></div>
+        <div class="field"><label for="t-${s.id}">Texte, einer pro Zeile – <code>{ziel}</code>, <code>{zeit}</code>, <code>{commit}</code> werden ersetzt</label><textarea id="t-${s.id}" data-texts="${s.id}">${esc(v.texts.join('\n'))}</textarea></div>
+      </div></div>`;
+  }).join('');
+  return backLine(p) + `<div class="slots">${rows}</div><div class="hint">Das erste passende Fach gewinnt: eigene Fächer von oben nach unten, dann die vorgegebenen. Muster: <code>*</code> beliebig viele Zeichen, <code>?</code> ein Zeichen, Groß/klein egal, mehrere mit Komma.</div>`;
+}
+function matchText(c) {
+  const hits = SAMPLE_CALLS.filter(([n, t]) => matchesAny(c.tools || '', n) && (!c.input || matchesAny(c.input, t)));
+  return hits.length ? 'Trifft in der Beispielkette: ' + hits.map(([n, t]) => `<b>${esc(n)}</b> <i>${esc(t)}</i>`).join(' · ') : '<i>Trifft in der Beispielkette nichts.</i>';
+}
+function contrast(a, b) {
+  const lum = (h) => { const c = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16) / 255).map((v) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05);
+}
+function renderStyleEditor(p) {
+  const c = p.colors[st.scheme];
+  const fields = COLOR_FIELDS.map(([k, label]) => {
+    let warn = '';
+    if (k === 'fg' || k === 'muted') { const r = Math.min(contrast(c[k], c.base), contrast(c[k], c.surface)); if (r < 4.5) warn = `<span class="warnchip">Kontrast ${r.toFixed(1).replace('.', ',')}:1 – unter 4,5:1</span>`; }
+    if (k === 'accent') { const r = contrast(c.accent, c.base); if (r < 3) warn = `<span class="warnchip">Kontrast ${r.toFixed(1).replace('.', ',')}:1 – unter 3:1</span>`; }
+    return `<label class="colorfield"><input type="color" value="${c[k]}" data-color="${k}"><span>${label}</span>${warn}</label>`;
+  }).join('');
+  const bgRow = (key, label) => `${imgField('bg:' + key, label, p.bg[key].img, 'skin_image_set')}
+    <div class="field"><label for="op-${key}">Deckkraft ${p.bg[key].opacity} % <span class="tool">skin_style_set</span></label><input type="range" min="0" max="60" step="1" id="op-${key}" data-op="${key}" value="${p.bg[key].opacity}"></div>`;
+  return backLine(p) + `
+  <div class="section"><div class="section__title">Farben</div>
+    <div class="toolbar" style="margin-bottom:8px"><span class="seg" role="group" aria-label="Schema"><button type="button" data-scheme="dark" aria-pressed="${st.scheme === 'dark'}">Dunkel</button><button type="button" data-scheme="light" aria-pressed="${st.scheme === 'light'}">Hell</button></span><span class="hint" style="margin:0">Das Farbschema unter „Allgemein“ entscheidet, welcher Satz gilt.</span><span class="tool">skin_style_set</span></div>
+    <div class="grid2">${fields}</div>
+    <div class="toolbar" style="margin-top:8px"><button class="btn btn--quiet" type="button" id="resetColors">Farben auf Standard</button></div>
+  </div>
+  <div class="section"><div class="section__title">Hintergrundbilder</div>
+    <div class="grid2" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"><div class="field" style="gap:8px">${bgRow('side', 'Seitenleiste')}</div><div class="field" style="gap:8px">${bgRow('main', 'Inhalt rechts')}</div></div>
+    <div class="hint">Das Bild liegt unter einer Schicht in der Hintergrundfarbe; die Deckkraft ist höchstens 60 %, damit Text lesbar bleibt.</div>
+  </div>
+  <div class="section"><div class="section__title">App-Symbol</div>
+    ${imgField('icon', 'Symbol (PNG oder ICO, quadratisch, mindestens 32 px)', p.icon, 'skin_image_set')}
+    <div class="hint">Wechselt im Fenster und in der Taskleiste, solange der Verwalter läuft; die Verknüpfung behält das Original.</div>
+  </div>`;
+}
+function touch(p) { p.by = 'du · gerade eben'; p.agent = false; }
+function setImg(p, key, src) {
+  if (key === 'icon') p.icon = src;
+  else if (key.startsWith('bg:')) p.bg[key.slice(3)].img = src;
+  else { const [sid, k] = [key.slice(0, key.lastIndexOf(':')), key.slice(key.lastIndexOf(':') + 1)]; const v = slotVal(p, sid); v[k] = src; if (src && (!v.motion || v.motion === 'none')) v.motion = FIT[sid] || 'bob'; }
+  touch(p); renderAll();
+}
+function bindEditor() {
+  const p = packById(st.view.id);
+  $('back').onclick = () => { st.view = { mode:'list' }; renderAll(); };
+  $('pname').onchange = (e) => { p.name = e.target.value.trim() || p.name; touch(p); renderAll(); };
+  document.querySelectorAll('[data-file]').forEach((el) => el.onchange = () => { const f = el.files[0]; if (f) checkFile(p, el.dataset.file, f); });
+  document.querySelectorAll('[data-urlgo]').forEach((b) => b.onclick = () => { const key = b.dataset.urlgo; const url = document.querySelector(`[data-url="${key}"]`).value.trim(); if (!/^https:\/\//.test(url)) { document.querySelector(`[data-err="${key}"]`).textContent = 'Nur https-Adressen.'; return; } setImg(p, key, url); });
+  document.querySelectorAll('[data-imgdel]').forEach((b) => b.onclick = () => setImg(p, b.dataset.imgdel, null));
+  document.querySelectorAll('[data-drop]').forEach((d) => { d.ondragover = (e) => { e.preventDefault(); d.classList.add('over'); }; d.ondragleave = () => d.classList.remove('over'); d.ondrop = (e) => { e.preventDefault(); d.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) checkFile(p, d.dataset.drop, f); }; });
+  if (p.kind === 'style') {
+    document.querySelectorAll('[data-scheme]').forEach((b) => b.onclick = () => { st.scheme = b.dataset.scheme; renderAll(); });
+    document.querySelectorAll('[data-color]').forEach((el) => el.oninput = () => { p.colors[st.scheme][el.dataset.color] = el.value; renderPreviewAll(); });
+    document.querySelectorAll('[data-color]').forEach((el) => el.onchange = () => { touch(p); renderAll(); });
+    document.querySelectorAll('[data-op]').forEach((el) => el.oninput = () => { p.bg[el.dataset.op].opacity = +el.value; el.previousElementSibling && 0; renderPreviewAll(); el.closest('.field').querySelector('label').firstChild.textContent = `Deckkraft ${el.value} % `; });
+    $('resetColors').onclick = () => { p.colors[st.scheme] = st.scheme === 'dark' ? { ...DEFAULT_COLORS } : { base:'#ffffff', side:'#f8f8f8', surface:'#ffffff', fg:'#3c3c3c', muted:'#6e6e6e', accent:'#c4572f', border:'#d9d9d9' }; touch(p); renderAll(); };
+    return;
+  }
+  document.querySelectorAll('[data-open]').forEach((b) => b.onclick = () => { st.open = st.open === b.dataset.open ? null : b.dataset.open; renderSettings(); if (st.open && !st.open.startsWith('c:') && !SLOTS.find((s) => s.id === st.open).party) showSlot(st.open); });
+  document.querySelectorAll('[data-motion]').forEach((el) => el.onchange = () => { slotVal(p, el.dataset.motion).motion = el.value; touch(p); renderAll(); });
+  document.querySelectorAll('[data-texts]').forEach((el) => el.onchange = () => { slotVal(p, el.dataset.texts).texts = el.value.split('\n').map((x) => x.trim()).filter(Boolean); touch(p); renderAll(); });
+  const addBtn = $('addSlot'); if (addBtn) addBtn.onclick = () => { const id = 'n' + Date.now(); p.custom.unshift({ id, name:'Neues Fach', tools:'', input:'', motion:'bob', texts:T('Arbeitet mit {ziel} …') }); st.open = 'c:' + id; touch(p); renderAll(); };
+  document.querySelectorAll('[data-cname]').forEach((el) => el.onchange = () => { slotVal(p, el.dataset.cname).name = el.value.trim() || 'Fach'; touch(p); renderAll(); });
+  document.querySelectorAll('[data-ctools]').forEach((el) => el.oninput = () => { slotVal(p, el.dataset.ctools).tools = el.value; document.querySelector(`[data-match="${el.dataset.ctools}"]`).innerHTML = matchText(slotVal(p, el.dataset.ctools)); });
+  document.querySelectorAll('[data-cinput]').forEach((el) => el.oninput = () => { slotVal(p, el.dataset.cinput).input = el.value; document.querySelector(`[data-match="${el.dataset.cinput}"]`).innerHTML = matchText(slotVal(p, el.dataset.cinput)); });
+  document.querySelectorAll('[data-ctools],[data-cinput]').forEach((el) => el.onchange = () => { touch(p); renderAll(); });
+  const move = (id, d) => { const i = p.custom.findIndex((c) => 'c:' + c.id === id); const j = i + d; if (j < 0 || j >= p.custom.length) return; [p.custom[i], p.custom[j]] = [p.custom[j], p.custom[i]]; touch(p); renderAll(); };
+  document.querySelectorAll('[data-up]').forEach((b) => b.onclick = () => move(b.dataset.up, -1));
+  document.querySelectorAll('[data-down]').forEach((b) => b.onclick = () => move(b.dataset.down, 1));
+  document.querySelectorAll('[data-cdel]').forEach((b) => b.onclick = () => { const i = p.custom.findIndex((c) => 'c:' + c.id === b.dataset.cdel); const [gone] = p.custom.splice(i, 1); touch(p); st.view = { mode:'edit', id:p.id }; renderAll(); $('agentline').innerHTML = `Fach „${esc(gone.name)}“ entfernt. <button class="btn btn--quiet" type="button" id="slotUndo">Rückgängig</button>`; $('slotUndo').onclick = () => { p.custom.splice(i, 0, gone); $('agentline').textContent = ''; renderAll(); }; });
+}
+function checkFile(p, key, f) {
+  const err = document.querySelector(`[data-err="${key}"]`);
+  const ok = key === 'icon' ? /^image\/(png|x-icon|vnd\.microsoft\.icon)$/.test(f.type) || /\.ico$/i.test(f.name) : /^image\/(gif|png|webp)$/.test(f.type);
+  if (!ok) { err.textContent = `„${f.name}“ hat ein Format, das hier nicht geht.`; return; }
+  if (f.size > 2 * 1024 * 1024) { err.textContent = `„${f.name}“ ist größer als 2 MB.`; return; }
+  setImg(p, key, URL.createObjectURL(f));
+}
+
+/* ---------- Vorschau: Stil ---------- */
+function renderStyle() {
+  const p = stylePack(); const scheme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  const c = p ? p.colors[st.view.mode === 'edit' && packById(st.view.id)?.kind === 'style' ? st.scheme : scheme] : DEFAULT_COLORS;
+  const app = $('app');
+  [['base','--a-base'],['side','--a-side'],['surface','--a-surface'],['fg','--a-fg'],['muted','--a-muted'],['accent','--a-accent'],['border','--a-border']].forEach(([k, v]) => app.style.setProperty(v, c[k]));
+  const set = (el, b) => { el.style.backgroundImage = b && b.img ? `url("${b.img}")` : 'none'; el.style.opacity = b ? b.opacity / 100 : 0; };
+  set($('bgSide'), p?.bg.side); set($('bgMain'), p?.bg.main);
+  const icon = p?.icon ? `<img src="${p.icon}" alt="">` : '<span style="width:16px;height:16px;border-radius:3px;background:#e0825c;display:inline-block"></span>';
+  $('apptitle').innerHTML = icon + 'Agenten Verwalter 2000';
+  $('taskbar').innerHTML = icon + 'Verwalter';
+}
+
+/* ---------- Vorschau: Figuren und Taktung ---------- */
+const MIN_STAND = 4000, FIRST_AFTER = 1000;
+let shown = null, lastSwitch = 0, workStart = 0, pending = null, pendTimer = null, calls = 0, hist = [], timers = [], paceTimer = null, thinkTimer = null, running = false;
+function fitImg(el, maxH) { const set = () => { el.style.height = Math.min(maxH, Math.round(el.naturalHeight * 1.5)) + 'px'; }; el.complete && el.naturalHeight ? set() : el.addEventListener('load', set, { once:true }); }
+function freeze(root) {
+  if (!document.body.classList.contains('still')) return;
+  root.querySelectorAll('img.spr').forEach((el) => { const draw = () => { const c = document.createElement('canvas'); c.width = el.naturalWidth; c.height = el.naturalHeight; c.getContext('2d').drawImage(el, 0, 0); c.className = el.className; c.style.cssText = el.style.cssText; c.style.width = (el.naturalWidth * parseFloat(el.style.height || el.naturalHeight) / el.naturalHeight) + 'px'; el.replaceWith(c); }; el.complete && el.naturalHeight ? draw() : el.addEventListener('load', draw, { once:true }); });
+}
+function slotData(slotId) { const p = figPack(); return p ? slotVal(p, slotId) : null; }
+function fillStage(el, slotId) {
+  const v = slotData(slotId);
+  el.innerHTML = v && v.img ? `<div class="stage__in">${stageHtml(v.motion || 'none', v.img, v.img2)}</div>` : '';
+  el.querySelectorAll('img.spr').forEach((i) => { if (!i.style.height) fitImg(i, 56); });
+  setTimeout(() => freeze(el), 60);
+}
+function textFor(slotId, target, index) {
+  const v = slotData(slotId); const t = v && v.texts.length ? v.texts : [SACHLICH[slotId] || SACHLICH.other];
+  const raw = index === undefined ? t[Math.floor(Math.random() * t.length)] : t[Math.min(index, t.length - 1)];
+  return raw.replace('{ziel}', target ?? '').replace('{zeit}', '14:30').replace('{commit}', 'a1b2c3d');
+}
+function slotFor(tool, target) {
+  const p = figPack();
+  if (p) for (const c of p.custom) if (c.tools && matchesAny(c.tools, tool) && (!c.input || matchesAny(c.input, target))) return 'c:' + c.id;
+  return BUILTIN_TOOLS[tool] || 'other';
+}
+function swap(el) { el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap'); }
+function show(slotId, target, index) { shown = slotId; lastSwitch = performance.now(); fillStage($('stage'), slotId); $('label').textContent = textFor(slotId, target, index); swap($('label')); }
+function request(slotId, target) {
+  const now = performance.now(); const earliest = Math.max(workStart + FIRST_AFTER, shown === null ? 0 : lastSwitch + MIN_STAND);
+  if (slotId === shown) { pending = null; return; }
+  pending = [slotId, target];
+  if (now >= earliest) { clearTimeout(pendTimer); pending = null; show(slotId, target); return; }
+  clearTimeout(pendTimer); pendTimer = setTimeout(() => { if (pending) { const [s, t] = pending; pending = null; if (s !== shown) show(s, t); } }, earliest - now);
+}
+function renderHistory() {
+  $('history').innerHTML = hist.map((h) => h.kind === 'group'
+    ? `<div class="history__group">Werkzeuge <span>${h.rows.length} Aufruf${h.rows.length === 1 ? '' : 'e'}</span></div>` + h.rows.slice(-6).map((r) => `<div class="history__row">⎿ <b>${esc(r[0])}</b> ${esc(r[1])}</div>`).join('')
+    : `<div class="history__think">✱ Gedankengang · ${h.seconds} s${h.live ? ' …' : ''}</div>`).join('');
+}
+function addCall(name, target) { let g = hist[hist.length - 1]; if (!g || g.kind !== 'group') { g = { kind:'group', rows:[] }; hist.push(g); } g.rows.push([name, target]); calls++; $('count').textContent = `· ${calls}`; renderHistory(); }
+function slotName(id) { if (id.startsWith('c:')) return slotVal(figPack(), id)?.name || id; return SLOTS.find((s) => s.id === id)?.name || id; }
+function pace() {
+  if (shown === null) { $('pace').textContent = figPack() ? 'Figur erscheint nach 1 s Arbeit …' : ''; return; }
+  const stood = (performance.now() - lastSwitch) / 1000;
+  $('pace').textContent = `Fach „${slotName(shown)}“ steht seit ${stood.toFixed(1)} s` + (pending ? ` · Wechsel zu „${slotName(pending[0])}“ in ${Math.max(0, MIN_STAND / 1000 - stood).toFixed(1)} s` : '');
+}
+function idle() { running = false; timers = []; shown = null; pending = null; clearTimeout(pendTimer); clearInterval(paceTimer); $('stage').innerHTML = ''; $('label').textContent = 'Antwort fertig – Statuszeile verschwindet'; $('count').textContent = ''; $('pace').textContent = ''; $('working').classList.add('idle'); }
+function stopRuns() { running = false; timers.forEach(clearTimeout); timers = []; clearInterval(thinkTimer); clearInterval(paceTimer); clearTimeout(pendTimer); $('working').classList.remove('idle'); $('pace').textContent = ''; }
+function begin() { stopRuns(); running = true; hist = []; calls = 0; shown = null; pending = null; partyDone = false; workStart = performance.now(); $('stage').innerHTML = ''; $('label').textContent = 'Arbeitet …'; $('count').textContent = ''; renderHistory(); paceTimer = setInterval(pace, 200); }
+let partyDone = false, toastTimer;
+function party(slotId) {
+  if (!figPack() || !st.celebrate || partyDone) return; partyDone = running;
+  fillStage($('toast-stage'), slotId); $('toast-text').textContent = textFor(slotId);
+  const el = $('toast'); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+}
+const CHAIN = [
+  [0,'Grep','„WorkingIndicator“'], [350,'Read','ChatTimeline.tsx'], [700,'Read','buildBlocks.ts'], [1100,'Grep','„thinking“'],
+  [1500,'Read','translate.rs'], [2600,'mcp__github__get_issue','#42'], [3000,'mcp__github__list_pull_requests','offen'],
+  [4300,'Edit','WorkingIndicator.tsx'], [4800,'Edit','WorkingIndicator.css'], [6200,'PowerShell','pnpm check'],
+  [10600,'PowerShell','git -C C:\\develop\\verwalter commit -m "feat: skins"'], [11200,'Read','code-map.md'],
+];
+$('chain').onclick = () => {
+  begin();
+  CHAIN.forEach(([at, name, target]) => timers.push(setTimeout(() => {
+    addCall(name, target); request(slotFor(name, target), target);
+    if (/^(Bash|PowerShell)$/.test(name) && matchesAny('*git*commit*', target)) timers.push(setTimeout(() => party('commit'), 600));
+  }, at)));
+  timers.push(setTimeout(idle, 13500));
+};
+$('think').onclick = () => {
+  begin(); const live = { kind:'think', seconds:0, live:true }; hist.push(live); renderHistory();
+  timers.push(setTimeout(() => show('think', '', 0), FIRST_AFTER / 5));
+  thinkTimer = setInterval(() => { live.seconds++; $('count').textContent = `· ${live.seconds} s`; renderHistory();
+    if (live.seconds % 10 === 0) { $('label').textContent = textFor('think', '', live.seconds / 10); swap($('label')); }
+    if (live.seconds >= 31) { clearInterval(thinkTimer); live.live = false; renderHistory(); idle(); } }, 200);
+};
+$('station').onclick = () => { partyDone = false; party('station'); if (!figPack() || !st.celebrate) $('agentline').textContent = 'Feier-Momente brauchen ein Figurenpaket und den Schalter „Feier-Momente“.'; };
+$('agentDemo').onclick = () => {
+  const line = $('agentline');
+  if (!st.agentTools) { line.textContent = 'Der Agent hat keine Skin-Werkzeuge – „Agent darf Skins bearbeiten“ ist aus (ab Werk).'; return; }
+  const p = packById('pokemon'); if (!p) { line.textContent = 'Kein Beispielpaket mehr da.'; return; }
+  if (!p.custom.find((c) => c.id === 'verwalter')) p.custom.push({ id:'verwalter', name:'Verwalter-Werkzeuge', tools:'mcp__verwalter__*', input:'', motion:'bob', texts:T('Porygon2 sortiert die Artefakte: {ziel} …') });
+  p.by = 'Session #7 (Agent) · gerade eben'; p.agent = true; renderAll();
+  line.innerHTML = 'Im Chat der Session stünde: <code>mcp__verwalter__skin_slot_set</code> Pokémon (Beispiel) · Fach „Verwalter-Werkzeuge“ · <code>mcp__verwalter__*</code>';
+};
+function showSlot(id) { if (running) return; $('working').classList.remove('idle'); show(id, SLOTS.find((s) => s.id === id)?.demo || ''); $('count').textContent = ''; hist = []; renderHistory(); }
+function renderPreviewFigures() {
+  document.body.classList.toggle('still', !st.anim);
+  if (running) return;
+  $('working').classList.remove('idle'); hist = []; renderHistory();
+  if (!figPack()) { $('stage').innerHTML = ''; $('label').textContent = textFor('read', 'ChatTimeline.tsx'); $('count').textContent = ''; $('pace').textContent = 'Figurenpaket „Aus“: sachliche Statuszeile, keine Figur.'; return; }
+  $('pace').textContent = ''; show('search', '„WorkingIndicator“');
+}
+function renderPreviewAll() { renderStyle(); renderPreviewFigures(); }
+
+/* ---------- Easter Egg ---------- */
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']; let kpos = 0;
+document.addEventListener('keydown', (e) => {
+  if (!st.eggs || e.target.matches('input, textarea, select')) return;
+  kpos = e.key === KONAMI[kpos] ? kpos + 1 : (e.key === KONAMI[0] ? 1 : 0); if (kpos < KONAMI.length) return; kpos = 0;
+  if (!packById('vera')) packs.push({ id:'vera', kind:'figures', name:'🔓 Vera (freigeschaltet)', by:'Konami-Code', custom:[], slots: { search:{ texts:T('Vera durchsucht {ziel}. Gnadenlos. …') }, read:{ texts:T('Vera liest {ziel}. Du solltest dir Sorgen machen …') }, write:{ texts:T('Vera räumt {ziel} hinter dir auf …') }, shell:{ texts:T('Vera tippt „{ziel}“ schneller, als du denkst …') }, think:{ texts:T('Vera denkt nach. Bitte nicht stören …') }, commit:{ texts:T('Commit {commit} steht. Gern geschehen, Sonnenschein.') } } });
+  st.figures = 'vera'; renderAll();
+});
+
+function bp() { const w = innerWidth; $('bp').textContent = '· Stufe: ' + (w < 576 ? 'xs' : w < 768 ? 'sm' : w < 992 ? 'md' : w < 1200 ? 'lg' : w < 1408 ? 'xl' : 'xxl') + ` (${w} px)`; }
+addEventListener('resize', bp); bp();
+function renderAll() { renderSettings(); renderPreviewAll(); }
+renderAll();
+if (location.hash === '#beispiel') { st.figures = 'pokemon'; st.style = 'vertania'; st.celebrate = true; renderAll(); }
+if (location.hash === '#editor') { st.figures = 'pokemon'; st.view = { mode:'edit', id:'pokemon' }; st.open = 'c:github'; renderAll(); }
+if (location.hash === '#stil') { st.style = 'vertania'; st.view = { mode:'edit', id:'vertania' }; renderAll(); }
+</script>
+</body>
+</html>
