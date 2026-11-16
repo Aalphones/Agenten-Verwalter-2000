@@ -4,7 +4,12 @@
 pub mod archive;
 pub mod icon;
 pub mod images;
+pub mod matching;
 pub mod model;
+mod tool_args;
+mod tool_edit;
+mod tool_paths;
+pub mod tools;
 pub mod validate;
 
 use std::collections::HashSet;
@@ -131,14 +136,18 @@ fn validate_data(data: &mut SkinData, dir: &Path) -> Result<(), CommandError> {
 }
 
 /// Schreibt die (schon geprüften) Daten, meldet die Änderung und liefert das Paket neu.
+/// `changed_by` ist `None`, wenn der Benutzer ändert, sonst die Beschriftung der Agenten-Session.
 fn store(
     app: &AppHandle,
     database: &Database,
     id: &str,
     data: &SkinData,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let json = data_json(data)?;
-    database.with(|connection| skin_rows::update_data(connection, id, &json, &now_text(), None))?;
+    database.with(|connection| {
+        skin_rows::update_data(connection, id, &json, &now_text(), changed_by)
+    })?;
     icon::apply_if_active(app, database, id);
     notify(app);
     reload_pack(app, database, id)
@@ -222,6 +231,7 @@ pub fn create(
     kind: SkinKind,
     name: &str,
     copy_of: Option<&str>,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let name = validate::clean_name(name, "Der Name des Pakets").map_err(skin_error)?;
     let source: Option<SkinRow> = match copy_of {
@@ -245,7 +255,17 @@ pub fn create(
     let id = uuid::Uuid::new_v4().simple().to_string();
     let dir = pack_dir(app, &id)?;
     fs::create_dir_all(&dir)?;
-    let created = create_rows(app, database, &id, &dir, kind, name, &data, source.as_ref());
+    let created = create_rows(
+        app,
+        database,
+        &id,
+        &dir,
+        kind,
+        name,
+        &data,
+        source.as_ref(),
+        changed_by,
+    );
     if created.is_err() {
         // Ein halb angelegtes Paket bleibt nicht liegen.
         let _ = fs::remove_dir_all(&dir);
@@ -265,6 +285,7 @@ fn create_rows(
     name: String,
     data: &SkinData,
     source: Option<&SkinRow>,
+    changed_by: Option<&str>,
 ) -> Result<(), CommandError> {
     if let Some(row) = source {
         copy_files(&pack_dir(app, &row.id)?, dir)?;
@@ -275,7 +296,7 @@ fn create_rows(
         name,
         data: data_json(data)?,
         changed_at: now_text(),
-        changed_by: None,
+        changed_by: changed_by.map(str::to_owned),
         deleted_at: None,
     };
     database.with(|connection| skin_rows::insert(connection, &row))
@@ -300,10 +321,13 @@ pub fn rename(
     database: &Database,
     id: &str,
     name: &str,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let row = find_active(database, id)?;
     let name = validate::clean_name(name, "Der Name des Pakets").map_err(skin_error)?;
-    database.with(|connection| skin_rows::rename(connection, &row.id, &name, &now_text(), None))?;
+    database.with(|connection| {
+        skin_rows::rename(connection, &row.id, &name, &now_text(), changed_by)
+    })?;
     notify(app);
     reload_pack(app, database, id)
 }
@@ -314,6 +338,7 @@ pub fn save(
     database: &Database,
     id: &str,
     mut data: SkinData,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let row = find_active(database, id)?;
     let kind = kind_of_row(&row)?;
@@ -325,7 +350,7 @@ pub fn save(
         )));
     }
     validate_data(&mut data, &pack_dir(app, &row.id)?)?;
-    store(app, database, &row.id, &data)
+    store(app, database, &row.id, &data, changed_by)
 }
 
 /// Das Bildfeld, auf das `target` zeigt. Ein eingebautes Fach, das das Paket noch nicht hat,
@@ -390,6 +415,7 @@ pub fn set_image(
     id: &str,
     target: &ImageTarget,
     source: &ImageSource,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let row = find_active(database, id)?;
     let dir = pack_dir(app, &row.id)?;
@@ -399,7 +425,7 @@ pub fn set_image(
     let file_name = images::ingest(&dir, target, source).map_err(skin_error)?;
     *image_field(&mut data, target).map_err(skin_error)? = Some(file_name);
     validate_data(&mut data, &dir)?;
-    store(app, database, &row.id, &data)
+    store(app, database, &row.id, &data, changed_by)
 }
 
 /// Entfernt das Bild am Ziel samt Datei.
@@ -408,6 +434,7 @@ pub fn remove_image(
     database: &Database,
     id: &str,
     target: &ImageTarget,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let row = find_active(database, id)?;
     let dir = pack_dir(app, &row.id)?;
@@ -420,7 +447,7 @@ pub fn remove_image(
     }
     images::remove_stem_files(&dir, &stem, None);
     validate_data(&mut data, &dir)?;
-    store(app, database, &row.id, &data)
+    store(app, database, &row.id, &data, changed_by)
 }
 
 /// Löscht weich: das Paket verschwindet aus der Liste und kann 24 Stunden zurückgeholt werden.
@@ -529,8 +556,9 @@ pub fn import(
     app: &AppHandle,
     database: &Database,
     zip_path: &Path,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
-    archive::import(app, database, zip_path)
+    archive::import(app, database, zip_path, changed_by)
 }
 
 /// Die 30 häufigsten Werkzeug-Aufrufe der Sessions mit Aktivität in den letzten `days` Tagen.

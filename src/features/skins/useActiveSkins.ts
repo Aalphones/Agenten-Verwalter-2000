@@ -1,6 +1,8 @@
 import { useEffect, useEffectEvent } from 'react';
 import type { UnlistenFn } from '@tauri-apps/api/event';
+import type { SettingsOverview } from '@/lib/bindings/SettingsOverview';
 import type { SkinPack } from '@/lib/bindings/SkinPack';
+import { loadSettings } from '@/lib/settings';
 import { getSkin, onSkinsChanged } from '@/lib/skins';
 import { useSettingsStore } from '@/stores/settings';
 import { useSkinsStore } from '@/stores/skins';
@@ -38,6 +40,24 @@ export function useActiveSkins(): void {
       });
   });
 
+  // Der Agent wählt Pakete über `skin_activate` am Store vorbei; deshalb liest jede Änderung die
+  // Auswahl neu. Wechselt sie, lädt der Effekt unten die Pakete; sonst lädt es dieser Aufruf.
+  const refreshSelection = useEffectEvent((): void => {
+    loadSettings()
+      .then((loaded: SettingsOverview) => {
+        useSettingsStore.getState().setSettings(loaded.settings);
+        const hasSelectionChanged: boolean =
+          figuresId !== loaded.settings.skinFigures || styleId !== loaded.settings.skinStyle;
+        if (!hasSelectionChanged) {
+          reload();
+        }
+      })
+      .catch((reason: unknown) => {
+        console.error('Einstellungen nach Skin-Änderung nicht ladbar', reason);
+        reload();
+      });
+  });
+
   useEffect(() => {
     reload();
   }, [figuresId, styleId]);
@@ -46,7 +66,7 @@ export function useActiveSkins(): void {
     const controller = new AbortController();
     let unlisten: UnlistenFn | null = null;
     onSkinsChanged(() => {
-      reload();
+      refreshSelection();
     })
       .then((stop: UnlistenFn) => {
         if (controller.signal.aborted) {

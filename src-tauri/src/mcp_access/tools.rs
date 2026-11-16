@@ -8,6 +8,18 @@ pub trait ToolSet: Send + Sync {
     fn prefix(&self) -> &'static str;
     fn tools(&self) -> Vec<ToolSpec>;
     fn call(&self, call: &ToolCall) -> ToolResult;
+
+    /// Ob der Satz dem Agenten gerade angeboten wird. Ein Satz, den ein Schalter abstellt,
+    /// fehlt in `tools/list`, und ein Aufruf auf eines seiner Werkzeuge scheitert mit
+    /// `unavailable_message`. Die Voreinstellung: immer angeboten.
+    fn offered(&self, _app: &AppHandle) -> bool {
+        true
+    }
+
+    /// Der Satz für den Agenten, wenn `offered` gerade `false` ist.
+    fn unavailable_message(&self) -> &'static str {
+        "Diese Werkzeuge sind ausgeschaltet."
+    }
 }
 
 pub struct ToolSpec {

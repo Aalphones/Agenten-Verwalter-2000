@@ -39,7 +39,7 @@ pub async fn skins_create(
     name: String,
     copy_of: Option<String>,
 ) -> Result<SkinPack, CommandError> {
-    skins::create(&app, &database, kind, &name, copy_of.as_deref())
+    skins::create(&app, &database, kind, &name, copy_of.as_deref(), None)
 }
 
 #[tauri::command]
@@ -49,7 +49,7 @@ pub async fn skins_rename(
     id: String,
     name: String,
 ) -> Result<SkinPack, CommandError> {
-    skins::rename(&app, &database, &id, &name)
+    skins::rename(&app, &database, &id, &name, None)
 }
 
 /// Speichert die Daten, wenn sie die Prüfung bestehen; sonst ein Fehlersatz und nichts ändert sich.
@@ -60,7 +60,7 @@ pub async fn skins_save(
     id: String,
     data: SkinData,
 ) -> Result<SkinPack, CommandError> {
-    skins::save(&app, &database, &id, data)
+    skins::save(&app, &database, &id, data, None)
 }
 
 /// Legt ein Bild aus Datei, `https`-Adresse oder Bytes im Paket ab und trägt es am Ziel ein.
@@ -72,7 +72,7 @@ pub async fn skins_set_image(
     target: ImageTarget,
     source: ImageSource,
 ) -> Result<SkinPack, CommandError> {
-    skins::set_image(&app, &database, &id, &target, &source)
+    skins::set_image(&app, &database, &id, &target, &source, None)
 }
 
 #[tauri::command]
@@ -82,7 +82,7 @@ pub async fn skins_remove_image(
     id: String,
     target: ImageTarget,
 ) -> Result<SkinPack, CommandError> {
-    skins::remove_image(&app, &database, &id, &target)
+    skins::remove_image(&app, &database, &id, &target, None)
 }
 
 /// Löscht weich; 24 Stunden lang holt `skins_undelete` das Paket zurück.
@@ -124,7 +124,7 @@ pub async fn skins_import(
     database: tauri::State<'_, Arc<Database>>,
     path: String,
 ) -> Result<SkinPack, CommandError> {
-    skins::import(&app, &database, Path::new(&path))
+    skins::import(&app, &database, Path::new(&path), None)
 }
 
 /// Die häufigsten Werkzeug-Aufrufe der Sessions der letzten `days` Tage.

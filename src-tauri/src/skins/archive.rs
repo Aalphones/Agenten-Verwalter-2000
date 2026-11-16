@@ -140,6 +140,7 @@ pub fn import(
     app: &AppHandle,
     database: &Database,
     zip_path: &Path,
+    changed_by: Option<&str>,
 ) -> Result<SkinPack, CommandError> {
     let archive: ReadArchive = read_archive(zip_path).map_err(skin_error)?;
     let (name, mut data): (String, SkinData) =
@@ -174,6 +175,7 @@ pub fn import(
         name,
         &data,
         None,
+        changed_by,
     );
     if let Err(error) = created {
         let _ = fs::remove_dir_all(&final_dir);

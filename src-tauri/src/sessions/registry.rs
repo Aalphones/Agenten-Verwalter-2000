@@ -94,6 +94,7 @@ mod overlaps;
 mod restore;
 mod retro;
 mod side;
+mod skins;
 mod terminal;
 mod tldr;
 

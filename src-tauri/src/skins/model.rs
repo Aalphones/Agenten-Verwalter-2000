@@ -37,6 +37,22 @@ pub enum BuiltinSlot {
     Station,
 }
 
+impl BuiltinSlot {
+    pub const ALL: [BuiltinSlot; 11] = [
+        BuiltinSlot::Search,
+        BuiltinSlot::Read,
+        BuiltinSlot::Write,
+        BuiltinSlot::Shell,
+        BuiltinSlot::Web,
+        BuiltinSlot::Agent,
+        BuiltinSlot::Other,
+        BuiltinSlot::Wait,
+        BuiltinSlot::Think,
+        BuiltinSlot::Commit,
+        BuiltinSlot::Station,
+    ];
+}
+
 /// Wie sich die Figur bewegt; die Bewegungen selbst liefert die Oberfläche.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -60,6 +76,30 @@ pub enum Motion {
     Sparkle,
     Frost,
     Wave,
+}
+
+impl Motion {
+    pub const ALL: [Motion; 19] = [
+        Motion::None,
+        Motion::Bob,
+        Motion::Vine,
+        Motion::Float,
+        Motion::Squish,
+        Motion::Zap,
+        Motion::Fly,
+        Motion::Summon,
+        Motion::Sleep,
+        Motion::Ponder,
+        Motion::Wobble,
+        Motion::Evolve,
+        Motion::Popin,
+        Motion::WebShot,
+        Motion::Shield,
+        Motion::Beam,
+        Motion::Sparkle,
+        Motion::Frost,
+        Motion::Wave,
+    ];
 }
 
 /// Figur, Bewegung und Texte eines Fachs. Bildnamen sind Dateinamen im Bildordner des Pakets.

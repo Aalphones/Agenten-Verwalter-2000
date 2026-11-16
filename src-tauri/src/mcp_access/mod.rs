@@ -23,6 +23,7 @@ use tauri::AppHandle;
 use crate::artifacts::tools::ArtifactTools;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::tools::ImplementationTools;
+use crate::skins::tools::SkinTools;
 use http::{BodyError, Head, Reply};
 use rpc::Outcome;
 use tools::ToolSet;
@@ -36,7 +37,11 @@ const BEARER: &str = "Bearer ";
 
 /// Alle Werkzeug-Sätze; ein neues Feature hängt hier eine Zeile an.
 pub fn tool_sets() -> Vec<Box<dyn ToolSet>> {
-    vec![Box::new(ArtifactTools), Box::new(ImplementationTools)]
+    vec![
+        Box::new(ArtifactTools),
+        Box::new(ImplementationTools),
+        Box::new(SkinTools),
+    ]
 }
 
 /// Der laufende Zugang; als `Arc<McpAccess>` Tauri-State.

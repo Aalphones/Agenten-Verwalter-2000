@@ -50,7 +50,7 @@ pub fn handle(
             is_initialize: true,
         },
         "ping" => success(id, json!({})),
-        "tools/list" => success(id, list(tool_sets)),
+        "tools/list" => success(id, list(app, tool_sets)),
         "tools/call" => call(app, session_id, id, params, tool_sets),
         other => error(
             id,
@@ -75,10 +75,11 @@ fn initialize(app: &AppHandle, params: &Value) -> Value {
     })
 }
 
-fn list(tool_sets: &[Box<dyn ToolSet>]) -> Value {
+fn list(app: &AppHandle, tool_sets: &[Box<dyn ToolSet>]) -> Value {
     let tools: Vec<Value> = tool_sets
         .iter()
         .map(Box::as_ref)
+        .filter(|set: &&dyn ToolSet| set.offered(app))
         .flat_map(|set: &dyn ToolSet| set.tools())
         .map(|spec| {
             json!({
@@ -110,6 +111,15 @@ fn call(
     let Some(set) = set else {
         return error(id, INVALID_PARAMS, &format!("Unbekanntes Werkzeug: {name}"));
     };
+    if !set.offered(app) {
+        return success(
+            id,
+            json!({
+                "content": [{ "type": "text", "text": set.unavailable_message() }],
+                "isError": true,
+            }),
+        );
+    }
     let empty = Value::Object(Map::new());
     let arguments = params.get("arguments").unwrap_or(&empty);
     let outcome = set.call(&ToolCall {
