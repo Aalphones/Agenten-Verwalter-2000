@@ -11,6 +11,8 @@
      Seitenleiste, nicht nach dem Fenster. */
   &__main {
     position: relative;
+    /* Das Hintergrundbild des Stilpakets liegt mit z-index -1 darin. */
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;

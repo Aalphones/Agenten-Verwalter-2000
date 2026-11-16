@@ -1,6 +1,7 @@
 //! Skins (ADR 065): Figurenpakete und Stilpakete des Benutzers. Die Pakete liegen als Zeilen in
 //! `skin_packs`, ihre Bilder unter `<Datenordner>\skins\<Paket-ID>\`. Jede Änderung sendet
 //! `skins://changed`; die Oberfläche liest dann neu.
+pub mod icon;
 pub mod images;
 pub mod model;
 pub mod validate;
@@ -137,6 +138,7 @@ fn store(
 ) -> Result<SkinPack, CommandError> {
     let json = data_json(data)?;
     database.with(|connection| skin_rows::update_data(connection, id, &json, &now_text(), None))?;
+    icon::apply_if_active(app, database, id);
     notify(app);
     reload_pack(app, database, id)
 }
@@ -424,6 +426,9 @@ pub fn remove_image(
 pub fn delete(app: &AppHandle, database: &Database, id: &str) -> Result<(), CommandError> {
     let row = find_active(database, id)?;
     database.with(|connection| skin_rows::set_deleted(connection, &row.id, Some(&now_text())))?;
+    // Die Einstellungen zählen ein gelöschtes Paket nicht mehr als aktiv; deshalb ohne Vorprüfung
+    // neu setzen: war es das aktive Stilpaket, gilt wieder das Symbol der App.
+    icon::apply_with(app, database);
     notify(app);
     Ok(())
 }
@@ -433,6 +438,7 @@ pub fn undelete(app: &AppHandle, database: &Database, id: &str) -> Result<SkinPa
         .with(|connection| skin_rows::get(connection, id))?
         .ok_or_else(|| skin_error("Dieses Paket gibt es nicht mehr."))?;
     database.with(|connection| skin_rows::set_deleted(connection, &row.id, None))?;
+    icon::apply_if_active(app, database, &row.id);
     notify(app);
     reload_pack(app, database, &row.id)
 }

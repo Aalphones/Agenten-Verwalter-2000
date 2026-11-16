@@ -40,6 +40,7 @@ import { useProjectTerminals } from '@/features/terminal/useProjectTerminals';
 import { useViewedSession } from '@/features/sessions/useViewedSession';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { useSettings } from '@/features/settings/useSettings';
+import { SkinBackdrop } from '@/features/skins/SkinBackdrop';
 import { useActiveSkins } from '@/features/skins/useActiveSkins';
 import { UsageAlertBar } from '@/features/usage/UsageAlertBar';
 import { useVoiceModel } from '@/features/voice/useVoiceModel';
@@ -717,6 +718,7 @@ export function App(): ReactElement {
       />
       <ResizeHandle edge="end" label="Breite der Seitenleiste" {...sidebarWidth.handleProps} />
       <main className="app__main" data-resize-fill>
+        <SkinBackdrop area="content" />
         <div className={`app__content${isDockFilling ? ' app__content--hidden' : ''}`}>
           {renderMain()}
         </div>

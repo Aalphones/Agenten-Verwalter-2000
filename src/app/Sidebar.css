@@ -1,4 +1,7 @@
 .sidebar {
+  /* Das Hintergrundbild des Stilpakets liegt mit z-index -1 darin. */
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   flex-shrink: 1;

@@ -79,6 +79,7 @@ pub fn run() {
             }
             let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
             app.manage(registry);
+            skins::icon::apply_with(app.handle(), &database);
             app.manage(database);
             app.manage(UsageService::new());
             app.manage(CodexService::new());

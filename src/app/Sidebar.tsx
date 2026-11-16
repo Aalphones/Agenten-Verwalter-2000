@@ -14,6 +14,7 @@ import {
   visibleSessions,
 } from '@/features/projects/projectStatus';
 import { displayStatus } from '@/features/sessions/sessionStatus';
+import { SkinBackdrop } from '@/features/skins/SkinBackdrop';
 import { UsageButton } from '@/features/usage/UsageButton';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
@@ -442,6 +443,7 @@ export function Sidebar({
 
   return (
     <nav className="sidebar" aria-label="Vorhaben" style={{ width }}>
+      <SkinBackdrop area="sidebar" />
       <div className="sidebar__brand">
         <svg
           width="16"

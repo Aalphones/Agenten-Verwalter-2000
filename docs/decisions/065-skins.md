@@ -25,4 +25,4 @@ Der Benutzer möchte die Statuszeile mit Figuren aus Fandoms beleben (Sprites, B
 
 - Fandom-Pakete entstehen außerhalb des Repositorys; der Plan baut drei davon als ZIP neben dem Repository.
 - Neue Bewegungen sind Programmcode und brauchen ein Release; Pakete nicht.
-- Das App-Symbol wechselt nur im laufenden Fenster und in der Taskleiste, nicht an der exe oder der Verknüpfung.
+- Das App-Symbol wechselt nur im laufenden Fenster und in der Taskleiste, nicht an der exe oder der Verknüpfung. Als Symbol taugen nur PNG und ICO; GIF und WebP weist der Kern ab.

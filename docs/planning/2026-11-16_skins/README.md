@@ -10,7 +10,7 @@ Ziel: Die Statuszeile nennt immer das laufende Werkzeug. Wer möchte, gibt dem V
 | 2 | Speicher, Einstellungen und Bilder im Kern | [phase-2-kern.md](phase-2-kern.md) | heikel | complete |
 | 3 | Figuren im Chat: Bühne, Bewegungen, Feier-Momente | [phase-3-figuren.md](phase-3-figuren.md) | standard | complete |
 | 4 | Einstellungsseite „Skins“ mit Paketliste und Editoren | [phase-4-seite.md](phase-4-seite.md) | standard | complete |
-| 5 | Stil anwenden: Farben, Hintergründe, App-Symbol | [phase-5-stil.md](phase-5-stil.md) | standard | pending |
+| 5 | Stil anwenden: Farben, Hintergründe, App-Symbol | [phase-5-stil.md](phase-5-stil.md) | standard | complete |
 | 6 | ZIP-Export und -Import | [phase-6-zip.md](phase-6-zip.md) | heikel | pending |
 | 7 | Agenten-Werkzeuge `skin_*` hinter dem Schalter | [phase-7-werkzeuge.md](phase-7-werkzeuge.md) | heikel | pending |
 | 8 | Tipps und Easter Eggs | [phase-8-extras.md](phase-8-extras.md) | mechanisch | pending |

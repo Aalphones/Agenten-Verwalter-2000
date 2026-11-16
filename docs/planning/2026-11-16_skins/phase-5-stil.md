@@ -22,12 +22,18 @@ Rating: standard. Ein aktives Stilpaket färbt die App um, legt zwei Hintergrund
 
 ## Checkliste
 
-- [ ] `src/features/skins/applyStyle.ts`: `applyStyle(pack: SkinPack | null)` baut den CSS-Text (AK 1–2) und setzt/entfernt `<style id="skin-style">`, Klassen `skin-style`, `skin-backdrop-on`.
-- [ ] `useActiveSkins.ts`: nach jedem Laden `applyStyle(activeStyle)`.
-- [ ] `src/features/skins/SkinBackdrop.tsx` + `.css`; in `Sidebar.tsx` und `App.tsx` als erstes Kind einsetzen; Bild-URL über `skinImageUrl`.
-- [ ] AK 4 prüfen und umsetzen; Ergebnis in Report-Back.
-- [ ] `Cargo.toml`: `tauri = { version = "2", features = ["protocol-asset", "image-png", "image-ico"] }`.
-- [ ] `src-tauri/src/skins/icon.rs`: `apply(app: &AppHandle)` (Hauptfenster über `app.get_webview_window("main")` – Label in `tauri.conf.json` prüfen); Aufrufe in `setup` (`lib.rs`), in `settings::update`-Command nach `SkinStyle` (im Command-Modul, nicht in `settings/mod.rs`, weil dort kein `AppHandle` ist) und in `skins/mod.rs` nach `save`/`set_image`/`remove_image`/`delete`/`undelete`, wenn das Paket das aktive Stilpaket ist.
-- [ ] Doku: `docs/code-map.md` (applyStyle, Backdrop, icon), ADR 065 Konsequenz zum Symbol bestätigt.
+- [x] `src/features/skins/applyStyle.ts`: `applyStyle(pack: SkinPack | null)` baut den CSS-Text (AK 1–2) und setzt/entfernt `<style id="skin-style">`, Klassen `skin-style`, `skin-backdrop-on`.
+- [x] `useActiveSkins.ts`: nach jedem Laden `applyStyle(activeStyle)`.
+- [x] `src/features/skins/SkinBackdrop.tsx` + `.css`; in `Sidebar.tsx` und `App.tsx` als erstes Kind einsetzen; Bild-URL über `skinImageUrl`.
+- [x] AK 4 prüfen und umsetzen; Ergebnis in Report-Back.
+- [x] `Cargo.toml`: `tauri = { version = "2", features = ["protocol-asset", "image-png", "image-ico"] }`.
+- [x] `src-tauri/src/skins/icon.rs`: `apply(app: &AppHandle)` (Hauptfenster über `app.get_webview_window("main")` – Label in `tauri.conf.json` prüfen); Aufrufe in `setup` (`lib.rs`), in `settings::update`-Command nach `SkinStyle` (im Command-Modul, nicht in `settings/mod.rs`, weil dort kein `AppHandle` ist) und in `skins/mod.rs` nach `save`/`set_image`/`remove_image`/`delete`/`undelete`, wenn das Paket das aktive Stilpaket ist.
+- [x] Doku: `docs/code-map.md` (applyStyle, Backdrop, icon), ADR 065 Konsequenz zum Symbol bestätigt.
 
 ## Report-Back
+
+Status: complete. `pnpm check` grün; in der echten App nicht gelaufen.
+
+- **AK 4 (deckende Hintergründe):** nur per Quelltext geprüft, nicht in den DevTools. Kein direktes Kind von `.app__main` (`.app__content`, Terminal-Dock, Hinweis) oder `.sidebar` deckt die ganze Fläche mit `bg-base`/`bg-sidebar` — `.sidebar` und `.app` tragen die Farbe selbst und liegen unter dem Bild. Deshalb gibt es keine angepasste Klasse und keine Regel unter `skin-backdrop-on`; die Klasse steht am Wurzelelement, falls eine nötig wird. Das Terminal-Dock bleibt absichtlich deckend.
+- **Symbol:** `skins::icon::apply_if_active` bei `save`/`set_image`/`remove_image`/`undelete`, `apply_with` bei `delete` (die Einstellungen zählen ein gelöschtes Paket schon nicht mehr als aktiv), beim Start in `setup`, nach `SkinStyle` in `commands/settings.rs`. `images::ingest` weist GIF/WebP als Symbol jetzt ab (vorher nur Nicht-Bilder). `Cargo.lock` trägt die neue Abhängigkeit `image` (durch `image-png`/`image-ico`).
+- **Wackelstellen:** (1) Hell/dunkel-Vorrang beruht auf Selektor-Spezifität (`:root.skin-style:not(.light)` und `.skin-style.dark` mit 0,3,0 gegen das helle 0,2,0) und darauf, dass das `<style>` nach `theme.css` im Kopf steht — nicht im Browser geprüft. (2) Bis die Pakete geladen sind, zeigt der Start kurz die Standardfarben. (3) Symbol im Titel/Taskleiste nicht live gesehen.

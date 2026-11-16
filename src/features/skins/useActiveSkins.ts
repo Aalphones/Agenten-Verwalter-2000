@@ -4,6 +4,7 @@ import type { SkinPack } from '@/lib/bindings/SkinPack';
 import { getSkin, onSkinsChanged } from '@/lib/skins';
 import { useSettingsStore } from '@/stores/settings';
 import { useSkinsStore } from '@/stores/skins';
+import { applyStyle } from './applyStyle';
 
 /** Paket zur ID laden; `null` ohne ID oder wenn das Paket fehlt (gelöscht, nicht mehr lesbar). */
 async function loadPack(id: string | null): Promise<SkinPack | null> {
@@ -30,6 +31,7 @@ export function useActiveSkins(): void {
     Promise.all([loadPack(figuresId), loadPack(styleId)])
       .then(([figures, style]: [SkinPack | null, SkinPack | null]) => {
         useSkinsStore.getState().setActive(figures, style);
+        applyStyle(style);
       })
       .catch((reason: unknown) => {
         console.error('Aktive Skins nicht ladbar', reason);

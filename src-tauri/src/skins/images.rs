@@ -74,6 +74,10 @@ pub fn ingest(dir: &Path, target: &ImageTarget, source: &ImageSource) -> Result<
             "Ein ICO-Bild geht nur als App-Symbol; erwartet wird GIF, PNG oder WebP.".to_owned(),
         );
     }
+    // Das Fenster kann ein Symbol nur aus PNG oder ICO bauen.
+    if is_icon_target && extension != "png" && extension != "ico" {
+        return Err("Das App-Symbol muss ein PNG oder ICO sein.".to_owned());
+    }
     fs::create_dir_all(dir)
         .map_err(|error| format!("Der Paketordner ist nicht anlegbar: {error}"))?;
     let file_name = format!("{stem}.{extension}");
