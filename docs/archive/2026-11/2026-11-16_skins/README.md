@@ -14,7 +14,7 @@ Ziel: Die Statuszeile nennt immer das laufende Werkzeug. Wer möchte, gibt dem V
 | 6 | ZIP-Export und -Import | [phase-6-zip.md](phase-6-zip.md) | heikel | complete |
 | 7 | Agenten-Werkzeuge `skin_*` hinter dem Schalter | [phase-7-werkzeuge.md](phase-7-werkzeuge.md) | heikel | complete |
 | 8 | Tipps und Easter Eggs | [phase-8-extras.md](phase-8-extras.md) | mechanisch | complete |
-| 9 | Pakete bauen: je Figuren- und Stilpaket für Pokémon, Disney, Marvel | [phase-9-pakete.md](phase-9-pakete.md) | standard | pending |
+| 9 | Pakete bauen: je Figuren- und Stilpaket für Pokémon, Disney, Marvel | [phase-9-pakete.md](phase-9-pakete.md) | standard | complete |
 
 Reihenfolge fest: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. Phase 9 baut keinen Code, sondern Pakete außerhalb des Repositorys mit den Werkzeugen aus Phase 7.
 
@@ -104,5 +104,5 @@ pub struct ToolUsage { pub tool: String, pub input_prefix: String, pub count: u3
 
 ## Follow-ups
 
-- Phase 9 (Pakete bauen: Pokémon, Disney, Marvel) ist nicht umgesetzt und damit auch finale AK 8 offen; der Plan ist mit Phase 9 `pending` archiviert. Die Pakete entstehen außerhalb des Repositorys mit den `skin_*`-Werkzeugen aus Phase 7, Vorgaben in [phase-9-pakete.md](phase-9-pakete.md).
+- Phase 9 ist erledigt: je Figuren- und Stilpaket für Pokémon, Disney und Marvel liegen als ZIP unter `%USERPROFILE%\.verwalter\skin-pakete\` (finale AK 8); der Import in der echten App ist nicht geprüft.
 - Phase 4 bis 6 und 8 sind nur per `pnpm check` belegt, nicht in der echten App gelaufen (Wackelstellen in den jeweiligen Phasendateien).
