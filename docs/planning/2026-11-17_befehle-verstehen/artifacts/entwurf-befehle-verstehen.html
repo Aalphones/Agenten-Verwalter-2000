@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan: Befehle verstehen</title>
+<style>
+:root {
+  --bg: #ffffff; --bg-side: #f8f8f8; --bg-surface: #ffffff; --bg-hover: #f0f0f0; --bg-selected: #e4e6f1;
+  --border-subtle: #e5e5e5; --border: #cecece;
+  --fg: #3c3c3c; --fg-2: #555555; --muted: #6e6e6e;
+  --accent: #c4572f; --accent-text: #a8461f; --on-accent: #ffffff; --accent-subtle: rgb(196 87 47 / 0.10);
+  --running: #2563eb; --waiting: #a86a00; --error: #d23b33; --done: #16803c; --script: #7c3aed;
+  --track: #e5e5e5; --code-bg: #f3f3f6;
+  --sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1f1f1f; --bg-side: #181818; --bg-surface: #252526; --bg-hover: #2e2e30; --bg-selected: #37373d;
+  --border-subtle: #2b2b2b; --border: #3c3c3c;
+  --fg: #d4d4d4; --fg-2: #b0b0b0; --muted: #8f8f8f;
+  --accent: #e0825c; --accent-text: #eea283; --on-accent: #1d130e; --accent-subtle: rgb(224 130 92 / 0.16);
+  --running: #5b9dff; --waiting: #f2b33d; --error: #f47067; --done: #4cc38a; --script: #a78bfa;
+  --track: #3c3c3c; --code-bg: #242428;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #1f1f1f; --bg-side: #181818; --bg-surface: #252526; --bg-hover: #2e2e30; --bg-selected: #37373d;
+  --border-subtle: #2b2b2b; --border: #3c3c3c;
+  --fg: #d4d4d4; --fg-2: #b0b0b0; --muted: #8f8f8f;
+  --accent: #e0825c; --accent-text: #eea283; --on-accent: #1d130e; --accent-subtle: rgb(224 130 92 / 0.16);
+  --running: #5b9dff; --waiting: #f2b33d; --error: #f47067; --done: #4cc38a; --script: #a78bfa;
+  --track: #3c3c3c; --code-bg: #242428;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 13.5px/1.5 var(--sans); }
+main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 15px; margin: 32px 0 8px; font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle); }
+h3 { font-size: 13.5px; margin: 16px 0 4px; font-weight: 600; }
+p { margin: 6px 0; }
+.lead { color: var(--fg-2); max-width: 78ch; }
+code, .mono { font-family: var(--mono); font-size: 12px; }
+code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; overflow-wrap: anywhere; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+button, select { font: inherit; color: inherit; }
+.btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; min-height: 28px; }
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible, select:focus-visible, .seg button:focus-visible, .switch:focus-visible { outline: 2px solid var(--running); outline-offset: 2px; }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+ul.tight { margin: 4px 0; padding-left: 18px; }
+ul.tight li { margin: 3px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border-subtle); }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+.tablewrap { overflow-x: auto; }
+.tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--fg-2); white-space: nowrap; }
+.tag--heikel { border-color: var(--waiting); }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+.dot--warn { background: var(--waiting); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--border-subtle); border-radius: 8px; margin: 10px 0; }
+.facts div { padding: 8px 12px; border-right: 1px solid var(--border-subtle); }
+.facts div:last-child { border-right: 0; }
+.facts b { display: block; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.facts span { color: var(--muted); font-size: 12px; }
+
+/* ---------- Entwurf ---------- */
+.why { color: var(--fg-2); margin: 4px 0 10px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 8px 0 10px; }
+.controls label { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; cursor: pointer; min-height: 28px; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--bg-selected); border-color: var(--accent); }
+.switch { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px; cursor: pointer; }
+.switch i { width: 30px; height: 17px; border-radius: 999px; background: var(--track); position: relative; transition: background 160ms; flex-shrink: 0; }
+.switch i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: transform 160ms; }
+.switch[aria-checked="true"] i { background: var(--accent); }
+.switch[aria-checked="true"] i::after { transform: translateX(13px); }
+select { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; min-height: 28px; }
+.sample { color: var(--muted); font-size: 11.5px; }
+
+.app { display: grid; grid-template-columns: 210px 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg); }
+.side { background: var(--bg-side); border-right: 1px solid var(--border-subtle); padding: 8px 6px; font-size: 12.5px; min-width: 0; }
+.side__head { color: var(--muted); font-size: 11px; padding: 2px 6px 6px; }
+.side__item { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 6px; min-width: 0; }
+.side__item--active { background: var(--bg-selected); }
+.side__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.side__clock { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sdot--run { background: var(--running); } .sdot--script { background: var(--script); } .sdot--done { background: var(--done); }
+.chat { padding: 12px 14px 10px; min-width: 0; }
+.umsg { background: var(--bg-hover); border-radius: 8px; padding: 6px 10px; margin: 0 0 10px auto; max-width: 420px; width: fit-content; }
+.tg { font-size: 12.5px; margin-bottom: 10px; }
+.tg__head { display: flex; gap: 8px; align-items: center; color: var(--fg-2); }
+.tg__line { display: flex; gap: 8px; align-items: baseline; padding: 2px 0 2px 14px; color: var(--fg-2); min-width: 0; }
+.tg__tool { color: var(--muted); flex-shrink: 0; }
+.tg__target { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tg__cmd { margin: 2px 0 4px 36px; padding: 5px 8px; background: var(--code-bg); border-radius: 6px; font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere; color: var(--fg-2); }
+.tg__dur { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; margin-left: auto; }
+
+.status { border-top: 1px dashed var(--border-subtle); padding-top: 8px; min-height: 58px; }
+.wi { display: flex; align-items: center; gap: 8px; color: var(--accent-text); font-size: 12.5px; min-width: 0; flex-wrap: wrap; }
+.wi__label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; min-width: 0; flex: 0 1 auto; }
+.wi__label--cmd { font-family: var(--mono); font-size: 11.5px; }
+.wi__time, .wi__count { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.wi__hint { color: var(--muted); flex-shrink: 0; }
+.wi__late { color: var(--fg-2); flex-shrink: 0; }
+.meter { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.bar { position: relative; width: 132px; height: 6px; border-radius: 999px; background: var(--track); }
+.bar__fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--accent); width: 0; transition: width 240ms cubic-bezier(0.2, 0, 0, 1); }
+.bar--est .bar__fill { background: repeating-linear-gradient(135deg, var(--accent) 0 4px, transparent 4px 7px); border: 1px solid var(--accent); }
+.bar--late .bar__fill { background: repeating-linear-gradient(135deg, var(--waiting) 0 4px, transparent 4px 7px); border: 1px solid var(--waiting); }
+.meter__num { font-variant-numeric: tabular-nums; }
+.wi__last { display: flex; gap: 6px; color: var(--muted); font-family: var(--mono); font-size: 11.5px; padding: 3px 0 0 21px; min-width: 0; }
+.wi__last span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wi__last--fig { padding-left: 65px; }
+.icon { flex-shrink: 0; }
+
+/* Figur (Bühne 57 × 35 wie SkinStage size="line") */
+.stage { width: 57px; height: 35px; position: relative; flex-shrink: 0; }
+.stage img { position: absolute; left: 4px; bottom: 0; height: 33px; image-rendering: pixelated; }
+.stage--none { display: none; }
+.rider { position: absolute; bottom: 5px; left: 0; height: 26px; transform: translateX(-50%); image-rendering: pixelated; transition: left 240ms cubic-bezier(0.2, 0, 0, 1); pointer-events: none; }
+.bar--trek { margin-top: 22px; }
+.bar__flag { position: absolute; right: -2px; bottom: 5px; width: 9px; height: 13px; border-left: 1.5px solid var(--fg-2); }
+.bar__flag::after { content: ''; position: absolute; left: 0; top: 0; border: 3.5px solid transparent; border-left: 6px solid var(--accent); }
+.ring { position: absolute; left: 0; top: 0; width: 40px; height: 35px; }
+.ring circle { fill: none; stroke-width: 2.5; }
+.ring .ring__bg { stroke: var(--track); }
+.ring .ring__fg { stroke: var(--accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 20px 17.5px; transition: stroke-dashoffset 240ms; }
+.stage--charge img { left: 8px; bottom: 5px; height: 24px; }
+.stage--reveal img.sil { filter: brightness(0); opacity: 0.32; }
+.stage--reveal img.col { transition: clip-path 240ms; }
+@media (prefers-reduced-motion: no-preference) {
+  .anim .rider { animation: hop 520ms ease-in-out infinite; }
+  .anim .stage--charge img { animation: pulse 900ms ease-in-out infinite; }
+  .anim .stage--idle img { animation: hop2 900ms ease-in-out infinite; }
+  .anim .ring--spin { animation: spin 1.4s linear infinite; transform-origin: 20px 17.5px; }
+}
+@keyframes hop { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+@keyframes hop2 { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+@keyframes pulse { 0%, 100% { scale: 1; } 50% { scale: 1.07; } }
+@keyframes spin { to { rotate: 360deg; } }
+
+.minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }
+.mini { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.mini h3 { margin: 0 0 6px; }
+.note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.tpl { margin-top: 8px; font-size: 12px; color: var(--fg-2); }
+
+@media (max-width: 640px) {
+  .app { grid-template-columns: 1fr; }
+  .side { border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .bar { width: 96px; }
+}
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <div>
+    <h1>Plan: Befehle verstehen</h1>
+    <p class="lead">Aus kryptischen Shell-Befehlen werden Klartext-Zeilen, lange Läufe zeigen Fortschritt und Restdauer – in der Statuszeile, an der Befehlszeile im Chat und in der Seitenleiste. Für den Agenten-Verwalter, Betriebsart Claude. Stand 17.11.2026, freigegeben; Plan-Dateien unter <code>docs/planning/2026-11-17_befehle-verstehen/</code>.</p>
+  </div>
+  <button class="btn" id="themeBtn" type="button">Hell/Dunkel wechseln</button>
+</div>
+
+<h2>Lage – was gemessen ist</h2>
+<div class="facts">
+  <div><b>16 144</b><span>Vordergrund-Befehle in 14 Tagen</span></div>
+  <div><b>2 684</b><span>davon 10 s oder länger</span></div>
+  <div><b>833</b><span>davon 60 s oder länger</span></div>
+  <div><b>3 607</b><span>doppelt gespeichert (Fehler)</span></div>
+</div>
+<ul class="tight">
+  <li><b>Die Beschreibung ist schon da.</b> Claude schreibt zu jedem Bash- und PowerShell-Aufruf eine eigene Zeile, was der Befehl tut (Feld <code>description</code>). Der Verwalter zeigt stattdessen den rohen Befehl. Gemessen mit Claude Code 2.1.322.</li>
+  <li><b>Die Ausgabe läuft live in eine Datei</b> – auch bei Befehlen im Vordergrund, nicht nur bei Hintergrundprozessen. Ab etwa 2 Sekunden Laufzeit meldet Claude den Befehl als Vorgang; ab da wächst <code>…\tasks\&lt;Vorgang&gt;.output</code> Zeile für Zeile mit und verschwindet nach dem Ende. Über den Protokoll-Strom selbst kommt während des Laufs nichts. Kein Befehl muss umgeschrieben werden.</li>
+  <li><b>Nebenbefund:</b> Wegen genau dieser Vorgangs-Meldung speichert der Verwalter jeden Vordergrund-Befehl über 2 Sekunden zweimal, als Befehl und als Hintergrundprozess. Phase 1 behebt das.</li>
+  <li><b>Zeitlimit überschritten:</b> Claude schiebt den Befehl in den Hintergrund und meldet das als Änderung desselben Vorgangs; die Ausgabedatei bleibt dieselbe. Einmal gemessen.</li>
+  <li><b>Laufzeiten</b> stehen heute schon je Befehl in der Datenbank, werden aber nicht für eine Schätzung genutzt.</li>
+</ul>
+<p class="note">Quellen: drei Probeläufe mit Haiku gegen die Claude-Kommandozeile (Mitschnitte im Scratchpad der Session unter <code>probe\</code>), Zählung in einer Kopie der Datenbank vom 17.11.2026.</p>
+
+<h2>Entwurf – so sieht es aus</h2>
+<p class="why"><b>Wofür:</b> Auf einen Blick sehen, was der Agent gerade ausführt und wie lange es noch dauert – ohne den Befehl lesen zu müssen. Der rohe Befehl bleibt einen Klick entfernt.</p>
+<div class="controls">
+  <div><label>Zustand</label><span class="seg" id="stateSeg"></span></div>
+</div>
+<div class="controls">
+  <button class="switch" id="funSwitch" type="button" role="switch" aria-checked="false"><i></i><span id="funLabel">Figurenpaket aus – sachliche Zeile</span></button>
+  <span><label for="motionSel">Bewegung</label><select id="motionSel" disabled>
+    <option value="trek">Läuft die Strecke ab (neu)</option>
+    <option value="charge">Lädt auf (neu)</option>
+    <option value="reveal">Wird sichtbar (neu)</option>
+  </select></span>
+  <button class="btn" id="playBtn" type="button">Lauf abspielen</button>
+</div>
+
+<div class="app" id="app">
+  <div class="side">
+    <div class="side__head">Vorhaben · Verwalter</div>
+    <div class="side__item side__item--active"><span class="sdot sdot--run" id="sideDot"></span><span class="side__name" id="sideName">Befehle verstehen</span><span class="side__clock" id="sideClock" title=""></span></div>
+    <div class="side__item"><span class="sdot sdot--script"></span><span class="side__name">Import-Nachtlauf</span><span class="side__clock" title="Wartet auf: Nachtlauf der Importe">212/900</span></div>
+    <div class="side__item"><span class="sdot sdot--done"></span><span class="side__name">Skins Phase 9</span></div>
+  </div>
+  <div class="chat">
+    <div class="umsg">Lass die Prüfkette laufen und schau, ob die Tests grün sind.</div>
+    <div class="tg">
+      <div class="tg__head"><span class="dot" style="background:var(--done)"></span><b>Bash</b><span>2 Befehle</span></div>
+      <div class="tg__line"><span>⎿</span><span class="tg__tool">Bash</span><span class="tg__target">Git-Status prüfen</span><span class="tg__dur">0,4 s</span></div>
+      <div class="tg__line"><span>⎿</span><span class="tg__tool">Bash</span><span class="tg__target">Abhängigkeiten installieren</span><span class="tg__dur">0:48</span></div>
+      <div class="tg__cmd">cd /c/Users/u/develop/Agenten-Verwalter-2000 &amp;&amp; pnpm install --frozen-lockfile 2&gt;&amp;1 | tail -5</div>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+<p class="sample">Alle Namen, Zeiten, Zahlen und Ausgabezeilen im Entwurf sind Beispielwerte. Die Figur ist ein Beispielbild von img.pokemondb.net und liegt nicht im Repository.</p>
+<div class="tpl" id="tpl"></div>
+
+<div class="minis">
+  <div class="mini">
+    <h3>Befehlszeile im Chat</h3>
+    <div class="tg__line" style="padding-left:0"><span>⎿</span><span class="tg__tool">Bash</span><span class="tg__target">Rust-Tests laufen lassen</span><span class="tg__dur">2:17</span></div>
+    <div class="tg__cmd" style="margin-left:22px">cargo test --manifest-path src-tauri/Cargo.toml 2&gt;&amp;1 | tail -20</div>
+    <p class="note">Die Zeile zeigt die Beschreibung und nach dem Ende die Dauer. Aufgeklappt steht wie heute der Befehl samt Ausgabe. Ohne Beschreibung (Codex, ältere Einträge) bleibt der Befehl stehen.</p>
+  </div>
+  <div class="mini">
+    <h3>Seitenleiste und Kopfzeile</h3>
+    <div class="side__item" style="background:var(--bg-side)"><span class="sdot sdot--run"></span><span class="side__name">Befehle verstehen</span><span class="side__clock">noch ~1:40</span></div>
+    <div class="side__item" style="background:var(--bg-side)"><span class="sdot sdot--script"></span><span class="side__name">Import-Nachtlauf</span><span class="side__clock">212/900</span></div>
+    <p class="note">Nur während eines Laufs ab 5 Sekunden: Restdauer, sonst Fortschritt, sonst wie heute die Laufzeit. Der Tooltip nennt die Beschreibung.</p>
+  </div>
+  <div class="mini">
+    <h3>Hintergrund-Panel</h3>
+    <div class="tg__line" style="padding-left:0"><span class="dot" style="background:var(--running)"></span><span class="tg__target"><b>Rust-Tests laufen lassen</b></span><span class="tg__dur">0:42</span></div>
+    <div class="tg__line" style="padding-left:13px"><span class="tg__target mono">cargo test --manifest-path src-tauri/Cargo.toml …</span></div>
+    <p class="note">Titel ist die Beschreibung, der Befehl steht darunter. Neu: auch bei einem laufenden Vordergrund-Befehl zeigt die Ausgabe-Ansicht den Stand live. Vordergrund-Befehle stehen nicht mehr zusätzlich unter „Prozesse“.</p>
+  </div>
+</div>
+
+<h3>Figurenpakete („Fun-Modus“)</h3>
+<ul class="tight">
+  <li>Neues Fach <b>„Langer Lauf“</b>: gilt, sobald ein Shell-Befehl 5 Sekunden läuft. Beim Warten auf ein Skript bleibt es beim Fach „Warten“, das dieselben Angaben bekommt. Eigene Fächer gewinnen wie bisher; sie werden weiter am Befehl geprüft, nicht an der Beschreibung.</li>
+  <li>Drei neue Bewegungen, die den Fortschritt zeigen: <b>Läuft die Strecke ab</b> (Figur wandert auf dem Balken zum Ziel), <b>Lädt auf</b> (Ring um die Figur füllt sich), <b>Wird sichtbar</b> (Schattenriss bekommt von unten Farbe). Ohne bekannten Fortschritt laufen sie auf der Stelle; mit abgeschalteten Animationen steht die Figur still an ihrer Position.</li>
+  <li>Neue Platzhalter für Paket-Texte: <code>{befehl}</code>, <code>{fortschritt}</code>, <code>{rest}</code>; <code>{zeit}</code> gilt jetzt auch für Befehle. <code>{ziel}</code> ist bei Shell-Befehlen künftig die Beschreibung – bestehende Pakete zeigen sie ohne Änderung.</li>
+  <li>Alle 19 vorhandenen Bewegungen bleiben in jedem Fach wählbar.</li>
+</ul>
+
+<h2>Entscheidungen</h2>
+<div class="tablewrap"><table>
+<tr><th>Frage</th><th>Entschieden</th><th>Verworfen, weil</th></tr>
+<tr><td>Woher kommt die Beschreibung?</td><td>Aus Claudes eigenem Feld; ein Absatz im Systemprompt verlangt sie auf Deutsch, höchstens acht Wörter, „was, nicht wie“.</td><td>Eigener Modell-Aufruf je Befehl: kostet Kontingent und Zeit für etwas, das schon geliefert wird. Regel-Katalog je Befehl: veraltet mit jedem neuen Werkzeug.</td></tr>
+<tr><td>Woher kommt der Fortschritt?</td><td>Aus der Ausgabedatei, einmal je Sekunde die letzten 4 KB: Muster <code>[12/40]</code>, <code>12/40</code>, <code>45 %</code>, jeweils der jüngste Treffer; dazu die letzte Ausgabezeile.</td><td>Befehle umschreiben oder in den Hintergrund zwingen: ändert, was der Agent ausführt. Eigene Regeln je Test-Läufer: erst, wenn die allgemeinen Muster nachweislich nicht reichen.</td></tr>
+<tr><td>Woher kommt die Restdauer?</td><td>Erkannter Fortschritt rechnet hoch. Sonst Mittelwert (Median) der letzten fünf erfolgreichen Läufe desselben Befehls, erst im selben Vorhaben, sonst überall. Gemerkt werden Läufe ab 3 Sekunden, je Befehl die letzten zehn.</td><td>Durchschnitt über alle Läufe: ein Ausreißer verzerrt wochenlang. Fehlgeschlagene Läufe mitzählen: sie enden meist früh.</td></tr>
+<tr><td>Wann gilt ein Befehl als derselbe?</td><td>Gleicher Text nach Vereinheitlichen der Leerzeichen und ohne angehängte Ausgabe-Filter am Ende (<code>| tail</code>, <code>| head</code>, <code>| grep</code>, <code>2&gt;&amp;1</code> …). Gespeichert wird nur ein Prüfwert des Textes, nicht der Befehl.</td><td>Führendes <code>cd &lt;Ordner&gt;</code> wegschneiden: mischt denselben Befehl aus zwei Repositories.</td></tr>
+<tr><td>Wie unterscheidet sich Schätzung von Messung?</td><td>Gemessener Fortschritt: voller Balken mit Zahl. Geschätzt: schraffierter Balken mit „üblich ~3:10“. Überzogen: schraffiert in Warnfarbe mit den Worten „länger als üblich“.</td><td>Ein Balken für beides: täuscht Genauigkeit vor.</td></tr>
+<tr><td>Skripte des Agenten</td><td>Derselbe Systemprompt-Absatz verlangt in eigenen Skripten und Schleifen je Schritt eine Zeile <code>[erledigt/gesamt] was läuft</code>, ungepuffert.</td><td>Eigenes Werkzeug zum Melden von Fortschritt: mehr Bau, mehr Kontext, gleicher Nutzen.</td></tr>
+<tr><td>Welche Betriebsarten?</td><td>Beschreibung und Restdauer überall, wo die Daten kommen. Live-Fortschritt nur Claude.</td><td>Autark und Codex: laut deiner Antwort Folgearbeit.</td></tr>
+</table></div>
+
+<h2>Phasen</h2>
+<div class="tablewrap"><table>
+<tr><th>#</th><th>Phase</th><th>Einstufung</th><th>Danach gilt</th></tr>
+<tr><td>1</td><td><b>Befehle nur einmal führen, Ausgabedatei kennen</b><br>Kern: Vorgangs-Meldungen von Vordergrund-Befehlen dem vorhandenen Eintrag zuordnen; Wechsel in den Hintergrund wandelt den Eintrag um.</td><td><span class="tag tag--heikel">heikel</span></td><td>Kein Vordergrund-Befehl steht mehr zusätzlich unter „Prozesse“. Die Ausgabe-Ansicht zeigt einen laufenden Vordergrund-Befehl live. Belegt mit den aufgezeichneten Protokollzeilen über ein neues Prüfprogramm.</td></tr>
+<tr><td>2</td><td><b>Beschreibung statt Befehl</b><br>Kern und Oberfläche: Beschreibung durchreichen, Systemprompt-Absatz, Befehlszeile im Chat, Gruppenzeile, Statuszeile, Hintergrund-Panel, Tooltips.</td><td><span class="tag">standard</span></td><td>Überall steht die Beschreibung, der Befehl beim Aufklappen. Ohne Beschreibung alles wie heute. Eigene Fächer prüfen weiter den Befehl.</td></tr>
+<tr><td>3</td><td><b>Laufzeit-Gedächtnis</b><br>Kern: neue Tabelle (Migration 021), Befehl vereinheitlichen, Läufe merken, Schätzung beim Start, laufender Befehl im Session-Stand; einmaliges Übernehmen der vorhandenen Laufzeiten beim ersten Start.</td><td><span class="tag">standard</span></td><td>Zweiter Lauf desselben Befehls trägt einen Erwartungswert; Befehle aus dem Bestand tragen ihn vom ersten Tag an. Prüfprogramm druckt Schlüssel und Schätzung zu einem Befehl.</td></tr>
+<tr><td>4</td><td><b>Live-Fortschritt aus der Ausgabe</b><br>Kern: Erkennung der Muster, Wächter liest einmal je Sekunde, Stand geht ohne Datenbank-Schreiben an die Oberfläche.</td><td><span class="tag tag--heikel">heikel</span></td><td>Während eines Laufs mit <code>[3/12]</code>-Zeilen meldet der Kern Fortschritt und letzte Zeile. Prüfprogramm druckt die Erkennung zu einer Datei.</td></tr>
+<tr><td>5</td><td><b>Anzeige</b><br>Oberfläche nach diesem Entwurf: Statuszeile mit Dauer, Balken, Restdauer und letzter Zeile; Warten auf Skript auch ohne Figurenpaket; Seitenleiste und Kopfzeile; Dauer an der Befehlszeile.</td><td><span class="tag">standard</span></td><td>Alle acht Zustände des Entwurfs, Seitenleiste und Kopfzeile nennen Restdauer oder Fortschritt.</td></tr>
+<tr><td>6</td><td><b>Figuren: Fach „Langer Lauf“ und drei Bewegungen</b><br>Kern und Oberfläche der Skins: Fach, Bewegungen, Platzhalter, Editor-Vorschau mit Schieber, Werkzeuge <code>skin_*</code>.</td><td><span class="tag">standard</span></td><td>Ein Paket kann das Fach belegen; die drei Bewegungen folgen dem Fortschritt. Ab Werk bleibt alles aus.</td></tr>
+<tr><td>7</td><td><b>Abschluss</b><br>Deine Abnahme, Archivieren, Version <code>v0.66.0</code>.</td><td><span class="tag">du</span></td><td>Release gebaut.</td></tr>
+</table></div>
+<p class="note">Reihenfolge fest 1 → 6: jede Phase baut auf den Daten der vorigen. Je Phase eine Umsetzungs-Session, keine automatisierten Tests (private Arbeitsweise). Architektur-Entscheidung als ADR 066.</p>
+
+<h2>Risiken</h2>
+<ul class="tight">
+  <li><span class="dot dot--warn"></span><b>Die Ausgabedatei ist nirgends zugesagt.</b> Ihr Ort ist an Claude Code 2.1.322 gemessen, nicht dokumentiert. Ändert Anthropic ihn, fällt der Live-Fortschritt still weg; Beschreibung und geschätzte Restdauer bleiben.</li>
+  <li><span class="dot dot--warn"></span><b>Gepufferte Ausgabe.</b> Manche Programme schreiben in eine Datei erst am Ende. Dann steht „noch keine Ausgabe“ und nur die Schätzung.</li>
+  <li><span class="dot dot--warn"></span><b>Falsch erkannter Fortschritt.</b> Eine Zeile wie „Schritt 2/3 von Teil 5“ zählt als 2 von 3. Der Balken kann springen oder zurückfallen.</li>
+  <li><span class="dot dot--warn"></span><b>Güte der Beschreibung.</b> Sie stammt vom Modell. Laufende Sessions bekommen den neuen Systemprompt erst nach einem Neustart des Agenten; bis dahin oft Englisch.</li>
+  <li><span class="dot dot--warn"></span><b>Schätzung in Ticket-Arbeitsbäumen.</b> Ein anderer Ordner im Befehl ist ein anderer Befehl; dort beginnt das Gedächtnis je Ordner neu.</li>
+</ul>
+<h3>Wo ich am unsichersten bin</h3>
+<ul class="tight">
+  <li>Reihenfolge der Meldungen beim Wechsel in den Hintergrund – nur einmal gemessen. Prüfung in Phase 1: Prüfprogramm über die aufgezeichneten Zeilen plus ein zweiter Live-Lauf mit kurzem Zeitlimit.</li>
+  <li>Sekündliche Stand-Meldungen je laufender Session und ihre Last auf der Oberfläche. Prüfung in Phase 4: gesendet wird nur bei geändertem Stand; Zählung der Ereignisse über einen 60-Sekunden-Lauf im Entwicklungsmodus.</li>
+  <li>Zweite Zeile der Statuszeile im virtualisierten Verlauf (Höhe wechselt). Prüfung in Phase 5: im Entwicklungsmodus einen Lauf starten und ans Ende gescrollt bleiben.</li>
+</ul>
+
+<h2>Nicht im Umfang</h2>
+<ul class="tight">
+  <li>Live-Fortschritt in den Betriebsarten Autark und Codex.</li>
+  <li>Befehle von Unteragenten (nur ihre Schrittliste wie heute).</li>
+  <li>Eigene Erkennung je Test-Läufer (cargo, vitest, pytest über die allgemeinen Muster hinaus).</li>
+  <li>Bestehende Figurenpakete um das neue Fach ergänzen – sie liegen außerhalb des Repositorys.</li>
+  <li>Linux und macOS: der Ort der Ausgabedatei ist dort nicht gemessen.</li>
+</ul>
+</main>
+
+<script>
+const SPRITE = '';
+const STATES = [
+  { id: 'kurz', name: 'Kurzer Befehl', label: 'Git-Status prüfen …', calls: 3 },
+  { id: 'fortschritt', name: 'Fortschritt erkannt', label: 'Rust-Tests laufen lassen …', sec: 42, kind: 'real', done: 12, total: 40, last: 'test sessions::handoff::erkennt_zwei_zeilen ... ok', side: 'rest' },
+  { id: 'geschaetzt', name: 'Nur Erfahrungswert', label: 'Prüfkette des Verwalters laufen lassen …', sec: 42, kind: 'est', expected: 190, last: '> verwalter@0.65.1 typecheck', side: 'rest' },
+  { id: 'erster', name: 'Erster Lauf', label: 'Abhängigkeiten installieren …', sec: 42, kind: 'none', last: 'Progress: resolved 412, reused 398, downloaded 3', side: 'zeit' },
+  { id: 'laenger', name: 'Länger als üblich', label: 'Prüfkette des Verwalters laufen lassen …', sec: 245, kind: 'late', expected: 190, last: 'Compiling verwalter v0.65.1', side: 'zeit' },
+  { id: 'stumm', name: 'Keine Ausgabe', label: 'Datenbank-Kopie auswerten …', sec: 12, kind: 'none', last: null, side: 'zeit' },
+  { id: 'skript', name: 'Wartet auf Skript', label: 'Wartet auf: Nachtlauf der Importe …', sec: 760, kind: 'real', done: 212, total: 900, last: '[212/900] kunde-0212.csv', side: 'frac', nohint: true, wait: true },
+  { id: 'ohne', name: 'Ohne Beschreibung', label: 'cargo test --manifest-path src-tauri/Cargo.toml 2>&1 | tail -20 …', cmd: true, sec: 42, kind: 'real', done: 12, total: 40, last: 'test db::runs::merkt_lauf ... ok', side: 'rest' },
+];
+let state = STATES[1], fun = false, motion = 'trek', play = null, sim = null;
+
+const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+function rest(seconds) {
+  if (seconds >= 600) return '~' + Math.round(seconds / 60) + ' min';
+  return '~' + mmss(Math.max(5, Math.round(seconds / 5) * 5));
+}
+function view() {
+  const s = sim ?? state;
+  const v = { frac: null, num: '', restText: '', late: false };
+  if (s.kind === 'real') { v.frac = s.done / s.total; v.num = s.done + '/' + s.total; if (s.done > 0 && s.done < s.total) v.restText = rest(s.sec * (s.total - s.done) / s.done); }
+  if (s.kind === 'est') { v.frac = Math.min(0.95, s.sec / s.expected); v.num = 'üblich ~' + mmss(s.expected); v.restText = rest(s.expected - s.sec); }
+  if (s.kind === 'late') { v.frac = 1; v.late = true; }
+  return v;
+}
+function esc(t) { return t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+function figure(v) {
+  if (!fun) return '<svg class="icon" width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11M3 3l8 8M11 3 3 11"/></svg>';
+  const s = sim ?? state;
+  if (s.kind === undefined) return '<span class="stage stage--idle"><img src="' + SPRITE + '" alt=""></span>';
+  if (motion === 'trek') return v.frac === null ? '<span class="stage stage--idle"><img src="' + SPRITE + '" alt=""></span>' : '';
+  if (motion === 'charge') {
+    const c = 2 * Math.PI * 15, off = v.frac === null ? c * 0.7 : c * (1 - v.frac);
+    return '<span class="stage stage--charge"><svg class="ring" viewBox="0 0 40 35"><circle class="ring__bg" cx="20" cy="17.5" r="15"/><g class="' + (v.frac === null ? 'ring--spin' : '') + '"><circle class="ring__fg" cx="20" cy="17.5" r="15" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '"/></g></svg><img src="' + SPRITE + '" alt=""></span>';
+  }
+  const top = v.frac === null ? 70 : Math.round((1 - v.frac) * 100);
+  return '<span class="stage stage--reveal"><img class="sil" src="' + SPRITE + '" alt=""><img class="col" src="' + SPRITE + '" alt="" style="clip-path: inset(' + top + '% 0 0 0)"></span>';
+}
+function meter(v) {
+  const s = sim ?? state;
+  if (s.kind === undefined || s.kind === 'none') return '';
+  const cls = v.late ? ' bar--late' : s.kind === 'est' ? ' bar--est' : '';
+  const trek = fun && motion === 'trek';
+  const pct = Math.round(v.frac * 100);
+  const rider = trek ? '<img class="rider" src="' + SPRITE + '" alt="" style="left:' + pct + '%"><span class="bar__flag"></span>' : '';
+  const aria = 'role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="' + (s.kind === 'real' ? 'Fortschritt' : 'Geschätzter Fortschritt') + '"';
+  return '<span class="meter"><span class="bar' + cls + (trek ? ' bar--trek' : '') + '" ' + aria + '><span class="bar__fill" style="width:' + pct + '%"></span>' + rider + '</span>' + (v.num ? '<span class="meter__num">' + v.num + '</span>' : '') + '</span>';
+}
+function render() {
+  const s = sim ?? state, v = view();
+  const parts = [figure(v), '<span class="wi__label' + (s.cmd ? ' wi__label--cmd' : '') + '" title="' + esc(s.label) + '">' + esc(s.label) + '</span>'];
+  if (s.sec !== undefined) parts.push('<span class="wi__time">· ' + (s.kind === 'none' ? 'läuft ' : '') + mmss(s.sec) + '</span>');
+  if (s.calls) parts.push('<span class="wi__count">· ' + s.calls + ' Aufrufe</span>');
+  const m = meter(v); if (m) parts.push(m);
+  if (v.late) parts.push('<span class="wi__late">länger als üblich (~' + mmss(s.expected) + ')</span>');
+  if (v.restText) parts.push('<span class="wi__time">· noch ' + v.restText + '</span>');
+  if (s.kind === 'none' && s.last === null) parts.push('<span class="wi__hint">· noch keine Ausgabe</span>');
+  if (!s.nohint) parts.push('<span class="wi__hint">· Esc unterbricht</span>');
+  let html = '<div class="wi">' + parts.join('') + '</div>';
+  if (s.last) html += '<div class="wi__last' + (fun && !(motion === 'trek' && v.frac !== null) ? ' wi__last--fig' : '') + '"><span>⎿</span><span title="' + esc(s.last) + '">' + esc(s.last) + '</span></div>';
+  const box = document.getElementById('status');
+  box.innerHTML = html;
+  box.classList.toggle('anim', fun);
+  const clock = document.getElementById('sideClock');
+  clock.textContent = s.sec === undefined || s.sec < 5 ? '' : s.side === 'rest' && v.restText ? 'noch ' + v.restText : s.side === 'frac' ? v.num : mmss(s.sec);
+  clock.title = s.label.replace(' …', '');
+  document.getElementById('sideDot').className = 'sdot ' + (s.wait ? 'sdot--script' : 'sdot--run');
+  document.getElementById('tpl').innerHTML = fun
+    ? 'Fach: <b>' + (s.wait ? 'Warten' : s.kind === undefined ? 'Befehl' : 'Langer Lauf') + '</b> · Text im Paket, Beispiel: <code>{ziel} … {fortschritt} {rest}</code> · Die Zeile oben zeigt denselben Stand sachlich; ein Paket-Text ersetzt nur den Satz vor der Dauer.'
+    : '';
+}
+function setState(id) {
+  stop(); state = STATES.find(x => x.id === id);
+  document.querySelectorAll('#stateSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  render();
+}
+function stop() { if (play) { clearInterval(play); play = null; } sim = null; document.getElementById('playBtn').textContent = 'Lauf abspielen'; }
+document.getElementById('stateSeg').innerHTML = STATES.map(s => '<button type="button" data-id="' + s.id + '" aria-pressed="false">' + s.name + '</button>').join('');
+document.getElementById('stateSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setState(b.dataset.id); });
+document.getElementById('funSwitch').addEventListener('click', () => {
+  fun = !fun;
+  const sw = document.getElementById('funSwitch'); sw.setAttribute('aria-checked', String(fun));
+  document.getElementById('funLabel').textContent = fun ? 'Figurenpaket an – Figur zeigt den Fortschritt' : 'Figurenpaket aus – sachliche Zeile';
+  document.getElementById('motionSel').disabled = !fun; render();
+});
+document.getElementById('motionSel').addEventListener('change', e => { motion = e.target.value; render(); });
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (play) { stop(); render(); return; }
+  if (state.kind === undefined) setState('fortschritt');
+  sim = { ...state }; document.getElementById('playBtn').textContent = 'Anhalten';
+  const lines = ['test runs::progress::erkennt_klammerform ... ok', 'test runs::normalize::schneidet_filter_ab ... ok', 'test skins::matching::eigenes_fach_gewinnt ... ok', 'test background::output::liest_ende ... ok'];
+  let tick = 0;
+  play = setInterval(() => {
+    tick += 1; sim.sec += 3;
+    if (sim.kind === 'real') { sim.done = Math.min(sim.total, sim.done + Math.max(1, Math.round(sim.total / 28))); sim.last = sim.wait ? '[' + sim.done + '/' + sim.total + '] kunde-' + String(sim.done).padStart(4, '0') + '.csv' : lines[tick % lines.length]; if (sim.done >= sim.total) { render(); stop(); setTimeout(render, 900); return; } }
+    if (sim.kind === 'est' && sim.sec >= sim.expected) { sim.kind = 'late'; }
+    if (sim.kind === 'est' || sim.kind === 'late' || sim.kind === 'none') { sim.sec += 9; if (tick > 22) { stop(); } }
+    render();
+  }, 450);
+});
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+});
+const start = location.hash.slice(1).split(',');
+if (start.includes('fun')) document.getElementById('funSwitch').click();
+for (const m of ['trek', 'charge', 'reveal']) if (start.includes(m)) { motion = m; document.getElementById('motionSel').value = m; }
+setState(STATES.some(s => start.includes(s.id)) ? STATES.find(s => start.includes(s.id)).id : 'fortschritt');
+</script>
+</body>
+</html>
