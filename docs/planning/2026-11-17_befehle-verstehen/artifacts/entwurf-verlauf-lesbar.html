@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entwurf: Verlauf lesbar</title>
+<style>
+:root {
+  --bg: #ffffff; --bg-surface: #ffffff; --bg-selected: #e4e6f1;
+  --border-subtle: #e5e5e5; --border: #cecece;
+  --fg: #3c3c3c; --fg-2: #555555; --muted: #6e6e6e;
+  --accent: #c4572f; --running: #2563eb; --error: #d23b33; --done: #16803c;
+  --track: #c8c8c8; --code-bg: #f3f3f6;
+  --sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1f1f1f; --bg-surface: #252526; --bg-selected: #37373d;
+  --border-subtle: #2b2b2b; --border: #3c3c3c;
+  --fg: #d4d4d4; --fg-2: #b0b0b0; --muted: #8f8f8f;
+  --accent: #e0825c; --running: #5b9dff; --error: #f47067; --done: #4cc38a;
+  --track: #4a4a4f; --code-bg: #242428;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #1f1f1f; --bg-surface: #252526; --bg-selected: #37373d;
+  --border-subtle: #2b2b2b; --border: #3c3c3c;
+  --fg: #d4d4d4; --fg-2: #b0b0b0; --muted: #8f8f8f;
+  --accent: #e0825c; --running: #5b9dff; --error: #f47067; --done: #4cc38a;
+  --track: #4a4a4f; --code-bg: #242428;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 13.5px/1.5 var(--sans); }
+main { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 15px; margin: 28px 0 8px; font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle); }
+h3 { font-size: 13px; margin: 0 0 8px; font-weight: 600; color: var(--fg-2); }
+p { margin: 6px 0; }
+.lead { color: var(--fg-2); }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+button { font: inherit; color: inherit; }
+.btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; min-height: 28px; }
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible, .seg button:focus-visible, .switch:focus-visible { outline: 2px solid var(--running); outline-offset: 2px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 8px 0 10px; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; cursor: pointer; min-height: 28px; font-size: 12.5px; }
+.seg button:hover { border-color: var(--accent); }
+.seg button[aria-pressed="true"] { background: var(--bg-selected); border-color: var(--accent); }
+.switch { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px; cursor: pointer; text-align: left; }
+.switch i { width: 30px; height: 17px; border-radius: 999px; background: var(--track); position: relative; transition: background 160ms; flex-shrink: 0; }
+.switch i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: transform 160ms; }
+.switch[aria-checked="true"] i { background: var(--accent); }
+.switch[aria-checked="true"] i::after { transform: translateX(13px); }
+.switch[disabled] { cursor: default; color: var(--muted); }
+.sample { color: var(--muted); font-size: 11.5px; }
+ul.tight { margin: 4px 0; padding-left: 18px; }
+ul.tight li { margin: 3px 0; }
+.prompt { background: var(--code-bg); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; color: var(--fg-2); }
+@media (prefers-reduced-motion: reduce) { .switch i, .switch i::after { transition: none; } .btn:active { transform: none; } }
+
+/* ---------- Verlauf ---------- */
+.chat { border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px 4px; min-width: 0; background: var(--bg); }
+.chat--bare { border: 0; padding: 0; }
+.txt { margin: 0 0 14px; overflow-wrap: anywhere; }
+.think { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--muted); font-style: italic; }
+.think svg { flex-shrink: 0; }
+
+.tg { display: flex; flex-direction: column; gap: 3px; margin: 0 0 14px; min-width: 0; }
+.tg__head { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.tg__head .tg__dot { margin-top: 6px; }
+.tg__purpose { margin: 0; font-size: 13px; font-weight: 600; color: var(--fg); overflow-wrap: anywhere; min-width: 0; }
+.tg__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tg--purpose .tg__body { margin-left: 3.5px; padding: 1px 0 2px 12.5px; border-left: 1px solid var(--border); }
+.tg--purpose .tg__lines { padding-left: 4px; }
+.tg__toggle { display: flex; align-items: center; align-self: flex-start; flex-wrap: wrap; gap: 2px 8px; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--fg-2); font-size: 12.5px; text-align: left; cursor: pointer; min-width: 0; }
+.tg__toggle:hover, .tg__line:hover { color: var(--fg); }
+.tg__toggle:focus-visible, .tg__line:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tg__dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 999px; background: var(--done); }
+.tg__dot--running { background: var(--running); }
+.tg__dot--failed { background: var(--error); }
+.tg__title { flex-shrink: 0; color: var(--fg); font-weight: 600; }
+.tg__part { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tg__sep { color: var(--muted); margin-left: 3px; }
+.tg__fail { color: var(--error); white-space: nowrap; }
+.tg__one { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 0 1 auto; }
+.tg__chev { flex-shrink: 0; }
+.tg__lines { display: flex; flex-direction: column; gap: 2px; padding-left: 16px; min-width: 0; }
+.tg__line { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--fg-2); font-size: 12.5px; text-align: left; cursor: pointer; }
+.tg__branch { flex-shrink: 0; color: var(--muted); font-family: var(--mono); }
+.tg__verb { flex-shrink: 0; width: 76px; font-weight: 600; }
+.tg__verb--tool { width: auto; }
+.tg__line--failed .tg__verb { color: var(--error); }
+.tg__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12px; color: var(--fg); }
+.tg__name--prose { font-family: var(--sans); font-size: 12.5px; }
+.tg__state { flex-shrink: 0; color: var(--muted); }
+.tg__state--failed { color: var(--error); }
+.tg__dur { flex-shrink: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tg__detail { margin: 2px 0 6px 22px; padding: 6px 9px; background: var(--code-bg); border-radius: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--fg-2); overflow-wrap: anywhere; min-width: 0; }
+.tg__detail b { display: block; font-family: var(--sans); font-weight: 600; font-size: 11px; color: var(--muted); margin: 0 0 1px; }
+.tg__detail b + span { display: block; margin-bottom: 5px; }
+.tg__detail span:last-child { margin-bottom: 0; }
+.fig { flex-shrink: 0; width: 26px; height: 20px; object-fit: contain; image-rendering: pixelated; }
+
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 32px; }
+.case { border-top: 1px solid var(--border-subtle); padding: 10px 0 2px; min-width: 0; }
+@media (max-width: 575px) { .chat { padding: 12px 12px 2px; } }
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <div>
+    <h1>Entwurf: Verlauf lesbar</h1>
+    <p class="lead">Jeder Schritt sagt: wozu und was.</p>
+  </div>
+  <button class="btn" id="themeBtn" type="button">Hell/Dunkel</button>
+</div>
+
+<h2>Verlauf</h2>
+<div class="controls">
+  <span class="seg" id="viewSeg">
+    <button type="button" data-view="neu">Neu</button>
+    <button type="button" data-view="heute">Heute</button>
+  </span>
+  <span class="seg" id="dataSeg">
+    <button type="button" data-data="neue">Neue Session</button>
+    <button type="button" data-data="alt">Alte Session</button>
+  </span>
+  <button class="switch" id="funSwitch" type="button" role="switch" aria-checked="false"><i></i><span id="funLabel"></span></button>
+  <button class="btn" id="openBtn" type="button">Alles aufklappen</button>
+</div>
+<div class="chat" id="chat" role="log" aria-label="Verlauf"></div>
+<p class="sample" id="sampleNote"></p>
+
+<h2>Sonderfälle</h2>
+<div class="cases" id="cases"></div>
+<p class="sample">Beispielwerte.</p>
+
+<h2>Regeln</h2>
+<ul class="tight">
+  <li><b>Kopf:</b> die kurze Zeile des Agenten direkt vor dem Block – höchstens 80 Zeichen. Längeres bleibt Text.</li>
+  <li><b>Ohne Kopf:</b> nur die Was-Zeile. Nichts wird erfunden.</li>
+  <li><b>Was-Zeile:</b> zählt je Art; jede Datei einmal.</li>
+  <li><b>Aufgeklappt:</b> Tätigkeit und Dateiname. Der ganze Pfad steht beim Überfahren und im Detail.</li>
+  <li><b>Ein Aufruf:</b> ein Klick bis zur Ausgabe.</li>
+  <li><b>Figur:</b> Bild des Fachs, unbewegt. Sprüche bleiben in der Statuszeile.</li>
+</ul>
+
+<h3 style="margin-top:16px">Vorgabe an den Agenten</h3>
+<p class="prompt">Zweck: Bevor du eine Folge von Werkzeug-Aufrufen beginnst, schreib eine einzelne kurze Zeile, wozu – auf Deutsch, höchstens sechs Wörter, wie eine Überschrift, ohne Punkt am Ende (z. B. „Plan-Dateien schreiben“). Der Benutzer liest diese Zeilen im Verlauf als Überschrift deiner Schritte. Keine neue Zeile, solange die vorige noch gilt.</p>
+</main>
+
+<script>
+const FIG_DIR = '_verlauf-figuren/';
+const R = 'C:\\Users\\u\\develop\\Agenten-Verwalter-2000\\';
+const PL = R + 'docs\\planning\\2026-11-17_befehle-verstehen\\';
+const AR = 'C:\\Users\\u\\.verwalter\\workspaces\\03feeb67\\.artefakte\\';
+
+/* Echte Einträge 185–213 der Session „Tool-Status und Fortschrittsanzeige“. `ex` = Beispielwert, nur in „Neue Session“; `old` = echter Text, nur in „Alte Session“. */
+const SESSION = [
+  { k: 'text', ex: true, text: 'Plan-Dateien schreiben' },
+  { k: 'text', old: true, text: 'Alles Nötige ist gelesen – ich schreibe jetzt die Plan-Dateien (Übersicht, sechs Phasen, Entscheidungs-Notiz) ins Repository.' },
+  { k: 'tool', id: 't186', tool: 'Write', target: PL + 'README.md' },
+  { k: 'tool', id: 't187', tool: 'Write', target: PL + 'phase-1-vorgang.md' },
+  { k: 'think', s: 3 },
+  { k: 'tool', id: 't189', tool: 'Write', target: PL + 'phase-2-beschreibung.md' },
+  { k: 'tool', id: 't190', tool: 'Write', target: PL + 'phase-3-gedaechtnis.md' },
+  { k: 'tool', id: 't191', tool: 'Write', target: PL + 'phase-4-fortschritt.md' },
+  { k: 'think', s: 4 },
+  { k: 'text', old: true, text: 'Vier von sechs Phasen-Dateien stehen; jetzt folgen Anzeige, Figuren, die Entscheidungs-Notiz und der Commit.' },
+  { k: 'tool', id: 't194', tool: 'Write', target: PL + 'phase-5-anzeige.md' },
+  { k: 'tool', id: 't195', tool: 'Write', target: PL + 'phase-6-figuren.md' },
+  { k: 'tool', id: 't196', tool: 'Write', target: PL + 'FINDINGS.md' },
+  { k: 'tool', id: 't197', tool: 'Write', target: PL + 'artifacts\\README.md' },
+  { k: 'tool', id: 't198', tool: 'Write', target: R + 'docs\\decisions\\066-befehle-verstehen.md' },
+  { k: 'tool', id: 't199', tool: 'Edit', target: R + 'STATE.md' },
+  { k: 'think', s: 5 },
+  { k: 'text', ex: true, text: 'Plan nachschärfen und committen' },
+  { k: 'tool', id: 't201', tool: 'Edit', target: PL + 'phase-5-anzeige.md' },
+  { k: 'tool', id: 't202', tool: 'Edit', target: PL + 'phase-6-figuren.md' },
+  { k: 'tool', id: 't203', tool: 'Edit', target: AR + 'plan-befehle-verstehen.html' },
+  { k: 'tool', id: 't204', tool: 'Edit', target: AR + 'plan-befehle-verstehen.html' },
+  { k: 'tool', id: 't205', tool: 'Edit', target: AR + 'plan-befehle-verstehen.html' },
+  { k: 'tool', id: 't206', tool: 'Edit', target: AR + 'plan-befehle-verstehen.html' },
+  { k: 'tool', id: 't207', tool: 'Write', target: 'C:\\Users\\u\\.verwalter\\workspaces\\03feeb67\\.scratchpad\\c9c031bc\\commit-plan.txt' },
+  { k: 'tool', id: 't208', tool: 'Bash', target: "sed 's#https://img.pokemondb.net/sprites/black-white/anim/normal/bulbasaur.gif##' /c/Users/u/.verwalter/workspaces/03feeb67/.artefakte/plan-befehle-verstehen.html > … && git commit -F …", desc: 'Plan committen', dur: '1,8 s' },
+  { k: 'think', s: 2 },
+  { k: 'text', ex: true, text: 'Umsetzung im Verwalter anlegen' },
+  { k: 'tool', id: 't210', tool: 'mcp__verwalter__implementation_create', target: '' },
+  { k: 'think', s: 9 },
+  { k: 'text', ex: true, text: 'Aufräumen' },
+  { k: 'tool', id: 't212', tool: 'Bash', target: 'rm -f "/c/Users/u/.verwalter/workspaces/03feeb67/.scratchpad/c9c031bc/db-kopie.db"; ls /c/Users/u/.verwalter/workspaces/03feeb67/.scratchpad/c9c031bc', desc: 'Datenbank-Kopie löschen', dur: '0,3 s' },
+  { k: 'text', text: 'Umsetzung angelegt: 7 Phasen, 7 Stationen. Nächster Schritt: Phase 1 im Verwalter starten.' },
+];
+
+const CASES = [
+  { title: 'Läuft', open: true, entries: [
+    { k: 'text', text: 'Prüfkette laufen lassen' },
+    { k: 'tool', id: 'c1a', tool: 'Read', target: R + 'package.json' },
+    { k: 'tool', id: 'c1b', tool: 'Bash', target: 'pnpm check 2>&1 | tail -40', desc: 'Prüfkette', state: 'running' },
+  ] },
+  { title: 'Fehlschlag', open: true, entries: [
+    { k: 'text', text: 'Einstellungen nachlesen' },
+    { k: 'tool', id: 'c2a', tool: 'Grep', target: 'runs_backfilled' },
+    { k: 'tool', id: 'c2b', tool: 'Read', target: R + 'src-tauri\\src\\db\\settings.rs' },
+    { k: 'tool', id: 'c2c', tool: 'Read', target: R + 'src-tauri\\src\\runs\\mod.rs', state: 'failed' },
+  ] },
+  { title: 'Unterbrochen', open: true, entries: [
+    { k: 'tool', id: 'c3a', tool: 'Bash', target: 'cargo build --release', desc: 'Release bauen', state: 'interrupted' },
+    { k: 'tool', id: 'c3b', tool: 'Read', target: R + 'src-tauri\\Cargo.toml' },
+  ] },
+  { title: 'Langer Text davor bleibt Text', entries: [
+    { k: 'text', text: 'Die Ursache steht fest: Der Übersetzer legt zu jedem Vordergrund-Befehl einen zweiten Eintrag an. Ich ändere zuerst die Zuordnung.' },
+    { k: 'tool', id: 'c4a', tool: 'Edit', target: R + 'src-tauri\\src\\agents\\claude\\translate.rs' },
+    { k: 'tool', id: 'c4b', tool: 'Edit', target: R + 'src-tauri\\src\\sessions\\registry.rs' },
+  ] },
+  { title: 'Viele Arten', entries: [
+    { k: 'text', text: 'Anzeige-Stellen suchen' },
+    ...Array.from({ length: 12 }, (_, i) => ({ k: 'tool', id: 'c5g' + i, tool: 'Grep', target: 'awaitedScript' })),
+    ...Array.from({ length: 40 }, (_, i) => ({ k: 'tool', id: 'c5r' + i, tool: 'Read', target: R + 'src\\app\\Datei' + i + '.tsx' })),
+    { k: 'tool', id: 'c5w', tool: 'WebFetch', target: 'https://tanstack.com/virtual/latest/docs/api/virtualizer' },
+    { k: 'tool', id: 'c5b1', tool: 'Bash', target: 'git status --short', desc: 'Git-Status prüfen' },
+    { k: 'tool', id: 'c5m', tool: 'mcp__verwalter__artifact_list', target: '' },
+  ] },
+  { title: 'Befehl ohne Beschreibung', entries: [
+    { k: 'tool', id: 'c7a', tool: 'Bash', target: 'cd /c/Users/u/develop/Agenten-Verwalter-2000 && git log --oneline -5' },
+  ] },
+];
+
+const SLOT = { Grep: 'search', Glob: 'search', Read: 'read', Edit: 'write', Write: 'write', NotebookEdit: 'write', Bash: 'shell', PowerShell: 'shell', WebSearch: 'web', WebFetch: 'web', Agent: 'agent', Task: 'agent' };
+const VERB = { Grep: 'Gesucht', Glob: 'Gesucht', Read: 'Gelesen', Edit: 'Bearbeitet', Write: 'Geschrieben', NotebookEdit: 'Bearbeitet', Bash: 'Befehl', PowerShell: 'Befehl', WebSearch: 'Websuche', WebFetch: 'Abgerufen', Agent: 'Unteragent', Task: 'Unteragent' };
+const COUNT = {
+  search: n => n === 1 ? '1 Suche' : n + ' Suchen',
+  read: n => n === 1 ? '1 Datei gelesen' : n + ' Dateien gelesen',
+  write: n => n === 1 ? '1 Datei bearbeitet' : n + ' Dateien bearbeitet',
+  shell: n => n === 1 ? '1 Befehl' : n + ' Befehle',
+  web: n => n === 1 ? '1 Web-Abruf' : n + ' Web-Abrufe',
+  agent: n => n === 1 ? '1 Unteragent' : n + ' Unteragenten',
+  other: n => n === 1 ? '1 weiterer Aufruf' : n + ' weitere Aufrufe',
+};
+const FILE_SLOTS = new Set(['read', 'write']);
+const MAX_PURPOSE = 80;
+
+const state = { view: 'neu', data: 'neue', fun: false, open: new Set(), figuresMissing: false };
+
+function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function slotOf(tool) { return SLOT[tool] || 'other'; }
+function chev(open) { return `<svg class="tg__chev" width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${open ? 'M3.5 5.5 7 9l3.5-3.5' : 'M5.5 3.5 9 7l-3.5 3.5'}"/></svg>`; }
+function fig(slot) { return state.fun && !state.figuresMissing ? `<canvas class="fig" data-fig="${slot}" aria-hidden="true"></canvas>` : ''; }
+function mcpName(tool) { const m = /^mcp__(.+?)__(.+)$/.exec(tool); return m ? m[1] + ' · ' + m[2] : tool; }
+function fileName(target) { const i = Math.max(target.lastIndexOf('\\'), target.lastIndexOf('/')); return i < 0 ? target : target.slice(i + 1); }
+function dotOf(tools) { return tools.some(t => t.state === 'failed') ? 'failed' : tools.some(t => t.state === 'running') ? 'running' : 'done'; }
+
+/* Aufeinanderfolgende Aufrufe sind eine Gruppe; in der neuen Ansicht wird eine kurze Zeile direkt davor ihr Kopf. */
+function buildBlocks(entries, withPurpose) {
+  const usable = entries.filter(e => state.data === 'neue' ? !e.old : !e.ex);
+  const blocks = []; let group = null;
+  for (const e of usable) {
+    if (e.k === 'tool') {
+      if (!group) {
+        group = { k: 'tools', tools: [], purpose: null };
+        const last = blocks[blocks.length - 1];
+        if (withPurpose && last && last.k === 'text' && last.text.length <= MAX_PURPOSE && !last.text.includes('\n')) { group.purpose = last.text; blocks.pop(); }
+        blocks.push(group);
+      }
+      group.tools.push(state.data === 'neue' ? e : { ...e, desc: undefined, dur: undefined });
+      continue;
+    }
+    group = null; blocks.push(e);
+  }
+  return blocks;
+}
+
+function parts(tools) {
+  const order = []; const seen = {};
+  for (const t of tools) {
+    const s = slotOf(t.tool);
+    if (!seen[s]) { seen[s] = { calls: 0, targets: new Set() }; order.push(s); }
+    seen[s].calls += 1; seen[s].targets.add(t.target);
+  }
+  const onlyOther = order.length === 1 && order[0] === 'other';
+  return order.map(s => {
+    const n = FILE_SLOTS.has(s) ? seen[s].targets.size : seen[s].calls;
+    return { slot: s, text: onlyOther ? n + ' Aufrufe' : COUNT[s](n) };
+  });
+}
+
+function labelHtml(t) {
+  const slot = slotOf(t.tool);
+  if (slot === 'read' || slot === 'write') return `<span class="tg__name" title="${esc(t.target)}">${esc(fileName(t.target))}</span>`;
+  if (slot === 'shell' && t.desc) return `<span class="tg__name tg__name--prose" title="${esc(t.target)}">${esc(t.desc)}</span>`;
+  if (slot === 'other') return `<span class="tg__name tg__name--prose">${esc(mcpName(t.tool))}</span>`;
+  return `<span class="tg__name" title="${esc(t.target)}">${esc(t.target)}</span>`;
+}
+function verbHtml(t) { return slotOf(t.tool) === 'other' ? '<span class="tg__verb">Werkzeug</span>' : `<span class="tg__verb">${VERB[t.tool]}</span>`; }
+function tailHtml(t) {
+  return (t.state === 'interrupted' ? '<span class="tg__state">unterbrochen</span>' : '')
+    + (t.state === 'failed' ? '<span class="tg__state tg__state--failed">fehlgeschlagen</span>' : '')
+    + (t.state === 'running' ? '<span class="tg__state">läuft</span>' : '')
+    + (t.dur ? `<span class="tg__dur">${t.dur}</span>` : '');
+}
+function detailHtml(t) {
+  const out = t.state === 'failed' ? 'Datei nicht gefunden.' : t.state === 'running' ? '(läuft noch)' : t.state === 'interrupted' ? '(unterbrochen)' : 'Ausgabe des Aufrufs, wie heute.';
+  return `<div class="tg__detail"><b>Eingabe</b><span>${esc(t.target || '{ … }')}</span><b>Ausgabe</b><span>${out}</span></div>`;
+}
+
+function toolsNew(b, key) {
+  const tools = b.tools; const dot = dotOf(tools);
+  const cls = b.purpose ? 'tg tg--purpose' : 'tg';
+  const head = b.purpose ? `<div class="tg__head"><span class="tg__dot tg__dot--${dot}"></span><p class="tg__purpose">${esc(b.purpose)}</p></div>` : '';
+  const lead = b.purpose ? '' : `<span class="tg__dot tg__dot--${dot}"></span>`;
+  if (tools.length === 1) {
+    const t = tools[0]; const open = state.open.has(t.id);
+    return `<div class="${cls}">${head}<div class="tg__body"><button type="button" class="tg__toggle" style="flex-wrap:nowrap" aria-expanded="${open}" data-key="${t.id}">${lead}${fig(slotOf(t.tool))}${verbHtml(t).replace('tg__verb', 'tg__verb tg__verb--tool tg__title')}${labelHtml(t)}${tailHtml(t)}${chev(open)}</button>${open ? detailHtml(t) : ''}</div></div>`;
+  }
+  const open = state.open.has(key);
+  const failed = tools.filter(t => t.state === 'failed').length;
+  const sep = '<span class="tg__sep" aria-hidden="true">·</span>';
+  const list = parts(tools);
+  const ps = list.map((p, i) => `<span class="tg__part">${fig(p.slot)}${p.text}${i < list.length - 1 || failed ? sep : ''}</span>`).join('');
+  const fail = failed ? `<span class="tg__fail">${failed} fehlgeschlagen</span>` : '';
+  const lines = open ? `<div class="tg__lines">${tools.map(t => {
+    const o = state.open.has(t.id);
+    return `<div><button type="button" class="tg__line${t.state === 'failed' ? ' tg__line--failed' : ''}" aria-expanded="${o}" data-key="${t.id}"><span class="tg__branch">⎿</span>${fig(slotOf(t.tool))}${verbHtml(t)}${labelHtml(t)}${tailHtml(t)}${chev(o)}</button>${o ? detailHtml(t) : ''}</div>`;
+  }).join('')}</div>` : '';
+  return `<div class="${cls}">${head}<div class="tg__body"><button type="button" class="tg__toggle" aria-expanded="${open}" data-key="${key}">${lead}${ps}${fail}${chev(open)}</button>${lines}</div></div>`;
+}
+
+/* Stand vor der Änderung, nach `toolSummary.ts` und `ToolGroup.tsx`. */
+function toolsOld(b, key) {
+  const tools = b.tools; const open = state.open.has(key);
+  const same = tools.every(t => t.tool === tools[0].tool) ? tools[0].tool : null;
+  const n = tools.length;
+  const sum = n === 1 ? tools[0].target : !same ? n + ' Aufrufe' : ['Read', 'Write', 'Edit'].includes(same) ? n + ' Dateien' : ['Grep', 'Glob'].includes(same) ? n + ' Suchen' : same === 'Bash' ? n + ' Befehle' : n + ' Aufrufe';
+  const lines = open ? `<div class="tg__lines">${tools.map(t => {
+    const o = state.open.has(t.id);
+    return `<div><button type="button" class="tg__line${t.state === 'failed' ? ' tg__line--failed' : ''}" aria-expanded="${o}" data-key="${t.id}"><span class="tg__branch">⎿</span><span class="tg__verb tg__verb--tool">${esc(t.tool)}</span><span class="tg__name" style="color:var(--fg-2)">${esc(t.target)}</span>${t.state === 'interrupted' ? '<span class="tg__state">unterbrochen</span>' : ''}${chev(o)}</button>${o ? detailHtml(t) : ''}</div>`;
+  }).join('')}</div>` : '';
+  return `<div class="tg"><button type="button" class="tg__toggle" style="flex-wrap:nowrap" aria-expanded="${open}" data-key="${key}"><span class="tg__dot tg__dot--${dotOf(tools)}"></span><span class="tg__title">${esc(same || 'Werkzeuge')}</span><span class="tg__one">${esc(sum)}</span>${chev(open)}</button>${lines}</div>`;
+}
+
+function blocksHtml(entries, prefix) {
+  const isNew = state.view === 'neu';
+  return buildBlocks(entries, isNew).map((b, i) => {
+    if (b.k === 'text') return `<p class="txt">${esc(b.text)}</p>`;
+    if (b.k === 'think') return `<div class="think"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11M3 3l8 8M11 3 3 11"/></svg><span>Gedankengang · ${b.s} s</span></div>`;
+    return isNew ? toolsNew(b, prefix + i) : toolsOld(b, prefix + i);
+  }).join('');
+}
+
+const figCache = {};
+function hydrate() {
+  document.querySelectorAll('canvas[data-fig]').forEach(cv => {
+    const slot = cv.dataset.fig;
+    const draw = img => { cv.width = img.naturalWidth; cv.height = img.naturalHeight; cv.getContext('2d').drawImage(img, 0, 0); };
+    const hit = figCache[slot];
+    if (hit && hit.complete && hit.naturalWidth) { draw(hit); return; }
+    const img = hit || new Image();
+    img.addEventListener('load', () => draw(img));
+    img.addEventListener('error', () => { if (!state.figuresMissing) { state.figuresMissing = true; state.fun = false; render(); } });
+    if (!hit) { figCache[slot] = img; img.src = FIG_DIR + slot + '.gif'; }
+  });
+}
+
+function render() {
+  document.getElementById('chat').innerHTML = blocksHtml(SESSION, 's');
+  document.getElementById('cases').innerHTML = CASES.map((c, ci) => `<div class="case"><h3>${c.title}</h3><div class="chat chat--bare">${blocksHtml(c.entries, 'c' + ci + '-')}</div></div>`).join('');
+  document.querySelectorAll('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === state.view)));
+  document.querySelectorAll('#dataSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.data === state.data)));
+  const fun = document.getElementById('funSwitch');
+  fun.setAttribute('aria-checked', String(state.fun));
+  fun.disabled = state.figuresMissing || state.view === 'heute';
+  document.getElementById('funLabel').textContent = state.figuresMissing ? 'Figuren liegen nur im Artefakte-Ordner' : state.fun ? 'Figuren an' : 'Figuren aus';
+  document.getElementById('sampleNote').textContent = state.data === 'neue'
+    ? 'Echte Aufrufe vom 17.11.2026. Kopfzeilen, Befehlsbeschreibungen und Dauern sind Beispielwerte.'
+    : 'Alte Session: nur Gespeichertes. Die zwei Texte sind zu lang für einen Kopf und bleiben Text.';
+  hydrate();
+  location.hash = [state.view, state.data, state.fun ? 'fun' : ''].filter(Boolean).join(',');
+}
+
+function allKeys() {
+  const keys = [];
+  const collect = (entries, prefix) => buildBlocks(entries, state.view === 'neu').forEach((b, i) => { if (b.k === 'tools' && b.tools.length > 1) keys.push(prefix + i); });
+  collect(SESSION, 's'); CASES.forEach((c, ci) => collect(c.entries, 'c' + ci + '-'));
+  return keys;
+}
+function openDefaults() { CASES.forEach((c, ci) => { if (c.open) buildBlocks(c.entries, true).forEach((b, i) => { if (b.k === 'tools' && b.tools.length > 1) state.open.add('c' + ci + '-' + i); }); }); }
+
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-key]');
+  if (el) { const k = el.dataset.key; state.open.has(k) ? state.open.delete(k) : state.open.add(k); render(); return; }
+  const v = ev.target.closest('[data-view]'); if (v) { state.view = v.dataset.view; state.open.clear(); openDefaults(); render(); return; }
+  const d = ev.target.closest('[data-data]'); if (d) { state.data = d.dataset.data; render(); }
+});
+document.getElementById('funSwitch').addEventListener('click', () => { state.fun = !state.fun; render(); });
+document.getElementById('openBtn').addEventListener('click', () => { const keys = allKeys(); const all = keys.every(k => state.open.has(k)); keys.forEach(k => all ? state.open.delete(k) : state.open.add(k)); document.getElementById('openBtn').textContent = all ? 'Alles aufklappen' : 'Alles zuklappen'; render(); });
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+});
+
+const wanted = location.hash.slice(1).split(',');
+if (wanted.includes('heute')) state.view = 'heute';
+if (wanted.includes('alt')) state.data = 'alt';
+if (wanted.includes('fun')) state.fun = true;
+if (wanted.includes('dark')) document.documentElement.dataset.theme = 'dark';
+if (wanted.includes('light')) document.documentElement.dataset.theme = 'light';
+openDefaults();
+if (wanted.includes('open')) allKeys().forEach(k => state.open.add(k));
+render();
+</script>
+</body>
+</html>

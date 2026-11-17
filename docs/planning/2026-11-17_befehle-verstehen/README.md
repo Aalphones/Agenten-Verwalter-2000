@@ -1,6 +1,6 @@
-# Plan: Befehle verstehen – Beschreibung, Restdauer, Live-Fortschritt
+# Plan: Befehle verstehen – Beschreibung, Restdauer, Live-Fortschritt, lesbarer Verlauf
 
-Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt; lange Läufe zeigen Dauer, Fortschritt, Restdauer und die letzte Ausgabezeile – in der Statuszeile, an der Befehlszeile im Chat, im Hintergrund-Panel und in der Seitenleiste. Figurenpakete bekommen ein Fach „Langer Lauf“ und drei Bewegungen, die den Fortschritt zeigen. Grundsatz: [ADR 066](../../decisions/066-befehle-verstehen.md). Entwurf (verbindlich): [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html).
+Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt; lange Läufe zeigen Dauer, Fortschritt, Restdauer und die letzte Ausgabezeile – in der Statuszeile, an der Befehlszeile im Chat, im Hintergrund-Panel und in der Seitenleiste. Figurenpakete bekommen ein Fach „Langer Lauf“ und drei Bewegungen, die den Fortschritt zeigen. Im Verlauf sagt jeder Werkzeug-Block, was getan wurde und wozu. Grundsatz: [ADR 066](../../decisions/066-befehle-verstehen.md). Entwürfe (verbindlich): [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html), [artifacts/entwurf-verlauf-lesbar.html](artifacts/entwurf-verlauf-lesbar.html).
 
 ## Phasen
 
@@ -12,8 +12,9 @@ Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt;
 | 4 | Live-Fortschritt aus der Ausgabe | [phase-4-fortschritt.md](phase-4-fortschritt.md) | heikel | pending |
 | 5 | Anzeige: Statuszeile, Seitenleiste, Befehlszeile | [phase-5-anzeige.md](phase-5-anzeige.md) | standard | pending |
 | 6 | Figuren: Fach „Langer Lauf“ und drei Bewegungen | [phase-6-figuren.md](phase-6-figuren.md) | standard | pending |
+| 7 | Verlauf lesbar: Zweckzeile und Was-Zeile | [phase-7-verlauf.md](phase-7-verlauf.md) | standard | pending |
 
-Reihenfolge fest 1 → 6: jede Phase baut auf den Daten der vorigen. Umfang: Betriebsart Claude für den Live-Fortschritt; Beschreibung und Schätzung wirken überall, wo die Daten ankommen. Nicht im Umfang: Live-Fortschritt in Autark und Codex, Befehle von Subagenten, eigene Erkennung je Test-Läufer, bestehende Figurenpakete ergänzen, Linux/macOS (Ort der Ausgabedatei dort nicht gemessen).
+Reihenfolge fest 1 → 7: jede Phase baut auf den Daten der vorigen. Umfang: Betriebsart Claude für den Live-Fortschritt; Beschreibung und Schätzung wirken überall, wo die Daten ankommen. Nicht im Umfang: Live-Fortschritt in Autark und Codex, Befehle von Subagenten, eigene Erkennung je Test-Läufer, bestehende Figurenpakete ergänzen, Linux/macOS (Ort der Ausgabedatei dort nicht gemessen).
 
 ## Gemessene Grundlage (Claude Code 2.1.322, 2026-11-17)
 
@@ -28,7 +29,7 @@ Reihenfolge fest 1 → 6: jede Phase baut auf den Daten der vorigen. Umfang: Bet
 
 ### Namensschema
 
-Feature `runs` (Läufe): `src-tauri/src/runs/` (`model.rs`, `normalize.rs`, `progress.rs`, `backfill.rs`, `mod.rs`), `src-tauri/src/db/runs.rs`, `src-tauri/src/sessions/registry/run_watch.rs`, `src/features/runs/`. Keine Tauri-Commands, kein Store. Tabelle `command_runs` (Migration 021). Einstellung-Schlüssel `runs_backfilled`. Prüfprogramme `src-tauri/examples/translate-probe.rs` und `runs-probe.rs`.
+Phase 7 legt kein Feature an: sie baut `src/features/chat/` (`buildBlocks.ts`, `toolSummary.ts`, `ToolGroup.tsx`) um und ergänzt `src/features/skins/SlotThumb.tsx`. Feature `runs` (Läufe): `src-tauri/src/runs/` (`model.rs`, `normalize.rs`, `progress.rs`, `backfill.rs`, `mod.rs`), `src-tauri/src/db/runs.rs`, `src-tauri/src/sessions/registry/run_watch.rs`, `src/features/runs/`. Keine Tauri-Commands, kein Store. Tabelle `command_runs` (Migration 021). Einstellung-Schlüssel `runs_backfilled`. Prüfprogramme `src-tauri/examples/translate-probe.rs` und `runs-probe.rs`.
 
 ### Typen (Rust, alle über die Tauri-Grenze mit `ts-rs`, `serde(rename_all = "camelCase")`)
 
@@ -74,6 +75,7 @@ AwaitedScript { title, started_at, count, description: Option<String>, expected_
 | `TAIL_BYTES` | 4096 | `runs/progress.rs` |
 | `MAX_LAST_LINE_CHARS` | 160 | `runs/progress.rs` |
 | `LONGRUN_AFTER_MS` | 5000 | `src/features/runs/runTexts.ts` |
+| `MAX_PURPOSE_CHARS` | 80 | `src/features/chat/buildBlocks.ts` |
 
 ### Tabelle (Migration `021_command_runs.sql`)
 
@@ -114,6 +116,35 @@ Farbcodes entfernen (`background::output::strip_ansi`), an `\n` und `\r` trennen
 Shell-Befehle: Gib bei jedem Bash- und PowerShell-Aufruf `description` an — auf Deutsch, höchstens acht Wörter, was der Befehl bewirkt, nicht wie (z. B. „Prüfkette laufen lassen“, „Git-Status prüfen“). Der Benutzer sieht diese Zeile statt des Befehls. Skripte und Schleifen, die du selbst schreibst und die länger als ein paar Sekunden laufen, geben je Schritt eine Zeile `[<erledigt>/<gesamt>] <was gerade läuft>` auf der Standardausgabe aus, sofort geschrieben und nicht gepuffert; der Verwalter zeigt daraus den Fortschritt.
 ```
 
+### Verlauf lesbar (Phase 7)
+
+Nichts davon wird gespeichert; alles entsteht beim Anzeigen aus den Einträgen.
+
+- **Zweckzeile:** der Text-Eintrag direkt vor einer Werkzeug-Gruppe wird ihr Kopf (`ChatBlock` der Art `tools`, Feld `purpose: TextEntry | null`), wenn er getrimmt höchstens `MAX_PURPOSE_CHARS` Zeichen hat, keinen Zeilenumbruch enthält, keine Markierung „ohne Fundstelle“ trägt (`unsourced` leer) und nicht der Text mit der „Weiter“-Leiste ist. Der Schlüssel des Blocks ist dann die `seq` des Textes.
+- **Was-Zeile** (`groupParts`): je Art (`BUILTIN_TOOL_SLOTS`, sonst `other`) ein Teil in der Reihenfolge des ersten Auftretens. Gezählt werden bei `read` und `write` verschiedene Ziele, sonst Aufrufe.
+
+| Art | 1 | n |
+|---|---|---|
+| `search` | 1 Suche | n Suchen |
+| `read` | 1 Datei gelesen | n Dateien gelesen |
+| `write` | 1 Datei bearbeitet | n Dateien bearbeitet |
+| `shell` | 1 Befehl | n Befehle |
+| `web` | 1 Web-Abruf | n Web-Abrufe |
+| `agent` | 1 Unteragent | n Unteragenten |
+| `other` | 1 weiterer Aufruf | n weitere Aufrufe |
+
+Besteht die Gruppe nur aus `other`: `n Aufrufe`. Fehlschläge hängen als `n fehlgeschlagen` an.
+
+- **Tätigkeit je Werkzeug** (`toolVerb`): `Grep`, `Glob` → Gesucht · `Read` → Gelesen · `Edit`, `NotebookEdit` → Bearbeitet · `Write` → Geschrieben · `Bash`, `PowerShell` → Befehl · `WebSearch` → Websuche · `WebFetch` → Abgerufen · `Agent`, `Task` → Unteragent · alles andere → Werkzeug.
+- **Ziel an der Aufruf-Zeile:** bei Dateien nur der Dateiname; der ganze Pfad steht im `title` und im Detail.
+- **Figur:** an der Was-Zeile das Bild des mitgelieferten Fachs der Art, an der Aufruf-Zeile das Bild von `slotFor(tool, target, eigene Fächer)`; immer aus dem heute aktiven Paket, unbewegt, 26 × 20 px. Die Texte des Pakets erscheinen im Verlauf nicht.
+
+### Systemprompt-Absatz „Zweck“ (`purpose_prompt()` in `agents/claude/process.rs`, immer Teil des gemeinsamen `--append-system-prompt`, nach `commands_prompt()`)
+
+```text
+Zweck: Bevor du eine Folge von Werkzeug-Aufrufen beginnst, schreib eine einzelne kurze Zeile, wozu — auf Deutsch, höchstens sechs Wörter, wie eine Überschrift, ohne Punkt am Ende (z. B. „Plan-Dateien schreiben“). Der Benutzer liest diese Zeilen im Verlauf als Überschrift deiner Schritte. Keine neue Zeile, solange die vorige noch gilt.
+```
+
 ### Platzhalter in Texten (ergänzt ADR 065)
 
 `{ziel}` = bei Bash/PowerShell die Befehlsbeschreibung, ohne sie der Befehl; sonst wie bisher · `{befehl}` = der Befehl (bei anderen Werkzeugen leer) · `{zeit}` = laufende Dauer `m:ss`, jetzt auch bei Befehlen · `{fortschritt}` = `12/40` bzw. `45 %`, sonst leer · `{rest}` = `~1:25` bzw. `~41 min`, sonst leer. Eigene Fächer prüfen ihr Muster `input` weiter gegen den Befehl, nie gegen die Beschreibung.
@@ -138,13 +169,17 @@ Shell-Befehle: Gib bei jedem Bash- und PowerShell-Aufruf `description` an — au
 4. Während ein Vordergrund-Befehl Zeilen `[n/m] …` ausgibt, zeigt die Statuszeile Balken, `n/m`, Restdauer und die letzte Zeile; das gilt ebenso beim Warten auf ein Skript.
 5. Die acht Zustände des Entwurfs sehen aus wie dort (Statuszeile), Seitenleiste und Kopfzeile nennen ab 5 s Restdauer, sonst Fortschritt, sonst Laufzeit.
 6. Ein Figurenpaket kann das Fach „Langer Lauf“ belegen; `Trek`, `Charge` und `Reveal` folgen dem Fortschritt und stehen mit abgeschalteten Animationen still an ihrer Position. Ab Werk bleibt alles aus.
-7. `pnpm check` grün.
+7. Im Verlauf trägt ein Werkzeug-Block die kurze Zeile des Agenten davor als Kopf und nennt in der Zeile darunter je Art, was getan wurde; alte Sessions zeigen dasselbe aus ihren vorhandenen Einträgen. Die Fälle des Entwurfs „Verlauf lesbar“ sehen aus wie dort.
+8. `pnpm check` grün.
 
 ## Wackelstellen
 
 - Reihenfolge von `task_updated` und `tool_result` beim Wechsel in den Hintergrund ist einmal gemessen → Phase 1 baut beide Reihenfolgen und prüft mit `translate-probe` plus einem zweiten Live-Lauf.
 - Der Ort der Ausgabedatei ist nicht dokumentiert → fehlt die Datei, bleibt es bei Beschreibung und Schätzung; kein Fehler.
 - Stand-Meldungen je Sekunde → Phase 4 sendet nur bei geändertem Stand und schreibt dabei nichts in die Datenbank.
+- Ob der Agent die Zweckzeile schreibt und sich an sechs Wörter hält, ist nicht gemessen; Anweisungen des Nutzers, die Zwischentexte verbieten, können sie unterdrücken → ohne Zeile oder mit einer längeren steht die Was-Zeile allein, nichts wird erfunden. Check nach Phase 7: eine Session mit drei Werkzeug-Folgen starten und zählen, wie viele Blöcke einen Kopf tragen.
+- Eine Zweckzeile kann vom Abgleich der Antwort (ADR 036) als „ohne Fundstelle“ markiert werden und bleibt dann ein eigener Text. Check nach Phase 7: dieselbe Session auf markierte Zweckzeilen ansehen.
+- Gedankengänge erklären das Wozu nicht: von 39 894 gespeicherten tragen 955 einen Text (gezählt am 2026-11-17 in einer Kopie der Datenbank).
 
 ## Summary
 

@@ -258,6 +258,7 @@ select { background: var(--bg-surface); border: 1px solid var(--border); border-
 <tr><td>Wann gilt ein Befehl als derselbe?</td><td>Gleicher Text nach Vereinheitlichen der Leerzeichen und ohne angehängte Ausgabe-Filter am Ende (<code>| tail</code>, <code>| head</code>, <code>| grep</code>, <code>2&gt;&amp;1</code> …). Gespeichert wird nur ein Prüfwert des Textes, nicht der Befehl.</td><td>Führendes <code>cd &lt;Ordner&gt;</code> wegschneiden: mischt denselben Befehl aus zwei Repositories.</td></tr>
 <tr><td>Wie unterscheidet sich Schätzung von Messung?</td><td>Gemessener Fortschritt: voller Balken mit Zahl. Geschätzt: schraffierter Balken mit „üblich ~3:10“. Überzogen: schraffiert in Warnfarbe mit den Worten „länger als üblich“.</td><td>Ein Balken für beides: täuscht Genauigkeit vor.</td></tr>
 <tr><td>Skripte des Agenten</td><td>Derselbe Systemprompt-Absatz verlangt in eigenen Skripten und Schleifen je Schritt eine Zeile <code>[erledigt/gesamt] was läuft</code>, ungepuffert.</td><td>Eigenes Werkzeug zum Melden von Fortschritt: mehr Bau, mehr Kontext, gleicher Nutzen.</td></tr>
+<tr><td>Woher kommt das Wozu im Verlauf?</td><td>Vom Agenten selbst: ein Absatz im Systemprompt bittet vor jeder Folge von Werkzeug-Aufrufen um eine kurze Zeile zum Zweck (höchstens sechs Wörter). Sie wird der Kopf des Werkzeug-Blocks; darunter steht je Art, was getan wurde. Nichts wird gespeichert, alte Sessions zeigen dasselbe aus ihren Einträgen. Entwurf: <code>entwurf-verlauf-lesbar.html</code>.</td><td>Eigener Modell-Aufruf je Block: kostet Kontingent und deutet, statt die Absicht zu zeigen. Der Gedankengang als Quelle: von 39 894 gespeicherten tragen 955 einen Text.</td></tr>
 <tr><td>Welche Betriebsarten?</td><td>Beschreibung und Restdauer überall, wo die Daten kommen. Live-Fortschritt nur Claude.</td><td>Autark und Codex: laut deiner Antwort Folgearbeit.</td></tr>
 </table></div>
 
@@ -270,9 +271,10 @@ select { background: var(--bg-surface); border: 1px solid var(--border); border-
 <tr><td>4</td><td><b>Live-Fortschritt aus der Ausgabe</b><br>Kern: Erkennung der Muster, Wächter liest einmal je Sekunde, Stand geht ohne Datenbank-Schreiben an die Oberfläche.</td><td><span class="tag tag--heikel">heikel</span></td><td>Während eines Laufs mit <code>[3/12]</code>-Zeilen meldet der Kern Fortschritt und letzte Zeile. Prüfprogramm druckt die Erkennung zu einer Datei.</td></tr>
 <tr><td>5</td><td><b>Anzeige</b><br>Oberfläche nach diesem Entwurf: Statuszeile mit Dauer, Balken, Restdauer und letzter Zeile; Warten auf Skript auch ohne Figurenpaket; Seitenleiste und Kopfzeile; Dauer an der Befehlszeile.</td><td><span class="tag">standard</span></td><td>Alle acht Zustände des Entwurfs, Seitenleiste und Kopfzeile nennen Restdauer oder Fortschritt.</td></tr>
 <tr><td>6</td><td><b>Figuren: Fach „Langer Lauf“ und drei Bewegungen</b><br>Kern und Oberfläche der Skins: Fach, Bewegungen, Platzhalter, Editor-Vorschau mit Schieber, Werkzeuge <code>skin_*</code>.</td><td><span class="tag">standard</span></td><td>Ein Paket kann das Fach belegen; die drei Bewegungen folgen dem Fortschritt. Ab Werk bleibt alles aus.</td></tr>
-<tr><td>7</td><td><b>Abschluss</b><br>Deine Abnahme, Archivieren, Version <code>v0.66.0</code>.</td><td><span class="tag">du</span></td><td>Release gebaut.</td></tr>
+<tr><td>7</td><td><b>Verlauf lesbar: Zweckzeile und Was-Zeile</b><br>Oberfläche und ein Absatz im Systemprompt: Kopf am Werkzeug-Block, Zeile „4 Dateien bearbeitet · 1 Befehl“ statt „8 Aufrufe“, je Aufruf nur Tätigkeit und Dateiname, Figur des Fachs unbewegt davor.</td><td><span class="tag">standard</span></td><td>Jeder Block im Verlauf sagt, was getan wurde, und – wo der Agent es dazuschreibt – wozu. Gilt rückwirkend für alte Sessions.</td></tr>
+<tr><td>8</td><td><b>Abschluss</b><br>Deine Abnahme, Archivieren, Version <code>v0.66.0</code>.</td><td><span class="tag">du</span></td><td>Release gebaut.</td></tr>
 </table></div>
-<p class="note">Reihenfolge fest 1 → 6: jede Phase baut auf den Daten der vorigen. Je Phase eine Umsetzungs-Session, keine automatisierten Tests (private Arbeitsweise). Architektur-Entscheidung als ADR 066.</p>
+<p class="note">Reihenfolge fest 1 → 7: jede Phase baut auf den Daten der vorigen. Je Phase eine Umsetzungs-Session, keine automatisierten Tests (private Arbeitsweise). Architektur-Entscheidung als ADR 066.</p>
 
 <h2>Risiken</h2>
 <ul class="tight">
@@ -281,12 +283,14 @@ select { background: var(--bg-surface); border: 1px solid var(--border); border-
   <li><span class="dot dot--warn"></span><b>Falsch erkannter Fortschritt.</b> Eine Zeile wie „Schritt 2/3 von Teil 5“ zählt als 2 von 3. Der Balken kann springen oder zurückfallen.</li>
   <li><span class="dot dot--warn"></span><b>Güte der Beschreibung.</b> Sie stammt vom Modell. Laufende Sessions bekommen den neuen Systemprompt erst nach einem Neustart des Agenten; bis dahin oft Englisch.</li>
   <li><span class="dot dot--warn"></span><b>Schätzung in Ticket-Arbeitsbäumen.</b> Ein anderer Ordner im Befehl ist ein anderer Befehl; dort beginnt das Gedächtnis je Ordner neu.</li>
+  <li><span class="dot dot--warn"></span><b>Die Zweckzeile ist eine Bitte, keine Garantie.</b> Schreibt der Agent sie nicht oder länger als 80 Zeichen – etwa weil eigene Anweisungen Zwischentexte verbieten –, steht nur da, was getan wurde. Nichts wird erfunden.</li>
 </ul>
 <h3>Wo ich am unsichersten bin</h3>
 <ul class="tight">
   <li>Reihenfolge der Meldungen beim Wechsel in den Hintergrund – nur einmal gemessen. Prüfung in Phase 1: Prüfprogramm über die aufgezeichneten Zeilen plus ein zweiter Live-Lauf mit kurzem Zeitlimit.</li>
   <li>Sekündliche Stand-Meldungen je laufender Session und ihre Last auf der Oberfläche. Prüfung in Phase 4: gesendet wird nur bei geändertem Stand; Zählung der Ereignisse über einen 60-Sekunden-Lauf im Entwicklungsmodus.</li>
   <li>Zweite Zeile der Statuszeile im virtualisierten Verlauf (Höhe wechselt). Prüfung in Phase 5: im Entwicklungsmodus einen Lauf starten und ans Ende gescrollt bleiben.</li>
+  <li>Wie zuverlässig der Agent die Zweckzeile schreibt und ob der Abgleich der Antwort sie als „ohne Fundstelle“ markiert. Prüfung nach Phase 7: eine Session mit drei Werkzeug-Folgen starten, Blöcke mit Kopf zählen, markierte Zeilen ansehen.</li>
 </ul>
 
 <h2>Nicht im Umfang</h2>

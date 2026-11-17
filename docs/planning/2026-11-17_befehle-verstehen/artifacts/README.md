@@ -3,10 +3,13 @@
 | Datei | Zeigt | Phasen |
 |---|---|---|
 | `entwurf-befehle-verstehen.html` | Plan-Seite mit bedienbarem Entwurf: Statuszeile in acht Zuständen, Schalter „Figurenpaket“ mit den drei neuen Bewegungen, Knopf „Lauf abspielen“; darunter Befehlszeile im Chat, Seitenleiste, Hintergrund-Panel | 2, 5, 6 |
+| `entwurf-verlauf-lesbar.html` | Bedienbarer Entwurf des Verlaufs: Werkzeug-Blöcke mit Zweckzeile und Was-Zeile an echten Einträgen einer Session, Umschalter „Neu/Heute“ und „Neue/Alte Session“, Schalter „Figuren“, sechs Sonderfälle, Regeln, Wortlaut des Systemprompt-Absatzes | 7 |
 | `vordergrund.jsonl` | Protokollzeilen eines Vordergrund-Befehls über 24 s (Claude Code 2.1.322) | 1, 2 |
 | `zeitlimit.jsonl` | Protokollzeilen eines Vordergrund-Befehls, der sein Zeitlimit von 6 s überschreitet und in den Hintergrund wandert | 1 |
 
 **Ansehen:** HTML-Datei im Browser öffnen. Direkt in einem Zustand über den Anker, mehrere Angaben mit Komma: Zustand `kurz`, `fortschritt`, `geschaetzt`, `erster`, `laenger`, `stumm`, `skript`, `ohne`; dazu `fun` (Figurenpaket an) und die Bewegung `trek`, `charge` oder `reveal` — z. B. `#fun,charge,geschaetzt`. Oben rechts „Hell/Dunkel wechseln“.
+
+Für `entwurf-verlauf-lesbar.html` gilt dasselbe mit den Angaben `neu` oder `heute`, `neue` oder `alt`, `fun`, `dark` oder `light` und `open` (alle Blöcke aufgeklappt) — z. B. `#neu,alt,dark,open`. Die Bilder des Figurenpakets fehlen im Repository absichtlich (Rechte Dritter); ohne den Ordner `_verlauf-figuren` neben der Datei ist der Schalter „Figuren“ gesperrt. Die vollständige Fassung liegt im Artefakte-Ordner des Vorhabens.
 
 **Werte:** Farben, Schriften und Abstände aus `src/styles/theme.css` (hell und dunkel). Balken 132 × 6 px, Figur auf dem Balken 26 px hoch, Bühne 57 × 35 px wie `SkinStage` mit `size="line"`.
 

@@ -20,6 +20,7 @@ Die Statuszeile und die Werkzeug-Zeilen zeigen bei Shell-Aufrufen den rohen Befe
 - Laufzeiten stehen in `command_runs` (Migration 021) unter dem SHA-256 des vereinheitlichten Befehls und dem Vorhaben; gemerkt werden erfolgreiche Läufe ab 3 s, je Schlüssel und Vorhaben die letzten 10; geschätzt wird der Median der letzten 5, erst im Vorhaben, sonst über alle.
 - Anzeige: gemessener Fortschritt als voller Balken mit Zahl, Schätzung schraffiert mit „üblich ~m:ss“, Überziehen schraffiert in Warnfarbe mit den Worten „länger als üblich“.
 - Figurenpakete: vorgegebenes Fach `longrun` und die Bewegungen `trek`, `charge`, `reveal`; Platzhalter `{befehl}`, `{fortschritt}`, `{rest}`, `{zeit}` auch bei Befehlen; `{ziel}` ist bei Shell-Befehlen die Beschreibung.
+- Verlauf: Ein Absatz im Systemprompt bittet den Agenten vor jeder Folge von Werkzeug-Aufrufen um eine kurze Zeile zum Zweck (höchstens sechs Wörter). Die Oberfläche macht einen Text von höchstens 80 Zeichen direkt vor einem Werkzeug-Block zu dessen Kopf und ersetzt „n Aufrufe“ durch eine Zeile, die je Art zählt, was getan wurde. Beides entsteht beim Anzeigen und wird nicht gespeichert. Verworfen: je Block ein eigener Modell-Aufruf (kostet Kontingent und deutet, statt die Absicht zu zeigen); der Gedankengang als Quelle (fast immer leer gespeichert).
 
 ## Konsequenzen
 
@@ -28,4 +29,5 @@ Die Statuszeile und die Werkzeug-Zeilen zeigen bei Shell-Aufrufen den rohen Befe
 - Programme, die ihre Ausgabe puffern, zeigen bis zum Ende „noch keine Ausgabe“.
 - Die Erkennung kann eine Zählung in der Ausgabe für Fortschritt halten, die keiner ist; der Balken kann springen.
 - Ein anderer Ordner im Befehl (`cd …`) ist ein anderer Schlüssel; in Ticket-Worktrees beginnt das Gedächtnis je Ordner neu.
+- Das Wozu eines Schritts steht nur da, wenn der Agent die Zeile schreibt; alte Sessions zeigen es nur, wo zufällig eine so kurze Zeile davorsteht. Die Figur im Verlauf ist die des heute aktiven Pakets.
 - Pakete mit dem neuen Fach oder den neuen Bewegungen lassen sich in älteren Versionen nicht importieren.
