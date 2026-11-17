@@ -2,6 +2,9 @@
   /* Das Hintergrundbild des Stilpakets liegt mit z-index -1 darin. */
   position: relative;
   isolation: isolate;
+  /* Über dem Hauptbereich (ebenfalls ein Stapelkontext, im DOM später): sonst wird das Kontingent-
+     Popover, das in den Chat hineinragt, von dessen Inhalt überdeckt. */
+  z-index: 1;
   display: flex;
   flex-direction: column;
   flex-shrink: 1;
