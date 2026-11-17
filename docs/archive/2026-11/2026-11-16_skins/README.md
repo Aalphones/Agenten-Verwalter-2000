@@ -103,3 +103,6 @@ pub struct ToolUsage { pub tool: String, pub input_prefix: String, pub count: u3
 ## Deviations from plan
 
 ## Follow-ups
+
+- Phase 9 (Pakete bauen: Pokémon, Disney, Marvel) ist nicht umgesetzt und damit auch finale AK 8 offen; der Plan ist mit Phase 9 `pending` archiviert. Die Pakete entstehen außerhalb des Repositorys mit den `skin_*`-Werkzeugen aus Phase 7, Vorgaben in [phase-9-pakete.md](phase-9-pakete.md).
+- Phase 4 bis 6 und 8 sind nur per `pnpm check` belegt, nicht in der echten App gelaufen (Wackelstellen in den jeweiligen Phasendateien).
