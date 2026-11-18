@@ -2,6 +2,8 @@
 
 **Status:** angenommen · **Datum:** 2026-10-05
 
+Geändert durch ADR 067: Ziel des Klicks (Quelltext und Dokumente öffnen in „Dateien“, HTML und PDF im Standardprogramm).
+
 ## Kontext
 
 Agenten nennen in ihren Antworten Dateien, die der Benutzer ansehen soll — in facepass etwa die Change-Übersichten unter `reports/`, die ungetrackt liegen und in den Changes nicht auftauchen. Bisher musste der Benutzer sie im Explorer suchen. Ein Klick auf den Pfad soll die Datei mit dem Standardprogramm von Windows öffnen. Der Pfad stammt aus einer Agenten-Antwort, also aus fremdem Text: Das Standardprogramm von `.cmd`, `.exe` oder `.lnk` führt die Datei aus.

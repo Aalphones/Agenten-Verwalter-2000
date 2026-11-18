@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactElement } from 'react';
 import { ResizeHandle } from '@/components/ResizeHandle';
 import { formatCount } from '@/features/changes/changesScope';
@@ -21,6 +21,8 @@ import { FilesToolbar } from '@/features/files/FilesToolbar';
 import { HistoryList } from '@/features/files/HistoryList';
 import { mergeGroups } from '@/features/files/mergeGroups';
 import type { RepoGroup } from '@/features/files/mergeGroups';
+import { resolvePendingLink } from '@/features/files/openFromLink';
+import type { LinkOutcome } from '@/features/files/openFromLink';
 import { RepoTree } from '@/features/files/RepoTree';
 import type { SearchHit } from '@/features/files/searchFiles';
 import { SessionPicker } from '@/features/files/SessionPicker';
@@ -37,7 +39,9 @@ import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import { usePanelWidth } from '@/lib/usePanelWidth';
 import { DEFAULT_FILES_SELECTION, useFilesStore } from '@/stores/files';
-import type { FilesMode, FilesSelection, OpenTarget } from '@/stores/files';
+import type { FilesMode, FilesSelection, OpenTarget, PendingLink } from '@/stores/files';
+import { useSessionErrorsStore } from '@/stores/sessionErrors';
+import { useSessionsStore } from '@/stores/sessions';
 import './FilesView.css';
 
 type FileRow = Extract<TreeRow, { kind: 'file' }>;
@@ -156,6 +160,30 @@ function behindOf(entry: GitEntryStatus): number {
   return entry.error === null ? entry.behind : 0;
 }
 
+/** Öffnet eine Datei und klappt ihre Ordner im Baum auf. Eine unveränderte Datei steht nicht in „Geändert“: der
+ *  Baum wechselt dann auf „Alle Dateien“. */
+function revealUpdate(
+  selection: FilesSelection,
+  groups: readonly RepoGroup[],
+  isChanged: boolean,
+  target: OpenTarget,
+): Partial<FilesSelection> {
+  const nextMode: FilesMode = !isChanged && selection.mode === 'changed' ? 'all' : selection.mode;
+  const current: readonly string[] =
+    selection.expanded[nextMode] ?? defaultExpanded(groups, nextMode);
+  const revealed: string[] = [
+    expandKey(target.group, ''),
+    ...ancestorKeys(target.group, target.path, Number.POSITIVE_INFINITY),
+  ];
+  return {
+    mode: nextMode,
+    expanded: { ...selection.expanded, [nextMode]: [...new Set([...current, ...revealed])] },
+    open: target,
+    pane: 'detail',
+    query: '',
+  };
+}
+
 function treeWidthStyle(width: number): CSSProperties {
   return { '--files-tree-width': `${String(width)}px` } as CSSProperties;
 }
@@ -223,6 +251,7 @@ export function FilesView({
     openAnchors,
     everyAnchors,
     stamp,
+    selection.pendingLink?.kind === 'name',
   );
   const { history, error: historyError } = useHistory(sessionId, commitStampOf(projectChanges));
 
@@ -308,28 +337,81 @@ export function FilesView({
   /** Öffnet einen Treffer der Suche, klappt seine Ordner im Baum auf und zeigt dort die Zeile. Eine unveränderte
    *  Datei steht nicht in „Geändert“: der Baum wechselt auf „Alle Dateien“. */
   function openSearchHit(hit: SearchHit): void {
-    const nextMode: FilesMode = hit.change === null && mode === 'changed' ? 'all' : mode;
-    const current: readonly string[] =
-      selection.expanded[nextMode] ?? defaultExpanded(groups, nextMode);
-    const revealed: string[] = [
-      expandKey(hit.group, ''),
-      ...ancestorKeys(hit.group, hit.path, Number.POSITIVE_INFINITY),
-    ];
-    update({
-      mode: nextMode,
-      expanded: { ...selection.expanded, [nextMode]: [...new Set([...current, ...revealed])] },
-      open: {
+    update(
+      revealUpdate(selection, groups, hit.change !== null, {
         group: hit.group,
         entryKey: hit.entryKey,
         path: hit.path,
         view: null,
         step: initialStep(hit.group, hit.path),
         line: null,
-      },
-      pane: 'detail',
-      query: '',
-    });
+      }),
+    );
   }
+
+  // Ein Dateilink aus dem Chat wartet, bis Changes (und für einen Namen alle Bäume) geladen sind.
+  const pendingLink: PendingLink | null = selection.pendingLink;
+  useEffect(() => {
+    if (pendingLink === null) {
+      return;
+    }
+    if (sessionFilter !== null) {
+      // Schlüssel der Links gelten für das ganze Vorhaben, nicht für eine gefilterte Session.
+      updateSelection(viewKey, { sessionFilter: null, expanded: { changed: null, all: null } });
+      return;
+    }
+    if (shownChanges === null && shownError === null) {
+      return;
+    }
+    let outcome: LinkOutcome;
+    if (shownChanges === null) {
+      outcome = { kind: 'missing', message: shownError ?? '' };
+    } else {
+      outcome = resolvePendingLink(pendingLink, groups, trees);
+    }
+    if (outcome.kind === 'wait') {
+      return;
+    }
+    if (outcome.kind === 'missing') {
+      updateSelection(viewKey, { pendingLink: null });
+      useSessionErrorsStore
+        .getState()
+        .report(sessionId, `Datei nicht geöffnet: ${outcome.message}`);
+      useSessionsStore.getState().showView('chat');
+      return;
+    }
+    if (outcome.kind === 'search') {
+      updateSelection(viewKey, {
+        pendingLink: null,
+        query: outcome.name,
+        pane: 'tree',
+        focusSearch: selection.focusSearch + 1,
+      });
+      return;
+    }
+    updateSelection(viewKey, {
+      ...revealUpdate(selection, groups, outcome.group.byPath.has(outcome.path), {
+        group: outcome.group.group,
+        entryKey: outcome.entryKey,
+        path: outcome.path,
+        view: outcome.line === null ? null : 'file',
+        step: 'all',
+        line: outcome.line,
+      }),
+      pendingLink: null,
+    });
+  }, [
+    pendingLink,
+    sessionFilter,
+    shownChanges,
+    shownError,
+    groups,
+    trees,
+    selection,
+    sessionId,
+    updateSelection,
+    viewKey,
+  ]);
 
   const markSearchFocusHandled = useCallback((): void => {
     updateSelection(viewKey, { focusDone: selection.focusSearch });

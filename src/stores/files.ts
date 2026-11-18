@@ -23,6 +23,10 @@ export interface OpenTarget {
   line: number | null;
 }
 
+/** Ein Dateilink aus dem Chat, den `FilesView` auflöst, sobald Changes und Bäume geladen sind. */
+export type PendingLink =
+  { kind: 'view'; key: string; path: string; line: number | null } | { kind: 'name'; name: string };
+
 /** Aufgeklappte Ordner je Modus als `<Gruppe>:<Ordnerpfad>`, der Knoten selbst als `<Gruppe>:`; `null`: noch
  *  nichts angefasst, es gilt die Vorgabe (in „Geändert“ die ersten zwei Ordnerebenen, in „Alle Dateien“ nur die
  *  Knoten). */
@@ -50,6 +54,8 @@ export interface FilesSelection {
   focusSearch: number;
   /** Der Stand von `focusSearch`, den die Suche schon bedient hat. */
   focusDone: number;
+  /** Dateilink aus dem Chat, der noch nicht geöffnet ist. */
+  pendingLink: PendingLink | null;
 }
 
 export const DEFAULT_FILES_SELECTION: FilesSelection = {
@@ -65,6 +71,7 @@ export const DEFAULT_FILES_SELECTION: FilesSelection = {
   query: '',
   focusSearch: 0,
   focusDone: 0,
+  pendingLink: null,
 };
 
 interface FilesState {

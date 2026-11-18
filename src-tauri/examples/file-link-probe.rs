@@ -1,34 +1,41 @@
 //! Zeigt, wohin ein Dateiverweis aus dem Chat aufgelöst wird, ohne etwas zu öffnen. Aufruf:
-//! `cargo run --manifest-path src-tauri/Cargo.toml --example file-link-probe -- --base <Ordner> [--base …] [--allow <Ordner> …] <pfad>`.
+//! `cargo run --manifest-path src-tauri/Cargo.toml --example file-link-probe -- --base <Ordner> [--base …] [--allow <Ordner> …] [--entry <Schlüssel>=<Ordner> …] <pfad>`.
 //! Relative Pfade werden gegen die `--base`-Ordner in ihrer Reihenfolge aufgelöst; erlaubt ist, was
-//! in einem `--base`- oder `--allow`-Ordner liegt. Ausgabe `OK <pfad>` (Exit 0) oder
-//! `FEHLER <Variante>: <Text>` (Exit 1).
+//! in einem `--base`- oder `--allow`-Ordner liegt. Ohne `--entry` gilt jede Basis als Eintrag (Schlüssel =
+//! Position). Erste Zeile `ZIEL view <Schlüssel> <Pfad> <Zeile|->` | `ZIEL external` | `ZIEL name <Name>` |
+//! `ZIEL FEHLER …`, zweite `OK <pfad>` (Exit 0) oder `FEHLER <Variante>: <Text>` (Exit 1).
 use std::env;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use verwalter_lib::error::CommandError;
-use verwalter_lib::file_links::{self, LinkRoots};
+use verwalter_lib::file_links::{self, FileLinkTarget, LinkRoots};
 
-const USAGE: &str =
-    "Aufruf: file-link-probe --base <Ordner> [--base …] [--allow <Ordner> …] <pfad>";
+const USAGE: &str = "Aufruf: file-link-probe --base <Ordner> [--base …] [--allow <Ordner> …] [--entry <Schlüssel>=<Ordner> …] <pfad>";
 
 fn main() -> ExitCode {
     let mut bases: Vec<PathBuf> = Vec::new();
     let mut extra_allowed: Vec<PathBuf> = Vec::new();
+    let mut entries: Vec<(String, PathBuf)> = Vec::new();
     let mut target: Option<String> = None;
     let mut arguments = env::args().skip(1);
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
-            "--base" | "--allow" => {
+            "--base" | "--allow" | "--entry" => {
                 let Some(folder) = arguments.next() else {
                     eprintln!("{USAGE}");
                     return ExitCode::from(2);
                 };
-                if argument == "--base" {
-                    bases.push(PathBuf::from(folder));
-                } else {
-                    extra_allowed.push(PathBuf::from(folder));
+                match argument.as_str() {
+                    "--base" => bases.push(PathBuf::from(folder)),
+                    "--allow" => extra_allowed.push(PathBuf::from(folder)),
+                    _ => match folder.split_once('=') {
+                        Some((key, dir)) => entries.push((key.to_owned(), PathBuf::from(dir))),
+                        None => {
+                            eprintln!("{USAGE}");
+                            return ExitCode::from(2);
+                        }
+                    },
                 }
             }
             _ if target.is_none() => target = Some(argument),
@@ -48,6 +55,24 @@ fn main() -> ExitCode {
         relative_bases: bases,
         allowed,
     };
+    // Ohne `--entry` gilt jede Basis als Eintrag mit ihrer Position als Schlüssel.
+    if entries.is_empty() {
+        entries = roots
+            .relative_bases
+            .iter()
+            .enumerate()
+            .map(|(index, base): (usize, &PathBuf)| (index.to_string(), base.clone()))
+            .collect();
+    }
+    match file_links::target(&target, &roots, &entries) {
+        Ok(FileLinkTarget::View { key, path, line }) => println!(
+            "ZIEL view {key} {path} {}",
+            line.map_or_else(|| "-".to_owned(), |number: u32| number.to_string())
+        ),
+        Ok(FileLinkTarget::External) => println!("ZIEL external"),
+        Ok(FileLinkTarget::Name { name }) => println!("ZIEL name {name}"),
+        Err(error) => println!("ZIEL FEHLER {}: {error}", variant_name(&error)),
+    }
     match file_links::resolve(&target, &roots) {
         Ok(path) => {
             println!("OK {}", path.display());

@@ -29,14 +29,17 @@ Rating: standard. Ein Klick auf einen Dateilink im Chat öffnet die Datei im Rei
 
 ## Checkliste
 
-- [ ] `file_links/mod.rs`: `EXTERNAL_EXTENSIONS`; `pub fn target(raw: &str, roots: &LinkRoots, entries: &[(String, PathBuf)]) -> Result<FileLinkTarget, CommandError>` nach den sechs Regeln (`entries` = `(key, dir)` aller Einträge aus `sources::sources`). Die Auflösung aus `resolve` in eine gemeinsame Funktion `locate(cleaned, roots) -> Result<(PathBuf, PathBuf), CommandError>` (gefundener und kanonischer Pfad, Grenze geprüft) ziehen; `resolve` = Endungsprüfung + `locate` + Endungsprüfung des kanonischen Pfads, Verhalten unverändert.
-- [ ] `file_links/mod.rs`: `pub fn line_of(raw: &str) -> Option<u32>` (erste angehängte Zahl); `clean` und die Doppelpunkt-Prüfung nach Regel 1 der README mit `cfg!(windows)`.
-- [ ] `commands/file_links.rs`: `file_link_resolve`; im `invoke_handler` eintragen.
-- [ ] `examples/file-link-probe.rs`: Ausgabe um das Ergebnis von `target` ergänzen (`ZIEL view <key> <Pfad> <Zeile>` | `ZIEL external` | `ZIEL name <Name>`); Zeile in `AGENTS.md` anpassen.
-- [ ] `src/lib/fileLinks.ts`: `VIEWABLE_EXTENSIONS` = `ts tsx js jsx mjs cjs rs py json jsonc css scss sass less vue svelte yml yaml toml ini sh ps1 cmd bat sql kt kts java gradle xml cs go rb php c h cpp hpp swift dart proto graphql csv log lock`; `filePathOf` erkennt `OPENABLE_EXTENSIONS` und `VIEWABLE_EXTENSIONS`; `resolveFileLink(sessionId, path): Promise<FileLinkTarget>`; `fileHrefOf` zusätzlich für Pfade, die mit `/` beginnen; `isExternalLink(path)` für `html`, `htm`, `pdf`.
-- [ ] `src/components/FileLink.tsx`: Klick ruft `resolveFileLink` und verzweigt nach AK 2 bis 4; `title` und ↗ nach AK 6.
-- [ ] `src/features/files/openFromLink.ts`: `openFromLink(sessionId, target)` setzt `OpenTarget` (Gruppe aus den geladenen Changes über den Eintrags-Schlüssel; sind sie noch nicht geladen, merkt der Zustand das Ziel als `pendingLink` und `FilesView` löst es nach dem Laden auf) und ruft `showView('files')`; `openByName(sessionId, name)` nach AK 4 über `loadAll()`.
-- [ ] `pnpm bindings`, `pnpm check`.
-- [ ] Doku: in `docs/glossary.md` den Eintrag zu Dateiverweisen anpassen; in ADR 023 unter dem Titel die Zeile „Geändert durch ADR 067: Ziel des Klicks“ ergänzen.
+- [x] `file_links/mod.rs`: `EXTERNAL_EXTENSIONS`; `pub fn target(raw: &str, roots: &LinkRoots, entries: &[(String, PathBuf)]) -> Result<FileLinkTarget, CommandError>` nach den sechs Regeln (`entries` = `(key, dir)` aller Einträge aus `sources::sources`). Die Auflösung aus `resolve` in eine gemeinsame Funktion `locate(cleaned, roots) -> Result<(PathBuf, PathBuf), CommandError>` (gefundener und kanonischer Pfad, Grenze geprüft) ziehen; `resolve` = Endungsprüfung + `locate` + Endungsprüfung des kanonischen Pfads, Verhalten unverändert.
+- [x] `file_links/mod.rs`: `pub fn line_of(raw: &str) -> Option<u32>` (erste angehängte Zahl); `clean` und die Doppelpunkt-Prüfung nach Regel 1 der README mit `cfg!(windows)`.
+- [x] `commands/file_links.rs`: `file_link_resolve`; im `invoke_handler` eintragen.
+- [x] `examples/file-link-probe.rs`: Ausgabe um das Ergebnis von `target` ergänzen (`ZIEL view <key> <Pfad> <Zeile>` | `ZIEL external` | `ZIEL name <Name>`); Zeile in `AGENTS.md` anpassen.
+- [x] `src/lib/fileLinks.ts`: `VIEWABLE_EXTENSIONS` = `ts tsx js jsx mjs cjs rs py json jsonc css scss sass less vue svelte yml yaml toml ini sh ps1 cmd bat sql kt kts java gradle xml cs go rb php c h cpp hpp swift dart proto graphql csv log lock`; `filePathOf` erkennt `OPENABLE_EXTENSIONS` und `VIEWABLE_EXTENSIONS`; `resolveFileLink(sessionId, path): Promise<FileLinkTarget>`; `fileHrefOf` zusätzlich für Pfade, die mit `/` beginnen; `isExternalLink(path)` für `html`, `htm`, `pdf`.
+- [x] `src/components/FileLink.tsx`: Klick ruft `resolveFileLink` und verzweigt nach AK 2 bis 4; `title` und ↗ nach AK 6.
+- [x] `src/features/files/openFromLink.ts`: `openFromLink(sessionId, target)` setzt `OpenTarget` (Gruppe aus den geladenen Changes über den Eintrags-Schlüssel; sind sie noch nicht geladen, merkt der Zustand das Ziel als `pendingLink` und `FilesView` löst es nach dem Laden auf) und ruft `showView('files')`; `openByName(sessionId, name)` nach AK 4 über `loadAll()`.
+- [x] `pnpm bindings`, `pnpm check`.
+- [x] Doku: in `docs/glossary.md` den Eintrag zu Dateiverweisen anpassen; in ADR 023 unter dem Titel die Zeile „Geändert durch ADR 067: Ziel des Klicks“ ergänzen.
 
 ## Report-Back
+
+Phase 6 fertig. Abweichungen: Der Dateiname-Fall (openByName) steht als esolvePendingLink in openFromLink.ts; FilesView löst gemerkte Links (pendingLink im Zustand) nach dem Laden auf, bei Name ohne Treffer meldet es in der Fehlerleiste und schaltet zurück auf den Chat. ile-link-probe hat dafür --entry <Schlüssel>=<Ordner>. useRepoTrees lädt alle Bäume auch über den Parameter isAllForced. Probe unter Windows gelaufen (iew, 
+ame, außerhalb, relativ); Linux nicht gelaufen.

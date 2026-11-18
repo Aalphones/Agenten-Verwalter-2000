@@ -27,12 +27,14 @@ function withEntry<T>(map: ReadonlyMap<string, T>, key: string, value: T): Map<s
 
 /** Lädt die Bäume „Alle Dateien“ der offenen Knoten (`anchorKeys`) und hält sie je Session. Ein Baum lädt beim
  *  ersten Aufklappen und erneut, sobald sich `changesStamp` ändert (neues Ergebnis der Changes); bis dahin bleibt der
- *  alte stehen. Nach `loadAll()` gehören die Anker aller Knoten (`everyAnchorKeys`) dazu. */
+ *  alte stehen. Nach `loadAll()` oder solange `isAllForced` gilt (ein Dateiname aus dem Chat wird gesucht), gehören
+ *  die Anker aller Knoten (`everyAnchorKeys`) dazu. */
 export function useRepoTrees(
   sessionId: string,
   anchorKeys: readonly string[],
   everyAnchorKeys: readonly string[],
   changesStamp: string,
+  isAllForced = false,
 ): RepoTreesState {
   const [trees, setTrees] = useState<ReadonlyMap<string, LoadState<RepoTree>>>(NO_TREES);
   const [ignoredChildren, setIgnoredChildren] =
@@ -51,7 +53,9 @@ export function useRepoTrees(
     setAllWanted(false);
   }
 
-  const wanted: string = (isAllWanted ? [...anchorKeys, ...everyAnchorKeys] : anchorKeys)
+  const wanted: string = (
+    isAllWanted || isAllForced ? [...anchorKeys, ...everyAnchorKeys] : anchorKeys
+  )
     .filter((key: string, index: number, keys: readonly string[]) => keys.indexOf(key) === index)
     .join('\n');
 

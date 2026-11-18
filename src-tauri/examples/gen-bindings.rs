@@ -29,6 +29,7 @@ use verwalter_lib::{
         BrokenLink, EnvironmentStatus, LinkCheck, MirrorDiff, MirrorKind, MirrorRun, MirrorState,
     },
     error::CommandError,
+    file_links::FileLinkTarget,
     files::model::{
         DirEntry, FileContent, HistoryCommit, HistoryFile, HistorySession, IgnoredEntry,
         ProjectHistory, RepoTree, TreeFile,
@@ -88,6 +89,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     RepoTree::export_all(&cfg)?;
     DirEntry::export_all(&cfg)?;
     FileContent::export_all(&cfg)?;
+    FileLinkTarget::export_all(&cfg)?;
     HistoryFile::export_all(&cfg)?;
     HistoryCommit::export_all(&cfg)?;
     HistorySession::export_all(&cfg)?;
