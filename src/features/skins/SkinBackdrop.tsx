@@ -29,7 +29,8 @@ function imageOf(style: StyleData, area: BackdropArea): { file: string | null; o
 export function SkinBackdrop({ area }: SkinBackdropProps): ReactElement | null {
   const pack: SkinPack | null = useSkinsStore((state) => state.activeStyle);
   const style: StyleData | null = styleOf(pack);
-  if (pack === null || style === null) {
+  // Die Seitenleiste bleibt bewusst ohne Bild, auch wenn ein Paket noch eines trägt.
+  if (area === 'sidebar' || pack === null || style === null) {
     return null;
   }
   const { file, opacity }: { file: string | null; opacity: number } = imageOf(style, area);
