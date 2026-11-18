@@ -1801,7 +1801,8 @@ impl SessionRegistry {
             .iter()
             .any(|comment: &ReviewComment| matches!(&comment.target, CommentTarget::Diff))
         {
-            let Ok(input) = self.changes_input(session_id, ChangesReach::Session) else {
+            // Reichweite `Project`: Kommentare gelten auch Dateien aus dem Ordner einer anderen Session.
+            let Ok(input) = self.changes_input(session_id, ChangesReach::Project) else {
                 return vec![None; comments.len()];
             };
             sources::sources(&input)

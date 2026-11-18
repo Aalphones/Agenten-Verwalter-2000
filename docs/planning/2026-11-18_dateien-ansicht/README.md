@@ -9,7 +9,7 @@ Ziel: Der Reiter „Changes“ wird zum Reiter „Dateien“. Links steht je Rep
 | 1 | Kern: Repositories zusammenlegen, Baum und Dateiinhalt lesen | [phase-1-kern-baum.md](phase-1-kern-baum.md) | heikel | complete |
 | 2 | Kern: Verlauf je Session und Diff eines Commits | [phase-2-kern-verlauf.md](phase-2-kern-verlauf.md) | standard | complete |
 | 3 | Reiter „Dateien“: Baum, Leiste, Übersicht mit Verlauf | [phase-3-reiter-baum.md](phase-3-reiter-baum.md) | heikel | complete |
-| 4 | Datei ansehen: Änderung, ganze Datei, Schritte | [phase-4-datei.md](phase-4-datei.md) | standard | pending |
+| 4 | Datei ansehen: Änderung, ganze Datei, Schritte | [phase-4-datei.md](phase-4-datei.md) | standard | complete |
 | 5 | Suche und Strg P | [phase-5-suche.md](phase-5-suche.md) | standard | pending |
 | 6 | Dateilinks im Chat | [phase-6-chat-links.md](phase-6-chat-links.md) | standard | pending |
 | 7 | Git-Seite, „Changes“ entfernen, Doku | [phase-7-git-aufraeumen.md](phase-7-git-aufraeumen.md) | standard | pending |
@@ -163,7 +163,7 @@ Kein neuer Code darf Windows voraussetzen: Pfade aus Git tragen `/` und werden n
 ## Wackelstellen
 
 - `SessionRegistry::changes_input` mit der ID einer längst beendeten Session als Session-Filter ist nicht gemessen → Check in Phase 3: `cargo run --example changes-probe -- <Kopie> <ID einer beendeten Session> session` muss Einträge liefern; liefert es `sessionNotFound`, bietet der Filter nur Sessions an, die die Registry kennt (`project_members`).
-- Die Reichweite, mit der Review-Kommentare ihren Eintrag beim Senden auflösen, ist nicht gelesen → Check in Phase 4: in `src-tauri/src/review/` die Auflösung des Schlüssels suchen; löst sie mit `Session` auf, auf `Project` umstellen, sonst scheitern Kommentare an Dateien aus dem Ordner einer anderen Session.
+- Die Reichweite, mit der Review-Kommentare ihren Eintrag beim Senden auflösen, ist nicht gelesen → Geprüft in Phase 4 (Auflösung stand auf `Session`, jetzt `Project` in `SessionRegistry::comment_folders`): in `src-tauri/src/review/` die Auflösung des Schlüssels suchen; löst sie mit `Session` auf, auf `Project` umstellen, sonst scheitern Kommentare an Dateien aus dem Ordner einer anderen Session.
 - `attribution::normalize_path` ersetzt `/` durch `\` und schreibt klein, ohne Unterschied nach Betriebssystem (gelesen am 2026-11-18); Phase 1 gibt ihr einen Unix-Zweig. Ob ein früherer Plan die Unix-Pfade an anderer Stelle schon abfängt, ist nicht gelesen → Check in Phase 1: Aufrufer von `normalize_path` suchen (Grep `normalize_path` in `src-tauri/src`) und prüfen, dass keiner danach noch einmal umformt.
 - Ob `ts-rs` aus einem Enum mit `serde(tag = "kind")` und benannten Feldern den erwarteten TypeScript-Typ erzeugt, ist am Muster `AutoHandoff` abgelesen, nicht für `FileContent` gelaufen → Check in Phase 1: nach `pnpm bindings` die Datei `src/lib/bindings/FileContent.ts` lesen; sie muss eine Vereinigung mit `kind: "text" | "image" | "binary" | "tooLarge" | "missing"` sein.
 

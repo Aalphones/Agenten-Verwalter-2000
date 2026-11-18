@@ -2,8 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactElement } from 'react';
 import { ResizeHandle } from '@/components/ResizeHandle';
 import { formatCount } from '@/features/changes/changesScope';
-import { DiffView } from '@/features/changes/DiffView';
-import { fileDiffKey } from '@/features/changes/useFileDiff';
 import {
   buildTreeRows,
   collapseAllKeys,
@@ -12,13 +10,15 @@ import {
   expandKey,
 } from '@/features/files/buildTreeRows';
 import type { TreeRow } from '@/features/files/buildTreeRows';
+import { FileViewer } from '@/features/files/FileViewer';
+import { fileSteps, latestStepOfSession } from '@/features/files/fileSteps';
 import { FilesOverview } from '@/features/files/FilesOverview';
 import { FilesSegment } from '@/features/files/FilesSegment';
 import type { SegmentOption } from '@/features/files/FilesSegment';
 import { FilesToolbar } from '@/features/files/FilesToolbar';
 import { HistoryList } from '@/features/files/HistoryList';
-import { mergeGroups, variantEntry } from '@/features/files/mergeGroups';
-import type { FileVariant, MergedFile, RepoGroup } from '@/features/files/mergeGroups';
+import { mergeGroups } from '@/features/files/mergeGroups';
+import type { RepoGroup } from '@/features/files/mergeGroups';
 import { RepoTree } from '@/features/files/RepoTree';
 import { SessionPicker } from '@/features/files/SessionPicker';
 import type { PickerSession } from '@/features/files/SessionPicker';
@@ -62,6 +62,8 @@ interface FilesViewProps {
   sessions: readonly FilesSession[];
   /** Git-Zustand der Session; `null` in den Übersichten. */
   git: GitSessionStatus | null;
+  /** Eine Session ist neben dem Reiter sichtbar: nur dann gehen Kommentare an Zeilen. */
+  canComment: boolean;
 }
 
 const NO_GROUPS: readonly RepoGroup[] = [];
@@ -165,6 +167,7 @@ export function FilesView({
   filteredError,
   sessions,
   git,
+  canComment,
 }: FilesViewProps): ReactElement {
   const treeWidth = usePanelWidth('filesTree');
   const selection: FilesSelection = useFilesStore(
@@ -273,12 +276,17 @@ export function FilesView({
     const group: RepoGroup | undefined = groups.find(
       (candidate: RepoGroup) => candidate.group === row.group,
     );
+    // Mit gesetztem Session-Filter öffnet „Änderung“ mit dem jüngsten Schritt dieser Session.
+    const filteredStep: string | null =
+      sessionFilter === null
+        ? null
+        : latestStepOfSession(fileSteps(history, row.group, row.path), sessionFilter);
     openTarget({
       group: row.group,
       entryKey: row.file?.shown.entryKey ?? group?.anchorKey ?? '',
       path: row.path,
       view: null,
-      step: 'all',
+      step: filteredStep ?? 'all',
       line: null,
     });
   }
@@ -382,71 +390,56 @@ export function FilesView({
     );
   }
 
-  function renderBar(): ReactElement {
-    return (
-      <div className="files-view__bar">
-        <button
-          type="button"
-          className="files-button files-button--small files-view__narrow-only"
-          onClick={(): void => {
-            update({ pane: 'tree' });
-          }}
-        >
-          ← Baum
-        </button>
-        {selection.open !== null && (
-          <button
-            type="button"
-            className="files-button files-button--small"
-            title="Zurück zur Übersicht mit Verlauf (Esc)"
-            onClick={showOverview}
-          >
-            ← Übersicht
-          </button>
-        )}
-      </div>
-    );
+  function revealFolder(group: string, folder: string): void {
+    const keys: string[] = [expandKey(group, '')];
+    const parts: string[] = folder === '' ? [] : folder.split('/');
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      keys.push(expandKey(group, parts.slice(0, depth).join('/')));
+    }
+    update({
+      expanded: { ...selection.expanded, [mode]: [...new Set([...expanded, ...keys])] },
+      pane: 'tree',
+    });
   }
 
   function renderOpenFile(open: OpenTarget): ReactElement {
     const group: RepoGroup | undefined = groups.find(
       (candidate: RepoGroup) => candidate.group === open.group,
     );
-    const merged: MergedFile | undefined = group?.byPath.get(open.path);
-    const variant: FileVariant | undefined =
-      merged?.variants.find((candidate: FileVariant) => candidate.entryKey === open.entryKey) ??
-      merged?.shown;
-    const repository: RepositoryChanges | undefined =
-      group === undefined || variant === undefined ? undefined : variantEntry(group, variant);
-    if (repository === undefined || variant === undefined) {
-      return (
-        <>
-          {renderBar()}
-          <div className="files-view__hint">
-            <b>Ganze Datei folgt</b>
-            <span className="files-view__path">{open.path}</span>
-            <span>
-              Die Datei ist im gewählten Blickwinkel unverändert; ihren Inhalt zeigt die Ansicht
-              bald.
-            </span>
-          </div>
-        </>
-      );
-    }
     return (
       <>
-        {renderBar()}
-        <DiffView
-          key={fileDiffKey({ key: repository.key, path: variant.change.path }, scope)}
-          sessionId={dataSessionId}
-          reach={sessionFilter === null ? 'project' : 'session'}
-          repository={repository}
-          file={variant.change}
-          scope={scope}
-          onClose={(): void => {
-            update({ open: null });
-          }}
-        />
+        <div className="files-view__narrow-only files-view__bar files-view__bar--plain">
+          <button
+            type="button"
+            className="files-button files-button--small"
+            onClick={(): void => {
+              update({ pane: 'tree' });
+            }}
+          >
+            ← Baum
+          </button>
+        </div>
+        {group === undefined ? (
+          <div className="files-view__hint">
+            <b>Repository nicht mehr im Vorhaben</b>
+            <span className="files-view__path">{open.path}</span>
+          </div>
+        ) : (
+          <FileViewer
+            key={`${open.group}|${open.path}`}
+            sessionId={dataSessionId}
+            historySessionId={sessionId}
+            reach={sessionFilter === null ? 'project' : 'session'}
+            group={group}
+            open={open}
+            history={history}
+            scope={scope}
+            canComment={canComment}
+            onOpen={openTarget}
+            onRevealFolder={revealFolder}
+            onOverview={showOverview}
+          />
+        )}
       </>
     );
   }
