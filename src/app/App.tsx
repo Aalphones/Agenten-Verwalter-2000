@@ -503,7 +503,11 @@ export function App(): ReactElement {
 
   const startInquiry = useInquiry(handleSessionCreated);
 
-  function renderFiles(session: SessionSummary, git: GitSessionStatus | null): ReactElement {
+  function renderFiles(
+    session: SessionSummary,
+    git: GitSessionStatus | null,
+    isSessionVisible: boolean,
+  ): ReactElement {
     return (
       <FilesView
         key={filesViewKey}
@@ -519,6 +523,7 @@ export function App(): ReactElement {
           name: candidate.name,
         }))}
         git={git}
+        canComment={isSessionVisible}
       />
     );
   }
@@ -581,7 +586,7 @@ export function App(): ReactElement {
               onChanged={reloadChanges}
             />
           }
-          files={renderFiles(latestSession, null)}
+          files={renderFiles(latestSession, null, false)}
           onNewInquiry={startInquiry}
           terminalCount={runningTerminalCount}
           isTerminalOpen={isTerminalOpen}
@@ -620,7 +625,7 @@ export function App(): ReactElement {
       );
     }
     if (isFilesView) {
-      return renderFiles(latestSession, null);
+      return renderFiles(latestSession, null, false);
     }
     if (isChangesView) {
       return (
@@ -669,7 +674,7 @@ export function App(): ReactElement {
       );
     }
     if (isFilesView) {
-      return renderFiles(session, gitStatus);
+      return renderFiles(session, gitStatus, true);
     }
     if (isChangesView) {
       return (

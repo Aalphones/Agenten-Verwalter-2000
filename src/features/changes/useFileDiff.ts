@@ -36,12 +36,16 @@ export function useFileDiff(
   file: DiffTarget,
   scope: ChangeScope,
   stamp: string,
+  isEnabled = true,
 ): FileDiffState {
   const [state, setState] = useState<LoadedDiff | null>(null);
   const diffKey: string = fileDiffKey(file, scope);
   const { key, path } = file;
 
   useEffect(() => {
+    if (!isEnabled) {
+      return undefined;
+    }
     const controller = new AbortController();
     loadFileDiff(sessionId, reach, key, path, scope)
       .then((diff: FileDiff) => {
@@ -59,8 +63,11 @@ export function useFileDiff(
     };
     // `stamp` löst das Nachladen aus, ohne im Effekt gelesen zu werden.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, reach, diffKey, stamp]);
+  }, [sessionId, reach, diffKey, stamp, isEnabled]);
 
+  if (!isEnabled) {
+    return { diff: null, error: null, isLoading: false };
+  }
   if (state === null || state.key !== diffKey) {
     return { diff: null, error: null, isLoading: true };
   }

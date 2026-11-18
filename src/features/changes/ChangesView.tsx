@@ -203,6 +203,7 @@ export function ChangesView({
               repository={openTarget.repository}
               file={openTarget.file}
               scope={openTarget.scope}
+              canComment={reach === 'session'}
               onClose={(): void => {
                 closeFile(sessionId);
               }}

@@ -1,6 +1,6 @@
 # Phase 4 — Datei ansehen: Änderung, ganze Datei, Schritte
 
-Rating: standard. Die rechte Seite bekommt eine eigene Datei-Ansicht: Kopf mit Pfad und Aktionen, Umschalter „Änderung · Ganze Datei“, die Schritte der Datei, die ganze Datei mit markierten geänderten Zeilen, dazu Bild, Binärdatei, zu große und fehlende Datei. Aussehen: Entwurf, Bilder `02-aenderung.png` und `03-ganze-datei-zeile.png`.
+Rating: standard. Status: complete. Die rechte Seite bekommt eine eigene Datei-Ansicht: Kopf mit Pfad und Aktionen, Umschalter „Änderung · Ganze Datei“, die Schritte der Datei, die ganze Datei mit markierten geänderten Zeilen, dazu Bild, Binärdatei, zu große und fehlende Datei. Aussehen: Entwurf, Bilder `02-aenderung.png` und `03-ganze-datei-zeile.png`.
 
 ## Kontext (lesen)
 
@@ -37,17 +37,23 @@ Rating: standard. Die rechte Seite bekommt eine eigene Datei-Ansicht: Kopf mit P
 
 ## Checkliste
 
-- [ ] Wackelstelle Review-Kommentare prüfen (README) und, falls nötig, die Auflösung des Schlüssels in `src-tauri/src/review/` auf `ChangesReach::Project` stellen. Ergebnis im Report-Back.
-- [ ] `src/features/changes/DiffView.tsx`: neue Props `canComment: boolean` (ersetzt `reach === 'session'`), `showHead: boolean` (Vorgabe `true`; `false` blendet den eigenen Kopf aus) und optional `lines: FileDiff` (vorgegebener Diff eines Schritts; dann kein eigenes Laden, kein Aufklappen, kein Kommentieren). `ChangesView` übergibt `canComment={reach === 'session'}` und bleibt sonst unverändert.
-- [ ] `src/features/files/FileViewer.tsx` + `.css`: Kopf, Segment, Schritt-Zeile, Zustände nach „Aufbau“; wählt Fassung, Ansicht und Schritt aus `OpenTarget`.
-- [ ] `src/features/files/useFileContent.ts`: `readFile` je `<Session>|<Eintrag>|<Pfad>`, neu laden bei neuem Ergebnis der Changes nur, wenn sich `changedAt` der Datei geändert hat.
-- [ ] `src/features/files/WholeFile.tsx` + `.css`: virtualisierte Zeilen (`@tanstack/react-virtual`), Farben über `highlightLines(text, languageOf(path))` einmal je Inhalt (`useMemo`), Markierungen aus `changedLines.ts`.
-- [ ] `src/features/files/changedLines.ts`: reine Funktion `changedLines(diff: FileDiff): { added: Set<number>; removedBefore: Set<number>; starts: number[] }` aus `DiffLine.kind` und `newLine`.
-- [ ] `src/features/files/fileSteps.ts`: reine Funktion, die aus `ProjectHistory`, Gruppe und Pfad die Schritte liefert (älteste zuerst) samt Session-Nummer und -Name.
-- [ ] Sprung zur Zeile: `OpenTarget.line` gesetzt → Ansicht „Ganze Datei“, `scrollToIndex(line − 1, { align: 'center' })`, Zeile hervorgehoben, bis eine andere Datei geöffnet wird.
-- [ ] Esc im Reiter „Dateien“ schließt die offene Datei, wenn weder Session-Auswahl noch Suchliste noch ein Dialog offen ist.
-- [ ] `FilesView` zeigt statt der `DiffView` aus Phase 3 den `FileViewer`.
-- [ ] `pnpm check`.
-- [ ] Doku: Code-Map-Zeile „Dateien (Oberfläche)“ um `FileViewer`, `WholeFile` ergänzen; in `docs/glossary.md` „Ganze Datei“ und „Fassung“.
+- [x] Wackelstelle Review-Kommentare prüfen (README) und, falls nötig, die Auflösung des Schlüssels in `src-tauri/src/review/` auf `ChangesReach::Project` stellen. Ergebnis im Report-Back.
+- [x] `src/features/changes/DiffView.tsx`: neue Props `canComment: boolean` (ersetzt `reach === 'session'`), `showHead: boolean` (Vorgabe `true`; `false` blendet den eigenen Kopf aus) und optional `lines: FileDiff` (vorgegebener Diff eines Schritts; dann kein eigenes Laden, kein Aufklappen, kein Kommentieren). `ChangesView` übergibt `canComment={reach === 'session'}` und bleibt sonst unverändert.
+- [x] `src/features/files/FileViewer.tsx` + `.css`: Kopf, Segment, Schritt-Zeile, Zustände nach „Aufbau“; wählt Fassung, Ansicht und Schritt aus `OpenTarget`.
+- [x] `src/features/files/useFileContent.ts`: `readFile` je `<Session>|<Eintrag>|<Pfad>`, neu laden bei neuem Ergebnis der Changes nur, wenn sich `changedAt` der Datei geändert hat.
+- [x] `src/features/files/WholeFile.tsx` + `.css`: virtualisierte Zeilen (`@tanstack/react-virtual`), Farben über `highlightLines(text, languageOf(path))` einmal je Inhalt (`useMemo`), Markierungen aus `changedLines.ts`.
+- [x] `src/features/files/changedLines.ts`: reine Funktion `changedLines(diff: FileDiff): { added: Set<number>; removedBefore: Set<number>; starts: number[] }` aus `DiffLine.kind` und `newLine`.
+- [x] `src/features/files/fileSteps.ts`: reine Funktion, die aus `ProjectHistory`, Gruppe und Pfad die Schritte liefert (älteste zuerst) samt Session-Nummer und -Name.
+- [x] Sprung zur Zeile: `OpenTarget.line` gesetzt → Ansicht „Ganze Datei“, `scrollToIndex(line − 1, { align: 'center' })`, Zeile hervorgehoben, bis eine andere Datei geöffnet wird.
+- [x] Esc im Reiter „Dateien“ schließt die offene Datei, wenn weder Session-Auswahl noch Suchliste noch ein Dialog offen ist.
+- [x] `FilesView` zeigt statt der `DiffView` aus Phase 3 den `FileViewer`.
+- [x] `pnpm check`.
+- [x] Doku: Code-Map-Zeile „Dateien (Oberfläche)“ um `FileViewer`, `WholeFile` ergänzen; in `docs/glossary.md` „Ganze Datei“ und „Fassung“.
 
 ## Report-Back
+
+- Wackelstelle Review-Kommentare: bestätigt. `SessionRegistry::comment_folders` löste mit `ChangesReach::Session` auf; jetzt `Project`. Schlüssel sind `<Position>` bzw. `<Position>/<Ordner>`, also je Session gleich.
+- `DiffView`: neue Props `canComment`, `showHead`, `lines`, `emptyText`, `handle`, `onPosition`; `onClose` optional. Sprung von Stelle zu Stelle über `stopNavigation.ts` (`StopHandle`).
+- Nicht umgesetzt: Symbol vor „Geändert" (A/M/D) im Kopf — `FileChange` trägt keine Art; Fokus im Baum nach Klick auf ein Pfadglied (der Ordner klappt auf, Fokus bleibt).
+- Esc schloss die Datei schon seit Phase 3 (`FilesView.handleKeyDown`).
+- Nicht in der echten App gelaufen (Symlink-Fall, VS Code, Bild, 20 000 Zeilen nur per Code gelesen).

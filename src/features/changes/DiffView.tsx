@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import type { ReactElement, Ref } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import {
   compareLabel,
@@ -17,6 +17,11 @@ import {
   type GapRow,
 } from '@/features/changes/diffRows';
 import { highlightDiff } from '@/features/changes/highlightDiff';
+import {
+  nextStopIndex,
+  type StopHandle,
+  type StopPosition,
+} from '@/features/changes/stopNavigation';
 import { useFileDiff } from '@/features/changes/useFileDiff';
 import { useGapExpansion } from '@/features/changes/useGapExpansion';
 import { CollectedNote } from '@/features/review/CollectedNote';
@@ -27,6 +32,7 @@ import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { DiffLine } from '@/lib/bindings/DiffLine';
 import type { DiffLineKind } from '@/lib/bindings/DiffLineKind';
 import type { FileChange } from '@/lib/bindings/FileChange';
+import type { FileDiff } from '@/lib/bindings/FileDiff';
 import type { LineStat } from '@/lib/bindings/LineStat';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import { languageOf, plainLine, type SyntaxLine, type SyntaxSegment } from '@/lib/syntax';
@@ -54,7 +60,18 @@ interface DiffViewProps {
   repository: RepositoryChanges;
   file: FileChange;
   scope: ChangeScope;
-  onClose: () => void;
+  /** Kommentare an den Zeilen erlaubt; in der Übersicht des Vorhabens ist kein Chat zu sehen. */
+  canComment: boolean;
+  /** Der eigene Kopf mit Pfad, Zahlen und Schließen-Kreuz; `false` blendet ihn aus. */
+  showHead?: boolean;
+  /** Vorgegebener Diff, etwa der eines Schritts: dann kein eigenes Laden, kein Aufklappen, kein Kommentieren. */
+  lines?: FileDiff;
+  /** Text bei einem Diff ohne Zeilen. */
+  emptyText?: string;
+  onClose?: () => void;
+  /** Sprung von Abschnitt zu Abschnitt von außen. */
+  handle?: Ref<StopHandle>;
+  onPosition?: (stop: StopPosition) => void;
 }
 
 interface RenderedLine {
@@ -102,17 +119,28 @@ export function DiffView({
   repository,
   file,
   scope,
+  canComment: isCommentAllowed,
+  showHead = true,
+  lines: fixedDiff,
+  emptyText = EMPTY_TEXT,
   onClose,
+  handle,
+  onPosition,
 }: DiffViewProps): ReactElement {
   const [revealLineId, setRevealLineId] = useState<string | null>(null);
+  const [stopIndex, setStopIndex] = useState<number>(-1);
   const stat: LineStat | null = statOf(file, scope);
-  const { diff, error, isLoading } = useFileDiff(
+  const isFixed: boolean = fixedDiff !== undefined;
+  const loaded = useFileDiff(
     sessionId,
     reach,
     { key: repository.key, path: file.path },
     scope,
     statStamp(stat),
+    !isFixed,
   );
+  const diff: FileDiff | null = fixedDiff ?? loaded.diff;
+  const { error, isLoading } = loaded;
   const scrollRef = useRef<HTMLDivElement>(null);
   const collected: readonly CollectedComment[] = useReviewStore(
     (state) => state.collected[sessionId] ?? NO_COMMENTS,
@@ -124,8 +152,7 @@ export function DiffView({
   const upsert = useReviewStore((state) => state.upsert);
   const remove = useReviewStore((state) => state.remove);
 
-  // In der Übersicht des Vorhabens ist kein Chat zu sehen; ein Kommentar landete unsichtbar in der neuesten Session.
-  const canComment: boolean = reach === 'session';
+  const canComment: boolean = isCommentAllowed && !isFixed;
   const commentsByLine: Map<string, CollectedComment> = useMemo(
     () => new Map(collected.map((entry: CollectedComment) => [entry.lineId, entry])),
     [collected],
@@ -144,9 +171,22 @@ export function DiffView({
     () => highlightDiff(lines, language),
     [lines, language],
   );
-  const rows: readonly DiffRow[] = useMemo(
-    () => (diff === null ? [] : buildRows(diff, expansions)),
-    [diff, expansions],
+  const rows: readonly DiffRow[] = useMemo(() => {
+    if (diff === null) {
+      return [];
+    }
+    const built: DiffRow[] = buildRows(diff, expansions);
+    return isFixed ? built.filter((row: DiffRow) => row.kind !== 'gap') : built;
+  }, [diff, expansions, isFixed]);
+  // Eine Stelle ist der Anfang eines Abschnitts: die erste Zeile hinter einem Abschnittskopf.
+  const stops: readonly number[] = useMemo(
+    () =>
+      rows.flatMap((row: DiffRow, rowIndex: number): number[] =>
+        row.kind === 'line' && (row.index === 0 || diff?.lines[row.index - 1]?.kind === 'hunk')
+          ? [rowIndex]
+          : [],
+      ),
+    [rows, diff],
   );
   const gaps: readonly GapRow[] = useMemo(
     () => rows.filter((row: DiffRow): row is GapRow => row.kind === 'gap'),
@@ -176,6 +216,26 @@ export function DiffView({
   // Zeilen schöben die Ansicht Zeile für Zeile weiter. Ausgeglichen werden nur Zeilen über der obersten sichtbaren.
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item: VirtualItem): boolean =>
     virtualizer.range !== null && item.index < virtualizer.range.startIndex;
+
+  useImperativeHandle(
+    handle,
+    (): StopHandle => ({
+      step: (direction: 1 | -1): void => {
+        const next: number = nextStopIndex(stopIndex, direction, stops.length);
+        const rowIndex: number | undefined = stops[next];
+        if (rowIndex === undefined) {
+          return;
+        }
+        setStopIndex(next);
+        virtualizer.scrollToIndex(rowIndex, { align: 'start' });
+      },
+      topLine: (): number | null => null,
+    }),
+    [stopIndex, stops, virtualizer],
+  );
+  useEffect(() => {
+    onPosition?.({ position: stopIndex + 1, count: stops.length });
+  }, [onPosition, stopIndex, stops.length]);
 
   function openCommentBox(target: CommentTarget, text: string): void {
     setRevealLineId(target.lineId);
@@ -306,13 +366,13 @@ export function DiffView({
       return <p className="diff-view__notice diff-view__notice--error">{error}</p>;
     }
     if (diff === null) {
-      return <p className="diff-view__notice">{EMPTY_TEXT}</p>;
+      return <p className="diff-view__notice">{emptyText}</p>;
     }
     if (diff.binary) {
       return <p className="diff-view__notice">{BINARY_TEXT}</p>;
     }
     if (diff.lines.length === 0) {
-      return <p className="diff-view__notice">{EMPTY_TEXT}</p>;
+      return <p className="diff-view__notice">{emptyText}</p>;
     }
     return (
       <div
@@ -474,62 +534,66 @@ export function DiffView({
 
   return (
     <div className="diff-view">
-      <div className="diff-view__header">
-        <span className="diff-view__repository">{repository.name} /</span>
-        <span className="diff-view__path">{file.path}</span>
-        {stat !== null && stat.binary && <span className="diff-view__binary">binär</span>}
-        {stat !== null && !stat.binary && (
-          <>
-            <span className="diff-view__added">+{formatCount(stat.added)}</span>
-            <span className="diff-view__deleted">−{formatCount(stat.deleted)}</span>
-          </>
-        )}
-        <span className="diff-view__spacer" />
-        <span className="diff-view__compare" title="Links der ältere, rechts der neuere Stand">
-          {compareLabel(scope, repository.baseRef, repository.branch)}
-        </span>
-        {hasGaps && (
-          <button
-            type="button"
-            className="diff-view__whole"
-            aria-pressed={isWholeFile}
-            title={
-              isWholeFile
-                ? 'Eingeblendete Zeilen wieder ausblenden'
-                : 'Alle unveränderten Zeilen einblenden'
-            }
-            disabled={isBusy}
-            onClick={(): void => {
-              if (isWholeFile) {
-                collapseAll();
-              } else {
-                expandAll(gaps);
+      {showHead && (
+        <div className="diff-view__header">
+          <span className="diff-view__repository">{repository.name} /</span>
+          <span className="diff-view__path">{file.path}</span>
+          {stat !== null && stat.binary && <span className="diff-view__binary">binär</span>}
+          {stat !== null && !stat.binary && (
+            <>
+              <span className="diff-view__added">+{formatCount(stat.added)}</span>
+              <span className="diff-view__deleted">−{formatCount(stat.deleted)}</span>
+            </>
+          )}
+          <span className="diff-view__spacer" />
+          <span className="diff-view__compare" title="Links der ältere, rechts der neuere Stand">
+            {compareLabel(scope, repository.baseRef, repository.branch)}
+          </span>
+          {hasGaps && !isFixed && (
+            <button
+              type="button"
+              className="diff-view__whole"
+              aria-pressed={isWholeFile}
+              title={
+                isWholeFile
+                  ? 'Eingeblendete Zeilen wieder ausblenden'
+                  : 'Alle unveränderten Zeilen einblenden'
               }
-            }}
-          >
-            {isWholeFile ? 'Nur Änderungen' : 'Ganze Datei'}
-          </button>
-        )}
-        <button
-          type="button"
-          className="diff-view__close"
-          aria-label="Diff schließen"
-          onClick={onClose}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />
-          </svg>
-        </button>
-      </div>
+              disabled={isBusy}
+              onClick={(): void => {
+                if (isWholeFile) {
+                  collapseAll();
+                } else {
+                  expandAll(gaps);
+                }
+              }}
+            >
+              {isWholeFile ? 'Nur Änderungen' : 'Ganze Datei'}
+            </button>
+          )}
+          {onClose !== undefined && (
+            <button
+              type="button"
+              className="diff-view__close"
+              aria-label="Diff schließen"
+              onClick={onClose}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
       {stat !== null && stat.foreign && <p className="diff-view__foreign">{FOREIGN_TEXT[reach]}</p>}
       <div ref={scrollRef} className="diff-view__body">
         {renderBody()}
