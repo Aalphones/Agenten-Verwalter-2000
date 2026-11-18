@@ -320,6 +320,76 @@ pub fn commit_files(worktree: &Path, commits: &[String]) -> Result<String, Comma
     )
 }
 
+/// Die IDs aus `ids`, die als Commit im Objektspeicher liegen — `git cat-file --batch-check` mit den
+/// IDs auf der Standardeingabe (keine Grenze der Befehlszeile).
+pub fn existing_commits(dir: &Path, ids: &[String]) -> Result<HashSet<String>, CommandError> {
+    if ids.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let mut input = ids.join("\n");
+    input.push('\n');
+    let output = run_raw_with_input(dir, &args(&["cat-file", "--batch-check"]), input)?;
+    Ok(output
+        .lines()
+        .filter_map(|line: &str| {
+            let mut fields = line.split(' ');
+            let (id, kind) = (fields.next()?, fields.next()?);
+            (kind == "commit").then(|| id.to_owned())
+        })
+        .collect())
+}
+
+/// Kopf je Commit in der Reihenfolge von `ids`: `<ID>\t<Eltern>\t<Committer-Zeit>\t<Betreff>`. Alle
+/// IDs müssen im Objektspeicher liegen (`existing_commits`).
+pub fn commit_heads(dir: &Path, ids: &[String]) -> Result<String, CommandError> {
+    if ids.is_empty() {
+        return Ok(String::new());
+    }
+    let mut input = ids.join("\n");
+    input.push('\n');
+    run_raw_with_input(
+        dir,
+        &args(&[
+            "log",
+            "--no-walk=unsorted",
+            "--stdin",
+            "--format=%H%x09%P%x09%ct%x09%s",
+        ]),
+        input,
+    )
+}
+
+/// `git log --no-walk=unsorted --stdin --no-renames --name-status -z` je Commit hinter `\x01<ID>\0`.
+pub fn commit_name_status(dir: &Path, ids: &[String]) -> Result<String, CommandError> {
+    commit_changes(dir, ids, "--name-status")
+}
+
+/// `git log --no-walk=unsorted --stdin --no-renames --numstat -z` je Commit hinter `\x01<ID>\0`.
+pub fn commit_numstat(dir: &Path, ids: &[String]) -> Result<String, CommandError> {
+    commit_changes(dir, ids, "--numstat")
+}
+
+fn commit_changes(dir: &Path, ids: &[String], mode: &str) -> Result<String, CommandError> {
+    if ids.is_empty() {
+        return Ok(String::new());
+    }
+    let mut input = ids.join("\n");
+    input.push('\n');
+    run_raw_with_input(
+        dir,
+        &args(&[
+            "log",
+            "--no-walk=unsorted",
+            "--stdin",
+            "--no-renames",
+            "--format=%x01%H",
+            mode,
+            "-z",
+        ]),
+        input,
+    )
+}
+
 /// `git show <rev>:<path>` — die Datei im Stand `rev`, sofern sie höchstens `max_bytes` groß ist;
 /// die Größe fragt vorher `git cat-file -s` ab, damit eine große Datei nicht ganz gelesen wird.
 /// `None` bei jedem Git-Fehler: der Diff hat dieselbe Datei kurz zuvor gelesen, ein Fehler heißt

@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { DirEntry } from '@/lib/bindings/DirEntry';
 import type { FileContent } from '@/lib/bindings/FileContent';
+import type { FileDiff } from '@/lib/bindings/FileDiff';
+import type { ProjectHistory } from '@/lib/bindings/ProjectHistory';
 import type { RepoTree } from '@/lib/bindings/RepoTree';
 
 /** Der vollständige Dateibaum eines Eintrags (`key` aus `RepositoryChanges`, aufgelöst über das ganze Vorhaben):
@@ -24,4 +26,32 @@ export function loadIgnoredChildren(
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (ungültiger Pfad, Schlüssel oder Ordner), `fileNotAllowed` (außerhalb des Repositorys), `io`, `git` */
 export function readFile(sessionId: string, key: string, path: string): Promise<FileContent> {
   return invoke<FileContent>('files_read', { sessionId, key, path });
+}
+
+/** Der Verlauf des ganzen Vorhabens: je Session ihre eigenen Commits (Schritte) mit Dateien.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `git` */
+export function loadHistory(sessionId: string): Promise<ProjectHistory> {
+  return invoke<ProjectHistory>('files_history', { sessionId });
+}
+
+/** Der Diff eines eigenen Commits an einer Datei gegen seinen ersten Elternteil (`key` aus `HistoryCommit`).
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (kein eigener Commit des Vorhabens, ungültiger Pfad oder Schlüssel), `io`, `git` */
+export function loadCommitDiff(
+  sessionId: string,
+  key: string,
+  commit: string,
+  path: string,
+): Promise<FileDiff> {
+  return invoke<FileDiff>('files_commit_diff', { sessionId, key, commit, path });
+}
+
+/** Öffnet die Datei im Eintrag in VS Code, mit Zeile an dieser Stelle.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal`, `fileNotAllowed` (außerhalb des Repositorys), `git` (VS Code nicht gefunden) */
+export async function openInEditor(
+  sessionId: string,
+  key: string,
+  path: string,
+  line: number | null,
+): Promise<void> {
+  await invoke('files_open_in_editor', { sessionId, key, path, line });
 }

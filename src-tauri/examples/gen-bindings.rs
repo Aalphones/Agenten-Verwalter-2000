@@ -29,7 +29,10 @@ use verwalter_lib::{
         BrokenLink, EnvironmentStatus, LinkCheck, MirrorDiff, MirrorKind, MirrorRun, MirrorState,
     },
     error::CommandError,
-    files::model::{DirEntry, FileContent, IgnoredEntry, RepoTree, TreeFile},
+    files::model::{
+        DirEntry, FileContent, HistoryCommit, HistoryFile, HistorySession, IgnoredEntry,
+        ProjectHistory, RepoTree, TreeFile,
+    },
     git::model::{
         GitBranch, GitBusySession, GitEntryStatus, GitForeignFile, GitLog, GitLogCommit,
         GitOpenTarget, GitOperation, GitOwnCommit, GitSessionStatus, GitSwitchMode,
@@ -85,6 +88,10 @@ fn main() -> Result<(), ts_rs::ExportError> {
     RepoTree::export_all(&cfg)?;
     DirEntry::export_all(&cfg)?;
     FileContent::export_all(&cfg)?;
+    HistoryFile::export_all(&cfg)?;
+    HistoryCommit::export_all(&cfg)?;
+    HistorySession::export_all(&cfg)?;
+    ProjectHistory::export_all(&cfg)?;
     ModelId::export_all(&cfg)?;
     Effort::export_all(&cfg)?;
     Mode::export_all(&cfg)?;

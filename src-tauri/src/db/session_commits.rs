@@ -24,6 +24,23 @@ pub fn insert_all(
     Ok(())
 }
 
+/// Die Paare `(Session, Commit)` aller genannten Sessions.
+pub fn load_by_session(
+    connection: &Connection,
+    session_ids: &[String],
+) -> Result<Vec<(String, String)>, CommandError> {
+    let mut statement =
+        connection.prepare("SELECT commit_id FROM session_commits WHERE session_id = ?1")?;
+    let mut pairs: Vec<(String, String)> = Vec::new();
+    for session_id in session_ids {
+        let rows = statement.query_map(params![session_id], |row| row.get::<_, String>(0))?;
+        for commit in rows {
+            pairs.push((session_id.clone(), commit?));
+        }
+    }
+    Ok(pairs)
+}
+
 /// Die Commits aller genannten Sessions zusammen.
 pub fn load_for(
     connection: &Connection,

@@ -1,11 +1,15 @@
 use std::path::PathBuf;
 
-use crate::changes::{self, model::ChangesReach};
+use crate::changes::{
+    self,
+    model::{ChangesReach, FileDiff},
+};
 use crate::error::CommandError;
 use crate::files::{
     self,
-    model::{DirEntry, FileContent, RepoTree},
+    model::{DirEntry, FileContent, ProjectHistory, RepoTree},
 };
+use crate::git;
 use crate::sessions::registry::SessionRegistry;
 
 // Die Commands sind `async`, damit Git und das Dateisystem nicht auf dem Haupt-Thread laufen. `key`
@@ -45,6 +49,44 @@ pub async fn files_read(
 ) -> Result<FileContent, CommandError> {
     let dir = entry_dir(&registry, &session_id, &key)?;
     files::read::read(&dir, &path)
+}
+
+/// Der Verlauf des ganzen Vorhabens: je Session ihre Commits mit Dateien.
+#[tauri::command]
+pub async fn files_history(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+) -> Result<ProjectHistory, CommandError> {
+    let (input, sessions, pairs) = registry.history_input(&session_id)?;
+    Ok(files::history::history(&input, &sessions, &pairs))
+}
+
+/// Der Diff eines eigenen Commits an einer Datei gegen seinen ersten Elternteil.
+#[tauri::command]
+pub async fn files_commit_diff(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    commit: String,
+    path: String,
+) -> Result<FileDiff, CommandError> {
+    let input = registry.changes_input(&session_id, ChangesReach::Project)?;
+    let source = changes::sources::find(&input, &key)?;
+    files::history::commit_diff(&source, &input.own, &commit, &path)
+}
+
+/// Öffnet eine Datei des Eintrags in VS Code, mit Zeile an dieser Stelle.
+#[tauri::command]
+pub async fn files_open_in_editor(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    key: String,
+    path: String,
+    line: Option<u32>,
+) -> Result<(), CommandError> {
+    let dir = entry_dir(&registry, &session_id, &key)?;
+    let file = files::checked_path(&dir, &path)?;
+    git::actions::open_file_in_vs_code(&file, line)
 }
 
 /// Der Ordner des Eintrags `key` — nur einer, den `sources` für das Vorhaben selbst gebaut hat.
