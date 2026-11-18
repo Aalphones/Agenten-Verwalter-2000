@@ -44,7 +44,12 @@ export interface FilesSelection {
   openCommits: readonly string[];
   /** Bildlaufposition der Übersicht in Pixeln. */
   overviewTop: number;
+  /** Suchtext der Dateisuche; bleibt, bis eine Datei gewählt wird. */
   query: string;
+  /** Wird von Strg P hochgezählt; die Suche setzt den Fokus, sobald er von `focusDone` abweicht. */
+  focusSearch: number;
+  /** Der Stand von `focusSearch`, den die Suche schon bedient hat. */
+  focusDone: number;
 }
 
 export const DEFAULT_FILES_SELECTION: FilesSelection = {
@@ -58,6 +63,8 @@ export const DEFAULT_FILES_SELECTION: FilesSelection = {
   openCommits: [],
   overviewTop: 0,
   query: '',
+  focusSearch: 0,
+  focusDone: 0,
 };
 
 interface FilesState {

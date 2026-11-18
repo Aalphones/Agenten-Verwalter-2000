@@ -30,14 +30,22 @@ Rating: standard. Das Suchfeld oben rechts in der Leiste findet Dateien aller Re
 
 ## Checkliste
 
-- [ ] `src/features/files/searchFiles.ts`: reine Funktion `searchFiles(query, groups, trees): SearchHit[]` nach Kontrakt; `SearchHit = { group; entryKey; path; change: FileChange | null; nameMatch: [number, number] | null }`. Für geänderte Dateien `entryKey` der gezeigten Fassung, sonst der Anker.
-- [ ] `src/features/files/FileSearch.tsx` + `.css`: Feld und Liste nach „Aufbau“, `role="combobox"` am Feld, `role="listbox"` an der Liste, `aria-activedescendant` für die Markierung.
-- [ ] `useRepoTrees.ts`: Funktion `loadAll()` für AK 2.
-- [ ] `FilesToolbar.tsx`: `FileSearch` rechts einhängen.
-- [ ] `src/app/App.tsx`: Tastenkürzel Strg P neben Strg N; ruft `showView('files')` bzw. `showProjectView('files')` und setzt über ein Signal im `files`-Zustand (`focusSearch: number`, hochgezählt) den Fokus. `event.preventDefault()` immer, wenn das Kürzel greift.
-- [ ] `src/features/terminal/terminalInstances.ts`: Strg P an die App durchlassen wie Strg Ö.
-- [ ] Hilfetext: `title` am Feld „Datei suchen (Strg P)“.
-- [ ] `pnpm check`.
-- [ ] Doku: README des Projekts oder die Stelle, an der Tastenkürzel dokumentiert sind (in `docs/` nach „Strg N“ suchen), um Strg P ergänzen; Code-Map-Zeile „Dateien (Oberfläche)“ um `FileSearch`, `searchFiles`.
+- [x] `src/features/files/searchFiles.ts`: reine Funktion `searchFiles(query, groups, trees)` nach Kontrakt; `SearchHit = { group; entryKey; path; change: FileChange | null; nameMatch: [number, number] | null }`. Für geänderte Dateien `entryKey` der gezeigten Fassung, sonst der Anker.
+- [x] `src/features/files/FileSearch.tsx` + `.css`: Feld und Liste nach „Aufbau“, `role="combobox"` am Feld, `role="listbox"` an der Liste, `aria-activedescendant` für die Markierung.
+- [x] `useRepoTrees.ts`: Funktion `loadAll()` für AK 2.
+- [x] `FilesToolbar.tsx`: `FileSearch` rechts einhängen.
+- [x] `src/app/App.tsx`: Tastenkürzel Strg P neben Strg N; ruft `showView('files')` bzw. `showProjectView('files')` und setzt über ein Signal im `files`-Zustand (`focusSearch: number`, hochgezählt) den Fokus. `event.preventDefault()` immer, wenn das Kürzel greift.
+- [x] `src/features/terminal/terminalInstances.ts`: Strg P an die App durchlassen wie Strg Ö.
+- [x] Hilfetext: `title` am Feld „Datei suchen (Strg P)“.
+- [x] `pnpm check`.
+- [x] Doku: kein Dokument nennt Tastenkürzel (Suche nach „Strg N“ in `docs/` und README ohne Treffer in lebenden Dateien); Code-Map-Zeile „Dateien“ um `FileSearch`, `searchFiles` ergänzt. Die README des Projekts nennt „Dateien“ noch nicht — Phase 7.
 
 ## Report-Back
+
+Phase 5 complete. Abweichungen vom Plan, beide klein:
+
+- `searchFiles` liefert `{ hits, matchCount, fileCount, pendingGroups }` statt nur `SearchHit[]`, weil der Kopf „n Treffer in m Dateien“ und „Dateien werden gelesen …“ die Zahlen brauchen; `SearchHit` trägt zusätzlich `stat` (Zeilenzahlen im gewählten Blickwinkel).
+- Der Zustand hat neben `focusSearch` ein `focusDone`: so wird das Strg-P-Signal auch bedient, wenn der Reiter erst durch das Kürzel erscheint, und beim späteren Wiederöffnen des Reiters nicht erneut.
+- `RepoTree` scrollt eine von außen gewählte Datei (Suche, später Chat-Link) in den sichtbaren Bereich.
+- Strg P ohne Repository ruft `preventDefault` nicht auf (Plan: „tut nichts“).
+- Wackelstelle: `FileSearch.tsx` Tastatur-/Fokus-Zusammenspiel (Esc gibt den Fokus an das vorher fokussierte Element zurück, Klick in die Liste behält den Fokus im Feld) und Scroll zur Zeile in `RepoTree.tsx` sind nur per `pnpm check` belegt, nicht in der echten App gelaufen. Keine Leistungsmessung mit 50 000 Pfaden (Wertung läuft einmal je Tastendruck, Index je Baum zwischengespeichert).

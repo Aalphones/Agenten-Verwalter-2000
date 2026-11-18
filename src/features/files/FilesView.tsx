@@ -3,6 +3,7 @@ import type { CSSProperties, KeyboardEvent, ReactElement } from 'react';
 import { ResizeHandle } from '@/components/ResizeHandle';
 import { formatCount } from '@/features/changes/changesScope';
 import {
+  ancestorKeys,
   buildTreeRows,
   collapseAllKeys,
   defaultExpanded,
@@ -10,6 +11,7 @@ import {
   expandKey,
 } from '@/features/files/buildTreeRows';
 import type { TreeRow } from '@/features/files/buildTreeRows';
+import { FileSearch } from '@/features/files/FileSearch';
 import { FileViewer } from '@/features/files/FileViewer';
 import { fileSteps, latestStepOfSession } from '@/features/files/fileSteps';
 import { FilesOverview } from '@/features/files/FilesOverview';
@@ -20,6 +22,7 @@ import { HistoryList } from '@/features/files/HistoryList';
 import { mergeGroups } from '@/features/files/mergeGroups';
 import type { RepoGroup } from '@/features/files/mergeGroups';
 import { RepoTree } from '@/features/files/RepoTree';
+import type { SearchHit } from '@/features/files/searchFiles';
 import { SessionPicker } from '@/features/files/SessionPicker';
 import type { PickerSession } from '@/features/files/SessionPicker';
 import { useHistory } from '@/features/files/useHistory';
@@ -212,7 +215,15 @@ export function FilesView({
           .filter((key: string) => key !== '')
       : [];
   const stamp: string = useMemo(() => changesStamp(shownChanges), [shownChanges]);
-  const { trees, ignoredChildren, loadIgnored } = useRepoTrees(dataSessionId, openAnchors, stamp);
+  const everyAnchors: string[] = groups
+    .map((group: RepoGroup) => group.anchorKey)
+    .filter((key: string) => key !== '');
+  const { trees, ignoredChildren, loadIgnored, loadAll } = useRepoTrees(
+    dataSessionId,
+    openAnchors,
+    everyAnchors,
+    stamp,
+  );
   const { history, error: historyError } = useHistory(sessionId, commitStampOf(projectChanges));
 
   const rows: TreeRow[] = useMemo(
@@ -272,24 +283,57 @@ export function FilesView({
     update({ open: target, pane: 'detail' });
   }
 
+  /** Mit gesetztem Session-Filter öffnet „Änderung“ mit dem jüngsten Schritt dieser Session. */
+  function initialStep(group: string, path: string): string {
+    if (sessionFilter === null) {
+      return 'all';
+    }
+    return latestStepOfSession(fileSteps(history, group, path), sessionFilter) ?? 'all';
+  }
+
   function openTreeFile(row: FileRow): void {
     const group: RepoGroup | undefined = groups.find(
       (candidate: RepoGroup) => candidate.group === row.group,
     );
-    // Mit gesetztem Session-Filter öffnet „Änderung“ mit dem jüngsten Schritt dieser Session.
-    const filteredStep: string | null =
-      sessionFilter === null
-        ? null
-        : latestStepOfSession(fileSteps(history, row.group, row.path), sessionFilter);
     openTarget({
       group: row.group,
       entryKey: row.file?.shown.entryKey ?? group?.anchorKey ?? '',
       path: row.path,
       view: null,
-      step: filteredStep ?? 'all',
+      step: initialStep(row.group, row.path),
       line: null,
     });
   }
+
+  /** Öffnet einen Treffer der Suche, klappt seine Ordner im Baum auf und zeigt dort die Zeile. Eine unveränderte
+   *  Datei steht nicht in „Geändert“: der Baum wechselt auf „Alle Dateien“. */
+  function openSearchHit(hit: SearchHit): void {
+    const nextMode: FilesMode = hit.change === null && mode === 'changed' ? 'all' : mode;
+    const current: readonly string[] =
+      selection.expanded[nextMode] ?? defaultExpanded(groups, nextMode);
+    const revealed: string[] = [
+      expandKey(hit.group, ''),
+      ...ancestorKeys(hit.group, hit.path, Number.POSITIVE_INFINITY),
+    ];
+    update({
+      mode: nextMode,
+      expanded: { ...selection.expanded, [nextMode]: [...new Set([...current, ...revealed])] },
+      open: {
+        group: hit.group,
+        entryKey: hit.entryKey,
+        path: hit.path,
+        view: null,
+        step: initialStep(hit.group, hit.path),
+        line: null,
+      },
+      pane: 'detail',
+      query: '',
+    });
+  }
+
+  const markSearchFocusHandled = useCallback((): void => {
+    updateSelection(viewKey, { focusDone: selection.focusSearch });
+  }, [updateSelection, viewKey, selection.focusSearch]);
 
   function toggleIgnored(row: IgnoredRow): void {
     const key: string = expandKey(row.group, row.path);
@@ -514,6 +558,21 @@ export function FilesView({
               }}
             />
           )
+        }
+        search={
+          <FileSearch
+            groups={groups}
+            trees={trees}
+            query={selection.query}
+            onQuery={(query: string): void => {
+              update({ query });
+            }}
+            onActivate={loadAll}
+            focusRequest={selection.focusSearch}
+            focusDone={selection.focusDone}
+            onFocusHandled={markSearchFocusHandled}
+            onSelect={openSearchHit}
+          />
         }
         onTogglePicker={(): void => {
           setPickerOpen(!isPickerOpen);

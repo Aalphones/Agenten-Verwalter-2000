@@ -12,6 +12,8 @@ export interface RepoTreesState {
   ignoredChildren: ReadonlyMap<string, LoadState<DirEntry[]>>;
   /** Liest die Kinder eines ignorierten Ordners, falls noch nicht geschehen. */
   loadIgnored: (entryKey: string, path: string) => void;
+  /** Lädt die Bäume aller Knoten, die noch nicht geladen sind (für die Suche); gilt bis zum Session-Wechsel. */
+  loadAll: () => void;
 }
 
 const NO_TREES: ReadonlyMap<string, LoadState<RepoTree>> = new Map();
@@ -25,15 +27,17 @@ function withEntry<T>(map: ReadonlyMap<string, T>, key: string, value: T): Map<s
 
 /** Lädt die Bäume „Alle Dateien“ der offenen Knoten (`anchorKeys`) und hält sie je Session. Ein Baum lädt beim
  *  ersten Aufklappen und erneut, sobald sich `changesStamp` ändert (neues Ergebnis der Changes); bis dahin bleibt der
- *  alte stehen. */
+ *  alte stehen. Nach `loadAll()` gehören die Anker aller Knoten (`everyAnchorKeys`) dazu. */
 export function useRepoTrees(
   sessionId: string,
   anchorKeys: readonly string[],
+  everyAnchorKeys: readonly string[],
   changesStamp: string,
 ): RepoTreesState {
   const [trees, setTrees] = useState<ReadonlyMap<string, LoadState<RepoTree>>>(NO_TREES);
   const [ignoredChildren, setIgnoredChildren] =
     useState<ReadonlyMap<string, LoadState<DirEntry[]>>>(NO_CHILDREN);
+  const [isAllWanted, setAllWanted] = useState<boolean>(false);
   const [owner, setOwner] = useState<string>(sessionId);
   // Je Anker der Stempel, mit dem zuletzt geladen wurde; ein anderer Stempel lädt neu.
   const loadedRef = useRef<Map<string, string>>(new Map());
@@ -44,9 +48,12 @@ export function useRepoTrees(
     setOwner(sessionId);
     setTrees(NO_TREES);
     setIgnoredChildren(NO_CHILDREN);
+    setAllWanted(false);
   }
 
-  const wanted: string = anchorKeys.join('\n');
+  const wanted: string = (isAllWanted ? [...anchorKeys, ...everyAnchorKeys] : anchorKeys)
+    .filter((key: string, index: number, keys: readonly string[]) => keys.indexOf(key) === index)
+    .join('\n');
 
   useEffect(() => {
     if (sessionRef.current !== sessionId) {
@@ -104,5 +111,9 @@ export function useRepoTrees(
     [sessionId, ignoredChildren],
   );
 
-  return { trees, ignoredChildren, loadIgnored };
+  const loadAll = useCallback((): void => {
+    setAllWanted(true);
+  }, []);
+
+  return { trees, ignoredChildren, loadIgnored, loadAll };
 }

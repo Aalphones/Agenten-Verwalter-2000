@@ -334,6 +334,46 @@ export function App(): ReactElement {
     isFilesView,
   );
 
+  // Strg P: aus jeder Ansicht des Vorhabens in „Dateien“ und mit dem Fokus ins Suchfeld. Ohne Repository gibt
+  // es nichts zu suchen, dann bleibt das Kürzel unberührt.
+  const canSearchFiles: boolean = isOverview
+    ? hasProjectRepositories
+    : !isMainReplaced && currentSession !== undefined && currentSession.repositoryCount > 0;
+  useEffect(() => {
+    if (!canSearchFiles) {
+      return undefined;
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (!event.ctrlKey || event.shiftKey || event.altKey || event.key.toLowerCase() !== 'p') {
+        return;
+      }
+      event.preventDefault();
+      if (isImplementation) {
+        showImplementationView('files');
+      } else if (isOverview) {
+        showProjectView('files');
+      } else {
+        showView('files');
+      }
+      const files = useFilesStore.getState();
+      files.update(filesViewKey, {
+        focusSearch: (files.selections[filesViewKey]?.focusSearch ?? 0) + 1,
+      });
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return (): void => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [
+    canSearchFiles,
+    isImplementation,
+    isOverview,
+    filesViewKey,
+    showImplementationView,
+    showProjectView,
+    showView,
+  ]);
+
   // Kopfzeile (Zähler), Verlauf (Zeilen) und Panel brauchen dieselben Daten — einmal laden, nicht je Verbraucher.
   // Die Übersicht hat keinen Knopf für das Panel und zeigt deshalb keins.
   const visibleSession: SessionSummary | null =
