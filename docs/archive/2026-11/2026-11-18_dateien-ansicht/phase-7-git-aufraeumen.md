@@ -45,16 +45,18 @@ Rating: standard. Die Git-Werkzeuge ziehen in den Reiter „Dateien“: „Git�
 
 ## Checkliste
 
-- [ ] `src/features/files/GitPage.tsx` + `.css` nach „Aufbau“; Daten: `useGitStatus` der sichtbaren Session, Changes der Reichweite `session` (das vorhandene `useSessionChanges(session, 'session', …)` aus `App.tsx` weiterreichen), `buildFileRows` je Eintrag.
-- [ ] `RepoTree.tsx`: Knopf „Git“ in der Kopfzeile des Knotens (setzt `page: { git: <Gruppe> }`), nur mit sichtbarer Session; `FilesOverview`: Zeile der Tabelle anklickbar.
-- [ ] `FilesView.tsx`: `page` mit `git` zeigt `GitPage`; `onChanged` lädt Git-Zustand, beide Changes, Bäume und Verlauf neu.
-- [ ] `FilesOverview.tsx`: die zwei Hinweise aus AK 5.
-- [ ] `src/stores/sessions.ts`: `'changes'` aus `SESSION_VIEWS` und `PROJECT_VIEWS` entfernen; wird der gemerkte Reiter irgendwo gespeichert und wieder gelesen (in `src/` nach `viewBySession` suchen), dort `'changes'` als `'files'` behandeln; lebt er nur im Zustand der laufenden App, entfällt das.
-- [ ] `App.tsx`, `SessionHeader.tsx`, `ProjectHeader.tsx`: alle Zweige für „Changes“ entfernen; `onOpenChanges` und ähnliche Sprünge (in `SessionHeader.tsx` suchen) führen in den Reiter „Dateien“.
-- [ ] Dateien aus AK 6 löschen; danach mit dem Grep-Werkzeug nach `ChangesView`, `ChangesToolbar`, `ChangesOverview`, `'changes'` in `src/` suchen und Reste entfernen. `PanelId` `changesTree` bleibt für die Breite der Liste in der Git-Seite.
-- [ ] Texte: in `src/` nach dem Wort „Changes“ in sichtbaren Beschriftungen suchen (Tooltips, Hinweise, Fehlermeldungen, Systemprompt-Absätze in `src-tauri/src/agents/`) und auf „Dateien“ umstellen, wo der Reiter gemeint ist; der Begriff „Changes“ für die Daten bleibt.
-- [ ] `pnpm check`.
-- [ ] Doku: `docs/code-map.md` (Zeilen „Changes“ auf den verbliebenen Umfang kürzen, „Dateien“ vollständig), `docs/glossary.md` („Changes-Ansicht“ → „Dateien-Ansicht“; „Übersicht (Vorhaben)“: Reiter „Übersicht · Dateien“; „Verlauf (Git)“: Ort Git-Seite), `docs/PROJECT.md` (Zeile zum Diff in der Stack-Tabelle und Critical Rule 1 im Wortlaut „Chat first, Changes second“ bleiben; ein Satz zur Dateien-Ansicht in der Beschreibung), `AGENTS.md` (Satz „Changes/Diffs die Prüfebene“ um die Dateien-Ansicht ergänzen), in ADR 006, 015, 020, 025 je die Zeile „Geändert durch ADR 067“ unter dem Titel.
-- [ ] Abschluss nach `docs/conventions/releases.md` und AGENTS.md Regel 6: Plan archivieren, Version anheben (Minor), Commit `chore(release)`, Tag setzen und pushen.
+- [x] `src/features/files/GitPage.tsx` + `.css` nach „Aufbau“; Daten: `useGitStatus` der sichtbaren Session, Changes der Reichweite `session` (das vorhandene `useSessionChanges(session, 'session', …)` aus `App.tsx` weiterreichen), `buildFileRows` je Eintrag.
+- [x] `RepoTree.tsx`: Knopf „Git“ in der Kopfzeile des Knotens (setzt `page: { git: <Gruppe> }`), nur mit sichtbarer Session; `FilesOverview`: Zeile der Tabelle anklickbar.
+- [x] `FilesView.tsx`: `page` mit `git` zeigt `GitPage`; `onChanged` lädt Git-Zustand, beide Changes, Bäume und Verlauf neu.
+- [x] `FilesOverview.tsx`: die zwei Hinweise aus AK 5.
+- [x] `src/stores/sessions.ts`: `'changes'` aus `SESSION_VIEWS` und `PROJECT_VIEWS` entfernen; wird der gemerkte Reiter irgendwo gespeichert und wieder gelesen (in `src/` nach `viewBySession` suchen), dort `'changes'` als `'files'` behandeln; lebt er nur im Zustand der laufenden App, entfällt das.
+- [x] `App.tsx`, `SessionHeader.tsx`, `ProjectHeader.tsx`: alle Zweige für „Changes“ entfernen; `onOpenChanges` und ähnliche Sprünge (in `SessionHeader.tsx` suchen) führen in den Reiter „Dateien“.
+- [x] Dateien aus AK 6 löschen; danach mit dem Grep-Werkzeug nach `ChangesView`, `ChangesToolbar`, `ChangesOverview`, `'changes'` in `src/` suchen und Reste entfernen. `PanelId` `changesTree` bleibt für die Breite der Liste in der Git-Seite.
+- [x] Texte: in `src/` nach dem Wort „Changes“ in sichtbaren Beschriftungen suchen (Tooltips, Hinweise, Fehlermeldungen, Systemprompt-Absätze in `src-tauri/src/agents/`) und auf „Dateien“ umstellen, wo der Reiter gemeint ist; der Begriff „Changes“ für die Daten bleibt.
+- [x] `pnpm check`.
+- [x] Doku: `docs/code-map.md` (Zeilen „Changes“ auf den verbliebenen Umfang kürzen, „Dateien“ vollständig), `docs/glossary.md` („Changes-Ansicht“ → „Dateien-Ansicht“; „Übersicht (Vorhaben)“: Reiter „Übersicht · Dateien“; „Verlauf (Git)“: Ort Git-Seite), `docs/PROJECT.md` (Zeile zum Diff in der Stack-Tabelle und Critical Rule 1 im Wortlaut „Chat first, Changes second“ bleiben; ein Satz zur Dateien-Ansicht in der Beschreibung), `AGENTS.md` (Satz „Changes/Diffs die Prüfebene“ um die Dateien-Ansicht ergänzen), in ADR 006, 015, 020, 025 je die Zeile „Geändert durch ADR 067“ unter dem Titel.
+- [x] Abschluss nach `docs/conventions/releases.md` und AGENTS.md Regel 6: Plan archivieren, Version anheben (Minor), Commit `chore(release)`, Tag setzen und pushen.
 
 ## Report-Back
+
+Fertig, `pnpm check` grün. Git-Seite (`GitPage`, `FileTree` mit `embedded`), Knopf „Git“ am Knoten und klickbare Tabellenzeile, „Changes“ samt Dateien und Store `changes.ts` entfernt, `/changes` → `/files`, Doku nachgezogen. Nicht in der echten App gelaufen. Rest: `changesTree` und Rust-Kommentare (README, Follow-ups).
