@@ -2,6 +2,8 @@
 
 **Status:** angenommen · **Datum:** 2026-10-01
 
+**Geändert durch [ADR 067](067-dateien-ansicht.md):** Die Bedienung sitzt jetzt im Reiter „Dateien“ statt im Changes-Reiter; die hier beschriebenen Daten und Regeln gelten weiter.
+
 ## Kontext
 
 Der Diff in der Changes-Ansicht ist einfarbig: Hinzugefügtes grün, Gelöschtes rot, sonst Grundfarbe. Wer einen Diff prüft, liest dadurch langsamer, als nötig wäre. Außerdem gibt es keinen Weg, dem Agenten eine Rückmeldung zu einer bestimmten Zeile zu geben, ohne Pfad und Zeilennummer von Hand in den Chat zu tippen. [ADR 006](006-changes-und-diff.md) hat den Diff als eigene virtualisierte Ansicht festgelegt; „Keine Syntaxfarben im Diff“ war dort eine Folge der Entscheidung gegen Monaco, kein eigenes Verbot.

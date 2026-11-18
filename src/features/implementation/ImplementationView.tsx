@@ -49,8 +49,6 @@ interface ImplementationViewProps {
   changesCount: number | null;
   /** Alle Sessions; die Kachel der Station im Fokus liest daraus die Changes ihrer Session. */
   sessions: readonly SessionSummary[];
-  /** Inhalt des Reiters „Changes“ (Reichweite Vorhaben); gezeigt, wenn er aktiv ist. */
-  changes: ReactNode;
   /** Inhalt des Reiters „Dateien“ (Reichweite Vorhaben); gezeigt, wenn er aktiv ist. */
   files: ReactNode;
   /** Artefakte aus Sessions der Umsetzung (Stationen und Rückfragen). */
@@ -75,7 +73,7 @@ function arrowStep(key: string): number {
   return key === 'ArrowUp' ? -1 : 0;
 }
 
-/** Hauptfläche einer Umsetzung (ADR 048): Kopfzeile, darunter Zeitleiste mit Kartei oder die Changes. */
+/** Hauptfläche einer Umsetzung (ADR 048): Kopfzeile, darunter Zeitleiste mit Kartei oder die Dateien. */
 export function ImplementationView({
   implementation,
   projectName,
@@ -83,7 +81,6 @@ export function ImplementationView({
   hasChanges,
   changesCount,
   sessions,
-  changes,
   files,
   artifactCount,
   artifacts,
@@ -110,10 +107,9 @@ export function ImplementationView({
 
   const stations: StationRef[] = useMemo(() => flatStations(implementation), [implementation]);
   // Ohne Repository bzw. ohne Artefakt fällt der Reiter auf den Ablauf zurück.
-  const isChangesShown: boolean = activeView === 'changes' && hasChanges;
   const isFilesShown: boolean = activeView === 'files' && hasChanges;
   const isArtifactsShown: boolean = activeView === 'artifacts' && artifactCount > 0;
-  const isFlow: boolean = !isChangesShown && !isFilesShown && !isArtifactsShown;
+  const isFlow: boolean = !isFilesShown && !isArtifactsShown;
   const isTicking: boolean = stations.some((ref: StationRef) =>
     ['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'].includes(
       ref.station.state,
@@ -240,7 +236,7 @@ export function ImplementationView({
       stations.find((ref: StationRef) => ref.station.id === stationId)?.station.sessionId ?? null;
     if (sessionId !== null) {
       selectSession(sessionId);
-      showSessionView('changes');
+      showSessionView('files');
     }
   }
 
@@ -319,9 +315,6 @@ export function ImplementationView({
   }
 
   function activeViewShown(): ImplementationViewKind {
-    if (isChangesShown) {
-      return 'changes';
-    }
     if (isFilesShown) {
       return 'files';
     }
@@ -329,9 +322,6 @@ export function ImplementationView({
   }
 
   function renderBody(): ReactNode {
-    if (isChangesShown) {
-      return changes;
-    }
     if (isFilesShown) {
       return files;
     }

@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import type { ModelId } from '@/lib/bindings/ModelId';
 
-export const SESSION_VIEWS = ['chat', 'changes', 'files', 'artifacts'] as const;
+export const SESSION_VIEWS = ['chat', 'files', 'artifacts'] as const;
 export type SessionView = (typeof SESSION_VIEWS)[number];
 
-export const PROJECT_VIEWS = ['overview', 'changes', 'files', 'artifacts'] as const;
+export const PROJECT_VIEWS = ['overview', 'files', 'artifacts'] as const;
 export type ProjectView = (typeof PROJECT_VIEWS)[number];
 
-export const IMPLEMENTATION_VIEWS = ['flow', 'changes', 'files', 'artifacts'] as const;
+export const IMPLEMENTATION_VIEWS = ['flow', 'files', 'artifacts'] as const;
 export type ImplementationViewKind = (typeof IMPLEMENTATION_VIEWS)[number];
 
 export type RenameKind = 'session' | 'project' | 'implementation';

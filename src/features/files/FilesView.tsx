@@ -18,6 +18,7 @@ import { FilesOverview } from '@/features/files/FilesOverview';
 import { FilesSegment } from '@/features/files/FilesSegment';
 import type { SegmentOption } from '@/features/files/FilesSegment';
 import { FilesToolbar } from '@/features/files/FilesToolbar';
+import { GitPage } from '@/features/files/GitPage';
 import { HistoryList } from '@/features/files/HistoryList';
 import { mergeGroups } from '@/features/files/mergeGroups';
 import type { RepoGroup } from '@/features/files/mergeGroups';
@@ -39,7 +40,7 @@ import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import { usePanelWidth } from '@/lib/usePanelWidth';
 import { DEFAULT_FILES_SELECTION, useFilesStore } from '@/stores/files';
-import type { FilesMode, FilesSelection, OpenTarget, PendingLink } from '@/stores/files';
+import type { FilesMode, FilesPage, FilesSelection, OpenTarget, PendingLink } from '@/stores/files';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { useSessionsStore } from '@/stores/sessions';
 import './FilesView.css';
@@ -69,11 +70,16 @@ interface FilesViewProps {
   sessions: readonly FilesSession[];
   /** Git-Zustand der Session; `null` in den Übersichten. */
   git: GitSessionStatus | null;
+  /** Changes der Reichweite `session` für die Git-Seite; `null` in den Übersichten und solange sie laden. */
+  sessionChanges: SessionChanges | null;
+  /** Lädt nach einer Git-Aktion Git-Zustand und Changes neu. */
+  onChanged: () => void;
   /** Eine Session ist neben dem Reiter sichtbar: nur dann gehen Kommentare an Zeilen. */
   canComment: boolean;
 }
 
 const NO_GROUPS: readonly RepoGroup[] = [];
+const NO_FOLDERS: readonly string[] = [];
 
 /** Die Stempel der Changes: ändert sich eine Datei, ein Pfad oder ein Eintrag, laden offene Bäume neu. */
 function changesStamp(changes: SessionChanges | null): string {
@@ -198,6 +204,8 @@ export function FilesView({
   filteredError,
   sessions,
   git,
+  sessionChanges,
+  onChanged,
   canComment,
 }: FilesViewProps): ReactElement {
   const treeWidth = usePanelWidth('filesTree');
@@ -449,6 +457,17 @@ export function FilesView({
     update({ open: null, page: 'overview', pane: 'detail' });
   }
 
+  function showGitPage(group: string): void {
+    update({ open: null, page: { git: group }, pane: 'detail' });
+  }
+
+  /** Eine Datei aus der Git-Seite; der Betrachter wählt Änderung oder ganze Datei selbst. */
+  function openGitPageFile(group: string, entryKey: string, path: string): void {
+    openTarget({ group, entryKey, path, view: null, step: 'all', line: null });
+  }
+
+  const openGit: ((group: string) => void) | null = git === null ? null : showGitPage;
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (event.key === 'Escape' && !event.defaultPrevented && selection.open !== null) {
       event.preventDefault();
@@ -512,6 +531,7 @@ export function FilesView({
         }}
         onToggleIgnored={toggleIgnored}
         onOpenFile={openTreeFile}
+        onOpenGit={openGit}
       />
     );
   }
@@ -581,6 +601,7 @@ export function FilesView({
         </p>
       );
     }
+    const page: FilesPage = selection.page;
     return (
       <>
         <div className="files-view__narrow-only files-view__bar files-view__bar--plain">
@@ -594,6 +615,37 @@ export function FilesView({
             ← Baum
           </button>
         </div>
+        {page !== 'overview' && git !== null ? renderGitPage(page.git, git) : renderOverview()}
+      </>
+    );
+  }
+
+  function renderGitPage(groupKey: string, gitStatus: GitSessionStatus): ReactElement {
+    if (sessionChanges === null) {
+      return <p className="files-view__notice">Git-Zustand wird gelesen …</p>;
+    }
+    const group: RepoGroup | undefined = groups.find(
+      (candidate: RepoGroup) => candidate.group === groupKey,
+    );
+    return (
+      <GitPage
+        sessionId={sessionId}
+        groupName={group?.name ?? groupKey}
+        group={groupKey}
+        changes={sessionChanges}
+        git={gitStatus}
+        onBack={showOverview}
+        onOpenFile={(entryKey: string, path: string): void => {
+          openGitPageFile(groupKey, entryKey, path);
+        }}
+        onChanged={onChanged}
+      />
+    );
+  }
+
+  function renderOverview(): ReactElement {
+    return (
+      <>
         <FilesOverview
           key={sessionFilter ?? 'all'}
           groups={groups}
@@ -601,6 +653,9 @@ export function FilesView({
           filterNumber={filterSession?.number ?? null}
           commitsByGroup={commitsByGroup}
           behindByGroup={behindByGroup}
+          untrackedBefore={shownChanges?.untrackedBefore ?? null}
+          plainFolders={shownChanges?.plainFolders ?? NO_FOLDERS}
+          onOpenGit={openGit}
           initialTop={selection.overviewTop}
           onScrollTop={(top: number): void => {
             update({ overviewTop: top });

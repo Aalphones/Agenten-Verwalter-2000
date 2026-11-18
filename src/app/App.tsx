@@ -23,7 +23,6 @@ import { StationTrail } from '@/features/implementation/StationTrail';
 import { useInquiry } from '@/features/implementation/useInquiry';
 import { useImplementations } from '@/features/implementation/useImplementations';
 import { countChangedFiles } from '@/features/changes/changesScope';
-import { ChangesView } from '@/features/changes/ChangesView';
 import { useSessionChanges } from '@/features/changes/useSessionChanges';
 import { FilesView } from '@/features/files/FilesView';
 import type { FilesSession } from '@/features/files/FilesView';
@@ -264,13 +263,7 @@ export function App(): ReactElement {
     stationId: shownStationId,
   });
 
-  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; ohne Repository gibt es keine Changes.
-  const isChangesView: boolean = isOverview
-    ? (isImplementation ? implementationView : projectView) === 'changes' && hasProjectRepositories
-    : !isMainReplaced &&
-      activeView === 'changes' &&
-      currentSession !== undefined &&
-      currentSession.repositoryCount > 0;
+  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; ohne Repository gibt es keine Dateien.
   const isFilesView: boolean = isOverview
     ? (isImplementation ? implementationView : projectView) === 'files' && hasProjectRepositories
     : !isMainReplaced &&
@@ -303,10 +296,14 @@ export function App(): ReactElement {
   } = useSessionChanges(
     isMainReplaced ? null : (currentSession ?? null),
     changesReach,
-    isChangesView || isFilesView || isOverview,
+    isFilesView || isOverview,
   );
   // „Dateien“ zeigt immer das ganze Vorhaben; in der Übersicht sind das schon die Changes oben.
-  const { changes: sessionProjectChanges, error: sessionProjectError } = useSessionChanges(
+  const {
+    changes: sessionProjectChanges,
+    error: sessionProjectError,
+    reload: reloadProjectChanges,
+  } = useSessionChanges(
     isMainReplaced || isOverview ? null : (currentSession ?? null),
     'project',
     isFilesView,
@@ -379,16 +376,15 @@ export function App(): ReactElement {
   const visibleSession: SessionSummary | null =
     isMainReplaced || isOverview ? null : (currentSession ?? null);
   useViewedSession(visibleSession === null ? null : visibleSession.id);
-  // Git-Zustand für Branch-Pille (Kopfzeile) und Git-Leisten (Changes): einmal je sichtbarer Session, nur in der
+  // Git-Zustand für Branch-Pille (Kopfzeile) und Git-Seite („Dateien“): einmal je sichtbarer Session, nur in der
   // Reichweite Session — die Übersicht des Vorhabens bedient kein Git.
-  const { status: gitStatus, reload: reloadGit } = useGitStatus(
-    visibleSession,
-    isChangesView || isFilesView,
-  );
+  const { status: gitStatus, reload: reloadGit } = useGitStatus(visibleSession, isFilesView);
+  // Baum und Verlauf des Reiters laden von selbst neu, sobald sich die Changes des Vorhabens ändern.
   const reloadAfterGitAction = useCallback((): void => {
     reloadGit();
     reloadChanges();
-  }, [reloadGit, reloadChanges]);
+    reloadProjectChanges();
+  }, [reloadGit, reloadChanges, reloadProjectChanges]);
   const { background, error: backgroundError } = useSessionBackground(
     visibleSession === null ? null : visibleSession.id,
   );
@@ -476,9 +472,7 @@ export function App(): ReactElement {
   // Strg+; öffnet die Nebenfrage der Session, deren Chat gerade vor der Eingabeleiste steht. Auf deutscher
   // Tastatur liegt das Semikolon auf Umschalt+Komma: `shiftKey` darf die Abfrage nicht ausschließen.
   const chatSessionId: string | null =
-    visibleSession !== null && !isChangesView && !isFilesView && !isArtifactsView
-      ? visibleSession.id
-      : null;
+    visibleSession !== null && !isFilesView && !isArtifactsView ? visibleSession.id : null;
   useEffect(() => {
     if (chatSessionId === null) {
       return undefined;
@@ -548,6 +542,8 @@ export function App(): ReactElement {
     git: GitSessionStatus | null,
     isSessionVisible: boolean,
   ): ReactElement {
+    // Die Git-Seite braucht die Changes der Session; in den Übersichten gibt es sie nicht.
+    const sessionChanges: SessionChanges | null = isSessionVisible ? changes : null;
     return (
       <FilesView
         key={filesViewKey}
@@ -563,6 +559,8 @@ export function App(): ReactElement {
           name: candidate.name,
         }))}
         git={git}
+        sessionChanges={sessionChanges}
+        onChanged={reloadAfterGitAction}
         canComment={isSessionVisible}
       />
     );
@@ -615,17 +613,6 @@ export function App(): ReactElement {
             )
           }
           sessions={sessions}
-          changes={
-            <ChangesView
-              key={latestSession.id}
-              session={latestSession}
-              changes={changes}
-              error={changesError}
-              reach="project"
-              git={null}
-              onChanged={reloadChanges}
-            />
-          }
           files={renderFiles(latestSession, null, false)}
           onNewInquiry={startInquiry}
           terminalCount={runningTerminalCount}
@@ -647,7 +634,7 @@ export function App(): ReactElement {
     if (isFilesView) {
       return 'files';
     }
-    return isChangesView ? 'changes' : 'overview';
+    return 'overview';
   }
 
   function renderOverviewBody(
@@ -666,19 +653,6 @@ export function App(): ReactElement {
     }
     if (isFilesView) {
       return renderFiles(latestSession, null, false);
-    }
-    if (isChangesView) {
-      return (
-        <ChangesView
-          key={latestSession.id}
-          session={latestSession}
-          changes={changes}
-          error={changesError}
-          reach="project"
-          git={null}
-          onChanged={reloadChanges}
-        />
-      );
     }
     return (
       <ProjectOverview
@@ -699,7 +673,7 @@ export function App(): ReactElement {
     if (isFilesView) {
       return 'files';
     }
-    return isChangesView ? 'changes' : 'chat';
+    return 'chat';
   }
 
   function renderSessionBody(session: SessionSummary): ReactElement {
@@ -715,18 +689,6 @@ export function App(): ReactElement {
     }
     if (isFilesView) {
       return renderFiles(session, gitStatus, true);
-    }
-    if (isChangesView) {
-      return (
-        <ChangesView
-          session={session}
-          changes={changes}
-          error={changesError}
-          reach="session"
-          git={gitStatus}
-          onChanged={reloadAfterGitAction}
-        />
-      );
     }
     return (
       <ChatView
@@ -782,7 +744,6 @@ export function App(): ReactElement {
             session={currentSession}
             projectName={projectNameOf(currentSession)}
             activeView={sessionViewShown()}
-            changesCount={changes === null ? null : countChangedFiles(changes)}
             filesCount={
               sessionProjectChanges === null ? null : countChangedFiles(sessionProjectChanges)
             }

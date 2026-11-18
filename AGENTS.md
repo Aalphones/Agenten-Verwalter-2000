@@ -2,7 +2,7 @@
 
 🚧 Aktive Arbeit → [STATE.md](STATE.md)
 
-Lokale Desktop-Kommandozentrale für Coding-Agenten: ein Vorhaben = eine Aufgabe über mehrere Git-Repositories; darin nacheinander eine oder mehrere Sessions mit frischem Kontext; ob der Agent im Haupt-Checkout oder in einem Ticket-Worktree arbeitet, bestimmen seine Anweisungen; der Chat ist die Hauptarbeitsfläche, Changes/Diffs die Prüfebene. Kontext, Scope, Meilensteine und offene Fragen: **[docs/PROJECT.md](docs/PROJECT.md)**. Ausführliches Ursprungskonzept: [docs/konzept.md](docs/konzept.md).
+Lokale Desktop-Kommandozentrale für Coding-Agenten: ein Vorhaben = eine Aufgabe über mehrere Git-Repositories; darin nacheinander eine oder mehrere Sessions mit frischem Kontext; ob der Agent im Haupt-Checkout oder in einem Ticket-Worktree arbeitet, bestimmen seine Anweisungen; der Chat ist die Hauptarbeitsfläche, Dateien-Ansicht (Dateibaum, Diffs, Git) die Prüfebene. Kontext, Scope, Meilensteine und offene Fragen: **[docs/PROJECT.md](docs/PROJECT.md)**. Ausführliches Ursprungskonzept: [docs/konzept.md](docs/konzept.md).
 
 ## Code finden — erst hier, dann suchen
 

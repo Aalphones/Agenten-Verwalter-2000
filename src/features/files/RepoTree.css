@@ -81,6 +81,31 @@
     color: var(--color-fg-muted);
   }
 
+  &__git {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 2px var(--space-md);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--color-fg-secondary);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-fg-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 1px;
+    }
+  }
+
   &__toggle {
     display: inline-flex;
     flex-shrink: 0;

@@ -2,6 +2,8 @@
 
 **Status:** angenommen · **Datum:** 2026-10-02
 
+**Geändert durch [ADR 067](067-dateien-ansicht.md):** Die Bedienung sitzt jetzt im Reiter „Dateien“ statt im Changes-Reiter; die hier beschriebenen Daten und Regeln gelten weiter.
+
 ## Kontext
 
 Manche Arbeitsordner sind ein Dach über weiteren Git-Repositories. Beispiel facepass: ein Dach-Repo, darin `app\`, `android\` … mit eigener Historie, daneben im selben Ordner ihre Ticket-Worktrees `app-wt-*`, `android-wt-*`; das Dach-Repo blendet alle per `.gitignore` aus. Am Vorhaben hängt nur das Dach. Die Changes zeigten dort nichts: Die App kannte nur das angehängte Repository, suchte eigene Commits nur darin und erwartete Ticket-Worktrees als `facepass-wt-*` neben ihm. Was die Sessions in den inneren Repositories und deren Ticket-Worktrees committet und geschrieben hatten, war unsichtbar.

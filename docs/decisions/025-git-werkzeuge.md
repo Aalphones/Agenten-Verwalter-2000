@@ -2,6 +2,8 @@
 
 **Status:** angenommen · **Datum:** 2026-10-06
 
+**Geändert durch [ADR 067](067-dateien-ansicht.md):** Die Bedienung sitzt jetzt im Reiter „Dateien“ statt im Changes-Reiter; die hier beschriebenen Daten und Regeln gelten weiter.
+
 ## Kontext
 
 Bisher zeigt der Verwalter nur, was sich geändert hat; committen, pushen, pullen oder den Branch wechseln geht nur über den Agenten oder ein zweites Programm. Gewünscht ist die Bedienung von „Source Control“ aus VS Code im Verwalter. Dabei teilen alle Sessions eines Vorhabens dieselben Ordner, und der Agent kann jederzeit selbst Git benutzen. Der Zustand, den die Oberfläche zeigt, muss aus Git kommen, nie aus Aussagen des Agenten (AGENTS.md, Regel 2).
