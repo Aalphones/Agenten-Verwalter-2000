@@ -48,3 +48,5 @@ Rating: standard. Der Kern liefert, welche Session welche Commits gemacht hat, m
 - [ ] Doku: Code-Map-Zeile „Dateien“ um „Verlauf je Session, Schritt-Diff“ ergänzen; Glossar-Einträge „Schritt“ und „Loser Commit“ (ein gespeicherter Commit, den kein Eintrag zwischen Basis und `HEAD` enthält).
 
 ## Report-Back
+
+Status: complete. Alle Checklistenpunkte umgesetzt, `pnpm check` grün. Abweichungen: `entry_base` entfiel, weil `changes::source_base` schon dasselbe leistet; die Git-Aufrufe bekommen die IDs über die Standardeingabe (`--stdin`), daher kein Blockweise-Aufteilen zu 200; `history_input` liefert die Sessions als `SessionRef` (Typalias `HistoryInput`) statt als Tupel, wegen der Clippy-Regel gegen komplexe Typen; `gen-bindings` kennt die vier neuen Typen. Nicht in der echten App gelaufen (privat: keine Live-Läufe).

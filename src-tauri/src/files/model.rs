@@ -2,6 +2,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::changes::model::ChangeKind;
+
 /// Eine Datei im Baum eines Eintrags.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -68,4 +70,55 @@ pub enum FileContent {
         bytes: f64,
     },
     Missing,
+}
+
+/// Eine Datei, die ein Commit geändert hat, gemessen gegen seinen ersten Elternteil.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryFile {
+    /// Relativ zum Repository, mit `/`.
+    pub path: String,
+    pub kind: ChangeKind,
+    pub added: u32,
+    pub deleted: u32,
+    /// Git zählt keine Zeilen; `added` und `deleted` sind dann 0.
+    pub binary: bool,
+}
+
+/// Ein eigener Commit des Vorhabens (ein „Schritt“).
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryCommit {
+    pub id: String,
+    pub short_id: String,
+    pub subject: String,
+    /// Committer-Zeit in Sekunden.
+    pub time: f64,
+    pub group: String,
+    pub group_name: String,
+    /// Der Eintrag, in dessen Ordner der Commit lesbar ist — für `files_commit_diff`.
+    pub key: String,
+    /// In keinem Eintrag zwischen Basis und `HEAD` enthalten, aber im Objektspeicher da.
+    pub loose: bool,
+    pub files: Vec<HistoryFile>,
+}
+
+/// Die Commits einer Session des Vorhabens, neueste zuerst.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct HistorySession {
+    pub session_id: String,
+    pub number: u32,
+    pub name: String,
+    pub commits: Vec<HistoryCommit>,
+}
+
+/// Der Verlauf des ganzen Vorhabens: wer wann was committet hat.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectHistory {
+    /// Sessions mit mindestens einem lesbaren Commit, nach Nummer absteigend.
+    pub sessions: Vec<HistorySession>,
+    /// Commits, die kein Repository des Vorhabens mehr kennt.
+    pub missing: u32,
 }

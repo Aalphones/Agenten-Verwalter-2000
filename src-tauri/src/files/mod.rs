@@ -1,6 +1,7 @@
 //! Ansicht „Dateien“ (ADR 067): der vollständige Baum eines Eintrags der Changes samt ignorierter
 //! Einträge und der Inhalt einer Datei zum Ansehen. Welche Einträge es gibt und welcher Ordner zu
 //! einem Schlüssel gehört, bleibt bei `changes::sources`; hier wird nur in diesem Ordner gelesen.
+pub mod history;
 pub mod model;
 pub mod read;
 pub mod tree;

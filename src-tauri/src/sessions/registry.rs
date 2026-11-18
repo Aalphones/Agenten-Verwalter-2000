@@ -54,6 +54,7 @@ use crate::db::{
     tool_details as tool_detail_rows,
 };
 use crate::error::CommandError;
+use crate::files::history::{HistoryInput, SessionRef};
 use crate::filesystem::workspace::{home_dir, new_session_workspace, stored_session_workspace};
 use crate::git::model::GitBusySession;
 use crate::implementation::Countdowns;
@@ -1971,6 +1972,31 @@ impl SessionRegistry {
             since_ms,
             own,
         })
+    }
+
+    /// Für den Verlauf des Vorhabens: das `ChangesInput` der Reichweite `Project`, die Sessions des
+    /// Vorhabens und die Paare `(Session, Commit)`.
+    pub fn history_input(&self, session_id: &str) -> Result<HistoryInput, CommandError> {
+        let input = self.changes_input(session_id, ChangesReach::Project)?;
+        let project_id = self.get(session_id)?.project_id.clone();
+        let mut sessions: Vec<SessionRef> = Vec::new();
+        for member in self.project_members(&project_id) {
+            let state = member.lock();
+            sessions.push(SessionRef {
+                id: member.id.clone(),
+                number: member.number,
+                name: state.name.clone(),
+                created_at: state.created_at,
+            });
+        }
+        let ids: Vec<String> = sessions
+            .iter()
+            .map(|session: &SessionRef| session.id.clone())
+            .collect();
+        let pairs = self
+            .database
+            .with(|connection| session_commits::load_by_session(connection, &ids))?;
+        Ok((input, sessions, pairs))
     }
 
     /// Name und Arbeitsordner jedes Repositorys der Session — dort suchen Skills und Befehle.

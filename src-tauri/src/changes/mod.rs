@@ -637,7 +637,7 @@ fn text_lines(content: &str) -> Vec<&str> {
     texts
 }
 
-fn line_count(content: &str) -> u32 {
+pub(crate) fn line_count(content: &str) -> u32 {
     u32::try_from(text_lines(content).len()).unwrap_or(u32::MAX)
 }
 
