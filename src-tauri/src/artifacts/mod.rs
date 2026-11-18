@@ -16,7 +16,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use model::{Artifact, ArtifactKind, ArtifactOwner};
 
-use crate::changes::attribution::normalize_path;
+use crate::changes::attribution::{NORMALIZED_SEPARATOR, normalize_path};
 use crate::error::CommandError;
 
 pub const DIR_NAME: &str = ".artefakte";
@@ -115,14 +115,14 @@ pub fn artifact_file_of(dir: &Path, used_path: &str) -> Option<String> {
         dir.parent()?.join(used_path).to_string_lossy().into_owned()
     };
     let normalized_dir = normalize_path(&dir.to_string_lossy());
-    let prefix = format!("{normalized_dir}\\");
+    let prefix = format!("{normalized_dir}{NORMALIZED_SEPARATOR}");
     let rest = normalize_path(&absolute).strip_prefix(&prefix)?.to_owned();
     // Der normalisierte Pfad ist klein geschrieben; der Name soll die Schreibweise des Agenten
     // tragen. Er steht im Original an derselben Stelle wie im normalisierten Pfad.
-    let depth = normalized_dir.split('\\').count();
+    let depth = normalized_dir.split(NORMALIZED_SEPARATOR).count();
     let original = normalize_separators(&absolute);
-    let name = original.split('\\').nth(depth)?.to_owned();
-    match rest.split_once('\\') {
+    let name = original.split(NORMALIZED_SEPARATOR).nth(depth)?.to_owned();
+    match rest.split_once(NORMALIZED_SEPARATOR) {
         None if is_hidden(&name) => None,
         None => Some(name),
         Some(_) if name.starts_with('.') => None,
@@ -219,10 +219,14 @@ fn is_env_name(lower_name: &str) -> bool {
     lower_name.starts_with(".env")
 }
 
+/// Wie `normalize_path`, aber in der Schreibweise des Originals.
 fn normalize_separators(path: &str) -> String {
-    path.strip_prefix(r"\\?\")
-        .unwrap_or(path)
-        .replace('/', "\\")
+    let without_prefix = path.strip_prefix(r"\\?\").unwrap_or(path);
+    if cfg!(windows) {
+        without_prefix.replace('/', "\\")
+    } else {
+        without_prefix.to_owned()
+    }
 }
 
 /// Eine HTML-Datei direkt im Ordner: Name ohne Endung und Anfang des Inhalts, beides klein.
@@ -436,7 +440,7 @@ fn with_owners(
 }
 
 fn touches_of<'a>(key: &str, is_dir: bool, owners: &'a [ArtifactOwner]) -> Vec<Touch<'a>> {
-    let inside = format!("{key}\\");
+    let inside = format!("{key}{NORMALIZED_SEPARATOR}");
     owners
         .iter()
         .filter_map(|owner: &ArtifactOwner| {

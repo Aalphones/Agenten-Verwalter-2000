@@ -37,14 +37,31 @@ struct Tracked {
     last_index: usize,
 }
 
-/// Windows-Pfade unterscheiden keine Groß-/Kleinschreibung; so vergleicht die App, was der Agent
-/// schrieb, mit dem, was Git meldet.
+/// Trenner in einem Ergebnis von `normalize_path`; wer darin Ordner abgrenzt, nimmt diesen.
+pub const NORMALIZED_SEPARATOR: char = if cfg!(windows) { '\\' } else { '/' };
+
+/// Vergleichsschlüssel eines absoluten Pfads, damit die App vergleichen kann, was der Agent schrieb,
+/// mit dem, was Git meldet. Windows-Pfade unterscheiden keine Groß-/Kleinschreibung und kennen beide
+/// Trenner; unter Linux und macOS ist `Readme.md` nicht `README.md` und `\` ein Zeichen im Namen.
+#[cfg(windows)]
 pub fn normalize_path(path: &str) -> String {
     let without_prefix = path.strip_prefix(VERBATIM_PREFIX).unwrap_or(path);
     without_prefix
         .replace('/', "\\")
         .trim_end_matches('\\')
         .to_lowercase()
+}
+
+/// Vergleichsschlüssel eines absoluten Pfads; siehe die Windows-Fassung.
+#[cfg(not(windows))]
+pub fn normalize_path(path: &str) -> String {
+    let without_prefix = path.strip_prefix(VERBATIM_PREFIX).unwrap_or(path);
+    let trimmed = without_prefix.trim_end_matches('/');
+    // Die Wurzel selbst bleibt `/`, sonst wäre sie der leere Schlüssel.
+    if trimmed.is_empty() && !without_prefix.is_empty() {
+        return "/".to_owned();
+    }
+    trimmed.to_owned()
 }
 
 /// Je Datei aus eigenen Commits: vom ersten bis zum letzten eigenen Commit, mit fremden Anteilen.
