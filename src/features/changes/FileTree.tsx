@@ -7,12 +7,10 @@ import { GitCommitBox } from '@/features/git/GitCommitBox';
 import { GitDiscardButton } from '@/features/git/GitDiscardButton';
 import { GitEntryBar } from '@/features/git/GitEntryBar';
 import { CaretIcon } from '@/features/git/GitIcons';
-import { GitLockHint } from '@/features/git/GitLockHint';
 import { GitOperationRow } from '@/features/git/GitOperationRow';
 import type { ChangeKind } from '@/lib/bindings/ChangeKind';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { GitBusySession } from '@/lib/bindings/GitBusySession';
-import type { OpenFile } from '@/stores/changes';
 import { isPathChecked, useGitStore, type GitSessionUi } from '@/stores/git';
 import './FileTree.css';
 
@@ -45,17 +43,30 @@ const KIND_LETTER: Record<ChangeKind, { letter: string; title: string }> = {
 const CHECKED_TITLE = 'Geht in den nächsten Commit';
 const UNCHECKED_TITLE = 'Bleibt beim Commit draußen';
 
+/** Eine Datei der Liste: Eintrag, Pfad und der Blickwinkel, in dem ihr Diff öffnet. */
+export interface OpenFile {
+  /** `key` des Eintrags, zu dem die Datei gehört. */
+  key: string;
+  path: string;
+  /** Blickwinkel, in dem der Diff öffnet, unabhängig vom gewählten (Git-Gruppen); `null`: der gewählte. */
+  scope: ChangeScope | null;
+}
+
 /** Was die Git-Bedienung im Baum braucht; `null` in der Reichweite Projekt: dort ist der Baum nur lesend. */
 export interface FileTreeGit {
   sessionId: string;
   busy: readonly GitBusySession[];
   /** Lädt Git-Zustand und Changes neu. */
   onChanged: () => void;
+  /** Die Git-Bedienung steht immer offen; der Pfeil zum Auf- und Zuklappen entfällt. */
+  isPinnedOpen?: boolean;
 }
 
 interface FileTreeProps {
-  /** Gezogene Breite in Pixeln. */
-  width: number;
+  /** Gezogene Breite in Pixeln; ohne Angabe füllt die Liste ihren Platz. */
+  width?: number;
+  /** Liste innerhalb einer Seite: eigene Höhe mit Bildlauf, ohne Rand rechts. */
+  embedded?: boolean;
   rows: readonly FileRow[];
   scope: ChangeScope;
   openFile: OpenFile | null;
@@ -67,6 +78,7 @@ type FileRowOf<Kind extends FileRow['kind']> = Extract<FileRow, { kind: Kind }>;
 
 export function FileTree({
   width,
+  embedded = false,
   rows,
   scope,
   openFile,
@@ -174,7 +186,7 @@ export function FileTree({
           </span>
           <span className="file-tree__added">+{formatCount(row.added)}</span>
           <span className="file-tree__deleted">−{formatCount(row.deleted)}</span>
-          {rowGit !== null && git !== null && (
+          {rowGit !== null && git !== null && git.isPinnedOpen !== true && (
             <button
               type="button"
               className={`file-tree__caret${isOpen ? ' file-tree__caret--open' : ''}`}
@@ -394,8 +406,11 @@ export function FileTree({
   }
 
   return (
-    <div ref={scrollRef} className="file-tree" style={{ width }}>
-      {git !== null && <GitLockHint sessionId={git.sessionId} busy={git.busy} />}
+    <div
+      ref={scrollRef}
+      className={`file-tree${embedded ? ' file-tree--embedded' : ''}`}
+      style={width === undefined ? undefined : { width }}
+    >
       {rows.length === 0 ? (
         <p className="file-tree__empty">{EMPTY_SCOPE_TEXT[scope]}</p>
       ) : (

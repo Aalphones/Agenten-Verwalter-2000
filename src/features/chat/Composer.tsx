@@ -257,8 +257,8 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
   function runSessionCommand(command: SessionCommand): void {
     if (command === 'rename') {
       startRename('session', session.id);
-    } else if (command === 'changes') {
-      showView('changes');
+    } else if (command === 'files') {
+      showView('files');
     } else if (command === 'mcp') {
       setOpenMenu('mcp');
     } else if (command === 'chrome') {

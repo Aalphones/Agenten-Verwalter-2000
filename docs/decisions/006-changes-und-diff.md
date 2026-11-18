@@ -2,6 +2,8 @@
 
 **Status:** angenommen · **Datum:** 2026-09-29
 
+**Geändert durch [ADR 067](067-dateien-ansicht.md):** Die Bedienung sitzt jetzt im Reiter „Dateien“ statt im Changes-Reiter; die hier beschriebenen Daten und Regeln gelten weiter.
+
 ## Kontext
 
 Meilenstein 5 zeigt, was der Agent in den Worktrees einer Session geändert hat — über alle Repositories der Session, mit Dateibaum, Übersicht und dem Unified Diff einer Datei ([PROJECT.md](../PROJECT.md), [Entwurf](../design/2026-09-28_hauptansichten/README.md), Tafeln `Changes` und `Diff`). Die Anzeige stammt aus Git, nie aus Aussagen des Agenten (AGENTS.md, Regel 2). Randbedingung: Der Agent arbeitet gleichzeitig im selben Worktree und committet dort selbst; die App liest mit, während er schreibt. Basis ist `base_commit` aus [ADR 005](005-repositories-und-worktrees.md).

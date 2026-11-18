@@ -11,7 +11,7 @@ import { addRepositoryToProject } from '@/lib/projects';
 import './AddRepositoryMenu.css';
 
 const TRIGGER_TITLE =
-  'Hängt ein Repository an das ganze Vorhaben: Changes und Skills gelten für alle Sessions, der Agent bekommt es beim nächsten Start. Die Änderungen zählen ab dem Anlegen des Vorhabens; was vorher schon unbestätigt im Ordner lag, erscheint mit. Ein Ordner ohne Git geht auch, erscheint aber nicht in den Changes.';
+  'Hängt ein Repository an das ganze Vorhaben: Dateien und Skills gelten für alle Sessions, der Agent bekommt es beim nächsten Start. Die Änderungen zählen ab dem Anlegen des Vorhabens; was vorher schon unbestätigt im Ordner lag, erscheint mit. Ein Ordner ohne Git geht auch, erscheint aber nicht in den Dateien.';
 const RUNNING_NOTE = 'Der laufende Agent kennt das Repository erst nach seinem nächsten Start.';
 const MENU_WIDTH = 320;
 

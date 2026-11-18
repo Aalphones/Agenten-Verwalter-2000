@@ -29,7 +29,6 @@ const MORE_MENU_WIDTH = 200;
 
 const VIEW_LABEL: Record<SessionView, string> = {
   chat: 'Chat',
-  changes: 'Changes',
   files: 'Dateien',
   artifacts: 'Artefakte',
 };
@@ -38,8 +37,6 @@ interface SessionHeaderProps {
   session: SessionSummary;
   projectName: string;
   activeView: SessionView;
-  /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
-  changesCount: number | null;
   /** Geänderte Dateien des ganzen Vorhabens für „Dateien“; `null`, solange nicht gelesen. */
   filesCount: number | null;
   /** Für die Branch-Pille: Namen und eigene uncommittete Dateien; `null`, solange nicht gelesen. */
@@ -64,7 +61,6 @@ export function SessionHeader({
   session,
   projectName,
   activeView,
-  changesCount,
   filesCount,
   changes,
   gitStatus,
@@ -106,11 +102,11 @@ export function SessionHeader({
     session.runningSince === null
       ? session.runningMs
       : session.runningMs + Math.max(0, now - session.runningSince);
-  // „Changes“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
+  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
   const views: readonly SessionView[] = SESSION_VIEWS.filter(
     (view: SessionView) =>
       view === 'chat' ||
-      ((view === 'changes' || view === 'files') && session.repositoryCount > 0) ||
+      (view === 'files' && session.repositoryCount > 0) ||
       (view === 'artifacts' && artifactCount > 0),
   );
 
@@ -269,7 +265,7 @@ export function SessionHeader({
           status={gitStatus}
           changes={changes}
           onOpenChanges={(): void => {
-            onShowView('changes');
+            onShowView('files');
           }}
         />
       </div>
@@ -291,9 +287,6 @@ export function SessionHeader({
               <span className="session-header__tab-count session-header__tab-count--review">
                 {formatCount(reviewCount)}
               </span>
-            )}
-            {view === 'changes' && changesCount !== null && changesCount > 0 && (
-              <span className="session-header__tab-count">{formatCount(changesCount)}</span>
             )}
             {view === 'files' && filesCount !== null && filesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(filesCount)}</span>

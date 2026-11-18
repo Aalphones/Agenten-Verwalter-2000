@@ -7,7 +7,7 @@ import { commandErrorText } from '@/lib/errors';
 import './RepositoryPicker.css';
 
 const INFO_TEXT =
-  'Der Agent arbeitet direkt im Ordner jedes gewählten Repositorys, auf dem gerade ausgecheckten Stand. Ob er dafür einen eigenen Branch oder Worktree anlegt, bestimmen seine Anweisungen; die App legt keinen an. Ein Ordner ohne Git geht genauso, aber ohne Changes: die App sieht dort nicht, was der Agent ändert, und Git kann nichts zurückholen.';
+  'Der Agent arbeitet direkt im Ordner jedes gewählten Repositorys, auf dem gerade ausgecheckten Stand. Ob er dafür einen eigenen Branch oder Worktree anlegt, bestimmen seine Anweisungen; die App legt keinen an. Ein Ordner ohne Git geht genauso, aber ohne Änderungsanzeige: die App sieht dort nicht, was der Agent ändert, und Git kann nichts zurückholen.';
 
 interface RepositoryPickerProps {
   selectedIds: string[];

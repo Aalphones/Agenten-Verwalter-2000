@@ -81,6 +81,20 @@
     }
   }
 
+  &__row--git {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+  }
+
+  &__note {
+    margin: var(--space-md) 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
   &__repo {
     font-weight: 600;
     overflow-wrap: anywhere;

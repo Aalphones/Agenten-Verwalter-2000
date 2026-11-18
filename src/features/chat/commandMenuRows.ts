@@ -6,7 +6,7 @@ import { modelName } from '@/lib/labels';
 
 /** `full`: Knopf `/` in der Eingabeleiste · `slash`: `/` am Feldanfang · `skills`: nur Skills („Neue Session“). */
 export type CommandScope = 'full' | 'slash' | 'skills';
-const SESSION_COMMANDS = ['rename', 'changes', 'mcp', 'pause', 'chrome', 'btw'] as const;
+const SESSION_COMMANDS = ['rename', 'files', 'mcp', 'pause', 'chrome', 'btw'] as const;
 export type SessionCommand = (typeof SESSION_COMMANDS)[number];
 export type CommandRow =
   | { kind: 'attach' }
@@ -33,7 +33,7 @@ const PAUSABLE_STATUSES: readonly SessionStatus[] = ['starting', 'running', 'wai
 
 const SESSION_COMMAND_TEXT: Record<Exclude<SessionCommand, 'chrome'>, RowText> = {
   rename: { label: '/rename', description: 'Session umbenennen' },
-  changes: { label: '/changes', description: 'Changes-Ansicht öffnen' },
+  files: { label: '/files', description: 'Dateien-Ansicht öffnen' },
   mcp: { label: '/mcp', description: 'MCP-Server anzeigen, ausschalten, neu verbinden' },
   pause: { label: '/pause', description: 'Agent pausieren' },
   btw: { label: '/btw', description: 'Nebenfrage stellen, ohne den Chat zu verlängern' },
@@ -196,7 +196,7 @@ function sessionRows(
   }
   const rows: CommandRow[] = [{ kind: 'session', command: 'rename' }];
   if (session.repositoryCount > 0) {
-    rows.push({ kind: 'session', command: 'changes' });
+    rows.push({ kind: 'session', command: 'files' });
   }
   if (hasMcp) {
     rows.push({ kind: 'session', command: 'mcp' });

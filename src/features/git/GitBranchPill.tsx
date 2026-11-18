@@ -7,7 +7,7 @@ import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import './GitBranchPill.css';
 
-const CLICK_HINT = 'Klick: Changes öffnen';
+const CLICK_HINT = 'Klick: Dateien öffnen';
 
 interface GitBranchPillProps {
   status: GitSessionStatus | null;

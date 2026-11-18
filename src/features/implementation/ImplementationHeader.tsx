@@ -17,7 +17,7 @@ interface ImplementationHeaderProps {
   implementation: ImplementationView;
   projectName: string;
   activeView: ImplementationViewKind;
-  /** Ohne Repository gibt es keine Changes und keinen Reiter dafür. */
+  /** Ohne Repository gibt es keine Dateien und keinen Reiter dafür. */
   hasChanges: boolean;
   /** Dateien unter „Alle“; `null`, solange die Changes nicht gelesen sind. */
   changesCount: number | null;
@@ -31,7 +31,7 @@ interface ImplementationHeaderProps {
   onToggleTerminal: () => void;
 }
 
-/** Kopfzeile „<Vorhaben> › Umsetzung <Name>“ mit den Reitern „Ablauf · Changes · Dateien · Artefakte“ und dem
+/** Kopfzeile „<Vorhaben> › Umsetzung <Name>“ mit den Reitern „Ablauf · Dateien · Artefakte“ und dem
  *  Fortschritt. */
 export function ImplementationHeader({
   implementation,
@@ -49,7 +49,7 @@ export function ImplementationHeader({
   const views: readonly ImplementationViewKind[] = IMPLEMENTATION_VIEWS.filter(
     (view: ImplementationViewKind) =>
       view === 'flow' ||
-      ((view === 'changes' || view === 'files') && hasChanges) ||
+      (view === 'files' && hasChanges) ||
       (view === 'artifacts' && artifactCount > 0),
   );
   const activeLanes: number = activeLaneCount(implementation);
@@ -102,11 +102,9 @@ export function ImplementationHeader({
             }}
           >
             {VIEW_LABEL[view]}
-            {(view === 'changes' || view === 'files') &&
-              changesCount !== null &&
-              changesCount > 0 && (
-                <span className="session-header__tab-count">{formatCount(changesCount)}</span>
-              )}
+            {view === 'files' && changesCount !== null && changesCount > 0 && (
+              <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+            )}
             {view === 'artifacts' && (
               <span className="session-header__tab-count">{formatCount(artifactCount)}</span>
             )}

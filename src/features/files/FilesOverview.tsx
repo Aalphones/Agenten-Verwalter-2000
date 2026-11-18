@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { fileCountLabel, formatCount } from '@/features/changes/changesScope';
+import { fileCountLabel, formatCount, trackedSinceText } from '@/features/changes/changesScope';
 import type { MergedFile, RepoGroup } from '@/features/files/mergeGroups';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { FileChange } from '@/lib/bindings/FileChange';
@@ -17,6 +17,12 @@ interface FilesOverviewProps {
   /** Eingehende Commits je Gruppe aus dem Git-Zustand der Session; `null`: kein Git-Zustand, die Spalten „Offen“
    *  und „Abgleich“ entfallen. */
   behindByGroup: ReadonlyMap<string, number> | null;
+  /** Seit wann Git die Dateien kennt, falls Dateien vorher nicht verfolgt wurden. */
+  untrackedBefore: number | null;
+  /** Namen der Ordner ohne Git. */
+  plainFolders: readonly string[];
+  /** Öffnet die Git-Seite des Knotens (`group`); `null`, wo keine Session sichtbar ist. */
+  onOpenGit: ((group: string) => void) | null;
   /** Der Verlauf unter der Tabelle. */
   history: ReactNode;
   initialTop: number;
@@ -94,6 +100,9 @@ export function FilesOverview({
   filterNumber,
   commitsByGroup,
   behindByGroup,
+  untrackedBefore,
+  plainFolders,
+  onOpenGit,
   history,
   initialTop,
   onScrollTop,
@@ -149,7 +158,14 @@ export function FilesOverview({
       (entry: RepositoryChanges) => entry.error !== null,
     );
     return (
-      <tr key={group.group}>
+      <tr
+        key={group.group}
+        className={onOpenGit === null ? undefined : 'files-overview__row--git'}
+        title={onOpenGit === null ? undefined : `Git-Werkzeuge für ${group.name} öffnen`}
+        onClick={(): void => {
+          onOpenGit?.(group.group);
+        }}
+      >
         <td className="files-overview__repo">{group.name}</td>
         <td className="files-overview__mono" data-label="Codebasis">
           {group.baseRef}
@@ -228,6 +244,14 @@ export function FilesOverview({
           </thead>
           <tbody>{groups.map(renderRow)}</tbody>
         </table>
+        {untrackedBefore !== null && (
+          <p className="files-overview__note">{trackedSinceText(untrackedBefore)}</p>
+        )}
+        {plainFolders.map((name: string, index: number) => (
+          <p key={`folder:${String(index)}`} className="files-overview__note">
+            <b>{name}</b> — Ordner ohne Git — die App sieht hier keine Änderungen.
+          </p>
+        ))}
         <h2 className="files-overview__heading">Verlauf · wer wann was geändert hat</h2>
         {history}
       </div>

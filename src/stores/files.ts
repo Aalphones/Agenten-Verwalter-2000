@@ -4,7 +4,7 @@ import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 /** „Geändert“ zeigt nur geänderte Dateien, „Alle Dateien“ den ganzen Ordner des Repositorys. */
 export type FilesMode = 'changed' | 'all';
 
-/** Rechte Seite ohne offene Datei: die Übersicht oder (ab Phase 7) die Git-Seite eines Repositorys. */
+/** Rechte Seite ohne offene Datei: die Übersicht oder die Git-Seite eines Repositorys. */
 export type FilesPage = 'overview' | { git: string };
 
 /** Schmale Breite: welche Seite gerade die ganze Breite hat. */

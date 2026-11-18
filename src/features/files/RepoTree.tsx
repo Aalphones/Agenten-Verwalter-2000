@@ -4,6 +4,7 @@ import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import type { TreeRow } from '@/features/files/buildTreeRows';
 import { ChangeMarks } from '@/features/files/ChangeMarks';
 import { FileTypeIcon } from '@/features/files/FileTypeIcon';
+import { BranchIcon } from '@/features/git/GitIcons';
 import type { FilesMode } from '@/stores/files';
 import './RepoTree.css';
 
@@ -28,6 +29,8 @@ interface RepoTreeProps {
   /** Klappt einen ignorierten Ordner auf oder zu und liest beim ersten Mal seine Kinder. */
   onToggleIgnored: (row: RowOf<'ignored'>) => void;
   onOpenFile: (row: RowOf<'file'>) => void;
+  /** Öffnet die Git-Seite des Knotens (`group`); `null`, wo keine Session sichtbar ist. */
+  onOpenGit: ((group: string) => void) | null;
 }
 
 function estimateHeight(row: TreeRow | undefined): number {
@@ -118,6 +121,7 @@ export function RepoTree({
   onToggle,
   onToggleIgnored,
   onOpenFile,
+  onOpenGit,
 }: RepoTreeProps): ReactElement {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -300,6 +304,24 @@ export function RepoTree({
           <ChangeMarks added={group.added} deleted={group.deleted} />
         ) : (
           <span className="repo-tree__quiet">keine Änderungen</span>
+        )}
+        {onOpenGit !== null && (
+          <button
+            type="button"
+            className="repo-tree__git"
+            title={`Git-Werkzeuge für ${group.name}`}
+            tabIndex={isPinned ? -1 : 0}
+            onClick={(event): void => {
+              event.stopPropagation();
+              onOpenGit(group.group);
+            }}
+            onKeyDown={(event): void => {
+              event.stopPropagation();
+            }}
+          >
+            <BranchIcon size={13} />
+            Git
+          </button>
         )}
       </div>
     );
