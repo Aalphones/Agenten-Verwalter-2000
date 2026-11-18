@@ -20,7 +20,7 @@ pub enum TerminalPlacement {
     Right,
 }
 
-/// Eine der vier seitlichen Leisten, deren Breite die Oberfläche verschieben lässt (ADR 053).
+/// Eine der fünf seitlichen Leisten, deren Breite die Oberfläche verschieben lässt (ADR 053).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum PanelId {
@@ -28,6 +28,8 @@ pub enum PanelId {
     Sidebar,
     /// Dateibaum der Changes.
     ChangesTree,
+    /// Linke Spalte der Ansicht „Dateien“ (ADR 067).
+    FilesTree,
     /// Liste der Artefakte.
     ArtifactsList,
     /// Hintergrund-Leiste.
@@ -40,6 +42,7 @@ pub enum PanelId {
 pub struct PanelWidths {
     pub sidebar: Option<u32>,
     pub changes_tree: Option<u32>,
+    pub files_tree: Option<u32>,
     pub artifacts_list: Option<u32>,
     pub background: Option<u32>,
 }

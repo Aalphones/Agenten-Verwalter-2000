@@ -13,6 +13,7 @@ interface PanelBounds {
 export const PANEL_BOUNDS: Readonly<Record<PanelId, PanelBounds>> = {
   sidebar: { initial: 256, min: 200 },
   changesTree: { initial: 360, min: 240 },
+  filesTree: { initial: 340, min: 240 },
   artifactsList: { initial: 300, min: 220 },
   background: { initial: 440, min: 320 },
 };
@@ -32,6 +33,7 @@ export function panelWidthOf(panel: PanelId, stored: number | null | undefined):
 const NO_WIDTHS: PanelWidths = {
   sidebar: null,
   changesTree: null,
+  filesTree: null,
   artifactsList: null,
   background: null,
 };
@@ -63,6 +65,7 @@ export function readRememberedPanelWidths(): PanelWidths {
     return {
       sidebar: numberOrNull(record.sidebar),
       changesTree: numberOrNull(record.changesTree),
+      filesTree: numberOrNull(record.filesTree),
       artifactsList: numberOrNull(record.artifactsList),
       background: numberOrNull(record.background),
     };

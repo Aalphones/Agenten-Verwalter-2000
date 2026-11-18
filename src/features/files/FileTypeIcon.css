@@ -1,0 +1,37 @@
+.file-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  font: 700 9px var(--font-mono);
+  letter-spacing: -0.3px;
+
+  &--run {
+    color: var(--color-status-running);
+  }
+
+  &--wait {
+    color: var(--color-status-waiting);
+  }
+
+  &--acc {
+    color: var(--color-accent-text);
+  }
+
+  &--scr {
+    color: var(--color-status-script);
+  }
+
+  &--err {
+    color: var(--color-status-error);
+  }
+
+  &--done {
+    color: var(--color-status-completed);
+  }
+
+  &--mut {
+    color: var(--color-fg-muted);
+  }
+}

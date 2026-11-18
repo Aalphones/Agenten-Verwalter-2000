@@ -51,6 +51,8 @@ interface ImplementationViewProps {
   sessions: readonly SessionSummary[];
   /** Inhalt des Reiters „Changes“ (Reichweite Vorhaben); gezeigt, wenn er aktiv ist. */
   changes: ReactNode;
+  /** Inhalt des Reiters „Dateien“ (Reichweite Vorhaben); gezeigt, wenn er aktiv ist. */
+  files: ReactNode;
   /** Artefakte aus Sessions der Umsetzung (Stationen und Rückfragen). */
   artifactCount: number;
   /** Inhalt des Reiters „Artefakte“; gezeigt, wenn er aktiv ist und es Artefakte gibt. */
@@ -82,6 +84,7 @@ export function ImplementationView({
   changesCount,
   sessions,
   changes,
+  files,
   artifactCount,
   artifacts,
   onNewInquiry,
@@ -108,8 +111,9 @@ export function ImplementationView({
   const stations: StationRef[] = useMemo(() => flatStations(implementation), [implementation]);
   // Ohne Repository bzw. ohne Artefakt fällt der Reiter auf den Ablauf zurück.
   const isChangesShown: boolean = activeView === 'changes' && hasChanges;
+  const isFilesShown: boolean = activeView === 'files' && hasChanges;
   const isArtifactsShown: boolean = activeView === 'artifacts' && artifactCount > 0;
-  const isFlow: boolean = !isChangesShown && !isArtifactsShown;
+  const isFlow: boolean = !isChangesShown && !isFilesShown && !isArtifactsShown;
   const isTicking: boolean = stations.some((ref: StationRef) =>
     ['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'].includes(
       ref.station.state,
@@ -318,12 +322,18 @@ export function ImplementationView({
     if (isChangesShown) {
       return 'changes';
     }
+    if (isFilesShown) {
+      return 'files';
+    }
     return isArtifactsShown ? 'artifacts' : 'flow';
   }
 
   function renderBody(): ReactNode {
     if (isChangesShown) {
       return changes;
+    }
+    if (isFilesShown) {
+      return files;
     }
     if (isArtifactsShown) {
       return artifacts;

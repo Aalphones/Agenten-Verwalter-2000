@@ -1,0 +1,147 @@
+.files-overview {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  container: files-detail / inline-size;
+
+  &__page {
+    max-width: 980px;
+    padding: var(--space-2xl) var(--space-3xl) 40px;
+  }
+
+  &__heading {
+    margin: 22px 0 var(--space-md);
+    font-size: 14px;
+    font-weight: 600;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  &__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    margin: 0 0 var(--space-sm);
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+  }
+
+  /* Wert über der Bezeichnung; die Trennlinien zeichnet der Schatten, damit jede Umbruchlage passt. */
+  &__fact {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    padding: 7px 14px;
+    box-shadow:
+      1px 0 0 var(--color-border-subtle),
+      0 1px 0 var(--color-border-subtle);
+
+    dt {
+      font-size: var(--font-size-xs);
+      color: var(--color-fg-muted);
+      white-space: nowrap;
+    }
+
+    dd {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+  }
+
+  &__added {
+    color: var(--color-diff-add-fg);
+  }
+
+  &__deleted {
+    color: var(--color-diff-del-fg);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: var(--space-sm) 14px var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border-subtle);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+      color: var(--color-fg-muted);
+    }
+  }
+
+  &__repo {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__mono {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+  }
+
+  &__muted {
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    color: var(--color-status-error);
+  }
+
+  &__dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: var(--space-sm);
+    border-radius: 50%;
+    background: var(--color-status-waiting);
+  }
+}
+
+@container files-view (max-width: 780px) {
+  .files-overview__page {
+    padding: 14px var(--space-xl) var(--space-5xl);
+  }
+}
+
+/* Schmal: jede Zeile der Tabelle als Block „Bezeichnung: Wert“. */
+@container files-detail (max-width: 640px) {
+  .files-overview__table,
+  .files-overview__table tbody,
+  .files-overview__table tr,
+  .files-overview__table td {
+    display: block;
+  }
+
+  .files-overview__table thead {
+    display: none;
+  }
+
+  .files-overview__table tr {
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .files-overview__table td {
+    padding: 1px 0;
+    border: 0;
+  }
+
+  .files-overview__table td[data-label]::before {
+    content: attr(data-label) ': ';
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+}

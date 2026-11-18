@@ -25,6 +25,11 @@ import { useImplementations } from '@/features/implementation/useImplementations
 import { countChangedFiles } from '@/features/changes/changesScope';
 import { ChangesView } from '@/features/changes/ChangesView';
 import { useSessionChanges } from '@/features/changes/useSessionChanges';
+import { FilesView } from '@/features/files/FilesView';
+import type { FilesSession } from '@/features/files/FilesView';
+import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
+import type { SessionChanges } from '@/lib/bindings/SessionChanges';
+import { useFilesStore } from '@/stores/files';
 import { ProjectOverview } from '@/features/projects/ProjectOverview';
 import { sessionsOf } from '@/features/projects/projectStatus';
 import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
@@ -266,6 +271,12 @@ export function App(): ReactElement {
       activeView === 'changes' &&
       currentSession !== undefined &&
       currentSession.repositoryCount > 0;
+  const isFilesView: boolean = isOverview
+    ? (isImplementation ? implementationView : projectView) === 'files' && hasProjectRepositories
+    : !isMainReplaced &&
+      activeView === 'files' &&
+      currentSession !== undefined &&
+      currentSession.repositoryCount > 0;
   // Die Artefakte gehören dem Vorhaben; in der Übersicht fragt die neueste Session ab (wie bei den Changes).
   const { list: artifacts }: { list: ArtifactList | null } = useProjectArtifacts(
     isMainReplaced ? null : (currentSession?.id ?? null),
@@ -292,7 +303,35 @@ export function App(): ReactElement {
   } = useSessionChanges(
     isMainReplaced ? null : (currentSession ?? null),
     changesReach,
-    isChangesView || isOverview,
+    isChangesView || isFilesView || isOverview,
+  );
+  // „Dateien“ zeigt immer das ganze Vorhaben; in der Übersicht sind das schon die Changes oben.
+  const { changes: sessionProjectChanges, error: sessionProjectError } = useSessionChanges(
+    isMainReplaced || isOverview ? null : (currentSession ?? null),
+    'project',
+    isFilesView,
+  );
+  const projectChanges: SessionChanges | null = isOverview ? changes : sessionProjectChanges;
+  const projectChangesError: string | null = isOverview ? changesError : sessionProjectError;
+  const filesViewKey: string =
+    shownImplementation !== undefined && isImplementation
+      ? `implementation:${shownImplementation.id}`
+      : isOverview && overviewProject !== undefined
+        ? `project:${overviewProject.id}`
+        : `session:${currentSession?.id ?? ''}`;
+  const filesFilterId: string | null = useFilesStore(
+    (state) => state.selections[filesViewKey]?.sessionFilter ?? null,
+  );
+  const filesSessions: SessionSummary[] =
+    currentSession === undefined ? [] : sessionsOf(currentSession.projectId, sessions);
+  const filteredSession: SessionSummary | null =
+    filesFilterId === null
+      ? null
+      : (filesSessions.find((session: SessionSummary) => session.id === filesFilterId) ?? null);
+  const { changes: filteredChanges, error: filteredChangesError } = useSessionChanges(
+    isFilesView ? filteredSession : null,
+    'session',
+    isFilesView,
   );
 
   // Kopfzeile (Zähler), Verlauf (Zeilen) und Panel brauchen dieselben Daten — einmal laden, nicht je Verbraucher.
@@ -302,7 +341,10 @@ export function App(): ReactElement {
   useViewedSession(visibleSession === null ? null : visibleSession.id);
   // Git-Zustand für Branch-Pille (Kopfzeile) und Git-Leisten (Changes): einmal je sichtbarer Session, nur in der
   // Reichweite Session — die Übersicht des Vorhabens bedient kein Git.
-  const { status: gitStatus, reload: reloadGit } = useGitStatus(visibleSession, isChangesView);
+  const { status: gitStatus, reload: reloadGit } = useGitStatus(
+    visibleSession,
+    isChangesView || isFilesView,
+  );
   const reloadAfterGitAction = useCallback((): void => {
     reloadGit();
     reloadChanges();
@@ -394,7 +436,9 @@ export function App(): ReactElement {
   // Strg+; öffnet die Nebenfrage der Session, deren Chat gerade vor der Eingabeleiste steht. Auf deutscher
   // Tastatur liegt das Semikolon auf Umschalt+Komma: `shiftKey` darf die Abfrage nicht ausschließen.
   const chatSessionId: string | null =
-    visibleSession !== null && !isChangesView && !isArtifactsView ? visibleSession.id : null;
+    visibleSession !== null && !isChangesView && !isFilesView && !isArtifactsView
+      ? visibleSession.id
+      : null;
   useEffect(() => {
     if (chatSessionId === null) {
       return undefined;
@@ -459,6 +503,26 @@ export function App(): ReactElement {
 
   const startInquiry = useInquiry(handleSessionCreated);
 
+  function renderFiles(session: SessionSummary, git: GitSessionStatus | null): ReactElement {
+    return (
+      <FilesView
+        key={filesViewKey}
+        viewKey={filesViewKey}
+        sessionId={session.id}
+        projectChanges={projectChanges}
+        projectError={projectChangesError}
+        filteredChanges={filteredSession === null ? null : filteredChanges}
+        filteredError={filteredSession === null ? null : filteredChangesError}
+        sessions={filesSessions.map((candidate: SessionSummary): FilesSession => ({
+          id: candidate.id,
+          number: candidate.number,
+          name: candidate.name,
+        }))}
+        git={git}
+      />
+    );
+  }
+
   function renderOverview(project: ProjectSummary, latestSession: SessionSummary): ReactElement {
     // Ein Schlüssel für die ganze Ansicht, nicht je Kind: gleiche Schlüssel an Geschwistern lassen React beim
     // Wechsel Kopfzeilen duplizieren statt ersetzen.
@@ -517,6 +581,7 @@ export function App(): ReactElement {
               onChanged={reloadChanges}
             />
           }
+          files={renderFiles(latestSession, null)}
           onNewInquiry={startInquiry}
           terminalCount={runningTerminalCount}
           isTerminalOpen={isTerminalOpen}
@@ -534,6 +599,9 @@ export function App(): ReactElement {
     if (isArtifactsView) {
       return 'artifacts';
     }
+    if (isFilesView) {
+      return 'files';
+    }
     return isChangesView ? 'changes' : 'overview';
   }
 
@@ -550,6 +618,9 @@ export function App(): ReactElement {
           list={artifacts}
         />
       );
+    }
+    if (isFilesView) {
+      return renderFiles(latestSession, null);
     }
     if (isChangesView) {
       return (
@@ -580,6 +651,9 @@ export function App(): ReactElement {
     if (isArtifactsView) {
       return 'artifacts';
     }
+    if (isFilesView) {
+      return 'files';
+    }
     return isChangesView ? 'changes' : 'chat';
   }
 
@@ -593,6 +667,9 @@ export function App(): ReactElement {
           list={artifacts}
         />
       );
+    }
+    if (isFilesView) {
+      return renderFiles(session, gitStatus);
     }
     if (isChangesView) {
       return (
@@ -661,6 +738,9 @@ export function App(): ReactElement {
             projectName={projectNameOf(currentSession)}
             activeView={sessionViewShown()}
             changesCount={changes === null ? null : countChangedFiles(changes)}
+            filesCount={
+              sessionProjectChanges === null ? null : countChangedFiles(sessionProjectChanges)
+            }
             changes={changes}
             gitStatus={gitStatus}
             artifactCount={artifactCount}

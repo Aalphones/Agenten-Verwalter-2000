@@ -1,0 +1,39 @@
+.change-marks {
+  flex-shrink: 0;
+  font: 11.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &__added {
+    color: var(--color-diff-add-fg);
+  }
+
+  &__deleted {
+    color: var(--color-diff-del-fg);
+  }
+
+  &__binary {
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__letter {
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+    font: 700 11px var(--font-mono);
+
+    &--added {
+      color: var(--color-diff-add-fg);
+    }
+
+    &--deleted {
+      color: var(--color-diff-del-fg);
+    }
+
+    &--modified {
+      color: var(--color-fg-primary);
+    }
+  }
+}

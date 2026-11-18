@@ -67,6 +67,7 @@ fn panel_key(panel: PanelId) -> &'static str {
     match panel {
         PanelId::Sidebar => "panel_width.sidebar",
         PanelId::ChangesTree => "panel_width.changes_tree",
+        PanelId::FilesTree => "panel_width.files_tree",
         PanelId::ArtifactsList => "panel_width.artifacts_list",
         PanelId::Background => "panel_width.background",
     }
@@ -98,6 +99,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     panel_widths: PanelWidths {
         sidebar: None,
         changes_tree: None,
+        files_tree: None,
         artifacts_list: None,
         background: None,
     },
@@ -166,6 +168,7 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
         panel_widths: PanelWidths {
             sidebar: stored_panel_width(&stored, PanelId::Sidebar),
             changes_tree: stored_panel_width(&stored, PanelId::ChangesTree),
+            files_tree: stored_panel_width(&stored, PanelId::FilesTree),
             artifacts_list: stored_panel_width(&stored, PanelId::ArtifactsList),
             background: stored_panel_width(&stored, PanelId::Background),
         },
