@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use super::{OVERLAP_HINT, ProjectState, Session, SessionRegistry};
-use crate::changes::attribution::normalize_path;
+use crate::changes::attribution::{NORMALIZED_SEPARATOR, normalize_path};
 use crate::db::session_files;
 use crate::error::CommandError;
 use crate::sessions::model::{SessionOverlap, SessionStatus};
@@ -170,7 +170,7 @@ fn write_folders(
 fn is_inside(path_key: &str, folder_key: &str) -> bool {
     path_key
         .strip_prefix(folder_key)
-        .is_some_and(|rest: &str| rest.starts_with('\\'))
+        .is_some_and(|rest: &str| rest.starts_with(NORMALIZED_SEPARATOR))
 }
 
 /// Je Session den ersten Ordner (nach Schlüssel), den mindestens eine andere teilt.
