@@ -26,6 +26,8 @@ interface FilesToolbarProps {
   isPickerOpen: boolean;
   /** Der Aufklapper, solange er offen ist. */
   picker: ReactNode;
+  /** Die Dateisuche am rechten Rand. */
+  search: ReactNode;
   onTogglePicker: () => void;
   onClearFilter: () => void;
   scope: ChangeScope;
@@ -35,11 +37,12 @@ interface FilesToolbarProps {
   deleted: number;
 }
 
-/** Leiste über der Ansicht „Dateien“: Session-Filter, Blickwinkel, Summe. */
+/** Leiste über der Ansicht „Dateien“: Session-Filter, Blickwinkel, Summe, Dateisuche. */
 export function FilesToolbar({
   filterNumber,
   isPickerOpen,
   picker,
+  search,
   onTogglePicker,
   onClearFilter,
   scope,
@@ -83,6 +86,7 @@ export function FilesToolbar({
       <span className="files-toolbar__summary">
         {fileCountLabel(fileCount)} · <ChangeMarks added={added} deleted={deleted} />
       </span>
+      {search}
       {picker}
     </div>
   );

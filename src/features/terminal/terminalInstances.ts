@@ -84,8 +84,8 @@ function wireKeys(term: Terminal): void {
     if (hasCommandKey && key === 'v') {
       return false;
     }
-    // Geht an das globale Kürzel in App.tsx.
-    if (event.ctrlKey && key === 'ö') {
+    // Gehen an die globalen Kürzel in App.tsx (Terminal ein-/ausblenden, Dateisuche).
+    if (event.ctrlKey && (key === 'ö' || key === 'p')) {
       return false;
     }
     return true;

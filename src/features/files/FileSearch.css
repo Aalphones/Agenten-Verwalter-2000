@@ -1,0 +1,159 @@
+/* Die Wurzel ist nur Klammer; Feld und Liste ordnen sich in der Leiste (`.files-toolbar`, `position: relative`). */
+.file-search {
+  display: contents;
+
+  &__field {
+    position: relative;
+    flex: 1 1 240px;
+    min-width: 180px;
+    max-width: 360px;
+    margin-left: auto;
+
+    svg {
+      position: absolute;
+      top: 7px;
+      left: 8px;
+      color: var(--color-fg-muted);
+      pointer-events: none;
+    }
+
+    input {
+      width: 100%;
+      height: 28px;
+      padding: 0 62px 0 28px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-bg-surface);
+      color: var(--color-fg-primary);
+      font: inherit;
+
+      &::placeholder {
+        color: var(--color-fg-muted);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: -1px;
+      }
+    }
+
+    kbd {
+      position: absolute;
+      top: 5px;
+      right: 6px;
+      padding: 0 4px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font: 11px var(--font-mono);
+      color: var(--color-fg-muted);
+      pointer-events: none;
+    }
+  }
+
+  &__results {
+    position: absolute;
+    top: 100%;
+    right: var(--space-md);
+    z-index: var(--z-overlay);
+    display: flex;
+    flex-direction: column;
+    width: min(580px, calc(100cqw - 24px));
+    max-height: min(60vh, 460px);
+    margin-top: var(--space-2xs);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-popover);
+    box-shadow: var(--shadow-popover);
+  }
+
+  &__head,
+  &__foot {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0 var(--space-lg);
+    padding: 5px var(--space-lg);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__foot {
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  &__list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  &__hit {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 26px;
+    padding: 4px var(--space-lg);
+    border-left: 2px solid transparent;
+    cursor: pointer;
+
+    &--active {
+      border-left-color: var(--color-accent);
+      background: var(--color-bg-selected);
+    }
+  }
+
+  &__name {
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    mark {
+      background: none;
+      color: var(--color-accent-text);
+      font-weight: 700;
+      text-decoration: underline;
+    }
+  }
+
+  /* `rtl` kürzt den Ordner von links; die Marke am Anfang hält Sonderzeichen in der Leserichtung. */
+  &__dir {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    direction: rtl;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__note,
+  &__empty {
+    margin: 0;
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-secondary);
+  }
+}
+
+/* Schmal: das Feld bekommt eine eigene Zeile in voller Breite. */
+@container files-view (max-width: 780px) {
+  .file-search__field {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .file-search__results {
+    right: var(--space-md);
+    left: var(--space-md);
+    width: auto;
+  }
+}
+
+@media (pointer: coarse) {
+  .file-search__hit {
+    min-height: 44px;
+  }
+}

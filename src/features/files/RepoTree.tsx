@@ -122,6 +122,7 @@ export function RepoTree({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const focusPendingRef = useRef<boolean>(false);
+  const revealedKeyRef = useRef<string | null>(null);
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -136,6 +137,22 @@ export function RepoTree({
   const foundIndex: number =
     activeKey === null ? -1 : rows.findIndex((row: TreeRow) => row.key === activeKey);
   const activeIndex: number = foundIndex >= 0 ? foundIndex : rows.findIndex(isFocusable);
+
+  // Eine von außen gewählte Datei (Suche, Chat-Link) scrollt in den sichtbaren Bereich, sobald ihre Zeile im Baum steht.
+  const selectedKey: string | null =
+    selected === null ? null : `${selected.group}|f|${selected.path}`;
+  const selectedIndex: number =
+    selectedKey === null ? -1 : rows.findIndex((row: TreeRow) => row.key === selectedKey);
+  useEffect(() => {
+    if (selectedKey === null) {
+      revealedKeyRef.current = null;
+      return;
+    }
+    if (selectedIndex >= 0 && revealedKeyRef.current !== selectedKey) {
+      revealedKeyRef.current = selectedKey;
+      virtualizer.scrollToIndex(selectedIndex, { align: 'auto' });
+    }
+  }, [selectedKey, selectedIndex, virtualizer]);
 
   useEffect(() => {
     if (!focusPendingRef.current || activeIndex < 0) {
