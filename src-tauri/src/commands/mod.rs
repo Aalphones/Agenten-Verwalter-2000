@@ -13,6 +13,7 @@ pub mod codex_account;
 pub mod context;
 pub mod environment;
 pub mod file_links;
+pub mod files;
 pub mod git;
 pub mod implementation;
 pub mod mcp;

@@ -8,4 +8,13 @@ export type FileChange = {
 /**
  * Relativ zum Worktree, mit Schrägstrichen.
  */
-path: string, all: LineStat | null, committed: LineStat | null, uncommitted: LineStat | null, };
+path: string, all: LineStat | null, committed: LineStat | null, uncommitted: LineStat | null, 
+/**
+ * Volle ID des letzten eigenen Commits an der Datei; `None`, wenn sie nur uncommittet ist.
+ */
+lastCommit: string | null, 
+/**
+ * Ms seit 1970: das Spätere aus der Committer-Zeit von `last_commit` und dem letzten Schreiben
+ * des Agenten; ohne beides 0.
+ */
+changedAt: number, };

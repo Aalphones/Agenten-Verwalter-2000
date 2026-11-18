@@ -57,7 +57,14 @@ const NO_FLAGS: Readonly<Record<string, boolean>> = {};
 /** Eine fremde Datei hat keinen Eintrag in den Changes; für den Diff reicht ein Stand unter „Uncommitted“. */
 function foreignChange(file: GitForeignFile): FileChange {
   const stat: LineStat = foreignLineStat(file);
-  return { path: file.path, all: stat, committed: null, uncommitted: stat };
+  return {
+    path: file.path,
+    all: stat,
+    committed: null,
+    uncommitted: stat,
+    lastCommit: null,
+    changedAt: 0,
+  };
 }
 
 /** Die geöffnete Datei, sofern sie in ihrem Blickwinkel noch existiert; sonst zeigt die Ansicht die Übersicht. */

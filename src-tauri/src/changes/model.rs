@@ -55,6 +55,13 @@ pub struct FileChange {
     pub all: Option<LineStat>,
     pub committed: Option<LineStat>,
     pub uncommitted: Option<LineStat>,
+    /// Volle ID des letzten eigenen Commits an der Datei; `None`, wenn sie nur uncommittet ist.
+    #[serde(default)]
+    pub last_commit: Option<String>,
+    /// Ms seit 1970: das Spätere aus der Committer-Zeit von `last_commit` und dem letzten Schreiben
+    /// des Agenten; ohne beides 0.
+    #[serde(default)]
+    pub changed_at: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -64,6 +71,16 @@ pub struct RepositoryChanges {
     /// `"<Position>/<Ordner>"` für einen Ticket-Worktree.
     pub key: String,
     pub name: String,
+    /// Repository, zu dem der Eintrag gehört (`sources::Source::group`); gleiche Gruppe heißt
+    /// derselbe Knoten in der Ansicht „Dateien“.
+    #[serde(default)]
+    pub group: String,
+    /// Name des Repositorys ohne Worktree-Ordner.
+    #[serde(default)]
+    pub group_name: String,
+    /// Der Checkout des Repositorys selbst, kein Ticket-Worktree.
+    #[serde(default)]
+    pub is_main: bool,
     pub branch: String,
     pub base_ref: String,
     /// Eigene Commits der Reichweite von der Basis bis `HEAD`, ohne Merge-Commits.
