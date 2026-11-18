@@ -16,6 +16,7 @@ const MS_PER_SECOND = 1000;
 const VIEW_LABEL: Record<ProjectView, string> = {
   overview: 'Übersicht',
   changes: 'Changes',
+  files: 'Dateien',
   artifacts: 'Artefakte',
 };
 
@@ -79,7 +80,7 @@ export function ProjectHeader({
   const views: readonly ProjectView[] = PROJECT_VIEWS.filter(
     (view: ProjectView) =>
       view === 'overview' ||
-      (view === 'changes' && project.repositoryNames.length > 0) ||
+      ((view === 'changes' || view === 'files') && project.repositoryNames.length > 0) ||
       (view === 'artifacts' && artifactCount > 0),
   );
   const sessionCountLabel: string =
@@ -112,9 +113,11 @@ export function ProjectHeader({
             }}
           >
             {VIEW_LABEL[view]}
-            {view === 'changes' && changesCount !== null && changesCount > 0 && (
-              <span className="session-header__tab-count">{formatCount(changesCount)}</span>
-            )}
+            {(view === 'changes' || view === 'files') &&
+              changesCount !== null &&
+              changesCount > 0 && (
+                <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+              )}
             {view === 'artifacts' && (
               <span className="session-header__tab-count">{formatCount(artifactCount)}</span>
             )}

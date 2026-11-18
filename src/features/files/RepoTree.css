@@ -1,0 +1,233 @@
+.repo-tree {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Die Liste ändert sich alle paar Sekunden; ein Ausgleich des Browsers verschöbe die Ansicht zusätzlich. */
+  overflow-anchor: none;
+
+  &__surface {
+    position: relative;
+    width: 100%;
+  }
+
+  &__item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /* Höhe 0: die angeheftete Kopfzeile liegt über der Liste, ohne sie zu verschieben. */
+  &__pin {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    height: 0;
+  }
+
+  &__group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-md);
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-sidebar);
+    font-size: var(--font-size-md);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+    }
+
+    &--pinned {
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+  }
+
+  &__group-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__group-name {
+    overflow: hidden;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__group-sub {
+    overflow: hidden;
+    font: 11px var(--font-mono);
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__quiet {
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    color: var(--color-fg-muted);
+    transition: transform var(--duration-fast) var(--ease-out);
+
+    &--open {
+      transform: rotate(90deg);
+    }
+
+    &--none {
+      visibility: hidden;
+    }
+  }
+
+  &__chevron {
+    width: 12px;
+    height: 12px;
+  }
+
+  &__folder {
+    flex-shrink: 0;
+    color: var(--color-fg-secondary);
+  }
+
+  &__row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-sizing: border-box;
+    height: 24px;
+    padding-right: var(--space-md);
+    border-left: 2px solid transparent;
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    cursor: pointer;
+
+    /* Hilfslinien je Ebene. */
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 13px;
+      width: calc(var(--depth, 0) * 14px);
+      background: repeating-linear-gradient(
+        90deg,
+        var(--color-border-subtle) 0 1px,
+        transparent 1px 14px
+      );
+      pointer-events: none;
+    }
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+    }
+
+    &--selected {
+      border-left-color: var(--color-accent);
+      background: var(--color-bg-selected);
+    }
+
+    &--ignored {
+      cursor: default;
+    }
+
+    &--ignored[aria-expanded] {
+      cursor: pointer;
+    }
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__link {
+    color: var(--color-fg-muted);
+  }
+
+  &__count {
+    flex-shrink: 0;
+    padding: 0 5px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font: 11px var(--font-mono);
+    line-height: 15px;
+    color: var(--color-fg-muted);
+  }
+
+  &__ignored {
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__note,
+  &__error {
+    margin: 0;
+    padding-top: var(--space-sm);
+    padding-bottom: var(--space-sm);
+    font-size: var(--font-size-xs);
+    white-space: normal;
+  }
+
+  &__note {
+    color: var(--color-fg-muted);
+  }
+
+  &__error {
+    color: var(--color-status-error);
+  }
+}
+
+.repo-tree__row--ignored .repo-tree__name {
+  font-style: italic;
+  color: var(--color-fg-muted);
+}
+
+/* „Alle Dateien“: geänderte Dateien und Ordner mit Änderungen fett, die übrigen gedämpft. */
+.repo-tree--all .repo-tree__row--file .repo-tree__name {
+  color: var(--color-fg-secondary);
+}
+
+.repo-tree--all .repo-tree__row--changed .repo-tree__name {
+  font-weight: 600;
+  color: var(--color-fg-primary);
+}
+
+@media (pointer: coarse) {
+  .repo-tree__row {
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .repo-tree__toggle {
+    transition: none;
+  }
+}
