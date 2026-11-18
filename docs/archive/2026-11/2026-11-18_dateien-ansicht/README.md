@@ -12,7 +12,7 @@ Ziel: Der Reiter „Changes“ wird zum Reiter „Dateien“. Links steht je Rep
 | 4 | Datei ansehen: Änderung, ganze Datei, Schritte | [phase-4-datei.md](phase-4-datei.md) | standard | complete |
 | 5 | Suche und Strg P | [phase-5-suche.md](phase-5-suche.md) | standard | complete |
 | 6 | Dateilinks im Chat | [phase-6-chat-links.md](phase-6-chat-links.md) | standard | complete |
-| 7 | Git-Seite, „Changes“ entfernen, Doku | [phase-7-git-aufraeumen.md](phase-7-git-aufraeumen.md) | standard | pending |
+| 7 | Git-Seite, „Changes“ entfernen, Doku | [phase-7-git-aufraeumen.md](phase-7-git-aufraeumen.md) | standard | complete |
 
 Reihenfolge fest 1 → 7. Bis Phase 6 steht „Dateien“ als zusätzlicher Reiter neben „Changes“, damit die Git-Werkzeuge nach jeder Phase erreichbar bleiben; Phase 7 zieht sie um und entfernt „Changes“. Profil: privat – keine automatisierten Tests, keine Review-Stationen, keine Abnahmeliste. Nicht im Umfang: Dateien bearbeiten (Nicht-Ziel in `docs/PROJECT.md` bleibt), Volltextsuche im Dateiinhalt, Vorschau von HTML und PDF in der Ansicht, Vergleich zweier beliebiger Stände.
 
@@ -169,10 +169,24 @@ Kein neuer Code darf Windows voraussetzen: Pfade aus Git tragen `/` und werden n
 
 ## Summary
 
+Neuer Reiter „Dateien“ (ADR 067): Baum je Repository über alle Arbeitsordner, Übersicht mit Kennzahlen und Verlauf, Datei ansehen (Änderung, Ganze Datei, Schritte), Dateisuche mit Strg P, Dateilinks aus dem Chat und eine Git-Seite je Repository. Der Reiter „Changes“ ist entfernt; die Git-Werkzeuge laufen über „Git“ am Knoten.
+
 ## Files touched
+
+Rust: `src-tauri/src/files/`, `changes/`, `attribution`, Befehle und Bindings. Oberfläche: `src/features/files/` (FilesView, RepoTree, FilesOverview, FileViewer, FileSearch, GitPage), `src/features/changes/` (FileTree, DiffView und Daten; ChangesView, ChangesToolbar, ChangesOverview gelöscht), `src/stores/files.ts` (`changes.ts` gelöscht), App- und Session-/Projekt-/Umsetzungs-Köpfe, Composer. Doku: code-map, glossary, PROJECT, AGENTS, ADR 006/015/020/025/067.
 
 ## Commits
 
+5ac4bb4, 2641e66, 48e61b3, 9c6b3dd, cacd6bf, f06ac7f, 3fe59f0 (Phase 7) sowie e6b775e (Vergleichsschlüssel Linux/macOS).
+
 ## Deviations from plan
 
+- Der Slash-Befehl `/changes` heißt jetzt `/files` („Dateien-Ansicht öffnen“).
+- Die Git-Seite bettet `FileTree` mit Modus `embedded` (Höhe begrenzt) ein, statt die Seite zu scrollen.
+- „Git“ am Knoten und die klickbare Tabellenzeile gibt es nur mit sichtbarer Session.
+
 ## Follow-ups
+
+- `PanelId` `changesTree` (Rust und `panelWidths.ts`) bleibt ungenutzt; Entfernen braucht Rust und Bindings.
+- Rust-Doc-Kommentare nennen noch „Changes-Ansicht“ (`agents/event.rs`, `changes/model.rs`, `changes/sources.rs`, `review/mod.rs`).
+- Die Oberfläche (Git-Seite, Reiter-Umbau, AK 3 und 4) ist nur per `pnpm check` belegt, nicht in der echten App gelaufen.

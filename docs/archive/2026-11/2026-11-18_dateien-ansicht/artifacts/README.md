@@ -21,7 +21,7 @@ Der Klickdummy braucht die Datendatei `_repository-ansicht/daten.js` neben sich 
 
 ```sh
 mkdir -p /tmp/skins-stand && git archive 39c72e6 | tar -x -C /tmp/skins-stand
-node docs/planning/2026-11-18_dateien-ansicht/artifacts/daten-bauen.cjs . /tmp/skins-stand docs/planning/2026-11-18_dateien-ansicht/artifacts/_repository-ansicht/daten.js
+node docs/archive/2026-11/2026-11-18_dateien-ansicht/artifacts/daten-bauen.cjs . /tmp/skins-stand docs/archive/2026-11/2026-11-18_dateien-ansicht/artifacts/_repository-ansicht/daten.js
 ```
 
 Danach `entwurf-repository-ansicht.html` im Browser öffnen. Syntaxfarben lädt die Seite von `cdnjs.cloudflare.com`; ohne Netz bleibt der Code einfarbig. Jeder Zustand hat eine Adresse hinter `#`, z. B. `#d=skins&m=alle&f=0|src/app/Sidebar.tsx&vw=datei&ln=446` (Datei, Ansicht, Zeile), `#d=skins&q=skin` (Suche), `#d=skins&t=chat` (Chat), `#d=skins&pg=git:0` (Git-Seite), `&th=dark` bzw. `&th=light` (Thema).
