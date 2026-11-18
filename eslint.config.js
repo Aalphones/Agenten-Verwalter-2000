@@ -11,6 +11,8 @@ export default tseslint.config(
       'src-tauri',
       'src/lib/bindings',
       'docs/archive/2026-11/2026-10-21_mitgelieferte-befehle/artifacts/codex-probe.cjs',
+      // Hilfsskripte der Entwürfe laufen mit Node und gehören nicht zur App.
+      'docs/**/artifacts/**/*.cjs',
     ],
   },
   js.configs.recommended,
