@@ -215,6 +215,7 @@ pub fn run() {
             commands::git::git_log,
             commands::git::git_suggest_message,
             commands::file_links::file_link_open,
+            commands::file_links::file_link_resolve,
             commands::artifacts::artifacts_list,
             commands::artifacts::artifact_open_default,
             commands::artifacts::artifact_reveal,

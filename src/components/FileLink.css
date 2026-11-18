@@ -14,3 +14,9 @@
     border-radius: var(--radius-sm);
   }
 }
+
+.file-link__external {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.85em;
+}

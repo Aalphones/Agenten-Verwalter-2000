@@ -1,6 +1,8 @@
 import type { MouseEvent, ReactElement, ReactNode } from 'react';
+import { openFromLink } from '@/features/files/openFromLink';
+import type { FileLinkTarget } from '@/lib/bindings/FileLinkTarget';
 import { commandErrorText } from '@/lib/errors';
-import { fileHrefOf, openFileLink } from '@/lib/fileLinks';
+import { fileHrefOf, isExternalLink, openFileLink, resolveFileLink } from '@/lib/fileLinks';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import './FileLink.css';
 
@@ -10,16 +12,25 @@ interface FileLinkProps {
   children: ReactNode;
 }
 
-/** Dateiverweis im Chat: öffnet die Datei mit dem Standardprogramm. Ob sie existiert und geöffnet
- *  werden darf, entscheidet erst der Core beim Klick. */
+/** Dateiverweis im Chat: Quelltext und Dokumente öffnen in „Dateien“, HTML und PDF im Standardprogramm. Wohin
+ *  der Link führt und ob er im Vorhaben liegt, entscheidet erst der Core beim Klick. */
 export function FileLink({ sessionId, path, children }: FileLinkProps): ReactElement {
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
 
+  async function follow(): Promise<void> {
+    const target: FileLinkTarget = await resolveFileLink(sessionId, path);
+    if (target.kind === 'external') {
+      await openFileLink(sessionId, path);
+    } else {
+      openFromLink(sessionId, target);
+    }
+  }
+
   function open(event: MouseEvent<HTMLAnchorElement>): void {
     // Ohne preventDefault würde das App-Fenster selbst navigieren.
     event.preventDefault();
-    openFileLink(sessionId, path)
+    follow()
       .then(() => {
         clearSessionError(sessionId);
       })
@@ -30,13 +41,17 @@ export function FileLink({ sessionId, path, children }: FileLinkProps): ReactEle
   }
 
   const href: string | undefined = fileHrefOf(path);
+  const isExternal: boolean = isExternalLink(path);
+  const title: string = isExternal
+    ? `Im Standardprogramm öffnen: ${path}`
+    : `In Dateien öffnen: ${path}`;
   return (
     <a
       className="file-link"
       href={href}
       role={href === undefined ? 'link' : undefined}
       tabIndex={href === undefined ? 0 : undefined}
-      title={`Öffnen: ${path}`}
+      title={title}
       onClick={open}
       onAuxClick={open}
       onKeyDown={(event) => {
@@ -46,6 +61,11 @@ export function FileLink({ sessionId, path, children }: FileLinkProps): ReactEle
       }}
     >
       {children}
+      {isExternal && (
+        <span className="file-link__external" aria-hidden="true">
+          {' ↗'}
+        </span>
+      )}
     </a>
   );
 }

@@ -11,7 +11,7 @@ Ziel: Der Reiter „Changes“ wird zum Reiter „Dateien“. Links steht je Rep
 | 3 | Reiter „Dateien“: Baum, Leiste, Übersicht mit Verlauf | [phase-3-reiter-baum.md](phase-3-reiter-baum.md) | heikel | complete |
 | 4 | Datei ansehen: Änderung, ganze Datei, Schritte | [phase-4-datei.md](phase-4-datei.md) | standard | complete |
 | 5 | Suche und Strg P | [phase-5-suche.md](phase-5-suche.md) | standard | complete |
-| 6 | Dateilinks im Chat | [phase-6-chat-links.md](phase-6-chat-links.md) | standard | pending |
+| 6 | Dateilinks im Chat | [phase-6-chat-links.md](phase-6-chat-links.md) | standard | complete |
 | 7 | Git-Seite, „Changes“ entfernen, Doku | [phase-7-git-aufraeumen.md](phase-7-git-aufraeumen.md) | standard | pending |
 
 Reihenfolge fest 1 → 7. Bis Phase 6 steht „Dateien“ als zusätzlicher Reiter neben „Changes“, damit die Git-Werkzeuge nach jeder Phase erreichbar bleiben; Phase 7 zieht sie um und entfernt „Changes“. Profil: privat – keine automatisierten Tests, keine Review-Stationen, keine Abnahmeliste. Nicht im Umfang: Dateien bearbeiten (Nicht-Ziel in `docs/PROJECT.md` bleibt), Volltextsuche im Dateiinhalt, Vorschau von HTML und PDF in der Ansicht, Vergleich zweier beliebiger Stände.
