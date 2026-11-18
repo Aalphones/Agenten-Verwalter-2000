@@ -1,5 +1,6 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type { SkinPack } from '@/lib/bindings/SkinPack';
+import { joinPath } from '@/lib/paths';
 
 /** Höchste Höhe einer Figur in Bühnenkoordinaten (Bühne 104 × 64). */
 const MAX_FIGURE_HEIGHT = 56;
@@ -13,5 +14,5 @@ export function fitFigureHeight(naturalHeight: number): number {
 
 /** Adresse eines Bildes im Bildordner des Pakets; `changedAt` hängt dran, damit ein ersetztes Bild nicht aus dem Cache kommt. */
 export function skinImageUrl(pack: SkinPack, file: string): string {
-  return `${convertFileSrc(`${pack.dir}\\${file}`)}?v=${encodeURIComponent(pack.changedAt)}`;
+  return `${convertFileSrc(joinPath(pack.dir, file))}?v=${encodeURIComponent(pack.changedAt)}`;
 }

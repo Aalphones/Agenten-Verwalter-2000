@@ -21,6 +21,7 @@ import type { ScratchpadFileState } from '@/features/background/useScratchpadFil
 import { VirtualPanelList } from '@/features/background/VirtualPanelList';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { TextPreview } from '@/lib/bindings/TextPreview';
+import { joinPath } from '@/lib/paths';
 import { useBackgroundStore } from '@/stores/background';
 import './ScratchpadTab.css';
 
@@ -33,8 +34,6 @@ const BINARY_NOTICE = 'Keine Textvorschau';
 const ROW_INDENT_BASE = 8;
 const ROW_INDENT_PER_LEVEL = 18;
 const ESTIMATED_ROW_HEIGHT = 26;
-/** Laufwerksbuchstabe (`C:`) oder UNC-Pfad (`\\`) am Anfang: der Core liefert dann Pfade mit `\`. */
-const WINDOWS_PATH_PATTERN = /^(?:[A-Za-z]:|\\\\)/;
 
 interface ScratchpadTabProps {
   session: SessionSummary;
@@ -80,7 +79,7 @@ export function ScratchpadTab({ session }: ScratchpadTabProps): ReactElement {
         isDisabled: folder === null,
         onClick: (): void => {
           if (folder !== null) {
-            run(() => revealItemInDir(fullPath(folder, row.path)));
+            run(() => revealItemInDir(joinPath(folder, row.path)));
           }
         },
       },
@@ -94,7 +93,7 @@ export function ScratchpadTab({ session }: ScratchpadTabProps): ReactElement {
           <img
             className="scratchpad-tab__image-content"
             alt={row.name}
-            src={folder === null ? '' : convertFileSrc(fullPath(folder, row.path))}
+            src={folder === null ? '' : convertFileSrc(joinPath(folder, row.path))}
           />
         </div>
       );
@@ -196,12 +195,6 @@ function rowIcon(row: ScratchpadRow): string {
     return '▾';
   }
   return row.isImage ? '▣' : '≡';
-}
-
-/** Der volle Pfad: Scratchpad-Ordner plus relativer Pfad, mit dem Trenner, den der Ordnerpfad selbst trägt. */
-function fullPath(folder: string, relativePath: string): string {
-  const separator: string = WINDOWS_PATH_PATTERN.test(folder) ? '\\' : '/';
-  return `${folder}${separator}${relativePath.split('/').join(separator)}`;
 }
 
 function previewNotice(preview: TextPreview | null): string | null {

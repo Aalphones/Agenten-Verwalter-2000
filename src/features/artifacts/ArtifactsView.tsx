@@ -23,6 +23,7 @@ import { openArtifactDefault, revealArtifact } from '@/lib/artifacts';
 import type { Artifact } from '@/lib/bindings/Artifact';
 import type { ArtifactList } from '@/lib/bindings/ArtifactList';
 import { commandErrorText } from '@/lib/errors';
+import { joinPath } from '@/lib/paths';
 import { usePanelWidth } from '@/lib/usePanelWidth';
 import { CommentBox } from '@/features/review/CommentBox';
 import { selectorTail } from '@/features/review/reviewLabels';
@@ -251,7 +252,10 @@ export function ArtifactsView({
         type="button"
         className="artifacts__button"
         onClick={(): void => {
-          mentionInChat(currentSessionId, `Artefakt „${item.title}“ (${list.dir}\\${item.file})`);
+          mentionInChat(
+            currentSessionId,
+            `Artefakt „${item.title}“ (${joinPath(list.dir, item.file)})`,
+          );
         }}
       >
         Im Chat besprechen
