@@ -2,7 +2,10 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-position: center;
+  background-position: right bottom;
   background-size: cover;
   pointer-events: none;
+  /* Nur ein Eck-Akzent: das Bild läuft von unten rechts weich aus, der Rest bleibt reine Grundfarbe. */
+  -webkit-mask-image: radial-gradient(ellipse 55% 60% at 100% 100%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(ellipse 55% 60% at 100% 100%, #000 0%, transparent 100%);
 }
