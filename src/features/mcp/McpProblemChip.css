@@ -27,5 +27,10 @@
     height: 7px;
     border-radius: var(--radius-full);
     background: var(--color-status-error);
+
+    &--ok {
+      background: var(--color-fg-secondary);
+      opacity: 0.5;
+    }
   }
 }

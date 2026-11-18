@@ -503,7 +503,7 @@ export function Composer({ session, onSessionCreated }: ComposerProps): ReactEle
               />
             )}
           </div>
-          {hasMcp && session.mcpProblems > 0 && (
+          {hasMcp && (
             <McpProblemChip
               count={session.mcpProblems}
               onOpen={(): void => {
