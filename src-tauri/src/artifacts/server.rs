@@ -31,6 +31,7 @@ const HTML: &str = "text/html; charset=utf-8";
 const JSON: &str = "application/json";
 const INDEX_PAGE: &str = "index.html";
 const BRIDGE_SCRIPT: &str = include_str!("bridge.js");
+const STORAGE_SHIM_SCRIPT: &str = include_str!("storage-shim.js");
 
 /// Der laufende Server; als Tauri-State verwaltet.
 pub struct ArtifactServer {
@@ -220,10 +221,11 @@ impl Connection {
     }
 }
 
-/// Hängt die passive Kommentar-Brücke an HTML an, ohne Binärdaten oder ungültiges UTF-8 anzutasten.
+/// Hängt die passive Kommentar-Brücke an HTML an und setzt den Speicher-Ersatz vor die Skripte der
+/// Seite, ohne Binärdaten oder ungültiges UTF-8 anzutasten.
 fn with_bridge(body: Vec<u8>) -> Vec<u8> {
     let html = match String::from_utf8(body) {
-        Ok(html) => html,
+        Ok(html) => with_storage_shim(html),
         Err(error) => return error.into_bytes(),
     };
     let bridge = format!("<script>{BRIDGE_SCRIPT}</script>");
@@ -239,6 +241,29 @@ fn with_bridge(body: Vec<u8>) -> Vec<u8> {
         result.push_str(&bridge);
         result.into_bytes()
     }
+}
+
+/// Setzt den Speicher-Ersatz direkt hinter `<head>`, ohne `<head>` vor das erste `<script>`; eine Seite
+/// ohne beides bleibt unverändert (ein Skript vor `<!doctype>` schaltete sie in den Quirks-Modus).
+fn with_storage_shim(html: String) -> String {
+    let lower = html.to_ascii_lowercase();
+    let after_head = lower.match_indices("<head").find_map(|(start, _)| {
+        let rest = &lower[start + "<head".len()..];
+        let next = rest.chars().next()?;
+        if next != '>' && !next.is_ascii_whitespace() {
+            return None;
+        }
+        rest.find('>').map(|end| start + "<head".len() + end + 1)
+    });
+    let Some(index) = after_head.or_else(|| lower.find("<script")) else {
+        return html;
+    };
+    let shim = format!("<script>{STORAGE_SHIM_SCRIPT}</script>");
+    let mut result = String::with_capacity(html.len() + shim.len());
+    result.push_str(&html[..index]);
+    result.push_str(&shim);
+    result.push_str(&html[index..]);
+    result
 }
 
 /// Die Seite darf aus ihrem eigenen Ordner und über https laden, sonst nichts — insbesondere nicht
@@ -373,5 +398,47 @@ fn content_type(path: &Path) -> &'static str {
         "m4a" => "audio/mp4",
         "pdf" => "application/pdf",
         _ => "application/octet-stream",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::with_bridge;
+
+    fn served(html: &str) -> String {
+        String::from_utf8(with_bridge(html.as_bytes().to_vec())).expect("UTF-8")
+    }
+
+    #[test]
+    fn storage_shim_runs_before_page_scripts() {
+        let page = served(
+            "<!doctype html><html><head><title>x</title><script>localStorage.getItem('a')</script></head><body><header>h</header></body></html>",
+        );
+        let shim = page.find("memoryStorage").expect("Ersatz fehlt");
+        assert!(page.starts_with("<!doctype html><html><head><script>"));
+        assert!(
+            shim < page
+                .find("localStorage.getItem('a')")
+                .expect("Seitenskript fehlt")
+        );
+        assert!(
+            page.find("verwalter: 1").expect("Brücke fehlt")
+                < page.find("</body>").expect("body fehlt")
+        );
+    }
+
+    #[test]
+    fn storage_shim_skips_header_and_falls_back_to_first_script() {
+        let page = served("<header>h</header><script>run()</script>");
+        assert!(page.starts_with("<header>h</header><script>"));
+        assert!(
+            page.find("memoryStorage").expect("Ersatz fehlt")
+                < page.find("run()").expect("Seitenskript fehlt")
+        );
+    }
+
+    #[test]
+    fn page_without_head_and_script_gets_no_shim() {
+        assert!(!served("<!doctype html><p>nur Text</p>").contains("memoryStorage"));
     }
 }
