@@ -14,6 +14,13 @@ pub struct Source {
     /// `RepositoryChanges.key`: `"<P>"`, `"<P>/<Ordner>"` oder `"<P>:<Ordner>"`.
     pub key: String,
     pub name: String,
+    /// Repository, zu dem der Eintrag gehört: `"<P>"` für ein angehängtes Repository und seine
+    /// Ticket-Worktrees, `"<P>:<innerer Ordner>"` für ein inneres Repository und seine.
+    pub group: String,
+    /// Name des Repositorys ohne Worktree-Ordner: `"facepass"` bzw. `"facepass/app"`.
+    pub group_name: String,
+    /// Der Checkout des Repositorys selbst, kein Ticket-Worktree.
+    pub is_main: bool,
     /// Wogegen gemessen wird; bei inneren Repositories aus `inner_checkout`.
     pub repository: SessionRepository,
     pub ticket: Option<TicketWorktree>,
@@ -56,6 +63,9 @@ pub fn sources(input: &ChangesInput) -> Vec<Source> {
             sources.push(Source {
                 key: position.to_string(),
                 name: repository.name.clone(),
+                group: position.to_string(),
+                group_name: repository.name.clone(),
+                is_main: true,
                 repository: repository.clone(),
                 ticket: None,
                 dir: repository.working_dir(&input.workspace),
@@ -75,6 +85,9 @@ pub fn sources(input: &ChangesInput) -> Vec<Source> {
                 sources.push(Source {
                     key: format!("{position}/{}", worktree.folder),
                     name: format!("{} · {}", repository.name, worktree.folder),
+                    group: position.to_string(),
+                    group_name: repository.name.clone(),
+                    is_main: false,
                     repository: repository.clone(),
                     dir: worktree.path.clone(),
                     ticket: Some(worktree),
@@ -117,6 +130,9 @@ fn inner_sources(
         Err(error) => {
             let path = outer.repository_path.join(inner);
             return vec![Source {
+                group: key.clone(),
+                group_name: name.clone(),
+                is_main: true,
                 key,
                 name,
                 repository: SessionRepository {
@@ -148,7 +164,10 @@ fn inner_sources(
         ),
     );
     let mut sources = vec![Source {
-        key,
+        group: key.clone(),
+        group_name: name.clone(),
+        is_main: true,
+        key: key.clone(),
         name: name.clone(),
         dir: inner_repository.repository_path.clone(),
         repository: inner_repository.clone(),
@@ -162,6 +181,9 @@ fn inner_sources(
             .map(|worktree: TicketWorktree| Source {
                 key: format!("{position}:{}", worktree.folder),
                 name: format!("{name} · {}", worktree.folder),
+                group: key.clone(),
+                group_name: name.clone(),
+                is_main: false,
                 repository: inner_repository.clone(),
                 dir: worktree.path.clone(),
                 ticket: Some(worktree),

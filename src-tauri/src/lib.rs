@@ -15,6 +15,7 @@ pub mod db;
 pub mod environment;
 pub mod error;
 pub mod file_links;
+pub mod files;
 pub mod filesystem;
 pub mod git;
 pub mod implementation;
@@ -187,6 +188,9 @@ pub fn run() {
             commands::changes::changes_load,
             commands::changes::changes_file_diff,
             commands::changes::changes_file_lines,
+            commands::files::files_tree,
+            commands::files::files_ignored_children,
+            commands::files::files_read,
             commands::git::git_status,
             commands::git::git_branches,
             commands::git::git_commit,

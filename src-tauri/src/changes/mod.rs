@@ -8,7 +8,7 @@ pub mod parse;
 pub mod scan;
 pub mod sources;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread::{self, ScopedJoinHandle};
@@ -28,9 +28,9 @@ use crate::worktrees::{
 };
 
 /// Größere untracked Dateien gelten als binär: ihre Zeilen zu zählen hieße, sie ganz zu lesen.
-const MAX_UNTRACKED_BYTES: u64 = 8 * 1024 * 1024;
+pub(crate) const MAX_UNTRACKED_BYTES: u64 = 8 * 1024 * 1024;
 /// So viele Bytes prüft auch Git auf ein NUL-Byte, bevor es eine Datei binär nennt.
-const BINARY_PROBE_BYTES: usize = 8000;
+pub(crate) const BINARY_PROBE_BYTES: usize = 8000;
 const WORKTREE_MISSING: &str =
     "Worktree fehlt — die nächste Nachricht an den Agenten legt ihn neu an.";
 const THREAD_FAILED: &str = "interner Fehler beim Lesen der Changes";
@@ -38,6 +38,7 @@ const HEAD: &str = "HEAD";
 const NO_OWN_COMMITS: &str = "Die Datei hat keine eigenen Commits in dieser Ansicht";
 const NO_TEXT: &str = "Kein Text: Binärdatei, größer als 8 MB oder nicht mehr vorhanden.";
 const SHORT_COMMIT_CHARS: usize = 7;
+const MS_PER_SECOND: f64 = 1000.0;
 /// Basis eines Ticket-Worktrees, wenn sie sich nicht bestimmen ließ; der Eintrag trägt dann den Fehler.
 const UNKNOWN_BASE: &str = "unbekannt";
 
@@ -79,8 +80,7 @@ pub fn load(input: &ChangesInput) -> SessionChanges {
                 // Ein panischer Thread trifft nur seinen Eintrag, nicht die ganze Ansicht.
                 let changes = handle.join().unwrap_or_else(|_| {
                     failed(
-                        source.key.clone(),
-                        source.name.clone(),
+                        source,
                         branch_label(&source.repository),
                         source.repository.base_ref.clone(),
                         THREAD_FAILED.to_owned(),
@@ -106,7 +106,11 @@ fn is_plain_folder(repository: &SessionRepository) -> bool {
 
 /// Geschriebene Dateien der Reichweite unter `dir`.
 pub(crate) fn has_touched_under(dir: &Path, own: &Ownership) -> bool {
-    let prefix = format!("{}\\", attribution::normalize_path(&dir.to_string_lossy()));
+    let prefix = format!(
+        "{}{}",
+        attribution::normalize_path(&dir.to_string_lossy()),
+        attribution::NORMALIZED_SEPARATOR
+    );
     own.touched
         .keys()
         .any(|path: &String| path.starts_with(&prefix))
@@ -124,15 +128,7 @@ fn read_source(source: &Source, own: &Ownership) -> RepositoryChanges {
                     .any(|entry: &scan::RevListEntry| own.commits.contains(&entry.id))
             });
         if !has_own_commits {
-            return RepositoryChanges {
-                key: source.key.clone(),
-                name: source.name.clone(),
-                branch: String::new(),
-                base_ref: source.repository.base_ref.clone(),
-                commit_count: 0,
-                files: Vec::new(),
-                error: None,
-            };
+            return empty_entry(source, String::new(), source.repository.base_ref.clone());
         }
     }
     if let Some(error) = &source.error {
@@ -215,13 +211,13 @@ fn load_repository(source: &Source, own: &Ownership) -> RepositoryChanges {
     };
     match read_changes(&source.dir, &base, own) {
         Ok((files, commit_count)) => RepositoryChanges {
-            key: source.key.clone(),
-            name: source.name.clone(),
-            branch: branch_label(repository),
-            base_ref: repository.base_ref.clone(),
             commit_count,
             files,
-            error: None,
+            ..empty_entry(
+                source,
+                branch_label(repository),
+                repository.base_ref.clone(),
+            )
         },
         Err(error) => failed_source(source, error.to_string()),
     }
@@ -230,32 +226,20 @@ fn load_repository(source: &Source, own: &Ownership) -> RepositoryChanges {
 /// Ein Ticket-Worktree gegen seine Abzweigung vom Standard-Branch, mit den Änderungen der
 /// Reichweite auf dem Branch.
 fn load_ticket(source: &Source, worktree: &TicketWorktree, own: &Ownership) -> RepositoryChanges {
-    let key = source.key.clone();
-    let name = source.name.clone();
     let branch = ticket_branch_label(worktree);
     let (base_commit, base_ref) = match base_of(source) {
         Ok(base) => base,
         Err(error) => {
-            return failed(
-                key,
-                name,
-                branch,
-                UNKNOWN_BASE.to_owned(),
-                error.to_string(),
-            );
+            return failed(source, branch, UNKNOWN_BASE.to_owned(), error.to_string());
         }
     };
     match read_changes(&worktree.path, &base_commit, own) {
         Ok((files, commit_count)) => RepositoryChanges {
-            key,
-            name,
-            branch,
-            base_ref,
             commit_count,
             files,
-            error: None,
+            ..empty_entry(source, branch, base_ref)
         },
-        Err(error) => failed(key, name, branch, base_ref, error.to_string()),
+        Err(error) => failed(source, branch, base_ref, error.to_string()),
     }
 }
 
@@ -280,12 +264,18 @@ fn read_changes(
     let committed = committed_stats(worktree, &own_files)?;
     let all = all_stats(worktree, &own_files, &dirty, &uncommitted)?;
     let commit_count = attribution::own_commit_count(&commits, &own.commits);
+    let commit_times: HashMap<&str, i64> = commits
+        .iter()
+        .map(|commit: &CommitInfo| (commit.id.as_str(), commit.time))
+        .collect();
 
     let mut files: BTreeMap<String, FileChange> = BTreeMap::new();
     for path in all.keys().chain(committed.keys()).chain(uncommitted.keys()) {
         if files.contains_key(path) {
             continue;
         }
+        let last_commit = own_files.get(path).map(|file: &OwnFile| file.to.clone());
+        let changed_at = changed_at(worktree, path, last_commit.as_deref(), &commit_times, own);
         files.insert(
             path.clone(),
             FileChange {
@@ -293,10 +283,33 @@ fn read_changes(
                 all: all.get(path).cloned(),
                 committed: committed.get(path).cloned(),
                 uncommitted: uncommitted.get(path).cloned(),
+                last_commit,
+                changed_at,
             },
         );
     }
     Ok((files.into_values().collect(), commit_count))
+}
+
+/// Wann die Reichweite die Datei zuletzt geändert hat, in ms: das Spätere aus der Committer-Zeit des
+/// letzten eigenen Commits und dem letzten Schreiben des Agenten; ohne beides 0.
+fn changed_at(
+    worktree: &Path,
+    path: &str,
+    last_commit: Option<&str>,
+    commit_times: &HashMap<&str, i64>,
+    own: &Ownership,
+) -> f64 {
+    let committed_at = last_commit
+        .and_then(|commit: &str| commit_times.get(commit))
+        .map_or(0.0, |seconds: &i64| *seconds as f64 * MS_PER_SECOND);
+    let absolute = worktree.join(native_path(path));
+    let written_at = own
+        .touched
+        .get(&attribution::normalize_path(&absolute.to_string_lossy()))
+        .copied()
+        .unwrap_or(0.0);
+    committed_at.max(written_at)
 }
 
 /// Alles Uncommittete im Arbeitsordner, egal von wem: `HEAD` → Arbeitsverzeichnis und die untracked
@@ -629,7 +642,7 @@ fn line_count(content: &str) -> u32 {
 }
 
 /// Git hält eine Datei für binär, wenn in den ersten Bytes ein NUL steht.
-fn is_binary(content: &[u8]) -> bool {
+pub(crate) fn is_binary(content: &[u8]) -> bool {
     content[..content.len().min(BINARY_PROBE_BYTES)].contains(&0)
 }
 
@@ -694,28 +707,32 @@ fn branch_label(repository: &SessionRepository) -> String {
 
 fn failed_source(source: &Source, error: String) -> RepositoryChanges {
     failed(
-        source.key.clone(),
-        source.name.clone(),
+        source,
         branch_label(&source.repository),
         source.repository.base_ref.clone(),
         error,
     )
 }
 
-fn failed(
-    key: String,
-    name: String,
-    branch: String,
-    base_ref: String,
-    error: String,
-) -> RepositoryChanges {
+fn failed(source: &Source, branch: String, base_ref: String, error: String) -> RepositoryChanges {
     RepositoryChanges {
-        key,
-        name,
+        error: Some(error),
+        ..empty_entry(source, branch, base_ref)
+    }
+}
+
+/// Ein Eintrag ohne Dateien und Commits, mit Schlüssel, Namen und Gruppe aus dem `Source`.
+fn empty_entry(source: &Source, branch: String, base_ref: String) -> RepositoryChanges {
+    RepositoryChanges {
+        key: source.key.clone(),
+        name: source.name.clone(),
+        group: source.group.clone(),
+        group_name: source.group_name.clone(),
+        is_main: source.is_main,
         branch,
         base_ref,
         commit_count: 0,
         files: Vec::new(),
-        error: Some(error),
+        error: None,
     }
 }

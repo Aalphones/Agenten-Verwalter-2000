@@ -6,7 +6,20 @@ export type RepositoryChanges = {
  * Kennung für Filter und Diff: `"<Position>"` für ein Session-Repository,
  * `"<Position>/<Ordner>"` für einen Ticket-Worktree.
  */
-key: string, name: string, branch: string, baseRef: string, 
+key: string, name: string, 
+/**
+ * Repository, zu dem der Eintrag gehört (`sources::Source::group`); gleiche Gruppe heißt
+ * derselbe Knoten in der Ansicht „Dateien“.
+ */
+group: string, 
+/**
+ * Name des Repositorys ohne Worktree-Ordner.
+ */
+groupName: string, 
+/**
+ * Der Checkout des Repositorys selbst, kein Ticket-Worktree.
+ */
+isMain: boolean, branch: string, baseRef: string, 
 /**
  * Eigene Commits der Reichweite von der Basis bis `HEAD`, ohne Merge-Commits.
  */

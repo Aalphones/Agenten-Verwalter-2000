@@ -249,6 +249,40 @@ pub fn untracked_files(worktree: &Path) -> Result<String, CommandError> {
     )
 }
 
+/// `git ls-files -z -s` — alle versionierten Einträge als `<Modus> <Objekt> <Stufe>\t<Pfad>\0`.
+pub fn ls_files_staged(dir: &Path) -> Result<String, CommandError> {
+    run_raw(dir, &args(&["ls-files", "-z", "-s"]))
+}
+
+/// `git ls-files -z --others --exclude-standard` — neue, nicht ignorierte Dateien.
+pub fn ls_files_others(dir: &Path) -> Result<String, CommandError> {
+    run_raw(
+        dir,
+        &args(&["ls-files", "-z", "--others", "--exclude-standard"]),
+    )
+}
+
+/// `git status --porcelain=v1 -z --ignored --untracked-files=normal` — ignorierte Einträge mit
+/// Präfix `!! `, ein ganz ignorierter Ordner als ein Eintrag mit `/` am Ende. Liest nur:
+/// `git_command` setzt `GIT_OPTIONAL_LOCKS=0`, der Index wird nicht aufgefrischt (ADR 006).
+pub fn status_ignored(dir: &Path) -> Result<String, CommandError> {
+    run_raw(
+        dir,
+        &args(&[
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--ignored",
+            "--untracked-files=normal",
+        ]),
+    )
+}
+
+/// `git check-ignore -q -- <path>` — ob Git `path` ignoriert.
+pub fn is_ignored(dir: &Path, path: &str) -> Result<bool, CommandError> {
+    exit_means_yes_or_no(dir, &args(&["check-ignore", "-q", "--", path]))
+}
+
 /// `git rev-list --reverse --topo-order --no-merges --timestamp --parents <from>..HEAD`
 pub fn commits_since(worktree: &Path, from: &str) -> Result<String, CommandError> {
     let range = format!("{from}..HEAD");

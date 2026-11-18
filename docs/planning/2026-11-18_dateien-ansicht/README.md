@@ -6,7 +6,7 @@ Ziel: Der Reiter „Changes“ wird zum Reiter „Dateien“. Links steht je Rep
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Kern: Repositories zusammenlegen, Baum und Dateiinhalt lesen | [phase-1-kern-baum.md](phase-1-kern-baum.md) | heikel | pending |
+| 1 | Kern: Repositories zusammenlegen, Baum und Dateiinhalt lesen | [phase-1-kern-baum.md](phase-1-kern-baum.md) | heikel | complete |
 | 2 | Kern: Verlauf je Session und Diff eines Commits | [phase-2-kern-verlauf.md](phase-2-kern-verlauf.md) | standard | pending |
 | 3 | Reiter „Dateien“: Baum, Leiste, Übersicht mit Verlauf | [phase-3-reiter-baum.md](phase-3-reiter-baum.md) | heikel | pending |
 | 4 | Datei ansehen: Änderung, ganze Datei, Schritte | [phase-4-datei.md](phase-4-datei.md) | standard | pending |

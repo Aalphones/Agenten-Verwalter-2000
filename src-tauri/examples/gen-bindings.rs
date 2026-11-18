@@ -29,6 +29,7 @@ use verwalter_lib::{
         BrokenLink, EnvironmentStatus, LinkCheck, MirrorDiff, MirrorKind, MirrorRun, MirrorState,
     },
     error::CommandError,
+    files::model::{DirEntry, FileContent, IgnoredEntry, RepoTree, TreeFile},
     git::model::{
         GitBranch, GitBusySession, GitEntryStatus, GitForeignFile, GitLog, GitLogCommit,
         GitOpenTarget, GitOperation, GitOwnCommit, GitSessionStatus, GitSwitchMode,
@@ -79,6 +80,11 @@ fn main() -> Result<(), ts_rs::ExportError> {
         Config::new().with_out_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../src/lib/bindings"));
     AppInfo::export_all(&cfg)?;
     CommandError::export_all(&cfg)?;
+    TreeFile::export_all(&cfg)?;
+    IgnoredEntry::export_all(&cfg)?;
+    RepoTree::export_all(&cfg)?;
+    DirEntry::export_all(&cfg)?;
+    FileContent::export_all(&cfg)?;
     ModelId::export_all(&cfg)?;
     Effort::export_all(&cfg)?;
     Mode::export_all(&cfg)?;
