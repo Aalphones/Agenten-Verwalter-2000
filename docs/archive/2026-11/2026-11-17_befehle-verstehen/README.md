@@ -1,6 +1,6 @@
 # Plan: Befehle verstehen – Beschreibung, Restdauer, Live-Fortschritt, lesbarer Verlauf
 
-Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt; lange Läufe zeigen Dauer, Fortschritt, Restdauer und die letzte Ausgabezeile – in der Statuszeile, an der Befehlszeile im Chat, im Hintergrund-Panel und in der Seitenleiste. Figurenpakete bekommen ein Fach „Langer Lauf“ und drei Bewegungen, die den Fortschritt zeigen. Im Verlauf sagt jeder Werkzeug-Block, was getan wurde und wozu. Grundsatz: [ADR 066](../../decisions/066-befehle-verstehen.md). Entwürfe (verbindlich): [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html), [artifacts/entwurf-verlauf-lesbar.html](artifacts/entwurf-verlauf-lesbar.html).
+Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt; lange Läufe zeigen Dauer, Fortschritt, Restdauer und die letzte Ausgabezeile – in der Statuszeile, an der Befehlszeile im Chat, im Hintergrund-Panel und in der Seitenleiste. Figurenpakete bekommen ein Fach „Langer Lauf“ und drei Bewegungen, die den Fortschritt zeigen. Im Verlauf sagt jeder Werkzeug-Block, was getan wurde und wozu. Grundsatz: [ADR 066](../../../decisions/066-befehle-verstehen.md). Entwürfe (verbindlich): [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html), [artifacts/entwurf-verlauf-lesbar.html](artifacts/entwurf-verlauf-lesbar.html).
 
 ## Phasen
 
@@ -183,10 +183,20 @@ Zweck: Bevor du eine Folge von Werkzeug-Aufrufen beginnst, schreib eine einzelne
 
 ## Summary
 
+Der Verwalter zeigt statt des rohen Shell-Befehls die Beschreibung, merkt sich Laufzeiten (Migration 021) und schätzt die Restdauer, liest den Live-Fortschritt aus der Ausgabedatei laufender Befehle und zeigt ihn zweizeilig in Statuszeile, Seitenleiste und Befehlszeile. Figurenpakete haben das Fach „Langer Lauf“ und drei Bewegungen mit Fortschritt. Im Verlauf trägt ein Werkzeug-Block die kurze Zeile des Agenten als Kopf und eine Was-Zeile mit Zählung je Art; alte Sessions zeigen dasselbe aus ihren Einträgen.
+
 ## Files touched
+
+`src-tauri/src/agents/claude/` (translate, process), `src-tauri/src/runs/`, `src-tauri/src/db/` (Migration 021), `src/features/runs/`, `src/features/chat/` (buildBlocks, ToolGroup, toolSummary), `src/features/skins/` (Fach „Langer Lauf“, SlotThumb, FrozenImage), `docs/glossary.md`, `docs/code-map.md`.
 
 ## Commits
 
+530f298, 2e54824, 5a261a2, 52e2262, f165b68, 6b37292, 7a3ff70.
+
 ## Deviations from plan
 
+Keine am Kontrakt; ADR 066 unverändert.
+
 ## Follow-ups
+
+Die Oberfläche der Phasen 5 bis 7 ist nur per `pnpm check` belegt, nicht in der echten App gelaufen. Zu messen im Betrieb: wie viele Werkzeug-Blöcke einer Session mit drei Werkzeug-Folgen einen Kopf tragen; ob Zweckzeilen vom Abgleich (ADR 036) als „ohne Fundstelle“ markiert werden; ob Aussehen und Umbruch der Köpfe dem Entwurf entsprechen.
