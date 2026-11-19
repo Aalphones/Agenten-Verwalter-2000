@@ -2,6 +2,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::runs::model::RunProgress;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum BackgroundKind {
@@ -63,6 +65,15 @@ pub struct BackgroundItem {
     /// Was der Befehl bewirkt, in den Worten des Agenten; `title` bleibt der Befehl.
     #[serde(default)]
     pub description: Option<String>,
+    /// Schätzung der Dauer beim Start, aus früheren Läufen; Millisekunden.
+    #[serde(default)]
+    pub expected_ms: Option<f64>,
+    /// Fortschritt, solange der Befehl läuft.
+    #[serde(default)]
+    pub progress: Option<RunProgress>,
+    /// Letzte Ausgabezeile, höchstens 160 Zeichen.
+    #[serde(default)]
+    pub last_line: Option<String>,
 }
 
 impl BackgroundItem {

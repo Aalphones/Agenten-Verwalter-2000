@@ -31,6 +31,7 @@ pub mod prompt_cache;
 pub mod repositories;
 pub mod retro;
 pub mod review;
+pub mod runs;
 pub mod sessions;
 pub mod settings;
 pub mod side;
@@ -64,6 +65,21 @@ use voice::VoiceService;
 
 const DATABASE_FILE: &str = "verwalter.db";
 
+/// Füllt das Laufzeit-Gedächtnis einmalig aus den alten Hintergrund-Einträgen. Ein Fehler geht
+/// ins Protokoll, die App startet weiter.
+fn start_runs_backfill(database: Arc<Database>) {
+    let spawned = std::thread::Builder::new()
+        .name("runs-backfill".to_owned())
+        .spawn(move || {
+            if let Err(error) = database.with(runs::backfill::run) {
+                eprintln!("Laufzeit-Gedächtnis nicht übernommen: {error}");
+            }
+        });
+    if let Err(error) = spawned {
+        eprintln!("Laufzeit-Gedächtnis nicht übernommen: {error}");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -78,6 +94,7 @@ pub fn run() {
             if let Err(error) = skins::purge_on_start(app.handle(), &database) {
                 eprintln!("Skin-Pakete nicht aufgeräumt: {error}");
             }
+            start_runs_backfill(Arc::clone(&database));
             let registry = SessionRegistry::restore(app.handle(), Arc::clone(&database))?;
             app.manage(registry);
             skins::icon::apply_with(app.handle(), &database);

@@ -69,6 +69,7 @@ use crate::review::{
     self,
     model::{CommentTarget, ReviewComment},
 };
+use crate::runs::{self, model::RunStatus};
 use crate::sessions::auto_handoff::{
     self, AUTO_HANDOFF_CHAIN_LIMIT, AUTO_HANDOFF_DELAY, FollowUp, ScheduledHandoff,
 };
@@ -400,6 +401,10 @@ struct Outbox {
     entries: Vec<ChatEntry>,
     summary_dirty: bool,
     summary: Option<SessionSummary>,
+    /// IDs neu gestarteter Einträge der Art Befehl oder Prozess; `persist` schätzt ihre Dauer.
+    run_starts: Vec<String>,
+    /// Erfolgreiche Läufe als (Befehl, Dauer ms, Ende ms) fürs Laufzeit-Gedächtnis.
+    run_records: Vec<(String, f64, f64)>,
     lines: Vec<String>,
     process: Option<Arc<ClaudeProcess>>,
     retire: bool,
@@ -2797,6 +2802,31 @@ impl SessionState {
             started_at: oldest.started_at,
             count,
             description: oldest.description.clone(),
+            expected_ms: oldest.expected_ms,
+            progress: oldest.progress,
+            last_line: oldest.last_line.clone(),
+        })
+    }
+
+    /// Der älteste laufende Vordergrund-Befehl des Hauptagenten.
+    fn running_command(&self) -> Option<RunStatus> {
+        let oldest = self
+            .background
+            .iter()
+            .filter(|item: &&BackgroundItem| {
+                item.kind == BackgroundKind::Command && item.is_running()
+            })
+            .min_by(|left: &&BackgroundItem, right: &&BackgroundItem| {
+                left.started_at.total_cmp(&right.started_at)
+            })?;
+        Some(RunStatus {
+            tool_use_id: oldest.tool_use_id.clone(),
+            description: oldest.description.clone(),
+            command: oldest.title.clone(),
+            started_at: oldest.started_at,
+            expected_ms: oldest.expected_ms,
+            progress: oldest.progress,
+            last_line: oldest.last_line.clone(),
         })
     }
 
@@ -3432,6 +3462,9 @@ impl SessionState {
     }
 
     fn start_background(&mut self, outbox: &mut Outbox, new: NewBackground) {
+        if matches!(new.kind, BackgroundKind::Command | BackgroundKind::Process) {
+            outbox.run_starts.push(new.id.clone());
+        }
         self.background.push(BackgroundItem {
             id: new.id,
             tool_use_id: new.tool_use_id,
@@ -3450,6 +3483,9 @@ impl SessionState {
             result: None,
             task_id: None,
             description: new.description,
+            expected_ms: None,
+            progress: None,
+            last_line: None,
         });
         self.touch_background(outbox, self.background.len() - 1);
     }
@@ -3473,9 +3509,17 @@ impl SessionState {
             BackgroundState::Failed
         };
         item.exit_code = exit_code;
-        item.ended_at = Some(now_ms());
+        let ended_at = now_ms();
+        item.ended_at = Some(ended_at);
+        if exit_code == Some(0) {
+            outbox
+                .run_records
+                .push((item.title.clone(), ended_at - item.started_at, ended_at));
+        }
         let (tail, truncated) = tail_text(output, MAX_COMMAND_OUTPUT_BYTES);
         outbox.outputs.push((item.id.clone(), tail, truncated));
+        // `touch_background` meldet Befehle nicht an die Zusammenfassung; `running_command` hängt aber an ihnen.
+        outbox.summary_dirty = true;
         self.touch_background(outbox, index);
     }
 
@@ -3539,7 +3583,8 @@ impl SessionState {
             TaskEnd::Failed => BackgroundState::Failed,
             TaskEnd::Stopped => BackgroundState::Stopped,
         };
-        item.ended_at = Some(now_ms());
+        let ended_at = now_ms();
+        item.ended_at = Some(ended_at);
         if output_file.is_some() {
             item.output_file = output_file;
         }
@@ -3550,6 +3595,13 @@ impl SessionState {
                     (None, TaskEnd::Completed) => Some(0),
                     (code, _) => code,
                 };
+                if end == TaskEnd::Completed && item.exit_code == Some(0) {
+                    outbox.run_records.push((
+                        item.title.clone(),
+                        ended_at - item.started_at,
+                        ended_at,
+                    ));
+                }
             }
             BackgroundKind::Subagent => {
                 if item.result.is_none() && end == TaskEnd::Completed {
@@ -3853,8 +3905,12 @@ fn update<R>(
     let result = {
         let mut state = session.lock_loaded()?;
         let result = change(&mut state, &mut outbox);
+        // Ein neuer Befehl ändert `running_command`, das `summarize` liest.
+        if !outbox.run_starts.is_empty() {
+            outbox.summary_dirty = true;
+        }
         // Auch bei einem Fehler: die Closure kann den Zustand schon verändert haben.
-        persist(session, &mut state, &outbox);
+        persist(session, &mut state, &mut outbox);
         if outbox.summary_dirty {
             outbox.summary = Some(summarize(session, &state));
         }
@@ -3933,10 +3989,13 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
 /// Schreibt, was der `Outbox` an Änderungen trägt, in die Datenbank — unter der Session-Sperre,
 /// damit zwei Änderungen derselben Session nicht in vertauschter Reihenfolge ankommen.
 /// Ein Fehler landet im Protokoll der Session; die Session läuft weiter.
-fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
+fn persist(session: &Session, state: &mut SessionState, outbox: &mut Outbox) {
     if session.deleted.load(Ordering::SeqCst) {
         return;
     }
+    // Geschätzt wird hier, weil nur `persist` den Zustand und die Datenbank zugleich hält — und
+    // vor dem Schreiben, damit die gespeicherte Nutzlast die Schätzung schon trägt.
+    estimate_run_starts(session, state, outbox);
     let saved = session.database.with(|connection| {
         // Erst die Session, dann ihre Einträge: die Einträge verweisen auf die Zeile.
         if outbox.summary_dirty {
@@ -3972,6 +4031,72 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &Outbox) {
     });
     if let Err(error) = saved {
         state.push_log(format!("Speichern fehlgeschlagen: {error}"));
+    }
+    record_runs(session, state, outbox);
+}
+
+/// Trägt die Schätzung in neu gestartete Einträge ein — im Zustand und in den Kopien der `Outbox`.
+/// Ein Fehler bricht das Speichern der übrigen Änderungen nicht ab.
+fn estimate_run_starts(session: &Session, state: &mut SessionState, outbox: &mut Outbox) {
+    if outbox.run_starts.is_empty() {
+        return;
+    }
+    let estimated = session.database.with(|connection| {
+        let mut found: Vec<(String, f64)> = Vec::new();
+        for id in &outbox.run_starts {
+            let Some(item) = state
+                .background
+                .iter()
+                .find(|item: &&BackgroundItem| item.id == *id)
+            else {
+                continue;
+            };
+            if let Some(expected_ms) = runs::estimate(connection, &session.project_id, &item.title)?
+            {
+                found.push((id.clone(), expected_ms));
+            }
+        }
+        Ok(found)
+    });
+    let found = match estimated {
+        Ok(found) => found,
+        Err(error) => {
+            state.push_log(format!("Schätzung fehlgeschlagen: {error}"));
+            return;
+        }
+    };
+    for (id, expected_ms) in found {
+        for item in state
+            .background
+            .iter_mut()
+            .chain(outbox.background.iter_mut())
+        {
+            if item.id == id {
+                item.expected_ms = Some(expected_ms);
+            }
+        }
+    }
+}
+
+/// Merkt die erfolgreichen Läufe dieser Änderung; ein Fehler bleibt im Protokoll der Session.
+fn record_runs(session: &Session, state: &mut SessionState, outbox: &Outbox) {
+    if outbox.run_records.is_empty() {
+        return;
+    }
+    let recorded = session.database.with(|connection| {
+        for (command, duration_ms, finished_at) in &outbox.run_records {
+            runs::record(
+                connection,
+                &session.project_id,
+                command,
+                *duration_ms,
+                *finished_at,
+            )?;
+        }
+        Ok(())
+    });
+    if let Err(error) = recorded {
+        state.push_log(format!("Lauf nicht gemerkt: {error}"));
     }
 }
 
@@ -4012,6 +4137,7 @@ fn summarize(session: &Session, state: &SessionState) -> SessionSummary {
         auto_handoff: state.auto_handoff.clone(),
         limit_resume_at: state.limit_resume_at,
         awaited_script: state.awaited_script(),
+        running_command: state.running_command(),
         thinking_since: state.thinking_since,
         station_of: state.station_of.clone(),
         inquiry_of: state.inquiry_of.clone(),

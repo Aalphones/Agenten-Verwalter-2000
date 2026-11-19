@@ -4,6 +4,7 @@ use ts_rs::TS;
 
 use crate::agents::event::{ChatEntry, Effort, Mode, ModelId};
 use crate::prompt_cache::model::PromptCache;
+use crate::runs::model::{RunProgress, RunStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -66,6 +67,8 @@ pub struct SessionSummary {
     pub limit_resume_at: Option<f64>,
     /// Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
     pub awaited_script: Option<AwaitedScript>,
+    /// Der älteste laufende Vordergrund-Befehl des Hauptagenten; nur im Speicher, `None` ohne.
+    pub running_command: Option<RunStatus>,
     /// Zeitpunkt in ms seit Epoche, seit dem der Agent denkt und noch nichts anderes tut; nur im Speicher, `None` ohne Denken.
     pub thinking_since: Option<f64>,
     /// Umsetzung, deren Station diese Session ist (ADR 048); die Sidebar zeigt sie nicht als Zeile.
@@ -161,6 +164,13 @@ pub struct AwaitedScript {
     /// Befehlsbeschreibung des ältesten laufenden Eintrags, wenn es eine gibt.
     #[serde(default)]
     pub description: Option<String>,
+    /// Schätzung des ältesten laufenden Eintrags, Millisekunden.
+    #[serde(default)]
+    pub expected_ms: Option<f64>,
+    #[serde(default)]
+    pub progress: Option<RunProgress>,
+    #[serde(default)]
+    pub last_line: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

@@ -6,6 +6,7 @@ import type { HandoffLine } from "./HandoffLine";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
 import type { PromptCache } from "./PromptCache";
+import type { RunStatus } from "./RunStatus";
 import type { SessionStatus } from "./SessionStatus";
 
 export type SessionSummary = { id: string, name: string, 
@@ -74,6 +75,10 @@ limitResumeAt: number | null,
  * Antwort abgegeben, ein Hintergrund-Befehl ohne lokale Adresse läuft noch (ADR 032); `status` bleibt `Completed`.
  */
 awaitedScript: AwaitedScript | null, 
+/**
+ * Der älteste laufende Vordergrund-Befehl des Hauptagenten; nur im Speicher, `None` ohne.
+ */
+runningCommand: RunStatus | null, 
 /**
  * Zeitpunkt in ms seit Epoche, seit dem der Agent denkt und noch nichts anderes tut; nur im Speicher, `None` ohne Denken.
  */

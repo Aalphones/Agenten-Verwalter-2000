@@ -9,6 +9,7 @@ pub mod implementations;
 pub mod migrations;
 pub mod projects;
 pub mod repositories;
+pub mod runs;
 pub mod session_commits;
 pub mod session_files;
 pub mod session_repositories;

@@ -54,6 +54,7 @@ use verwalter_lib::{
     repositories::model::{KnownRepository, RepositoryKind},
     retro::model::{RetroExport, RetroProgress},
     review::model::{CommentTarget, ReviewComment},
+    runs::model::{ProgressUnit, RunProgress, RunStatus},
     sessions::model::{
         AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionOverlap,
         SessionStatus, SessionSummary,
@@ -118,6 +119,9 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ToolDetail::export_all(&cfg)?;
     QuestionAnswer::export_all(&cfg)?;
     SessionStatus::export_all(&cfg)?;
+    ProgressUnit::export_all(&cfg)?;
+    RunProgress::export_all(&cfg)?;
+    RunStatus::export_all(&cfg)?;
     AwaitedScript::export_all(&cfg)?;
     PromptCache::export_all(&cfg)?;
     SessionSummary::export_all(&cfg)?;
