@@ -452,6 +452,16 @@ pub enum AgentEvent {
         output: String,
         exit_code: Option<i32>,
     },
+    /// Vorgang der Kommandozeile zu einem laufenden Vordergrund-Befehl.
+    CommandTask {
+        tool_use_id: String,
+        task_id: String,
+    },
+    /// Ein Vordergrund-Befehl hat sein Zeitlimit überschritten und wandert in den Hintergrund.
+    CommandBackgrounded {
+        tool_use_id: String,
+        task_id: String,
+    },
     /// Ein Bash- oder PowerShell-Aufruf mit `git` im Befehl ist beendet — vom Hauptagenten oder
     /// einem Subagenten, nicht im Hintergrund. Zeiten in Millisekunden seit 1970, gemessen beim
     /// Eingang.

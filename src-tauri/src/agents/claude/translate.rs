@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 use super::protocol::{
     AssistantMessage, CacheCreation, ContentBlock, ControlRequestLine, ControlResponseLine,
     Incoming, MessageLine, ModelUsage, PermissionDenialLine, RateLimitLine, ResultLine, SystemLine,
-    Usage, UserContent, UserMessage, WindowLine,
+    TaskPatch, Usage, UserContent, UserMessage, WindowLine,
 };
 use super::{mcp, stats};
 use crate::agents::event::{
@@ -59,6 +59,9 @@ pub struct Translator {
     /// der beiden ist nicht belegt, ohne Eintrag gingen Ausgabedatei und Modell verloren.
     /// `task_started` schickt sie noch einmal hinterher.
     early_task_events: HashMap<String, Vec<AgentEvent>>,
+    /// Vorgänge von Vordergrund-Befehlen (`task_id` → `tool_use_id`), bis ihr Ende oder ihr Wechsel
+    /// in den Hintergrund kommt. Sie werden kein eigener Hintergrund-Eintrag.
+    foreground_tasks: HashMap<String, String>,
     /// Laufende Bash-/PowerShell-Aufrufe mit `git` im Befehl (Hauptagent und Subagenten, nur
     /// Vordergrund) nach `tool_use_id` → Eingang in ms; ihr Ergebnis schließt das Zeitfenster für
     /// die Commit-Suche (ADR 014).
@@ -113,8 +116,17 @@ impl Translator {
                 vec![AgentEvent::ThinkingStarted]
             }
             "task_started" => self.task_started(system),
+            "task_updated" => self.task_updated(system),
             "task_progress" => task_progress(system).into_iter().collect(),
-            "task_notification" => task_ended(system).into_iter().collect(),
+            "task_notification" => {
+                // Ende eines Vordergrund-Befehls: das meldet sein Werkzeug-Ergebnis.
+                if let Some(task_id) = &system.task_id
+                    && self.foreground_tasks.remove(task_id).is_some()
+                {
+                    return Vec::new();
+                }
+                task_ended(system).into_iter().collect()
+            }
             "compact_boundary" => {
                 self.awaiting_compact_summary = true;
                 vec![compacted(system)]
@@ -144,6 +156,20 @@ impl Translator {
             Some(TASK_TYPE_AGENT) => TaskKind::Subagent,
             _ => return Vec::new(),
         };
+        let is_foreground_command = kind == TaskKind::Process
+            && system.is_backgrounded == Some(false)
+            && self
+                .bash_calls
+                .get(&tool_use_id)
+                .is_some_and(|call: &BashCall| !call.background);
+        if is_foreground_command {
+            self.foreground_tasks
+                .insert(task_id.clone(), tool_use_id.clone());
+            return vec![AgentEvent::CommandTask {
+                tool_use_id,
+                task_id,
+            }];
+        }
         let description = system.description.unwrap_or_default();
         let title = match kind {
             TaskKind::Process => self.process_title(&tool_use_id, description),
@@ -170,6 +196,31 @@ impl Translator {
                 .unwrap_or_default(),
         );
         events
+    }
+
+    /// Ein Vordergrund-Befehl, der sein Zeitlimit überschreitet, läuft als Hintergrundprozess
+    /// weiter. Ab hier gilt er als Vorgang: sein Werkzeug-Ergebnis beendet ihn nicht mehr, sondern
+    /// liefert nur die Ausgabedatei. Kam das Ergebnis schon vorher, hat es den Befehl beendet; die
+    /// Session-Seite macht ihn dann wieder laufend.
+    fn task_updated(&mut self, system: SystemLine) -> Vec<AgentEvent> {
+        let is_backgrounded = system
+            .patch
+            .and_then(|patch: TaskPatch| patch.is_backgrounded)
+            == Some(true);
+        let Some(task_id) = system.task_id.filter(|_: &String| is_backgrounded) else {
+            return Vec::new();
+        };
+        let Some(tool_use_id) = self.foreground_tasks.remove(&task_id) else {
+            return Vec::new();
+        };
+        // Ohne Eintrag in `bash_calls` erkennt `handle_user` den Aufruf über `started_tasks` als
+        // Vorgang.
+        self.bash_calls.remove(&tool_use_id);
+        self.started_tasks.insert(tool_use_id.clone());
+        vec![AgentEvent::CommandBackgrounded {
+            tool_use_id,
+            task_id,
+        }]
     }
 
     /// Der Befehl des Bash-Aufrufs, sonst die `description` der Kommandozeile. Ein Aufruf aus dem

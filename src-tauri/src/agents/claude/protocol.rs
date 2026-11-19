@@ -58,6 +58,13 @@ pub struct SystemLine {
     pub output_file: Option<String>,
     #[serde(default, deserialize_with = "lenient")]
     pub usage: Option<TaskUsage>,
+    /// `task_started`: `false` bei einem Vordergrund-Befehl, dessen Vorgang die Kommandozeile
+    /// nach rund 2 s anlegt.
+    #[serde(default, deserialize_with = "lenient")]
+    pub is_backgrounded: Option<bool>,
+    /// `task_updated`: die geänderten Felder des Vorgangs.
+    #[serde(default, deserialize_with = "lenient")]
+    pub patch: Option<TaskPatch>,
     /// Ab hier: `compact_boundary`, `status`, `informational` und `model_refusal_fallback`.
     #[serde(default, deserialize_with = "lenient")]
     pub compact_metadata: Option<CompactMetadata>,
@@ -76,6 +83,14 @@ pub struct SystemLine {
 #[derive(Debug, Deserialize)]
 pub struct TaskUsage {
     pub tool_uses: Option<u32>,
+}
+
+/// `is_backgrounded: true`: ein Vordergrund-Befehl hat sein Zeitlimit überschritten und läuft im
+/// Hintergrund weiter.
+#[derive(Debug, Deserialize)]
+pub struct TaskPatch {
+    #[serde(default)]
+    pub is_backgrounded: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

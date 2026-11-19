@@ -107,6 +107,10 @@ const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
 const CONTEXT_CHANGED_EVENT: &str = "context://changed";
 const MAX_SUBAGENT_STEPS: usize = 200;
+/// Ordner neben dem Scratchpad der Kommandozeile mit der Ausgabe ihrer Vorgänge (gemessen mit
+/// Claude Code 2.1.322 unter Windows).
+const CLI_TASKS_DIR: &str = "tasks";
+const CLI_TASK_OUTPUT_SUFFIX: &str = ".output";
 /// Werkzeuge, mit denen der Agent Dateien schreibt (ADR 014).
 const WRITING_TOOLS: [&str; 4] = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
 const KILL_GRACE: Duration = Duration::from_secs(5);
@@ -323,6 +327,10 @@ struct SessionState {
     /// Befehle, Prozesse und Subagenten, nach `started_at` aufsteigend. Wird mit dem Verlauf geladen.
     background: Vec<BackgroundItem>,
     scratchpad_dir: Option<String>,
+    /// Ordner `tasks` neben dem Scratchpad, das die Kommandozeile selbst meldet: dort schreibt sie
+    /// die Ausgabe laufender Vordergrund-Befehle nach `<task_id>.output`. Nicht dokumentiert, nur
+    /// im Speicher.
+    cli_tasks_dir: Option<PathBuf>,
     /// Ordner `.artefakte` des Vorhabens, gesetzt bei jedem Agent-Start; daran erkennt `apply_event`
     /// Artefakte.
     artifacts_dir: Option<PathBuf>,
@@ -2059,6 +2067,13 @@ impl SessionRegistry {
             ..TextPreview::default()
         };
         match item.kind {
+            // Solange der Befehl läuft, schreibt die Kommandozeile seine Ausgabe in die Datei und
+            // löscht sie am Ende; danach gilt die gespeicherte Ausgabe.
+            BackgroundKind::Command if item.is_running() && item.output_file.is_some() => {
+                Ok(item.output_file.map_or(missing, |file: String| {
+                    read_tail(Path::new(&file), MAX_PREVIEW_BYTES)
+                }))
+            }
             BackgroundKind::Command => {
                 let stored = session.database.with(|connection| {
                     background_rows::load_output(connection, &session.id, &item.id)
@@ -2110,13 +2125,19 @@ impl SessionRegistry {
             app,
             &session,
             |state: &mut SessionState, outbox: &mut Outbox| {
-                let is_stoppable = state.background.iter().any(|item: &BackgroundItem| {
-                    item.id == item_id && item.kind != BackgroundKind::Command && item.is_running()
-                });
-                if !is_stoppable {
+                let task_ref: Option<String> = state
+                    .background
+                    .iter()
+                    .find(|item: &&BackgroundItem| {
+                        item.id == item_id
+                            && item.kind != BackgroundKind::Command
+                            && item.is_running()
+                    })
+                    .map(|item: &BackgroundItem| item.task_ref().to_owned());
+                let Some(task_ref) = task_ref else {
                     return Err(CommandError::Internal("Eintrag läuft nicht".to_owned()));
-                }
-                state.send_control(outbox, stop_task(item_id))
+                };
+                state.send_control(outbox, stop_task(&task_ref))
             },
         )
     }
@@ -2411,6 +2432,7 @@ impl SessionState {
             next_request: 0,
             background: Vec::new(),
             scratchpad_dir: None,
+            cli_tasks_dir: None,
             artifacts_dir: None,
             ticket_roots: Vec::new(),
             ticket_worktrees: Vec::new(),
@@ -3204,8 +3226,13 @@ impl SessionState {
                 self.mcp_answered(outbox, &request_id, Some(error));
             }
             // Den Ordner gibt die App vor (`use_scratchpad`); meldet die Kommandozeile doch einen
-            // eigenen, schreibt der Agent trotzdem in den vorgegebenen.
-            AgentEvent::ScratchpadDir(_) => {}
+            // eigenen, schreibt der Agent trotzdem in den vorgegebenen. Gebraucht wird der gemeldete
+            // nur für den Ordner `tasks` daneben, in dem die Ausgabe laufender Befehle liegt.
+            AgentEvent::ScratchpadDir(dir) => {
+                self.cli_tasks_dir = Path::new(&dir)
+                    .parent()
+                    .map(|parent: &Path| parent.join(CLI_TASKS_DIR));
+            }
             AgentEvent::CommandStarted {
                 tool_use_id,
                 command,
@@ -3222,6 +3249,14 @@ impl SessionState {
                 output,
                 exit_code,
             } => self.finish_command(outbox, &tool_use_id, &output, exit_code),
+            AgentEvent::CommandTask {
+                tool_use_id,
+                task_id,
+            } => self.attach_command_task(outbox, &tool_use_id, task_id),
+            AgentEvent::CommandBackgrounded {
+                tool_use_id,
+                task_id,
+            } => self.background_command(outbox, &tool_use_id, task_id),
             AgentEvent::TaskStarted {
                 task_id,
                 tool_use_id,
@@ -3230,7 +3265,7 @@ impl SessionState {
                 subagent_type,
             } => {
                 if self
-                    .background_index(|item: &BackgroundItem| item.id == task_id)
+                    .background_index(|item: &BackgroundItem| item.matches_task(&task_id))
                     .is_none()
                 {
                     let kind = match kind {
@@ -3250,7 +3285,7 @@ impl SessionState {
             }
             AgentEvent::TaskProgress { task_id, tool_uses } => {
                 if let Some(index) =
-                    self.background_index(|item: &BackgroundItem| item.id == task_id)
+                    self.background_index(|item: &BackgroundItem| item.matches_task(&task_id))
                 {
                     self.background[index].tool_uses = tool_uses;
                     self.touch_background(outbox, index);
@@ -3393,6 +3428,7 @@ impl SessionState {
             tool_uses: 0,
             steps: Vec::new(),
             result: None,
+            task_id: None,
         });
         self.touch_background(outbox, self.background.len() - 1);
     }
@@ -3422,6 +3458,45 @@ impl SessionState {
         self.touch_background(outbox, index);
     }
 
+    /// Der Befehl kennt ab hier seinen Vorgang und, falls der Ordner der Kommandozeile bekannt ist,
+    /// die Datei mit seiner laufenden Ausgabe.
+    fn attach_command_task(&mut self, outbox: &mut Outbox, tool_use_id: &str, task_id: String) {
+        let Some(index) = self.background_index(|item: &BackgroundItem| {
+            item.kind == BackgroundKind::Command && item.id == tool_use_id
+        }) else {
+            return;
+        };
+        let output_file = self.cli_tasks_dir.as_ref().map(|dir: &PathBuf| {
+            dir.join(format!("{task_id}{CLI_TASK_OUTPUT_SUFFIX}"))
+                .to_string_lossy()
+                .into_owned()
+        });
+        let item = &mut self.background[index];
+        item.task_id = Some(task_id);
+        if output_file.is_some() {
+            item.output_file = output_file;
+        }
+        self.touch_background(outbox, index);
+    }
+
+    /// Der Befehl läuft nach seinem Zeitlimit als Prozess weiter. Kam sein Werkzeug-Ergebnis schon
+    /// vorher, hat es ihn beendet — er wird deshalb wieder laufend. Ein unterbrochener bleibt
+    /// unterbrochen.
+    fn background_command(&mut self, outbox: &mut Outbox, tool_use_id: &str, task_id: String) {
+        let Some(index) = self.background_index(|item: &BackgroundItem| {
+            item.id == tool_use_id && item.state != BackgroundState::Interrupted
+        }) else {
+            return;
+        };
+        let item = &mut self.background[index];
+        item.kind = BackgroundKind::Process;
+        item.task_id = Some(task_id);
+        item.state = BackgroundState::Running;
+        item.ended_at = None;
+        item.exit_code = None;
+        self.touch_background(outbox, index);
+    }
+
     /// Nur ein laufender Eintrag endet: ein unterbrochener bleibt unterbrochen, auch wenn der
     /// Agent danach noch sein Ende meldet.
     fn end_task(
@@ -3432,9 +3507,9 @@ impl SessionState {
         summary: Option<String>,
         output_file: Option<String>,
     ) {
-        let Some(index) =
-            self.background_index(|item: &BackgroundItem| item.id == task_id && item.is_running())
-        else {
+        let Some(index) = self.background_index(|item: &BackgroundItem| {
+            item.matches_task(task_id) && item.is_running()
+        }) else {
             return;
         };
         let item = &mut self.background[index];

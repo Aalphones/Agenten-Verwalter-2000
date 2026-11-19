@@ -7,7 +7,7 @@ use ts_rs::TS;
 pub enum BackgroundKind {
     /// Bash-Aufruf des Hauptagenten im Vordergrund.
     Command,
-    /// Bash mit `run_in_background`.
+    /// Bash mit `run_in_background` oder ein Vordergrund-Befehl nach seinem Zeitlimit.
     Process,
     /// Aufruf des Werkzeugs `Agent`.
     Subagent,
@@ -57,11 +57,25 @@ pub struct BackgroundItem {
     /// Höchstens die letzten 200; ältere fallen weg.
     pub steps: Vec<SubagentStep>,
     pub result: Option<String>,
+    /// Vorgang der Kommandozeile zu einem Befehl; bei Prozess und Subagent steht er in `id`.
+    #[serde(default)]
+    pub task_id: Option<String>,
 }
 
 impl BackgroundItem {
     pub fn is_running(&self) -> bool {
         self.state == BackgroundState::Running
+    }
+
+    /// Gehört der Vorgang `task_id` zu diesem Eintrag — als eigene `id` oder als Vorgang eines
+    /// Befehls, auch eines, der in den Hintergrund gewandert ist.
+    pub fn matches_task(&self, task_id: &str) -> bool {
+        self.id == task_id || self.task_id.as_deref() == Some(task_id)
+    }
+
+    /// Die Kennung, unter der die Kommandozeile den Vorgang führt.
+    pub fn task_ref(&self) -> &str {
+        self.task_id.as_deref().unwrap_or(&self.id)
     }
 }
 

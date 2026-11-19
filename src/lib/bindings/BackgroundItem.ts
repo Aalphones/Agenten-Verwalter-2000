@@ -27,4 +27,8 @@ model: string | null, toolUses: number,
 /**
  * Höchstens die letzten 200; ältere fallen weg.
  */
-steps: Array<SubagentStep>, result: string | null, };
+steps: Array<SubagentStep>, result: string | null, 
+/**
+ * Vorgang der Kommandozeile zu einem Befehl; bei Prozess und Subagent steht er in `id`.
+ */
+taskId: string | null, };
