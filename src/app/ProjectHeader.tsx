@@ -5,7 +5,7 @@ import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import { useNow } from '@/features/background/useNow';
 import { mostUrgent } from '@/features/projects/projectStatus';
-import { headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
+import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { PROJECT_VIEWS, type ProjectView } from '@/stores/sessions';
@@ -47,7 +47,7 @@ export function ProjectHeader({
 }: ProjectHeaderProps): ReactElement {
   const [now, setNow] = useState<number>(() => Date.now());
   const urgent: SessionSummary | null = mostUrgent(sessions);
-  const scriptNow: number = useNow(urgent !== null && urgent.awaitedScript !== null);
+  const scriptNow: number = useNow(urgent !== null && activeRun(urgent) !== null);
   const isTicking: boolean = sessions.some(
     (session: SessionSummary) => session.runningSince !== null,
   );
@@ -92,7 +92,7 @@ export function ProjectHeader({
         {urgent !== null && (
           <span
             className={`session-header__status session-header__status--${headerStatus(urgent)}`}
-            title={urgent.awaitedScript?.description ?? urgent.awaitedScript?.title}
+            title={activeRun(urgent)?.target}
           >
             <StatusIcon status={headerStatus(urgent)} size={10} />
             <span>{headerStatusLabel(urgent, scriptNow)}</span>

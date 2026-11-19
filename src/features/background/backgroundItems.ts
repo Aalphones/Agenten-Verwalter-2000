@@ -51,6 +51,18 @@ export function indexByToolUseId(
   return index;
 }
 
+/** Dauer der beendeten Vordergrund-Befehle in Millisekunden nach `toolUseId`; eigene Zuordnung, weil `indexByToolUseId`
+ *  Befehle bewusst nicht enthält (sonst löste sich jeder Befehl aus seiner Gruppe im Verlauf). */
+export function commandDurations(items: readonly BackgroundItem[]): ReadonlyMap<string, number> {
+  const durations = new Map<string, number>();
+  for (const item of items) {
+    if (item.kind === 'command' && item.endedAt !== null) {
+      durations.set(item.toolUseId, Math.max(0, item.endedAt - item.startedAt));
+    }
+  }
+  return durations;
+}
+
 /** Der gewählte Eintrag; ohne Wahl oder bei einem verschwundenen Eintrag der erste. */
 export function pickSelected(
   items: readonly BackgroundItem[],

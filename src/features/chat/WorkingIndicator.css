@@ -1,12 +1,21 @@
 .working-indicator {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
   color: var(--color-accent-text);
   font-size: var(--font-size-sm);
 
-  & > svg {
-    flex-shrink: 0;
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+
+    & > svg {
+      flex-shrink: 0;
+    }
+
+    /* Mit Lauf kommen Balken und Angaben dazu; sie rücken in die nächste Zeile, statt abgeschnitten zu werden. */
+    &--run {
+      flex-wrap: wrap;
+      min-width: 0;
+    }
   }
 
   &__label {
@@ -35,6 +44,40 @@
     flex-shrink: 0;
     color: var(--color-fg-muted);
   }
+
+  &__late {
+    flex-shrink: 0;
+    color: var(--color-fg-secondary);
+  }
+
+  /* 21 px = Symbol 13 px + Abstand 8 px: die Zeile steht unter dem Text. */
+  &__last {
+    display: flex;
+    gap: var(--space-sm);
+    min-width: 0;
+    padding: 3px 0 0 21px;
+    color: var(--color-fg-muted);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+
+    /* 65 px = Bühne 57 px + Abstand 8 px. */
+    &--figure {
+      padding-left: 65px;
+    }
+  }
+
+  &__last-text {
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.working-indicator__main--run .working-indicator__label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 @keyframes working-indicator-fade-in {

@@ -1,5 +1,8 @@
 import { formatDuration } from '@/features/background/backgroundLabels';
+import { runClockLabel, runView } from '@/features/runs/runTexts';
+import type { RunInput } from '@/features/runs/runTexts';
 import type { AwaitedScript } from '@/lib/bindings/AwaitedScript';
+import type { RunStatus } from '@/lib/bindings/RunStatus';
 import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { modelName, repositoryCountLabel } from '@/lib/labels';
@@ -44,9 +47,28 @@ export function displayStatus(
   return hasFollowUp ? session.status : 'handoff';
 }
 
-/** „wartet auf Skript · 2:14“, bei mehreren „wartet auf 2 Skripte · 2:14“; die Uhr zählt den ältesten Befehl. */
+/** Kurzangabe eines Laufs: `noch ~1:25`, sonst `12/40`, sonst die Laufzeit; unter 5 s die Laufzeit mit Zehntel. */
+function runClock(run: RunInput, now: number): string {
+  const clock: string = runClockLabel(runView(run, now));
+  return clock === '' ? formatDuration(now - run.startedAt) : clock;
+}
+
+/** Der Befehl, der gerade läuft: bei einer fertigen Session der wartende, sonst der laufende; `null` ohne. */
+export function activeRun(session: SessionSummary): (RunInput & { target: string }) | null {
+  if (session.awaitedScript !== null) {
+    const script: AwaitedScript = session.awaitedScript;
+    return { ...script, target: script.description ?? script.title };
+  }
+  if (session.runningCommand !== null) {
+    const command: RunStatus = session.runningCommand;
+    return { ...command, target: command.description ?? command.command };
+  }
+  return null;
+}
+
+/** „wartet auf Skript · noch ~2:14“, bei mehreren „wartet auf 2 Skripte · …“; gezählt wird der älteste Befehl. */
 export function scriptLabel(script: AwaitedScript, now: number): string {
-  const duration: string = formatDuration(now - script.startedAt);
+  const duration: string = runClock(script, now);
   if (script.count === 1) {
     return `wartet auf Skript · ${duration}`;
   }
@@ -61,6 +83,11 @@ export function headerStatus(session: SessionSummary): SessionStatus | 'script' 
 /** Text der Status-Pille in der Kopfzeile, z.B. „Läuft“ oder „Wartet auf Skript · 2:14“. */
 export function headerStatusLabel(session: SessionSummary, now: number): string {
   if (session.awaitedScript === null) {
+    const command: RunStatus | null = session.runningCommand;
+    if (session.status === 'running' && command !== null) {
+      const clock: string = runClockLabel(runView(command, now));
+      return clock === '' ? STATUS_LABEL.running : `${STATUS_LABEL.running} · ${clock}`;
+    }
     return STATUS_LABEL[session.status];
   }
   const label: string = scriptLabel(session.awaitedScript, now);

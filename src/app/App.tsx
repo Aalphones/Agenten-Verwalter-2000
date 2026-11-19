@@ -10,7 +10,11 @@ import { useAppUpdateCheck } from '@/features/appupdate/useAppUpdate';
 import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { ArchiveDialog } from '@/features/archive/ArchiveDialog';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
-import { countRunning, indexByToolUseId } from '@/features/background/backgroundItems';
+import {
+  commandDurations,
+  countRunning,
+  indexByToolUseId,
+} from '@/features/background/backgroundItems';
 import { useSessionBackground } from '@/features/background/useSessionBackground';
 import { IMPLEMENTATION_ARTIFACTS_HEADING } from '@/features/artifacts/artifactTexts';
 import { ArtifactsView } from '@/features/artifacts/ArtifactsView';
@@ -396,6 +400,10 @@ export function App(): ReactElement {
     () => indexByToolUseId(backgroundItems),
     [backgroundItems],
   );
+  const durationByToolUseId: ReadonlyMap<string, number> = useMemo(
+    () => commandDurations(backgroundItems),
+    [backgroundItems],
+  );
 
   // Das Terminal-Dock gehört dem sichtbaren Vorhaben (Session oder Übersicht); in „Neues Vorhaben“ und den
   // Einstellungen gibt es keins.
@@ -695,6 +703,7 @@ export function App(): ReactElement {
         session={session}
         projectName={projectNameOf(session)}
         backgroundByToolUseId={backgroundByToolUseId}
+        durationByToolUseId={durationByToolUseId}
         artifacts={artifacts}
         onSessionCreated={handleSessionCreated}
         autoHandoff={

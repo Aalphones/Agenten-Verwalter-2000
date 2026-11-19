@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import type { ToolEntry } from '@/features/chat/buildBlocks';
 import { ToolDetail } from '@/features/chat/ToolDetail';
+import { formatCommandDuration } from '@/features/runs/runTexts';
 import { groupDot, groupSummary, groupTitle, toolLabel } from '@/features/chat/toolSummary';
 import './ToolGroup.css';
 
@@ -9,6 +10,8 @@ const TOOL_TOGGLE_HINT = 'Eingabe und Ausgabe dieses Aufrufs ein-/ausblenden';
 interface ToolGroupProps {
   sessionId: string;
   tools: readonly ToolEntry[];
+  /** Dauer beendeter Befehle (ms) nach `toolUseId`. */
+  durationByToolUseId: ReadonlyMap<string, number>;
   isExpanded: boolean;
   onToggle: () => void;
   isToolExpanded: (toolUseId: string) => boolean;
@@ -42,6 +45,7 @@ function Chevron({ isOpen, className }: ChevronProps): ReactElement {
 export function ToolGroup({
   sessionId,
   tools,
+  durationByToolUseId,
   isExpanded,
   onToggle,
   isToolExpanded,
@@ -64,6 +68,7 @@ export function ToolGroup({
         <div className="tool-group__lines">
           {tools.map((tool: ToolEntry) => {
             const isOpen: boolean = isToolExpanded(tool.toolUseId);
+            const durationMs: number | undefined = durationByToolUseId.get(tool.toolUseId);
             return (
               <div key={tool.toolUseId} className="tool-group__item">
                 <button
@@ -80,6 +85,11 @@ export function ToolGroup({
                   <span className="tool-group__target">{toolLabel(tool)}</span>
                   {tool.state === 'interrupted' && (
                     <span className="tool-group__interrupted">unterbrochen</span>
+                  )}
+                  {durationMs !== undefined && (
+                    <span className="tool-group__duration">
+                      {formatCommandDuration(durationMs)}
+                    </span>
                   )}
                   <Chevron isOpen={isOpen} className="tool-group__chevron" />
                 </button>

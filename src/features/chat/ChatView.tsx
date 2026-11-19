@@ -27,6 +27,8 @@ interface ChatViewProps {
   session: SessionSummary;
   projectName: string;
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
+  /** Dauer beendeter Befehle (ms) nach `toolUseId`; die Befehlszeile zeigt sie rechts. */
+  durationByToolUseId: ReadonlyMap<string, number>;
   /** Artefakte des Vorhabens; `null`, bis die erste Abfrage antwortet. */
   artifacts: ArtifactList | null;
   /** Nimmt eine aus der Einstiegszeile angelegte Session in die Liste auf und wählt sie aus. */
@@ -48,6 +50,7 @@ export function ChatView({
   session,
   projectName,
   backgroundByToolUseId,
+  durationByToolUseId,
   artifacts,
   onSessionCreated,
   autoHandoff,
@@ -148,6 +151,7 @@ export function ChatView({
         session={session}
         entries={entries}
         backgroundByToolUseId={backgroundByToolUseId}
+        durationByToolUseId={durationByToolUseId}
         artifacts={artifacts}
         hasMore={hasMore}
         loadingOlder={loadingOlder}

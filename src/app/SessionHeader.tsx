@@ -6,7 +6,7 @@ import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { useNow } from '@/features/background/useNow';
-import { headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
+import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
@@ -79,7 +79,9 @@ export function SessionHeader({
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
   const reviewCount: number = useReviewStore((state) => state.collected[session.id]?.length ?? 0);
-  const scriptNow: number = useNow(session.awaitedScript !== null);
+  const scriptNow: number = useNow(
+    session.awaitedScript !== null || session.runningCommand !== null,
+  );
   const isTicking: boolean = session.runningSince !== null;
 
   useEffect(() => {
@@ -256,7 +258,7 @@ export function SessionHeader({
         <h1 className="session-header__name">{session.name}</h1>
         <span
           className={`session-header__status session-header__status--${headerStatus(session)}`}
-          title={session.awaitedScript?.description ?? session.awaitedScript?.title ?? statusLabel}
+          title={activeRun(session)?.target ?? statusLabel}
         >
           <StatusIcon status={headerStatus(session)} size={10} />
           <span className="session-header__status-label">{statusLabel}</span>

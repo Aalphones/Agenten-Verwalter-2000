@@ -4,8 +4,10 @@ import { SessionDeleteDialog } from '@/app/SessionDeleteDialog';
 import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import { TwinFoldersIcon } from '@/components/TwinFoldersIcon';
-import { formatDuration } from '@/features/background/backgroundLabels';
-import { useNow } from '@/features/background/useNow';
+import { runClockLabel } from '@/features/runs/runTexts';
+import type { RunInput, RunView } from '@/features/runs/runTexts';
+import { useRunView } from '@/features/runs/useRunView';
+import { activeRun } from '@/features/sessions/sessionStatus';
 import type { DisplayStatus } from '@/features/sessions/sessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { useOverlapStore } from '@/stores/overlaps';
@@ -45,7 +47,9 @@ export function SidebarItem({
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
   const hasOverlap: boolean = useOverlapStore((state) => session.id in state.overlaps);
-  const now: number = useNow(status === 'script');
+  const run: RunInput | null = session.awaitedScript ?? session.runningCommand;
+  const view: RunView | null = useRunView(run);
+  const runClock: string = view === null ? '' : runClockLabel(view);
 
   if (isRenaming) {
     return (
@@ -82,12 +86,9 @@ export function SidebarItem({
         >
           {session.name}
         </span>
-        {status === 'script' && session.awaitedScript !== null && (
-          <span
-            className="sidebar-item__clock"
-            title={session.awaitedScript.description ?? session.awaitedScript.title}
-          >
-            {formatDuration(now - session.awaitedScript.startedAt)}
+        {runClock !== '' && (
+          <span className="sidebar-item__clock" title={activeRun(session)?.target}>
+            {runClock}
           </span>
         )}
         {hasOverlap && (

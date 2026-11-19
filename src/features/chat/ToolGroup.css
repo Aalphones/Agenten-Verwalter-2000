@@ -117,6 +117,13 @@
     text-overflow: ellipsis;
   }
 
+  &__duration {
+    flex-shrink: 0;
+    margin-left: auto;
+    color: var(--color-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
   &__interrupted {
     flex-shrink: 0;
     color: var(--color-fg-muted);

@@ -35,16 +35,16 @@ Rating: standard. Die Oberfläche zeigt, was Phase 2 bis 4 liefern, genau nach d
 
 ## Checkliste
 
-- [ ] `src/features/runs/runTexts.ts`: `LONGRUN_AFTER_MS`, `RUN_VISIBLE_AFTER_MS = 2000`; `formatRest(seconds)`, `formatProgress(progress)` (`12/40` bzw. `45 %`), `runView(run, now)` → `{ elapsedSeconds, fraction: number | null, kind: 'measured' | 'estimated' | 'overdue' | 'none', valueLabel, restLabel, expectedLabel }` nach dem Kontrakt; `formatDuration` für AK 5. Reine Funktionen, keine Uhr darin.
-- [ ] `src/features/runs/RunMeter.tsx` + `.css` (Block `run-meter`): Balken und Wert; Props `{ kind, fraction, valueLabel, rider?: ReactNode }` (`rider` bleibt bis Phase 6 leer).
-- [ ] `src/features/runs/useRunView.ts`: nimmt `RunStatus | AwaitedScript | null`, tickt mit `useSecondTick`, liefert `runView` oder `null` (jünger als `RUN_VISIBLE_AFTER_MS`).
-- [ ] `WorkingIndicator.tsx` + `.css`: neue Props `run: RunView | null`, `lastLine: string | null`; Aufbau nach „Struktur“; die Zeile wird ein Block mit zwei Zeilen (`working-indicator__main`, `working-indicator__last`). Zähler und Todo nur bei `run === null`.
-- [ ] `ChatTimeline.tsx`: `useRunView(session.runningCommand)` an `WorkingIndicator` geben; `renderStatusLine`: bei `!isWorking && session.awaitedScript !== null` immer die Warte-Zeile (ohne Paket mit dem sachlichen Text des Fachs `wait`), Bedingung in Zeile ~133 (`activeFigures !== null`) entsprechend lockern. Schätzhöhe bzw. Nachmessen des Statusblocks so, dass AK 6 hält.
-- [ ] `AwaitedScriptLine.tsx`: `pack` wird optional; nutzt `useRunView(script)` und `script.description ?? script.title` als Ziel.
-- [ ] `statusText.ts`/Aufrufer: `{zeit}`, `{fortschritt}`, `{rest}` aus dem `RunView` füllen (leer ohne Lauf).
-- [ ] `SidebarItem.tsx`, `SessionHeader.tsx`: Anzeige nach AK 4 über eine gemeinsame Funktion `runClockLabel(view)` in `runTexts.ts`; gilt für `runningCommand` (Status „läuft“) und `awaitedScript`.
-- [ ] `ToolGroup.tsx` + `.css`: Dauer rechts (`tool-group__duration`, `tabular-nums`, gedämpft); die Dauer kommt aus dem Hintergrund-Eintrag zum `toolUseId` (`buildBlocks.ts` kennt `backgroundByToolUseId` bereits — dort an `ToolEntry` als `durationMs: number | null` hängen).
-- [ ] `docs/code-map.md`: Zeile „Läufe“ um `src/features/runs/`; Zeile „Chat“ (`WorkingIndicator` zweizeilig, Warte-Zeile ohne Paket).
-- [ ] `docs/glossary.md`: „Restdauer“, „länger als üblich“.
+- [x] `src/features/runs/runTexts.ts`: `LONGRUN_AFTER_MS`, `RUN_VISIBLE_AFTER_MS = 2000`; `formatRest(seconds)`, `formatProgress(progress)` (`12/40` bzw. `45 %`), `runView(run, now)` → `{ elapsedSeconds, fraction: number | null, kind: 'measured' | 'estimated' | 'overdue' | 'none', valueLabel, restLabel, expectedLabel }` nach dem Kontrakt; `formatDuration` für AK 5. Reine Funktionen, keine Uhr darin.
+- [x] `src/features/runs/RunMeter.tsx` + `.css` (Block `run-meter`): Balken und Wert; Props `{ kind, fraction, valueLabel, rider?: ReactNode }` (`rider` bleibt bis Phase 6 leer).
+- [x] `src/features/runs/useRunView.ts`: nimmt `RunStatus | AwaitedScript | null`, tickt mit `useSecondTick`, liefert `runView` oder `null` (jünger als `RUN_VISIBLE_AFTER_MS`).
+- [x] `WorkingIndicator.tsx` + `.css`: neue Props `run: RunView | null`, `lastLine: string | null`; Aufbau nach „Struktur“; die Zeile wird ein Block mit zwei Zeilen (`working-indicator__main`, `working-indicator__last`). Zähler und Todo nur bei `run === null`.
+- [x] `ChatTimeline.tsx`: `useRunView(session.runningCommand)` an `WorkingIndicator` geben; `renderStatusLine`: bei `!isWorking && session.awaitedScript !== null` immer die Warte-Zeile (ohne Paket mit dem sachlichen Text des Fachs `wait`), Bedingung in Zeile ~133 (`activeFigures !== null`) entsprechend lockern. Schätzhöhe bzw. Nachmessen des Statusblocks so, dass AK 6 hält.
+- [x] `AwaitedScriptLine.tsx`: `pack` wird optional; nutzt `useRunView(script)` und `script.description ?? script.title` als Ziel.
+- [x] `statusText.ts`/Aufrufer: `{zeit}`, `{fortschritt}`, `{rest}` aus dem `RunView` füllen (leer ohne Lauf).
+- [x] `SidebarItem.tsx`, `SessionHeader.tsx`: Anzeige nach AK 4 über eine gemeinsame Funktion `runClockLabel(view)` in `runTexts.ts`; gilt für `runningCommand` (Status „läuft“) und `awaitedScript`.
+- [x] `ToolGroup.tsx` + `.css`: Dauer rechts (`tool-group__duration`, `tabular-nums`, gedämpft); die Dauer kommt aus dem Hintergrund-Eintrag zum `toolUseId` (`buildBlocks.ts` kennt `backgroundByToolUseId` bereits — dort an `ToolEntry` als `durationMs: number | null` hängen).
+- [x] `docs/code-map.md`: Zeile „Läufe“ um `src/features/runs/`; Zeile „Chat“ (`WorkingIndicator` zweizeilig, Warte-Zeile ohne Paket).
+- [x] `docs/glossary.md`: „Restdauer“, „länger als üblich“.
 
 ## Report-Back

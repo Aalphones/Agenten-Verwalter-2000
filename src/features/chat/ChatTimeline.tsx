@@ -14,7 +14,9 @@ import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import { NoticeBlock } from '@/features/notices/NoticeBlock';
 import { FigureStage, hasFigure } from '@/features/skins/FigureStage';
 import { customMatchers, lookFor } from '@/features/skins/figureLook';
-import { statusText } from '@/features/skins/statusText';
+import type { RunView } from '@/features/runs/runTexts';
+import { useRunView } from '@/features/runs/useRunView';
+import { formatElapsed, statusText } from '@/features/skins/statusText';
 import { useStatusFigure, type StatusFigure } from '@/features/skins/useStatusFigure';
 import { SelectionMenu } from '@/features/side/SelectionMenu';
 import { selectedChatText } from '@/features/side/selectionText';
@@ -66,6 +68,8 @@ interface ChatTimelineProps {
   entries: readonly ChatEntry[];
   /** Subagenten und Hintergrundprozesse nach `toolUseId`; ihre Werkzeug-Zeilen werden zu eigenen Zeilen. */
   backgroundByToolUseId: ReadonlyMap<string, BackgroundItem>;
+  /** Dauer beendeter Befehle (ms) nach `toolUseId`. */
+  durationByToolUseId: ReadonlyMap<string, number>;
   /** Für die Karten im Verlauf: Titel, Uhrzeit und ob die Datei noch da ist. */
   artifacts: ArtifactList | null;
   hasMore: boolean;
@@ -98,6 +102,7 @@ export function ChatTimeline({
   session,
   entries,
   backgroundByToolUseId,
+  durationByToolUseId,
   artifacts,
   hasMore,
   loadingOlder,
@@ -128,9 +133,8 @@ export function ChatTimeline({
   );
   const isWorking: boolean = session.status === 'starting' || session.status === 'running';
   const activeFigures: SkinPack | null = useSkinsStore((state) => state.activeFigures);
-  // Wartet die Session auf ein Skript, steht unter dem Verlauf die Figur des Fachs „Warten“.
-  const hasWaitLine: boolean =
-    !isWorking && session.awaitedScript !== null && activeFigures !== null;
+  // Wartet die Session auf ein Skript, steht unter dem Verlauf die Zeile des Fachs „Warten“, mit und ohne Figurenpaket.
+  const hasWaitLine: boolean = !isWorking && session.awaitedScript !== null;
   const count: number = blocks.length + (isWorking || hasWaitLine ? 1 : 0);
 
   // Die Warnung gilt dem React Compiler, den das Projekt nicht nutzt; die Bibliothek schreibt ADR 002 vor.
@@ -163,16 +167,17 @@ export function ChatTimeline({
   });
   const statusLook: SlotLook | null =
     statusFigure.slot === null ? null : lookFor(activeFigures, statusFigure.slot);
+  const run: RunView | null = useRunView(isWorking ? session.runningCommand : null);
   const statusLine: string = statusText({
     slot: statusFigure.slot,
     target: statusFigure.label,
     command: statusFigure.command,
-    progress: '',
-    rest: '',
+    progress: run?.progressLabel ?? '',
+    rest: run?.restLabel ?? '',
     textIndex: statusFigure.textIndex,
     roll: statusFigure.roll,
     look: statusLook,
-    time: '',
+    time: run === null ? '' : formatElapsed(run.elapsedSeconds),
   });
   const oldestOpenQuestion: QuestionEntry | null = useMemo(
     () => findOldestOpenQuestion(entries),
@@ -417,7 +422,7 @@ export function ChatTimeline({
 
   /** Die Zeile unter dem Verlauf: Arbeit des Agenten oder, mit Figurenpaket, das Warten auf ein Skript. */
   function renderStatusLine(): ReactElement {
-    if (!isWorking && session.awaitedScript !== null && activeFigures !== null) {
+    if (!isWorking && session.awaitedScript !== null) {
       return <AwaitedScriptLine script={session.awaitedScript} pack={activeFigures} />;
     }
     return (
@@ -426,6 +431,7 @@ export function ChatTimeline({
         calls={statusFigure.calls}
         todo={activeTodo}
         thinkingSeconds={statusFigure.thinkingSeconds}
+        run={run}
         figure={
           activeFigures !== null && hasFigure(statusLook) ? (
             <FigureStage
@@ -449,6 +455,7 @@ export function ChatTimeline({
         <ToolGroup
           sessionId={session.id}
           tools={block.tools}
+          durationByToolUseId={durationByToolUseId}
           isExpanded={expandedKeys.has(block.key)}
           onToggle={(): void => {
             toggleExpanded(block.key);
