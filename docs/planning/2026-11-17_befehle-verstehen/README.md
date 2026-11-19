@@ -12,7 +12,7 @@ Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt;
 | 4 | Live-Fortschritt aus der Ausgabe | [phase-4-fortschritt.md](phase-4-fortschritt.md) | heikel | complete |
 | 5 | Anzeige: Statuszeile, Seitenleiste, Befehlszeile | [phase-5-anzeige.md](phase-5-anzeige.md) | standard | complete |
 | 6 | Figuren: Fach „Langer Lauf“ und drei Bewegungen | [phase-6-figuren.md](phase-6-figuren.md) | standard | complete |
-| 7 | Verlauf lesbar: Zweckzeile und Was-Zeile | [phase-7-verlauf.md](phase-7-verlauf.md) | standard | pending |
+| 7 | Verlauf lesbar: Zweckzeile und Was-Zeile | [phase-7-verlauf.md](phase-7-verlauf.md) | standard | complete |
 
 Reihenfolge fest 1 → 7: jede Phase baut auf den Daten der vorigen. Umfang: Betriebsart Claude für den Live-Fortschritt; Beschreibung und Schätzung wirken überall, wo die Daten ankommen. Nicht im Umfang: Live-Fortschritt in Autark und Codex, Befehle von Subagenten, eigene Erkennung je Test-Läufer, bestehende Figurenpakete ergänzen, Linux/macOS (Ort der Ausgabedatei dort nicht gemessen).
 

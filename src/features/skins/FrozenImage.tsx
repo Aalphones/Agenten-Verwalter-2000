@@ -7,6 +7,8 @@ interface FrozenImageProps {
   className: string;
   /** Lage in der Bühne (`left`, `bottom`); Größe setzt die Komponente selbst. */
   style: CSSProperties;
+  /** Die Klasse bestimmt die Größe; die Komponente setzt nur die Deckkraft 0 bis zum Laden. */
+  fixedSize?: boolean;
 }
 
 interface FigureSize {
@@ -15,7 +17,12 @@ interface FigureSize {
 }
 
 /** Zeigt von einem Bild (auch GIF) nur das erste Bild: es wird einmal auf eine Zeichenfläche kopiert. */
-export function FrozenImage({ src, className, style }: FrozenImageProps): ReactElement {
+export function FrozenImage({
+  src,
+  className,
+  style,
+  fixedSize = false,
+}: FrozenImageProps): ReactElement {
   const [size, setSize] = useState<FigureSize | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -50,8 +57,8 @@ export function FrozenImage({ src, className, style }: FrozenImageProps): ReactE
       className={className}
       style={{
         ...style,
-        width: size === null ? undefined : `${String(size.width)}px`,
-        height: size === null ? undefined : `${String(size.height)}px`,
+        width: fixedSize || size === null ? undefined : `${String(size.width)}px`,
+        height: fixedSize || size === null ? undefined : `${String(size.height)}px`,
         opacity: size === null ? 0 : undefined,
       }}
     />

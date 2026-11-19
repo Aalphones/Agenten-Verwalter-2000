@@ -214,7 +214,7 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
     }
     // Ein gemeinsamer Text: der autarke Agent liest nur ein `--append-system-prompt`, ein zweites
     // überschriebe das erste.
-    let mut prompts: Vec<String> = vec![commands_prompt()];
+    let mut prompts: Vec<String> = vec![commands_prompt(), purpose_prompt()];
     if let Some(dir) = &opts.scratchpad {
         prompts.push(scratchpad_prompt(dir));
     }
@@ -273,6 +273,16 @@ fn commands_prompt() -> String {
      Schleifen, die du selbst schreibst und die länger als ein paar Sekunden laufen, geben je \
      Schritt eine Zeile `[<erledigt>/<gesamt>] <was gerade läuft>` auf der Standardausgabe aus, \
      sofort geschrieben und nicht gepuffert; der Verwalter zeigt daraus den Fortschritt."
+        .to_owned()
+}
+
+/// Ohne die Zeile steht im Verlauf nur, was getan wurde, nicht wozu: der Verwalter macht die kurze
+/// Zeile direkt vor einer Folge von Werkzeug-Aufrufen zur Überschrift des Blocks (ADR 066).
+fn purpose_prompt() -> String {
+    "Zweck: Bevor du eine Folge von Werkzeug-Aufrufen beginnst, schreib eine einzelne kurze Zeile, \
+     wozu — auf Deutsch, höchstens sechs Wörter, wie eine Überschrift, ohne Punkt am Ende \
+     (z. B. „Plan-Dateien schreiben“). Der Benutzer liest diese Zeilen im Verlauf als Überschrift \
+     deiner Schritte. Keine neue Zeile, solange die vorige noch gilt."
         .to_owned()
 }
 

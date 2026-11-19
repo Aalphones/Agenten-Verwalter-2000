@@ -48,22 +48,22 @@ Rating: standard. Jeder Werkzeug-Block im Verlauf sagt, was getan wurde, und tr�
 
 ### Kern
 
-- [ ] `process.rs`: `fn purpose_prompt() -> String` mit dem Text aus dem Kontrakt (wortgleich) und einem Kommentar, warum es ihn gibt (ohne die Zeile steht im Verlauf nur, was getan wurde, nicht wozu); immer in `prompts` aufnehmen, direkt nach `commands_prompt()`.
+- [x] `process.rs`: `fn purpose_prompt() -> String` mit dem Text aus dem Kontrakt (wortgleich) und einem Kommentar, warum es ihn gibt (ohne die Zeile steht im Verlauf nur, was getan wurde, nicht wozu); immer in `prompts` aufnehmen, direkt nach `commands_prompt()`.
 
 ### Oberfläche
 
-- [ ] `buildBlocks.ts`: `export type TextEntry = Extract<ChatEntry, { kind: 'text' }>`; die Variante `tools` von `ChatBlock` bekommt `purpose: TextEntry | null`. Neuer dritter Parameter `keepTextSeq: number | null`. Konstante `MAX_PURPOSE_CHARS = 80`. Beim Beginn einer neuen Gruppe: ist der letzte Block `kind: 'entry'` mit `entry.kind === 'text'`, `entry.text.trim().length <= MAX_PURPOSE_CHARS`, ohne `\n` im getrimmten Text, `entry.unsourced.length === 0` und `entry.seq !== keepTextSeq` → diesen Block entfernen, `purpose` = der Eintrag, `key` der Gruppe = `String(purpose.seq)`. Sonst `purpose: null`, Schlüssel wie bisher. Ein Aufruf mit Hintergrund-Eintrag (`kind: 'background'`) bekommt nie einen Kopf.
-- [ ] `ChatTimeline.tsx`: `buildBlocks(entries, backgroundByToolUseId, showsHandoff ? answerSeq : null)` (`answerSeq` und `showsHandoff` dafür vor `blocks` berechnen); `ToolGroup` bekommt `purpose={block.purpose}`, `figures={activeFigures}`, `customSlots={customSlots}`.
-- [ ] `toolSummary.ts`: `groupTitle`, `groupSummary` und `toolLabel` (Phase 2) löschen. Neu, alles reine Funktionen:
+- [x] `buildBlocks.ts`: `export type TextEntry = Extract<ChatEntry, { kind: 'text' }>`; die Variante `tools` von `ChatBlock` bekommt `purpose: TextEntry | null`. Neuer dritter Parameter `keepTextSeq: number | null`. Konstante `MAX_PURPOSE_CHARS = 80`. Beim Beginn einer neuen Gruppe: ist der letzte Block `kind: 'entry'` mit `entry.kind === 'text'`, `entry.text.trim().length <= MAX_PURPOSE_CHARS`, ohne `\n` im getrimmten Text, `entry.unsourced.length === 0` und `entry.seq !== keepTextSeq` → diesen Block entfernen, `purpose` = der Eintrag, `key` der Gruppe = `String(purpose.seq)`. Sonst `purpose: null`, Schlüssel wie bisher. Ein Aufruf mit Hintergrund-Eintrag (`kind: 'background'`) bekommt nie einen Kopf.
+- [x] `ChatTimeline.tsx`: `buildBlocks(entries, backgroundByToolUseId, showsHandoff ? answerSeq : null)` (`answerSeq` und `showsHandoff` dafür vor `blocks` berechnen); `ToolGroup` bekommt `purpose={block.purpose}`, `figures={activeFigures}`, `customSlots={customSlots}`.
+- [x] `toolSummary.ts`: `groupTitle`, `groupSummary` und `toolLabel` (Phase 2) löschen. Neu, alles reine Funktionen:
   - `builtinSlot(tool: string): BuiltinSlotId` = `BUILTIN_TOOL_SLOTS[tool] ?? 'other'`.
   - `groupParts(tools): GroupPart[]` mit `interface GroupPart { slot: BuiltinSlotId; label: string }`: Arten in der Reihenfolge des ersten Auftretens; Zahl = bei `read` und `write` die Anzahl verschiedener `target`, sonst die Anzahl der Aufrufe; Texte aus dem Kontrakt; besteht die Gruppe nur aus `other`, lautet der Text `<n> Aufrufe`.
   - `failedCount(tools): number`.
   - `toolVerb(tool: string): string` nach dem Kontrakt; ohne Eintrag `Werkzeug`.
   - `toolName(tool: string): string`: passt `^mcp__(.+?)__(.+)$`, dann `<1> · <2>`, sonst der Name.
   - `fileName(target: string): string`: alles hinter dem letzten `\` oder `/`; ohne Trenner das Ziel selbst.
-- [ ] `src/features/skins/FrozenImage.tsx`: optionale Prop `fixedSize?: boolean` (Standard `false`); bei `true` setzt die Komponente weder Breite noch Höhe (die Klasse bestimmt die Größe), nur die Deckkraft 0 bis zum Laden.
-- [ ] `src/features/skins/SlotThumb.tsx` + `.css` (Block `slot-thumb`): Props `{ pack: SkinPack | null; slot: string }`; `look = lookFor(pack, slot)`; ohne Paket oder `!hasFigure(look)` → `null`; sonst `<FrozenImage src={skinImageUrl(pack, look.image)} className="slot-thumb" style={{}} fixedSize />`. CSS: 26 × 20 px, `object-fit: contain`, `image-rendering: pixelated`, `flex-shrink: 0`.
-- [ ] `ToolGroup.tsx` + `.css`: neue Props `purpose: TextEntry | null`, `figures: SkinPack | null`, `customSlots: readonly CustomSlotMatch[]`. Aufbau nach „Struktur“:
+- [x] `src/features/skins/FrozenImage.tsx`: optionale Prop `fixedSize?: boolean` (Standard `false`); bei `true` setzt die Komponente weder Breite noch Höhe (die Klasse bestimmt die Größe), nur die Deckkraft 0 bis zum Laden.
+- [x] `src/features/skins/SlotThumb.tsx` + `.css` (Block `slot-thumb`): Props `{ pack: SkinPack | null; slot: string }`; `look = lookFor(pack, slot)`; ohne Paket oder `!hasFigure(look)` → `null`; sonst `<FrozenImage src={skinImageUrl(pack, look.image)} className="slot-thumb" style={{}} fixedSize />`. CSS: 26 × 20 px, `object-fit: contain`, `image-rendering: pixelated`, `flex-shrink: 0`.
+- [x] `ToolGroup.tsx` + `.css`: neue Props `purpose: TextEntry | null`, `figures: SkinPack | null`, `customSlots: readonly CustomSlotMatch[]`. Aufbau nach „Struktur“:
   - Kopf: `<div className="tool-group__head"><span className="tool-group__dot …" /><div className="tool-group__purpose"><TextBlock text={purpose.text} unsourced={[]} /></div></div>`; der Absatz darin ohne Außenabstand. Mit Kopf bekommt `.tool-group` die Klasse `tool-group--purpose`; Was-Zeile, Zeilen und `ToolDetail` liegen in `tool-group__body`, das die Linie trägt.
   - Eine eigene Komponente `ToolLine` in derselben Datei rendert die Aufruf-Zeile (Props `tool`, `figures`, `customSlots`, `isOpen`, `onToggle`, `isSingle`, `hasDot`); bei `isSingle` kein `⎿`, Klasse `tool-group__line--single` und – nur bei `hasDot` (Block ohne Zweckzeile) – der Zustandspunkt vorn. Figur an der Zeile: `SlotThumb` mit `slotFor(tool.tool, tool.target, customSlots)`.
   - Ziel je Art (`builtinSlot`): `read`/`write` → `fileName(tool.target)` in `tool-group__name`; `shell` → `tool.description` in `tool-group__name tool-group__name--prose`, ohne Beschreibung `tool.target` in Monospace; `other` → `toolName(tool.tool)` als Prosa; sonst `tool.target` in Monospace. Das Ziel trägt `title={tool.target}`, außer das Ziel ist leer; die Zeile behält `title={TOOL_TOGGLE_HINT}`.
@@ -73,8 +73,10 @@ Rating: standard. Jeder Werkzeug-Block im Verlauf sagt, was getan wurde, und tr�
 
 ### Doku
 
-- [ ] `docs/glossary.md`: „Zweckzeile“, „Was-Zeile“.
-- [ ] `docs/code-map.md`: Zeile „Chat“ (Kopf am Werkzeug-Block, `groupParts`, `ToolLine`), Zeile „Skins“ (`SlotThumb`).
-- [ ] `docs/decisions/066-befehle-verstehen.md`: unverändert, außer die Umsetzung weicht vom Kontrakt ab.
+- [x] `docs/glossary.md`: „Zweckzeile“, „Was-Zeile“.
+- [x] `docs/code-map.md`: Zeile „Chat“ (Kopf am Werkzeug-Block, `groupParts`, `ToolLine`), Zeile „Skins“ (`SlotThumb`).
+- [x] `docs/decisions/066-befehle-verstehen.md`: unverändert, außer die Umsetzung weicht vom Kontrakt ab.
 
 ## Report-Back
+
+Phase 7 fertig: `purpose_prompt`, Kopf am Werkzeug-Block (`buildBlocks`), Was-Zeile und `ToolLine` in `ToolGroup`, `SlotThumb`; `groupTitle`, `groupSummary`, `toolLabel` entfernt. `pnpm check` grün; nicht in der echten App gelaufen. ADR 066 unverändert.

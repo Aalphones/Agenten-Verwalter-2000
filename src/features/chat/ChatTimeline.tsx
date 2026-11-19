@@ -128,9 +128,12 @@ export function ChatTimeline({
   const stickToBottomRef = useRef<boolean>(true);
   const layoutMarkRef = useRef<LayoutMark>({ firstSeq: null, scrollHeight: 0 });
 
+  const answerSeq: number | null = useMemo(() => lastAnswerSeq(entries), [entries]);
+  const showsHandoff: boolean =
+    session.handoffLines.length > 0 && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
   const blocks: ChatBlock[] = useMemo(
-    () => buildBlocks(entries, backgroundByToolUseId),
-    [entries, backgroundByToolUseId],
+    () => buildBlocks(entries, backgroundByToolUseId, showsHandoff ? answerSeq : null),
+    [entries, backgroundByToolUseId, showsHandoff, answerSeq],
   );
   const isWorking: boolean = session.status === 'starting' || session.status === 'running';
   const activeFigures: SkinPack | null = useSkinsStore((state) => state.activeFigures);
@@ -155,9 +158,6 @@ export function ChatTimeline({
   const bottomOffset: number = Math.max(0, containerHeight - totalSize);
 
   const lastErrorSeq: number | null = useMemo(() => findLastErrorSeq(entries), [entries]);
-  const answerSeq: number | null = useMemo(() => lastAnswerSeq(entries), [entries]);
-  const showsHandoff: boolean =
-    session.handoffLines.length > 0 && !HANDOFF_HIDDEN_STATUSES.includes(session.status);
   const activeTodo: string | null = useMemo(() => findActiveTodoLabel(entries), [entries]);
   const customSlots = useMemo(() => customMatchers(activeFigures), [activeFigures]);
   const statusFigure: StatusFigure = useStatusFigure({
@@ -456,6 +456,9 @@ export function ChatTimeline({
         <ToolGroup
           sessionId={session.id}
           tools={block.tools}
+          purpose={block.purpose}
+          figures={activeFigures}
+          customSlots={customSlots}
           durationByToolUseId={durationByToolUseId}
           isExpanded={expandedKeys.has(block.key)}
           onToggle={(): void => {

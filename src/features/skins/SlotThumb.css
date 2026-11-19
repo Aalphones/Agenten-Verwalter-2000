@@ -1,0 +1,7 @@
+.slot-thumb {
+  flex-shrink: 0;
+  width: 26px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
