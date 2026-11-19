@@ -3,15 +3,19 @@
 //! `runs-probe estimate <Datenbank-Kopie> <Vorhaben-ID> "<Befehl>"` druckt die Schätzung in ms oder
 //! `keine` und die Zahl der zugrunde liegenden Läufe;
 //! `runs-probe backfill <Datenbank-Kopie>` druckt die Zahl der aus `background_items` übernommenen
-//! Läufe. Nie gegen `%USERPROFILE%\.verwalter\verwalter.db` — `Database::open` führt Migrationen aus.
+//! Läufe;
+//! `runs-probe progress <Datei>` druckt den erkannten Fortschritt und die letzte Zeile vom Ende
+//! der Datei. Nie gegen `%USERPROFILE%\.verwalter\verwalter.db` — `Database::open` führt Migrationen aus.
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use verwalter_lib::background::output::read_tail;
 use verwalter_lib::db::Database;
-use verwalter_lib::runs::{self, backfill, normalize};
+use verwalter_lib::runs::model::{ProgressUnit, RunProgress};
+use verwalter_lib::runs::{self, backfill, normalize, progress};
 
-const USAGE: &str = "Aufruf: runs-probe key \"<Befehl>\" | estimate <Datenbank-Kopie> <Vorhaben-ID> \"<Befehl>\" | backfill <Datenbank-Kopie>";
+const USAGE: &str = "Aufruf: runs-probe key \"<Befehl>\" | estimate <Datenbank-Kopie> <Vorhaben-ID> \"<Befehl>\" | backfill <Datenbank-Kopie> | progress <Datei>";
 
 fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let arguments: Vec<String> = env::args().skip(1).collect();
@@ -45,11 +49,29 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
             println!("{taken} Läufe übernommen");
             Ok(ExitCode::SUCCESS)
         }
+        ["progress", file] => {
+            let tail = read_tail(Path::new(file), progress::TAIL_BYTES);
+            let (found, last_line) = progress::read(&tail.text);
+            println!("{}", describe_progress(found));
+            println!("{}", last_line.unwrap_or_else(|| "keine Zeile".to_owned()));
+            Ok(ExitCode::SUCCESS)
+        }
         _ => {
             eprintln!("{USAGE}");
             Ok(ExitCode::from(2))
         }
     }
+}
+
+fn describe_progress(found: Option<RunProgress>) -> String {
+    let Some(run_progress) = found else {
+        return "kein Fortschritt".to_owned();
+    };
+    let unit = match run_progress.unit {
+        ProgressUnit::Count => "Count",
+        ProgressUnit::Percent => "Percent",
+    };
+    format!("{unit} {}/{}", run_progress.done, run_progress.total)
 }
 
 fn open_copy(path: &str) -> Result<Option<Database>, Box<dyn std::error::Error>> {

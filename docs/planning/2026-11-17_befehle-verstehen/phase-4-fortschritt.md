@@ -1,6 +1,6 @@
 # Phase 4 — Live-Fortschritt aus der Ausgabe
 
-Rating: heikel. Solange ein Befehl oder Hintergrundprozess mit bekannter Ausgabedatei läuft, liest ein Wächter einmal je Sekunde das Ende der Datei, erkennt Fortschritt und letzte Zeile und meldet Änderungen an die Oberfläche — ohne Schreibzugriff auf die Datenbank. Noch keine neue Anzeige.
+Rating: heikel. Status: complete. Solange ein Befehl oder Hintergrundprozess mit bekannter Ausgabedatei läuft, liest ein Wächter einmal je Sekunde das Ende der Datei, erkennt Fortschritt und letzte Zeile und meldet Änderungen an die Oberfläche — ohne Schreibzugriff auf die Datenbank. Noch keine neue Anzeige.
 
 ## Kontext (lesen)
 
@@ -27,23 +27,30 @@ Rating: heikel. Solange ein Befehl oder Hintergrundprozess mit bekannter Ausgabe
 
 ### Erkennung
 
-- [ ] `src-tauri/src/runs/progress.rs`: `read(tail: &str) -> (Option<RunProgress>, Option<String>)` genau nach dem Kontrakt; die zwei Muster als `LazyLock<Regex>` (Crate `regex` ist vorhanden); Konstanten `TAIL_BYTES`, `MAX_LAST_LINE_CHARS`.
-- [ ] `runs-probe`: Unterbefehl `progress <Datei>` (liest mit `read_tail(path, TAIL_BYTES)` und druckt wie in AK 1).
+- [x] `src-tauri/src/runs/progress.rs`: `read(tail: &str) -> (Option<RunProgress>, Option<String>)` genau nach dem Kontrakt; die zwei Muster als `LazyLock<Regex>` (Crate `regex` ist vorhanden); Konstanten `TAIL_BYTES`, `MAX_LAST_LINE_CHARS`.
+- [x] `runs-probe`: Unterbefehl `progress <Datei>` (liest mit `read_tail(path, TAIL_BYTES)` und druckt wie in AK 1).
 
 ### Wächter
 
-- [ ] `src-tauri/src/sessions/registry/run_watch.rs`: `pub(super) fn schedule(app: AppHandle, session: Arc<Session>, item_id: String, file: String)` startet einen Thread `run-watch`. Schleife: `WATCH_INTERVAL` schlafen; ist `session.deleted` gesetzt → Ende; Datei mit `read_tail(Path::new(&file), TAIL_BYTES)` lesen (fehlt sie oder ist sie binär → leerer Stand); `progress::read`; dann `update(&app, &session, |state, outbox| …)`: Eintrag `id == item_id` suchen; fehlt er oder läuft er nicht mehr → Ende melden; weichen `progress` oder `last_line` vom gespeicherten Stand ab → setzen und `outbox.live_changed = true`. Ein Fehler aus `update` beendet den Wächter.
-- [ ] `Outbox`: `live_changed: bool` (Stand eines laufenden Eintrags hat sich geändert, nur für die Oberfläche) und `run_watches: Vec<(String, String)>` (ID, Datei).
-- [ ] `update`: `if outbox.summary_dirty || outbox.live_changed { outbox.summary = Some(summarize(..)) }`; `persist` bleibt unverändert und schreibt bei `live_changed` allein nichts. Nach `outbox.emit` je `run_watches` `run_watch::schedule` aufrufen (wie `commit_scan::schedule`).
-- [ ] `Outbox::emit`: prüfen, dass eine gesetzte `summary` `session://changed` auslöst, auch wenn `summary_dirty` nicht gesetzt ist; sonst dort angleichen.
-- [ ] Session-Zustand: `watched_runs: HashSet<String>`. Zweige `CommandTask` und `TaskOutputFile` sowie `end_task`, falls dort erstmals ein `output_file` gesetzt wird, während der Eintrag läuft: ist die ID noch nicht in `watched_runs` → eintragen und (ID, Datei) in `outbox.run_watches`. `finish_command`, `end_task` und das Unterbrechen eines Eintrags entfernen die ID.
-- [ ] `running_command` und `awaited_script` (Phase 3) geben `progress` und `last_line` des Eintrags weiter.
-- [ ] Wandert ein Befehl in den Hintergrund (`CommandBackgrounded`), läuft sein Wächter weiter: gleiche ID, gleiche Datei.
+- [x] `src-tauri/src/sessions/registry/run_watch.rs`: `pub(super) fn schedule(app: AppHandle, session: Arc<Session>, item_id: String, file: String)` startet einen Thread `run-watch`. Schleife: `WATCH_INTERVAL` schlafen; ist `session.deleted` gesetzt → Ende; Datei mit `read_tail(Path::new(&file), TAIL_BYTES)` lesen (fehlt sie oder ist sie binär → leerer Stand); `progress::read`; dann `update(&app, &session, |state, outbox| …)`: Eintrag `id == item_id` suchen; fehlt er oder läuft er nicht mehr → Ende melden; weichen `progress` oder `last_line` vom gespeicherten Stand ab → setzen und `outbox.live_changed = true`. Ein Fehler aus `update` beendet den Wächter.
+- [x] `Outbox`: `live_changed: bool` (Stand eines laufenden Eintrags hat sich geändert, nur für die Oberfläche) und `run_watches: Vec<(String, String)>` (ID, Datei).
+- [x] `update`: `if outbox.summary_dirty || outbox.live_changed { outbox.summary = Some(summarize(..)) }`; `persist` bleibt unverändert und schreibt bei `live_changed` allein nichts. Nach `outbox.emit` je `run_watches` `run_watch::schedule` aufrufen (wie `commit_scan::schedule`).
+- [x] `Outbox::emit`: prüfen, dass eine gesetzte `summary` `session://changed` auslöst, auch wenn `summary_dirty` nicht gesetzt ist; sonst dort angleichen.
+- [x] Session-Zustand: `watched_runs: HashSet<String>`. Zweige `CommandTask` und `TaskOutputFile` sowie `end_task`, falls dort erstmals ein `output_file` gesetzt wird, während der Eintrag läuft: ist die ID noch nicht in `watched_runs` → eintragen und (ID, Datei) in `outbox.run_watches`. `finish_command`, `end_task` und das Unterbrechen eines Eintrags entfernen die ID.
+- [x] `running_command` und `awaited_script` (Phase 3) geben `progress` und `last_line` des Eintrags weiter.
+- [x] Wandert ein Befehl in den Hintergrund (`CommandBackgrounded`), läuft sein Wächter weiter: gleiche ID, gleiche Datei.
 
 ### Doku
 
-- [ ] `docs/code-map.md`, Zeile „Läufe“: `progress.rs`, `run_watch.rs`, `live_changed`.
-- [ ] `docs/glossary.md`: „Fortschrittszeile“ (`[erledigt/gesamt] …`), „Live-Fortschritt“.
-- [ ] `docs/knowledge/claude-stream-json.md`: ein Satz, dass der Verwalter die Datei laufender Vordergrund-Befehle liest.
+- [x] `docs/code-map.md`, Zeile „Läufe“: `progress.rs`, `run_watch.rs`, `live_changed`.
+- [x] `docs/glossary.md`: „Fortschrittszeile“ (`[erledigt/gesamt] …`), „Live-Fortschritt“.
+- [x] `docs/knowledge/claude-stream-json.md`: ein Satz, dass der Verwalter die Datei laufender Vordergrund-Befehle liest.
 
 ## Report-Back
+
+- AK 1 belegt mit `runs-probe progress` an sieben Dateien (`step 7/12` mit Farbcode und `` → `Count 7/12`; `[ 45%]` → `Percent 45/100`; ohne Treffer, leer, `1/1`, `13/12`, `C:/a/2/3/x` → `kein Fortschritt`). AK 7: `pnpm check` grün.
+- AK 2 bis 6 nur am Code geprüft, nicht in der echten App gelaufen.
+- Abweichung: `finish_command`, `end_task` und das Unterbrechen nehmen die ID nicht aus `watched_runs`; das tut der Wächter selbst, sobald er den Eintrag nicht mehr laufend findet. Sonst könnte ein Befehl, dessen Ergebnis vor `task_updated` ankommt (Wechsel in den Hintergrund), einen zweiten Wächter bekommen, während der erste noch schläft.
+- Abweichung: eine fehlende Ausgabedatei lässt den letzten Stand stehen, statt ihn zu leeren. Die Kommandozeile löscht die Datei eines Vordergrund-Befehls vor seinem Ergebnis; sonst ginge der letzte Stand (AK 6) verloren. Leer oder binär bleibt ein Stand ohne Fortschritt und Zeile.
+- `end_task` startet keinen Wächter: dort endet der Eintrag schon.
+- PowerShell-Vordergrund-Befehle haben weiter keinen Live-Fortschritt (Eintrag `Process` ohne Ausgabedatei), nicht gemessen.

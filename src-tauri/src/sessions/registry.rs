@@ -4,7 +4,7 @@
 //! Oberfläche und Zeilen an den Prozess gehen erst nach dem Freigeben der Sperre hinaus. Ein
 //! Schreiben in die Pipe unter der Sperre könnte sich mit dem Lese-Thread verklemmen — der
 //! Agent blockiert auf einer vollen Ausgabe-Pipe, der Lese-Thread wartet auf die Sperre.
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -95,6 +95,7 @@ mod mcp;
 mod overlaps;
 mod restore;
 mod retro;
+mod run_watch;
 mod side;
 mod skins;
 mod terminal;
@@ -332,6 +333,8 @@ struct SessionState {
     /// die Ausgabe laufender Vordergrund-Befehle nach `<task_id>.output`. Nicht dokumentiert, nur
     /// im Speicher.
     cli_tasks_dir: Option<PathBuf>,
+    /// Einträge, deren Ausgabedatei gerade ein Wächter liest (`run_watch`); höchstens einer je Eintrag.
+    watched_runs: HashSet<String>,
     /// Ordner `.artefakte` des Vorhabens, gesetzt bei jedem Agent-Start; daran erkennt `apply_event`
     /// Artefakte.
     artifacts_dir: Option<PathBuf>,
@@ -401,6 +404,12 @@ struct Outbox {
     entries: Vec<ChatEntry>,
     summary_dirty: bool,
     summary: Option<SessionSummary>,
+    /// Fortschritt oder letzte Zeile eines laufenden Eintrags hat sich geändert: nur die Oberfläche
+    /// erfährt es, gespeichert wird nichts.
+    live_changed: bool,
+    /// Neu zu beobachtende Ausgabedateien als (ID des Eintrags, Datei); die Wächter starten nach
+    /// dem Freigeben der Sperre.
+    run_watches: Vec<(String, String)>,
     /// IDs neu gestarteter Einträge der Art Befehl oder Prozess; `persist` schätzt ihre Dauer.
     run_starts: Vec<String>,
     /// Erfolgreiche Läufe als (Befehl, Dauer ms, Ende ms) fürs Laufzeit-Gedächtnis.
@@ -2448,6 +2457,7 @@ impl SessionState {
             background: Vec::new(),
             scratchpad_dir: None,
             cli_tasks_dir: None,
+            watched_runs: HashSet::new(),
             artifacts_dir: None,
             ticket_roots: Vec::new(),
             ticket_worktrees: Vec::new(),
@@ -3339,6 +3349,7 @@ impl SessionState {
                 }) {
                     self.background[index].output_file = Some(path);
                     self.touch_background(outbox, index);
+                    self.watch_run(outbox, index);
                 }
             }
             AgentEvent::TaskProgress { task_id, tool_uses } => {
@@ -3542,6 +3553,7 @@ impl SessionState {
             item.output_file = output_file;
         }
         self.touch_background(outbox, index);
+        self.watch_run(outbox, index);
     }
 
     /// Der Befehl läuft nach seinem Zeitlimit als Prozess weiter. Kam sein Werkzeug-Ergebnis schon
@@ -3560,6 +3572,54 @@ impl SessionState {
         item.ended_at = None;
         item.exit_code = None;
         self.touch_background(outbox, index);
+        // Gleiche ID, gleiche Datei: ein laufender Wächter liest einfach weiter.
+        self.watch_run(outbox, index);
+    }
+
+    /// Startet nach dem Freigeben der Sperre einen Wächter für die Ausgabedatei des Eintrags, wenn
+    /// er läuft, die Datei kennt und noch keiner ihn beobachtet.
+    fn watch_run(&mut self, outbox: &mut Outbox, index: usize) {
+        let Some(item) = self.background.get(index) else {
+            return;
+        };
+        let Some(file) = item
+            .output_file
+            .clone()
+            .filter(|_: &String| item.is_running())
+        else {
+            return;
+        };
+        if self.watched_runs.insert(item.id.clone()) {
+            outbox.run_watches.push((item.id.clone(), file));
+        }
+    }
+
+    /// Übernimmt den Stand eines Wächters. `false`: der Eintrag läuft nicht mehr, der Wächter
+    /// endet. Der Stand liegt nur im Speicher; gespeichert wird er mit der nächsten anderen
+    /// Änderung des Eintrags, spätestens an seinem Ende.
+    fn apply_live_run(
+        &mut self,
+        outbox: &mut Outbox,
+        item_id: &str,
+        reading: run_watch::LiveReading,
+    ) -> bool {
+        let Some(item) = self
+            .background
+            .iter_mut()
+            .find(|item: &&mut BackgroundItem| item.id == item_id && item.is_running())
+        else {
+            self.watched_runs.remove(item_id);
+            return false;
+        };
+        let Some((progress, last_line)) = reading else {
+            return true;
+        };
+        if item.progress != progress || item.last_line != last_line {
+            item.progress = progress;
+            item.last_line = last_line;
+            outbox.live_changed = true;
+        }
+        true
     }
 
     /// Nur ein laufender Eintrag endet: ein unterbrochener bleibt unterbrochen, auch wenn der
@@ -3911,7 +3971,7 @@ fn update<R>(
         }
         // Auch bei einem Fehler: die Closure kann den Zustand schon verändert haben.
         persist(session, &mut state, &mut outbox);
-        if outbox.summary_dirty {
+        if outbox.summary_dirty || outbox.live_changed {
             outbox.summary = Some(summarize(session, &state));
         }
         result
@@ -3926,6 +3986,9 @@ fn update<R>(
     let windows = std::mem::take(&mut outbox.commit_windows);
     if !windows.is_empty() {
         commit_scan::schedule(Arc::clone(session), windows);
+    }
+    for (item_id, file) in std::mem::take(&mut outbox.run_watches) {
+        run_watch::schedule(app.clone(), Arc::clone(session), item_id, file);
     }
     // Die Session-Sperre ist hier frei: `consider` nimmt Vorhaben- und Session-Sperren selbst.
     if outbox.turn_completed {

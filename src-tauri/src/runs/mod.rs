@@ -3,6 +3,7 @@
 pub mod backfill;
 pub mod model;
 pub mod normalize;
+pub mod progress;
 
 use rusqlite::Connection;
 

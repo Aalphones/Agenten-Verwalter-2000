@@ -162,7 +162,7 @@ fn local_url_at(text: &str) -> Option<String> {
 }
 
 /// Entfernt Steuersequenzen der Form `ESC [ … Buchstabe`.
-fn strip_ansi(text: &str) -> String {
+pub(crate) fn strip_ansi(text: &str) -> String {
     let mut plain = String::with_capacity(text.len());
     let mut characters = text.chars().peekable();
     while let Some(character) = characters.next() {

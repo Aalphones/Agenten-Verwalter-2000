@@ -9,7 +9,7 @@ Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt;
 | 1 | Befehle nur einmal führen, Ausgabedatei kennen | [phase-1-vorgang.md](phase-1-vorgang.md) | heikel | complete |
 | 2 | Beschreibung statt Befehl | [phase-2-beschreibung.md](phase-2-beschreibung.md) | standard | complete |
 | 3 | Laufzeit-Gedächtnis und Schätzung | [phase-3-gedaechtnis.md](phase-3-gedaechtnis.md) | standard | complete |
-| 4 | Live-Fortschritt aus der Ausgabe | [phase-4-fortschritt.md](phase-4-fortschritt.md) | heikel | pending |
+| 4 | Live-Fortschritt aus der Ausgabe | [phase-4-fortschritt.md](phase-4-fortschritt.md) | heikel | complete |
 | 5 | Anzeige: Statuszeile, Seitenleiste, Befehlszeile | [phase-5-anzeige.md](phase-5-anzeige.md) | standard | pending |
 | 6 | Figuren: Fach „Langer Lauf“ und drei Bewegungen | [phase-6-figuren.md](phase-6-figuren.md) | standard | pending |
 | 7 | Verlauf lesbar: Zweckzeile und Was-Zeile | [phase-7-verlauf.md](phase-7-verlauf.md) | standard | pending |
