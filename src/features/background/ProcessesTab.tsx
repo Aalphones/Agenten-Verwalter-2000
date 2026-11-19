@@ -69,9 +69,10 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
       <BackgroundRow
         icon={stateIcon(item.state)}
         iconTone={stateTone(item.state)}
-        title={item.title}
-        isMono
+        title={item.description ?? item.title}
+        isMono={item.description === null}
         subtitle={rowSubtitle(item, now)}
+        command={item.description === null ? null : item.title}
         right={rowRight(item)}
         rightTone={rowRightTone(item)}
         indent={8}
@@ -138,8 +139,9 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
     return (
       <>
         <DetailHead
-          title={selected.title}
-          isMono
+          title={selected.description ?? selected.title}
+          isMono={selected.description === null}
+          command={selected.description === null ? null : selected.title}
           meta={detailMeta(selected, now)}
           result={null}
           actions={buildActions(selected)}

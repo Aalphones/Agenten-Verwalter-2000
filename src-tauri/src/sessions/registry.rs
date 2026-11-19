@@ -384,6 +384,16 @@ pub struct NewSession<'a> {
     pub mode: Mode,
 }
 
+/// Angaben für einen neuen Eintrag im Hintergrund-Panel (`start_background`).
+struct NewBackground {
+    id: String,
+    tool_use_id: String,
+    kind: BackgroundKind,
+    title: String,
+    subagent_type: Option<String>,
+    description: Option<String>,
+}
+
 /// Was nach dem Freigeben der Sperre hinausgeht.
 #[derive(Default)]
 struct Outbox {
@@ -2786,6 +2796,7 @@ impl SessionState {
             title: oldest.title.clone(),
             started_at: oldest.started_at,
             count,
+            description: oldest.description.clone(),
         })
     }
 
@@ -3105,6 +3116,7 @@ impl SessionState {
                 tool_use_id,
                 tool,
                 target,
+                description,
                 used_paths,
                 input,
                 input_truncated,
@@ -3127,6 +3139,7 @@ impl SessionState {
                     tool,
                     target,
                     state: ToolState::Running,
+                    description,
                 });
                 self.tool_seqs.insert(tool_use_id, seq);
                 if is_write {
@@ -3236,13 +3249,17 @@ impl SessionState {
             AgentEvent::CommandStarted {
                 tool_use_id,
                 command,
+                description,
             } => self.start_background(
                 outbox,
-                tool_use_id.clone(),
-                tool_use_id,
-                BackgroundKind::Command,
-                command,
-                None,
+                NewBackground {
+                    id: tool_use_id.clone(),
+                    tool_use_id,
+                    kind: BackgroundKind::Command,
+                    title: command,
+                    subagent_type: None,
+                    description,
+                },
             ),
             AgentEvent::CommandFinished {
                 tool_use_id,
@@ -3263,6 +3280,7 @@ impl SessionState {
                 kind,
                 title,
                 subagent_type,
+                description,
             } => {
                 if self
                     .background_index(|item: &BackgroundItem| item.matches_task(&task_id))
@@ -3272,7 +3290,17 @@ impl SessionState {
                         TaskKind::Process => BackgroundKind::Process,
                         TaskKind::Subagent => BackgroundKind::Subagent,
                     };
-                    self.start_background(outbox, task_id, tool_use_id, kind, title, subagent_type);
+                    self.start_background(
+                        outbox,
+                        NewBackground {
+                            id: task_id,
+                            tool_use_id,
+                            kind,
+                            title,
+                            subagent_type,
+                            description,
+                        },
+                    );
                 }
             }
             AgentEvent::TaskOutputFile { tool_use_id, path } => {
@@ -3403,32 +3431,25 @@ impl SessionState {
         })
     }
 
-    fn start_background(
-        &mut self,
-        outbox: &mut Outbox,
-        id: String,
-        tool_use_id: String,
-        kind: BackgroundKind,
-        title: String,
-        subagent_type: Option<String>,
-    ) {
+    fn start_background(&mut self, outbox: &mut Outbox, new: NewBackground) {
         self.background.push(BackgroundItem {
-            id,
-            tool_use_id,
-            kind,
+            id: new.id,
+            tool_use_id: new.tool_use_id,
+            kind: new.kind,
             state: BackgroundState::Running,
-            title,
+            title: new.title,
             started_at: now_ms(),
             ended_at: None,
             exit_code: None,
             url: None,
             output_file: None,
-            subagent_type,
+            subagent_type: new.subagent_type,
             model: None,
             tool_uses: 0,
             steps: Vec::new(),
             result: None,
             task_id: None,
+            description: new.description,
         });
         self.touch_background(outbox, self.background.len() - 1);
     }

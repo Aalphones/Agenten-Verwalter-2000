@@ -25,8 +25,12 @@ export interface StatusFigureInput {
 export interface StatusFigure {
   /** Das gezeigte Fach; `null`, solange noch keines feststeht. */
   slot: string | null;
-  /** Ziel des Werkzeugs für `{ziel}`; ohne Ziel der Werkzeugname, beim Denken leer. */
+  /** Ziel des Werkzeugs für das Fach-Muster `input` (`slotFor`); bei Befehlen der Befehl, beim Denken leer. */
   target: string;
+  /** Was für `{ziel}` steht: bei Befehlen die Beschreibung, sonst `target`, ohne Ziel der Werkzeugname. */
+  label: string;
+  /** Der Befehl für `{befehl}`; bei anderen Werkzeugen und beim Denken leer. */
+  command: string;
   /** Welcher Text des Fachs steht; nur beim Denken gesetzt (`floor(Sekunden / 10)`). */
   textIndex: number | null;
   /** Werkzeug-Aufrufe seit der letzten Nachricht des Users. */
@@ -40,7 +44,11 @@ export interface StatusFigure {
 interface Wanted {
   slot: string;
   target: string;
+  label: string;
+  command: string;
 }
+
+const SHELL_TOOLS: ReadonlySet<string> = new Set<string>(['Bash', 'PowerShell']);
 
 interface Shown extends Wanted {
   roll: number;
@@ -71,6 +79,8 @@ function readToolActivity(
       running = {
         slot: slotFor(entry.tool, entry.target, custom),
         target: entry.target || entry.tool,
+        label: entry.description ?? (entry.target || entry.tool),
+        command: SHELL_TOOLS.has(entry.tool) ? entry.target : '',
       };
     }
   }
@@ -99,10 +109,12 @@ export function useStatusFigure({
     if (running !== null) {
       return running;
     }
-    return thinkingSince === null ? null : { slot: THINK_SLOT, target: '' };
+    return thinkingSince === null ? null : { slot: THINK_SLOT, target: '', label: '', command: '' };
   }, [running, thinkingSince]);
   const wantedSlot: string | null = wanted?.slot ?? null;
   const wantedTarget: string = wanted?.target ?? '';
+  const wantedLabel: string = wanted?.label ?? '';
+  const wantedCommand: string = wanted?.command ?? '';
 
   useEffect(() => {
     if (!isWorking) {
@@ -120,7 +132,11 @@ export function useStatusFigure({
     if (!isWorking || workStart === null || wantedSlot === null) {
       return;
     }
-    if (shown?.slot === wantedSlot && shown.target === wantedTarget) {
+    if (
+      shown?.slot === wantedSlot &&
+      shown.target === wantedTarget &&
+      shown.label === wantedLabel
+    ) {
       return;
     }
     const lastChange: number | null = clockRef.current.lastChange;
@@ -131,14 +147,20 @@ export function useStatusFigure({
     const timer: number = window.setTimeout(
       (): void => {
         clockRef.current.lastChange = Date.now();
-        setShown({ slot: wantedSlot, target: wantedTarget, roll: Math.random() });
+        setShown({
+          slot: wantedSlot,
+          target: wantedTarget,
+          label: wantedLabel,
+          command: wantedCommand,
+          roll: Math.random(),
+        });
       },
       Math.max(0, earliest - Date.now()),
     );
     return (): void => {
       window.clearTimeout(timer);
     };
-  }, [isWorking, wantedSlot, wantedTarget, shown]);
+  }, [isWorking, wantedSlot, wantedTarget, wantedLabel, wantedCommand, shown]);
 
   const isThinkingShown: boolean =
     isWorking && shown?.slot === THINK_SLOT && thinkingSince !== null;
@@ -149,11 +171,22 @@ export function useStatusFigure({
       : null;
 
   if (!isWorking || shown === null) {
-    return { slot: null, target: '', textIndex: null, calls, thinkingSeconds: null, roll: 0 };
+    return {
+      slot: null,
+      target: '',
+      label: '',
+      command: '',
+      textIndex: null,
+      calls,
+      thinkingSeconds: null,
+      roll: 0,
+    };
   }
   return {
     slot: shown.slot,
     target: shown.target,
+    label: shown.label,
+    command: shown.command,
     textIndex: thinkingSeconds === null ? null : Math.floor(thinkingSeconds / THINK_TEXT_STEP_S),
     calls,
     thinkingSeconds,

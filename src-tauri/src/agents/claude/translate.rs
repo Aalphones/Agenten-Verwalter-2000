@@ -172,9 +172,14 @@ impl Translator {
         }
         let description = system.description.unwrap_or_default();
         let title = match kind {
-            TaskKind::Process => self.process_title(&tool_use_id, description),
-            TaskKind::Subagent => description,
+            TaskKind::Process => self.process_title(&tool_use_id, description.clone()),
+            TaskKind::Subagent => description.clone(),
         };
+        // Bei einem Prozess ersetzt der Befehl die Beschreibung als Titel; sie bleibt als eigener
+        // Text. Fehlt der Befehl, ist die Beschreibung schon der Titel und braucht keine Kopie.
+        let description = Some(description.trim().to_owned()).filter(|text: &String| {
+            kind == TaskKind::Process && !text.is_empty() && *text != title
+        });
         self.started_tasks.insert(tool_use_id.clone());
         let output_file = system.output_file;
         let mut events = vec![AgentEvent::TaskStarted {
@@ -183,6 +188,7 @@ impl Translator {
             kind,
             title,
             subagent_type: system.subagent_type,
+            description,
         }];
         if let Some(path) = output_file.filter(|path: &String| !path.is_empty()) {
             events.push(AgentEvent::TaskOutputFile {
@@ -324,6 +330,7 @@ impl Translator {
         Some(AgentEvent::CommandStarted {
             tool_use_id: id.clone(),
             command,
+            description: description_of(name, input),
         })
     }
 
@@ -542,12 +549,14 @@ fn translate_tool_use(id: String, name: String, input: &Value) -> Option<AgentEv
         ASK_USER_TOOL => None,
         _ => {
             let target = target_of(&name, input);
+            let description = description_of(&name, input);
             let (detail_input, input_truncated) =
                 head_text(&input_text(&name, input), MAX_TOOL_INPUT_BYTES);
             Some(AgentEvent::ToolStarted {
                 tool_use_id: id,
                 tool: name,
                 target,
+                description,
                 used_paths: used_paths(input),
                 input: detail_input,
                 input_truncated,
@@ -558,6 +567,19 @@ fn translate_tool_use(id: String, name: String, input: &Value) -> Option<AgentEv
 
 fn is_shell_tool(name: &str) -> bool {
     name == BASH_TOOL || name == POWERSHELL_TOOL
+}
+
+/// Was der Befehl bewirkt, in den Worten des Agenten (`description` der Eingabe); nur bei Bash und
+/// PowerShell. Leer oder fehlend → `None`, lange Texte werden auf eine Zeile gekürzt.
+fn description_of(name: &str, input: &Value) -> Option<String> {
+    if !is_shell_tool(name) {
+        return None;
+    }
+    let text = input.get("description").and_then(Value::as_str)?.trim();
+    if text.is_empty() {
+        return None;
+    }
+    Some(shorten_to_line(text))
 }
 
 /// Bei Bash/PowerShell der Befehl wie geschrieben, sonst die ganze Eingabe als JSON.

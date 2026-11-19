@@ -7,7 +7,7 @@ Ziel: Statt des rohen Shell-Befehls zeigt der Verwalter, was der Befehl bewirkt;
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Befehle nur einmal führen, Ausgabedatei kennen | [phase-1-vorgang.md](phase-1-vorgang.md) | heikel | complete |
-| 2 | Beschreibung statt Befehl | [phase-2-beschreibung.md](phase-2-beschreibung.md) | standard | pending |
+| 2 | Beschreibung statt Befehl | [phase-2-beschreibung.md](phase-2-beschreibung.md) | standard | complete |
 | 3 | Laufzeit-Gedächtnis und Schätzung | [phase-3-gedaechtnis.md](phase-3-gedaechtnis.md) | standard | pending |
 | 4 | Live-Fortschritt aus der Ausgabe | [phase-4-fortschritt.md](phase-4-fortschritt.md) | heikel | pending |
 | 5 | Anzeige: Statuszeile, Seitenleiste, Befehlszeile | [phase-5-anzeige.md](phase-5-anzeige.md) | standard | pending |

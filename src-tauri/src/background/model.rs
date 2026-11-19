@@ -60,6 +60,9 @@ pub struct BackgroundItem {
     /// Vorgang der Kommandozeile zu einem Befehl; bei Prozess und Subagent steht er in `id`.
     #[serde(default)]
     pub task_id: Option<String>,
+    /// Was der Befehl bewirkt, in den Worten des Agenten; `title` bleibt der Befehl.
+    #[serde(default)]
+    pub description: Option<String>,
 }
 
 impl BackgroundItem {

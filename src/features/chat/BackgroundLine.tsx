@@ -32,7 +32,14 @@ export function BackgroundLine({ sessionId, item }: BackgroundLineProps): ReactE
       <>
         <span className="background-line__name">Bash</span>
         <span className="background-line__note">im Hintergrund</span>
-        <span className="background-line__command">{item.title}</span>
+        {item.description === null ? (
+          <span className="background-line__command">{item.title}</span>
+        ) : (
+          <>
+            <span className="background-line__title">{item.description}</span>
+            <span className="background-line__command">{item.title}</span>
+          </>
+        )}
         {item.url !== null && <span className="background-line__url">→ {item.url}</span>}
       </>
     );

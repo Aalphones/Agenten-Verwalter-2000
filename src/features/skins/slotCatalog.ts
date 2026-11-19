@@ -30,12 +30,12 @@ export const BUILTIN_TOOL_SLOTS: Readonly<Record<string, BuiltinSlotId>> = {
   Task: 'agent',
 };
 
-/** Sachliche Texte der Fächer; `{ziel}`, `{zeit}` und `{commit}` füllt `fillText`. */
+/** Sachliche Texte der Fächer; `{ziel}`, `{befehl}`, `{zeit}`, `{commit}`, `{fortschritt}` und `{rest}` füllt `fillText`. */
 export const PLAIN_TEXTS: Readonly<Record<BuiltinSlotId, string>> = {
   search: 'Durchsucht {ziel} …',
   read: 'Liest {ziel} …',
   write: 'Bearbeitet {ziel} …',
-  shell: 'Führt {ziel} aus …',
+  shell: '{ziel} …',
   web: 'Sucht im Web nach {ziel} …',
   agent: 'Unteragent: {ziel} …',
   other: 'Arbeitet mit {ziel} …',

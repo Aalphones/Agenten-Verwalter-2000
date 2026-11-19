@@ -1,6 +1,6 @@
 # Phase 2 — Beschreibung statt Befehl
 
-Rating: standard. Die Befehlsbeschreibung (`description` aus der Eingabe von Bash und PowerShell) wandert vom Übersetzer bis in jede Anzeige. Der Befehl bleibt gespeichert, bleibt Grundlage für eigene Fächer und steht beim Aufklappen. Aussehen der Zeilen: [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html), Kästen „Befehlszeile im Chat“ und „Hintergrund-Panel“.
+Status: complete. Rating: standard. Die Befehlsbeschreibung (`description` aus der Eingabe von Bash und PowerShell) wandert vom Übersetzer bis in jede Anzeige. Der Befehl bleibt gespeichert, bleibt Grundlage für eigene Fächer und steht beim Aufklappen. Aussehen der Zeilen: [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html), Kästen „Befehlszeile im Chat“ und „Hintergrund-Panel“.
 
 ## Kontext (lesen)
 
@@ -32,29 +32,31 @@ Rating: standard. Die Befehlsbeschreibung (`description` aus der Eingabe von Bas
 
 ### Kern
 
-- [ ] `translate.rs`: Helfer `description_of(name, input) -> Option<String>`: nur bei `is_shell_tool(name)`, Feld `description` als String, getrimmt, leer → `None`, auf 120 Zeichen gekürzt (`shorten_to_line`). `translate_tool_use` und `remember_bash` geben ihn in `ToolStarted.description` bzw. `CommandStarted.description`.
-- [ ] `translate.rs`, `task_started`: `AgentEvent::TaskStarted.description` = bei `TaskKind::Process` die `system.description`, wenn sie nicht leer ist und vom Titel (dem Befehl) abweicht, sonst `None`; bei `Subagent` `None`.
-- [ ] `event.rs`: Felder laut Kontrakt (`ChatEntry::Tool.description` mit `#[serde(default)]`).
-- [ ] `registry.rs`: `ToolStarted` schreibt `description` in den Eintrag; `start_background` bekommt einen Parameter `description: Option<String>` und setzt `BackgroundItem.description` (Aufrufer: `CommandStarted`, `TaskStarted`). `awaited_script` füllt `AwaitedScript.description` vom ältesten laufenden Eintrag.
-- [ ] `background/model.rs`, `sessions/model.rs`: Felder `description` laut Kontrakt (`#[serde(default)]` am `BackgroundItem`).
-- [ ] `process.rs`: `fn commands_prompt() -> String` mit dem Text aus dem Kontrakt (wortgleich) und einem Kommentar, warum es ihn gibt; immer in `prompts` aufnehmen (vor `scratchpad_prompt`), sodass `--append-system-prompt` jetzt immer gesetzt ist.
-- [ ] `pnpm bindings`.
+- [x] `translate.rs`: Helfer `description_of(name, input) -> Option<String>`: nur bei `is_shell_tool(name)`, Feld `description` als String, getrimmt, leer → `None`, auf 120 Zeichen gekürzt (`shorten_to_line`). `translate_tool_use` und `remember_bash` geben ihn in `ToolStarted.description` bzw. `CommandStarted.description`.
+- [x] `translate.rs`, `task_started`: `AgentEvent::TaskStarted.description` = bei `TaskKind::Process` die `system.description`, wenn sie nicht leer ist und vom Titel (dem Befehl) abweicht, sonst `None`; bei `Subagent` `None`.
+- [x] `event.rs`: Felder laut Kontrakt (`ChatEntry::Tool.description` mit `#[serde(default)]`).
+- [x] `registry.rs`: `ToolStarted` schreibt `description` in den Eintrag; `start_background` bekommt einen Parameter `description: Option<String>` und setzt `BackgroundItem.description` (Aufrufer: `CommandStarted`, `TaskStarted`). `awaited_script` füllt `AwaitedScript.description` vom ältesten laufenden Eintrag.
+- [x] `background/model.rs`, `sessions/model.rs`: Felder `description` laut Kontrakt (`#[serde(default)]` am `BackgroundItem`).
+- [x] `process.rs`: `fn commands_prompt() -> String` mit dem Text aus dem Kontrakt (wortgleich) und einem Kommentar, warum es ihn gibt; immer in `prompts` aufnehmen (vor `scratchpad_prompt`), sodass `--append-system-prompt` jetzt immer gesetzt ist.
+- [x] `pnpm bindings`.
 
 ### Oberfläche
 
-- [ ] `buildBlocks.ts`: `ToolEntry` trägt `description: string | null` aus dem Eintrag.
-- [ ] `toolSummary.ts`: neue Funktion `toolLabel(tool: ToolEntry): string` = `tool.description ?? tool.target`; `groupSummary` nutzt sie im Fall „genau ein Aufruf“. `COMMAND_TOOL`-Vergleich um `PowerShell` erweitern („n Befehle“ auch dort).
-- [ ] `ToolGroup.tsx`: Zeile zeigt `toolLabel(tool)`; `title`-Attribut der Zeile bleibt `TOOL_TOGGLE_HINT`.
-- [ ] `useStatusFigure.ts`: `Wanted`/`Shown`/`StatusFigure` bekommen neben `target` (weiter der Befehl, für `slotFor`) ein Feld `label` (`entry.description ?? (entry.target || entry.tool)`) und `command` (`entry.target` bei Bash/PowerShell, sonst `''`). Der Wechsel-Vergleich nimmt `label` dazu.
-- [ ] `fillText.ts`: Werte `{ ziel, befehl, zeit, commit, fortschritt, rest }`; `statusText.ts`: `StatusTextInput` um `command`, `progress`, `rest` (Strings, vorerst `''`) erweitert, `ziel` = `label`. `slotCatalog.ts`: `PLAIN_TEXTS.shell = '{ziel} …'`.
-- [ ] `ChatTimeline.tsx`: `statusText` mit `target: statusFigure.label`, `command: statusFigure.command`; der `key` der `FigureStage` nutzt weiter `statusFigure.target`.
-- [ ] `ProcessesTab.tsx`, `DetailHead`-Aufrufer, `BackgroundLine.tsx`: `title = item.description ?? item.title`; gibt es eine Beschreibung, der Befehl als `subtitle` bzw. zweite Zeile in Monospace, `isMono` nur noch ohne Beschreibung.
-- [ ] `SidebarItem.tsx`, `SessionHeader.tsx`, `ProjectHeader.tsx`, `sessionStatus.ts`: überall `awaitedScript.description ?? awaitedScript.title`.
+- [x] `buildBlocks.ts`: `ToolEntry` trägt `description: string | null` aus dem Eintrag.
+- [x] `toolSummary.ts`: neue Funktion `toolLabel(tool: ToolEntry): string` = `tool.description ?? tool.target`; `groupSummary` nutzt sie im Fall „genau ein Aufruf“. `COMMAND_TOOL`-Vergleich um `PowerShell` erweitern („n Befehle“ auch dort).
+- [x] `ToolGroup.tsx`: Zeile zeigt `toolLabel(tool)`; `title`-Attribut der Zeile bleibt `TOOL_TOGGLE_HINT`.
+- [x] `useStatusFigure.ts`: `Wanted`/`Shown`/`StatusFigure` bekommen neben `target` (weiter der Befehl, für `slotFor`) ein Feld `label` (`entry.description ?? (entry.target || entry.tool)`) und `command` (`entry.target` bei Bash/PowerShell, sonst `''`). Der Wechsel-Vergleich nimmt `label` dazu.
+- [x] `fillText.ts`: Werte `{ ziel, befehl, zeit, commit, fortschritt, rest }`; `statusText.ts`: `StatusTextInput` um `command`, `progress`, `rest` (Strings, vorerst `''`) erweitert, `ziel` = `label`. `slotCatalog.ts`: `PLAIN_TEXTS.shell = '{ziel} …'`.
+- [x] `ChatTimeline.tsx`: `statusText` mit `target: statusFigure.label`, `command: statusFigure.command`; der `key` der `FigureStage` nutzt weiter `statusFigure.target`.
+- [x] `ProcessesTab.tsx`, `DetailHead`-Aufrufer, `BackgroundLine.tsx`: `title = item.description ?? item.title`; gibt es eine Beschreibung, der Befehl als `subtitle` bzw. zweite Zeile in Monospace, `isMono` nur noch ohne Beschreibung.
+- [x] `SidebarItem.tsx`, `SessionHeader.tsx`, `ProjectHeader.tsx`, `sessionStatus.ts`: überall `awaitedScript.description ?? awaitedScript.title`.
 
 ### Doku
 
-- [ ] `docs/glossary.md`: „Befehlsbeschreibung“.
-- [ ] `docs/code-map.md`: Zeilen „Chat“ und „Hintergrund“ (Beschreibung, `toolLabel`), Zeile „Skins“ (`{befehl}`, `label`).
-- [ ] `docs/decisions/065-skins.md` bleibt unverändert; die neuen Platzhalter stehen in ADR 066.
+- [x] `docs/glossary.md`: „Befehlsbeschreibung“.
+- [x] `docs/code-map.md`: Zeilen „Chat“ und „Hintergrund“ (Beschreibung, `toolLabel`), Zeile „Skins“ (`{befehl}`, `label`).
+- [x] `docs/decisions/065-skins.md` bleibt unverändert; die neuen Platzhalter stehen in ADR 066.
 
 ## Report-Back
+
+Ergebnis: Beschreibung läuft von `translate.rs` (`description_of`) über `ToolStarted`/`CommandStarted`/`TaskStarted` in Eintrag, Hintergrund-Eintrag und `AwaitedScript`; Anzeige in Gruppenzeile, Statuszeile, Hintergrund-Panel, Chat-Zeile und Tooltips. `translate-probe` über `vordergrund.jsonl` zeigt die Beschreibung (AK 1). `pnpm bindings` und `pnpm check` grün. Abweichungen: `start_background` nimmt eine Struktur `NewBackground` (Clippy: höchstens 7 Argumente); der Befehl steht in Panel-Zeilen als Festbreiten-Abschnitt vor der Unterzeile statt als dritte Zeile (die Liste rechnet mit fester Zeilenhöhe). `remember_bash` merkt weiter nur `Bash`; ein PowerShell-Vordergrund-Befehl behält Beschreibung am Werkzeug-Eintrag, entsteht im Panel aber weiter nur über `task_started`.

@@ -222,6 +222,9 @@ pub enum ChatEntry {
         tool: String,
         target: String,
         state: ToolState,
+        /// Was der Befehl bewirkt (Bash, PowerShell); Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        description: Option<String>,
     },
     Todos {
         seq: u32,
@@ -358,6 +361,8 @@ pub enum AgentEvent {
         tool_use_id: String,
         tool: String,
         target: String,
+        /// `description` der Eingabe bei Bash und PowerShell.
+        description: Option<String>,
         /// Ungekürzte Werte von `file_path`, `notebook_path`, `path` und `command` aus der Eingabe
         /// des Werkzeugs; daraus ordnet die Session Ticket-Worktrees zu.
         used_paths: Vec<String>,
@@ -446,6 +451,7 @@ pub enum AgentEvent {
     CommandStarted {
         tool_use_id: String,
         command: String,
+        description: Option<String>,
     },
     CommandFinished {
         tool_use_id: String,
@@ -475,6 +481,8 @@ pub enum AgentEvent {
         kind: TaskKind,
         title: String,
         subagent_type: Option<String>,
+        /// Beschreibung eines Prozesses, wenn sie neben dem Befehl als Titel steht.
+        description: Option<String>,
     },
     /// Die Datei, in die ein Hintergrundprozess seine Ausgabe schreibt.
     TaskOutputFile {

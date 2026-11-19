@@ -25,7 +25,14 @@ import type { SlotLook } from '@/lib/bindings/SlotLook';
 import './FigureSlotRow.css';
 
 /** Werte, mit denen die Vorschau die Platzhalter der Texte füllt. */
-const PREVIEW_VALUES = { ziel: 'ChatTimeline.tsx', zeit: '14:30', commit: 'a1b2c3d' } as const;
+const PREVIEW_VALUES = {
+  ziel: 'ChatTimeline.tsx',
+  befehl: 'pnpm check',
+  zeit: '14:30',
+  commit: 'a1b2c3d',
+  fortschritt: '12/40',
+  rest: '~1:25',
+} as const;
 const MOTION_KEYS = Object.keys(MOTION_LABELS) as Motion[];
 
 interface FigureSlotRowProps {

@@ -214,7 +214,7 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
     }
     // Ein gemeinsamer Text: der autarke Agent liest nur ein `--append-system-prompt`, ein zweites
     // überschriebe das erste.
-    let mut prompts: Vec<String> = Vec::new();
+    let mut prompts: Vec<String> = vec![commands_prompt()];
     if let Some(dir) = &opts.scratchpad {
         prompts.push(scratchpad_prompt(dir));
     }
@@ -225,11 +225,9 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
             opts.verwalter_mcp.is_some() && opts.codex_exe.is_none(),
         ));
     }
-    if !prompts.is_empty() {
-        command
-            .arg("--append-system-prompt")
-            .arg(prompts.join("\n\n"));
-    }
+    command
+        .arg("--append-system-prompt")
+        .arg(prompts.join("\n\n"));
     // `--allowedTools` nimmt mehrere Werte; die nächste Option (`--add-dir`, `--resume`,
     // `--session-id`) beendet die Liste.
     // Die Werkzeuge des Verwalters lesen nur und wählen in der eigenen Oberfläche aus: keine
@@ -263,6 +261,19 @@ fn model_arg(opts: &SpawnOptions) -> &str {
         Some(backend) => backend.model.as_str(),
         None => opts.model.cli_id(),
     }
+}
+
+/// Ohne die Vorgabe zeigt der Verwalter den rohen Shell-Befehl und kann bei langen Läufen keinen
+/// Fortschritt lesen: die `description` ist der Text, den der Benutzer statt des Befehls sieht, die
+/// Zeilen `[n/m] …` sind die Quelle des Fortschritts (ADR 066).
+fn commands_prompt() -> String {
+    "Shell-Befehle: Gib bei jedem Bash- und PowerShell-Aufruf `description` an — auf Deutsch, \
+     höchstens acht Wörter, was der Befehl bewirkt, nicht wie (z. B. „Prüfkette laufen lassen“, \
+     „Git-Status prüfen“). Der Benutzer sieht diese Zeile statt des Befehls. Skripte und \
+     Schleifen, die du selbst schreibst und die länger als ein paar Sekunden laufen, geben je \
+     Schritt eine Zeile `[<erledigt>/<gesamt>] <was gerade läuft>` auf der Standardausgabe aus, \
+     sofort geschrieben und nicht gepuffert; der Verwalter zeigt daraus den Fortschritt."
+        .to_owned()
 }
 
 /// Ohne die Vorgabe erfindet jeder Agent seine eigene Ablage (`%TEMP%\<ticket>`, `_scratch\` im

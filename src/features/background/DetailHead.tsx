@@ -13,6 +13,8 @@ export interface DetailAction {
 interface DetailHeadProps {
   title: string;
   isMono: boolean;
+  /** Der Befehl in Festbreitenschrift unter der Überschrift, wenn sie eine Beschreibung ist. */
+  command?: string | null;
   meta: string;
   /** Absatz mit dem Ergebnis (Subagent); `null` ohne. */
   result: string | null;
@@ -24,6 +26,7 @@ interface DetailHeadProps {
 export function DetailHead({
   title,
   isMono,
+  command = null,
   meta,
   result,
   actions,
@@ -34,6 +37,7 @@ export function DetailHead({
       <div className={`detail-head__title${isMono ? ' detail-head__title--mono' : ''}`}>
         {title}
       </div>
+      {command !== null && <div className="detail-head__command">{command}</div>}
       <div className="detail-head__meta">{meta}</div>
       {result !== null && <p className="detail-head__result">{result}</p>}
       <div className="detail-head__actions">

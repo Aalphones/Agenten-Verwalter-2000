@@ -16,6 +16,13 @@
     }
   }
 
+  &__command {
+    color: var(--color-fg-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    word-break: break-all;
+  }
+
   &__meta {
     color: var(--color-fg-muted);
     font-size: var(--font-size-xs);

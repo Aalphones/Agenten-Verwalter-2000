@@ -165,7 +165,10 @@ export function ChatTimeline({
     statusFigure.slot === null ? null : lookFor(activeFigures, statusFigure.slot);
   const statusLine: string = statusText({
     slot: statusFigure.slot,
-    target: statusFigure.target,
+    target: statusFigure.label,
+    command: statusFigure.command,
+    progress: '',
+    rest: '',
     textIndex: statusFigure.textIndex,
     roll: statusFigure.roll,
     look: statusLook,

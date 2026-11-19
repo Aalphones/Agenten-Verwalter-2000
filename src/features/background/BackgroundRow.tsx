@@ -9,6 +9,8 @@ interface BackgroundRowProps {
   /** Überschrift in Festbreitenschrift (Befehle, Dateinamen). */
   isMono: boolean;
   subtitle: string | null;
+  /** Der Befehl in Festbreitenschrift vor der Unterzeile, wenn die Überschrift eine Beschreibung ist. */
+  command?: string | null;
   right: string;
   rightTone: RowTone;
   /** Einzug links in Pixeln; Ordner im Scratchpad-Baum rücken ein. */
@@ -24,6 +26,7 @@ export function BackgroundRow({
   title,
   isMono,
   subtitle,
+  command = null,
   right,
   rightTone,
   indent,
@@ -39,7 +42,13 @@ export function BackgroundRow({
         <span className={`background-row__title${isMono ? ' background-row__title--mono' : ''}`}>
           {title}
         </span>
-        {subtitle !== null && <span className="background-row__subtitle">{subtitle}</span>}
+        {(subtitle !== null || command !== null) && (
+          <span className="background-row__subtitle">
+            {command !== null && <span className="background-row__command">{command}</span>}
+            {command !== null && subtitle !== null && ' · '}
+            {subtitle}
+          </span>
+        )}
       </span>
       <span className={`background-row__right background-row__right--${rightTone}`}>{right}</span>
     </>

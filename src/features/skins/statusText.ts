@@ -6,8 +6,14 @@ import type { SlotLook } from '@/lib/bindings/SlotLook';
 export interface StatusTextInput {
   /** Das gezeigte Fach; `null` = noch keines, dann der neutrale Text. */
   slot: string | null;
-  /** Ziel des Werkzeugs für `{ziel}`. */
+  /** Was für `{ziel}` steht: bei Befehlen die Beschreibung, sonst das Ziel. */
   target: string;
+  /** Der Befehl für `{befehl}`; bei anderen Werkzeugen leer. */
+  command: string;
+  /** Fortschritt für `{fortschritt}`, z. B. `12/40`; leer, solange keiner bekannt ist. */
+  progress: string;
+  /** Restdauer für `{rest}`, z. B. `~1:25`; leer, solange keine bekannt ist. */
+  rest: string;
   /** Beim Denken: welcher Text steht (der letzte bleibt stehen); sonst `null`. */
   textIndex: number | null;
   /** Zufallswert (0 bis 1), gezogen beim Wechsel; wählt den Text, solange kein Index gilt. */
@@ -57,8 +63,11 @@ export function statusText(input: StatusTextInput): string {
   }
   return fillText(pickTemplate(input, input.slot), {
     ziel: input.target,
+    befehl: input.command,
     zeit: input.time,
     commit: '',
+    fortschritt: input.progress,
+    rest: input.rest,
   });
 }
 
@@ -71,10 +80,20 @@ export function celebrationText(
   const input: StatusTextInput = {
     slot,
     target: '',
+    command: '',
+    progress: '',
+    rest: '',
     textIndex: null,
     roll: Math.random(),
     look,
     time: '',
   };
-  return fillText(pickTemplate(input, slot), { ziel: '', zeit: '', commit });
+  return fillText(pickTemplate(input, slot), {
+    ziel: '',
+    befehl: '',
+    zeit: '',
+    commit,
+    fortschritt: '',
+    rest: '',
+  });
 }

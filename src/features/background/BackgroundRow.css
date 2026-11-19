@@ -85,6 +85,10 @@
     text-overflow: ellipsis;
   }
 
+  &__command {
+    font-family: var(--font-mono);
+  }
+
   &__right {
     flex-shrink: 0;
     font-size: 11.5px;

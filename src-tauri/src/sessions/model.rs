@@ -158,6 +158,9 @@ pub struct AwaitedScript {
     pub started_at: f64,
     /// Zahl der laufenden Einträge, ab 1.
     pub count: u32,
+    /// Befehlsbeschreibung des ältesten laufenden Eintrags, wenn es eine gibt.
+    #[serde(default)]
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

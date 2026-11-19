@@ -256,7 +256,7 @@ export function SessionHeader({
         <h1 className="session-header__name">{session.name}</h1>
         <span
           className={`session-header__status session-header__status--${headerStatus(session)}`}
-          title={session.awaitedScript?.title ?? statusLabel}
+          title={session.awaitedScript?.description ?? session.awaitedScript?.title ?? statusLabel}
         >
           <StatusIcon status={headerStatus(session)} size={10} />
           <span className="session-header__status-label">{statusLabel}</span>

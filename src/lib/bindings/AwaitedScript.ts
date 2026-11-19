@@ -12,4 +12,8 @@ startedAt: number,
 /**
  * Zahl der laufenden Einträge, ab 1.
  */
-count: number, };
+count: number, 
+/**
+ * Befehlsbeschreibung des ältesten laufenden Eintrags, wenn es eine gibt.
+ */
+description: string | null, };

@@ -31,4 +31,8 @@ steps: Array<SubagentStep>, result: string | null,
 /**
  * Vorgang der Kommandozeile zu einem Befehl; bei Prozess und Subagent steht er in `id`.
  */
-taskId: string | null, };
+taskId: string | null, 
+/**
+ * Was der Befehl bewirkt, in den Worten des Agenten; `title` bleibt der Befehl.
+ */
+description: string | null, };

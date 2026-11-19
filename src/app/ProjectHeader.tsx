@@ -92,7 +92,7 @@ export function ProjectHeader({
         {urgent !== null && (
           <span
             className={`session-header__status session-header__status--${headerStatus(urgent)}`}
-            title={urgent.awaitedScript?.title}
+            title={urgent.awaitedScript?.description ?? urgent.awaitedScript?.title}
           >
             <StatusIcon status={headerStatus(urgent)} size={10} />
             <span>{headerStatusLabel(urgent, scriptNow)}</span>

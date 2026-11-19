@@ -25,7 +25,10 @@ export function AwaitedScriptLine({ script, pack }: AwaitedScriptLineProps): Rea
   const seconds: number = Math.max(0, Math.floor((now - script.startedAt) / SECOND_MS));
   const text: string = statusText({
     slot: WAIT_SLOT,
-    target: script.title,
+    target: script.description ?? script.title,
+    command: script.title,
+    progress: '',
+    rest: '',
     textIndex: null,
     roll,
     look,

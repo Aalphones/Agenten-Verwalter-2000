@@ -83,7 +83,10 @@ export function SidebarItem({
           {session.name}
         </span>
         {status === 'script' && session.awaitedScript !== null && (
-          <span className="sidebar-item__clock" title={session.awaitedScript.title}>
+          <span
+            className="sidebar-item__clock"
+            title={session.awaitedScript.description ?? session.awaitedScript.title}
+          >
             {formatDuration(now - session.awaitedScript.startedAt)}
           </span>
         )}

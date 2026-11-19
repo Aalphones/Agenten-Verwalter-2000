@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import type { ToolEntry } from '@/features/chat/buildBlocks';
 import { ToolDetail } from '@/features/chat/ToolDetail';
-import { groupDot, groupSummary, groupTitle } from '@/features/chat/toolSummary';
+import { groupDot, groupSummary, groupTitle, toolLabel } from '@/features/chat/toolSummary';
 import './ToolGroup.css';
 
 const TOOL_TOGGLE_HINT = 'Eingabe und Ausgabe dieses Aufrufs ein-/ausblenden';
@@ -77,7 +77,7 @@ export function ToolGroup({
                 >
                   <span className="tool-group__branch">⎿</span>
                   <span className="tool-group__tool">{tool.tool}</span>
-                  <span className="tool-group__target">{tool.target}</span>
+                  <span className="tool-group__target">{toolLabel(tool)}</span>
                   {tool.state === 'interrupted' && (
                     <span className="tool-group__interrupted">unterbrochen</span>
                   )}
