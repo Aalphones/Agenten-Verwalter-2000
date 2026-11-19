@@ -15,8 +15,10 @@ interface WorkingIndicatorProps {
   thinkingSeconds: number | null;
   /** Der Lauf eines Befehls ab 2 s; `null` ohne. Dann stehen Zähler und Todo nicht in der Zeile. */
   run: RunView | null;
-  /** Figur vor dem Text; ohne Skin leer. */
+  /** Figur vor dem Text; `undefined` ohne Skin (dann das Standardsymbol), `null` bewusst ohne. */
   figure?: ReactNode;
+  /** Figur auf dem Balken des Laufs (Bewegung „Läuft die Strecke ab“). */
+  rider?: ReactNode;
   /** „· Esc unterbricht“; beim Warten auf ein Skript läuft nichts, das Esc unterbrechen könnte. */
   showsHint?: boolean;
 }
@@ -43,6 +45,7 @@ export function WorkingIndicator({
   thinkingSeconds,
   run,
   figure,
+  rider,
   showsHint = true,
 }: WorkingIndicatorProps): ReactElement {
   const count: string | null = run === null ? countLabel(calls, thinkingSeconds) : null;
@@ -53,7 +56,12 @@ export function WorkingIndicator({
       <>
         <span className="working-indicator__count">{elapsedLabel(view)}</span>
         {view.kind !== 'none' && view.fraction !== null && (
-          <RunMeter kind={view.kind} fraction={view.fraction} valueLabel={view.valueLabel} />
+          <RunMeter
+            kind={view.kind}
+            fraction={view.fraction}
+            valueLabel={view.valueLabel}
+            rider={rider}
+          />
         )}
         {view.kind === 'overdue' && view.expectedLabel !== null && (
           <span className="working-indicator__late">länger als üblich ({view.expectedLabel})</span>
@@ -73,7 +81,7 @@ export function WorkingIndicator({
       <div
         className={`working-indicator__main${run === null ? '' : ' working-indicator__main--run'}`}
       >
-        {figure ?? (
+        {figure === undefined ? (
           <svg
             width="13"
             height="13"
@@ -86,6 +94,8 @@ export function WorkingIndicator({
           >
             <path d="M7 1.5v11M1.5 7h11M3 3l8 8M11 3 3 11" />
           </svg>
+        ) : (
+          figure
         )}
         <span key={text} className="working-indicator__label" title={text}>
           {text}
@@ -97,7 +107,7 @@ export function WorkingIndicator({
       </div>
       {lastLine !== null && (
         <div
-          className={`working-indicator__last${figure === undefined ? '' : ' working-indicator__last--figure'}`}
+          className={`working-indicator__last${figure === undefined || figure === null ? '' : ' working-indicator__last--figure'}`}
         >
           <span aria-hidden="true">⎿</span>
           <span className="working-indicator__last-text" title={lastLine}>

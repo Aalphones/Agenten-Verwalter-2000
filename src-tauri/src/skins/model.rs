@@ -28,6 +28,7 @@ pub enum BuiltinSlot {
     Read,
     Write,
     Shell,
+    Longrun,
     Web,
     Agent,
     Other,
@@ -38,11 +39,12 @@ pub enum BuiltinSlot {
 }
 
 impl BuiltinSlot {
-    pub const ALL: [BuiltinSlot; 11] = [
+    pub const ALL: [BuiltinSlot; 12] = [
         BuiltinSlot::Search,
         BuiltinSlot::Read,
         BuiltinSlot::Write,
         BuiltinSlot::Shell,
+        BuiltinSlot::Longrun,
         BuiltinSlot::Web,
         BuiltinSlot::Agent,
         BuiltinSlot::Other,
@@ -76,10 +78,13 @@ pub enum Motion {
     Sparkle,
     Frost,
     Wave,
+    Trek,
+    Charge,
+    Reveal,
 }
 
 impl Motion {
-    pub const ALL: [Motion; 19] = [
+    pub const ALL: [Motion; 22] = [
         Motion::None,
         Motion::Bob,
         Motion::Vine,
@@ -99,6 +104,9 @@ impl Motion {
         Motion::Sparkle,
         Motion::Frost,
         Motion::Wave,
+        Motion::Trek,
+        Motion::Charge,
+        Motion::Reveal,
     ];
 }
 

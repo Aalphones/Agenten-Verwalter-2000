@@ -1,0 +1,36 @@
+.figure-rider {
+  position: absolute;
+  bottom: 5px;
+  height: 26px;
+  transform: translateX(-50%);
+  transition: left var(--duration-base) var(--ease-out);
+  pointer-events: none;
+
+  &__image {
+    height: 100% !important; /* das eingefrorene Bild setzt seine Größe inline */
+    width: auto !important;
+    image-rendering: pixelated;
+  }
+
+  &--hop {
+    animation: figure-rider-hop 0.52s ease-in-out infinite;
+  }
+}
+
+@keyframes figure-rider-hop {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figure-rider {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LONGRUN_AFTER_MS } from '@/features/runs/runTexts';
 import { slotFor, type CustomSlotMatch } from '@/features/skins/matchSlot';
+import { LONGRUN_SLOT } from '@/features/skins/slotCatalog';
 import { useSecondTick } from '@/features/skins/useSecondTick';
 import type { ChatEntry } from '@/lib/bindings/ChatEntry';
 
@@ -12,6 +14,7 @@ export const THINK_TEXT_STEP_S = 10;
 
 const SECOND_MS = 1000;
 const THINK_SLOT = 'think';
+const SHELL_SLOT = 'shell';
 
 export interface StatusFigureInput {
   entries: readonly ChatEntry[];
@@ -20,6 +23,10 @@ export interface StatusFigureInput {
   thinkingSince: number | null;
   /** Eigene Fächer des aktiven Figurenpakets; leer ohne Paket. Die Liste muss stabil sein (`useMemo`). */
   custom: readonly CustomSlotMatch[];
+  /** Start des laufenden Befehls (ms seit Epoche); `null` ohne laufenden Befehl. */
+  runSince: number | null;
+  /** Ob das aktive Paket das Fach „Langer Lauf“ belegt hat. */
+  hasLongrun: boolean;
 }
 
 export interface StatusFigure {
@@ -97,6 +104,8 @@ export function useStatusFigure({
   isWorking,
   thinkingSince,
   custom,
+  runSince,
+  hasLongrun,
 }: StatusFigureInput): StatusFigure {
   const [shown, setShown] = useState<Shown | null>(null);
   const clockRef = useRef<{ workStart: number | null; lastChange: number | null }>({
@@ -105,12 +114,32 @@ export function useStatusFigure({
   });
   const { running, calls } = useMemo(() => readToolActivity(entries, custom), [entries, custom]);
 
+  const [longrunSince, setLongrunSince] = useState<number | null>(null);
+  useEffect(() => {
+    if (runSince === null || !hasLongrun) {
+      return;
+    }
+    const timer: number = window.setTimeout(
+      (): void => {
+        setLongrunSince(runSince);
+      },
+      Math.max(0, runSince + LONGRUN_AFTER_MS - Date.now()),
+    );
+    return (): void => {
+      window.clearTimeout(timer);
+    };
+  }, [runSince, hasLongrun]);
+  const isLongrun: boolean = runSince !== null && hasLongrun && longrunSince === runSince;
+
   const wanted: Wanted | null = useMemo(() => {
     if (running !== null) {
-      return running;
+      // Ein passendes eigenes Fach gewinnt; nur das Fach „Befehl“ wird nach 5 s zum langen Lauf.
+      return isLongrun && running.slot === SHELL_SLOT
+        ? { ...running, slot: LONGRUN_SLOT }
+        : running;
     }
     return thinkingSince === null ? null : { slot: THINK_SLOT, target: '', label: '', command: '' };
-  }, [running, thinkingSince]);
+  }, [running, thinkingSince, isLongrun]);
   const wantedSlot: string | null = wanted?.slot ?? null;
   const wantedTarget: string = wanted?.target ?? '';
   const wantedLabel: string = wanted?.label ?? '';

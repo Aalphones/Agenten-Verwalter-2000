@@ -24,6 +24,15 @@ const FROST_STEP_S = 0.8;
 /** Sechs Arme der Länge 5 um den Nullpunkt. */
 const SNOWFLAKE_PATH = 'M-5 0H5M-2.5 -4.33L2.5 4.33M-2.5 4.33L2.5 -4.33';
 
+/** Der Ring der Bewegung „Lädt auf“: Mittelpunkt und Halbmesser in Bühnenkoordinaten. */
+const RING_CENTER_X = 34;
+const RING_CENTER_Y = 35;
+const RING_RADIUS = 29;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+const RING_ARC_WITHOUT_PROGRESS = 0.25;
+/** Ohne Fortschritt ist „Wird sichtbar“ zu diesem Anteil in Farbe. */
+const REVEAL_FRACTION_WITHOUT_PROGRESS = 0.3;
+
 const WAVE_PATH = 'M0 56Q6.5 52 13 56T26 56T39 56T52 56T65 56T78 56T91 56T104 56';
 
 const NET_SPOKES: readonly number[] = [0, 45, 90, 135, 180, 225, 270, 315];
@@ -31,6 +40,11 @@ const NET_SPOKES: readonly number[] = [0, 45, 90, 135, 180, 225, 270, 315];
 interface FigureProps {
   image: string;
   isStill: boolean;
+}
+
+interface ProgressFigureProps extends FigureProps {
+  /** Fortschritt 0 bis 1; `null`, solange keiner bekannt ist. */
+  progress: number | null;
 }
 
 function netSpokePath(angleDegrees: number): string {
@@ -440,15 +454,72 @@ function Wave({ image, isStill }: FigureProps): ReactElement {
   );
 }
 
+/** Ring um die Figur, gefüllt bis zum Fortschritt; ohne Fortschritt dreht ein Viertelbogen. */
+function Charge({ image, isStill, progress }: ProgressFigureProps): ReactElement {
+  const arcFraction: number = progress ?? RING_ARC_WITHOUT_PROGRESS;
+  const ringProps = {
+    cx: RING_CENTER_X,
+    cy: RING_CENTER_Y,
+    r: RING_RADIUS,
+    fill: 'none',
+    strokeWidth: 4,
+    transform: `rotate(-90 ${String(RING_CENTER_X)} ${String(RING_CENTER_Y)})`,
+  };
+  const foreground = (
+    <circle
+      {...ringProps}
+      className="skin-a-ring-fill"
+      stroke="var(--color-accent)"
+      strokeLinecap="round"
+      strokeDasharray={RING_LENGTH}
+      strokeDashoffset={RING_LENGTH * (1 - arcFraction)}
+    />
+  );
+  return (
+    <>
+      <svg className="skin-stage__overlay" viewBox={VIEW_BOX}>
+        <circle {...ringProps} stroke="var(--color-border-subtle)" />
+        {progress === null ? <g className="skin-a-ring-spin">{foreground}</g> : foreground}
+      </svg>
+      <StageImage
+        src={image}
+        motionClass="skin-a-ring-pulse"
+        left={14}
+        bottom={9}
+        isStill={isStill}
+      />
+    </>
+  );
+}
+
+/** Schattenriss, von unten bis zum Fortschritt in Farbe. */
+function Reveal({ image, isStill, progress }: ProgressFigureProps): ReactElement {
+  const shown: number = progress ?? REVEAL_FRACTION_WITHOUT_PROGRESS;
+  return (
+    <>
+      <StageImage src={image} motionClass="skin-a-reveal-sil" left={8} isStill={isStill} />
+      <StageImage
+        src={image}
+        motionClass="skin-a-reveal-col"
+        left={8}
+        isStill={isStill}
+        extraStyle={{ clipPath: `inset(${String((1 - shown) * 100)}% 0 0 0)` }}
+      />
+    </>
+  );
+}
+
 /**
  * Das Bild der Figur samt Zubehör für eine Bewegung, in Bühnenkoordinaten 104 × 64.
- * `secondImage` zählt nur bei „Entwicklung“.
+ * `secondImage` zählt nur bei „Entwicklung“, `progress` nur bei „Lädt auf“ und „Wird sichtbar“; „Läuft die
+ * Strecke ab“ zeigt in der Bühne nur den Fall ohne Balken (die Figur wippt links), auf dem Balken steht sie als `rider`.
  */
 export function renderMotion(
   motion: Motion,
   image: string,
   secondImage: string | null,
   isStill: boolean,
+  progress: number | null = null,
 ): ReactElement {
   const figure: FigureProps = { image, isStill };
   switch (motion) {
@@ -488,6 +559,12 @@ export function renderMotion(
       return <Frost {...figure} />;
     case 'wave':
       return <Wave {...figure} />;
+    case 'trek':
+      return <StageImage src={image} motionClass="skin-a-trek" left={8} isStill={isStill} />;
+    case 'charge':
+      return <Charge {...figure} progress={progress} />;
+    case 'reveal':
+      return <Reveal {...figure} progress={progress} />;
     case 'none':
       return <StageImage src={image} left={8} isStill={isStill} />;
   }

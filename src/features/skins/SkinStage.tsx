@@ -13,6 +13,8 @@ interface SkinStageProps {
   size: 'line' | 'toast';
   /** Ohne Bewegung; GIFs zeigen ihr erstes Bild. */
   still: boolean;
+  /** Fortschritt 0 bis 1 für „Lädt auf“ und „Wird sichtbar“; `null` ohne. */
+  progress: number | null;
 }
 
 /** Die Bühne einer Figur: Bild, Bewegung und Zubehör in einem festen Rahmen. */
@@ -22,6 +24,7 @@ export function SkinStage({
   image2,
   size,
   still,
+  progress,
 }: SkinStageProps): ReactElement | null {
   if (image === null) {
     return null;
@@ -31,7 +34,9 @@ export function SkinStage({
       className={`skin-stage skin-stage--${size}${still ? ' skin-stage--still' : ''}`}
       aria-hidden="true"
     >
-      <div className="skin-stage__inner">{renderMotion(motion, image, image2, still)}</div>
+      <div className="skin-stage__inner">
+        {renderMotion(motion, image, image2, still, progress)}
+      </div>
     </div>
   );
 }

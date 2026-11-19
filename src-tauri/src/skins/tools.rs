@@ -631,8 +631,11 @@ fn specs() -> Vec<ToolSpec> {
             name: SLOT_SET,
             description: "Legt in einem Figurenpaket ein Fach an oder ändert es. Ein Fach bestimmt, \
                 welche Figur, Bewegung und welche Texte die Statuszeile bei einem Werkzeug zeigt. \
-                Vorgegebene Fächer (search, read, write, shell, web, agent, other, wait, think, \
-                commit, station) haben feste Werkzeuge; dort sind nur motion und texts änderbar. \
+                Vorgegebene Fächer (search, read, write, shell, longrun, web, agent, other, wait, \
+                think, commit, station) haben feste Werkzeuge; longrun gilt statt shell, sobald ein \
+                Shell-Befehl über fünf Sekunden läuft; dort sind nur motion und texts änderbar. \
+                Die Bewegungen trek, charge und reveal folgen dem Fortschritt eines laufenden \
+                Befehls. \
                 Eigene Fächer heißen „c-“ plus Kleinbuchstaben, Ziffern oder Bindestriche (nicht auf \
                 „-2“ endend), höchstens 24 je Paket; ein unbekanntes „c-…“ legt ein neues an, dann \
                 sind name (höchstens 40 Zeichen) und tools Pflicht. tools ist ein Muster für den \
@@ -644,8 +647,9 @@ fn specs() -> Vec<ToolSpec> {
                 vorgegebenen; position (ab 0) setzt die Stelle und gilt nur für eigene Fächer. \
                 texts ersetzt die Liste (höchstens 10, je höchstens 160 Zeichen; die Statuszeile \
                 wählt reihum); Platzhalter: {ziel} = Datei, Suchbegriff oder Befehl des Aufrufs, \
-                {zeit} = laufende Dauer m:ss (Fach wait), {commit} = Kennung des Commits (Fach \
-                commit). Bilder setzt skin_image_set.",
+                {befehl} = der Shell-Befehl, {fortschritt} = 12/40 oder 45 %, {rest} = ~1:25, \
+                {zeit} = laufende Dauer m:ss (Fächer wait, shell, longrun), {commit} = Kennung des \
+                Commits (Fach commit). Bilder setzt skin_image_set.",
             input_schema: object(
                 json!({
                     "pack": pack_property(),

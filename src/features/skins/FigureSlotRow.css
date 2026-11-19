@@ -111,6 +111,12 @@
     color: var(--color-status-error);
   }
 
+  &__range {
+    width: 100%;
+    max-width: 280px;
+    accent-color: var(--color-accent);
+  }
+
   &__preview {
     display: flex;
     flex-wrap: wrap;

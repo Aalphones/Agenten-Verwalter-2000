@@ -11,7 +11,7 @@ interface RunMeterProps {
   fraction: number;
   /** Wert neben dem Balken; leer lässt nur den Balken stehen. */
   valueLabel: string;
-  /** Figur, die auf dem Balken mitläuft. */
+  /** Figur, die auf dem Balken mitläuft; am Ende der Spur steht dann eine Fahne und über dem Balken ist Platz. */
   rider?: ReactNode;
 }
 
@@ -21,7 +21,7 @@ export function RunMeter({ kind, fraction, valueLabel, rider }: RunMeterProps): 
   return (
     <span className="run-meter">
       <span
-        className={`run-meter__bar run-meter__bar--${kind}`}
+        className={`run-meter__bar run-meter__bar--${kind}${rider === undefined ? '' : ' run-meter__bar--rider'}`}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={PERCENT}
@@ -29,6 +29,7 @@ export function RunMeter({ kind, fraction, valueLabel, rider }: RunMeterProps): 
         aria-label={kind === 'measured' ? 'Fortschritt' : 'Geschätzter Fortschritt'}
       >
         <span className="run-meter__fill" style={{ width: `${String(percent)}%` }} />
+        {rider !== undefined && <span className="run-meter__flag" aria-hidden="true" />}
         {rider}
       </span>
       {valueLabel !== '' && <span className="run-meter__value">{valueLabel}</span>}

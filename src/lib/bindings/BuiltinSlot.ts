@@ -3,4 +3,4 @@
 /**
  * Die Fächer der Statuszeile, die der Verwalter selbst kennt.
  */
-export type BuiltinSlot = "search" | "read" | "write" | "shell" | "web" | "agent" | "other" | "wait" | "think" | "commit" | "station";
+export type BuiltinSlot = "search" | "read" | "write" | "shell" | "longrun" | "web" | "agent" | "other" | "wait" | "think" | "commit" | "station";

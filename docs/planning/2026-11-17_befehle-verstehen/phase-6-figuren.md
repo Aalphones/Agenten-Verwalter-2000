@@ -1,6 +1,6 @@
 # Phase 6 — Figuren: Fach „Langer Lauf“ und drei Bewegungen
 
-Rating: standard. Figurenpakete bekommen ein vorgegebenes Fach für lange Läufe und drei Bewegungen, die den Fortschritt zeigen. Vorlage: [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html) mit Schalter „Figurenpaket“ an und der Auswahl „Bewegung“ (Anker `#fun,trek,fortschritt`, `#fun,charge,geschaetzt`, `#fun,reveal,skript`); die CSS-Regeln `.rider`, `.bar--trek`, `.bar__flag`, `.ring`, `.stage--reveal` und die `@keyframes` dort sind die Vorlage für die Bewegungen. Ab Werk bleibt alles aus (ADR 065).
+Status: complete. Rating: standard. Figurenpakete bekommen ein vorgegebenes Fach für lange Läufe und drei Bewegungen, die den Fortschritt zeigen. Vorlage: [artifacts/entwurf-befehle-verstehen.html](artifacts/entwurf-befehle-verstehen.html) mit Schalter „Figurenpaket“ an und der Auswahl „Bewegung“ (Anker `#fun,trek,fortschritt`, `#fun,charge,geschaetzt`, `#fun,reveal,skript`); die CSS-Regeln `.rider`, `.bar--trek`, `.bar__flag`, `.ring`, `.stage--reveal` und die `@keyframes` dort sind die Vorlage für die Bewegungen. Ab Werk bleibt alles aus (ADR 065).
 
 ## Kontext (lesen)
 
@@ -29,27 +29,32 @@ Rating: standard. Figurenpakete bekommen ein vorgegebenes Fach für lange Läufe
 
 ### Kern
 
-- [ ] `skins/model.rs`: `BuiltinSlot::Longrun` nach `Shell` (auch in `ALL`, Länge 12); `Motion::Trek`, `Charge`, `Reveal` nach `Wave` (auch in `ALL`). Alle `match`-Stellen über beide Enums nachziehen (`validate.rs`, `matching.rs`, `tool_args.rs`, `tool_edit.rs`, `mod.rs`).
-- [ ] `skins/matching.rs`: Werkzeug → Fach bleibt unverändert (`Bash`/`PowerShell` → `Shell`); `Longrun` ist ein Fach ohne Werkzeug wie `Wait`, `Think`, `Commit`, `Station` — an denselben Stellen wie diese behandeln.
-- [ ] `skins/tools.rs`: Aufzählungen der Fächer und Bewegungen in den Beschreibungen und Schemas ergänzen; den Satz zu den Fächern mit festen Werkzeugen (um Zeile 635) um `longrun` erweitern.
-- [ ] `pnpm bindings`.
+- [x] `skins/model.rs`: `BuiltinSlot::Longrun` nach `Shell` (auch in `ALL`, Länge 12); `Motion::Trek`, `Charge`, `Reveal` nach `Wave` (auch in `ALL`). Alle `match`-Stellen über beide Enums nachziehen (`validate.rs`, `matching.rs`, `tool_args.rs`, `tool_edit.rs`, `mod.rs`).
+- [x] `skins/matching.rs`: Werkzeug → Fach bleibt unverändert (`Bash`/`PowerShell` → `Shell`); `Longrun` ist ein Fach ohne Werkzeug wie `Wait`, `Think`, `Commit`, `Station` — an denselben Stellen wie diese behandeln.
+- [x] `skins/tools.rs`: Aufzählungen der Fächer und Bewegungen in den Beschreibungen und Schemas ergänzen; den Satz zu den Fächern mit festen Werkzeugen (um Zeile 635) um `longrun` erweitern.
+- [x] `pnpm bindings`.
 
 ### Oberfläche
 
-- [ ] `slotCatalog.ts`: `'longrun'` in `BUILTIN_SLOT_IDS` nach `'shell'`; `PLAIN_TEXTS.longrun = '{ziel} …'`; `SLOT_LABELS.longrun = 'Langer Lauf'`.
-- [ ] `motionCatalog.ts`: `MOTION_LABELS` (`trek: 'Läuft die Strecke ab'`, `charge: 'Lädt auf'`, `reveal: 'Wird sichtbar'`); `FITTING_MOTION.longrun = 'trek'`; neue Konstante `PROGRESS_MOTIONS: ReadonlySet<Motion>` mit den dreien.
-- [ ] `useStatusFigure.ts`: Eingabe `runSince: number | null` (Start des laufenden Befehls). Ist das gewünschte Fach `shell` (also kein eigenes Fach) und `Date.now() − runSince ≥ LONGRUN_AFTER_MS` und hat das aktive Paket `longrun` belegt (Eingabe `hasLongrun: boolean`) → gewünschtes Fach `longrun`. Der Wechsel läuft über die vorhandene Taktung; für den Zeitpunkt einen Zeitgeber auf `runSince + LONGRUN_AFTER_MS` setzen und aufräumen.
-- [ ] `motionMarkup.tsx`: `renderMotion(motion, image, image2, still, progress: number | null = null)`; Komponenten `Charge` und `Reveal` (Koordinaten in der Bühne 104 × 64 wie die übrigen; Ring als `circle` mit `strokeDasharray`/`strokeDashoffset`, Farbe `var(--color-accent)`; `Reveal` mit zwei `StageImage`, das obere mit `clipPath: inset(<1 − progress> 0 0 0)`, das untere mit Klasse für `brightness(0)` und Deckkraft 0,32). `Trek` rendert in der Bühne nur den Stand-Fall (Figur wippt links).
-- [ ] `motions.css`: Klassen `skin-a-trek`, `skin-a-charge`, `skin-a-charge-spin`, `skin-a-reveal` nach der Vorlage im Entwurf; unter `skin-stage--still` und `prefers-reduced-motion: reduce` ohne Animation.
-- [ ] `SkinStage.tsx`, `FigureStage.tsx`: Prop `progress: number | null` durchreichen.
-- [ ] `RunMeter.tsx`: `rider` = Figur (nur Bild, 26 px hoch, `left: <Fortschritt> %`, `translateX(-50%)`, Übergang `--duration-base`) und Fahne am Ende der Spur; bei gesetztem `rider` 22 px Platz über dem Balken. `WorkingIndicator`/`ChatTimeline`/`AwaitedScriptLine`: ist die Bewegung des gezeigten Fachs `trek` und gibt es einen Balken → Figur als `rider`, keine Bühne vor dem Text; sonst Bühne mit `progress = view.fraction`.
-- [ ] `FigureSlotRow.tsx`/`FiguresEditor.tsx`: ist die gewählte Bewegung in `PROGRESS_MOTIONS`, steht unter der Vorschau ein Schieber „Fortschritt“ (0–100 %, `input type="range"` mit Beschriftung), der die Vorschau steuert; bei `trek` zeigt die Vorschau den `RunMeter` mit Figur. Der Hinweistext zu den Platzhaltern nennt die neuen.
-- [ ] `statusText.ts`: `isBuiltinSlot` deckt `longrun` automatisch; prüfen, dass ein eigenes Fach ohne Text weiter auf „Sonstiges“ fällt.
+- [x] `slotCatalog.ts`: `'longrun'` in `BUILTIN_SLOT_IDS` nach `'shell'`; `PLAIN_TEXTS.longrun = '{ziel} …'`; `SLOT_LABELS.longrun = 'Langer Lauf'`.
+- [x] `motionCatalog.ts`: `MOTION_LABELS` (`trek: 'Läuft die Strecke ab'`, `charge: 'Lädt auf'`, `reveal: 'Wird sichtbar'`); `FITTING_MOTION.longrun = 'trek'`; neue Konstante `PROGRESS_MOTIONS: ReadonlySet<Motion>` mit den dreien.
+- [x] `useStatusFigure.ts`: Eingabe `runSince: number | null` (Start des laufenden Befehls). Ist das gewünschte Fach `shell` (also kein eigenes Fach) und `Date.now() − runSince ≥ LONGRUN_AFTER_MS` und hat das aktive Paket `longrun` belegt (Eingabe `hasLongrun: boolean`) → gewünschtes Fach `longrun`. Der Wechsel läuft über die vorhandene Taktung; für den Zeitpunkt einen Zeitgeber auf `runSince + LONGRUN_AFTER_MS` setzen und aufräumen.
+- [x] `motionMarkup.tsx`: `renderMotion(motion, image, image2, still, progress: number | null = null)`; Komponenten `Charge` und `Reveal` (Koordinaten in der Bühne 104 × 64 wie die übrigen; Ring als `circle` mit `strokeDasharray`/`strokeDashoffset`, Farbe `var(--color-accent)`; `Reveal` mit zwei `StageImage`, das obere mit `clipPath: inset(<1 − progress> 0 0 0)`, das untere mit Klasse für `brightness(0)` und Deckkraft 0,32). `Trek` rendert in der Bühne nur den Stand-Fall (Figur wippt links).
+- [x] `motions.css`: Klassen `skin-a-trek`, `skin-a-charge`, `skin-a-charge-spin`, `skin-a-reveal` nach der Vorlage im Entwurf; unter `skin-stage--still` und `prefers-reduced-motion: reduce` ohne Animation.
+- [x] `SkinStage.tsx`, `FigureStage.tsx`: Prop `progress: number | null` durchreichen.
+- [x] `RunMeter.tsx`: `rider` = Figur (nur Bild, 26 px hoch, `left: <Fortschritt> %`, `translateX(-50%)`, Übergang `--duration-base`) und Fahne am Ende der Spur; bei gesetztem `rider` 22 px Platz über dem Balken. `WorkingIndicator`/`ChatTimeline`/`AwaitedScriptLine`: ist die Bewegung des gezeigten Fachs `trek` und gibt es einen Balken → Figur als `rider`, keine Bühne vor dem Text; sonst Bühne mit `progress = view.fraction`.
+- [x] `FigureSlotRow.tsx`/`FiguresEditor.tsx`: ist die gewählte Bewegung in `PROGRESS_MOTIONS`, steht unter der Vorschau ein Schieber „Fortschritt“ (0–100 %, `input type="range"` mit Beschriftung), der die Vorschau steuert; bei `trek` zeigt die Vorschau den `RunMeter` mit Figur. Der Hinweistext zu den Platzhaltern nennt die neuen.
+- [x] `statusText.ts`: `isBuiltinSlot` deckt `longrun` automatisch; prüfen, dass ein eigenes Fach ohne Text weiter auf „Sonstiges“ fällt.
 
 ### Doku
 
-- [ ] `docs/decisions/065-skins.md`: unverändert; `docs/decisions/066-befehle-verstehen.md`: Abschnitt „Konsequenzen“ um einen Satz ergänzen, falls die Umsetzung vom Kontrakt abweicht.
-- [ ] `docs/code-map.md`, Zeile „Skins“: Fach `longrun`, `PROGRESS_MOTIONS`, `rider`.
-- [ ] `docs/glossary.md`: „Langer Lauf“ (Fach), „Bewegung mit Fortschritt“.
+- [x] `docs/decisions/065-skins.md`: unverändert; `docs/decisions/066-befehle-verstehen.md`: Abschnitt „Konsequenzen“ um einen Satz ergänzen, falls die Umsetzung vom Kontrakt abweicht.
+- [x] `docs/code-map.md`, Zeile „Skins“: Fach `longrun`, `PROGRESS_MOTIONS`, `rider`.
+- [x] `docs/glossary.md`: „Langer Lauf“ (Fach), „Bewegung mit Fortschritt“.
 
 ## Report-Back
+
+- Abweichung: Die Klasse `skin-a-charge` gehört schon der Bewegung „Blitz ins Terminal“ (`zap`); der Ring heißt deshalb `skin-a-ring-fill`, `-spin`, `-pulse`.
+- Neu: `FigureRider.tsx` (Figur auf dem Balken), `statusFigureParts.tsx` (entscheidet Bühne oder `rider` für Statuszeile und Warte-Zeile); `StageImage` nimmt `extraStyle` (Zuschnitt für „Wird sichtbar“).
+- „Belegt“ heißt: das Paket hat einen Eintrag für `longrun`.
+- Nur per `pnpm check` und `pnpm bindings` belegt, nicht in der echten App gelaufen (Trek-Vorschau im Editor, Ring-Geometrie bei unterschiedlichen Bildgrößen).

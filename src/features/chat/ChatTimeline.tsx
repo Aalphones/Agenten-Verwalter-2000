@@ -12,11 +12,12 @@ import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
 import { NoticeBlock } from '@/features/notices/NoticeBlock';
-import { FigureStage, hasFigure } from '@/features/skins/FigureStage';
 import { customMatchers, lookFor } from '@/features/skins/figureLook';
 import type { RunView } from '@/features/runs/runTexts';
 import { useRunView } from '@/features/runs/useRunView';
 import { formatElapsed, statusText } from '@/features/skins/statusText';
+import { LONGRUN_SLOT } from '@/features/skins/slotCatalog';
+import { statusFigureParts } from '@/features/skins/statusFigureParts';
 import { useStatusFigure, type StatusFigure } from '@/features/skins/useStatusFigure';
 import { SelectionMenu } from '@/features/side/SelectionMenu';
 import { selectedChatText } from '@/features/side/selectionText';
@@ -164,6 +165,8 @@ export function ChatTimeline({
     isWorking,
     thinkingSince: session.thinkingSince,
     custom: customSlots,
+    runSince: isWorking ? (session.runningCommand?.startedAt ?? null) : null,
+    hasLongrun: lookFor(activeFigures, LONGRUN_SLOT) !== null,
   });
   const statusLook: SlotLook | null =
     statusFigure.slot === null ? null : lookFor(activeFigures, statusFigure.slot);
@@ -425,6 +428,12 @@ export function ChatTimeline({
     if (!isWorking && session.awaitedScript !== null) {
       return <AwaitedScriptLine script={session.awaitedScript} pack={activeFigures} />;
     }
+    const figureParts = statusFigureParts({
+      pack: activeFigures,
+      look: statusLook,
+      run,
+      stageKey: `${statusFigure.slot ?? ''}|${statusFigure.target}|${String(statusFigure.roll)}`,
+    });
     return (
       <WorkingIndicator
         text={statusLine}
@@ -432,16 +441,8 @@ export function ChatTimeline({
         todo={activeTodo}
         thinkingSeconds={statusFigure.thinkingSeconds}
         run={run}
-        figure={
-          activeFigures !== null && hasFigure(statusLook) ? (
-            <FigureStage
-              key={`${statusFigure.slot ?? ''}|${statusFigure.target}|${String(statusFigure.roll)}`}
-              pack={activeFigures}
-              look={statusLook}
-              size="line"
-            />
-          ) : undefined
-        }
+        figure={figureParts.figure}
+        rider={figureParts.rider}
       />
     );
   }

@@ -3,6 +3,7 @@ export const BUILTIN_SLOT_IDS = [
   'read',
   'write',
   'shell',
+  'longrun',
   'web',
   'agent',
   'other',
@@ -13,6 +14,9 @@ export const BUILTIN_SLOT_IDS = [
 ] as const;
 
 export type BuiltinSlotId = (typeof BUILTIN_SLOT_IDS)[number];
+
+/** Das Fach, das statt „Befehl“ gilt, sobald ein Shell-Befehl lange läuft. */
+export const LONGRUN_SLOT: BuiltinSlotId = 'longrun';
 
 /** Werkzeugname → Fach; jedes Werkzeug ohne Eintrag gehört ins Fach „Sonstiges“. */
 export const BUILTIN_TOOL_SLOTS: Readonly<Record<string, BuiltinSlotId>> = {
@@ -36,6 +40,7 @@ export const PLAIN_TEXTS: Readonly<Record<BuiltinSlotId, string>> = {
   read: 'Liest {ziel} …',
   write: 'Bearbeitet {ziel} …',
   shell: '{ziel} …',
+  longrun: '{ziel} …',
   web: 'Sucht im Web nach {ziel} …',
   agent: 'Unteragent: {ziel} …',
   other: 'Arbeitet mit {ziel} …',
@@ -50,6 +55,7 @@ export const SLOT_LABELS: Readonly<Record<BuiltinSlotId, string>> = {
   read: 'Lesen',
   write: 'Schreiben',
   shell: 'Befehl',
+  longrun: 'Langer Lauf',
   web: 'Web',
   agent: 'Unteragent',
   other: 'Sonstiges',

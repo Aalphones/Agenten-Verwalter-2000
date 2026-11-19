@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { FrozenImage } from '@/features/skins/FrozenImage';
 import { fitFigureHeight } from '@/features/skins/skinImage';
 
@@ -13,6 +13,8 @@ interface StageImageProps {
   bottom?: number;
   /** Eingefroren: nur das erste Bild, keine Bewegung. */
   isStill: boolean;
+  /** Weitere Stilangaben, z. B. ein Zuschnitt. */
+  extraStyle?: CSSProperties;
 }
 
 /** Eine Figur in der Bühne: pixelgenau, Höhe nach der natürlichen Höhe, bis zum Laden unsichtbar. */
@@ -22,10 +24,15 @@ export function StageImage({
   left,
   bottom = 0,
   isStill,
+  extraStyle,
 }: StageImageProps): ReactElement {
   const [height, setHeight] = useState<number | null>(null);
   const className: string = `skin-stage__figure${motionClass === undefined ? '' : ` ${motionClass}`}`;
-  const position = { left: `${String(left)}px`, bottom: `${String(bottom)}px` };
+  const position: CSSProperties = {
+    left: `${String(left)}px`,
+    bottom: `${String(bottom)}px`,
+    ...extraStyle,
+  };
 
   if (isStill) {
     return <FrozenImage src={src} className={className} style={position} />;

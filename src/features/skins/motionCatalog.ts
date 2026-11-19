@@ -22,6 +22,9 @@ export const MOTION_LABELS: Readonly<Record<Motion, string>> = {
   sparkle: 'Zauberstaub',
   frost: 'Eiskristalle',
   wave: 'Welle',
+  trek: 'Läuft die Strecke ab',
+  charge: 'Lädt auf',
+  reveal: 'Wird sichtbar',
 };
 
 /** Die Bewegung, die zum Fach passt; der Editor schlägt sie vor, wenn ein Bild gesetzt wird. */
@@ -30,6 +33,7 @@ export const FITTING_MOTION: Readonly<Record<BuiltinSlotId, Motion>> = {
   read: 'float',
   write: 'squish',
   shell: 'zap',
+  longrun: 'trek',
   web: 'fly',
   agent: 'summon',
   other: 'bob',
@@ -38,3 +42,6 @@ export const FITTING_MOTION: Readonly<Record<BuiltinSlotId, Motion>> = {
   commit: 'wobble',
   station: 'evolve',
 };
+
+/** Bewegungen, die dem Fortschritt eines laufenden Befehls folgen; der Editor zeigt dafür einen Schieber. */
+export const PROGRESS_MOTIONS: ReadonlySet<Motion> = new Set<Motion>(['trek', 'charge', 'reveal']);

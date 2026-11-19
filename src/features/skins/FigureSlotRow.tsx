@@ -1,7 +1,9 @@
 import { useId, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { CommitField } from '@/features/skins/CommitField';
-import { FigureStage } from '@/features/skins/FigureStage';
+import { RunMeter } from '@/features/runs/RunMeter';
+import { FigureRider } from '@/features/skins/FigureRider';
+import { FigureStage, hasFigure } from '@/features/skins/FigureStage';
 import { fillText } from '@/features/skins/fillText';
 import {
   isBuiltinSlotId,
@@ -11,7 +13,7 @@ import {
 } from '@/features/skins/figuresData';
 import { ImageField } from '@/features/skins/ImageField';
 import { parseTexts, textsError } from '@/features/skins/limits';
-import { FITTING_MOTION, MOTION_LABELS } from '@/features/skins/motionCatalog';
+import { FITTING_MOTION, MOTION_LABELS, PROGRESS_MOTIONS } from '@/features/skins/motionCatalog';
 import { saveFigures } from '@/features/skins/saveFigures';
 import { skinImageUrl } from '@/features/skins/skinImage';
 import { SkinThumb } from '@/features/skins/SkinThumb';
@@ -33,6 +35,8 @@ const PREVIEW_VALUES = {
   fortschritt: '12/40',
   rest: '~1:25',
 } as const;
+const PREVIEW_PROGRESS_START = 40;
+const PERCENT = 100;
 const MOTION_KEYS = Object.keys(MOTION_LABELS) as Motion[];
 
 interface FigureSlotRowProps {
@@ -70,7 +74,10 @@ export function FigureSlotRow({
 }: FigureSlotRowProps): ReactElement {
   const bodyId: string = useId();
   const motionId: string = useId();
+  const progressId: string = useId();
   const [motionError, setMotionError] = useState<string | null>(null);
+  const [previewPercent, setPreviewPercent] = useState<number>(PREVIEW_PROGRESS_START);
+  const followsProgress: boolean = PROGRESS_MOTIONS.has(look.motion);
   const hasSecondImage: boolean = slotKey === 'station';
   const fittingMotion: Motion | null = isBuiltinSlotId(slotKey) ? FITTING_MOTION[slotKey] : null;
 
@@ -114,12 +121,50 @@ export function FigureSlotRow({
   function renderPreview(): ReactElement {
     const template: string =
       look.texts[0] ?? (isBuiltinSlotId(slotKey) ? PLAIN_TEXTS[slotKey] : PLAIN_TEXTS.other);
+    const fraction: number = previewPercent / PERCENT;
+    const trekLook: (SlotLook & { image: string }) | null =
+      look.motion === 'trek' && hasFigure(look) ? look : null;
     return (
-      <div className="figure-slot__preview">
-        <span className="figure-slot__preview-label">Vorschau</span>
-        <FigureStage pack={pack} look={look} size="line" />
-        <span className="figure-slot__preview-text">{fillText(template, PREVIEW_VALUES)}</span>
-      </div>
+      <>
+        <div className="figure-slot__preview">
+          <span className="figure-slot__preview-label">Vorschau</span>
+          {trekLook === null && (
+            <FigureStage
+              pack={pack}
+              look={look}
+              size="line"
+              progress={followsProgress ? fraction : null}
+            />
+          )}
+          <span className="figure-slot__preview-text">{fillText(template, PREVIEW_VALUES)}</span>
+          {trekLook !== null && (
+            <RunMeter
+              kind="measured"
+              fraction={fraction}
+              valueLabel={`${String(previewPercent)} %`}
+              rider={<FigureRider pack={pack} look={trekLook} fraction={fraction} />}
+            />
+          )}
+        </div>
+        {followsProgress && (
+          <div className="figure-slot__field">
+            <label className="figure-slot__label" htmlFor={progressId}>
+              Fortschritt der Vorschau
+            </label>
+            <input
+              id={progressId}
+              className="figure-slot__range"
+              type="range"
+              min={0}
+              max={PERCENT}
+              value={previewPercent}
+              onChange={(event) => {
+                setPreviewPercent(Number(event.target.value));
+              }}
+            />
+          </div>
+        )}
+      </>
     );
   }
 
@@ -174,7 +219,8 @@ export function FigureSlotRow({
         <CommitField
           label={
             <>
-              Texte, einer pro Zeile – <code>{'{ziel}'}</code>, <code>{'{zeit}'}</code>,{' '}
+              Texte, einer pro Zeile – <code>{'{ziel}'}</code>, <code>{'{befehl}'}</code>,{' '}
+              <code>{'{fortschritt}'}</code>, <code>{'{rest}'}</code>, <code>{'{zeit}'}</code>,{' '}
               <code>{'{commit}'}</code> werden ersetzt
             </>
           }

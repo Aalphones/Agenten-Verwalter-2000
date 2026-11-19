@@ -850,3 +850,60 @@
 .skin-a-wave-bob {
   animation: skin-bob 2.4s ease-in-out infinite;
 }
+
+.skin-a-trek {
+  animation: skin-bob 1.2s ease-in-out infinite;
+}
+
+.skin-a-ring-fill {
+  transition: stroke-dashoffset var(--duration-base) var(--ease-out);
+}
+
+.skin-a-ring-spin {
+  transform-origin: 34px 35px;
+  animation: skin-ring-spin 1.4s linear infinite;
+}
+
+.skin-a-ring-pulse {
+  animation: skin-ring-pulse 0.9s ease-in-out infinite;
+}
+
+.skin-a-reveal-sil {
+  filter: brightness(0);
+  opacity: 0.32;
+}
+
+.skin-a-reveal-col {
+  transition: clip-path var(--duration-base) var(--ease-out);
+}
+
+@keyframes skin-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes skin-ring-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.07);
+  }
+}
+
+/* Auch ohne die Einstellung „Animationen“: die Position folgt dem Fortschritt, nur Wippen und Drehen entfallen. */
+@media (prefers-reduced-motion: reduce) {
+  .skin-a-trek,
+  .skin-a-ring-spin,
+  .skin-a-ring-pulse {
+    animation: none;
+  }
+
+  .skin-a-ring-fill,
+  .skin-a-reveal-col {
+    transition: none;
+  }
+}

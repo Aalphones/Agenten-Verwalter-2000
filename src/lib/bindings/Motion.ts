@@ -3,4 +3,4 @@
 /**
  * Wie sich die Figur bewegt; die Bewegungen selbst liefert die Oberfläche.
  */
-export type Motion = "none" | "bob" | "vine" | "float" | "squish" | "zap" | "fly" | "summon" | "sleep" | "ponder" | "wobble" | "evolve" | "popin" | "webShot" | "shield" | "beam" | "sparkle" | "frost" | "wave";
+export type Motion = "none" | "bob" | "vine" | "float" | "squish" | "zap" | "fly" | "summon" | "sleep" | "ponder" | "wobble" | "evolve" | "popin" | "webShot" | "shield" | "beam" | "sparkle" | "frost" | "wave" | "trek" | "charge" | "reveal";
