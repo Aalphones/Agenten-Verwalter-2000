@@ -1,7 +1,7 @@
 # STATE
 
 **Aktiver Plan:** (kein aktiver Plan)
-**Freigegeben, als Umsetzung angelegt:** `docs/planning/2026-11-22_developer-vault/` — Developer Vault, Bibliothekskern (ADR 068, keine Migration, eigene Index-Datei), 6 Phasen. Danach in dieser Reihenfolge, je eigener Plan, erst im Detail planen, wenn er dran ist: Zusammenarbeit der Stationen (Nachrichten, Suche in früheren Sessions, Migration 022) → semantische Suche mit lokalem ONNX-Modell (Modell-Probe zuerst) → Wissenskandidaten aus Retros.
+**Freigegeben, als Umsetzung angelegt:** `docs/planning/2026-11-22_developer-vault/` — Developer Vault, Bibliothekskern (ADR 068, keine Migration, eigene Index-Datei), 6 Phasen. Danach in dieser Reihenfolge, je eigener Plan, erst im Detail planen, wenn er dran ist — Grundlage samt Skizzen: `docs/konzept-vault.md`: Zusammenarbeit der Stationen (Nachrichten, Suche in früheren Sessions, Migration 022) → semantische Suche mit lokalem ONNX-Modell (Modell-Probe zuerst) → Wissenskandidaten aus Retros.
 **Nächster Schritt:** Plan Developer Vault umsetzen, Phase 1.
 **Zuletzt archiviert (neu):** `docs/archive/2026-11/2026-11-18_dateien-ansicht/` (ADR 067, keine Migration), Release `v0.66.0` — alle 7 Phasen complete; Oberfläche (Git-Seite, Reiter-Umbau, AK 3 und 4) nur per `pnpm check` belegt, nicht in der echten App gelaufen; Follow-ups in der README (`PanelId` `changesTree`, Rust-Kommentare „Changes-Ansicht“).
 **Zuletzt archiviert:** `docs/archive/2026-11/2026-11-16_skins/` (ADR 065, Migration 020) — alle 9 Phasen complete (Phase 9: sechs Pakete-ZIPs unter `%USERPROFILE%\.verwalter\skin-pakete\`); Phase 4 bis 6 und 8 nur per `pnpm check` belegt, nicht in der echten App gelaufen.

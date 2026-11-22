@@ -74,6 +74,7 @@ Die Prüfkette im Einzelnen und ihre Reihenfolge: [docs/conventions/linting.md](
 | Datei | Inhalt |
 |---|---|
 | [docs/PROJECT.md](docs/PROJECT.md) | Ziel, Scope, Nicht-Ziele, Constraints, Meilensteine, offene Fragen |
+| [docs/konzept-vault.md](docs/konzept-vault.md) | Konzept Developer Vault und Zusammenarbeit der Sessions, Bestand und Schnitt der Folgepläne |
 | [docs/code-map.md](docs/code-map.md) | Feature → Ordner |
 | [docs/glossary.md](docs/glossary.md) | Verbindliches Vokabular |
 | [docs/decisions/](docs/decisions/) | Architektur-Entscheidungen (ADRs) |
