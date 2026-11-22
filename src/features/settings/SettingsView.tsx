@@ -21,6 +21,8 @@ import { EnvironmentLinksRow } from '@/features/environment/EnvironmentLinksRow'
 import { EnvironmentMirrorRow } from '@/features/environment/EnvironmentMirrorRow';
 import { MasterDirRow } from '@/features/environment/MasterDirRow';
 import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
+import { VaultDirRow } from '@/features/vault/VaultDirRow';
+import { VaultStatusRow } from '@/features/vault/VaultStatusRow';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { SkinPackEditor } from '@/features/skins/SkinPackEditor';
 import { SkinSettingRow } from '@/features/skins/SkinSettingRow';
@@ -547,6 +549,27 @@ export function SettingsView({
         );
       case 'environmentMirror':
         return <EnvironmentMirrorRow />;
+      case 'vaultDir':
+        return (
+          <VaultDirRow
+            vaultDir={current.vaultDir}
+            onSave={(value: string | null): Promise<boolean> => save({ kind: 'vaultDir', value })}
+          />
+        );
+      case 'vaultEnabled':
+        return (
+          <SettingRow id={id}>
+            <Switch
+              checked={current.vaultEnabled}
+              label="Developer Vault"
+              onChange={(checked: boolean): void => {
+                save({ kind: 'vaultEnabled', value: checked }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+        );
+      case 'vaultStatus':
+        return <VaultStatusRow />;
       case 'skinFigures':
       case 'skinAnimations':
       case 'skinCelebrations':

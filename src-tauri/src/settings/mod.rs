@@ -29,6 +29,8 @@ const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
 const KEY_MASTER_DIR: &str = "master_dir";
+const KEY_VAULT_DIR: &str = "vault_dir";
+const KEY_VAULT_ENABLED: &str = "vault_enabled";
 const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
 const KEY_AUTO_COMPACT_STATIONS: &str = "auto_compact_stations";
 const KEY_AUTO_COMPACT_THRESHOLD: &str = "auto_compact_threshold";
@@ -89,6 +91,8 @@ const DEFAULT_SETTINGS: Settings = Settings {
     local_model: None,
     default_codex_model: None,
     master_dir: None,
+    vault_dir: None,
+    vault_enabled: false,
     mark_unsourced: true,
     auto_compact_stations: true,
     auto_compact_threshold: 250_000,
@@ -135,6 +139,15 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .map(|text: &String| text.trim())
             .filter(|text: &&str| !text.is_empty())
             .map(str::to_owned),
+        vault_dir: stored
+            .get(KEY_VAULT_DIR)
+            .map(|text: &String| text.trim())
+            .filter(|text: &&str| !text.is_empty())
+            .map(str::to_owned),
+        vault_enabled: stored
+            .get(KEY_VAULT_ENABLED)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.vault_enabled),
         mark_unsourced: stored
             .get(KEY_MARK_UNSOURCED)
             .and_then(|text: &String| text.parse::<bool>().ok())
@@ -306,6 +319,17 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
                     KEY_MASTER_DIR,
                     value.as_deref().map_or("", str::trim),
                 )?;
+            }
+            SettingsChange::VaultDir { value } => {
+                // Leer = kein Vault-Ordner; `load` liest leere Texte als „nicht gesetzt“.
+                setting_rows::write(
+                    &transaction,
+                    KEY_VAULT_DIR,
+                    value.as_deref().map_or("", str::trim),
+                )?;
+            }
+            SettingsChange::VaultEnabled { value } => {
+                setting_rows::write(&transaction, KEY_VAULT_ENABLED, &value.to_string())?;
             }
             SettingsChange::MarkUnsourced { value } => {
                 setting_rows::write(&transaction, KEY_MARK_UNSOURCED, &value.to_string())?;

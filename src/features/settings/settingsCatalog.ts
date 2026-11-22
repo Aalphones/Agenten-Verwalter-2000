@@ -19,7 +19,7 @@ export interface SettingsCategory {
 export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   { id: 'general', label: 'Allgemein', summary: 'Konto · Darstellung' },
   { id: 'agent', label: 'Agent', summary: 'Betriebsart · Modelle · Modus · Claude Code' },
-  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Umgebung' },
+  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Umgebung · Vault' },
   { id: 'skins', label: 'Skins', summary: 'Figuren · Stil · Pakete' },
   { id: 'app', label: 'App', summary: 'Version · Ordner · Rechte' },
 ];
@@ -48,6 +48,14 @@ function isClaudeMode(settings: Settings): boolean {
 
 function hasMasterDir(settings: Settings): boolean {
   return settings.masterDir !== null;
+}
+
+function hasVaultDir(settings: Settings): boolean {
+  return settings.vaultDir !== null;
+}
+
+function isVaultOn(settings: Settings): boolean {
+  return settings.vaultDir !== null && settings.vaultEnabled;
 }
 
 // Die Schlüsselreihenfolge ist die Anzeigereihenfolge.
@@ -167,6 +175,26 @@ const ENTRY_DATA = {
     label: 'Abgleich',
     info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Master-Ordner mit ~\\.claude nach Inhalt. Die Änderungszeit entscheidet nur, welche Seite neuer ist. „Spiegeln“ kopiert, was im Master neuer ist oder lokal fehlt, und löscht nie.',
     isShown: hasMasterDir,
+  },
+  vaultDir: {
+    category: 'skills',
+    section: 'Developer Vault',
+    label: 'Vault-Ordner',
+    info: 'Ordner deiner Entwicklerbibliothek: Snippets, Wissen, Ideen, Designs, Vorlagen, Skripte. Jeder Ordner geht, auch ein synchronisierter oder einer in einem Git-Repository. Der Verwalter liest ihn nur; der Suchindex liegt lokal in seinem Datenordner.',
+  },
+  vaultEnabled: {
+    category: 'skills',
+    section: 'Developer Vault',
+    label: 'Developer Vault',
+    info: 'Schaltet Einlesen, Suche und die Vault-Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht, die Agenten sehen keine Vault-Werkzeuge.',
+    isShown: hasVaultDir,
+  },
+  vaultStatus: {
+    category: 'skills',
+    section: 'Developer Vault',
+    label: 'Status',
+    info: 'Stand des Suchindex. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist; dabei liest der Verwalter nur Dateien, die sich geändert haben. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ in einen leeren Ordner.',
+    isShown: isVaultOn,
   },
   skinFigures: {
     category: 'skins',

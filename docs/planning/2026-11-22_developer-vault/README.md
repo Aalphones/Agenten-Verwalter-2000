@@ -8,7 +8,7 @@ Entscheidungen und Begründung: [ADR 068](../../decisions/068-developer-vault.md
 
 | Phase | Titel | Stufe | Status |
 |---|---|---|---|
-| 1 | [Einstellung, Status, Grundgerüst](phase-1-einstellung-status.md) | standard | pending |
+| 1 | [Einstellung, Status, Grundgerüst](phase-1-einstellung-status.md) | standard | complete |
 | 2 | [Index-Datei und Abgleich](phase-2-index-abgleich.md) | heikel | pending |
 | 3 | [Metadaten und Abschnitte](phase-3-metadaten-abschnitte.md) | heikel | pending |
 | 4 | [Suche und Werkzeuge für Agenten](phase-4-suche-werkzeuge.md) | heikel | pending |

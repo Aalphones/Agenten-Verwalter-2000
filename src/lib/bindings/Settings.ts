@@ -26,6 +26,14 @@ defaultCodexModel: string | null,
  */
 masterDir: string | null, 
 /**
+ * Ordner der Entwicklerbibliothek (Developer Vault, ADR 068); `None`, solange keiner gewählt ist.
+ */
+vaultDir: string | null, 
+/**
+ * Ob der Vault eingelesen und durchsucht wird; Standard aus.
+ */
+vaultEnabled: boolean, 
+/**
  * Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
  */
 markUnsourced: boolean, 

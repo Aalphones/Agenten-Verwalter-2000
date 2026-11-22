@@ -29,4 +29,5 @@ pub mod terminal;
 pub mod tldr;
 pub mod tool_details;
 pub mod usage;
+pub mod vault;
 pub mod voice;

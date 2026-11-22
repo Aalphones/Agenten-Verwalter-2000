@@ -157,3 +157,5 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **Schreib-Ordner** | Ordner, in dem eine Session tatsächlich schreibt: ihre benutzten Ticket-Worktrees und der Haupt-Checkout, wenn sie dort Dateien geändert hat ([ADR 037](decisions/037-parallele-sessions.md)). |
 | **Master-Ordner** | Frei gewählter Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`; der Verwalter vergleicht `~\.claude` damit und spiegelt auf Klick ([ADR 038](decisions/038-umgebung.md)). |
 | **Spiegeln** | Kopiert aus dem Master-Ordner, was dort neuer ist oder lokal fehlt; löscht nie ([ADR 038](decisions/038-umgebung.md)). |
+| **Developer Vault** | Frei gewählter Ordner mit der persönlichen Entwicklerbibliothek (Snippets, Wissen, Ideen, Designs, Vorlagen, Skripte). Der Verwalter liest ihn nur und durchsucht ihn über einen eigenen, wegwerfbaren Index ([ADR 068](decisions/068-developer-vault.md)). Im Code `vault`. |
+| **Grundgerüst (Vault)** | Die drei Dateien `README.md`, `AGENTS.md` und `inbox/README.md`, die der Verwalter auf Klick in einen leeren Vault-Ordner schreibt, ohne je eine vorhandene Datei zu überschreiben. |

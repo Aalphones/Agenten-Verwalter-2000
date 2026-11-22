@@ -25,34 +25,34 @@
 
 ### Core
 
-- [ ] `src-tauri/src/settings/model.rs`: `Settings` um `vault_dir: Option<String>` und `vault_enabled: bool` erweitern; `SettingsChange::VaultDir { value: Option<String> }` (Doc-Kommentar wie bei `MasterDir`) und `SettingsChange::VaultEnabled { value: bool }`.
-- [ ] `src-tauri/src/settings/mod.rs`: `KEY_VAULT_DIR = "vault_dir"`, `KEY_VAULT_ENABLED = "vault_enabled"`; Standard `None` / `false`; `load` und `update` genau wie `master_dir` bzw. wie ein vorhandener Schalter (`mark_unsourced`).
-- [ ] Neues Modul `src-tauri/src/vault/` (in `lib.rs` als `pub mod vault;` in alphabetischer Reihe — `pub`, damit das Prüfprogramm aus Phase 2 es erreicht):
+- [x] `src-tauri/src/settings/model.rs`: `Settings` um `vault_dir: Option<String>` und `vault_enabled: bool` erweitern; `SettingsChange::VaultDir { value: Option<String> }` (Doc-Kommentar wie bei `MasterDir`) und `SettingsChange::VaultEnabled { value: bool }`.
+- [x] `src-tauri/src/settings/mod.rs`: `KEY_VAULT_DIR = "vault_dir"`, `KEY_VAULT_ENABLED = "vault_enabled"`; Standard `None` / `false`; `load` und `update` genau wie `master_dir` bzw. wie ein vorhandener Schalter (`mark_unsourced`).
+- [x] Neues Modul `src-tauri/src/vault/` (in `lib.rs` als `pub mod vault;` in alphabetischer Reihe — `pub`, damit das Prüfprogramm aus Phase 2 es erreicht):
   - `model.rs`: `VaultState`, `VaultStatus` exakt nach Kontrakt, `#[serde(rename_all = "camelCase")]` wie die übrigen Typen, `derive(TS)`; in `examples/gen-bindings.rs` eintragen.
   - `mod.rs`: `pub struct VaultService {}` mit `new()` (Phase 2 ergänzt die Felder); `pub const CHANGED_EVENT: &str = "vault://changed"`; `pub fn status(app: &AppHandle) -> VaultStatus` (liest Einstellungen, prüft den Ordner mit `check_dir`, Zähler 0, `scanned_at: None`); `pub fn announce(app: &AppHandle)` sendet `status(app)` als Ereignis; `fn check_dir(dir: &Path, home: &Path, data_dir: &Path) -> Result<(), (VaultState, String)>` mit den drei Sätzen aus AK 3 (Vergleich über `fs::canonicalize`, `starts_with` für den Datenordner); `fn is_empty_dir(dir: &Path) -> bool` (keine Einträge, deren Name nicht mit `.` beginnt).
   - Zustand: `vault_enabled == false` oder `vault_dir == None` → `Off`; Ordnerprüfung scheitert mit Fehlen → `Missing`, mit den beiden anderen Gründen → `Error`; sonst `Ready`.
   - `skeleton.rs`: `pub fn create(dir: &Path) -> Result<(), CommandError>`; scheitert mit „Der Ordner ist nicht leer — das Grundgerüst wird nur in einen leeren Ordner geschrieben.“, wenn `is_empty_dir` falsch ist; schreibt mit `OpenOptions::new().write(true).create_new(true)` die Texte unten (UTF-8, `\n`).
-- [ ] `src-tauri/src/commands/vault.rs`: `vault_status() -> VaultStatus`, `vault_create_skeleton() -> VaultStatus` (prüft `Ready`, ruft `skeleton::create`, dann `announce`, gibt den neuen Status zurück); in `commands/mod.rs` und im `invoke_handler` registrieren; `app.manage(VaultService::new())` in `setup` neben `EnvironmentService`.
-- [ ] `commands/settings.rs` → `settings_update`: nach `settings::update` bei `VaultDir` oder `VaultEnabled` `vault::announce(&app)` rufen (Muster `changes_skin_style`).
-- [ ] `pnpm bindings`.
+- [x] `src-tauri/src/commands/vault.rs`: `vault_status() -> VaultStatus`, `vault_create_skeleton() -> VaultStatus` (prüft `Ready`, ruft `skeleton::create`, dann `announce`, gibt den neuen Status zurück); in `commands/mod.rs` und im `invoke_handler` registrieren; `app.manage(VaultService::new())` in `setup` neben `EnvironmentService`.
+- [x] `commands/settings.rs` → `settings_update`: nach `settings::update` bei `VaultDir` oder `VaultEnabled` `vault::announce(&app)` rufen (Muster `changes_skin_style`).
+- [x] `pnpm bindings`.
 
 ### Oberfläche
 
-- [ ] `src/lib/vault.ts`: `loadVaultStatus`, `createVaultSkeleton`, `onVaultChanged(handler)` (Abo auf `vault://changed`, Muster `src/lib/projects.ts`).
-- [ ] `src/features/vault/useVaultStatus.ts`: lädt einmal, abonniert das Ereignis, liefert `{ status, error }`.
-- [ ] `src/features/vault/vaultTexts.ts`: `statusText(status: VaultStatus, now: Date): string` — `Missing`/`Error` → `message`; `Scanning` → „wird eingelesen …“; `Ready` ohne `scannedAt` → „bereit · noch nicht eingelesen“; `Ready` mit `scannedAt` → „bereit · {files} Dateien · {artifacts} Artefakte · Stand HH:MM“, bei `skipped > 0` angehängt „ · {skipped} übersprungen“ (Uhrzeit über das vorhandene Format in `src/features/context/formatTokens.ts`).
-- [ ] `src/features/vault/VaultDirRow.tsx`: Kopie des Musters `MasterDirRow` (Titel des Dialogs „Vault-Ordner wählen“, leer „Kein Vault-Ordner“), ohne Umgebungs-Prüfung; zeigt bei `Missing`/`Error` den Satz in der Warnfarbe darunter.
-- [ ] `src/features/vault/VaultStatusRow.tsx`: Statustext, darunter der Knopf „Grundgerüst anlegen“ nur bei `isEmptyDir && state === 'ready'`; Fehler des Knopfs als Satz in der Zeile (`commandErrorText`).
-- [ ] `settingsCatalog.ts`: Einträge `vaultDir`, `vaultEnabled` (`isShown`: Ordner gesetzt), `vaultStatus` (`isShown`: Ordner gesetzt und eingeschaltet), alle `category: 'skills'`, `section: 'Developer Vault'`; Zusammenfassung der Kategorie „Skills · Umgebung · Vault“. ⓘ-Texte:
+- [x] `src/lib/vault.ts`: `loadVaultStatus`, `createVaultSkeleton`, `onVaultChanged(handler)` (Abo auf `vault://changed`, Muster `src/lib/projects.ts`).
+- [x] `src/features/vault/useVaultStatus.ts`: lädt einmal, abonniert das Ereignis, liefert `{ status, error }`.
+- [x] `src/features/vault/vaultTexts.ts`: `statusText(status: VaultStatus, now: Date): string` — `Missing`/`Error` → `message`; `Scanning` → „wird eingelesen …“; `Ready` ohne `scannedAt` → „bereit · noch nicht eingelesen“; `Ready` mit `scannedAt` → „bereit · {files} Dateien · {artifacts} Artefakte · Stand HH:MM“, bei `skipped > 0` angehängt „ · {skipped} übersprungen“ (Uhrzeit über das vorhandene Format in `src/features/context/formatTokens.ts`).
+- [x] `src/features/vault/VaultDirRow.tsx`: Kopie des Musters `MasterDirRow` (Titel des Dialogs „Vault-Ordner wählen“, leer „Kein Vault-Ordner“), ohne Umgebungs-Prüfung; zeigt bei `Missing`/`Error` den Satz in der Warnfarbe darunter.
+- [x] `src/features/vault/VaultStatusRow.tsx`: Statustext, darunter der Knopf „Grundgerüst anlegen“ nur bei `isEmptyDir && state === 'ready'`; Fehler des Knopfs als Satz in der Zeile (`commandErrorText`).
+- [x] `settingsCatalog.ts`: Einträge `vaultDir`, `vaultEnabled` (`isShown`: Ordner gesetzt), `vaultStatus` (`isShown`: Ordner gesetzt und eingeschaltet), alle `category: 'skills'`, `section: 'Developer Vault'`; Zusammenfassung der Kategorie „Skills · Umgebung · Vault“. ⓘ-Texte:
   - Vault-Ordner: „Ordner deiner Entwicklerbibliothek: Snippets, Wissen, Ideen, Designs, Vorlagen, Skripte. Jeder Ordner geht, auch ein synchronisierter oder einer in einem Git-Repository. Der Verwalter liest ihn nur; der Suchindex liegt lokal in seinem Datenordner.“
   - Developer Vault: „Schaltet Einlesen, Suche und die Vault-Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht, die Agenten sehen keine Vault-Werkzeuge.“
   - Status: „Stand des Suchindex. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist; dabei liest der Verwalter nur Dateien, die sich geändert haben. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ in einen leeren Ordner.“
-- [ ] `SettingsView.tsx`: `renderRow`-Fälle für die drei Ids (Schalter analog `autoContinueAtLimit`).
+- [x] `SettingsView.tsx`: `renderRow`-Fälle für die drei Ids (Schalter analog `autoContinueAtLimit`).
 
 ### Doku
 
-- [ ] `docs/code-map.md`: neue Zeile „Developer Vault“ (Oberfläche `src/features/vault/`, `src/lib/vault.ts`; Core `src-tauri/src/vault/`, `commands/vault.rs`, ADR 068); `vault` in die Feature-Liste des Namensschemas.
-- [ ] `docs/glossary.md`: „Developer Vault“, „Grundgerüst (Vault)“.
+- [x] `docs/code-map.md`: neue Zeile „Developer Vault“ (Oberfläche `src/features/vault/`, `src/lib/vault.ts`; Core `src-tauri/src/vault/`, `commands/vault.rs`, ADR 068); `vault` in die Feature-Liste des Namensschemas.
+- [x] `docs/glossary.md`: „Developer Vault“, „Grundgerüst (Vault)“.
 
 ## Texte des Grundgerüsts
 

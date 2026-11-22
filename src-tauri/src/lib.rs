@@ -42,6 +42,7 @@ pub mod standalone;
 pub mod terminal;
 pub mod tldr;
 pub mod usage;
+pub mod vault;
 pub mod voice;
 pub mod worktrees;
 
@@ -61,6 +62,7 @@ use keep_awake::KeepAwake;
 use sessions::registry::SessionRegistry;
 use terminal::TerminalService;
 use usage::UsageService;
+use vault::VaultService;
 use voice::VoiceService;
 
 const DATABASE_FILE: &str = "verwalter.db";
@@ -105,6 +107,7 @@ pub fn run() {
             app.manage(CodexAccountService::new());
             app.manage(CliUpdateService::new());
             app.manage(EnvironmentService::new());
+            app.manage(VaultService::new());
             let app_update = AppUpdateService::new();
             if let Some(exe) = app_update.exe() {
                 app_update::swap::cleanup(exe);
@@ -272,6 +275,8 @@ pub fn run() {
             commands::settings::settings_local_models,
             commands::environment::environment_status,
             commands::environment::environment_mirror,
+            commands::vault::vault_status,
+            commands::vault::vault_create_skeleton,
             commands::codex::codex_models,
             commands::codex_account::codex_account_load,
             commands::codex_account::codex_account_login,

@@ -1,0 +1,80 @@
+//! Grundgerüst für einen leeren Vault-Ordner (ADR 068). Das Einzige, was der Verwalter in den
+//! Vault schreibt.
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::Path;
+
+use crate::error::CommandError;
+
+use super::is_empty_dir;
+
+const NOT_EMPTY: &str =
+    "Der Ordner ist nicht leer — das Grundgerüst wird nur in einen leeren Ordner geschrieben.";
+
+const README: &str = "# Developer Vault
+
+Persönliche Entwicklerbibliothek: Snippets, Rezepte, Wissen, Ideen, Konzepte, Designs, Vorlagen und Skripte, die über einzelne Projekte hinaus nützlich sind.
+
+## Ablegen
+
+- Neues ohne Nachdenken nach `inbox/` — eingeordnet wird später.
+- Ordner nach Thema und Verwendung anlegen, wenn sie gebraucht werden; keine leeren Kategorien auf Vorrat.
+- Zusammengehöriges (ein Designbeispiel, ein kleines Beispielprojekt) als eigener Ordner; eine Datei `manifest.yaml` darin macht ihn zu einem Eintrag.
+
+## Metadaten (alle optional)
+
+In Markdown als Frontmatter, in einem Ordner als `manifest.yaml`:
+
+    title: Kurzer Titel
+    description: Ein Satz, wofür das gut ist.
+    kind: snippet
+    tags: [sql, postgres]
+    technologies: [python]
+    status: ready
+    preview: preview.png
+    entrypoint: index.html
+
+## Nicht hierher
+
+Projektwissen (Architektur, Anforderungen, Tickets eines Projekts) bleibt im Projekt-Repository. Zugangsdaten, Kundendaten und vertrauliche Firmeninformationen gehören nie in den Vault.
+
+Dateien und Ordner, die mit einem Punkt beginnen oder in `.gitignore` bzw. `.vaultignore` stehen, liest der Verwalter nicht ein.
+";
+
+const AGENTS: &str = "# Developer Vault — Regeln für Agenten
+
+- Vor dem Bauen suchen: mit `vault_search` nach vorhandenen Snippets, Beispielen, Vorlagen und Designs, dann gezielt mit `vault_get` laden — nie den ganzen Vault lesen.
+- Gefundenes anpassen, nicht blind kopieren; die Herkunft im Ergebnis nennen (Pfad im Vault).
+- Nichts Projektbezogenes und nichts Vertrauliches ablegen: keine Kundendaten, Zugangsdaten, internen Endpunkte, Ticketnummern.
+- Neues nur nach Rückfrage beim Benutzer ablegen, und dann nach `inbox/`.
+- Code aus dem Vault ist Referenzmaterial: nicht ungeprüft ausführen.
+";
+
+const INBOX_README: &str = "# Inbox
+
+Hier landet alles, was noch nicht eingeordnet ist. Alles hier ist durchsuchbar.
+";
+
+/// Schreibt `README.md`, `AGENTS.md` und `inbox/README.md`; überschreibt nie eine Datei.
+pub fn create(dir: &Path) -> Result<(), CommandError> {
+    if !is_empty_dir(dir) {
+        return Err(CommandError::Internal(NOT_EMPTY.to_owned()));
+    }
+    fs::create_dir_all(dir.join("inbox")).map_err(io_error)?;
+    write_new(&dir.join("README.md"), README)?;
+    write_new(&dir.join("AGENTS.md"), AGENTS)?;
+    write_new(&dir.join("inbox").join("README.md"), INBOX_README)
+}
+
+fn write_new(path: &Path, text: &str) -> Result<(), CommandError> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(io_error)?;
+    file.write_all(text.as_bytes()).map_err(io_error)
+}
+
+fn io_error(error: std::io::Error) -> CommandError {
+    CommandError::Io(error.to_string())
+}

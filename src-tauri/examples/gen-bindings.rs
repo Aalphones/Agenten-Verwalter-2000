@@ -77,6 +77,7 @@ use verwalter_lib::{
     usage::model::{
         UsageAlert, UsageBreakdown, UsageLimit, UsageShare, UsageSnapshot, UsageStatus,
     },
+    vault::model::{VaultState, VaultStatus},
     voice::model::{VoiceLevelEvent, VoiceModelEvent, VoiceModelState, VoicePartialEvent},
 };
 
@@ -267,5 +268,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     MirrorDiff::export_all(&cfg)?;
     MirrorRun::export_all(&cfg)?;
     EnvironmentStatus::export_all(&cfg)?;
+    VaultState::export_all(&cfg)?;
+    VaultStatus::export_all(&cfg)?;
     Ok(())
 }

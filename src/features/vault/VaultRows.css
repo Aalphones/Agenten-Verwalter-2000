@@ -1,0 +1,41 @@
+.vault-row {
+  &__stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+
+  &__line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    min-width: 0;
+  }
+
+  &__text {
+    font-size: var(--font-size-md);
+    color: var(--color-fg-secondary);
+  }
+
+  &__warn {
+    font-size: var(--font-size-md);
+    color: var(--color-status-waiting);
+  }
+
+  &__muted {
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__mono {
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

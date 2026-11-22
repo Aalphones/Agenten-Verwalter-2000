@@ -77,6 +77,10 @@ pub struct Settings {
     /// Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`, mit dem die
     /// Umgebung abgeglichen wird (ADR 038); `None`, solange keiner gewählt ist.
     pub master_dir: Option<String>,
+    /// Ordner der Entwicklerbibliothek (Developer Vault, ADR 068); `None`, solange keiner gewählt ist.
+    pub vault_dir: Option<String>,
+    /// Ob der Vault eingelesen und durchsucht wird; Standard aus.
+    pub vault_enabled: bool,
     /// Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
     pub mark_unsourced: bool,
     /// Ob Stationen einer Umsetzung ihren Verlauf selbst zusammenfassen (ADR 058).
@@ -153,6 +157,13 @@ pub enum SettingsChange {
     /// `None` oder ein leerer Text entfernt den Master-Ordner.
     MasterDir {
         value: Option<String>,
+    },
+    /// `None` oder ein leerer Text entfernt den Vault-Ordner.
+    VaultDir {
+        value: Option<String>,
+    },
+    VaultEnabled {
+        value: bool,
     },
     MarkUnsourced {
         value: bool,

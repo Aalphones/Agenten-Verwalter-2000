@@ -9,6 +9,7 @@ use crate::settings::{
 };
 use crate::skins;
 use crate::usage::UsageService;
+use crate::vault;
 
 // `async`, damit Datenbank und Skill-Ordner nicht auf dem Haupt-Thread gelesen werden.
 
@@ -29,9 +30,16 @@ pub async fn settings_update(
 ) -> Result<Settings, CommandError> {
     let changes_operating_mode = matches!(change, SettingsChange::OperatingMode { .. });
     let changes_skin_style = matches!(change, SettingsChange::SkinStyle { .. });
+    let changes_vault = matches!(
+        change,
+        SettingsChange::VaultDir { .. } | SettingsChange::VaultEnabled { .. }
+    );
     let updated = settings::update(&database, change)?;
     if changes_skin_style {
         skins::icon::apply_with(&app, &database);
+    }
+    if changes_vault {
+        vault::announce(&app);
     }
     // Das Kontingent gehört zum Abo der Betriebsart; der Stand der alten gilt nicht weiter.
     if changes_operating_mode
