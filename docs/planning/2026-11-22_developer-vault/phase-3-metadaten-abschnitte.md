@@ -1,0 +1,34 @@
+# Phase 3 — Metadaten und Abschnitte
+
+**Stufe:** heikel (Artefakt-Bildung, Zerlegung je Dateityp) · **Ziel:** Der Index kennt Artefakte mit Titel, Beschreibung, Art, Tags und Status und zerlegt jede Datei in sinnvolle Abschnitte. Ersetzt die vorläufige Zerlegung aus Phase 2.
+
+## Kontext — lesen vor dem Start
+
+- `README.md` dieses Plans (Kontrakt: Tabellen `artifacts`, `sections`) und [ADR 068](../../decisions/068-developer-vault.md).
+- Ergebnis von Phase 2: `src-tauri/src/vault/index.rs`, `scan.rs`.
+- Vorhandener Frontmatter-Leser `src-tauri/src/skills/frontmatter.rs` — **nicht ändern** (Skills hängen daran); er kennt keine Listen. Der Vault bekommt einen eigenen Leser.
+- HTML zu Text: Aufruf von `html2text::from_read` in `src-tauri/src/standalone/tools/web_fetch.rs`.
+- Fehlerklassen geprüft: keine einschlägig für diese Phase.
+
+## Abnahmekriterien der Phase
+
+1. **Dateiart** nach Endung (klein geschrieben): `markdown` = md, markdown, mdx · `web` = html, htm · `image` = png, jpg, jpeg, gif, webp, svg, bmp, ico · `code` = rs, ts, tsx, js, jsx, mjs, cjs, py, sql, sh, bash, ps1, psm1, bat, cmd, go, kt, kts, java, cs, c, h, cpp, hpp, swift, rb, php, css, scss, less, json, jsonc, yaml, yml, toml, ini, cfg, xml, vue, svelte · `text` = txt, log, csv, tsv · sonst `text`, wenn UTF-8 ohne NUL-Byte in den ersten 8 KiB, andernfalls `binary`.
+2. **Artefakt:** Ein Ordner mit einer Datei `manifest.yaml` oder `manifest.yml` ist ein Artefakt; jede Datei darunter (auch in Unterordnern) gehört zum tiefsten solchen Ordner. Jede andere Datei ist ihr eigenes Artefakt.
+3. **Metadaten-Leser** `vault/meta.rs` (`parse_yaml(text) -> Meta`): oberste Ebene `schlüssel: wert` (Schlüssel ohne Einrückung, Buchstaben, Ziffern, `_`, `-`); Werte ohne umschließende `'…'`/`"…"`; `[a, b]` als Liste; leerer Wert mit eingerückten Folgezeilen `- x` als Liste; `>` (Zeilen mit Leerzeichen verbunden) und `|` (mit Zeilenumbruch) als Block; eingerückte Zeilen ohne `- ` unter einem leeren Wert (verschachteltes Objekt) und Zeilen mit `#` am Anfang werden übersprungen. Ausgewertet: `title`; `description` oder `summary`; `kind` oder `type`; `tags`, `aliases`, `technologies`, `platforms`, `components` → alle in `tags` (klein, ohne Doppelte); `status`; `preview`; `entrypoint`. Alles andere bleibt unbeachtet.
+4. **Frontmatter** in Markdown: beginnt der Text (ohne BOM) mit einer Zeile `---`, ist alles bis zur nächsten Zeile `---` YAML für `parse_yaml`; es zählt nicht zum Text, die Zeilennummern der Abschnitte bleiben die der Datei.
+5. **Standardwerte, wenn Metadaten fehlen** — Ordner-Artefakt: Titel = Ordnername; Beschreibung = erster Absatz der `README.md` im Ordner; `preview` = erste vorhandene von `preview.png`, `preview.jpg`, `preview.jpeg`, `preview.webp`; `entrypoint` = `index.html`, sonst `README.md`, wenn vorhanden; Art = `package`. Datei-Artefakt: Titel = erste Überschrift `# …` (Markdown) bzw. `<title>` (HTML), sonst Dateiname ohne Endung; Beschreibung = erster Absatz (erste zusammenhängende Textzeilen, die keine Überschrift sind); Art nach Dateiart: markdown → `note`, code → `snippet`, web → `web`, image → `image`, text → `note`, binary → `file`. Status: Metadatum, sonst `inbox` unter `inbox/`, sonst leer. Beschreibung höchstens 300 Zeichen, an einer Wortgrenze gekürzt mit `…`.
+6. **Abschnitte** (höchstens 4000 Zeichen; Längeres wird an Leerzeilen geteilt, ein einzelner Block über 4000 an Zeilengrenzen; Teile heißen „<Überschrift> (Teil n)“): Markdown nach Überschriften `#` bis `###` außerhalb von Code-Zäunen (``` bzw. `~~~`), Überschriften-Pfad „A › B › C“, Text vor der ersten Überschrift als Abschnitt ohne Überschrift; Web: Text aus `html2text` (Breite 100); Code und Text: Blöcke an Leerzeilen; Bild, Binärdatei und Datei über 2 MiB: ein Abschnitt mit dem Dateinamen, in dem `-`, `_` und `.` durch Leerzeichen ersetzt sind. Jeder Abschnitt trägt die erste Zeile (1-basiert).
+7. **FTS-Zeilen** tragen Titel und Tags ihres Artefakts. Ändert sich ein `manifest.yaml` (neu, geändert, gelöscht), werden alle Dateien seines Ordners neu eingelesen, damit Titel und Tags in den FTS-Zeilen stimmen. `artifacts.modified_ms` = jüngste Änderungszeit seiner Dateien.
+8. `vault-probe scan` auf einen Probe-Ordner mit einer Markdown-Datei mit Frontmatter, einem Ordner mit `manifest.yaml` + `index.html` + `preview.png` und einer `.rs`-Datei zeigt danach mit dem neuen Unterbefehl `artifacts <Index-Datei>` je Artefakt eine Zeile `<pfad> · <art> · <titel> · <tags> · <dateien> Dateien · <abschnitte> Abschnitte`.
+9. `pnpm check` grün.
+
+## Checkliste
+
+- [ ] `src-tauri/src/vault/meta.rs`: `pub struct Meta { title, description, kind, status, preview, entrypoint: Option<String>, tags: Vec<String> }`, `parse_yaml` nach AK 3, `split_frontmatter(text) -> (Option<&str>, &str, usize)` (YAML, Rest, Zahl der Zeilen vor dem Rest) nach AK 4.
+- [ ] `src-tauri/src/vault/extract.rs`: `pub enum FileKind` mit `as_str()`, `pub fn file_kind(rel: &str, head: Option<&[u8]>) -> FileKind` nach AK 1; `pub struct SectionInput { heading, line, text }`; `pub fn sections(kind, rel, text: Option<&str>) -> Vec<SectionInput>` nach AK 6; `pub fn file_meta(kind, rel, text) -> Meta` mit den Standardwerten für Datei-Artefakte nach AK 5; `pub fn folder_meta(root, folder_rel, manifest_text, readme_text, existing_files) -> Meta` für Ordner-Artefakte.
+- [ ] `scan.rs` umbauen auf diesen Ablauf: (1) Durchlauf; (2) Menge der Manifest-Ordner; (3) je Datei ihr Artefakt nach AK 2; (4) geändert = Größe/Zeit anders, neu, mit Fehler, oder anderes Artefakt als gespeichert; (5) schmutzige Artefakte = Artefakte geänderter und entfernter Dateien; jedes schmutzige Ordner-Artefakt macht alle seine Dateien zu „erzwungen geändert“; (6) schmutzige Ordner-Artefakte: `folder_meta` → `put_artifact`; (7) je geänderte Datei: lesen, Hash; gleicher Hash und nicht erzwungen und gleiches Artefakt → nur `touch_file`; sonst `file_kind`, `sections`, bei Datei-Artefakt `file_meta` → `put_artifact`, dann `replace_sections` mit Titel und Tags des Artefakts; (8) entfernte Dateien löschen, verwaiste Artefakte löschen, `modified_ms` der schmutzigen Artefakte setzen.
+- [ ] `vault-probe`: Unterbefehl `artifacts` nach AK 8; Zeile in `AGENTS.md` ergänzen.
+- [ ] `docs/code-map.md`: `meta.rs`, `extract.rs` in der Zeile „Developer Vault“.
+- [ ] `docs/glossary.md`: „Artefakt (Vault)“ — eine Datei oder ein Ordner mit `manifest.yaml`; nicht zu verwechseln mit den Artefakten eines Vorhabens im Ordner `.artefakte`. „Abschnitt (Vault)“.
+
+## Report-Back
