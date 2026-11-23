@@ -85,6 +85,21 @@ svg { flex-shrink:0; }
 .sidebar__foot-btn:hover { background:var(--bg-hover); }
 .sidebar__foot-btn--active, .sidebar__foot-btn--active:hover { background:var(--bg-selected); }
 .sidebar__foot-btn kbd { margin-left:auto; }
+.sidebar__pair { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+.sidebar__pair .sidebar__foot-btn { min-width:0; }
+.sidebar__pair kbd { font-size:10.5px; }
+.sidebar__icons { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-top:2px; }
+.sidebar__icon-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:44px; padding:0 2px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); font-size:11px; cursor:pointer; min-width:0; }
+.sidebar__icon-btn span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sidebar__icon-btn:hover { background:var(--bg-hover); }
+.sidebar__icon-btn--active { background:var(--bg-selected); }
+.usage { display:flex; align-items:center; gap:8px; width:100%; height:30px; padding:0 8px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; white-space:nowrap; }
+.usage:hover { background:var(--bg-hover); }
+.usage__name { flex-grow:1; text-align:left; }
+.usage__bar { overflow:hidden; width:32px; height:4px; border-radius:999px; background:var(--bg-hover); }
+.usage__fill { display:block; height:4px; background:var(--error); }
+.usage__label { min-width:34px; font:11.5px var(--font-mono); text-align:right; color:var(--error); }
+.usage svg.sev { color:var(--error); }
 .appear { animation:appear 200ms var(--ease); }
 @keyframes appear { from { opacity:0; transform:translateY(-3px); } }
 
@@ -288,8 +303,9 @@ mark { padding:0 1px; border-radius:3px; background:var(--accent-subtle); color:
   </label>
   <label>Einstieg
     <span class="seg" id="entry">
-      <button type="button" data-e="foot" aria-pressed="false">Fußleiste</button>
-      <button type="button" data-e="top" aria-pressed="false">Oben</button>
+      <button type="button" data-e="top" aria-pressed="false">1 · Suchzeile oben</button>
+      <button type="button" data-e="pair" aria-pressed="false">2 · Paar im Fuß</button>
+      <button type="button" data-e="icons" aria-pressed="false">3 · Symbolleiste</button>
     </span>
   </label>
   <label>Einstellungen
@@ -380,7 +396,7 @@ const KIND_LABEL = {markdown:'Markdown',code:'Code',web:'Web',image:'Bild',text:
 /* ---------------- Zustand ---------------- */
 const $ = id => document.getElementById(id);
 const root = document.documentElement, stage = $('stage');
-const S = { variant:'c', entry:'foot', settingsMode:'today', state:'ready', width:'100%', theme:'auto', vaultDir:'D:\\Vault', vaultOn:true, view:'chat', tools:false,
+const S = { variant:'c', entry:'top', settingsMode:'today', state:'ready', width:'100%', theme:'auto', vaultDir:'D:\\Vault', vaultOn:true, view:'chat', tools:false,
             open:false, q:'', shownQ:'', sel:0, hits:[], total:0, openErr:'', done:'', loading:false, detail:false, tip:false };
 const SEARCH_INFO = 'Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.';
 const isOn = () => S.vaultDir !== null && S.vaultOn;
@@ -413,17 +429,27 @@ function statusText(){
 }
 
 /* ---------------- Sidebar und Hauptbereich ---------------- */
-function vaultEntry(cls){
-  return `<button type="button" class="${cls}${S.justOn ? ' appear' : ''}" id="vaultbtn" title="Vault durchsuchen">${S.entry === 'top' ? I_SEARCH : I_BOOK}<span class="sidebar__new-label">${S.entry === 'top' ? 'Vault durchsuchen' : 'Vault'}</span><kbd>Ctrl K</kbd></button>`;
-}
+const I_ARCH = svg('<path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3"/>');
+const I_SET = svg('<path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"/><circle cx="9" cy="4" r="1.5"/><circle cx="5" cy="10" r="1.5"/>');
+const USAGE = `<button type="button" class="usage" title="Kontingent deines Abos (5-Stunden-Fenster) — Klick für Details (Beispielwert)">${svg('<path d="M2 10.5a5 5 0 1 1 10 0"/><path d="M7 10.5 9.2 6.8"/>')}<span class="usage__name">Kontingent</span><svg class="sev" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" role="img" aria-label="kritisch"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5"/><circle cx="7" cy="9.8" r=".5" fill="currentColor"/></svg><span class="usage__bar"><span class="usage__fill" style="width:86%"></span></span><span class="usage__label">86 %</span></button>`;
 function renderSidebar(){
-  const top = $('actions');
+  const top = $('actions'), on = isOn(), anim = S.justOn ? ' appear' : '', setSel = S.view === 'settings';
+  const cur = setSel ? 'aria-current="page"' : '';
   top.querySelector('#vaultbtn')?.remove();
-  if (isOn() && S.entry === 'top') top.insertAdjacentHTML('beforeend', vaultEntry('sidebar__new sidebar__find'));
-  const fv = isOn() && S.entry === 'foot' ? vaultEntry('sidebar__foot-btn') : '';
-  $('footer').innerHTML = `${fv}
-    <button type="button" class="sidebar__foot-btn" id="archbtn">${svg('<path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3"/>')}<span>Archiv</span></button>
-    <button type="button" class="sidebar__foot-btn${S.view === 'settings' ? ' sidebar__foot-btn--active' : ''}" id="setbtn" ${S.view === 'settings' ? 'aria-current="page"' : ''}>${svg('<path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"/><circle cx="9" cy="4" r="1.5"/><circle cx="5" cy="10" r="1.5"/>')}<span>Einstellungen</span></button>`;
+  if (on && S.entry === 'top') top.insertAdjacentHTML('beforeend', `<button type="button" class="sidebar__new sidebar__find${anim}" id="vaultbtn" title="Vault durchsuchen">${I_SEARCH}<span class="sidebar__new-label">Vault durchsuchen</span><kbd>Ctrl K</kbd></button>`);
+  let foot = USAGE;
+  if (S.entry === 'icons') {
+    foot += `<div class="sidebar__icons">${on ? `<button type="button" class="sidebar__icon-btn${anim}" id="vaultbtn" title="Vault durchsuchen (Ctrl K)">${I_BOOK}<span>Vault</span></button>` : ''}
+      <button type="button" class="sidebar__icon-btn" title="Archiv">${I_ARCH}<span>Archiv</span></button>
+      <button type="button" class="sidebar__icon-btn${setSel ? ' sidebar__icon-btn--active' : ''}" id="setbtn" ${cur} title="Einstellungen">${I_SET}<span>Einstellungen</span></button></div>`;
+  } else if (S.entry === 'pair' && on) {
+    foot += `<div class="sidebar__pair"><button type="button" class="sidebar__foot-btn${anim}" id="vaultbtn" title="Vault durchsuchen (Ctrl K)">${I_BOOK}<span>Vault</span><kbd>Ctrl K</kbd></button><button type="button" class="sidebar__foot-btn">${I_ARCH}<span>Archiv</span></button></div>
+      <button type="button" class="sidebar__foot-btn${setSel ? ' sidebar__foot-btn--active' : ''}" id="setbtn" ${cur}>${I_SET}<span>Einstellungen</span></button>`;
+  } else {
+    foot += `<button type="button" class="sidebar__foot-btn">${I_ARCH}<span>Archiv</span></button>
+      <button type="button" class="sidebar__foot-btn${setSel ? ' sidebar__foot-btn--active' : ''}" id="setbtn" ${cur}>${I_SET}<span>Einstellungen</span></button>`;
+  }
+  $('footer').innerHTML = foot;
   $('vaultbtn')?.addEventListener('click', openDialog);
   $('setbtn').addEventListener('click', () => { S.view = 'settings'; renderAll(); });
   S.justOn = false;
@@ -623,7 +649,10 @@ const CMP = {
 };
 function renderCmp(){
   $('cmp').innerHTML = Object.entries(CMP).map(([k, v]) => `<h4>${v.name}${k === S.variant ? ' (angezeigt)' : ''}${k === 'c' ? ' · Empfehlung' : ''}</h4><ul>${v.plus.map(p => '<li>+ ' + p + '</li>').join('')}${v.minus.map(p => '<li>− ' + p + '</li>').join('')}</ul>`).join('')
-    + '<h4>Einstieg</h4><ul><li>Fußleiste: über „Archiv“, gleiche Bauart</li><li>Oben: unter „Neues Vorhaben“, als Suchzeile — häufiger Weg, sichtbarer</li><li>Beide nur bei Vault-Ordner und Schalter „Developer Vault“ an</li></ul>';
+    + '<h4>Einstieg · 1 Suchzeile oben (Empfehlung)</h4><ul><li>+ Fuß bleibt unverändert: Kontingent, Archiv, Einstellungen</li><li>+ Suche steht, wo man sie sucht, neben „Neues Vorhaben“</li><li>− Die Vorhabenliste wird oben 36 px kürzer</li></ul>'
+    + '<h4>Einstieg · 2 Paar im Fuß</h4><ul><li>+ Fuß bleibt dreizeilig; Vault und Archiv (beides Suchen) teilen eine Zeile</li><li>− Halbe Breite, eng neben Ctrl K</li></ul>'
+    + '<h4>Einstieg · 3 Symbolleiste</h4><ul><li>+ Spart eine Zeile gegenüber heute; mit Vault gleich hoch wie heute ohne</li><li>− Bestehende Knöpfe Archiv und Einstellungen werden umgebaut; Beschriftung 11 px</li></ul>'
+    + '<p>Alle drei: nur bei Vault-Ordner und Schalter an; sonst wie heute.</p>';
 }
 const DSEL = {
   state:{label:'Zustand', opts:[['ready','Bereit'],['many','Viele Treffer'],['scanning','Wird eingelesen'],['empty','Vault leer'],['loading','Erste Suche lädt'],['searcherr','Suche fehlgeschlagen'],['missing','Ordner fehlt']]},

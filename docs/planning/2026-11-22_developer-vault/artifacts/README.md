@@ -20,9 +20,15 @@ Gemeinsam: Suchfeld mit Lupe, Leeren-Knopf und ⓘ; letzte Suche bleibt beim ern
 
 ## Einstieg und Sichtbarkeit
 
-- Fußleiste: „Vault“ über „Archiv“, gleiche Bauart, `Ctrl K` rechts wie `Ctrl N` bei „Neues Vorhaben“.
-- Oben: Suchzeile „Vault durchsuchen“ unter „Neues Vorhaben“.
-- Beide nur bei gesetztem Ordner und eingeschaltetem Schalter; sonst kein Knopf, `Ctrl K` ohne Wirkung. Im Dummy unter Einstellungen schaltbar.
+Im Fuß stehen heute Kontingent, Archiv und Einstellungen. Damit er nicht auf vier Zeilen wächst, gibt es drei Anordnungen:
+
+| Einstieg | Ort | Fuß |
+|---|---|---|
+| 1 · Suchzeile oben (Empfehlung) | „Vault durchsuchen  Ctrl K“ unter „Neues Vorhaben“, gleiche Bauart | unverändert, drei Zeilen |
+| 2 · Paar im Fuß | „Vault  Ctrl K“ und „Archiv“ teilen sich eine Zeile | drei Zeilen |
+| 3 · Symbolleiste | Kontingent als Zeile, darunter Vault, Archiv, Einstellungen als Symbole mit Beschriftung (44 px) | zwei Zeilen; baut Archiv und Einstellungen um |
+
+Alle drei nur bei gesetztem Ordner und eingeschaltetem Schalter; sonst sieht die Seitenleiste aus wie heute und `Ctrl K` bleibt ohne Wirkung. Im Dummy unter Einstellungen schaltbar.
 
 ## Bibliothek (Folgeplan)
 
