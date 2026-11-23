@@ -42,5 +42,11 @@ pub enum ToolResult {
         text: String,
         structured: Option<Value>,
     },
+    /// Text und ein Bild (Base64); `rpc.rs` schreibt beides in `content`.
+    Image {
+        text: String,
+        data: String,
+        mime_type: String,
+    },
     Err(String),
 }

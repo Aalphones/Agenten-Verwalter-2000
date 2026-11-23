@@ -35,12 +35,14 @@
 
 ## Checkliste
 
-- [ ] `src-tauri/src/vault/search.rs`: Typen und `search` nach Kontrakt und AK 1–5; Kern als `pub fn search_index(index: &VaultIndex, query: &VaultQuery) -> Result<(Vec<VaultHit>, u32), CommandError>` ohne `AppHandle` (für das Prüfprogramm), `search(app, query)` legt Status und Frische darum.
-- [ ] `src-tauri/src/vault/tools.rs`: `pub struct VaultTools` mit `ToolSet` nach AK 6–10; Base64 über die Abhängigkeit `base64` (`engine::general_purpose::STANDARD`).
-- [ ] `src-tauri/src/mcp_access/tools.rs` und `rpc.rs`: Variante `Image` nach AK 8; jedes `match` auf `ToolResult` anpassen.
-- [ ] `src-tauri/src/mcp_access/mod.rs`: `Box::new(VaultTools)` in `tool_sets()`.
-- [ ] `vault-probe`: Unterbefehl `search` nach AK 11; Zeile in `AGENTS.md`.
+- [x] `src-tauri/src/vault/search.rs`: Typen und `search` nach Kontrakt und AK 1–5; Kern als `pub fn search_index(index: &VaultIndex, query: &VaultQuery) -> Result<(Vec<VaultHit>, u32), CommandError>` ohne `AppHandle` (für das Prüfprogramm), `search(app, query)` legt Status und Frische darum.
+- [x] `src-tauri/src/vault/tools.rs`: `pub struct VaultTools` mit `ToolSet` nach AK 6–10; Base64 über die Abhängigkeit `base64` (`engine::general_purpose::STANDARD`).
+- [x] `src-tauri/src/mcp_access/tools.rs` und `rpc.rs`: Variante `Image` nach AK 8; jedes `match` auf `ToolResult` anpassen.
+- [x] `src-tauri/src/mcp_access/mod.rs`: `Box::new(VaultTools)` in `tool_sets()`.
+- [x] `vault-probe`: Unterbefehl `search` nach AK 11; Zeile in `AGENTS.md`.
 - [ ] Wackelstelle aus der README prüfen: in einer echten Session `vault_get` auf eine PNG-Datei; Ergebnis (zeigt Claude das Bild?) in `FINDINGS.md` festhalten.
-- [ ] Doku: ADR 046 → Abschnitt Konsequenzen um einen Satz zur Bild-Antwort ergänzen; `docs/code-map.md` (`search.rs`, `tools.rs`, Eintrag `vault_*` in der Zeile „MCP-Zugang“); `docs/glossary.md` („Vault-Werkzeuge“).
+- [x] Doku: ADR 046 → Abschnitt Konsequenzen um einen Satz zur Bild-Antwort ergänzen; `docs/code-map.md` (`search.rs`, `tools.rs`, Eintrag `vault_*` in der Zeile „MCP-Zugang“); `docs/glossary.md` („Vault-Werkzeuge“).
 
 ## Report-Back
+
+Phase 4 umgesetzt. `pnpm check` und `vault-probe search` (Test-Vault: Wortanfang, mehrere Begriffe, ODER-Wiederholung, leerer Suchtext) grün. Offen: `mcp-probe list` gegen die laufende App und die Bild-Antwort in einer echten Session (siehe FINDINGS.md).

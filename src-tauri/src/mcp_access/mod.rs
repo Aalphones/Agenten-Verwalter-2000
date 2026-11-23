@@ -24,6 +24,7 @@ use crate::artifacts::tools::ArtifactTools;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::tools::ImplementationTools;
 use crate::skins::tools::SkinTools;
+use crate::vault::tools::VaultTools;
 use http::{BodyError, Head, Reply};
 use rpc::Outcome;
 use tools::ToolSet;
@@ -41,6 +42,7 @@ pub fn tool_sets() -> Vec<Box<dyn ToolSet>> {
         Box::new(ArtifactTools),
         Box::new(ImplementationTools),
         Box::new(SkinTools),
+        Box::new(VaultTools),
     ]
 }
 

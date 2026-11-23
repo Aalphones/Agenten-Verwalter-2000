@@ -139,6 +139,17 @@ fn call(
             }
             body
         }
+        ToolResult::Image {
+            text,
+            data,
+            mime_type,
+        } => json!({
+            "content": [
+                { "type": "text", "text": text },
+                { "type": "image", "data": data, "mimeType": mime_type },
+            ],
+            "isError": false,
+        }),
         ToolResult::Err(text) => json!({
             "content": [{ "type": "text", "text": text }],
             "isError": true,

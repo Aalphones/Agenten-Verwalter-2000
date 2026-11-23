@@ -27,6 +27,7 @@ Agenten sollen Werkzeuge des Verwalters aufrufen können: zuerst die Artefakte d
 
 - Ein neues Feature mit Werkzeugen für den Agenten legt einen `ToolSet` an und hängt ihn in `tool_sets()` an — kein neuer Server, keine neue Übergabe.
 - Sätze können sich per `offered` abschalten (ADR 065: `skin_*` nur bei „Agent darf Skins bearbeiten“): ein nicht angebotener Satz fehlt in `tools/list`, ein Aufruf darauf liefert `isError` mit dem Satz des `ToolSet`. Die Liste wird je Anfrage gebildet; ein Agent, der vor dem Umschalten startete, behält seine alte Liste bis zum Neustart, der Aufruf selbst prüft den Schalter aber jedes Mal.
+- Eine Antwort kann ein Bild tragen (`ToolResult::Image`): `content` bekommt neben dem Text einen Eintrag `{type:"image", data, mimeType}`; alle übrigen Antworten bleiben unverändert (ADR 068, `vault_get`).
 - Die Konfigurationsdatei enthält den Schlüssel im Klartext im Benutzerordner. Er gilt nur, solange die App läuft, und nur für die eine Session.
 - Prüfen ohne Agent: `cargo run --example mcp-probe -- <konfigurationsdatei> [list | call <name> <json>] [--negative]`.
 - Für Codex braucht es eine eigene Prüfung gegen das Protokoll von `codex app-server`, sobald eine `codex.exe` verfügbar ist.

@@ -5,7 +5,9 @@ pub mod index;
 pub mod meta;
 pub mod model;
 pub mod scan;
+pub mod search;
 pub mod skeleton;
+pub mod tools;
 
 use std::fs;
 use std::panic::{self, AssertUnwindSafe};
