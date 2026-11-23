@@ -1,6 +1,6 @@
 # Entwurf: Suche in Vault und Bibliothek – gegliedert
 
-**Status:** zur Abnahme vorgelegt (Phase 6, Station „Entwurf“, dritte Runde). Die Vorschläge A/B/C der zweiten Runde sind ersetzt durch einen Dialog, der nach Gruppen gliedert. Bei der Abnahme wählt der Benutzer noch den Einstieg (1/2/3).
+**Status:** abgenommen 2026-11-23 — gegliederter Dialog mit Vorschau rechts, Einstieg 3 „Symbolleiste“ mit dem Kontingent unter der Symbolleiste. Verbindlich für die Umsetzung von Phase 6; Einstiege 1 und 2 bleiben im Dummy nur zum Vergleich.
 
 ## Ansehen
 
@@ -34,9 +34,9 @@ Bedienung: ↑/↓ wählt, Enter öffnet, Ctrl Enter zeigt im Ordner, Ctrl 0–3
 
 | Einstieg | Ort | Fuß |
 |---|---|---|
-| 1 · Suchzeile oben (Empfehlung) | „Vault durchsuchen  Ctrl K“ unter „Neues Vorhaben“, gleiche Bauart | unverändert, drei Zeilen |
-| 2 · Paar im Fuß | „Vault“ und „Archiv“ teilen sich eine Zeile | drei Zeilen |
-| 3 · Symbolleiste | Kontingent als Zeile, darunter Vault, Archiv, Einstellungen als Symbole mit Beschriftung (44 px) | zwei Zeilen; baut Archiv und Einstellungen um |
+| 3 · Symbolleiste (abgenommen) | Vault, Archiv, Einstellungen als Symbole mit Beschriftung (44 px), darunter die Zeile Kontingent | zwei Zeilen; baut Archiv und Einstellungen um |
+| 1 · Suchzeile oben (verworfen) | „Vault durchsuchen  Ctrl K“ unter „Neues Vorhaben“ | unverändert, drei Zeilen |
+| 2 · Paar im Fuß (verworfen) | „Vault“ und „Archiv“ teilen sich eine Zeile | drei Zeilen |
 
 Alle drei nur bei gesetztem Ordner und eingeschaltetem Schalter; sonst sieht die Seitenleiste aus wie heute und `Ctrl K` bleibt ohne Wirkung. Im Dummy unter Einstellungen schaltbar.
 

@@ -87,7 +87,7 @@ svg { flex-shrink:0; }
 .foot-btn--active, .foot-btn--active:hover { background:var(--bg-selected); }
 .foot-btn kbd { margin-left:auto; }
 .pair { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
-.icons { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-top:2px; }
+.icons { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:2px; margin-bottom:4px; }
 .icon-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:44px; padding:0 2px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); font-size:11px; cursor:pointer; min-width:0; }
 .icon-btn span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .icon-btn:hover { background:var(--bg-hover); }
@@ -376,7 +376,7 @@ const I_INFO = svg('<circle cx="7" cy="7" r="5.5"/><path d="M7 6.4v3.4"/><circle
 /* ---------------- Zustand ---------------- */
 const $ = id => document.getElementById(id);
 const root = document.documentElement, stage = $('stage');
-const S = { build:'lib', entry:'top', state:'ready', width:'100%', theme:'auto', tools:false, vaultDir:'D:\\Vault', vaultOn:true, view:'chat',
+const S = { build:'phase6', entry:'icons', state:'ready', width:'100%', theme:'auto', tools:false, vaultDir:'D:\\Vault', vaultOn:true, view:'chat',
   open:false, q:'', shownQ:'', scope:'all', selId:null, openErr:'', done:'', loading:false, detail:false, tip:false, justOn:false };
 const isOn = () => S.vaultDir !== null && S.vaultOn;
 const stageW = () => stage.getBoundingClientRect().width;
@@ -439,7 +439,7 @@ function renderSidebar(){
   if (on && S.entry === 'top') $('actions').insertAdjacentHTML('beforeend', `<button type="button" class="sidebar__new sidebar__find${anim}" id="vaultbtn">${I_SEARCH}<span class="sidebar__new-label">${short} durchsuchen</span><kbd>Ctrl K</kbd></button>`);
   const setBtn = `<button type="button" class="foot-btn${sel ? ' foot-btn--active' : ''}" id="setbtn" ${cur}>${I_SET}<span>Einstellungen</span></button>`;
   let f = USAGE;
-  if (S.entry === 'icons') f += `<div class="icons">${on ? `<button type="button" class="icon-btn${anim}" id="vaultbtn" title="${name} durchsuchen (Ctrl K)">${I_BOOK}<span>${short}</span></button>` : ''}<button type="button" class="icon-btn" title="Archiv">${I_ARCH}<span>Archiv</span></button><button type="button" class="icon-btn${sel ? ' icon-btn--active' : ''}" id="setbtn" ${cur} title="Einstellungen">${I_SET}<span>Einstellungen</span></button></div>`;
+  if (S.entry === 'icons') f = `<div class="icons">${on ? `<button type="button" class="icon-btn${anim}" id="vaultbtn" title="${name} durchsuchen (Ctrl K)">${I_BOOK}<span>${short}</span></button>` : ''}<button type="button" class="icon-btn" title="Archiv">${I_ARCH}<span>Archiv</span></button><button type="button" class="icon-btn${sel ? ' icon-btn--active' : ''}" id="setbtn" ${cur} title="Einstellungen">${I_SET}<span>Einstellungen</span></button></div>` + USAGE;
   else if (S.entry === 'pair' && on) f += `<div class="pair"><button type="button" class="foot-btn${anim}" id="vaultbtn" title="${name} durchsuchen (Ctrl K)">${I_BOOK}<span>${short}</span></button><button type="button" class="foot-btn">${I_ARCH}<span>Archiv</span></button></div>${setBtn}`;
   else f += `<button type="button" class="foot-btn">${I_ARCH}<span>Archiv</span></button>${setBtn}`;
   $('footer').innerHTML = f;
@@ -595,7 +595,7 @@ function act(reveal){
 function renderCmp(){
   $('cmp').innerHTML = `<h4>Aufbau</h4><ul><li>Links Gruppen: Anweisungen, Skills, Wissen — darunter Untergruppen mit Anzahl</li><li>Mitte: ruhige Liste, je Eintrag Titel und eine Zeile Beschreibung; Abschnitte je Untergruppe</li><li>Rechts: Vorschau mit Ort, Fundstelle, Öffnen, Im Ordner zeigen</li><li>Ohne Suche: „Überblick“ zeigt zuletzt Geändertes; mit Suche: Treffer je Untergruppe, je vier, „alle n zeigen“</li></ul>
   <h4>Ausbau</h4><ul><li>Phase 6: nur Wissen (Vault-Ordner)</li><li>Bibliothek (Folgeplan): zusätzlich Anweisungen und Skills aus dem Master-Ordner</li></ul>
-  <h4>Einstieg</h4><ul><li>1 Suchzeile oben (Empfehlung): Fuß bleibt wie heute</li><li>2 Paar im Fuß: Fuß bleibt dreizeilig</li><li>3 Symbolleiste: Fuß zweizeilig, Archiv und Einstellungen umgebaut</li><li>Alle nur bei Ordner und Schalter an</li></ul>
+  <h4>Einstieg</h4><ul><li>3 Symbolleiste (abgenommen): Vault, Archiv, Einstellungen als Symbole, Kontingent darunter</li><li>1 Suchzeile oben, 2 Paar im Fuß: verworfen, nur zum Vergleich</li><li>Alle nur bei Ordner und Schalter an</li></ul>
   <h4>Daten</h4><ul><li>Skills, Befehle, Ausgabestile: echte Namen (Auswahl), Beschreibungen gekürzt</li><li>Wissen, Zahlen, Kontingent: Beispiele</li></ul>`;
 }
 const DSEL = {

@@ -16,8 +16,8 @@
 
 ## Abnahmekriterien der Phase
 
-0. **Offen bis zur Abnahme:** Der Benutzer wählt einen Einstieg (1 Suchzeile oben, 2 Paar im Fuß, 3 Symbolleiste); siehe [artifacts/README.md](artifacts/README.md). Die Abnahme legt AK 1 auf diese Wahl fest; bis dahin gilt Einstieg 1. Der Dialog ist gegliedert (Gruppen links, Liste, Vorschau); in Phase 6 gibt es nur die Gruppe Wissen mit einer Untergruppe je Ordner der ersten Ebene.
-1. Knopf „Vault“ (14 px, Strichstärke 1,5 wie „Archiv“) mit `Ctrl K` rechts (wie `Ctrl N`), angeordnet nach dem gewählten Einstieg; der Fuß mit Kontingent wächst nicht über drei Zeilen. Nur bei `vaultDir !== null && vaultEnabled`. `Strg+K` (ohne Umschalt/Alt) öffnet denselben Dialog unter derselben Bedingung, sonst passiert nichts.
+0. **Abgenommen 2026-11-23:** gegliederter Dialog mit Vorschau rechts (Gruppen links, Liste, Vorschau) und Einstieg 3 „Symbolleiste“ mit dem Kontingent darunter; siehe [artifacts/README.md](artifacts/README.md). In Phase 6 gibt es nur die Gruppe Wissen mit einer Untergruppe je Ordner der ersten Ebene.
+1. Fuß der Sidebar in zwei Zeilen: oben eine Symbolleiste aus drei gleich breiten Knöpfen (je 44 px hoch, Symbol 14 px mit Strichstärke 1,5 über der Beschriftung 11 px) „Vault“, „Archiv“, „Einstellungen“; darunter die Zeile „Kontingent“ (`UsageButton` unverändert). „Vault“ trägt `Ctrl K` im Tooltip; fehlt er, teilen sich Archiv und Einstellungen die Zeile zu gleichen Teilen. Der aktive Bereich (Einstellungen offen) ist wie heute hinterlegt. „Vault“ nur bei `vaultDir !== null && vaultEnabled`. `Strg+K` (ohne Umschalt/Alt) öffnet denselben Dialog unter derselben Bedingung, sonst passiert nichts.
 2. Dialog (Titel „Developer Vault“), Kopf: Titel, Suchfeld mit Fokus beim Öffnen und ⓘ (Text: „Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.“), Statuszeile rechts (Text aus `statusText`). Darunter drei Spalten: links Gruppen („Überblick“ bzw. „Alle Treffer“, darunter je Ordner der ersten Ebene mit Anzahl; während einer Suche Trefferzahl, leere fallen weg), Mitte Liste, rechts Vorschau. Unten Fußzeile „<n> von <total> Treffern“ (bei `isScanning` ergänzt um „Index wird noch aufgebaut“) und rechts die Tastenhilfe. Entwurf: [artifacts/vault-suchdialog.html](artifacts/vault-suchdialog.html), Beschreibung in [artifacts/README.md](artifacts/README.md).
 3. Suche über `vault_find` mit `limit = 50`, entprellt 250 ms; leeres Feld zeigt sofort die zuletzt geänderten Artefakte unter der Gruppenzeile „Zuletzt geändert“.
 4. Liste: je Eintrag Symbol der Art, Titel, Beschreibung einzeilig, Fundstellen markiert (`<mark>`); kein Pfad, keine Art-Marke in der Zeile. Mit Suche Abschnitte je Untergruppe mit Kopf „Wissen › <Ordner>“; unter „Alle Treffer“ höchstens vier je Abschnitt plus „alle n zeigen“ (wechselt die Gruppe). Vorschau: Ort „Wissen › <Ordner>“, Titel, Beschreibung, Knöpfe, darunter Ausschnitt mit Abschnitt und Zeile oder das Vorschaubild bei Bildern, zuletzt der Pfad (Monospace).
@@ -39,7 +39,7 @@
 - [ ] `src/features/vault/useVaultSearch.ts` nach AK 3 (Muster `useArchiveSearch`).
 - [ ] `src/features/vault/snippetSegments.ts`: zerlegt einen Ausschnitt an ``/`` in `{ text, isMatch }[]`.
 - [ ] `src/features/vault/VaultHitRow.tsx` nach AK 4–5, `src/features/vault/VaultSearchDialog.tsx` + `VaultSearchDialog.css` (BEM `vault-search__…`) nach AK 2, 5, 6.
-- [ ] `src/app/Sidebar.tsx`: Prop `onOpenVault`, Knopf `sidebar__vault` nach AK 1; `src/app/App.tsx`: `isVaultOpen`, Kürzel nach AK 1, Dialog einhängen.
+- [ ] `src/app/Sidebar.tsx` + `Sidebar.css`: Fuß nach AK 1 umbauen — Symbolleiste `sidebar__toolbar` mit `sidebar__tool` (Vault, Archiv, Einstellungen; ersetzt die bisherigen Zeilen Archiv und Einstellungen), `UsageButton` darunter; Prop `onOpenVault`; `src/app/App.tsx`: `isVaultOpen`, Kürzel nach AK 1, Dialog einhängen.
 
 ### Doku
 
