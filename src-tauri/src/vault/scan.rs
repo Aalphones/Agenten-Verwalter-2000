@@ -1,5 +1,6 @@
 //! Der Abgleich: liest den Vault-Ordner und zieht den Index nach — nur geänderte Dateien werden
 //! geöffnet. Ohne `AppHandle`, damit das Prüfprogramm `vault-probe` ihn ohne App fahren kann.
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
@@ -9,21 +10,17 @@ use ignore::{DirEntry, WalkBuilder};
 use sha2::{Digest, Sha256};
 
 use crate::error::CommandError;
-use crate::vault::index::{
-    self, ArtifactFts, ArtifactRow, FileRow, SectionInput, VaultIndex, delete_file,
-};
+use crate::vault::extract::{self, FileKind, SectionInput};
+use crate::vault::index::{self, ArtifactFts, ArtifactRow, FileRow, VaultIndex, delete_file};
+use crate::vault::meta::Meta;
 
 /// Größere Dateien werden nicht gelesen; ihr Name bleibt auffindbar.
 const MAX_READ_BYTES: u64 = 2 * 1024 * 1024;
-/// So viele Zeichen eines Textes kommen vorläufig in den einen Abschnitt.
-const MAX_SECTION_CHARS: usize = 4000;
-/// Anfang einer Datei, in dem ein NUL-Byte sie als binär ausweist.
-const BINARY_PROBE_BYTES: usize = 8 * 1024;
 const IGNORE_FILE: &str = ".vaultignore";
-const INBOX_PREFIX: &str = "inbox/";
-const KIND_TEXT: &str = "text";
-const KIND_BINARY: &str = "binary";
-const STATUS_INBOX: &str = "inbox";
+const MANIFEST_NAMES: [&str; 2] = ["manifest.yaml", "manifest.yml"];
+const README_NAME: &str = "README.md";
+/// Anfang einer Datei, nach dem `file_kind` bei unbekannter Endung urteilt.
+const HEAD_BYTES: usize = 8 * 1024;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ScanReport {
@@ -38,6 +35,14 @@ struct Entry {
     rel: String,
     size: i64,
     modified_ms: i64,
+    /// Pfad des Artefakts: die Datei selbst oder der Ordner mit `manifest.yaml`.
+    artifact: String,
+}
+
+/// Titel und Tags eines Ordner-Artefakts, wie sie in die FTS-Zeilen seiner Dateien kommen.
+struct FolderFts {
+    title: String,
+    tags: String,
 }
 
 /// Gleicht den Index mit dem Ordner ab. Je Datei eine eigene Transaktion; eine nicht lesbare
@@ -45,24 +50,36 @@ struct Entry {
 pub fn run(root: &Path, index: &VaultIndex) -> Result<ScanReport, CommandError> {
     let started: Instant = Instant::now();
     let mut report = ScanReport::default();
-    let entries: Vec<Entry> = walk(root, &mut report);
+    let mut entries: Vec<Entry> = walk(root, &mut report);
     report.seen = entries.len() as u32;
-    for entry in &entries {
-        if sync_file(root, index, entry)? == Outcome::Read {
-            report.read += 1;
+    let folders: HashSet<String> = manifest_folders(&entries);
+    for entry in &mut entries {
+        entry.artifact = artifact_of(&entry.rel, &folders);
+    }
+    let stored: HashMap<String, FileRow> =
+        index.with(|connection| index::all_file_rows(connection))?;
+    let mut work: Vec<bool> = entries
+        .iter()
+        .map(|entry: &Entry| is_changed(entry, stored.get(&entry.rel)))
+        .collect();
+    let dirty: Vec<String> = dirty_folders(&entries, &work, &stored, &folders);
+    let folder_fts: HashMap<String, FolderFts> =
+        put_folder_artifacts(root, index, &entries, &dirty, &mut work)?;
+    let forced: HashSet<usize> = forced_members(&entries, &work, &stored, &dirty);
+    for (position, entry) in entries.iter().enumerate() {
+        if !work[position] && !forced.contains(&position) {
+            continue;
         }
+        let fts: Option<&FolderFts> = folder_fts.get(&entry.artifact);
+        let is_forced: bool = forced.contains(&position);
+        sync_file(root, index, entry, stored.get(&entry.rel), fts, is_forced)?;
+        report.read += 1;
     }
     report.skipped += index.with(|connection| Ok(index::counts(connection)?.skipped))?;
-    report.removed = remove_vanished(index, &entries)?;
+    report.removed = remove_vanished(index, &entries, &stored)?;
     index.with(|connection| index::delete_orphan_artifacts(connection))?;
     report.duration_ms = started.elapsed().as_millis() as u64;
     Ok(report)
-}
-
-#[derive(PartialEq, Eq)]
-enum Outcome {
-    Unchanged,
-    Read,
 }
 
 fn walk(root: &Path, report: &mut ScanReport) -> Vec<Entry> {
@@ -104,26 +121,192 @@ fn entry_of(root: &Path, found: &DirEntry) -> Option<Entry> {
         rel: parts.join("/"),
         size: metadata.len() as i64,
         modified_ms: modified.as_millis() as i64,
+        artifact: String::new(),
     })
 }
 
-/// Vergleicht eine Datei mit dem gespeicherten Stand und zieht den Index nach.
-fn sync_file(root: &Path, index: &VaultIndex, entry: &Entry) -> Result<Outcome, CommandError> {
-    let stored: Option<FileRow> =
-        index.with(|connection| index::file_row(connection, &entry.rel))?;
-    if let Some(row) = &stored {
-        let is_unchanged: bool =
-            row.error.is_none() && row.size == entry.size && row.modified_ms == entry.modified_ms;
-        if is_unchanged {
-            return Ok(Outcome::Unchanged);
+/// Ordner, die eine `manifest.yaml` oder `manifest.yml` tragen. Eine Manifest-Datei im Vault-Ordner
+/// selbst macht nicht den ganzen Vault zu einem Artefakt.
+fn manifest_folders(entries: &[Entry]) -> HashSet<String> {
+    entries
+        .iter()
+        .filter_map(|entry: &Entry| entry.rel.rsplit_once('/'))
+        .filter(|(_, name): &(&str, &str)| MANIFEST_NAMES.contains(name))
+        .map(|(folder, _): (&str, &str)| folder.to_owned())
+        .collect()
+}
+
+/// Das Artefakt einer Datei: der tiefste Manifest-Ordner über ihr, sonst sie selbst.
+fn artifact_of(rel: &str, folders: &HashSet<String>) -> String {
+    let mut parent: &str = rel;
+    while let Some((folder, _)) = parent.rsplit_once('/') {
+        if folders.contains(folder) {
+            return folder.to_owned();
+        }
+        parent = folder;
+    }
+    rel.to_owned()
+}
+
+fn is_changed(entry: &Entry, stored: Option<&FileRow>) -> bool {
+    let Some(row) = stored else {
+        return true;
+    };
+    row.error.is_some()
+        || row.size != entry.size
+        || row.modified_ms != entry.modified_ms
+        || row.artifact != entry.artifact
+}
+
+/// Ordner-Artefakte, an denen sich etwas geändert hat: durch eine geänderte oder entfernte Datei.
+fn dirty_folders(
+    entries: &[Entry],
+    changed: &[bool],
+    stored: &HashMap<String, FileRow>,
+    folders: &HashSet<String>,
+) -> Vec<String> {
+    let present: HashSet<&str> = entries
+        .iter()
+        .map(|entry: &Entry| entry.rel.as_str())
+        .collect();
+    let mut dirty: HashSet<String> = HashSet::new();
+    for (entry, is_changed) in entries.iter().zip(changed) {
+        if *is_changed {
+            dirty.insert(entry.artifact.clone());
+            if let Some(row) = stored.get(&entry.rel) {
+                dirty.insert(row.artifact.clone());
+            }
         }
     }
+    for (path, row) in stored {
+        if !present.contains(path.as_str()) {
+            dirty.insert(row.artifact.clone());
+        }
+    }
+    let mut found: Vec<String> = dirty
+        .into_iter()
+        .filter(|artifact: &String| folders.contains(artifact))
+        .collect();
+    found.sort();
+    found
+}
+
+/// Berechnet die Metadaten der schmutzigen Ordner-Artefakte und schreibt ihre Zeilen. Ändern sich
+/// Titel oder Tags gegenüber dem Gespeicherten, bleibt der Vermerk für `forced_members` in der
+/// Rückgabe stehen, denn dann stimmen die FTS-Zeilen aller Dateien des Ordners nicht mehr.
+fn put_folder_artifacts(
+    root: &Path,
+    index: &VaultIndex,
+    entries: &[Entry],
+    dirty_folders: &[String],
+    changed: &mut [bool],
+) -> Result<HashMap<String, FolderFts>, CommandError> {
+    let mut found: HashMap<String, FolderFts> = HashMap::new();
+    for folder in dirty_folders {
+        let members: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry: &&Entry| &entry.artifact == folder)
+            .collect();
+        let meta: Meta = folder_meta_of(root, folder, &members);
+        let latest: i64 = members
+            .iter()
+            .map(|entry: &&Entry| entry.modified_ms)
+            .max()
+            .unwrap_or(0);
+        let row: ArtifactRow = artifact_row(folder, &meta, latest);
+        let previous: Option<(String, String)> =
+            index.with(|connection| index::artifact_title_tags(connection, folder))?;
+        let is_same: bool = previous
+            .as_ref()
+            .is_some_and(|(title, tags): &(String, String)| {
+                *title == row.title && *tags == row.tags
+            });
+        index.with(|connection| index::put_artifact(connection, &row))?;
+        if !is_same {
+            // Erzwingt das Einlesen aller Dateien des Ordners: ihre FTS-Zeilen tragen Titel und Tags.
+            for (position, entry) in entries.iter().enumerate() {
+                if &entry.artifact == folder {
+                    changed[position] = true;
+                }
+            }
+        }
+        found.insert(
+            folder.clone(),
+            FolderFts {
+                title: row.title,
+                tags: row.tags,
+            },
+        );
+    }
+    Ok(found)
+}
+
+/// Dateien, die nur wegen ihres Ordner-Artefakts neu eingelesen werden, obwohl sie selbst
+/// unverändert sind. Ihr Hash-Kurzschluss gilt nicht.
+fn forced_members(
+    entries: &[Entry],
+    work: &[bool],
+    stored: &HashMap<String, FileRow>,
+    dirty_folders: &[String],
+) -> HashSet<usize> {
+    let dirty: HashSet<&str> = dirty_folders.iter().map(String::as_str).collect();
+    entries
+        .iter()
+        .enumerate()
+        .filter(|(position, entry): &(usize, &Entry)| {
+            work[*position]
+                && dirty.contains(entry.artifact.as_str())
+                && !is_changed(entry, stored.get(&entry.rel))
+        })
+        .map(|(position, _): (usize, &Entry)| position)
+        .collect()
+}
+
+fn folder_meta_of(root: &Path, folder: &str, members: &[&Entry]) -> Meta {
+    let files: HashSet<String> = members
+        .iter()
+        .map(|entry: &&Entry| entry.rel.clone())
+        .collect();
+    let manifest: String = MANIFEST_NAMES
+        .iter()
+        .map(|name: &&str| format!("{folder}/{name}"))
+        .find(|path: &String| files.contains(path))
+        .and_then(|path: String| read_small_text(root, &path))
+        .unwrap_or_default();
+    let readme_path: String = format!("{folder}/{README_NAME}");
+    let readme: Option<String> = if files.contains(&readme_path) {
+        read_small_text(root, &readme_path)
+    } else {
+        None
+    };
+    extract::folder_meta(folder, &manifest, readme.as_deref(), &files)
+}
+
+fn read_small_text(root: &Path, rel: &str) -> Option<String> {
+    let path = root.join(native(rel));
+    let size: u64 = fs::metadata(&path).ok()?.len();
+    if size > MAX_READ_BYTES {
+        return None;
+    }
+    let bytes: Vec<u8> = fs::read(path).ok()?;
+    Some(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// Vergleicht eine Datei mit dem gespeicherten Stand und zieht den Index nach.
+fn sync_file(
+    root: &Path,
+    index: &VaultIndex,
+    entry: &Entry,
+    stored: Option<&FileRow>,
+    folder: Option<&FolderFts>,
+    is_forced: bool,
+) -> Result<(), CommandError> {
     let loaded: Result<Loaded, String> = load(&root.join(native(&entry.rel)), entry.size);
     match loaded {
         Err(message) => store_failure(index, entry, message)?,
-        Ok(loaded) => store_loaded(index, entry, stored.as_ref(), loaded)?,
+        Ok(loaded) => store_loaded(index, entry, stored, folder, is_forced, loaded)?,
     }
-    Ok(Outcome::Read)
+    Ok(())
 }
 
 struct Loaded {
@@ -166,8 +349,8 @@ fn store_failure(index: &VaultIndex, entry: &Entry, message: String) -> Result<(
                 size: entry.size,
                 modified_ms: entry.modified_ms,
                 hash: String::new(),
-                kind: KIND_BINARY.to_owned(),
-                artifact: entry.rel.clone(),
+                kind: FileKind::Binary.as_str().to_owned(),
+                artifact: entry.artifact.clone(),
                 error: Some(message),
             },
         )?;
@@ -180,47 +363,48 @@ fn store_loaded(
     index: &VaultIndex,
     entry: &Entry,
     stored: Option<&FileRow>,
+    folder: Option<&FolderFts>,
+    is_forced: bool,
     loaded: Loaded,
 ) -> Result<(), CommandError> {
-    let has_same_content: bool = stored.is_some_and(|row| {
-        row.error.is_none() && !loaded.hash.is_empty() && row.hash == loaded.hash
-    });
+    let has_same_content: bool = !is_forced
+        && stored.is_some_and(|row: &FileRow| {
+            row.error.is_none()
+                && row.artifact == entry.artifact
+                && !loaded.hash.is_empty()
+                && row.hash == loaded.hash
+        });
     if has_same_content {
         return index.with(|connection| {
             index::touch_file(connection, &entry.rel, entry.size, entry.modified_ms)
         });
     }
-    let text: Option<String> = loaded.bytes.as_deref().and_then(text_of);
-    let kind: &str = if text.is_some() {
-        KIND_TEXT
-    } else {
-        KIND_BINARY
+    let head: Option<&[u8]> = loaded
+        .bytes
+        .as_deref()
+        .map(|bytes: &[u8]| &bytes[..bytes.len().min(HEAD_BYTES)]);
+    let kind: FileKind = extract::file_kind(&entry.rel, head);
+    let text: Option<String> = text_of(kind, loaded.bytes.as_deref());
+    let parts: Vec<SectionInput> = extract::sections(kind, &entry.rel, text.as_deref());
+    let own_row: Option<ArtifactRow> = match folder {
+        Some(_) => None,
+        None => {
+            let meta: Meta = extract::file_meta(kind, &entry.rel, text.as_deref());
+            Some(artifact_row(&entry.rel, &meta, entry.modified_ms))
+        }
     };
-    let title: String = file_title(&entry.rel);
-    let status: &str = if entry.rel.starts_with(INBOX_PREFIX) {
-        STATUS_INBOX
-    } else {
-        ""
-    };
-    let section_text: String = match &text {
-        Some(text) => text.chars().take(MAX_SECTION_CHARS).collect(),
-        None => file_name(&entry.rel),
+    let (title, tags): (&str, &str) = match (folder, &own_row) {
+        (Some(fts), _) => (&fts.title, &fts.tags),
+        (None, Some(row)) => (&row.title, &row.tags),
+        (None, None) => ("", ""),
     };
     index.with(|connection| {
         let transaction = connection.transaction()?;
-        let artifact: ArtifactFts = ArtifactFts {
-            title: &title,
-            tags: "",
-        };
         index::replace_sections(
             &transaction,
             &entry.rel,
-            &[SectionInput {
-                heading: String::new(),
-                line: 1,
-                text: section_text,
-            }],
-            &artifact,
+            &parts,
+            &ArtifactFts { title, tags },
         )?;
         index::put_file(
             &transaction,
@@ -228,50 +412,57 @@ fn store_loaded(
                 path: entry.rel.clone(),
                 size: entry.size,
                 modified_ms: entry.modified_ms,
-                hash: loaded.hash,
-                kind: kind.to_owned(),
-                artifact: entry.rel.clone(),
+                hash: loaded.hash.clone(),
+                kind: kind.as_str().to_owned(),
+                artifact: entry.artifact.clone(),
                 error: None,
             },
         )?;
-        index::put_artifact(
-            &transaction,
-            &ArtifactRow {
-                path: entry.rel.clone(),
-                title,
-                description: String::new(),
-                kind: kind.to_owned(),
-                tags: String::new(),
-                status: status.to_owned(),
-                preview: None,
-                entrypoint: None,
-                modified_ms: entry.modified_ms,
-            },
-        )?;
+        if let Some(row) = &own_row {
+            index::put_artifact(&transaction, row)?;
+        }
         transaction.commit()?;
         Ok(())
     })
 }
 
-/// Der Text einer Datei, wenn sie UTF-8 ist und im Anfang kein NUL-Byte trägt.
-fn text_of(bytes: &[u8]) -> Option<String> {
-    let head: &[u8] = &bytes[..bytes.len().min(BINARY_PROBE_BYTES)];
-    if head.contains(&0) {
+/// Der Text einer Datei, soweit ihre Art Text ist. Unbekannte Endungen hat `file_kind` schon auf
+/// Text oder binär geprüft, bei bekannten Endungen zählt die Endung.
+fn text_of(kind: FileKind, bytes: Option<&[u8]>) -> Option<String> {
+    if matches!(kind, FileKind::Image | FileKind::Binary) {
         return None;
     }
-    String::from_utf8(bytes.to_vec()).ok()
+    bytes.map(|content: &[u8]| String::from_utf8_lossy(content).into_owned())
+}
+
+/// Aus fertigen Metadaten wird die Zeile in `artifacts`; `extract` setzt Titel und Art immer.
+fn artifact_row(path: &str, meta: &Meta, modified_ms: i64) -> ArtifactRow {
+    ArtifactRow {
+        path: path.to_owned(),
+        title: meta.title.clone().unwrap_or_default(),
+        description: meta.description.clone().unwrap_or_default(),
+        kind: meta.kind.clone().unwrap_or_default(),
+        tags: meta.tags.join(" "),
+        status: meta.status.clone().unwrap_or_default(),
+        preview: meta.preview.clone(),
+        entrypoint: meta.entrypoint.clone(),
+        modified_ms,
+    }
 }
 
 /// Löscht Dateien, die der Durchlauf nicht mehr gesehen hat; gibt ihre Zahl zurück.
-fn remove_vanished(index: &VaultIndex, entries: &[Entry]) -> Result<u32, CommandError> {
-    let seen: std::collections::HashSet<&str> = entries
+fn remove_vanished(
+    index: &VaultIndex,
+    entries: &[Entry],
+    stored: &HashMap<String, FileRow>,
+) -> Result<u32, CommandError> {
+    let seen: HashSet<&str> = entries
         .iter()
         .map(|entry: &Entry| entry.rel.as_str())
         .collect();
-    let stored = index.with(|connection| index::all_paths(connection))?;
     let mut removed: u32 = 0;
     for path in stored
-        .iter()
+        .keys()
         .filter(|path: &&String| !seen.contains(path.as_str()))
     {
         index.with(|connection| {
@@ -283,18 +474,6 @@ fn remove_vanished(index: &VaultIndex, entries: &[Entry]) -> Result<u32, Command
         removed += 1;
     }
     Ok(removed)
-}
-
-fn file_name(rel: &str) -> String {
-    rel.rsplit('/').next().unwrap_or(rel).to_owned()
-}
-
-fn file_title(rel: &str) -> String {
-    let name: String = file_name(rel);
-    match name.rsplit_once('.') {
-        Some((stem, _)) if !stem.is_empty() => stem.to_owned(),
-        _ => name,
-    }
 }
 
 /// Pfad mit `/` zum Dateisystempfad (siehe `filesystem::native_path`).

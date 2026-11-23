@@ -10,7 +10,7 @@ Entscheidungen und Begründung: [ADR 068](../../decisions/068-developer-vault.md
 |---|---|---|---|
 | 1 | [Einstellung, Status, Grundgerüst](phase-1-einstellung-status.md) | standard | complete |
 | 2 | [Index-Datei und Abgleich](phase-2-index-abgleich.md) | heikel | complete |
-| 3 | [Metadaten und Abschnitte](phase-3-metadaten-abschnitte.md) | heikel | pending |
+| 3 | [Metadaten und Abschnitte](phase-3-metadaten-abschnitte.md) | heikel | complete |
 | 4 | [Suche und Werkzeuge für Agenten](phase-4-suche-werkzeuge.md) | heikel | pending |
 | 5 | [Vault-Treffer im Auftrag der Station](phase-5-stationsauftrag.md) | standard | pending |
 | 6 | [Suchdialog](phase-6-suchdialog.md) | standard | pending |

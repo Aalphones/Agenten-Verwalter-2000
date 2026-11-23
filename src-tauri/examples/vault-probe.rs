@@ -1,36 +1,38 @@
 //! Prüft den Vault ohne App. Aufruf:
-//! `cargo run --manifest-path src-tauri/Cargo.toml --example vault-probe -- scan <Vault-Ordner> <Index-Datei>`.
+//! `cargo run --manifest-path src-tauri/Cargo.toml --example vault-probe -- scan <Vault-Ordner> <Index-Datei>`
+//! `cargo run --manifest-path src-tauri/Cargo.toml --example vault-probe -- artifacts <Index-Datei>`.
 //! `scan` gleicht den Vault-Ordner mit der Index-Datei ab und druckt
-//! `gesehen <n> · gelesen <n> · entfernt <n> · übersprungen <n> · <ms> ms`. Nie gegen den
-//! Datenordner der App: die Index-Datei ist eine eigene Probe-Datei.
+//! `gesehen <n> · gelesen <n> · entfernt <n> · übersprungen <n> · <ms> ms`. `artifacts` druckt je
+//! Artefakt der Index-Datei eine Zeile `<pfad> · <art> · <titel> · <tags> · <n> Dateien · <n>
+//! Abschnitte`. Nie gegen den Datenordner der App: die Index-Datei ist eine eigene Probe-Datei.
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use verwalter_lib::vault::index::VaultIndex;
+use rusqlite::{Connection, OpenFlags};
+use verwalter_lib::vault::index::{self, ArtifactSummary, VaultIndex};
 use verwalter_lib::vault::scan;
 
-const USAGE: &str = "Aufruf: vault-probe scan <Vault-Ordner> <Index-Datei>";
+const USAGE: &str =
+    "Aufruf: vault-probe scan <Vault-Ordner> <Index-Datei> | vault-probe artifacts <Index-Datei>";
 
 fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let arguments: Vec<String> = env::args().skip(1).collect();
-    let (Some(command), Some(vault_dir), Some(index_file)) =
-        (arguments.first(), arguments.get(1), arguments.get(2))
-    else {
-        eprintln!("{USAGE}");
-        return Ok(ExitCode::from(2));
-    };
-    if command != "scan" {
-        eprintln!("{USAGE}");
-        return Ok(ExitCode::from(2));
+    let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
+    match words.as_slice() {
+        ["scan", vault_dir, index_file] => run_scan(vault_dir, index_file),
+        ["artifacts", index_file] => run_artifacts(index_file),
+        _ => {
+            eprintln!("{USAGE}");
+            Ok(ExitCode::from(2))
+        }
     }
+}
+
+fn run_scan(vault_dir: &str, index_file: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let index_path: PathBuf = PathBuf::from(index_file);
     if is_app_data(&index_path) {
-        eprintln!(
-            "Nur gegen eine eigene Index-Datei: {} liegt im Datenordner der App.",
-            index_path.display()
-        );
-        return Ok(ExitCode::from(2));
+        return Ok(refuse(&index_path));
     }
     let root: PathBuf = std::fs::canonicalize(vault_dir)?;
     let index: VaultIndex = VaultIndex::open(&index_path, &root)?;
@@ -40,6 +42,34 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         report.seen, report.read, report.removed, report.skipped, report.duration_ms
     );
     Ok(ExitCode::SUCCESS)
+}
+
+fn run_artifacts(index_file: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let index_path: PathBuf = PathBuf::from(index_file);
+    if is_app_data(&index_path) {
+        return Ok(refuse(&index_path));
+    }
+    let connection: Connection =
+        Connection::open_with_flags(&index_path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    for summary in index::artifact_summaries(&connection)? {
+        print_summary(&summary);
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn print_summary(summary: &ArtifactSummary) {
+    println!(
+        "{} · {} · {} · {} · {} Dateien · {} Abschnitte",
+        summary.path, summary.kind, summary.title, summary.tags, summary.files, summary.sections
+    );
+}
+
+fn refuse(index_path: &Path) -> ExitCode {
+    eprintln!(
+        "Nur gegen eine eigene Index-Datei: {} liegt im Datenordner der App.",
+        index_path.display()
+    );
+    ExitCode::from(2)
 }
 
 fn is_app_data(path: &Path) -> bool {

@@ -1,7 +1,7 @@
 //! Die Index-Datei des Developer Vault (`<Datenordner>\vault\index.db`): eine eigene, wegwerfbare
 //! SQLite-Datei mit Dateien, Artefakten und Abschnitten samt FTS5-Index. Sie hat eine eigene
 //! Verbindung und nicht `Database`, weil deren `open` die Migrationen der Hauptdatenbank fährt.
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, PoisonError};
@@ -206,6 +206,77 @@ pub fn file_row(connection: &Connection, path: &str) -> Result<Option<FileRow>, 
         )
         .optional()?;
     Ok(row)
+}
+
+/// Alle Zeilen aus `files`, nach Pfad.
+pub fn all_file_rows(connection: &Connection) -> Result<HashMap<String, FileRow>, CommandError> {
+    let mut statement = connection
+        .prepare("SELECT path, size, modified_ms, hash, kind, artifact, error FROM files")?;
+    let rows: Vec<FileRow> = statement
+        .query_map([], |row| {
+            Ok(FileRow {
+                path: row.get(0)?,
+                size: row.get(1)?,
+                modified_ms: row.get(2)?,
+                hash: row.get(3)?,
+                kind: row.get(4)?,
+                artifact: row.get(5)?,
+                error: row.get(6)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<FileRow>>>()?;
+    Ok(rows
+        .into_iter()
+        .map(|row: FileRow| (row.path.clone(), row))
+        .collect())
+}
+
+/// Titel und Tags des gespeicherten Artefakts, wie sie in den FTS-Zeilen stehen.
+pub fn artifact_title_tags(
+    connection: &Connection,
+    path: &str,
+) -> Result<Option<(String, String)>, CommandError> {
+    let found: Option<(String, String)> = connection
+        .query_row(
+            "SELECT title, tags FROM artifacts WHERE path = ?1",
+            [path],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    Ok(found)
+}
+
+/// Eine Zeile je Artefakt für das Prüfprogramm.
+pub struct ArtifactSummary {
+    pub path: String,
+    pub kind: String,
+    pub title: String,
+    pub tags: String,
+    pub files: u32,
+    pub sections: u32,
+}
+
+pub fn artifact_summaries(connection: &Connection) -> Result<Vec<ArtifactSummary>, CommandError> {
+    let mut statement = connection.prepare(
+        "SELECT a.path, a.kind, a.title, a.tags,
+           (SELECT COUNT(*) FROM files f WHERE f.artifact = a.path),
+           (SELECT COUNT(*) FROM sections s WHERE s.file IN
+             (SELECT f.path FROM files f WHERE f.artifact = a.path))
+         FROM artifacts a ORDER BY a.path",
+    )?;
+    let summaries: Vec<ArtifactSummary> = statement
+        .query_map([], |row| {
+            Ok(ArtifactSummary {
+                path: row.get(0)?,
+                kind: row.get(1)?,
+                title: row.get(2)?,
+                tags: row.get(3)?,
+                files: row.get(4)?,
+                sections: row.get(5)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<ArtifactSummary>>>()?;
+    Ok(summaries)
 }
 
 pub fn all_paths(connection: &Connection) -> Result<HashSet<String>, CommandError> {
