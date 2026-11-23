@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uhrzeiten im Chat</title>
+<style>
+:root{
+  --bg-base:#fff;--bg-outer:#f8f8f8;--bg-surface:#fff;--bg-hover:#f0f0f0;
+  --border-subtle:#e5e5e5;--border:#cecece;
+  --fg:#3c3c3c;--fg2:#555;--fg-muted:#6e6e6e;
+  --accent:#c4572f;--accent-text:#a8461f;--accent-subtle:color-mix(in srgb,#c4572f 10%,transparent);--fg-on-accent:#fff;
+  --toggle-off:#c8c8c8;--fg-on-toggle:#fff;
+  --ok:#16803c;--err:#d23b33;--err-subtle:#fdeceb;
+  --bar-bg:#ececec;--font:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;--mono:'Cascadia Code',Consolas,ui-monospace,monospace;
+  color-scheme:light;
+}
+:root.dark{
+  --bg-base:#1f1f1f;--bg-outer:#181818;--bg-surface:#252526;--bg-hover:#2e2e30;
+  --border-subtle:#2b2b2b;--border:#3c3c3c;
+  --fg:#d4d4d4;--fg2:#b0b0b0;--fg-muted:#8f8f8f;
+  --accent:#e0825c;--accent-text:#eea283;--accent-subtle:color-mix(in srgb,#e0825c 16%,transparent);--fg-on-accent:#1d130e;
+  --toggle-off:#4a4a4f;--fg-on-toggle:#f5f5f5;
+  --ok:#4cc38a;--err:#f47067;--err-subtle:color-mix(in srgb,#f47067 11%,transparent);
+  --bar-bg:#2e2e30;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-outer);color:var(--fg);font:13px/1.5 var(--font)}
+button{font:inherit;color:inherit}
+/* Entwurfsleiste: gehört nicht zur App */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 16px;background:var(--bar-bg);border-bottom:1px dashed var(--border);font-size:12px}
+.bar__title{font-weight:600}
+.grp{display:flex;align-items:center;gap:6px}
+.lbl{color:var(--fg2)}
+.bar__stage,.bar__note{color:var(--fg-muted)}
+.seg{display:inline-flex;margin:0;padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--bg-surface)}
+.seg label{display:block;cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:flex;align-items:center;min-height:28px;padding:0 10px;color:var(--fg2);border-left:1px solid var(--border)}
+.seg label:first-child span{border-left:0}
+.seg label:hover span{background:var(--bg-hover)}
+.seg input:checked+span{background:var(--accent-subtle);color:var(--accent-text);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-2px}
+.btn{min-height:28px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-surface);cursor:pointer}
+.btn:hover{background:var(--bg-hover)}
+.btn:focus-visible,.tg__toggle:focus-visible,.sw button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.info{padding:10px 16px 12px;border-bottom:1px dashed var(--border);background:var(--bar-bg);font-size:12.5px}
+.info h3{margin:0 0 4px;font-size:12.5px}
+.info ul{margin:0 0 8px;padding-left:18px}
+.info[hidden]{display:none}
+/* Bühne und App */
+.stage{display:flex;justify-content:center;padding:16px}
+.app{width:var(--w,100%);max-width:100%;height:680px;display:flex;flex-direction:column;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;overflow:hidden;container:main/inline-size}
+.app__head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;padding:0 16px;border-bottom:1px solid var(--border-subtle)}
+.app__name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app__status{display:flex;align-items:center;gap:6px;color:var(--fg2);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.app__body{flex:1;min-height:0;display:flex;flex-direction:column}
+.timeline{flex:1;min-height:0;overflow-y:auto;padding-top:20px}
+.composer{margin:8px 16px 14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-surface);color:var(--fg-muted)}
+/* Blöcke */
+.block{position:relative;padding:0 32px 12px}
+.has-time .block{padding-right:72px}
+.t{position:absolute;right:16px;top:3px;width:44px;text-align:right;font-size:11.5px;line-height:21px;color:var(--fg-muted);font-variant-numeric:tabular-nums;cursor:default}
+.block--user .t{top:16px}
+.mode-hover .t{opacity:0;transition:opacity 120ms}
+.mode-hover .block:hover .t,.mode-hover .block:focus-within .t,.mode-hover .block[data-open] .t{opacity:1}
+.ubox{margin-top:6px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-surface);font-size:13.5px;line-height:1.6}
+.atext{margin:0;font-size:13.5px;line-height:1.6;overflow-wrap:anywhere}
+.atext code{padding:0 5px;border-radius:4px;background:var(--bg-hover);font:12.5px var(--mono)}
+.think{display:flex;align-items:center;gap:8px;color:var(--fg-muted);font-style:italic}
+.think svg{flex:none}
+.tg__row{display:flex;align-items:flex-start;gap:8px}
+.tg__dot{flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--ok)}
+.tg--fail .tg__dot{background:var(--err)}
+.tg__toggle{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;padding:0;border:0;background:transparent;color:var(--fg2);cursor:pointer;font-size:12.5px;text-align:left;min-height:22px}
+.tg__toggle:hover{color:var(--fg)}
+.tg__c{display:inline-flex;align-items:center;gap:6px}
+.tg__c+.tg__c::before{content:'·';margin-right:4px;color:var(--fg-muted)}
+.tg__fail{color:var(--err)}
+.chev{width:10px;height:10px;transition:transform 120ms}
+[aria-expanded=true] .chev{transform:rotate(90deg)}
+.tg__body{margin:2px 0 2px 3.5px;padding:1px 0 2px 16px;border-left:1px solid var(--border);color:var(--fg2);font:12.5px var(--mono)}
+.err{display:flex;gap:10px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--err);border-radius:8px;background:var(--err-subtle)}
+.err b{display:block}
+.err p{margin:2px 0 8px}
+.err svg{flex:none;margin-top:2px;color:var(--err)}
+/* Trennlinien */
+.sep{display:flex;align-items:center;gap:10px;padding:2px 32px 12px;color:var(--fg2);font-size:11.5px}
+.has-time .sep{padding-right:72px}
+.sep::before,.sep::after{content:'';flex:1;border-top:1px solid var(--border)}
+.sep--gap{color:var(--fg-muted)}
+.sep--gap::before,.sep--gap::after{border-top-style:dashed;border-color:var(--border-subtle)}
+.sep span{white-space:nowrap}
+.sep--day span{font-weight:600}
+.empty{margin:auto;padding:24px;text-align:center;color:var(--fg2)}
+.empty b{display:block;color:var(--fg);margin-bottom:2px}
+/* Einstellungen */
+.set{padding:16px;overflow-y:auto}
+.set h2{margin:0 0 8px;font-size:13px}
+.card{border:1px solid var(--border);border-radius:8px;background:var(--bg-surface)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px}
+.row+.row{border-top:1px solid var(--border-subtle)}
+.row__txt{display:flex;flex-direction:column;min-width:0}
+.row__txt span{color:var(--fg2);font-size:12px}
+.sw{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.sw button{position:relative;width:34px;height:20px;padding:0;border:0;border-radius:999px;background:var(--toggle-off);cursor:pointer}
+.sw button::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--fg-on-toggle);transition:transform 120ms}
+.sw button[aria-checked=true]{background:var(--accent)}
+.sw button[aria-checked=true]::after{transform:translateX(14px);background:var(--fg-on-accent)}
+.sw button:disabled{opacity:.5;cursor:not-allowed}
+.sw .off{color:var(--fg-muted)}
+.prev{margin-top:12px;border:1px solid var(--border-subtle);border-radius:8px;padding:12px 0 0;background:var(--bg-base)}
+.prev__lbl{padding:0 12px 8px;color:var(--fg-muted);font-size:11.5px}
+.has-time .prev .block,.prev .block{padding-left:16px}
+.prev .sep{padding-left:16px}
+@container main (max-width:559px){
+  .block,.has-time .block{padding:0 16px 12px}
+  .sep,.has-time .sep{padding:2px 16px 12px}
+  .t{position:static;display:block;width:auto;text-align:left;line-height:18px;margin-bottom:2px}
+  .block--user .t{margin-top:2px}
+  .mode-hover .t{display:none;opacity:1}
+  .mode-hover .block[data-open] .t{display:block}
+  .row{flex-direction:column;align-items:flex-start}
+  .prev .block,.has-time .prev .block{padding:0 16px 12px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="bar" role="toolbar" aria-label="Entwurfsleiste">
+  <strong class="bar__title">Entwurf · Uhrzeiten im Chat</strong>
+  <div class="grp"><span class="lbl">Ansicht</span><fieldset class="seg" data-k="tab"><label><input type="radio" name="b-tab" value="chat"><span>Chat</span></label><label><input type="radio" name="b-tab" value="settings"><span>Einstellungen</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Uhrzeiten</span><fieldset class="seg" data-k="mode"><label><input type="radio" name="b-mode" value="off"><span>Aus</span></label><label><input type="radio" name="b-mode" value="hover"><span>Beim Überfahren</span></label><label><input type="radio" name="b-mode" value="always"><span>Immer</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Verlauf</span><fieldset class="seg" data-k="data"><label><input type="radio" name="b-data" value="neu"><span>Neu</span></label><label><input type="radio" name="b-data" value="alt"><span>Bestand</span></label><label><input type="radio" name="b-data" value="leer"><span>Leer</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Breite</span><fieldset class="seg" data-k="w"><label><input type="radio" name="b-w" value="390"><span>390</span></label><label><input type="radio" name="b-w" value="860"><span>860</span></label><label><input type="radio" name="b-w" value="1366"><span>1366</span></label><label><input type="radio" name="b-w" value="full"><span>Voll</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Thema</span><fieldset class="seg" data-k="theme"><label><input type="radio" name="b-theme" value="light"><span>Hell</span></label><label><input type="radio" name="b-theme" value="dark"><span>Dunkel</span></label></fieldset></div>
+  <span class="bar__stage" id="stage"></span>
+  <button class="btn" id="infoBtn" aria-expanded="false" aria-controls="info">ⓘ Aufgabe</button>
+</header>
+<section class="info" id="info" hidden>
+  <h3>Wofür</h3>
+  <ul><li>Sehen, wann etwas im Chat geschah — ohne den Verlauf zu füllen.</li></ul>
+  <h3>Vorschlag</h3>
+  <ul>
+    <li>Zeit (HH:MM) am rechten Rand; Handy: über dem Block.</li>
+    <li>„Immer“: nur der erste Block je Minute trägt sie.</li>
+    <li>Tageswechsel und Pausen ab 30 Min. als Linie mit Wort.</li>
+    <li>Sekunden und Datum beim Überfahren der Zeit.</li>
+    <li>Ein Einstieg: Einstellungen › Chat. Gilt je Nutzer.</li>
+  </ul>
+  <h3>Technik, kurz</h3>
+  <ul>
+    <li>Nachrichten von dir haben die Zeit schon (<code>sentAt</code>).</li>
+    <li>Einträge des Agenten brauchen ein neues Feld; ältere bleiben ohne Zeit, ohne Platzhalter („Bestand“).</li>
+    <li>Pause nur zwischen zwei unmittelbar benachbarten Einträgen mit Zeit.</li>
+  </ul>
+  <h3>Beispiel</h3>
+  <ul><li>Datum (23.11.2026), Texte und Zeiten sind erfunden. Werkzeug-Symbole ersetzen die Figuren des Skins.</li></ul>
+</section>
+<main class="stage"><div class="app" id="app">
+  <div class="app__head"><span class="app__name">Zeitstempel im Chat</span><span class="app__status"><i class="dot"></i>bereit</span></div>
+  <div class="app__body" id="body"></div>
+</div></main>
+<script>
+(function(){
+var $=function(s,r){return (r||document).querySelector(s)};
+var state={w:'full',theme:null,mode:'always',tab:'chat',data:'neu',gap:true};
+try{var sv=JSON.parse(localStorage.getItem('uhr.v1')||'{}');if(sv.mode)state.mode=sv.mode;if(typeof sv.gap==='boolean')state.gap=sv.gap}catch(e){}
+var hp=new URLSearchParams(location.hash.slice(1));
+['w','theme','mode','tab','data'].forEach(function(k){if(hp.get(k))state[k]=hp.get(k)});
+if(hp.get('gap'))state.gap=hp.get('gap')==='1';
+if(hp.get('open'))state.open=hp.get('open');
+if(!state.theme)state.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+var expanded={},opened={};
+var TODAY=new Date('2026-11-23T12:10:00');
+var pad=function(n){return String(n).padStart(2,'0')};
+var hm=function(d){return pad(d.getHours())+':'+pad(d.getMinutes())};
+var hms=function(d){return hm(d)+':'+pad(d.getSeconds())};
+var WD=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+var dmy=function(d){return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()};
+var dayKey=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var sod=function(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())};
+function dayLabel(d){var n=Math.round((sod(TODAY)-sod(d))/864e5);if(n===0)return 'Heute';if(n===1)return 'Gestern';return WD[d.getDay()].slice(0,2)+'., '+dmy(d)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var F={file:'Dateien gelesen',cmd:'Befehle',search:'Suchen'};
+var IC={
+ file:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 1.7h5.5L12.5 5v9.3H4z"/><path d="M9.5 1.7V5h3"/></svg>',
+ cmd:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.7" y="2.7" width="12.6" height="10.6" rx="1.5"/><path d="M4.5 6l2 2-2 2M8 10.5h3"/></svg>',
+ search:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>'
+};
+var STAR='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2v12M2.8 5l10.4 6M2.8 11l10.4-6"/></svg>';
+var CH='<svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5L6.5 5 3 8.5"/></svg>';
+var BASE=[
+ {id:1,k:'user',at:'2026-11-20T16:41:07',text:'Prüf bitte die Changes der Artefakt-Phase.'},
+ {id:2,k:'think',at:'2026-11-20T16:41:20',s:1},
+ {id:3,k:'tools',at:'2026-11-20T16:41:40',c:[['file',3]],lines:['Read ArtifactCard.tsx','Read ArtifactList.tsx','Read artifacts.rs']},
+ {id:4,k:'think',at:'2026-11-20T16:42:30',s:2},
+ {id:5,k:'text',at:'2026-11-20T16:43:12',text:'Zwei Funde: Die Karte zeigt die Uhrzeit nur im Verlauf, nicht in der Liste. Der Rest ist sauber.'},
+ {id:6,k:'user',at:'2026-11-23T09:12:30',text:'Ist es möglich, im Chat Uhrzeiten anzuzeigen?'},
+ {id:7,k:'think',at:'2026-11-23T09:12:36',s:1},
+ {id:8,k:'tools',at:'2026-11-23T09:12:48',c:[['file',2],['cmd',2],['search',1]],fail:1,lines:['Read ChatTimeline.tsx','Read ChatEntry.ts','Bash git status','Bash grep -r (fehlgeschlagen)','Grep sentAt']},
+ {id:9,k:'think',at:'2026-11-23T09:13:01',s:18},
+ {id:10,k:'tools',at:'2026-11-23T09:13:12',c:[['search',3]],lines:['Grep timestamp','Grep sent_at','Grep push_entry']},
+ {id:11,k:'text',at:'2026-11-23T09:13:20',text:'Ja. Nachrichten von dir tragen die Zeit schon (<code>sentAt</code>), Einträge des Agenten brauchen ein neues Feld.',html:1},
+ {id:12,k:'user',at:'2026-11-23T09:47:05',text:'Mach dafür einen Entwurf.'},
+ {id:13,k:'think',at:'2026-11-23T09:47:12',s:1},
+ {id:14,k:'tools',at:'2026-11-23T09:47:30',c:[['file',3]],lines:['Read theme.css','Read UserMessage.css','Read ToolGroup.css']},
+ {id:15,k:'text',at:'2026-11-23T09:49:02',text:'Entwurf liegt vor: Einstellung, Trennlinien, Zeit am rechten Rand.'},
+ {id:16,k:'user',at:'2026-11-23T11:58:20',text:'Und auf dem Handy?'},
+ {id:17,k:'text',at:'2026-11-23T11:58:41',text:'Dort steht die Zeit über dem Block; ein Tipp blendet sie ein.'},
+ {id:18,k:'error',at:'2026-11-23T12:03:10',title:'Agent nicht erreichbar',text:'Die Verbindung brach ab. Neu starten stellt die Session wieder her.'}
+];
+function list(){
+  if(state.data==='leer')return [];
+  return BASE.map(function(e){var x=Object.assign({},e);
+    if(state.data==='alt'&&e.k!=='user'&&e.id<16)x.at=null;return x});
+}
+function timeEl(d){
+  return '<time class="t" datetime="'+d.toISOString()+'" title="'+WD[d.getDay()]+', '+dmy(d)+' · '+hms(d)+'">'+hm(d)+'</time>';
+}
+function gapText(ms){var m=Math.round(ms/6e4);if(m<60)return m+' Min. Pause';var h=Math.floor(m/60);return h+' Std. '+(m%60)+' Min. Pause'}
+function renderList(items,pfx){
+  var h='',lastTimed=null,prevAt=null,lastMin=null;
+  items.forEach(function(e,i){
+    var d=e.at?new Date(e.at):null,key=pfx+e.id;
+    if(state.mode!=='off'&&d){
+      if(!lastTimed||dayKey(lastTimed)!==dayKey(d))h+='<div class="sep sep--day"><span>'+dayLabel(d)+'</span></div>';
+      else if(state.gap&&prevAt&&d-prevAt>=18e5)h+='<div class="sep sep--gap"><span>'+gapText(d-prevAt)+'</span></div>';
+    }
+    var t='';
+    if(state.mode!=='off'&&d){
+      var mk=dayKey(d)+hm(d);
+      if(!(state.mode==='always'&&mk===lastMin))t=timeEl(d);
+    }
+    if(d){lastTimed=d;lastMin=dayKey(d)+hm(d)}
+    prevAt=d;
+    var body='';
+    if(e.k==='user')body='<div class="ubox">'+esc(e.text)+'</div>';
+    else if(e.k==='text')body='<p class="atext">'+(e.html?e.text:esc(e.text))+'</p>';
+    else if(e.k==='think')body='<div class="think">'+STAR+'Gedankengang · '+e.s+' s</div>';
+    else if(e.k==='tools'){
+      var ex=!!expanded[key];
+      body='<div class="tg'+(e.fail?' tg--fail':'')+'"><div class="tg__row"><i class="tg__dot"></i><button class="tg__toggle" data-ex="'+key+'" aria-expanded="'+ex+'">'+
+        e.c.map(function(c){var n=c[1],l=F[c[0]];if(c[0]==='search'&&n===1)l='Suche';if(c[0]==='cmd'&&n===1)l='Befehl';if(c[0]==='file'&&n===1)l='Datei gelesen';return '<span class="tg__c">'+IC[c[0]]+n+' '+l+'</span>'}).join('')+
+        (e.fail?'<span class="tg__fail">· '+e.fail+' fehlgeschlagen</span>':'')+CH+'</button></div>'+
+        (ex?'<div class="tg__body">'+e.lines.map(function(l){return '<div>'+esc(l)+'</div>'}).join('')+'</div>':'')+'</div>';
+    }else if(e.k==='error')body='<div class="err"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1.8L14.5 13.5h-13z"/><path d="M8 6.5v3.2M8 11.6v.1"/></svg><div><b>Fehler · '+esc(e.title)+'</b><p>'+esc(e.text)+'</p><button class="btn" type="button">Session neu starten</button></div></div>';
+    h+='<div class="block block--'+e.k+'"'+(opened[key]?' data-open':'')+' data-key="'+key+'">'+t+body+'</div>';
+  });
+  return h;
+}
+function settingsHtml(){
+  var seg='<fieldset class="seg" data-k="mode" aria-label="Uhrzeiten im Verlauf"><label><input type="radio" name="s-mode" value="off"><span>Aus</span></label><label><input type="radio" name="s-mode" value="hover"><span>Beim Überfahren</span></label><label><input type="radio" name="s-mode" value="always"><span>Immer</span></label></fieldset>';
+  var off=state.mode==='off';
+  var sw='<div class="sw"><button type="button" role="switch" id="gapSw" aria-checked="'+(state.gap&&!off)+'" aria-label="Pausen markieren"'+(off?' disabled':'')+'></button><span class="'+(off?'off':'')+'">'+(off?'Nicht verfügbar':(state.gap?'An · ab 30 Min.':'Aus'))+'</span></div>';
+  return '<div class="set"><h2>Chat</h2><div class="card"><div class="row"><div class="row__txt"><b>Uhrzeiten im Verlauf</b><span>Zeit je Nachricht, Tageswechsel als Linie.</span></div>'+seg+'</div><div class="row"><div class="row__txt"><b>Pausen markieren</b><span>Linie bei langer Pause zwischen zwei Nachrichten.</span></div>'+sw+'</div></div>'+
+   '<div class="prev"><div class="prev__lbl">Vorschau</div>'+renderList(BASE.filter(function(e){return e.id===15||e.id===16}),'p')+'</div></div>';
+}
+function sync(){
+  document.documentElement.classList.toggle('dark',state.theme==='dark');
+  document.querySelectorAll('[data-k] input').forEach(function(i){i.checked=state[i.closest('[data-k]').dataset.k]===i.value});
+  var app=$('#app');
+  app.style.setProperty('--w',state.w==='full'?'100%':state.w+'px');
+  app.className='app mode-'+state.mode+(state.mode!=='off'?' has-time':'');
+  var hs=new URLSearchParams({w:state.w,theme:state.theme,mode:state.mode,tab:state.tab,data:state.data,gap:state.gap?'1':'0'});
+  try{history.replaceState(null,'','#'+hs.toString())}catch(e){}
+  try{localStorage.setItem('uhr.v1',JSON.stringify({mode:state.mode,gap:state.gap}))}catch(e){}
+}
+function render(keepScroll){
+  var body=$('#body'),tl=$('#tl'),st=tl?tl.scrollTop:0,atEnd=tl?tl.scrollTop+tl.clientHeight>=tl.scrollHeight-24:true;
+  if(state.tab==='settings'){body.innerHTML=settingsHtml();sync();stage();return}
+  var items=list(),inner;
+  if(!items.length)inner='<div class="empty"><b>Noch keine Nachricht</b>Uhrzeiten erscheinen mit der ersten.</div>';
+  else inner=renderList(items,'m');
+  body.innerHTML='<div class="timeline" id="tl">'+inner+'</div><div class="composer">Nachricht an Claude …</div>';
+  sync();stage();
+  var t2=$('#tl');
+  if(!keepScroll||atEnd)t2.scrollTop=t2.scrollHeight;else t2.scrollTop=st;
+}
+function stage(){
+  var w=$('#app').clientWidth,n=w<560?'Handy':w<900?'Tablet':w<1200?'Laptop':'Desktop';
+  $('#stage').textContent='Stufe: '+n+' · '+w+' px';
+}
+document.addEventListener('change',function(ev){
+  var g=ev.target.closest('[data-k]');if(!g)return;
+  state[g.dataset.k]=ev.target.value;render(true);
+});
+document.addEventListener('click',function(ev){
+  var x=ev.target.closest('[data-ex]');
+  if(x){expanded[x.dataset.ex]=!expanded[x.dataset.ex];render(true);return}
+  var sw=ev.target.closest('#gapSw');
+  if(sw){state.gap=!state.gap;render(true);return}
+  var b=ev.target.closest('.block');
+  if(b&&state.mode==='hover'&&!ev.target.closest('button')){var k=b.dataset.key;opened[k]=!opened[k];b.toggleAttribute('data-open',!!opened[k])}
+});
+$('#infoBtn').addEventListener('click',function(){var p=$('#info'),o=p.hidden;p.hidden=!o;this.setAttribute('aria-expanded',String(o));stage()});
+new ResizeObserver(stage).observe($('#app'));
+if(state.open==='info'){$('#info').hidden=false;$('#infoBtn').setAttribute('aria-expanded','true')}
+render(false);
+})();
+</script>
+</body>
+</html>
