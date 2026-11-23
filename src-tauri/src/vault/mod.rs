@@ -21,6 +21,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::db::Database;
 use crate::error::CommandError;
 use crate::filesystem::workspace::{data_dir, home_dir};
+use crate::mcp_access::tools::ToolSet;
 use crate::settings;
 use index::VaultIndex;
 use model::{VaultState, VaultStatus};
@@ -306,6 +307,71 @@ fn check_dir(dir: &Path, home: &Path, data_dir: &Path) -> Result<(), (VaultState
         ));
     }
     Ok(())
+}
+
+/// Kürzeste Länge eines Suchbegriffs aus dem Auftrag; kürzere Wörter treffen zu viel.
+const BRIEF_MIN_TERM_CHARS: usize = 4;
+const BRIEF_MAX_TERMS: usize = 12;
+const BRIEF_LIMIT: u32 = 3;
+const BRIEF_DESCRIPTION_CHARS: usize = 120;
+const BRIEF_HEADLINE: &str = "Vault (passend zur Phase; laden mit vault_get):";
+
+/// Die Vault-Zeilen für die erste Nachricht einer Station: bis zu drei Treffer zu Titel und
+/// Beschreibung der Phase. Leer, wenn der Vault nicht angeboten wird oder nichts passt.
+pub fn brief_lines(
+    app: &AppHandle,
+    title: &str,
+    description: &str,
+) -> Result<Vec<String>, CommandError> {
+    if !tools::VaultTools.offered(app) {
+        return Ok(Vec::new());
+    }
+    let text: String = brief_terms(&format!("{title} {description}")).join(" ");
+    if text.is_empty() {
+        return Ok(Vec::new());
+    }
+    let result: search::VaultSearchResult = search::search(
+        app,
+        &search::VaultQuery {
+            text,
+            kind: None,
+            tags: Vec::new(),
+            under: None,
+            limit: BRIEF_LIMIT,
+            any_term: true,
+        },
+    )?;
+    if result.hits.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut lines: Vec<String> = vec![BRIEF_HEADLINE.to_owned()];
+    lines.extend(result.hits.iter().map(brief_hit_line));
+    Ok(lines)
+}
+
+/// Die ersten verschiedenen Begriffe ab vier Zeichen, klein geschrieben.
+fn brief_terms(text: &str) -> Vec<String> {
+    let mut terms: Vec<String> = Vec::new();
+    for part in text.split(|character: char| !character.is_alphanumeric()) {
+        let term: String = part.to_lowercase();
+        if term.chars().count() < BRIEF_MIN_TERM_CHARS || terms.contains(&term) {
+            continue;
+        }
+        terms.push(term);
+        if terms.len() == BRIEF_MAX_TERMS {
+            break;
+        }
+    }
+    terms
+}
+
+fn brief_hit_line(hit: &search::VaultHit) -> String {
+    let mut description: String = hit.description.clone();
+    if description.chars().count() > BRIEF_DESCRIPTION_CHARS {
+        description = description.chars().take(BRIEF_DESCRIPTION_CHARS).collect();
+        description.push('…');
+    }
+    format!("- {} · {} — {}", hit.path, hit.title, description)
 }
 
 /// Wahr, wenn der Ordner lesbar ist und keinen Eintrag ohne führenden Punkt enthält.

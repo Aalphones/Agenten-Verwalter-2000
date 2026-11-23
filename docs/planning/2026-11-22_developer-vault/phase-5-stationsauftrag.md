@@ -21,9 +21,9 @@
 
 ## Checkliste
 
-- [ ] `vault::brief_lines` nach AK 1–2.
-- [ ] `implementation/start.rs`: Parameter und Einbau nach AK 3–4.
-- [ ] `implementation-probe` (Befehlstabelle in `AGENTS.md`) baut die erste Nachricht nicht nach — kein Umbau nötig; prüfen, dass es weiter kompiliert.
-- [ ] Doku: ADR 048 → Konsequenzen um einen Satz „Die erste Nachricht einer Station nennt bei aktivem Developer Vault bis zu drei Treffer (ADR 068).“; `docs/glossary.md` → Eintrag „Station“ unverändert, Eintrag „Developer Vault“ um diesen Satz ergänzen.
+- [x] `vault::brief_lines` nach AK 1–2.
+- [x] `implementation/start.rs`: Parameter und Einbau nach AK 3–4.
+- [x] `implementation-probe` (Befehlstabelle in `AGENTS.md`) baut die erste Nachricht nicht nach — kein Umbau nötig; prüfen, dass es weiter kompiliert (clippy `--all-targets` grün).
+- [x] Doku: ADR 048 → Konsequenzen um einen Satz „Die erste Nachricht einer Station nennt bei aktivem Developer Vault bis zu drei Treffer (ADR 068).“; `docs/glossary.md` → Eintrag „Station“ unverändert, Eintrag „Developer Vault“ um diesen Satz ergänzen.
 
 ## Report-Back

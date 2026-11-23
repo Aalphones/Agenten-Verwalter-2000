@@ -26,4 +26,5 @@ Ein freigegebener Plan wird heute Phase für Phase in frischen Sessions umgesetz
 
 - Ohne Verwalter gibt es die Werkzeuge nicht: im Terminal arbeiten die Skills weiter mit der Einstiegszeile.
 - Stationen sind Sessions ohne eigene Zeile — wer sie öffnen will, geht über die Ansicht der Umsetzung.
+- Die erste Nachricht einer Station nennt bei aktivem Developer Vault bis zu drei Treffer (ADR 068).
 - Prüfen ohne App: `cargo run --example implementation-probe -- <Datenbank-Kopie> create <Session-ID> <JSON-Datei>` bzw. `… show <Umsetzungs-ID>`.

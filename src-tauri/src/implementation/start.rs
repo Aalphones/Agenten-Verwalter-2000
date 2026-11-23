@@ -14,6 +14,7 @@ use crate::git::model::{GitEntryStatus, GitOperation, GitOwnCommit, GitSessionSt
 use crate::git::status;
 use crate::sessions::model::SessionSummary;
 use crate::sessions::registry::SessionRegistry;
+use crate::vault;
 
 const HELD_BY_CANCEL: &str =
     "Eine Anfrage zum Abbrechen liegt vor; erst bestätigen oder verwerfen.";
@@ -33,6 +34,7 @@ pub fn first_message(
     phase: &PhaseView,
     station: &StationView,
     git_lines: &[String],
+    vault_lines: &[String],
 ) -> String {
     let mut lines: Vec<String> = Vec::new();
     if let Some(skill) = &station.skill {
@@ -86,6 +88,7 @@ pub fn first_message(
         lines.push("Git-Lage:".to_owned());
         lines.extend(git_lines.iter().cloned());
     }
+    lines.extend(vault_lines.iter().cloned());
     lines.push(String::new());
     lines.push(FIRST_MESSAGE_FOOTER.to_owned());
     lines.join("\n")
@@ -298,7 +301,17 @@ fn start_claimed(
             Vec::new()
         }
     };
-    let message: String = first_message(&view, phase, station, &git);
+    let vault_lines: Vec<String> = match vault::brief_lines(app, &phase.title, &phase.description) {
+        Ok(found) => found,
+        Err(error) => {
+            registry.log_session_line(
+                &created.id,
+                format!("Vault-Treffer nicht ermittelt: {error}"),
+            );
+            Vec::new()
+        }
+    };
+    let message: String = first_message(&view, phase, station, &git, &vault_lines);
     if let Err(error) = registry.send(app, &created.id, &message, &[], &[]) {
         registry.log_session_line(
             &created.id,
