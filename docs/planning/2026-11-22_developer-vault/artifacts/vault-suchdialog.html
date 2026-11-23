@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entwurf: Vault-Suchdialog (Developer Vault, Phase 6)</title>
+<style>
+/* Tokens: Hex-Werte aus src/styles/theme.css (Stand 2026-11-23). */
+:root {
+  --bg-base:#fff; --bg-sidebar:#f8f8f8; --bg-popover:#fff; --bg-hover:#f0f0f0; --bg-selected:#e4e6f1;
+  --border-subtle:#e5e5e5; --border:#cecece; --fg:#3c3c3c; --fg-2:#555; --fg-muted:#6e6e6e;
+  --accent:#c4572f; --on-accent:#fff; --accent-subtle:rgb(196 87 47 / .10); --accent-text:#a8461f;
+  --error:#d23b33; --error-subtle:#fdeceb; --scrim:rgb(0 0 0 / .28);
+  --shadow:0 10px 30px rgb(0 0 0 / .14); --bar-bg:#f3f3f6;
+  --font-sans:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;
+  --font-mono:'Cascadia Code','Cascadia Mono',Consolas,ui-monospace,monospace;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg-base:#1f1f1f; --bg-sidebar:#181818; --bg-popover:#252526; --bg-hover:#2e2e30; --bg-selected:#37373d;
+  --border-subtle:#2b2b2b; --border:#3c3c3c; --fg:#d4d4d4; --fg-2:#b0b0b0; --fg-muted:#8f8f8f;
+  --accent:#e0825c; --on-accent:#1d130e; --accent-subtle:rgb(224 130 92 / .16); --accent-text:#eea283;
+  --error:#f47067; --error-subtle:rgb(244 112 103 / .11); --scrim:rgb(0 0 0 / .55);
+  --shadow:0 10px 30px rgb(0 0 0 / .45); --bar-bg:#181818;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg-base); color:var(--fg); font:13px/1.45 var(--font-sans); }
+button, input, select { font:inherit; color:inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+/* ---------- Entwurfsleiste (gehört nicht zur App) ---------- */
+.bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:8px 14px; background:var(--bar-bg); border-bottom:1px solid var(--border); position:relative; }
+.bar label { display:flex; align-items:center; gap:6px; color:var(--fg-2); }
+.bar select { height:28px; padding:0 8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-base); }
+.bar__btn { height:28px; padding:0 12px; border:1px solid var(--border); border-radius:6px; background:transparent; cursor:pointer; }
+.bar__btn:hover { background:var(--bg-hover); }
+.bar__tag { margin-left:auto; color:var(--fg-muted); font-size:12px; }
+.bar__info { width:28px; padding:0; }
+.bar__pop { position:absolute; top:100%; right:14px; z-index:90; width:min(28rem,calc(100% - 28px)); padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg-popover); box-shadow:var(--shadow); }
+.bar__pop[hidden] { display:none; }
+.bar__pop p { margin:0 0 6px; } .bar__pop p:last-child { margin:0; }
+.sw { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+.sw input { position:absolute; opacity:0; width:1px; height:1px; }
+.sw__track { width:30px; height:18px; border-radius:999px; background:var(--border); position:relative; transition:background 120ms; }
+.sw__track::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform 120ms; }
+.sw input:checked + .sw__track { background:var(--accent); }
+.sw input:checked + .sw__track::after { transform:translateX(12px); }
+.sw input:focus-visible + .sw__track { outline:2px solid var(--accent); outline-offset:2px; }
+.stagewrap { padding:12px; display:flex; justify-content:center; }
+.stage { container:stage / inline-size; position:relative; width:100%; height:min(720px, calc(100vh - 90px)); min-height:560px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg-base); display:flex; }
+.stage__badge { position:absolute; right:8px; bottom:6px; z-index:5; font-size:11px; color:var(--fg-muted); pointer-events:none; }
+.tools { margin:0 12px 12px; padding:8px 12px; border:1px solid var(--border-subtle); border-radius:8px; font-family:var(--font-mono); font-size:12px; color:var(--fg-2); }
+.tools[hidden] { display:none; }
+.tools b { font-family:var(--font-sans); color:var(--fg); }
+
+/* ---------- App-Rahmen (Sidebar wie im Bestand, nur der Knopf „Vault“ ist neu) ---------- */
+.side { width:232px; flex-shrink:0; display:flex; flex-direction:column; background:var(--bg-sidebar); border-right:1px solid var(--border-subtle); }
+.side__list { flex:1; min-height:0; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:2px; }
+.side__item { padding:5px 8px; border-radius:6px; color:var(--fg-2); }
+.side__item--sel { background:var(--bg-selected); color:var(--fg); }
+.side__head { padding:8px 8px 2px; font-weight:600; color:var(--fg); }
+.side__foot { padding:8px 10px; border-top:1px solid var(--border-subtle); display:flex; flex-direction:column; gap:2px; }
+.side__row { display:flex; gap:2px; }
+.side__btn { flex:1; display:flex; align-items:center; gap:8px; height:30px; padding:0 8px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; text-align:left; }
+.side__btn:hover { background:var(--bg-hover); }
+.side__btn--new { box-shadow:inset 0 0 0 1px var(--accent); }
+.side__kbd { margin-left:auto; color:var(--fg-muted); font-size:11px; }
+.main { flex:1; min-width:0; padding:18px; color:var(--fg-muted); }
+@container stage (max-width:575px) { .side { width:100%; border-right:0; } .main { display:none; } .side__btn { height:44px; } }
+
+/* ---------- Dialog ---------- */
+.scrim { position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; padding:32px; background:var(--scrim); }
+.scrim[hidden] { display:none; }
+.vs { display:flex; flex-direction:column; width:40rem; max-width:100%; max-height:100%; height:min(34rem,100%); border:1px solid var(--border); border-radius:10px; background:var(--bg-popover); box-shadow:var(--shadow); color:var(--fg); }
+.vs__header { flex-shrink:0; padding:18px 20px 12px; }
+.vs__titlerow { display:flex; align-items:baseline; gap:12px; margin:0 0 10px; }
+.vs__title { margin:0; font-size:14px; font-weight:600; white-space:nowrap; }
+.vs__status { color:var(--fg-muted); font-size:12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vs__status--error { color:var(--error); }
+.vs__close { display:none; margin-left:auto; width:44px; height:44px; margin:-12px -14px -12px auto; border:0; background:transparent; cursor:pointer; color:var(--fg-2); border-radius:6px; }
+.vs__searchrow { position:relative; display:flex; align-items:center; gap:8px; }
+.vs__search { flex:1; min-width:0; height:30px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-base); color:var(--fg); }
+.vs__search::placeholder { color:var(--fg-muted); }
+.vs__info { flex-shrink:0; width:28px; height:28px; padding:0; border:1px solid var(--border); border-radius:50%; background:transparent; color:var(--fg-2); cursor:pointer; font-size:12px; line-height:1; }
+.vs__info:hover { background:var(--bg-hover); }
+.vs__tip { position:absolute; right:0; top:36px; z-index:3; width:min(21rem,100%); padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-popover); box-shadow:var(--shadow); color:var(--fg-2); font-size:12px; }
+.vs__tip[hidden] { display:none; }
+.vs__error { flex-shrink:0; margin:0 20px 8px; padding:6px 10px; border-left:3px solid var(--error); background:var(--error-subtle); color:var(--fg); font-size:12px; }
+.vs__error::before { content:"Fehler: "; font-weight:600; }
+.vs__scroll { flex:1; min-height:0; overflow-y:auto; padding:0 12px 8px; }
+.vs__group { margin:4px 8px 4px; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--fg-muted); }
+.vs__list { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; }
+.hit { position:relative; display:block; padding:8px 8px 8px 12px; border-left:2px solid transparent; border-bottom:1px solid var(--border-subtle); cursor:pointer; }
+.hit:hover { background:var(--bg-hover); }
+.hit--sel, .hit--sel:hover { background:var(--bg-selected); border-left-color:var(--accent); }
+.hit__line1 { display:flex; align-items:center; gap:8px; min-width:0; }
+.hit__title { font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hit__kind { flex-shrink:0; padding:0 6px; border:1px solid var(--border); border-radius:4px; color:var(--fg-2); font-size:11px; line-height:16px; }
+.hit__path { margin:1px 0 0; font:11.5px var(--font-mono); color:var(--fg-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; text-align:left; }
+.hit__path bdi { unicode-bidi:plaintext; }
+.hit__desc { margin:2px 0 0; color:var(--fg-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hit__snip { margin:2px 0 0; font-size:12px; color:var(--fg-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.hit--sel .hit__path, .hit--sel .vs__status { color:var(--fg-2); }
+.hit--sel mark { color:var(--fg); }
+.hit mark { border-radius:4px; background:var(--accent-subtle); color:var(--accent-text); }
+.hit__actions { display:none; gap:8px; margin-top:8px; }
+.hit--sel .hit__actions { display:flex; }
+.btn { height:28px; padding:0 12px; border:1px solid var(--border); border-radius:6px; background:transparent; cursor:pointer; }
+.btn:hover { background:var(--bg-hover); }
+.btn--primary { border-color:var(--accent-text); background:var(--accent-text); color:var(--on-accent); }
+.btn--primary:hover { background:var(--accent-text); filter:brightness(1.07); }
+.btn:active { transform:translateY(1px); }
+.vs__empty { margin:0; padding:28px 12px; text-align:center; color:var(--fg-muted); }
+.vs__empty small { display:block; margin-top:4px; }
+.vs__foot { flex-shrink:0; display:flex; align-items:center; gap:12px; padding:8px 20px; border-top:1px solid var(--border-subtle); color:var(--fg-muted); font-size:12px; }
+.vs__keys { margin-left:auto; white-space:nowrap; }
+.vs__done { color:var(--fg-2); }
+kbd { padding:0 4px; border:1px solid var(--border); border-radius:4px; font:11px var(--font-mono); }
+.skel { margin:6px 8px; height:44px; border-radius:6px; background:var(--bg-hover); }
+
+/* Handy: Dialog als Blatt von unten, Ziele 44 px, Knöpfe immer erreichbar. */
+@container stage (max-width:575px) {
+  .scrim { padding:0; align-items:flex-end; }
+  .vs { width:100%; height:88%; border-radius:12px 12px 0 0; border-bottom:0; }
+  .vs__close { display:block; }
+  .vs__header { padding:14px 16px 10px; }
+  .vs__search { height:44px; }
+  .vs__info { width:44px; height:44px; }
+  .vs__scroll { padding:0 6px 8px; }
+  .hit { padding:10px 8px 10px 12px; min-height:44px; }
+  .btn { height:44px; flex:1; }
+  .vs__keys { display:none; }
+  .vs__foot { padding:8px 16px; }
+  .vs__titlerow { flex-wrap:wrap; align-items:center; gap:0 12px; }
+  .vs__status { order:3; flex-basis:100%; white-space:normal; }
+  .vs__close { margin-left:auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scrim:not([hidden]) .vs { animation: up 180ms cubic-bezier(.2,0,0,1); }
+  @keyframes up { from { transform:translateY(8px); opacity:0; } }
+}
+</style>
+</head>
+<body>
+
+<div class="bar" role="toolbar" aria-label="Entwurfsleiste">
+  <label>Zustand
+    <select id="state">
+      <option value="ready">Bereit (Beispieldaten)</option>
+      <option value="many">Bereit, viele Treffer</option>
+      <option value="scanning">Wird eingelesen</option>
+      <option value="empty">Vault leer</option>
+      <option value="loading">Erste Suche lädt</option>
+      <option value="searcherr">Suche fehlgeschlagen</option>
+      <option value="missing">Ordner fehlt</option>
+    </select>
+  </label>
+  <label>Breite
+    <select id="width">
+      <option value="100%">Voll</option>
+      <option value="390px">390 Handy</option>
+      <option value="860px">860 Tablet</option>
+      <option value="1366px">1366 Laptop</option>
+    </select>
+  </label>
+  <label>Thema
+    <select id="theme"><option value="auto">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select>
+  </label>
+  <label class="sw"><input type="checkbox" id="tools"><span class="sw__track" aria-hidden="true"></span>Agenten-Werkzeug</label>
+  <button class="bar__btn" id="open" type="button">Dialog öffnen</button>
+  <button class="bar__btn bar__info" id="task" type="button" aria-expanded="false" aria-controls="taskpop" title="Aufgabe">ⓘ</button>
+  <span class="bar__tag">Entwurf · Beispieldaten erfunden · <span id="tier"></span></span>
+  <div class="bar__pop" id="taskpop" hidden>
+    <p><b>Aufgabe:</b> etwas im Vault wiederfinden (Snippet, Notiz, Skript) und es öffnen — mehrmals täglich, meist mit Tastatur.</p>
+    <p>Hauptaktion: Treffer öffnen. Selten: Im Ordner zeigen. <kbd>Strg</kbd>+<kbd>K</kbd> öffnet den Dialog, <kbd>↑</kbd><kbd>↓</kbd> wählen, <kbd>Enter</kbd> öffnet, <kbd>Strg</kbd>+<kbd>Enter</kbd> zeigt im Ordner, <kbd>Esc</kbd> schließt.</p>
+    <p>Handy (unter 576 px Breite): Blatt von unten; Tippen wählt, „Öffnen“ öffnet.</p>
+  </div>
+</div>
+
+<div class="stagewrap">
+  <div class="stage" id="stage">
+    <aside class="side" aria-label="Seitenleiste (Bestand, nur Fußzeile ergänzt)">
+      <div class="side__list">
+        <div class="side__head">Agenten-Verwalter</div>
+        <div class="side__item side__item--sel">Chat: Suchdialog entwerfen</div>
+        <div class="side__item">Umsetzung: Developer Vault</div>
+        <div class="side__head">Wiki</div>
+        <div class="side__item">Session-Review</div>
+      </div>
+      <div class="side__foot">
+        <div class="side__row">
+          <button class="side__btn side__btn--new" type="button" id="sidevault" title="Vault durchsuchen (Strg+K)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 1.5h7.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 1 2 10.5v-8A1 1 0 0 1 3 1.5zM2 10.5A1.5 1.5 0 0 1 3.5 9h8M5 4.5h4"/></svg>
+            <span>Vault</span>
+          </button>
+          <button class="side__btn" type="button" tabindex="-1">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3"/></svg>
+            <span>Archiv</span>
+          </button>
+        </div>
+        <button class="side__btn" type="button" tabindex="-1"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"/></svg><span>Einstellungen</span></button>
+      </div>
+    </aside>
+    <main class="main">Chat (Bestand)</main>
+
+    <div class="scrim" id="scrim" hidden>
+      <div class="vs" role="dialog" aria-modal="true" aria-labelledby="vs-title" id="dialog">
+        <header class="vs__header">
+          <div class="vs__titlerow">
+            <h3 class="vs__title" id="vs-title">Developer Vault</h3>
+            <span class="vs__status" id="status"></span>
+            <button class="vs__close" type="button" id="close" aria-label="Schließen">✕</button>
+          </div>
+          <div class="vs__searchrow">
+            <input class="vs__search" id="q" type="search" role="combobox" aria-expanded="true" aria-controls="list" aria-label="Vault durchsuchen" placeholder="Snippets, Notizen, Skripte suchen" autocomplete="off">
+            <button class="vs__info" type="button" id="info" aria-label="Suchhilfe" aria-expanded="false" aria-controls="tip">ⓘ</button>
+            <div class="vs__tip" id="tip" role="note" hidden>Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.</div>
+          </div>
+        </header>
+        <p class="vs__error" id="err" role="alert" hidden></p>
+        <div class="vs__scroll" id="scroll"></div>
+        <footer class="vs__foot">
+          <span id="count" aria-live="polite"></span>
+          <span class="vs__keys" id="keys"><kbd>↑</kbd><kbd>↓</kbd> wählen · <kbd>Enter</kbd> öffnen · <kbd>Esc</kbd> schließen</span>
+        </footer>
+      </div>
+    </div>
+    <span class="stage__badge" id="badge"></span>
+  </div>
+</div>
+<div class="tools" id="toolsbox" hidden></div>
+
+<script>
+// Beispieldaten (erfunden). Felder nach VaultHit: path, kind, title, description, text (→ snippet).
+const NOW = Date.UTC(2026, 10, 23, 12);
+const D = [
+ {path:'snippets/ui/ladebalken/progress.tsx',kind:'code',title:'Ladebalken mit Fortschritt',desc:'React-Komponente für einen Fortschrittsbalken mit Restzeit',tags:'react ui fortschritt',text:'Der Balken zeigt die Restzeit an und springt nie zurück, auch wenn die Schätzung schwankt. Wert immer zwischen 0 und 1 begrenzen.',age:1},
+ {path:'wissen/tauri/im-ordner-zeigen.md',kind:'markdown',title:'Tauri: Datei im Ordner zeigen',desc:'reveal_item_in_dir und open_path aus dem Opener-Plugin',tags:'tauri rust opener',text:'Mit reveal_item_in_dir markiert der Explorer die Datei. open_path startet das Standardprogramm. Beide brauchen eine Berechtigung in der Capability-Datei.',age:3},
+ {path:'skripte/db-sichern.ps1',kind:'code',title:'Skript: Datenbank sichern',desc:'Kopiert die SQLite-Datei mit Zeitstempel in den Sicherungsordner',tags:'powershell sqlite backup',text:'Vor dem Kopieren die Verbindung schließen, sonst bleibt die WAL-Datei zurück. Zeitstempel im Format 2026-11-23_1200.',age:6},
+ {path:'ideen/stationen-nachrichten.md',kind:'markdown',title:'Idee: Stationen sprechen miteinander',desc:'Eine Station hinterlässt der nächsten eine Nachricht samt Fundstelle',tags:'idee stationen',text:'Eine Nachricht hängt am Vorhaben, nicht an der Session. Die nächste Station sieht sie in der ersten Nachricht und kann den Vault nach der Fundstelle fragen.',age:9},
+ {path:'designs/chat-uhrzeiten/index.html',kind:'web',title:'Entwurf Chat-Uhrzeiten',desc:'Klickdummy: Uhrzeit am Block, Tageslinie, Pausenlinie',tags:'design chat klickdummy',text:'Uhrzeit rechts am Block, unter 560 px Breite darüber. Gleiche Minute: nur der erste Block trägt die Zeit.',age:12},
+ {path:'vorlagen/skin-vorschau.png',kind:'image',title:'Skin-Vorschau Figurenpaket',desc:'Vorschaubild der Figuren im Fach „Warten“',tags:'skin figuren vorschau',text:'',age:20},
+ {path:'wissen/sqlite/fts5-spickzettel.md',kind:'markdown',title:'SQLite FTS5 Spickzettel',desc:'MATCH-Syntax, bm25, snippet() und Zerleger',tags:'sqlite fts5 suche',text:'Wortanfänge mit Stern: lade* findet Ladebalken. Der Zerleger unicode61 trennt keine zusammengesetzten Wörter. snippet() liefert die Fundstellen mit Markern.',age:25},
+ {path:'vorlagen/adr.md',kind:'markdown',title:'ADR-Vorlage',desc:'Kontext, Entscheidung, Folgen — eine Seite',tags:'vorlage adr entscheidung',text:'Titel mit Nummer. Kontext in drei Sätzen. Entscheidung im Präsens. Folgen: was wird leichter, was schwerer.',age:31},
+ {path:'konzepte/sessions-wiederherstellen.md',kind:'markdown',title:'Konzept: Sessions wiederherstellen',desc:'Was beim Zurückholen aus dem Archiv passiert',tags:'konzept archiv sessions',text:'Der Agent startet erst mit der nächsten Nachricht des Nutzers. Sessions behalten ihren Verlauf, Vorhaben ihre Reihenfolge.',age:40},
+ {path:'wissen/retro/2026-11.txt',kind:'text',title:'Notizen aus dem Retro November',desc:'Was gut lief, was nicht',tags:'retro notizen',text:'Suche im Archiv wurde oft gebraucht, die im Vault fehlt noch. Ladebalken beim Abgleich wäre hilfreich.',age:44},
+ {path:'konzepte/seitenleiste/neuordnung/vorhaben-stationen-umsetzungen/ueberblick-mit-allen-ebenen.md',kind:'markdown',title:'Konzept für die vollständige Neuordnung der Seitenleiste mit mehreren Vorhaben, Stationen und Umsetzungen im Überblick',desc:'Sehr langer Titel und tiefer Pfad: beide werden gekürzt, nichts ragt über den Rand hinaus, auch nicht auf dem Handy',tags:'konzept seitenleiste',text:'Die Seitenleiste zeigt je Vorhaben die Stationen; Umsetzungen stehen als eigene Gruppe. Ladebalken für laufende Abgleiche bleiben in der Fußzeile.',age:50},
+ {path:'skripte/backup/verwalter.db.bak',kind:'binary',title:'verwalter.db.bak',desc:'',tags:'backup',text:'',age:60},
+ {path:'alt/gelöscht-seit-dem-letzten-abgleich.md',kind:'markdown',title:'Alte Notiz (Datei inzwischen gelöscht)',desc:'Zeigt den Fehlerfall beim Öffnen',tags:'alt',text:'Diese Datei gibt es auf der Platte nicht mehr; der Index kennt sie noch bis zum nächsten Abgleich.',age:70,broken:true},
+];
+D.forEach(d => d.mod = NOW - d.age*864e5);
+const FILL = Array.from({length:60},(_,i)=>({path:`snippets/beispiel/eintrag-${String(i+1).padStart(2,'0')}.ts`,kind:'code',title:`Beispiel-Eintrag ${i+1}`,desc:'Platzhalter für die Sicht auf viele Treffer',tags:'beispiel',text:'Beispieltext mit Ladebalken und Fundstelle, nur zur Prüfung der langen Liste.',mod:NOW-(80+i)*864e5}));
+
+const $ = id => document.getElementById(id);
+const root = document.documentElement, stage = $('stage');
+let state = 'ready', q = '', shownQ = '', sel = 0, hits = [], total = 0, timer = null, openErr = '', done = '', loadingFirst = false;
+const isNarrow = () => stage.getBoundingClientRect().width < 576;
+
+function esc(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function terms(s){ return s.toLowerCase().split(/\s+/).filter(Boolean); }
+const rx = t => new RegExp('(^|[^\\p{L}\\p{N}])(' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'iu');
+function dataset(){ return state==='many' ? D.concat(FILL) : D; }
+
+function search(query){
+  if (state==='empty' || state==='missing') return {hits:[],total:0};
+  const ts = terms(query), src = dataset();
+  let r = src.filter(d => { const hay = [d.title,d.tags,d.path.replace(/[/._-]/g,' '),d.desc,d.text].join(' ').toLowerCase(); return ts.every(t => rx(t).test(hay)); });
+  r = ts.length ? r : r.slice().sort((a,b)=>b.mod-a.mod);
+  const tot = state==='many' && ts.length===0 ? 212 : r.length;
+  return {hits:r.slice(0,50), total:(state==='many' && ts.length<=1) ? Math.max(tot,212) : tot};
+}
+function snippet(d, ts){
+  const text = d.text; if (!text) return '';
+  let start = 0;
+  if (ts.length){ const m = ts.map(t => rx(t).exec(text)).filter(Boolean).map(m=>m.index+m[1].length).sort((a,b)=>a-b)[0]; if (m!==undefined) start = Math.max(0,m-30); }
+  let part = text.slice(start, start+190); let html = esc(part);
+  ts.forEach(t => { html = html.replace(new RegExp('(^|[^\\p{L}\\p{N}])(' + esc(t).replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '[\\p{L}\\p{N}]*)','giu'), '$1<mark>$2</mark>'); });
+  return (start>0?'… ':'') + html + (start+190<text.length?' …':'');
+}
+function statusText(){
+  switch(state){
+    case 'scanning': return 'wird eingelesen …';
+    case 'missing': return 'Der Vault-Ordner wurde nicht gefunden.';
+    case 'empty': return 'bereit · 0 Dateien · 0 Artefakte · Stand 12:04';
+    case 'many': return 'bereit · 1 840 Dateien · 212 Artefakte · Stand 12:04';
+    default: return 'bereit · 38 Dateien · 13 Artefakte · Stand 12:04';
+  }
+}
+function render(){
+  const ts = terms(shownQ), isEmptyQ = ts.length===0;
+  $('status').textContent = statusText();
+  $('status').className = 'vs__status' + (state==='missing' ? ' vs__status--error' : '');
+  const err = state==='searcherr' ? 'Die Suche ist fehlgeschlagen: Die Index-Datei ist nicht lesbar. Unter Einstellungen › Vault „Neu einlesen“ wählen.' : openErr;
+  $('err').hidden = !err; $('err').textContent = err;
+  const sc = $('scroll');
+  if (state==='loading' && loadingFirst){ sc.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div><p class="vs__empty">Lädt …</p>'; $('count').textContent=''; return; }
+  if (state==='searcherr' || state==='missing'){ sc.innerHTML=''; $('count').textContent=''; return; }
+  if (!hits.length){
+    sc.innerHTML = isEmptyQ ? '<p class="vs__empty">Der Vault ist noch leer.<small>Lege Dateien im Vault-Ordner ab oder wähle in den Einstellungen „Neu einlesen“.</small></p>' : '<p class="vs__empty">Nichts gefunden.<small>Weniger oder kürzere Wörter versuchen — Wortanfänge genügen.</small></p>';
+    $('count').textContent = '0 von 0 Treffern'; return;
+  }
+  const rows = hits.map((d,i) => {
+    const s = snippet(d, ts);
+    return `<li class="hit${i===sel?' hit--sel':''}" role="option" id="hit-${i}" data-i="${i}" aria-selected="${i===sel}">
+      <div class="hit__line1"><span class="hit__title" title="${esc(d.title)}">${esc(d.title)}</span><span class="hit__kind">${d.kind}</span></div>
+      <p class="hit__path" title="${esc(d.path)}"><bdi>${esc(d.path)}</bdi></p>
+      ${d.desc?`<p class="hit__desc">${esc(d.desc)}</p>`:''}
+      ${s?`<p class="hit__snip">${s}</p>`:''}
+      <div class="hit__actions"><button class="btn btn--primary" type="button" data-act="open" tabindex="-1">Öffnen</button><button class="btn" type="button" data-act="reveal" tabindex="-1">Im Ordner zeigen</button></div>
+    </li>`; }).join('');
+  sc.innerHTML = (isEmptyQ?'<p class="vs__group">Zuletzt geändert</p>':'') + `<ul class="vs__list" id="list" role="listbox" aria-label="Treffer">${rows}</ul>`;
+  $('count').innerHTML = `${hits.length} von ${total} Treffern` + (state==='scanning' ? ' · Index wird noch aufgebaut' : '') + (done ? ` <span class="vs__done">· ${esc(done)}</span>` : '');
+  $('q').setAttribute('aria-activedescendant', 'hit-'+sel);
+}
+function run(query){ const r = search(query); hits = r.hits; total = r.total; shownQ = query; sel = Math.min(sel, Math.max(0,hits.length-1)); render(); }
+function onInput(){ q = $('q').value; clearTimeout(timer); openErr=''; done=''; sel=0;
+  if (terms(q).length===0){ run(q); return; }   // leeres Feld ohne Verzögerung
+  timer = setTimeout(()=>run(q), 250); }
+function act(i, reveal){
+  const d = hits[i]; if (!d) return;
+  if (d.broken){ openErr = `„${d.path.split('/').pop()}“ ließ sich nicht öffnen: Die Datei existiert nicht mehr. Unter Einstellungen › Vault „Neu einlesen“ wählen.`; done=''; }
+  else { openErr=''; done = (reveal ? 'Im Ordner gezeigt: ' : 'Geöffnet: ') + d.path.split('/').pop(); }
+  render();
+}
+function move(n){ if(!hits.length) return; sel = (sel+n+hits.length)%hits.length; render(); const el=$('hit-'+sel); el && el.scrollIntoView({block:'nearest'}); }
+function openDialog(){ $('scrim').hidden=false; openErr=''; done=''; loadingFirst = state==='loading'; $('q').value=q; run(q); setTimeout(()=>$('q').focus(),0); }
+function closeDialog(){ $('scrim').hidden=true; $('tip').hidden=true; $('sidevault').focus(); }
+
+$('q').addEventListener('input', onInput);
+$('dialog').addEventListener('keydown', e => {
+  if (e.key==='Escape'){ if(!$('tip').hidden){ $('tip').hidden=true; } else closeDialog(); e.preventDefault(); }
+  else if (e.key==='ArrowDown'){ move(1); e.preventDefault(); }
+  else if (e.key==='ArrowUp'){ move(-1); e.preventDefault(); }
+  else if (e.key==='Enter' && e.target===$('q')){ act(sel, e.ctrlKey); e.preventDefault(); }
+});
+$('scroll').addEventListener('click', e => {
+  const li = e.target.closest('.hit'); if(!li) return; const i = +li.dataset.i, b = e.target.closest('[data-act]');
+  sel = i;
+  if (b) act(i, b.dataset.act==='reveal');
+  else if (isNarrow()) render();      // Handy: Tippen wählt, die Knöpfe öffnen
+  else act(i, false);                 // Desktop: Klick wählt und öffnet
+  $('q').focus();
+});
+$('scrim').addEventListener('mousedown', e => { if (e.target===$('scrim')) closeDialog(); });
+$('close').addEventListener('click', closeDialog);
+$('info').addEventListener('click', () => { const t=$('tip'); t.hidden=!t.hidden; $('info').setAttribute('aria-expanded', String(!t.hidden)); });
+$('sidevault').addEventListener('click', openDialog);
+$('open').addEventListener('click', openDialog);
+document.addEventListener('keydown', e => { if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase()==='k'){ e.preventDefault(); if ($('scrim').hidden) openDialog(); } });
+$('state').addEventListener('change', e => { state = e.target.value; openErr=''; loadingFirst = state==='loading'; if(!$('scrim').hidden) run(q); if (state==='loading') setTimeout(()=>{ loadingFirst=false; if(!$('scrim').hidden) run(q); }, 1800); });
+$('width').addEventListener('change', e => { stage.style.width = e.target.value; badge(); render(); });
+$('theme').addEventListener('change', e => { const v=e.target.value; if(v==='auto') root.removeAttribute('data-theme'); else root.dataset.theme=v; });
+$('task').addEventListener('click', () => { const p=$('taskpop'); p.hidden=!p.hidden; $('task').setAttribute('aria-expanded', String(!p.hidden)); });
+$('tools').addEventListener('change', e => { $('toolsbox').hidden = !e.target.checked; toolsText(); });
+function toolsText(){ const L = (q||'').trim();
+  $('toolsbox').innerHTML = `<b>Gleiche Suche für Agenten:</b> vault_search { "query": ${JSON.stringify(L)}, "limit": 8 } &nbsp;·&nbsp; <b>Öffnen:</b> vault_get { "path": "…" } (liefert den Inhalt; Standardprogramm und Explorer öffnet nur der Dialog, nach Freigabe des Nutzers durch seinen Klick)`; }
+$('q').addEventListener('input', toolsText);
+function badge(){ const w = Math.round(stage.getBoundingClientRect().width); const t = w<576?'sm (Handy)':w<768?'md':w<992?'md (Tablet)':w<1200?'lg':w<1408?'xl (Laptop)':'xxl'; $('badge').textContent = w+' px · '+t; $('tier').textContent = w+' px · '+t; }
+window.addEventListener('resize', ()=>{ badge(); render(); });
+badge(); toolsText();
+// Aufruf per Adresse: #open, #dark, #w=390, #state=empty, #q=lade
+const h = Object.fromEntries(location.hash.slice(1).split('&').filter(Boolean).map(p=>p.split('=')));
+if (h.w){ $('width').value = h.w+'px'; stage.style.width = h.w+'px'; badge(); }
+if ('dark' in h){ root.dataset.theme='dark'; $('theme').value='dark'; }
+if (h.state){ $('state').value=h.state; state=h.state; loadingFirst=false; }
+if (h.q){ q=decodeURIComponent(h.q); }
+if (h.sel){ sel=+h.sel; }
+if ('open' in h){ openDialog(); if (h.sel) { sel=+h.sel; render(); } if (h.act==='err'){ q=''; $('q').value=''; run(''); sel=hits.findIndex(d=>d.broken); act(sel,false);} }
+</script>
+</body>
+</html>

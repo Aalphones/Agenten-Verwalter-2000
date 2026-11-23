@@ -17,10 +17,10 @@
 ## Abnahmekriterien der Phase
 
 1. Knopf „Vault“ (Buch-Symbol, 14 px, Strichstärke 1,5 wie „Archiv“) im Fuß der Sidebar links neben „Archiv“, nur bei `vaultDir !== null && vaultEnabled`. `Strg+K` (ohne Umschalt/Alt) öffnet denselben Dialog unter derselben Bedingung, sonst passiert nichts.
-2. Dialog (Titel „Developer Vault“), von oben nach unten: Statuszeile (Text aus `statusText`), Suchfeld mit Fokus beim Öffnen und ⓘ (Text: „Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.“), Trefferliste, Fußzeile „<n> von <total> Treffern“.
-3. Suche über `vault_find` mit `limit = 50`, entprellt 250 ms; leeres Feld zeigt sofort die zuletzt geänderten Artefakte.
+2. Dialog (Titel „Developer Vault“), von oben nach unten: Statuszeile (Text aus `statusText`, neben dem Titel), Suchfeld mit Fokus beim Öffnen und ⓘ (Text: „Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.“), Trefferliste, Fußzeile „<n> von <total> Treffern“ (bei `isScanning` ergänzt um „Index wird noch aufgebaut“) und rechts die Tastenhilfe. Entwurf: [artifacts/vault-suchdialog.html](artifacts/vault-suchdialog.html), Beschreibung in [artifacts/README.md](artifacts/README.md).
+3. Suche über `vault_find` mit `limit = 50`, entprellt 250 ms; leeres Feld zeigt sofort die zuletzt geänderten Artefakte unter der Gruppenzeile „Zuletzt geändert“.
 4. Trefferzeile: Titel (fett) und Art als Marke in der ersten Zeile; Pfad (Monospace, gedämpft) in der zweiten; Beschreibung einzeilig mit Auslassung; Ausschnitt mit markierten Fundstellen (`<mark>`), höchstens zwei Zeilen.
-5. Bedienung: ↑/↓ wählt die Zeile, Enter öffnet, Esc schließt; Klick auf die Zeile wählt und öffnet; in der gewählten Zeile die Knöpfe „Öffnen“ und „Im Ordner zeigen“.
+5. Bedienung: ↑/↓ wählt die Zeile, Enter öffnet, Strg+Enter zeigt im Ordner, Esc schließt; ab 576 px Breite wählt und öffnet ein Klick auf die Zeile, darunter wählt er nur; in der gewählten Zeile die Knöpfe „Öffnen“ und „Im Ordner zeigen“. Der Dialog bleibt nach dem Öffnen offen, die Fußzeile bestätigt („Geöffnet: <Dateiname>“). Unter 576 px ist der Dialog ein Blatt von unten mit Schließen-Knopf und 44-px-Zielen. Breite 40 rem.
 6. Leer: ohne Text und ohne Artefakte „Der Vault ist noch leer.“; mit Text ohne Treffer „Nichts gefunden.“; Fehler als Satz über der Liste.
 7. `vault_open(path, reveal)` öffnet nur Pfade, die `vault_get` auch erlauben würde (eingelesene Datei oder Ordner darüber); sonst Fehlersatz wie dort.
 8. `pnpm check` grün.
