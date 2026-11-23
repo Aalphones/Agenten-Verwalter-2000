@@ -3,33 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entwurf: Vault-Suche – drei Vorschläge (Developer Vault, Phase 6)</title>
+<title>Entwurf: Bibliothek durchsuchen – gegliedert nach Anweisungen, Skills, Wissen</title>
 <style>
-/* Tokens: Hex-Werte aus src/styles/theme.css (Stand 2026-11-23); Namen gekürzt. */
+/* Tokens: Hex-Werte aus src/styles/theme.css (Stand 2026-11-23). */
 :root {
-  --bg-base:#fff; --bg-sidebar:#f8f8f8; --bg-popover:#fff; --bg-hover:#f0f0f0; --bg-selected:#e4e6f1;
+  --bg-base:#fff; --bg-sidebar:#f8f8f8; --bg-popover:#fff; --bg-hover:#f0f0f0; --bg-selected:#e4e6f1; --bg-soft:#f8f8f8;
   --border-subtle:#e5e5e5; --border:#cecece; --fg:#3c3c3c; --fg-2:#555; --fg-muted:#6e6e6e;
   --accent:#c4572f; --accent-strong:#a8461f; --on-accent:#fff; --accent-subtle:rgb(196 87 47 / .10); --accent-text:#a8461f;
-  --toggle-on:#c4572f; --toggle-off:#c8c8c8; --on-toggle:#fff;
-  --error:#d23b33; --error-subtle:#fdeceb; --waiting:#a86a00; --scrim:rgb(0 0 0 / .28);
+  --toggle-on:#c4572f; --toggle-off:#c8c8c8; --on-toggle:#fff; --ok:#16803c;
+  --error:#d23b33; --error-subtle:#fdeceb; --scrim:rgb(0 0 0 / .28);
   --shadow:0 10px 30px rgb(0 0 0 / .14); --bar-bg:#f3f3f6;
+  --g-anw:#3d6fa8; --g-skills:#7c3aed; --g-wissen:#16803c;
   --font-sans:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;
   --font-mono:'Cascadia Code','Cascadia Mono',Consolas,ui-monospace,monospace;
   --ease:cubic-bezier(.2,0,0,1);
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --bg-base:#1f1f1f; --bg-sidebar:#181818; --bg-popover:#252526; --bg-hover:#2e2e30; --bg-selected:#37373d;
+  --bg-base:#1f1f1f; --bg-sidebar:#181818; --bg-popover:#252526; --bg-hover:#2e2e30; --bg-selected:#37373d; --bg-soft:#1f1f1f;
   --border-subtle:#2b2b2b; --border:#3c3c3c; --fg:#d4d4d4; --fg-2:#b0b0b0; --fg-muted:#8f8f8f;
   --accent:#e0825c; --accent-strong:#e0825c; --on-accent:#1d130e; --accent-subtle:rgb(224 130 92 / .16); --accent-text:#eea283;
-  --toggle-on:#e0825c; --toggle-off:#4a4a4f; --on-toggle:#f5f5f5;
-  --error:#f47067; --error-subtle:rgb(244 112 103 / .11); --waiting:#f2b33d; --scrim:rgb(0 0 0 / .55);
+  --toggle-on:#e0825c; --toggle-off:#4a4a4f; --on-toggle:#f5f5f5; --ok:#4cc38a;
+  --error:#f47067; --error-subtle:rgb(244 112 103 / .11); --scrim:rgb(0 0 0 / .55);
   --shadow:0 10px 30px rgb(0 0 0 / .45); --bar-bg:#181818;
+  --g-anw:#8ab8ea; --g-skills:#a78bfa; --g-wissen:#4cc38a;
   color-scheme: dark;
 }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg-base); color:var(--fg); font:13px/1.45 var(--font-sans); }
-button, input, select { font:inherit; color:inherit; }
+button, input { font:inherit; color:inherit; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 [hidden] { display:none !important; }
 kbd { font:11px var(--font-mono); color:var(--fg-muted); }
@@ -52,68 +54,64 @@ svg { flex-shrink:0; }
 .dsel__menu li[aria-selected="true"]::before { content:"✓ "; color:var(--accent-text); }
 .bar__btn { height:28px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:transparent; cursor:pointer; }
 .bar__btn:hover { background:var(--bg-hover); }
+.bar__btn[aria-pressed="true"] { background:var(--bg-selected); }
 .bar__info { width:28px; padding:0; }
 .bar__tag { margin-left:auto; color:var(--fg-muted); font-size:12px; }
-.bar__pop { position:absolute; top:100%; right:14px; z-index:96; width:min(30rem,calc(100% - 28px)); padding:12px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg-popover); box-shadow:var(--shadow); }
+.bar__pop { position:absolute; top:100%; right:14px; z-index:96; width:min(32rem,calc(100% - 28px)); padding:12px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg-popover); box-shadow:var(--shadow); }
 .bar__pop h4 { margin:0 0 4px; font-size:13px; }
 .bar__pop ul { margin:0 0 10px; padding-left:18px; } .bar__pop ul:last-child { margin:0; }
 .stagewrap { display:flex; justify-content:center; padding:12px; }
-.stage { container:stage / inline-size; position:relative; display:flex; width:100%; height:min(740px, calc(100vh - 96px)); min-height:580px; overflow:hidden; border:1px solid var(--border); border-radius:8px; background:var(--bg-base); }
+.stage { container:stage / inline-size; position:relative; display:flex; width:100%; height:min(760px, calc(100vh - 96px)); min-height:600px; overflow:hidden; border:1px solid var(--border); border-radius:8px; background:var(--bg-base); }
 .tools { margin:0 12px 12px; padding:8px 12px; border:1px solid var(--border-subtle); border-radius:8px; font:12px var(--font-mono); color:var(--fg-2); }
 .tools b { font-family:var(--font-sans); color:var(--fg); }
 
-/* ================= App: Sidebar wie src/app/Sidebar.css ================= */
+/* ================= Seitenleiste wie src/app/Sidebar.css + UsageButton.css ================= */
 .sidebar { display:flex; flex-direction:column; width:256px; flex-shrink:0; border-right:1px solid var(--border-subtle); background:var(--bg-sidebar); }
-.sidebar__brand { display:flex; align-items:center; gap:10px; height:48px; padding:0 16px; flex-shrink:0; }
-.sidebar__brand-name { font-weight:600; }
+.sidebar__brand { display:flex; align-items:center; gap:10px; height:48px; padding:0 16px; flex-shrink:0; font-weight:600; }
 .sidebar__actions { display:flex; flex-direction:column; gap:6px; padding:2px 10px 10px; flex-shrink:0; }
 .sidebar__new { display:flex; align-items:center; gap:8px; width:100%; height:30px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--fg); cursor:pointer; }
 .sidebar__new:hover { background:var(--bg-hover); }
 .sidebar__new-label { flex-grow:1; text-align:left; }
-.sidebar__find { color:var(--fg-muted); }
-.sidebar__find .sidebar__new-label { color:var(--fg-muted); }
+.sidebar__find, .sidebar__find .sidebar__new-label { color:var(--fg-muted); }
 .sidebar__list { flex-grow:1; min-height:0; overflow-y:auto; padding:2px 10px; }
-.proj { display:flex; align-items:center; gap:6px; height:28px; padding:0 8px; border-radius:6px; color:var(--fg); font-weight:600; cursor:default; }
+.proj { display:flex; align-items:center; gap:6px; height:28px; padding:0 8px; font-weight:600; }
 .proj svg { color:var(--fg-muted); }
 .sess { margin-left:26px; padding:0 0 1px 6px; border-left:1px solid var(--border-subtle); }
 .sess__item { display:flex; align-items:center; gap:8px; height:28px; padding:0 8px; border-radius:6px; color:var(--fg-2); }
 .sess__item--sel { background:var(--bg-selected); color:var(--fg); }
-.dot { width:7px; height:7px; border-radius:50%; background:var(--fg-muted); flex-shrink:0; }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--fg-muted); }
 .dot--run { background:#2563eb; } :root[data-theme="dark"] .dot--run { background:#5b9dff; }
 .sidebar__footer { flex-shrink:0; padding:8px 10px; border-top:1px solid var(--border-subtle); }
-.sidebar__foot-btn { display:flex; align-items:center; gap:8px; width:100%; height:30px; padding:0 8px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; }
-.sidebar__foot-btn:hover { background:var(--bg-hover); }
-.sidebar__foot-btn--active, .sidebar__foot-btn--active:hover { background:var(--bg-selected); }
-.sidebar__foot-btn kbd { margin-left:auto; }
-.sidebar__pair { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
-.sidebar__pair .sidebar__foot-btn { min-width:0; }
-.sidebar__pair kbd { font-size:10.5px; }
-.sidebar__icons { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-top:2px; }
-.sidebar__icon-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:44px; padding:0 2px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); font-size:11px; cursor:pointer; min-width:0; }
-.sidebar__icon-btn span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.sidebar__icon-btn:hover { background:var(--bg-hover); }
-.sidebar__icon-btn--active { background:var(--bg-selected); }
+.foot-btn { display:flex; align-items:center; gap:8px; width:100%; height:30px; padding:0 8px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; min-width:0; }
+.foot-btn:hover { background:var(--bg-hover); }
+.foot-btn--active, .foot-btn--active:hover { background:var(--bg-selected); }
+.foot-btn kbd { margin-left:auto; }
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+.icons { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-top:2px; }
+.icon-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:44px; padding:0 2px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); font-size:11px; cursor:pointer; min-width:0; }
+.icon-btn span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.icon-btn:hover { background:var(--bg-hover); }
+.icon-btn--active { background:var(--bg-selected); }
 .usage { display:flex; align-items:center; gap:8px; width:100%; height:30px; padding:0 8px; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; white-space:nowrap; }
 .usage:hover { background:var(--bg-hover); }
 .usage__name { flex-grow:1; text-align:left; }
 .usage__bar { overflow:hidden; width:32px; height:4px; border-radius:999px; background:var(--bg-hover); }
 .usage__fill { display:block; height:4px; background:var(--error); }
 .usage__label { min-width:34px; font:11.5px var(--font-mono); text-align:right; color:var(--error); }
-.usage svg.sev { color:var(--error); }
+.usage .sev { color:var(--error); }
 .appear { animation:appear 200ms var(--ease); }
 @keyframes appear { from { opacity:0; transform:translateY(-3px); } }
 
-/* ================= App: Hauptbereich ================= */
+/* ================= Hauptbereich ================= */
 .main { flex:1; min-width:0; display:flex; flex-direction:column; }
-.chat__head { display:flex; align-items:center; gap:8px; height:48px; padding:0 20px; border-bottom:1px solid var(--border-subtle); flex-shrink:0; font-weight:600; }
+.chat__head { display:flex; align-items:center; gap:8px; height:48px; padding:0 20px; border-bottom:1px solid var(--border-subtle); font-weight:600; }
 .chat__head span { color:var(--fg-muted); font-weight:400; }
-.chat__body { flex:1; min-height:0; overflow:auto; padding:20px; display:flex; flex-direction:column; gap:14px; max-width:46rem; }
+.chat__body { flex:1; min-height:0; overflow:auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
 .msg-user { align-self:flex-end; max-width:80%; padding:8px 12px; border-radius:10px; background:var(--bg-hover); }
 .msg-agent { color:var(--fg-2); }
 .chat__input { margin:0 20px 16px; height:64px; border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--fg-muted); }
 .settings { flex:1; min-height:0; display:flex; flex-direction:column; }
-.settings__head { display:flex; align-items:center; height:48px; padding:0 20px; border-bottom:1px solid var(--border-subtle); flex-shrink:0; }
-.settings__title { margin:0; font-size:13.5px; font-weight:600; }
+.settings__head { display:flex; align-items:center; gap:10px; height:48px; padding:0 20px; border-bottom:1px solid var(--border-subtle); font-size:13.5px; font-weight:600; }
 .settings__split { flex:1; min-height:0; display:grid; grid-template-columns:200px minmax(0,1fr); }
 .settings__nav { padding:12px 10px; border-right:1px solid var(--border-subtle); display:flex; flex-direction:column; gap:2px; }
 .settings__cat { padding:6px 10px; border-left:2px solid transparent; color:var(--fg-2); }
@@ -121,169 +119,146 @@ svg { flex-shrink:0; }
 .settings__cat--sel { background:var(--bg-selected); border-left-color:var(--accent); color:var(--fg); }
 .settings__body { overflow:auto; padding:16px 24px; }
 .settings__section { margin:22px 0 6px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--fg-muted); }
-.ok { color:#16803c; } :root[data-theme="dark"] .ok { color:#4cc38a; }
 .settings__section:first-child { margin-top:0; }
-.srow { display:grid; grid-template-columns:230px minmax(0,1fr); align-items:center; gap:16px; padding:8px 0; border-top:1px solid var(--border-subtle); }
+.srow { display:grid; grid-template-columns:200px minmax(0,1fr); align-items:center; gap:16px; padding:8px 0; border-top:1px solid var(--border-subtle); }
 .srow__label { display:flex; align-items:center; gap:6px; }
 .srow__info { display:flex; width:18px; height:18px; align-items:center; justify-content:center; padding:0; border:0; background:transparent; color:var(--fg-muted); cursor:help; }
 .srow__ctl { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
 .srow__mono { font:12px var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-.srow__muted { color:var(--fg-muted); }
+.muted { color:var(--fg-muted); }
+.ok { color:var(--ok); }
 .sbtn { flex-shrink:0; height:30px; padding:0 12px; border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; }
 .sbtn:hover { background:var(--bg-hover); }
 .switch { position:relative; flex-shrink:0; width:34px; height:20px; padding:0; border:0; border-radius:999px; background:var(--toggle-off); cursor:pointer; transition:background 160ms var(--ease); }
 .switch--on { background:var(--toggle-on); }
 .switch__knob { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:999px; background:var(--on-toggle); transition:left 160ms var(--ease); }
 .switch--on .switch__knob { left:16px; }
-.srow__note { color:var(--fg-muted); font-size:12px; }
+.note { color:var(--fg-muted); font-size:12px; }
 
-@container stage (max-width:575px) {
-  .sidebar { width:100%; border-right:0; }
-  .sidebar[data-hidden-narrow] { display:none; }
-  .main { display:none; } .main[data-show-narrow] { display:flex; }
-  .sidebar__new, .sidebar__foot-btn { height:44px; }
-  .settings__split { grid-template-columns:1fr; } .settings__nav { display:none; }
-  .srow { grid-template-columns:1fr; gap:6px; }
-}
-
-/* ================= Dialog: gemeinsamer Rahmen (wie src/components/Dialog.css) ================= */
-.scrim { position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; padding:32px; background:var(--scrim); }
-.scrim--top { align-items:flex-start; padding-top:min(12vh,88px); }
-.dlg { display:flex; flex-direction:column; max-width:100%; max-height:100%; border:1px solid var(--border); border-radius:10px; background:var(--bg-popover); box-shadow:var(--shadow); color:var(--fg); overflow:hidden; }
-.dlg__head { flex-shrink:0; padding:16px 20px 12px; }
-.dlg__titlerow { display:flex; align-items:baseline; gap:12px; margin-bottom:10px; min-width:0; }
+/* ================= Dialog ================= */
+.scrim { position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; padding:28px; background:var(--scrim); }
+.dlg { display:flex; flex-direction:column; width:66rem; max-width:100%; height:min(38rem,100%); border:1px solid var(--border); border-radius:10px; background:var(--bg-popover); box-shadow:var(--shadow); overflow:hidden; }
+.dlg__head { flex-shrink:0; display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border-subtle); }
 .dlg__title { margin:0; font-size:14px; font-weight:600; white-space:nowrap; }
-.dlg__status { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--fg-muted); }
-.dlg__status--warn { color:var(--fg); }
-.dlg__status--warn::before { content:"⚠ "; color:var(--error); }
-.dlg__close { display:none; flex-shrink:0; width:44px; height:44px; margin:-14px -14px -14px auto; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; }
-.search { position:relative; display:flex; align-items:center; gap:8px; }
-.search__field { position:relative; flex:1; min-width:0; }
+.dlg__status { font-size:12px; color:var(--fg-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.dlg__status--warn { color:var(--fg); } .dlg__status--warn::before { content:"⚠ "; color:var(--error); }
+.dlg__close { display:none; width:44px; height:44px; margin:-10px -10px -10px auto; border:0; border-radius:6px; background:transparent; color:var(--fg-2); cursor:pointer; }
+.search { position:relative; flex:1; min-width:0; display:flex; align-items:center; gap:6px; max-width:34rem; }
 .search__icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--fg-muted); pointer-events:none; }
-.search__input { width:100%; height:32px; padding:0 30px 0 32px; border:1px solid var(--border); border-radius:6px; background:var(--bg-base); color:var(--fg); }
+.search__input { width:100%; height:34px; padding:0 32px 0 32px; border:1px solid var(--border); border-radius:6px; background:var(--bg-base); color:var(--fg); font-size:13.5px; }
 .search__input::-webkit-search-cancel-button { display:none; }
 .search__input::placeholder { color:var(--fg-muted); }
 .search__input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-.search__clear { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:24px; height:24px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--fg-muted); cursor:pointer; }
-.search__clear:hover { background:var(--bg-hover); color:var(--fg); }
+.search__clear { position:absolute; right:38px; top:50%; transform:translateY(-50%); width:24px; height:24px; padding:0; border:0; border-radius:4px; background:transparent; color:var(--fg-muted); cursor:pointer; }
 .search__info { flex-shrink:0; display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--fg-muted); cursor:help; }
-.search__info:hover { background:var(--bg-hover); color:var(--fg); }
-.search__tip { position:absolute; right:0; top:38px; z-index:3; width:min(21rem,100%); padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-popover); box-shadow:var(--shadow); color:var(--fg-2); font-size:12px; }
-.dlg__error { flex-shrink:0; margin:0 20px 8px; padding:6px 10px; border-left:3px solid var(--error); background:var(--error-subtle); font-size:12px; }
-.dlg__error b { color:var(--fg); }
-.dlg__group { margin:6px 8px 4px; font-size:11px; font-weight:600; color:var(--fg-muted); }
-.dlg__empty { margin:0; padding:32px 16px; text-align:center; color:var(--fg-muted); }
-.dlg__empty strong { display:block; margin-bottom:2px; color:var(--fg-2); font-weight:600; }
-.dlg__foot { flex-shrink:0; display:flex; align-items:center; gap:12px; min-height:34px; padding:6px 20px; border-top:1px solid var(--border-subtle); font-size:12px; color:var(--fg-muted); }
-.dlg__done { color:var(--fg-2); }
-.dlg__done::before { content:"✓ "; color:var(--accent-text); }
-.keys { margin-left:auto; white-space:nowrap; }
-.skel { height:42px; margin:6px 8px; border-radius:6px; background:var(--bg-hover); }
-.kind { flex-shrink:0; padding:0 5px; border:1px solid var(--border); border-radius:4px; font-size:11px; line-height:16px; color:var(--fg-2); }
-.path { font:11.5px var(--font-mono); color:var(--fg-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; text-align:left; min-width:0; }
-.path bdi { unicode-bidi:plaintext; }
-.snip { font-size:12px; color:var(--fg-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
-mark { padding:0 1px; border-radius:3px; background:var(--accent-subtle); color:inherit; font-weight:600; }
+.search__info:hover, .search__clear:hover { background:var(--bg-hover); color:var(--fg); }
+.search__tip { position:absolute; right:0; top:40px; z-index:3; width:min(22rem,100%); padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-popover); box-shadow:var(--shadow); color:var(--fg-2); font-size:12px; }
+.dlg__head .dlg__status { margin-left:auto; }
+.dlg__error { flex-shrink:0; margin:8px 16px 0; padding:6px 10px; border-left:3px solid var(--error); background:var(--error-subtle); font-size:12px; }
+.body { flex:1; min-height:0; display:grid; grid-template-columns:13rem minmax(0,1fr) 24rem; }
+
+/* Gruppen links */
+.nav { overflow-y:auto; padding:8px 6px 12px; border-right:1px solid var(--border-subtle); background:var(--bg-soft); }
+.nav__all, .nav__item { display:flex; align-items:center; gap:8px; width:100%; height:28px; padding:0 8px 0 10px; border:0; border-left:2px solid transparent; background:transparent; color:var(--fg-2); text-align:left; cursor:pointer; }
+.nav__all { font-weight:600; color:var(--fg); }
+.nav__all:hover, .nav__item:hover { background:var(--bg-hover); }
+.nav__all[aria-current="true"], .nav__item[aria-current="true"] { background:var(--bg-selected); border-left-color:var(--accent); color:var(--fg); }
+.nav__count { margin-left:auto; font-size:11px; color:var(--fg-muted); font-variant-numeric:tabular-nums; }
+.nav__item--empty { color:var(--fg-muted); }
+.nav__group { margin-top:12px; }
+.nav__ghead { display:flex; align-items:center; gap:8px; width:100%; height:26px; padding:0 8px 0 10px; border:0; border-left:2px solid transparent; background:transparent; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--fg-muted); cursor:pointer; text-align:left; }
+.nav__ghead:hover { color:var(--fg); }
+.nav__ghead[aria-current="true"] { color:var(--fg); border-left-color:var(--accent); background:var(--bg-selected); }
+.nav__ghead svg { color:var(--gc); }
+.nav__subs { margin-left:16px; padding-left:4px; border-left:2px solid color-mix(in srgb, var(--gc) 45%, transparent); }
+.chips { display:none; gap:6px; padding:8px 12px; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap; }
+.chip { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border:1px solid var(--border); border-radius:999px; background:transparent; color:var(--fg-2); cursor:pointer; }
+.chip[aria-pressed="true"] { border-color:var(--accent-strong); background:var(--accent-subtle); color:var(--fg); font-weight:600; }
+.chip svg { color:var(--gc); }
+
+/* Liste Mitte */
+.list { overflow-y:auto; padding:4px 8px 12px; }
+.sec { margin-top:10px; }
+.sec:first-child { margin-top:4px; }
+.sec__head { position:sticky; top:-4px; z-index:1; display:flex; align-items:center; gap:6px; padding:6px 8px 4px; background:var(--bg-popover); font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--fg-muted); }
+.sec__head svg { color:var(--gc); }
+.sec__crumb { color:var(--fg-muted); font-weight:600; }
+.sec__more { margin-left:auto; padding:0 6px; border:0; background:transparent; color:var(--accent-text); font-size:12px; font-weight:400; letter-spacing:0; text-transform:none; cursor:pointer; border-radius:4px; }
+.sec__more:hover { background:var(--bg-hover); }
+.rows { margin:0; padding:0; list-style:none; }
+.row { display:grid; grid-template-columns:16px minmax(0,1fr); column-gap:10px; padding:6px 8px; border-radius:0 6px 6px 0; border-left:2px solid transparent; cursor:pointer; }
+.row:hover { background:var(--bg-hover); }
+.row--sel, .row--sel:hover { background:var(--bg-selected); border-left-color:var(--accent); }
+.row svg { margin-top:2px; color:var(--fg-muted); }
+.row__title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.row__desc { grid-column:2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--fg-muted); }
+.row--sel .row__desc { color:var(--fg-2); }
+mark { padding:0 1px; border-radius:3px; background:var(--accent-subtle); color:inherit; }
+.empty { margin:0; padding:36px 16px; text-align:center; color:var(--fg-muted); }
+.empty strong { display:block; margin-bottom:2px; color:var(--fg-2); }
+.skel { height:38px; margin:6px 8px; border-radius:6px; background:var(--bg-hover); }
+
+/* Vorschau rechts */
+.pv { display:flex; flex-direction:column; min-height:0; border-left:1px solid var(--border-subtle); }
+.pv__back { display:none; align-items:center; gap:6px; height:44px; padding:0 14px; border:0; border-bottom:1px solid var(--border-subtle); background:transparent; color:var(--fg-2); cursor:pointer; text-align:left; flex-shrink:0; }
+.pv__head { padding:14px 16px 12px; border-bottom:1px solid var(--border-subtle); }
+.pv__crumb { display:flex; align-items:center; gap:6px; margin:0 0 6px; font-size:12px; color:var(--fg-muted); }
+.pv__crumb svg { color:var(--gc); }
+.pv__title { margin:0; font-size:14px; font-weight:600; overflow-wrap:anywhere; }
+.pv__desc { margin:4px 0 0; color:var(--fg-2); }
+.pv__acts { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.pv__body { flex:1; min-height:0; overflow:auto; padding:12px 16px 16px; }
+.pv__label { margin:0 0 4px; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--fg-muted); }
+.pv__where { margin:0 0 6px; font-size:12px; color:var(--fg-2); }
+.pv__text { margin:0 0 14px; padding:10px 12px; border-left:2px solid var(--border); background:var(--bg-soft); font-size:12.5px; color:var(--fg-2); overflow-wrap:anywhere; }
+.pv__file { margin:0; font:11.5px var(--font-mono); color:var(--fg-muted); overflow-wrap:anywhere; }
+.pv__img { display:block; width:100%; height:auto; border:1px solid var(--border-subtle); border-radius:6px; margin-bottom:12px; }
+.pv__none { margin:auto; color:var(--fg-muted); }
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:28px; padding:0 10px; border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--fg); cursor:pointer; white-space:nowrap; }
 .btn:hover { background:var(--bg-hover); }
 .btn:active { transform:translateY(1px); }
 .btn--primary { border-color:var(--accent-strong); background:var(--accent-strong); color:var(--on-accent); }
 .btn--primary:hover { background:var(--accent-strong); filter:brightness(1.08); }
-.list { margin:0; padding:0; list-style:none; }
-.dlg__scroll { flex:1; min-height:0; overflow-y:auto; }
-
-/* ---------- Vorschlag A: Liste (Archiv-Muster, verfeinert) ---------- */
-.va { width:40rem; height:min(34rem,100%); }
-.va .dlg__scroll { padding:0 12px 8px; }
-.ha { position:relative; padding:8px 10px 8px 12px; border-left:2px solid transparent; border-radius:0 6px 6px 0; cursor:pointer; }
-.ha + .ha { margin-top:2px; }
-.ha:hover { background:var(--bg-hover); }
-.ha--sel, .ha--sel:hover { background:var(--bg-selected); border-left-color:var(--accent); }
-.ha__l1 { display:flex; align-items:center; gap:8px; min-width:0; height:24px; }
-.ha__title { font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ha__acts { display:flex; gap:6px; margin-left:auto; flex-shrink:0; visibility:hidden; }
-.ha--sel .ha__acts { visibility:visible; }
-.ha__desc { margin:1px 0 0; color:var(--fg-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ha .path { margin:1px 0 0; }
-.ha .snip { margin:3px 0 0; }
-.ha--sel .path { color:var(--fg-2); }
-
-/* ---------- Vorschlag B: Befehlspalette ---------- */
-.vb { width:38rem; height:min(30rem,100%); }
-.vb .dlg__head { padding:12px 14px 10px; border-bottom:1px solid var(--border-subtle); }
-.vb .dlg__titlerow { margin-bottom:8px; }
-.vb .search__input { height:36px; font-size:14px; }
-.vb .dlg__scroll { padding:6px; }
-.hb { display:flex; align-items:center; gap:10px; height:34px; padding:0 10px; border-radius:6px; cursor:pointer; color:var(--fg-2); }
-.hb:hover { background:var(--bg-hover); }
-.hb--sel, .hb--sel:hover { background:var(--bg-selected); color:var(--fg); box-shadow:inset 2px 0 0 var(--accent); border-radius:0 6px 6px 0; }
-.hb__title { flex-shrink:1; min-width:4rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); font-weight:600; }
-.hb .path { flex:1 1 0; margin-left:4px; }
-.hb .kind { margin-left:auto; }
-.pb { flex-shrink:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 14px; align-items:start; padding:10px 14px; border-top:1px solid var(--border-subtle); background:var(--bg-base); min-height:84px; }
-.pb__desc { margin:0; color:var(--fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pb .snip { margin:0; grid-column:1; }
-.pb__acts { grid-column:2; grid-row:1 / span 2; display:flex; flex-direction:column; gap:6px; }
-
-/* ---------- Vorschlag C: Liste mit Vorschau ---------- */
-.vc { width:62rem; height:min(36rem,100%); }
-.vc__split { flex:1; min-height:0; display:grid; grid-template-columns:minmax(16rem,23rem) minmax(0,1fr); border-top:1px solid var(--border-subtle); }
-.vc__list { overflow-y:auto; padding:6px; border-right:1px solid var(--border-subtle); }
-.hc { display:grid; grid-template-columns:16px minmax(0,1fr); column-gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; }
-.hc + .hc { margin-top:1px; }
-.hc svg { margin-top:2px; color:var(--fg-muted); }
-.hc:hover { background:var(--bg-hover); }
-.hc--sel, .hc--sel:hover { background:var(--bg-selected); box-shadow:inset 2px 0 0 var(--accent); border-radius:0 6px 6px 0; }
-.hc--sel svg, .hc--sel .path { color:var(--fg-2); }
-.hc__title { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.hc .path { grid-column:2; }
-.pv { display:flex; flex-direction:column; min-height:0; }
-.pv__back { display:none; align-items:center; gap:6px; height:44px; padding:0 14px; border:0; border-bottom:1px solid var(--border-subtle); background:transparent; color:var(--fg-2); cursor:pointer; text-align:left; }
-.pv__head { padding:14px 18px 10px; border-bottom:1px solid var(--border-subtle); }
-.pv__title { margin:0 0 4px; font-size:14px; font-weight:600; overflow-wrap:anywhere; }
-.pv__meta { display:flex; align-items:center; gap:8px; min-width:0; }
-.pv__acts { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-.pv__body { flex:1; min-height:0; overflow:auto; padding:12px 18px 16px; }
-.pv__desc { margin:0 0 12px; color:var(--fg); }
-.pv__label { margin:0 0 4px; font-size:11px; font-weight:600; color:var(--fg-muted); }
-.pv__where { margin:0 0 6px; font-size:12px; color:var(--fg-2); }
-.pv__snip { margin:0; padding:10px 12px; border-left:2px solid var(--border); background:var(--bg-base); font-size:12.5px; color:var(--fg-2); white-space:pre-wrap; overflow-wrap:anywhere; }
-.pv__img { display:block; width:100%; max-width:22rem; border:1px solid var(--border-subtle); border-radius:6px; }
-.pv__imgnote { margin:4px 0 0; font-size:11px; color:var(--fg-muted); }
-.pv__none { margin:auto; color:var(--fg-muted); }
+.dlg__foot { flex-shrink:0; display:flex; align-items:center; gap:12px; min-height:32px; padding:6px 16px; border-top:1px solid var(--border-subtle); font-size:12px; color:var(--fg-muted); }
+.done { color:var(--fg-2); } .done::before { content:"✓ "; color:var(--accent-text); }
+.keys { margin-left:auto; white-space:nowrap; }
 
 /* ---------- Breiten ---------- */
-@container stage (max-width:1023px) { .vc { width:100%; } }
+@container stage (max-width:1180px) {
+  .body { grid-template-columns:12rem minmax(0,1fr); }
+  .pv { display:none; }
+  .dlg[data-detail] .list { display:none; }
+  .dlg[data-detail] .pv { display:flex; border-left:0; }
+  .pv__back { display:flex; }
+  .dlg { width:44rem; }
+  .dlg__head .dlg__status { display:none; }
+}
 @container stage (max-width:767px) {
-  .vc__split { grid-template-columns:1fr; }
-  .vc__list { border-right:0; }
-  .vc .pv { display:none; }
-  .vc[data-detail] .vc__list { display:none; }
-  .vc[data-detail] .pv { display:flex; }
-  .vc .pv__back { display:flex; }
+  .body { grid-template-columns:1fr; }
+  .nav { display:none; }
+  .chips { display:flex; }
+  .dlg[data-detail] .chips { display:none; }
+  .keys { display:none; }
 }
 @container stage (max-width:575px) {
-  .scrim, .scrim--top { padding:0; align-items:flex-end; }
-  .dlg { width:100%; height:90%; border-radius:12px 12px 0 0; border-bottom:0; }
+  .sidebar { width:100%; border-right:0; }
+  .sidebar[data-hidden-narrow] { display:none; }
+  .main { display:none; } .main[data-show-narrow] { display:flex; }
+  .sidebar__new, .foot-btn, .usage { height:44px; }
+  .settings__split { grid-template-columns:1fr; } .settings__nav { display:none; }
+  .srow { grid-template-columns:1fr; gap:6px; }
+  .scrim { padding:0; align-items:flex-end; }
+  .dlg { width:100%; height:92%; border-radius:12px 12px 0 0; border-bottom:0; }
+  .dlg__head { flex-wrap:wrap; gap:8px; }
   .dlg__close { display:block; }
-  .dlg__titlerow { flex-wrap:wrap; align-items:center; gap:0 12px; }
-  .dlg__status { order:3; flex-basis:100%; white-space:normal; }
+  .search { order:3; flex-basis:100%; max-width:none; }
   .search__input { height:44px; }
-  .search__info, .search__clear { width:44px; height:44px; }
-  .search__clear { right:0; }
-  .keys { display:none; }
-  .btn { height:44px; padding:0 14px; }
-  .ha { padding:10px 10px 10px 12px; }
-  .ha__l1 { height:auto; min-height:24px; }
-  .ha__acts { display:none; }
-  .ha--sel .ha__acts--narrow { display:flex; }
-  .hb { height:44px; } .hb .path { display:none; }
-  .pb { grid-template-columns:1fr; } .pb__acts { grid-column:1; grid-row:auto; flex-direction:row; } .pb__acts .btn { flex:1; }
-  .hc { padding:10px 8px; }
-  .pv__acts .btn { flex:1; }
+  .search__info { width:44px; height:44px; }
+  .search__clear { right:52px; width:36px; height:36px; }
+  .dlg__head .dlg__status { display:block; margin-left:0; flex:1; }
+  .row { padding:9px 8px; }
+  .btn { height:44px; padding:0 14px; flex:1; }
 }
-.ha__acts--narrow { display:none; gap:8px; margin-top:8px; }
-.ha__acts--narrow .btn { flex:1; }
 @media (prefers-reduced-motion: no-preference) {
   .scrim .dlg { animation:dlg-in 180ms var(--ease); }
   @keyframes dlg-in { from { opacity:0; transform:translateY(6px); } }
@@ -294,11 +269,10 @@ mark { padding:0 1px; border-radius:3px; background:var(--accent-subtle); color:
 <body>
 
 <div class="bar" role="toolbar" aria-label="Entwurfsleiste">
-  <label>Vorschlag
-    <span class="seg" id="variant">
-      <button type="button" data-v="a" aria-pressed="false">A · Liste</button>
-      <button type="button" data-v="b" aria-pressed="false">B · Palette</button>
-      <button type="button" data-v="c" aria-pressed="false">C · Vorschau</button>
+  <label>Ausbau
+    <span class="seg" id="stagesel">
+      <button type="button" data-s="phase6" aria-pressed="false">Phase 6 · nur Vault</button>
+      <button type="button" data-s="lib" aria-pressed="false">Bibliothek</button>
     </span>
   </label>
   <label>Einstieg
@@ -308,39 +282,29 @@ mark { padding:0 1px; border-radius:3px; background:var(--accent-subtle); color:
       <button type="button" data-e="icons" aria-pressed="false">3 · Symbolleiste</button>
     </span>
   </label>
-  <label>Einstellungen
-    <span class="seg" id="smode">
-      <button type="button" data-s="today" aria-pressed="false">Heute</button>
-      <button type="button" data-s="lib" aria-pressed="false">Bibliothek (Folgeplan)</button>
-    </span>
-  </label>
   <span class="dsel" data-key="state"></span>
   <span class="dsel" data-key="width"></span>
   <span class="dsel" data-key="theme"></span>
   <button class="bar__btn" type="button" id="toolsbtn" aria-pressed="false">Agenten-Werkzeug</button>
-  <button class="bar__btn bar__info" type="button" id="cmpbtn" aria-expanded="false" aria-controls="cmp" title="Vorschläge vergleichen">ⓘ</button>
-  <span class="bar__tag">Entwurf · Beispieldaten · <span id="tier"></span></span>
+  <button class="bar__btn bar__info" type="button" id="cmpbtn" aria-expanded="false" aria-controls="cmp" title="Aufbau und Einstieg">ⓘ</button>
+  <span class="bar__tag">Entwurf · <span id="tier"></span></span>
   <div class="bar__pop" id="cmp" hidden></div>
 </div>
 
 <div class="stagewrap">
   <div class="stage" id="stage">
     <nav class="sidebar" id="sidebar" aria-label="Vorhaben">
-      <div class="sidebar__brand">
-        <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="7" height="7" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="2"/></svg>
-        <span class="sidebar__brand-name">Agenten Verwalter 2000</span>
-      </div>
+      <div class="sidebar__brand"><svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="7" height="7" rx="2"/><rect x="5.5" y="5.5" width="7" height="7" rx="2"/></svg>Agenten Verwalter 2000</div>
       <div class="sidebar__actions" id="actions">
         <button type="button" class="sidebar__new"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M7 2.5v9M2.5 7h9"/></svg><span class="sidebar__new-label">Neues Vorhaben</span><kbd>Ctrl N</kbd></button>
       </div>
       <div class="sidebar__list">
         <div class="proj"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg>Agenten-Verwalter</div>
         <div class="sess">
-          <div class="sess__item sess__item--sel" data-nav="chat"><span class="dot dot--run" role="img" aria-label="läuft"></span>Vault-Suche entwerfen</div>
+          <div class="sess__item sess__item--sel"><span class="dot dot--run" role="img" aria-label="läuft"></span>Vault-Suche entwerfen</div>
           <div class="sess__item"><span class="dot" role="img" aria-label="wartet"></span>Phase 5 · Umsetzung</div>
         </div>
-        <div class="proj"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg>Wissens-Vault</div>
-        <div class="proj"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg>Photofant</div>
+        <div class="proj"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg>Beispiel-Vorhaben</div>
       </div>
       <div class="sidebar__footer" id="footer"></div>
     </nav>
@@ -351,311 +315,291 @@ mark { padding:0 1px; border-radius:3px; background:var(--accent-subtle); color:
 <div class="tools" id="tools" hidden></div>
 
 <script>
-/* ---------------- Beispieldaten (erfunden); Felder nach VaultHit ---------------- */
-const NOW = Date.UTC(2026, 10, 23, 12);
-const D = [
- {path:'snippets/ui/ladebalken/progress.tsx',kind:'code',title:'Ladebalken mit Fortschritt',desc:'React-Komponente für einen Fortschrittsbalken mit Restzeit',tags:'react ui fortschritt',heading:'Restzeit › Wert begrenzen',line:24,text:'Der Balken zeigt die Restzeit an und springt nie zurück, auch wenn die Schätzung schwankt. Wert immer zwischen 0 und 1 begrenzen, sonst ragt der Balken über den Rand.',age:1},
- {path:'skills/mode-design/SKILL.md',kind:'skill',title:'mode-design',desc:'Entwürfe für Oberflächen bauen — Klickdummy, Mockup, Layout-Vorschlag',tags:'skill design entwurf klickdummy',heading:'Grundlage jedes Entwurfs',line:20,text:'Klickdummy ab der ersten Vorlage: alle Bereiche anklickbar, Kernabläufe bedienbar, echte Daten aus der Quelle des Users. Breakpoints von Anfang an.',age:2},
- {path:'commands/plan.md',kind:'command',title:'/plan',desc:'Start a new phased plan',tags:'befehl planung',heading:'',line:1,text:'Loads planning conventions and walks through plan creation; implementation is /implement.',age:5},
- {path:'output-styles/station.md',kind:'style',title:'station',desc:'Sachlich und knapp, auf Deutsch',tags:'ausgabestil station',heading:'',line:1,text:'Keine Persona: keine Pointen, keine Anreden. Ergebnis zuerst, dann Risiko, dann nächster Schritt.',age:7},
- {path:'wissen/tauri/im-ordner-zeigen.md',kind:'markdown',title:'Tauri: Datei im Ordner zeigen',desc:'reveal_item_in_dir und open_path aus dem Opener-Plugin',tags:'tauri rust opener',heading:'Berechtigungen',line:12,text:'Mit reveal_item_in_dir markiert der Explorer die Datei. open_path startet das Standardprogramm. Beide brauchen eine Berechtigung in der Capability-Datei, sonst kommt der Fehler „not allowed“.',age:3},
- {path:'skripte/db-sichern.ps1',kind:'code',title:'Skript: Datenbank sichern',desc:'Kopiert die SQLite-Datei mit Zeitstempel in den Sicherungsordner',tags:'powershell sqlite backup',heading:'',line:1,text:'Vor dem Kopieren die Verbindung schließen, sonst bleibt die WAL-Datei zurück. Zeitstempel im Format 2026-11-23_1200.',age:6},
- {path:'ideen/stationen-nachrichten.md',kind:'markdown',title:'Idee: Stationen sprechen miteinander',desc:'Eine Station hinterlässt der nächsten eine Nachricht samt Fundstelle',tags:'idee stationen',heading:'Ablauf',line:8,text:'Eine Nachricht hängt am Vorhaben, nicht an der Session. Die nächste Station sieht sie in der ersten Nachricht und kann den Vault nach der Fundstelle fragen.',age:9},
- {path:'designs/chat-uhrzeiten/index.html',kind:'web',title:'Entwurf Chat-Uhrzeiten',desc:'Klickdummy: Uhrzeit am Block, Tageslinie, Pausenlinie',tags:'design chat klickdummy',heading:'',line:1,text:'Uhrzeit rechts am Block, unter 560 px Breite darüber. Gleiche Minute: nur der erste Block trägt die Zeit.',age:12},
- {path:'vorlagen/skin-vorschau.png',kind:'image',title:'Skin-Vorschau Figurenpaket',desc:'Vorschaubild der Figuren im Fach „Warten“',tags:'skin figuren vorschau',heading:'',line:1,text:'',preview:true,age:20},
- {path:'wissen/sqlite/fts5-spickzettel.md',kind:'markdown',title:'SQLite FTS5 Spickzettel',desc:'MATCH-Syntax, bm25, snippet() und Zerleger',tags:'sqlite fts5 suche',heading:'Zerleger › unicode61',line:41,text:'Wortanfänge mit Stern: lade* findet Ladebalken. Der Zerleger unicode61 trennt keine zusammengesetzten Wörter. snippet() liefert die Fundstellen mit Markern.',age:25},
- {path:'vorlagen/adr.md',kind:'markdown',title:'ADR-Vorlage',desc:'Kontext, Entscheidung, Folgen — eine Seite',tags:'vorlage adr entscheidung',heading:'Aufbau',line:3,text:'Titel mit Nummer. Kontext in drei Sätzen. Entscheidung im Präsens. Folgen: was wird leichter, was schwerer.',age:31},
- {path:'konzepte/sessions-wiederherstellen.md',kind:'markdown',title:'Konzept: Sessions wiederherstellen',desc:'Was beim Zurückholen aus dem Archiv passiert',tags:'konzept archiv sessions',heading:'Agent',line:17,text:'Der Agent startet erst mit der nächsten Nachricht des Nutzers. Sessions behalten ihren Verlauf, Vorhaben ihre Reihenfolge.',age:40},
- {path:'wissen/retro/2026-11.txt',kind:'text',title:'Notizen aus dem Retro November',desc:'Was gut lief, was nicht',tags:'retro notizen',heading:'',line:5,text:'Suche im Archiv wurde oft gebraucht, die im Vault fehlt noch. Ladebalken beim Abgleich wäre hilfreich.',age:44},
- {path:'konzepte/seitenleiste/neuordnung/vorhaben-stationen-umsetzungen/ueberblick-mit-allen-ebenen.md',kind:'markdown',title:'Konzept für die vollständige Neuordnung der Seitenleiste mit mehreren Vorhaben, Stationen und Umsetzungen im Überblick',desc:'Sehr langer Titel und tiefer Pfad: beide werden gekürzt, nichts ragt über den Rand',tags:'konzept seitenleiste',heading:'Ebenen › Umsetzungen',line:88,text:'Die Seitenleiste zeigt je Vorhaben die Stationen; Umsetzungen stehen als eigene Gruppe. Ladebalken für laufende Abgleiche bleiben in der Fußzeile.',age:50},
- {path:'skripte/backup/verwalter.db.bak',kind:'binary',title:'verwalter.db.bak',desc:'',tags:'backup',heading:'',line:1,text:'',age:60},
- {path:'alt/gelöscht-seit-dem-letzten-abgleich.md',kind:'markdown',title:'Alte Notiz (Datei inzwischen gelöscht)',desc:'Zeigt den Fehlerfall beim Öffnen',tags:'alt',heading:'',line:1,text:'Diese Datei gibt es auf der Platte nicht mehr; der Index kennt sie noch bis zum nächsten Abgleich.',age:70,broken:true},
+/* ---------------- Gruppen ----------------
+   Gruppe und Untergruppe ergeben sich aus dem Pfad (Regel siehe README). */
+const GROUPS = [
+  {id:'anw', label:'Anweisungen', color:'--g-anw', icon:'<path d="M3 1.5h6l2.5 2.5v8.5H3zM5 6h4.5M5 8.5h4.5M5 11h2.5"/>', subs:[['regeln','Grundregeln'],['stile','Ausgabestile']]},
+  {id:'skills', label:'Skills', color:'--g-skills', icon:'<path d="M7 1.5 8.4 5l3.6.3-2.8 2.3.9 3.6L7 9.3l-3.1 1.9.9-3.6L2 5.3 5.6 5z"/>', subs:[['mode','Arbeitsweise'],['lang','Sprachen'],['fw','Frameworks'],['tools','Werkzeuge'],['cmd','Befehle']]},
+  {id:'wissen', label:'Wissen', color:'--g-wissen', icon:'<path d="M3 1.5h7.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 1 2 10.5v-8A1 1 0 0 1 3 1.5zM2 10.5A1.5 1.5 0 0 1 3.5 9h8"/>', subs:[['inbox','inbox'],['snippets','snippets'],['wissen','wissen'],['ideen','ideen'],['konzepte','konzepte'],['designs','designs'],['vorlagen','vorlagen'],['skripte','skripte']]},
 ];
-D.forEach(d => d.mod = NOW - d.age * 864e5);
-const FILL = Array.from({length:60}, (_, i) => ({path:`snippets/beispiel/eintrag-${String(i+1).padStart(2,'0')}.ts`,kind:'code',title:`Beispiel-Eintrag ${i+1}`,desc:'Platzhalter für die Sicht auf viele Treffer',tags:'beispiel',heading:'',line:1,text:'Beispieltext mit Ladebalken und Fundstelle, nur zur Prüfung der langen Liste.',mod:NOW-(80+i)*864e5}));
+const SUBLABEL = {}; GROUPS.forEach(g => g.subs.forEach(([id, l]) => SUBLABEL[g.id + '/' + id] = l));
 
-const ICON = {
-  markdown:'<path d="M3.5 1.5h5l2.5 2.5v8.5h-7.5zM8.5 1.5V4H11M5.5 7h3M5.5 9.5h3"/>',
+/* ---------------- Daten ----------------
+   Anweisungen und Skills: echte Namen aus dem Master-Ordner, Beschreibungen gekürzt (Auswahl).
+   Wissen: erfundene Beispiele. */
+const NOW = Date.UTC(2026, 10, 23, 12);
+let n = 0;
+const it = (g, s, title, desc, path, kind, age, text='', heading='', line=1, extra={}) => ({id:++n, g, s, title, desc, path, kind, mod:NOW-age*36e5, text, heading, line, ...extra});
+const D = [
+ it('anw','regeln','CLAUDE.md','Globale Regeln für alle Projekte','CLAUDE.md','doc',30,'Bei Widerspruch: explizite Anweisung im Chat vor Projekt-Ebene vor CLAUDE.md und Topics vor User-Skills vor Memory.','Konflikt-Hierarchie',96),
+ ...[['station','Sachlicher Klartext ohne Persona für Stationen'],['vera','Trocken, sarkastisch, Deadpan-Ironie'],['yoda','Meister Yoda: umgestellter Satzbau, ruhig'],['tony-stark','Tony Stark: sarkastisch, tech-verliebt'],['butcher','Billy Butcher: trockener, derber Slang'],['zorro','Lorenor Zorro: stoisch, kurz angebunden'],['trump','Wahlkampf-Rhetorik mit Superlativen']].map(([t,d],i) => it('anw','stile',t,d,`output-styles/${t}.md`,'style',50+i*20,'Ergebnis zuerst, dann Risiko, dann nächster Schritt.')),
+ ...[['mode-planning','Plan erstellen, Feature in Phasen schneiden'],['mode-implementing','Vorhandenen Plan umsetzen'],['mode-design','Entwürfe bauen: Klickdummy, Mockup, Layout'],['mode-committing','Commit, Branch und Merge'],['mode-reviewing','Code-Review in drei Phasen'],['mode-debugging','Vom Symptom zum belegten Fix'],['mode-web-frontend','Frontend-Architektur und Barrierefreiheit'],['mode-dependencies','Bibliotheken installieren und aktualisieren'],['mode-bootstrap','Projekt aufsetzen oder migrieren']].map(([t,d],i) => it('skills','mode',t,d,`skills/${t}/SKILL.md`,'skill',4+i*9, t==='mode-design' ? 'Klickdummy ab der ersten Vorlage: alle Bereiche anklickbar, Kernabläufe bedienbar, echte Daten aus der Quelle des Users. Breakpoints von Anfang an.' : 'Ablauf, Prüfsteine und Übergaben für diesen Arbeitsschritt.', t==='mode-design' ? 'Grundlage jedes Entwurfs' : '', t==='mode-design' ? 20 : 1)),
+ ...[['lang-typescript','TypeScript-Regeln'],['lang-react','React mit TypeScript'],['lang-angular','Angular mit TypeScript'],['lang-python','Python mit uv und pytest'],['lang-go','Go-Regeln'],['lang-kotlin','Kotlin für Android und Backend']].map(([t,d],i) => it('skills','lang',t,d,`skills/${t}/SKILL.md`,'skill',100+i*15,'Konventionen, Werkzeuge und Fallen der Sprache.')),
+ it('skills','fw','framework-tailwind','Tailwind v4, CSS-first','skills/framework-tailwind/SKILL.md','skill',140,'Tokens in @theme, keine Utility-Flut, BEM für Komponenten.'),
+ ...[['audit','Regelsatz prüfen und verbessern'],['research','Neue Best Practices sammeln'],['session-review','Rückblick auf eine Session'],['code-health','Bestandsaufnahme einer Codebasis'],['interview','Kommunikation für einen Nutzer einstellen']].map(([t,d],i) => it('skills','tools',t,d,`skills/${t}/SKILL.md`,'skill',60+i*30,'Ablauf und Ergebnisablage des Werkzeugs.')),
+ ...[['/plan','Neuen Plan in Phasen anlegen'],['/implement','Geparkten Plan fortsetzen'],['/review','Code-Review des aktuellen Stands'],['/session-review','Rückblick auf die Session'],['/audit','Regelsatz prüfen'],['/research','Best Practices sammeln'],['/bootstrap','Projekt aufsetzen']].map(([t,d],i) => it('skills','cmd',t,d,`commands/${t.slice(1)}.md`,'command',80+i*25,'Lädt den passenden Skill und führt durch den Ablauf.')),
+ it('wissen','inbox','Notiz: Kontingent-Anzeige im Fuß','Noch nicht eingeordnet','inbox/kontingent-fuss.md','doc',1,'Fuß der Seitenleiste nicht weiter füllen; Suche gehört nach oben.'),
+ it('wissen','inbox','Screenshot Einstellungen Umgebung','Noch nicht eingeordnet','inbox/umgebung.png','image',2,'','',1,{preview:true}),
+ it('wissen','snippets','Ladebalken mit Fortschritt','React-Komponente mit Restzeit','snippets/ui/ladebalken/progress.tsx','code',5,'Der Balken zeigt die Restzeit an und springt nie zurück. Wert immer zwischen 0 und 1 begrenzen, sonst ragt der Balken über den Rand.','Restzeit › Wert begrenzen',24),
+ it('wissen','snippets','Entprellen in React','useDebounce mit 250 ms','snippets/react/use-debounce.ts','code',90,'Leerer Text ohne Verzögerung, sonst 250 ms warten.'),
+ it('wissen','wissen','Tauri: Datei im Ordner zeigen','reveal_item_in_dir und open_path','wissen/tauri/im-ordner-zeigen.md','doc',20,'Mit reveal_item_in_dir markiert der Explorer die Datei. open_path startet das Standardprogramm. Beide brauchen eine Berechtigung in der Capability-Datei.','Berechtigungen',12),
+ it('wissen','wissen','SQLite FTS5 Spickzettel','MATCH, bm25, snippet()','wissen/sqlite/fts5.md','doc',70,'Wortanfänge mit Stern: lade* findet Ladebalken. Der Zerleger unicode61 trennt keine zusammengesetzten Wörter.','Zerleger',41),
+ it('wissen','ideen','Stationen sprechen miteinander','Nachricht an die nächste Station','ideen/stationen-nachrichten.md','doc',40,'Eine Nachricht hängt am Vorhaben, nicht an der Session.','Ablauf',8),
+ it('wissen','konzepte','Neuordnung der Seitenleiste mit mehreren Vorhaben, Stationen und Umsetzungen im Überblick','Sehr langer Titel: wird gekürzt, nichts ragt über den Rand','konzepte/seitenleiste/neuordnung/ueberblick-mit-allen-ebenen.md','doc',120,'Die Seitenleiste zeigt je Vorhaben die Stationen; Umsetzungen stehen als eigene Gruppe.','Ebenen',88),
+ it('wissen','designs','Entwurf Chat-Uhrzeiten','Klickdummy: Uhrzeit, Tageslinie, Pausen','designs/chat-uhrzeiten/index.html','web',30,'Uhrzeit rechts am Block, unter 560 px Breite darüber.'),
+ it('wissen','designs','Skin-Vorschau Figurenpaket','Vorschaubild der Figuren','designs/skin-vorschau.png','image',200,'','',1,{preview:true}),
+ it('wissen','vorlagen','ADR-Vorlage','Kontext, Entscheidung, Folgen','vorlagen/adr.md','doc',160,'Titel mit Nummer. Kontext in drei Sätzen. Entscheidung im Präsens.','Aufbau',3),
+ it('wissen','skripte','Datenbank sichern','Kopiert die SQLite-Datei mit Zeitstempel','skripte/db-sichern.ps1','code',60,'Vor dem Kopieren die Verbindung schließen, sonst bleibt die WAL-Datei zurück.'),
+ it('wissen','skripte','Alte Notiz (Datei inzwischen gelöscht)','Zeigt den Fehlerfall beim Öffnen','skripte/alt-geloescht.md','doc',300,'Diese Datei gibt es nicht mehr.','',1,{broken:true}),
+];
+const FILL = Array.from({length:120}, (_, i) => it('wissen','snippets',`Beispiel-Snippet ${i+1}`,'Platzhalter für viele Einträge',`snippets/beispiel/eintrag-${i+1}.ts`,'code',400+i,'Beispieltext mit Fundstelle.'));
+
+/* ---------------- Symbole ---------------- */
+const svg = (p, s=14) => `<svg width="${s}" height="${s}" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const KIND = {
+  doc:'<path d="M3.5 1.5h5l2.5 2.5v8.5h-7.5zM8.5 1.5V4H11M5.5 7h3M5.5 9.5h3"/>',
   code:'<path d="M5 4 2 7l3 3M9 4l3 3-3 3"/>',
   web:'<circle cx="7" cy="7" r="5.5"/><path d="M1.5 7h11M7 1.5c1.8 2.2 1.8 8.8 0 11M7 1.5c-1.8 2.2-1.8 8.8 0 11"/>',
-  image:'<rect x="1.5" y="2.5" width="11" height="9" rx="1"/><path d="m1.5 9.5 3-3 3 3 2-2 3 3"/><circle cx="9.5" cy="5.5" r=".8"/>',
-  text:'<path d="M2.5 3h9M2.5 6h9M2.5 9h6"/>',
-  binary:'<rect x="2" y="2.5" width="10" height="9" rx="1"/><path d="M4.5 5v4M7 5v4M9.5 5v4"/>',
+  image:'<rect x="1.5" y="2.5" width="11" height="9" rx="1"/><path d="m1.5 9.5 3-3 3 3 2-2 3 3"/>',
+  skill:'<path d="M7 1.5 8.4 5l3.6.3-2.8 2.3.9 3.6L7 9.3l-3.1 1.9.9-3.6L2 5.3 5.6 5z"/>',
+  command:'<rect x="1.5" y="2.5" width="11" height="9" rx="1"/><path d="M4.5 5.5 6.5 7l-2 1.5M8 9h2"/>',
+  style:'<path d="M3 4.5h8M3 7h8M3 9.5h5M1.5 2.5v9"/>',
 };
-const svg = (p, s=14) => `<svg width="${s}" height="${s}" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const I_SEARCH = svg('<circle cx="6" cy="6" r="4"/><path d="m9 9 3.5 3.5"/>');
-const I_BOOK = svg('<path d="M3 1.5h7.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 1 2 10.5v-8A1 1 0 0 1 3 1.5zM2 10.5A1.5 1.5 0 0 1 3.5 9h8M5 4.5h4"/>');
+const I_BOOK = svg(GROUPS[2].icon);
+const I_ARCH = svg('<path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3"/>');
+const I_SET = svg('<path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"/><circle cx="9" cy="4" r="1.5"/><circle cx="5" cy="10" r="1.5"/>');
 const I_OPEN = svg('<path d="M8 2h4v4M12 2 6.5 7.5M10.5 8.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/>');
 const I_FOLDER = svg('<path d="M1.5 3.5a1 1 0 0 1 1-1h3l1.5 1.5h4.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/>');
 const I_INFO = svg('<circle cx="7" cy="7" r="5.5"/><path d="M7 6.4v3.4"/><circle cx="7" cy="4.3" r=".5" fill="currentColor"/>', 13);
-ICON.skill = '<path d="M7 1.5 8.4 5l3.6.3-2.8 2.3.9 3.6L7 9.3l-3.1 1.9.9-3.6L2 5.3 5.6 5z"/>';
-ICON.command = '<rect x="1.5" y="2.5" width="11" height="9" rx="1"/><path d="M6.5 5 5 9M8 9h2"/>';
-ICON.style = '<path d="M3 4.5h8M3 7h8M3 9.5h5"/><path d="M1.5 2.5v9"/>';
-const KIND_LABEL = {markdown:'Markdown',code:'Code',web:'Web',image:'Bild',text:'Text',binary:'Binär',skill:'Skill',command:'Befehl',style:'Ausgabestil'};
 
 /* ---------------- Zustand ---------------- */
 const $ = id => document.getElementById(id);
 const root = document.documentElement, stage = $('stage');
-const S = { variant:'c', entry:'top', settingsMode:'today', state:'ready', width:'100%', theme:'auto', vaultDir:'D:\\Vault', vaultOn:true, view:'chat', tools:false,
-            open:false, q:'', shownQ:'', sel:0, hits:[], total:0, openErr:'', done:'', loading:false, detail:false, tip:false };
-const SEARCH_INFO = 'Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.';
+const S = { build:'lib', entry:'top', state:'ready', width:'100%', theme:'auto', tools:false, vaultDir:'D:\\Vault', vaultOn:true, view:'chat',
+  open:false, q:'', shownQ:'', scope:'all', selId:null, openErr:'', done:'', loading:false, detail:false, tip:false, justOn:false };
 const isOn = () => S.vaultDir !== null && S.vaultOn;
 const stageW = () => stage.getBoundingClientRect().width;
-const narrow = () => stageW() < 576;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const terms = s => s.toLowerCase().split(/\s+/).filter(Boolean);
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const wordStart = t => new RegExp('(^|[^\\p{L}\\p{N}])(' + reEsc(t) + ')', 'iu');
+const ws = t => new RegExp('(^|[^\\p{L}\\p{N}])(' + reEsc(t) + ')', 'iu');
 const fileName = p => p.split('/').pop();
+const groupOf = id => GROUPS.find(g => g.id === id);
+const dlgTitle = () => S.build === 'lib' ? 'Bibliothek' : 'Developer Vault';
 
-function search(query){
-  if (['empty','missing','searcherr'].includes(S.state)) return {hits:[], total:0};
-  const ts = terms(query), src = S.state === 'many' ? D.concat(FILL) : D;
-  let r = src.filter(d => { const hay = [d.title, d.tags, d.path.replace(/[/._-]/g,' '), d.desc, d.text].join(' '); return ts.every(t => wordStart(t).test(hay)); });
-  if (!ts.length) r = r.slice().sort((a, b) => b.mod - a.mod);
-  const total = S.state === 'many' && ts.length <= 1 ? Math.max(r.length, 212) : r.length;
-  return {hits:r.slice(0, 50), total};
+function source(){
+  if (['empty','missing','searcherr'].includes(S.state)) return [];
+  let src = S.state === 'many' ? D.concat(FILL) : D;
+  if (S.build === 'phase6') src = src.filter(d => d.g === 'wissen');
+  return src;
 }
-function snippet(d, ts, len=180){
+function matches(){
+  const ts = terms(S.shownQ);
+  const r = source().filter(d => { const hay = [d.title, d.desc, d.path.replace(/[/._-]/g, ' '), d.text, d.heading].join(' '); return ts.every(t => ws(t).test(hay)); });
+  return ts.length ? r.sort((a, b) => (ts.every(t => ws(t).test(b.title)) - ts.every(t => ws(t).test(a.title))) || b.mod - a.mod) : r;
+}
+const inScope = d => S.scope === 'all' || S.scope === d.g || S.scope === d.g + '/' + d.s;
+function hl(text){ let h = esc(text); terms(S.shownQ).forEach(t => { h = h.replace(new RegExp('(^|[^\\p{L}\\p{N}])(' + reEsc(esc(t)) + '[\\p{L}\\p{N}]*)', 'giu'), '$1<mark>$2</mark>'); }); return h; }
+function excerpt(d){
   if (!d.text) return '';
-  let start = 0;
-  if (ts.length){ const pos = ts.map(t => wordStart(t).exec(d.text)).filter(Boolean).map(m => m.index + m[1].length).sort((a,b) => a-b)[0]; if (pos !== undefined) start = Math.max(0, pos - 30); }
-  let html = esc(d.text.slice(start, start + len));
-  ts.forEach(t => { html = html.replace(new RegExp('(^|[^\\p{L}\\p{N}])(' + reEsc(esc(t)) + '[\\p{L}\\p{N}]*)', 'giu'), '$1<mark>$2</mark>'); });
-  return (start > 0 ? '… ' : '') + html + (start + len < d.text.length ? ' …' : '');
+  const ts = terms(S.shownQ); let start = 0;
+  if (ts.length) { const pos = ts.map(t => ws(t).exec(d.text)).filter(Boolean).map(m => m.index + m[1].length).sort((a, b) => a - b)[0]; if (pos !== undefined) start = Math.max(0, pos - 40); }
+  const part = d.text.slice(start, start + 320);
+  return (start > 0 ? '… ' : '') + hl(part) + (start + 320 < d.text.length ? ' …' : '');
 }
 function statusText(){
-  return ({scanning:'wird eingelesen …', missing:'Der Vault-Ordner wurde nicht gefunden.', empty:'bereit · 0 Dateien · 0 Artefakte · Stand 12:04', many:'bereit · 1840 Dateien · 212 Artefakte · Stand 12:04'})[S.state] ?? 'bereit · 41 Dateien · 16 Artefakte · Stand 12:04';
+  if (S.state === 'scanning') return 'wird eingelesen …';
+  if (S.state === 'missing') return 'Der Ordner wurde nicht gefunden.';
+  if (S.state === 'empty') return 'bereit · 0 Einträge · Stand 12:04';
+  return `bereit · ${S.state === 'many' ? 1840 : source().length} Einträge · Stand 12:04`;
 }
 
-/* ---------------- Sidebar und Hauptbereich ---------------- */
-const I_ARCH = svg('<path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3"/>');
-const I_SET = svg('<path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12"/><circle cx="9" cy="4" r="1.5"/><circle cx="5" cy="10" r="1.5"/>');
-const USAGE = `<button type="button" class="usage" title="Kontingent deines Abos (5-Stunden-Fenster) — Klick für Details (Beispielwert)">${svg('<path d="M2 10.5a5 5 0 1 1 10 0"/><path d="M7 10.5 9.2 6.8"/>')}<span class="usage__name">Kontingent</span><svg class="sev" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" role="img" aria-label="kritisch"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5"/><circle cx="7" cy="9.8" r=".5" fill="currentColor"/></svg><span class="usage__bar"><span class="usage__fill" style="width:86%"></span></span><span class="usage__label">86 %</span></button>`;
+/* ---------------- Sichtbare Einträge: Abschnitte je Untergruppe ---------------- */
+function sections(){
+  const inS = matches().filter(inScope), ts = terms(S.shownQ);
+  if (!ts.length && S.scope === 'all') return [{key:'recent', label:'Zuletzt geändert', items:inS.slice().sort((a, b) => b.mod - a.mod).slice(0, 10)}];
+  const out = [];
+  GROUPS.forEach(g => g.subs.forEach(([sid]) => {
+    const key = g.id + '/' + sid, items = inS.filter(d => d.g + '/' + d.s === key);
+    if (!items.length) return;
+    const limit = S.scope === 'all' ? 4 : Infinity;
+    out.push({key, g, label:SUBLABEL[key], items:items.slice(0, limit), more:items.length > limit ? items.length : 0});
+  }));
+  return out;
+}
+const visible = () => sections().flatMap(s => s.items);
+
+/* ---------------- Seitenleiste und Hauptbereich ---------------- */
+const USAGE = `<button type="button" class="usage" title="Kontingent deines Abos (5-Stunden-Fenster) — Beispielwert">${svg('<path d="M2 10.5a5 5 0 1 1 10 0"/><path d="M7 10.5 9.2 6.8"/>')}<span class="usage__name">Kontingent</span><svg class="sev" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" role="img" aria-label="kritisch"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5"/><circle cx="7" cy="9.8" r=".5" fill="currentColor"/></svg><span class="usage__bar"><span class="usage__fill" style="width:86%"></span></span><span class="usage__label">86 %</span></button>`;
 function renderSidebar(){
-  const top = $('actions'), on = isOn(), anim = S.justOn ? ' appear' : '', setSel = S.view === 'settings';
-  const cur = setSel ? 'aria-current="page"' : '';
-  top.querySelector('#vaultbtn')?.remove();
-  if (on && S.entry === 'top') top.insertAdjacentHTML('beforeend', `<button type="button" class="sidebar__new sidebar__find${anim}" id="vaultbtn" title="Vault durchsuchen">${I_SEARCH}<span class="sidebar__new-label">Vault durchsuchen</span><kbd>Ctrl K</kbd></button>`);
-  let foot = USAGE;
-  if (S.entry === 'icons') {
-    foot += `<div class="sidebar__icons">${on ? `<button type="button" class="sidebar__icon-btn${anim}" id="vaultbtn" title="Vault durchsuchen (Ctrl K)">${I_BOOK}<span>Vault</span></button>` : ''}
-      <button type="button" class="sidebar__icon-btn" title="Archiv">${I_ARCH}<span>Archiv</span></button>
-      <button type="button" class="sidebar__icon-btn${setSel ? ' sidebar__icon-btn--active' : ''}" id="setbtn" ${cur} title="Einstellungen">${I_SET}<span>Einstellungen</span></button></div>`;
-  } else if (S.entry === 'pair' && on) {
-    foot += `<div class="sidebar__pair"><button type="button" class="sidebar__foot-btn${anim}" id="vaultbtn" title="Vault durchsuchen (Ctrl K)">${I_BOOK}<span>Vault</span><kbd>Ctrl K</kbd></button><button type="button" class="sidebar__foot-btn">${I_ARCH}<span>Archiv</span></button></div>
-      <button type="button" class="sidebar__foot-btn${setSel ? ' sidebar__foot-btn--active' : ''}" id="setbtn" ${cur}>${I_SET}<span>Einstellungen</span></button>`;
-  } else {
-    foot += `<button type="button" class="sidebar__foot-btn">${I_ARCH}<span>Archiv</span></button>
-      <button type="button" class="sidebar__foot-btn${setSel ? ' sidebar__foot-btn--active' : ''}" id="setbtn" ${cur}>${I_SET}<span>Einstellungen</span></button>`;
-  }
-  $('footer').innerHTML = foot;
+  const on = isOn(), anim = S.justOn ? ' appear' : '', sel = S.view === 'settings', cur = sel ? 'aria-current="page"' : '', name = dlgTitle();
+  const short = S.build === 'lib' ? 'Bibliothek' : 'Vault';
+  $('actions').querySelector('#vaultbtn')?.remove();
+  if (on && S.entry === 'top') $('actions').insertAdjacentHTML('beforeend', `<button type="button" class="sidebar__new sidebar__find${anim}" id="vaultbtn">${I_SEARCH}<span class="sidebar__new-label">${short} durchsuchen</span><kbd>Ctrl K</kbd></button>`);
+  const setBtn = `<button type="button" class="foot-btn${sel ? ' foot-btn--active' : ''}" id="setbtn" ${cur}>${I_SET}<span>Einstellungen</span></button>`;
+  let f = USAGE;
+  if (S.entry === 'icons') f += `<div class="icons">${on ? `<button type="button" class="icon-btn${anim}" id="vaultbtn" title="${name} durchsuchen (Ctrl K)">${I_BOOK}<span>${short}</span></button>` : ''}<button type="button" class="icon-btn" title="Archiv">${I_ARCH}<span>Archiv</span></button><button type="button" class="icon-btn${sel ? ' icon-btn--active' : ''}" id="setbtn" ${cur} title="Einstellungen">${I_SET}<span>Einstellungen</span></button></div>`;
+  else if (S.entry === 'pair' && on) f += `<div class="pair"><button type="button" class="foot-btn${anim}" id="vaultbtn" title="${name} durchsuchen (Ctrl K)">${I_BOOK}<span>${short}</span></button><button type="button" class="foot-btn">${I_ARCH}<span>Archiv</span></button></div>${setBtn}`;
+  else f += `<button type="button" class="foot-btn">${I_ARCH}<span>Archiv</span></button>${setBtn}`;
+  $('footer').innerHTML = f;
   $('vaultbtn')?.addEventListener('click', openDialog);
   $('setbtn').addEventListener('click', () => { S.view = 'settings'; renderAll(); });
   S.justOn = false;
 }
 const info = t => `<button class="srow__info" type="button" title="${esc(t)}" aria-label="Erklärung: ${esc(t)}">${I_INFO}</button>`;
+const row = (label, tip, ctl) => `<div class="srow"><div class="srow__label">${label} ${info(tip)}</div><div class="srow__ctl">${ctl}</div></div>`;
 function renderMain(){
   const m = $('main');
-  if (S.view === 'settings'){
-    m.toggleAttribute('data-show-narrow', true); $('sidebar').toggleAttribute('data-hidden-narrow', true);
-    const statusRow = isOn() ? `<div class="srow"><div class="srow__label">Status <button class="srow__info" type="button" title="Stand des Suchindex.">${I_INFO}</button></div><div class="srow__ctl"><span>${esc(statusText())}</span><button class="sbtn" type="button">Neu einlesen</button></div></div>` : '';
-    const enabledRow = S.vaultDir !== null ? `<div class="srow"><div class="srow__label">Developer Vault <button class="srow__info" type="button" title="Schaltet Einlesen, Suche und die Vault-Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht, die Agenten sehen keine Vault-Werkzeuge.">${I_INFO}</button></div><div class="srow__ctl"><button type="button" role="switch" aria-checked="${S.vaultOn}" aria-label="Developer Vault" class="switch${S.vaultOn ? ' switch--on' : ''}" id="vswitch"><span class="switch__knob"></span></button><span class="srow__note">${S.vaultOn ? 'an · Knopf „Vault“ und Ctrl K in der Seitenleiste' : 'aus · kein Knopf, Ctrl K ohne Wirkung'}</span></div></div>` : '';
-    const dirCtl = S.vaultDir === null ? `<span class="srow__muted">Kein Vault-Ordner</span><button class="sbtn" type="button" id="vpick">Wählen …</button>` : `<span class="srow__mono" title="${esc(S.vaultDir)}">${esc(S.vaultDir)}</span><button class="sbtn" type="button" id="vpick">Ändern …</button><button class="sbtn" type="button" id="vremove">Entfernen</button>`;
-    m.innerHTML = `<div class="settings">
-      <div class="settings__head"><button class="sbtn" type="button" id="back" style="display:none">← Zurück</button><h2 class="settings__title">Einstellungen</h2></div>
-      <div class="settings__split">
-        <div class="settings__nav">${[['Allgemein','Konto · Darstellung'],['Agent','Betriebsart · Modelle · Modus'],['Skills & Umgebung','Skills · Umgebung · Vault'],['Skins','Figuren · Stil · Pakete'],['App','Version · Ordner · Rechte']].map(([l,s],i) => `<div class="settings__cat${i===2?' settings__cat--sel':''}">${l}<small>${s}</small></div>`).join('')}</div>
-        <div class="settings__body">${S.settingsMode === 'lib' ? `
-          <p class="settings__section">Bibliothek</p>
-          <div class="srow"><div class="srow__label">Bibliotheks-Ordner ${info('Ein Ordner für Skills, Befehle, Ausgabestile und den Developer Vault. Der Abgleich spiegelt Skills nach ~\\.claude; die Suche liest alles außer den Ausschlüssen.')}</div><div class="srow__ctl">${S.vaultDir === null ? dirCtl : `<span class="srow__mono" title="G:\\Meine Ablage\\U104_Agents">G:\\Meine Ablage\\U104_Agents</span><button class="sbtn" type="button">Ändern …</button><button class="sbtn" type="button" id="vremove">Entfernen</button>`}</div></div>
-          ${S.vaultDir === null ? '' : `
-          <div class="srow"><div class="srow__label">Abgleich der Skills ${info('Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md mit ~\\.claude.')}</div><div class="srow__ctl"><span class="ok">Gleich</span><button class="sbtn" type="button">Erneut prüfen</button></div></div>
-          <div class="srow"><div class="srow__label">Verknüpfungen ${info('Junctions von ~\\.claude in den Ordner.')}</div><div class="srow__ctl"><span class="ok">Alle 14 erreichbar</span><button class="sbtn" type="button">Erneut prüfen</button></div></div>
-          <div class="srow"><div class="srow__label">Suche ${info('Schaltet Einlesen, Suche und die Vault-Werkzeuge der Agenten ein.')}</div><div class="srow__ctl"><button type="button" role="switch" aria-checked="${S.vaultOn}" aria-label="Suche" class="switch${S.vaultOn ? ' switch--on' : ''}" id="vswitch"><span class="switch__knob"></span></button><span class="srow__note">${S.vaultOn ? 'an · Knopf „Vault“ und Ctrl K' : 'aus · kein Knopf, Ctrl K ohne Wirkung'}</span></div></div>
-          ${isOn() ? `<div class="srow"><div class="srow__label">Suchindex ${info('Stand des Suchindex.')}</div><div class="srow__ctl"><span>${esc(statusText())}</span><button class="sbtn" type="button">Neu einlesen</button></div></div>
-          <div class="srow"><div class="srow__label">Nicht durchsucht ${info('Aus .vaultignore im Ordner; dort änderbar.')}</div><div class="srow__ctl"><span class="srow__mono srow__muted">memory/ · hooks/ · *-log.md</span></div></div>` : ''}`}` : `
-          <p class="settings__section">Umgebung</p>
-          <div class="srow"><div class="srow__label">Verknüpfungen ${info('Junctions von ~\\.claude in den Master-Ordner.')}</div><div class="srow__ctl"><span class="ok">Alle 14 erreichbar</span><button class="sbtn" type="button">Erneut prüfen</button></div></div>
-          <div class="srow"><div class="srow__label">Master-Ordner ${info('Ordner mit Skills, Befehlen und Ausgabestilen.')}</div><div class="srow__ctl"><span class="srow__mono">G:\\Meine Ablage\\U104_Agents</span><button class="sbtn" type="button">Ändern …</button><button class="sbtn" type="button">Entfernen</button></div></div>
-          <div class="srow"><div class="srow__label">Abgleich ${info('Vergleicht Master-Ordner und ~\\.claude.')}</div><div class="srow__ctl"><span class="ok">Gleich</span><button class="sbtn" type="button">Erneut prüfen</button></div></div>
-          <p class="settings__section">Developer Vault</p>
-          <div class="srow"><div class="srow__label">Vault-Ordner ${info('Ordner deiner Entwicklerbibliothek.')}</div><div class="srow__ctl">${dirCtl}</div></div>
-          ${enabledRow}${statusRow}`}
-        </div>
-      </div></div>`;
-    if (narrow()) { const b = $('back'); b.style.display = ''; b.style.marginRight = '10px'; }
-    $('back').addEventListener('click', () => { S.view = 'chat'; renderAll(); });
-    $('vswitch')?.addEventListener('click', () => { S.vaultOn = !S.vaultOn; S.justOn = S.vaultOn; renderAll(); });
-    $('vpick')?.addEventListener('click', () => { if (S.vaultDir === null){ S.vaultDir = 'D:\\Vault'; S.vaultOn = false; renderAll(); } });
-    $('vremove')?.addEventListener('click', () => { S.vaultDir = null; renderAll(); });
+  if (S.view !== 'settings') {
+    m.removeAttribute('data-show-narrow'); $('sidebar').removeAttribute('data-hidden-narrow');
+    m.innerHTML = `<div class="chat__head">Vault-Suche entwerfen <span>· Agenten-Verwalter</span></div><div class="chat__body"><div class="msg-user">Wo lag nochmal das Snippet für den Ladebalken?</div><div class="msg-agent">Im Vault unter snippets/ui/ladebalken/progress.tsx.</div></div><div class="chat__input">Nachricht an den Agenten …</div>`;
     return;
   }
-  m.removeAttribute('data-show-narrow'); $('sidebar').removeAttribute('data-hidden-narrow');
-  m.innerHTML = `<div class="chat__head">Vault-Suche entwerfen <span>· Agenten-Verwalter</span></div>
-    <div class="chat__body"><div class="msg-user">Wo lag nochmal das Snippet für den Ladebalken?</div><div class="msg-agent">Im Vault unter snippets/ui/ladebalken/progress.tsx — Komponente mit Restzeit.</div></div>
-    <div class="chat__input">Nachricht an den Agenten …</div>`;
+  m.setAttribute('data-show-narrow', ''); $('sidebar').setAttribute('data-hidden-narrow', '');
+  const sw = lbl => `<button type="button" role="switch" aria-checked="${S.vaultOn}" aria-label="${lbl}" class="switch${S.vaultOn ? ' switch--on' : ''}" id="vswitch"><span class="switch__knob"></span></button><span class="note">${S.vaultOn ? 'an · Suche in der Seitenleiste und Ctrl K' : 'aus · kein Einstieg, Ctrl K ohne Wirkung'}</span>`;
+  const dir = p => S.vaultDir === null ? `<span class="muted">Kein Ordner</span><button class="sbtn" type="button" id="vpick">Wählen …</button>` : `<span class="srow__mono">${esc(p)}</span><button class="sbtn" type="button">Ändern …</button><button class="sbtn" type="button" id="vremove">Entfernen</button>`;
+  const idx = row('Suchindex', 'Stand des Suchindex.', `<span>${esc(statusText())}</span><button class="sbtn" type="button">Neu einlesen</button>`);
+  const body = S.build === 'lib'
+    ? `<p class="settings__section">Bibliothek</p>${row('Ordner', 'Ein Ordner für Anweisungen, Skills und Wissen.', dir('G:\\Ablage\\Agenten (Beispiel)'))}
+       ${S.vaultDir === null ? '' : row('Abgleich der Skills', 'Vergleicht mit dem Benutzerordner.', '<span class="ok">Gleich</span><button class="sbtn" type="button">Erneut prüfen</button>') + row('Verknüpfungen', 'Verknüpfungen in den Ordner.', '<span class="ok">Alle 14 erreichbar</span><button class="sbtn" type="button">Erneut prüfen</button>') + row('Suche', 'Schaltet Einlesen, Suche und die Werkzeuge der Agenten ein.', sw('Suche')) + (isOn() ? idx + row('Nicht durchsucht', 'Aus .vaultignore im Ordner.', '<span class="srow__mono muted">memory/ · hooks/ · Logs</span>') : '')}`
+    : `<p class="settings__section">Umgebung</p>${row('Verknüpfungen', 'Verknüpfungen in den Master-Ordner.', '<span class="ok">Alle 14 erreichbar</span><button class="sbtn" type="button">Erneut prüfen</button>')}${row('Master-Ordner', 'Skills, Befehle, Ausgabestile.', '<span class="srow__mono">G:\\Ablage\\Agenten (Beispiel)</span><button class="sbtn" type="button">Ändern …</button><button class="sbtn" type="button">Entfernen</button>')}${row('Abgleich', 'Vergleicht mit dem Benutzerordner.', '<span class="ok">Gleich</span><button class="sbtn" type="button">Erneut prüfen</button>')}
+       <p class="settings__section">Developer Vault</p>${row('Vault-Ordner', 'Ordner deiner Entwicklerbibliothek.', dir(S.vaultDir ?? ''))}${S.vaultDir === null ? '' : row('Developer Vault', 'Schaltet Einlesen, Suche und die Vault-Werkzeuge ein.', sw('Developer Vault'))}${isOn() ? row('Status', 'Stand des Suchindex.', `<span>${esc(statusText())}</span><button class="sbtn" type="button">Neu einlesen</button>`) : ''}`;
+  m.innerHTML = `<div class="settings"><div class="settings__head"><button class="sbtn" type="button" id="back" ${stageW() < 576 ? '' : 'hidden'}>← Zurück</button>Einstellungen</div><div class="settings__split"><div class="settings__nav">${[['Allgemein','Konto · Darstellung'],['Agent','Betriebsart · Modelle · Modus'],['Skills & Umgebung','Skills · Umgebung · Vault'],['Skins','Figuren · Stil · Pakete'],['App','Version · Ordner · Rechte']].map(([l,s],i) => `<div class="settings__cat${i===2?' settings__cat--sel':''}">${l}<small>${s}</small></div>`).join('')}</div><div class="settings__body">${body}</div></div></div>`;
+  $('back').addEventListener('click', () => { S.view = 'chat'; renderAll(); });
+  $('vswitch')?.addEventListener('click', () => { S.vaultOn = !S.vaultOn; S.justOn = S.vaultOn; renderAll(); });
+  $('vpick')?.addEventListener('click', () => { S.vaultDir = 'D:\\Vault'; S.vaultOn = false; renderAll(); });
+  $('vremove')?.addEventListener('click', () => { S.vaultDir = null; renderAll(); });
 }
 
 /* ---------------- Dialog ---------------- */
 function openDialog(){
   if (!isOn()) return;
-  S.open = true; S.openErr = ''; S.done = ''; S.detail = false; S.tip = false;
-  S.loading = S.state === 'loading';
-  run(S.q, true);
-  const inp = $('q'); inp.focus(); inp.select();   // letzte Suche bleibt, Tippen ersetzt sie
-  if (S.loading) setTimeout(() => { S.loading = false; if (S.open) run(S.q); }, 1600);
+  Object.assign(S, {open:true, openErr:'', done:'', detail:false, tip:false, loading:S.state === 'loading', shownQ:S.q});
+  renderDialog(true);
+  const q = $('q'); q.focus(); q.select();
+  if (S.loading) setTimeout(() => { S.loading = false; if (S.open) renderDialog(); }, 1600);
 }
 function closeDialog(){ S.open = false; $('scrim').hidden = true; $('scrim').innerHTML = ''; $('vaultbtn')?.focus(); }
-function run(query, keepSel){ const r = search(query); S.hits = r.hits; S.total = r.total; S.shownQ = query; if (!keepSel) S.sel = 0; S.sel = Math.min(S.sel, Math.max(0, S.hits.length - 1)); renderDialog(); }
+function ensureSel(){ const v = visible(); if (!v.find(d => d.id === S.selId)) S.selId = v[0]?.id ?? null; }
+const groupsPresent = () => GROUPS.filter(g => source().some(d => d.g === g.id));
 
-function headHTML(){
-  const warn = S.state === 'missing';
-  return `<header class="dlg__head">
-    <div class="dlg__titlerow"><h3 class="dlg__title" id="vs-title">Developer Vault</h3><span class="dlg__status${warn ? ' dlg__status--warn' : ''}">${esc(statusText())}</span><button class="dlg__close" type="button" id="close" aria-label="Schließen">✕</button></div>
-    <div class="search">
-      <div class="search__field">${'<span class="search__icon">' + I_SEARCH + '</span>'}
-        <input class="search__input" id="q" type="search" role="combobox" aria-expanded="true" aria-controls="hits" aria-autocomplete="list" aria-label="Vault durchsuchen" placeholder="Titel, Tag, Dateiname oder Text" autocomplete="off" value="${esc(S.q)}">
-        <button class="search__clear" type="button" id="clear" aria-label="Suche leeren" ${S.q ? '' : 'hidden'}>✕</button>
-      </div>
-      <button class="search__info" type="button" id="info" aria-label="Suchhilfe" aria-expanded="${S.tip}" aria-controls="tip">${I_INFO}</button>
-      <div class="search__tip" id="tip" role="note" ${S.tip ? '' : 'hidden'}>${SEARCH_INFO}</div>
-    </div></header>`;
+function navHTML(){
+  const all = matches(), ts = terms(S.shownQ).length, cnt = f => all.filter(f).length;
+  return `<button type="button" class="nav__all" data-scope="all" aria-current="${S.scope === 'all'}">${ts ? 'Alle Treffer' : 'Überblick'}<span class="nav__count">${all.length}</span></button>`
+    + groupsPresent().map(g => {
+      const subs = g.subs.filter(([sid]) => (ts ? all : source()).some(d => d.g === g.id && d.s === sid));
+      return `<div class="nav__group" style="--gc:var(${g.color})"><button type="button" class="nav__ghead" data-scope="${g.id}" aria-current="${S.scope === g.id}">${svg(g.icon, 13)}${g.label}<span class="nav__count">${cnt(d => d.g === g.id)}</span></button>
+        <div class="nav__subs">${subs.map(([sid]) => { const k = g.id + '/' + sid, c = cnt(d => d.g + '/' + d.s === k); return `<button type="button" class="nav__item${ts && !c ? ' nav__item--empty' : ''}" data-scope="${k}" aria-current="${S.scope === k}">${esc(SUBLABEL[k])}<span class="nav__count">${c}</span></button>`; }).join('')}</div></div>`;
+    }).join('');
 }
-function errorHTML(){
-  let e = S.openErr;
-  if (S.state === 'searcherr') e = 'Die Suche ist fehlgeschlagen: Die Index-Datei ist nicht lesbar. In den Einstellungen „Neu einlesen“ wählen.';
-  if (S.state === 'missing') e = 'Der Vault-Ordner D:\\Vault ist nicht erreichbar. Laufwerk verbinden oder in den Einstellungen einen anderen Ordner wählen.';
-  return e ? `<p class="dlg__error" role="alert"><b>Fehler:</b> ${esc(e)}</p>` : '';
+function chipsHTML(){
+  const all = matches(), top = S.scope.split('/')[0];
+  return `<button type="button" class="chip" data-scope="all" aria-pressed="${S.scope === 'all'}">Alle <span class="nav__count">${all.length}</span></button>` + groupsPresent().map(g => `<button type="button" class="chip" style="--gc:var(${g.color})" data-scope="${g.id}" aria-pressed="${top === g.id}">${svg(g.icon, 13)}${g.label} <span class="nav__count">${all.filter(d => d.g === g.id).length}</span></button>`).join('');
 }
-function emptyHTML(){
-  if (S.loading) return '<div class="skel"></div><div class="skel"></div><div class="skel"></div><p class="dlg__empty" role="status">Lädt …</p>';
+function listHTML(){
+  if (S.loading) return '<div class="skel"></div><div class="skel"></div><div class="skel"></div><p class="empty" role="status">Lädt …</p>';
   if (S.state === 'searcherr' || S.state === 'missing') return '';
-  if (!S.hits.length) return terms(S.shownQ).length
-    ? '<p class="dlg__empty"><strong>Nichts gefunden.</strong>Weniger oder kürzere Wörter versuchen — Wortanfänge genügen.</p>'
-    : '<p class="dlg__empty"><strong>Der Vault ist noch leer.</strong>Dateien in den Vault-Ordner legen; in den Einstellungen „Grundgerüst anlegen“.</p>';
-  return null;
+  const secs = sections();
+  if (!secs.length || !secs[0].items.length) return terms(S.shownQ).length
+    ? `<p class="empty"><strong>Nichts gefunden${S.scope === 'all' ? '' : ' in dieser Gruppe'}.</strong>${S.scope === 'all' ? 'Weniger oder kürzere Wörter versuchen — Wortanfänge genügen.' : '<button class="sec__more" type="button" data-scope="all">In allen Gruppen suchen</button>'}</p>`
+    : `<p class="empty"><strong>Noch nichts abgelegt.</strong>Dateien in den Ordner legen; in den Einstellungen „Grundgerüst anlegen“.</p>`;
+  const sub = S.scope.includes('/');
+  return secs.map(s => {
+    const g = s.g;
+    const crumb = s.key === 'recent' ? 'Zuletzt geändert' : sub ? '' : `<span class="sec__crumb">${g.label} ›</span> ${esc(s.label)}`;
+    const head = crumb ? `<div class="sec__head" style="--gc:var(${g ? g.color : '--fg-muted'})">${g ? svg(g.icon, 12) : ''}${crumb}${s.more ? `<button class="sec__more" type="button" data-scope="${s.key}">alle ${s.more} zeigen</button>` : ''}</div>` : '';
+    return `<div class="sec">${head}<ul class="rows" role="group" aria-label="${esc(s.label)}">${s.items.map(d => `<li class="row${d.id === S.selId ? ' row--sel' : ''}" role="option" id="hit-${d.id}" data-id="${d.id}" aria-selected="${d.id === S.selId}">${svg(KIND[d.kind])}<span class="row__title" title="${esc(d.title)}">${hl(d.title)}</span><span class="row__desc">${hl(d.desc)}</span></li>`).join('')}</ul></div>`;
+  }).join('');
 }
-function footHTML(){
-  const count = S.hits.length || S.total ? `${S.hits.length} von ${S.total} Treffern` : '';
-  const scan = S.state === 'scanning' ? ' · Index wird noch aufgebaut' : '';
-  const done = S.done ? ` <span class="dlg__done">${esc(S.done)}</span>` : '';
-  const keys = `<span class="keys"><kbd>↑</kbd> <kbd>↓</kbd> wählen · <kbd>Enter</kbd> öffnen · <kbd>Ctrl Enter</kbd> im Ordner · <kbd>Esc</kbd> schließen</span>`;
-  return `<footer class="dlg__foot"><span aria-live="polite">${count}${scan}${done}</span>${keys}</footer>`;
+function previewImg(){ return `<svg class="pv__img" viewBox="0 0 320 170" role="img" aria-label="Beispielbild"><rect width="320" height="170" fill="#e4e6f1"/><circle cx="95" cy="90" r="32" fill="#c4572f" opacity=".75"/><circle cx="170" cy="86" r="26" fill="#3d6fa8" opacity=".7"/><circle cx="235" cy="94" r="28" fill="#16803c" opacity=".6"/><text x="160" y="158" font-size="12" text-anchor="middle" fill="#555" font-family="Segoe UI, sans-serif">Beispielbild (Platzhalter)</text></svg>`; }
+function previewHTML(){
+  const d = visible().find(x => x.id === S.selId);
+  if (!d) return '<p class="pv__none">Nichts gewählt.</p>';
+  const g = groupOf(d.g), ts = terms(S.shownQ).length, sl = SUBLABEL[d.g + '/' + d.s];
+  const where = d.heading ? `Abschnitt „${esc(d.heading)}“ · Zeile ${d.line}` : '';
+  const body = d.preview ? previewImg()
+    : d.text ? `<p class="pv__label">${ts ? 'Fundstelle' : 'Anfang'}</p>${where ? `<p class="pv__where">${where}</p>` : ''}<p class="pv__text">${excerpt(d)}</p>` : '';
+  return `<button class="pv__back" type="button" id="pvback">← ${esc(sl)}</button>
+    <div class="pv__head"><p class="pv__crumb" style="--gc:var(${g.color})">${svg(g.icon, 12)}${g.label} › ${esc(sl)}</p><h4 class="pv__title">${esc(d.title)}</h4><p class="pv__desc">${esc(d.desc)}</p>
+      <div class="pv__acts"><button class="btn btn--primary" type="button" data-act="open">${I_OPEN}Öffnen</button><button class="btn" type="button" data-act="reveal">${I_FOLDER}Im Ordner zeigen</button></div></div>
+    <div class="pv__body">${body}<p class="pv__label">Datei</p><p class="pv__file">${esc(d.path)}</p></div>`;
 }
-const recentLabel = () => terms(S.shownQ).length ? '' : '<p class="dlg__group">Zuletzt geändert</p>';
-const actBtns = (cls='') => `<button class="btn btn--primary ${cls}" type="button" data-act="open">${I_OPEN}Öffnen</button><button class="btn ${cls}" type="button" data-act="reveal">${I_FOLDER}Im Ordner zeigen</button>`;
-const opt = (i, cls, inner) => `<li class="${cls}${i === S.sel ? ' ' + cls + '--sel' : ''}" role="option" id="hit-${i}" data-i="${i}" aria-selected="${i === S.sel}">${inner}</li>`;
-
-function bodyA(){
-  const ts = terms(S.shownQ), e = emptyHTML();
-  const rows = e ?? recentLabel() + `<ul class="list" id="hits" role="listbox" aria-label="Treffer">${S.hits.map((d, i) => opt(i, 'ha', `
-    <div class="ha__l1"><span class="ha__title" title="${esc(d.title)}">${esc(d.title)}</span><span class="kind">${KIND_LABEL[d.kind]}</span><span class="ha__acts">${actBtns()}</span></div>
-    <p class="path" title="${esc(d.path)}"><bdi>${esc(d.path)}</bdi></p>
-    ${d.desc ? `<p class="ha__desc">${esc(d.desc)}</p>` : ''}
-    ${d.text ? `<p class="snip">${snippet(d, ts)}</p>` : ''}
-    <div class="ha__acts--narrow">${actBtns()}</div>`)).join('')}</ul>`;
-  return `<div class="dlg va" role="dialog" aria-modal="true" aria-labelledby="vs-title" id="dlg">${headHTML()}${errorHTML()}<div class="dlg__scroll" id="scroll">${rows}</div>${footHTML()}</div>`;
-}
-function bodyB(){
-  const ts = terms(S.shownQ), e = emptyHTML(), d = S.hits[S.sel];
-  const rows = e ?? recentLabel() + `<ul class="list" id="hits" role="listbox" aria-label="Treffer">${S.hits.map((h, i) => opt(i, 'hb', `${svg(ICON[h.kind])}<span class="hb__title" title="${esc(h.title)}">${esc(h.title)}</span><span class="path"><bdi>${esc(h.path)}</bdi></span><span class="kind">${KIND_LABEL[h.kind]}</span>`)).join('')}</ul>`;
-  const detail = !e && d ? `<div class="pb" aria-live="polite">
-      <p class="pb__desc">${esc(d.desc || fileName(d.path))}</p>
-      <p class="snip">${d.text ? snippet(d, ts, 200) : '<span class="path"><bdi>' + esc(d.path) + '</bdi></span>'}</p>
-      <div class="pb__acts">${actBtns()}</div></div>` : '';
-  return `<div class="dlg vb" role="dialog" aria-modal="true" aria-labelledby="vs-title" id="dlg">${headHTML()}${errorHTML()}<div class="dlg__scroll" id="scroll">${rows}</div>${detail}${footHTML()}</div>`;
-}
-function previewImg(){
-  return `<svg class="pv__img" viewBox="0 0 320 180" role="img" aria-label="Beispielbild"><rect width="320" height="180" fill="#e4e6f1"/><circle cx="90" cy="100" r="34" fill="#c4572f" opacity=".75"/><circle cx="170" cy="96" r="28" fill="#3d6fa8" opacity=".7"/><circle cx="240" cy="104" r="30" fill="#16803c" opacity=".6"/><text x="160" y="166" font-size="12" text-anchor="middle" fill="#555" font-family="Segoe UI, sans-serif">Beispielbild (Platzhalter)</text></svg>`;
-}
-function bodyC(){
-  const ts = terms(S.shownQ), e = emptyHTML(), d = S.hits[S.sel];
-  const list = e ?? recentLabel() + `<ul class="list" id="hits" role="listbox" aria-label="Treffer">${S.hits.map((h, i) => opt(i, 'hc', `${svg(ICON[h.kind])}<span class="hc__title" title="${esc(h.title)}">${esc(h.title)}</span><span class="path"><bdi>${esc(h.path)}</bdi></span>`)).join('')}</ul>`;
-  let pv = '<p class="pv__none">Kein Treffer gewählt.</p>';
-  if (!e && d) {
-    const where = d.heading ? `Abschnitt „${esc(d.heading)}“ · Zeile ${d.line}` : (d.text ? `Zeile ${d.line}` : '');
-    const body = d.kind === 'image' && d.preview ? previewImg() + '<p class="pv__imgnote">Vorschau aus dem Feld preview</p>'
-      : d.text ? `<p class="pv__label">Fundstelle</p>${where ? `<p class="pv__where">${where}</p>` : ''}<p class="pv__snip">${snippet(d, ts, 320)}</p>`
-      : '<p class="srow__muted">Kein Textinhalt — nur Titel und Dateiname sind durchsuchbar.</p>';
-    pv = `<button class="pv__back" type="button" id="pvback">← Treffer</button>
-      <div class="pv__head"><h4 class="pv__title">${esc(d.title)}</h4>
-        <div class="pv__meta"><span class="kind">${KIND_LABEL[d.kind]}</span><span class="path" title="${esc(d.path)}"><bdi>${esc(d.path)}</bdi></span></div>
-        <div class="pv__acts">${actBtns()}</div></div>
-      <div class="pv__body">${d.desc ? `<p class="pv__desc">${esc(d.desc)}</p>` : ''}${body}</div>`;
-  }
-  return `<div class="dlg vc" role="dialog" aria-modal="true" aria-labelledby="vs-title" id="dlg" ${S.detail ? 'data-detail' : ''}>${headHTML()}${errorHTML()}
-    <div class="vc__split"><div class="vc__list" id="scroll">${list}</div><section class="pv" aria-label="Vorschau">${pv}</section></div>${footHTML()}</div>`;
-}
-
-function renderDialog(){
+function renderDialog(first){
   if (!S.open) return;
-  const sc = $('scrim'), hadFocus = document.activeElement?.id === 'q', caret = $('q')?.selectionStart;
-  const oldScroll = $('scroll')?.scrollTop ?? 0;
+  ensureSel();
+  const sc = $('scrim'), focusId = document.activeElement?.id, caret = $('q')?.selectionStart, ls = document.querySelector('.list')?.scrollTop ?? 0;
+  const err = S.state === 'searcherr' ? 'Die Suche ist fehlgeschlagen: Die Index-Datei ist nicht lesbar. In den Einstellungen „Neu einlesen“ wählen.'
+    : S.state === 'missing' ? 'Der Ordner D:\\Vault ist nicht erreichbar. Laufwerk verbinden oder in den Einstellungen einen anderen Ordner wählen.' : S.openErr;
+  const nv = visible().length, total = matches().filter(inScope).length;
   sc.hidden = false;
-  sc.className = 'scrim' + (S.variant === 'b' ? ' scrim--top' : '');
-  sc.innerHTML = S.variant === 'a' ? bodyA() : S.variant === 'b' ? bodyB() : bodyC();
-  const inp = $('q');
-  if (hadFocus || !narrow() || !S.detail) { inp.focus(); if (caret != null) inp.setSelectionRange(caret, caret); }
-  if (S.hits.length) inp.setAttribute('aria-activedescendant', 'hit-' + S.sel);
-  const s = $('scroll'); if (s) s.scrollTop = oldScroll;
-  $('hit-' + S.sel)?.scrollIntoView({block:'nearest'});
+  sc.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="vs-title" id="dlg" ${S.detail ? 'data-detail' : ''}>
+    <header class="dlg__head"><h3 class="dlg__title" id="vs-title">${dlgTitle()}</h3>
+      <div class="search"><span class="search__icon">${I_SEARCH}</span><input class="search__input" id="q" type="search" role="combobox" aria-expanded="true" aria-controls="list" aria-autocomplete="list" aria-label="${dlgTitle()} durchsuchen" placeholder="${S.build === 'lib' ? 'Anweisungen, Skills und Wissen durchsuchen' : 'Snippets, Notizen, Vorlagen durchsuchen'}" autocomplete="off" value="${esc(S.q)}">
+        <button class="search__clear" type="button" id="clear" aria-label="Suche leeren" ${S.q ? '' : 'hidden'}>✕</button>
+        <button class="search__info" type="button" id="info" aria-label="Suchhilfe" aria-expanded="${S.tip}">${I_INFO}</button>
+        <div class="search__tip" ${S.tip ? '' : 'hidden'}>Sucht in Titeln, Beschreibungen, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.</div></div>
+      <span class="dlg__status${S.state === 'missing' ? ' dlg__status--warn' : ''}">${esc(statusText())}</span>
+      <button class="dlg__close" type="button" id="close" aria-label="Schließen">✕</button></header>
+    ${err ? `<p class="dlg__error" role="alert"><b>Fehler:</b> ${esc(err)}</p>` : ''}
+    <div class="chips" role="toolbar" aria-label="Gruppen">${chipsHTML()}</div>
+    <div class="body"><nav class="nav" aria-label="Gruppen">${navHTML()}</nav><div class="list" id="list" role="listbox" aria-label="Einträge">${listHTML()}</div><section class="pv" aria-label="Vorschau">${previewHTML()}</section></div>
+    <footer class="dlg__foot"><span aria-live="polite">${S.loading || err ? '' : `${nv} von ${total}${S.state === 'many' && S.scope === 'all' ? ' (Index: 1840)' : ''} ${terms(S.shownQ).length ? 'Treffern' : 'Einträgen'}`}${S.state === 'scanning' ? ' · Index wird noch aufgebaut' : ''}</span>${S.done ? `<span class="done">${esc(S.done)}</span>` : ''}
+      <span class="keys"><kbd>↑</kbd> <kbd>↓</kbd> wählen · <kbd>Enter</kbd> öffnen · <kbd>Ctrl Enter</kbd> im Ordner · <kbd>Ctrl 0–3</kbd> Gruppe · <kbd>Esc</kbd> schließen</span></footer></div>`;
+  const q = $('q');
+  if (first || focusId === 'q' || !focusId) { q.focus(); if (caret != null) q.setSelectionRange(caret, caret); }
+  else document.getElementById(focusId)?.focus();
+  if (S.selId) q.setAttribute('aria-activedescendant', 'hit-' + S.selId);
+  const l = document.querySelector('.list'); if (l) l.scrollTop = ls;
+  $('hit-' + S.selId)?.scrollIntoView({block:'nearest'});
   bindDialog(); renderTools();
 }
+let timer;
 function bindDialog(){
-  const inp = $('q'); let timer;
-  inp.addEventListener('input', () => {
-    S.q = inp.value; S.openErr = ''; S.done = ''; S.detail = false; $('clear').hidden = !S.q; clearTimeout(timer);
-    if (!terms(S.q).length) { run(S.q); return; }      // leeres Feld ohne Verzögerung
-    timer = setTimeout(() => run(S.q), 250);           // sonst entprellt
-    renderTools();
+  const q = $('q');
+  q.addEventListener('input', () => {
+    S.q = q.value; S.openErr = ''; S.done = ''; S.detail = false; clearTimeout(timer);
+    if (!terms(S.q).length) { S.shownQ = S.q; renderDialog(); return; }
+    timer = setTimeout(() => { S.shownQ = S.q; S.selId = null; renderDialog(); }, 250);
+    $('clear').hidden = !S.q; renderTools();
   });
-  $('clear').addEventListener('click', () => { S.q = ''; run(''); $('q').focus(); });
-  $('info').addEventListener('click', () => { S.tip = !S.tip; $('tip').hidden = !S.tip; $('info').setAttribute('aria-expanded', String(S.tip)); });
-  $('close').addEventListener('click', closeDialog);
-  $('pvback')?.addEventListener('click', () => { S.detail = false; renderDialog(); });
-  $('dlg').addEventListener('keydown', e => {
-    if (e.key === 'Escape') { e.preventDefault(); if (S.tip) { S.tip = false; $('tip').hidden = true; } else closeDialog(); }
+  $('clear').onclick = () => { S.q = S.shownQ = ''; renderDialog(); $('q').focus(); };
+  $('info').onclick = () => { S.tip = !S.tip; renderDialog(); };
+  $('close').onclick = closeDialog;
+  if ($('pvback')) $('pvback').onclick = () => { S.detail = false; renderDialog(); };
+  const dlg = $('dlg');
+  dlg.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); if (S.tip) { S.tip = false; renderDialog(); } else if (S.detail) { S.detail = false; renderDialog(); } else closeDialog(); }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); move(e.key === 'ArrowDown' ? 1 : -1); }
-    else if (e.key === 'Enter' && e.target.id === 'q') { e.preventDefault(); act(S.sel, e.ctrlKey); }
+    else if (e.key === 'Enter' && e.target.id === 'q') { e.preventDefault(); act(e.ctrlKey); }
+    else if (e.ctrlKey && /^[0-3]$/.test(e.key)) { e.preventDefault(); const gs = groupsPresent(); S.scope = e.key === '0' ? 'all' : (gs[+e.key - 1]?.id ?? S.scope); S.selId = null; S.detail = false; renderDialog(); $('q').focus(); }
   });
-  $('dlg').addEventListener('click', e => {
-    const b = e.target.closest('[data-act]');
-    if (b) { const li = b.closest('[data-i]'); act(li ? +li.dataset.i : S.sel, b.dataset.act === 'reveal'); return; }
-    const li = e.target.closest('[data-i]'); if (!li) return;
-    const i = +li.dataset.i;
-    if (S.variant === 'c') { S.sel = i; S.detail = stageW() < 768; renderDialog(); return; }       // C: Klick wählt, Vorschau zeigt
-    if (narrow()) { S.sel = i; renderDialog(); return; }                                          // Handy: Tippen wählt
-    if (S.sel === i || S.variant === 'b') act(i, false); else { S.sel = i; renderDialog(); }      // A: erster Klick wählt, zweiter öffnet
+  dlg.addEventListener('click', e => {
+    const sc = e.target.closest('[data-scope]'); if (sc) { S.scope = sc.dataset.scope; S.selId = null; S.detail = false; renderDialog(); $('q').focus(); return; }
+    const b = e.target.closest('[data-act]'); if (b) { act(b.dataset.act === 'reveal'); return; }
+    const r = e.target.closest('[data-id]'); if (!r) return;
+    S.selId = +r.dataset.id; S.done = ''; S.detail = stageW() <= 1180; renderDialog(); $('q').focus();
   });
-  $('dlg').addEventListener('dblclick', e => { const li = e.target.closest('[data-i]'); if (li && S.variant === 'c') act(+li.dataset.i, false); });
+  dlg.addEventListener('dblclick', e => { const r = e.target.closest('[data-id]'); if (r) { S.selId = +r.dataset.id; act(false); } });
   $('scrim').onmousedown = e => { if (e.target === $('scrim')) closeDialog(); };
 }
-function move(n){ if (!S.hits.length) return; S.sel = (S.sel + n + S.hits.length) % S.hits.length; S.done = ''; renderDialog(); }
-function act(i, reveal){
-  const d = S.hits[i]; if (!d) return; S.sel = i;
-  if (d.broken) { S.openErr = `„${fileName(d.path)}“ ließ sich nicht öffnen: Die Datei existiert nicht mehr. In den Einstellungen „Neu einlesen“ wählen.`; S.done = ''; renderDialog(); return; }
-  S.openErr = ''; S.done = (reveal ? 'Im Ordner gezeigt: ' : 'Geöffnet: ') + fileName(d.path);
-  if (S.variant === 'b' && !reveal) { closeDialog(); flash(S.done); return; }   // Palette: schließt nach dem Öffnen
+function move(k){ const v = visible(); if (!v.length) return; const i = v.findIndex(d => d.id === S.selId); S.selId = v[(i + k + v.length) % v.length].id; S.done = ''; renderDialog(); }
+function act(reveal){
+  const d = visible().find(x => x.id === S.selId); if (!d) return;
+  if (d.broken) { S.openErr = `„${fileName(d.path)}“ ließ sich nicht öffnen: Die Datei existiert nicht mehr. In den Einstellungen „Neu einlesen“ wählen.`; S.done = ''; }
+  else { S.openErr = ''; S.done = (reveal ? 'Im Ordner gezeigt: ' : 'Geöffnet: ') + fileName(d.path); }
   renderDialog();
 }
-function flash(text){ const t = document.createElement('div'); t.textContent = '✓ ' + text; t.setAttribute('role','status'); Object.assign(t.style, {position:'absolute', left:'50%', bottom:'16px', transform:'translateX(-50%)', padding:'6px 12px', border:'1px solid var(--border)', borderRadius:'8px', background:'var(--bg-popover)', boxShadow:'var(--shadow)', fontSize:'12px', zIndex:50}); stage.appendChild(t); setTimeout(() => t.remove(), 2200); }
 
 /* ---------------- Entwurfsleiste ---------------- */
-const CMP = {
-  a:{name:'A · Liste', plus:['Nah am Archiv-Dialog, sofort vertraut','Alles zu einem Treffer in der Liste sichtbar'], minus:['Hohe Zeilen: etwa fünf Treffer auf einen Blick','Erster Klick wählt, zweiter öffnet']},
-  b:{name:'B · Palette', plus:['Schnellster Weg per Tastatur, zehn Treffer und mehr auf einen Blick','Schließt nach dem Öffnen — wie Ctrl P'], minus:['Ausschnitt nur für den gewählten Treffer (Leiste unten)','Weniger zum Stöbern']},
-  c:{name:'C · Vorschau', plus:['Lesen ohne Öffnen: Fundstelle, Abschnitt, Zeile, Bild','Knöpfe stehen fest in der Vorschau, die Liste springt nie'], minus:['Breit (62 rem); unter 768 px zweistufig: Liste, dann Vorschau','Ausschnitt in der Liste fehlt, er steht rechts']},
-};
 function renderCmp(){
-  $('cmp').innerHTML = Object.entries(CMP).map(([k, v]) => `<h4>${v.name}${k === S.variant ? ' (angezeigt)' : ''}${k === 'c' ? ' · Empfehlung' : ''}</h4><ul>${v.plus.map(p => '<li>+ ' + p + '</li>').join('')}${v.minus.map(p => '<li>− ' + p + '</li>').join('')}</ul>`).join('')
-    + '<h4>Einstieg · 1 Suchzeile oben (Empfehlung)</h4><ul><li>+ Fuß bleibt unverändert: Kontingent, Archiv, Einstellungen</li><li>+ Suche steht, wo man sie sucht, neben „Neues Vorhaben“</li><li>− Die Vorhabenliste wird oben 36 px kürzer</li></ul>'
-    + '<h4>Einstieg · 2 Paar im Fuß</h4><ul><li>+ Fuß bleibt dreizeilig; Vault und Archiv (beides Suchen) teilen eine Zeile</li><li>− Halbe Breite, eng neben Ctrl K</li></ul>'
-    + '<h4>Einstieg · 3 Symbolleiste</h4><ul><li>+ Spart eine Zeile gegenüber heute; mit Vault gleich hoch wie heute ohne</li><li>− Bestehende Knöpfe Archiv und Einstellungen werden umgebaut; Beschriftung 11 px</li></ul>'
-    + '<p>Alle drei: nur bei Vault-Ordner und Schalter an; sonst wie heute.</p>';
+  $('cmp').innerHTML = `<h4>Aufbau</h4><ul><li>Links Gruppen: Anweisungen, Skills, Wissen — darunter Untergruppen mit Anzahl</li><li>Mitte: ruhige Liste, je Eintrag Titel und eine Zeile Beschreibung; Abschnitte je Untergruppe</li><li>Rechts: Vorschau mit Ort, Fundstelle, Öffnen, Im Ordner zeigen</li><li>Ohne Suche: „Überblick“ zeigt zuletzt Geändertes; mit Suche: Treffer je Untergruppe, je vier, „alle n zeigen“</li></ul>
+  <h4>Ausbau</h4><ul><li>Phase 6: nur Wissen (Vault-Ordner)</li><li>Bibliothek (Folgeplan): zusätzlich Anweisungen und Skills aus dem Master-Ordner</li></ul>
+  <h4>Einstieg</h4><ul><li>1 Suchzeile oben (Empfehlung): Fuß bleibt wie heute</li><li>2 Paar im Fuß: Fuß bleibt dreizeilig</li><li>3 Symbolleiste: Fuß zweizeilig, Archiv und Einstellungen umgebaut</li><li>Alle nur bei Ordner und Schalter an</li></ul>
+  <h4>Daten</h4><ul><li>Skills, Befehle, Ausgabestile: echte Namen (Auswahl), Beschreibungen gekürzt</li><li>Wissen, Zahlen, Kontingent: Beispiele</li></ul>`;
 }
 const DSEL = {
-  state:{label:'Zustand', opts:[['ready','Bereit'],['many','Viele Treffer'],['scanning','Wird eingelesen'],['empty','Vault leer'],['loading','Erste Suche lädt'],['searcherr','Suche fehlgeschlagen'],['missing','Ordner fehlt']]},
+  state:{label:'Zustand', opts:[['ready','Bereit'],['many','Viele Einträge'],['scanning','Wird eingelesen'],['empty','Leer'],['loading','Erste Suche lädt'],['searcherr','Suche fehlgeschlagen'],['missing','Ordner fehlt']]},
   width:{label:'Breite', opts:[['100%','Voll'],['390px','390 Handy'],['860px','860 Tablet'],['1366px','1366 Laptop']]},
   theme:{label:'Thema', opts:[['auto','System'],['light','Hell'],['dark','Dunkel']]},
 };
@@ -664,8 +608,8 @@ function renderDsel(){
     const k = el.dataset.key, c = DSEL[k], cur = c.opts.find(o => o[0] === S[k]);
     el.innerHTML = `<button type="button" class="dsel__btn" aria-haspopup="listbox" aria-expanded="false">${c.label}: ${cur[1]}</button><ul class="dsel__menu" role="listbox" hidden>${c.opts.map(o => `<li role="option" data-val="${o[0]}" aria-selected="${o[0] === S[k]}">${o[1]}</li>`).join('')}</ul>`;
     const btn = el.querySelector('button'), menu = el.querySelector('ul');
-    btn.onclick = () => { const o = menu.hidden; document.querySelectorAll('.dsel__menu').forEach(m => m.hidden = true); menu.hidden = !o; btn.setAttribute('aria-expanded', String(o)); };
-    menu.onclick = e => { const li = e.target.closest('li'); if (!li) return; set(k, li.dataset.val); };
+    btn.onclick = () => { const was = menu.hidden; document.querySelectorAll('.dsel__menu').forEach(m => m.hidden = true); menu.hidden = !was; btn.setAttribute('aria-expanded', String(was)); };
+    menu.onclick = e => { const li = e.target.closest('li'); if (li) set(k, li.dataset.val); };
   });
 }
 document.addEventListener('click', e => { if (!e.target.closest('.dsel')) document.querySelectorAll('.dsel__menu').forEach(m => m.hidden = true); });
@@ -673,36 +617,34 @@ function set(k, v){
   S[k] = v;
   if (k === 'width') stage.style.width = v;
   if (k === 'theme') { if (v === 'auto') root.removeAttribute('data-theme'); else root.dataset.theme = v; }
-  if (k === 'state') { S.openErr = ''; S.done = ''; if (S.open) { S.loading = v === 'loading'; run(S.q); if (S.loading) setTimeout(() => { S.loading = false; if (S.open) run(S.q); }, 1600); } }
+  if (k === 'state') { S.openErr = ''; S.loading = v === 'loading' && S.open; if (S.loading) setTimeout(() => { S.loading = false; if (S.open) renderDialog(); }, 1600); }
   renderAll();
 }
 function renderTools(){
   $('tools').hidden = !S.tools;
-  if (S.tools) $('tools').innerHTML = `<b>Gleiche Suche für Agenten:</b> vault_search { "query": ${esc(JSON.stringify(S.q.trim()))}, "limit": 8 } · <b>Inhalt lesen:</b> vault_get { "path": "${esc(S.hits[S.sel]?.path ?? '…')}" } · <b>Öffnen und Im Ordner zeigen</b> nur im Dialog, durch den Klick des Nutzers.`;
+  if (!S.tools) return;
+  const sel = visible().find(d => d.id === S.selId), under = S.scope.includes('/') ? `, "under": "${S.scope.split('/')[1]}"` : '';
+  $('tools').innerHTML = `<b>Gleiche Suche für Agenten:</b> vault_search { "query": ${esc(JSON.stringify(S.q.trim()))}${esc(under)}, "limit": 8 } · <b>Inhalt:</b> vault_get { "path": "${esc(sel?.path ?? '…')}" } · <b>Öffnen und Im Ordner zeigen</b> nur im Dialog, durch den Klick des Nutzers.`;
 }
-function tier(){ const w = Math.round(stageW()); const t = w < 576 ? 'xs (Handy)' : w < 768 ? 'sm' : w < 992 ? 'md (Tablet)' : w < 1200 ? 'lg' : w < 1408 ? 'xl (Laptop)' : 'xxl'; $('tier').textContent = `${w} px · ${t}`; }
+function tier(){ const w = Math.round(stageW()); const t = w < 576 ? 'xs Handy' : w < 768 ? 'sm' : w < 992 ? 'md Tablet' : w < 1200 ? 'lg' : w < 1408 ? 'xl Laptop' : 'xxl'; $('tier').textContent = `${w} px · ${t}`; }
 function renderAll(){
-  document.querySelectorAll('#variant button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.variant)));
+  document.querySelectorAll('#stagesel button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === S.build)));
   document.querySelectorAll('#entry button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.e === S.entry)));
-  document.querySelectorAll('#smode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === S.settingsMode)));
   $('toolsbtn').setAttribute('aria-pressed', String(S.tools));
   renderDsel(); renderCmp(); renderSidebar(); renderMain(); tier();
   if (S.open) { if (isOn()) renderDialog(); else closeDialog(); }
   renderTools();
 }
-$('variant').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { S.variant = b.dataset.v; S.detail = false; renderAll(); } });
+$('stagesel').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { S.build = b.dataset.s; S.scope = 'all'; S.selId = null; renderAll(); } });
 $('entry').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { S.entry = b.dataset.e; renderAll(); } });
-$('smode').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { S.settingsMode = b.dataset.s; S.view = 'settings'; renderAll(); } });
 $('toolsbtn').addEventListener('click', () => { S.tools = !S.tools; renderAll(); });
 $('cmpbtn').addEventListener('click', () => { const p = $('cmp'); p.hidden = !p.hidden; $('cmpbtn').setAttribute('aria-expanded', String(!p.hidden)); });
-document.addEventListener('keydown', e => {
-  if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); if (!S.open) openDialog(); else $('q').select(); }   // ohne Vault: nichts
-});
+document.addEventListener('keydown', e => { if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); if (!S.open) openDialog(); else $('q').select(); } });
 window.addEventListener('resize', () => { tier(); if (S.open) renderDialog(); });
 
-/* Adresse: #v=a|b|c&entry=top&state=…&w=390&dark&off&nodir&settings&open&q=lade&sel=2&detail&act=err */
+/* Adresse: #build=phase6&entry=pair&state=…&w=390&dark&off&nodir&settings&open&q=lade&scope=skills&sel=3&detail&act=err&cmp */
 const h = Object.fromEntries(location.hash.slice(1).split('&').filter(Boolean).map(p => { const [k, v] = p.split('='); return [k, v === undefined ? true : decodeURIComponent(v)]; }));
-if (h.v) S.variant = h.v;
+if (h.build) S.build = h.build;
 if (h.entry) S.entry = h.entry;
 if (h.state) S.state = h.state;
 if (h.w) { S.width = h.w + 'px'; stage.style.width = S.width; }
@@ -711,10 +653,10 @@ if (h.light) { S.theme = 'light'; root.dataset.theme = 'light'; }
 if (h.off) S.vaultOn = false;
 if (h.nodir) S.vaultDir = null;
 if (h.settings) S.view = 'settings';
-if (h.lib) S.settingsMode = 'lib';
 if (h.q) S.q = h.q;
+if (h.scope) S.scope = h.scope;
 renderAll();
-if (h.open) { openDialog(); if (h.sel) { S.sel = +h.sel; } if (h.detail) S.detail = true; if (h.act === 'err') { S.sel = S.hits.findIndex(d => d.broken); act(S.sel, false); } else renderDialog(); }
+if (h.open) { openDialog(); if (h.sel) S.selId = +h.sel; if (h.detail) S.detail = true; if (h.act === 'err') { S.scope = 'wissen/skripte'; S.selId = D.find(d => d.broken).id; act(false); } else renderDialog(); }
 if (h.cmp) $('cmpbtn').click();
 </script>
 </body>
