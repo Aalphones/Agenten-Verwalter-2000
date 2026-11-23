@@ -14,6 +14,13 @@ pub async fn vault_status(app: tauri::AppHandle) -> Result<VaultStatus, CommandE
     Ok(vault::status(&app))
 }
 
+/// Gleicht den Index im Hintergrund mit dem Ordner ab; kehrt sofort zurück.
+#[tauri::command]
+pub async fn vault_rescan(app: tauri::AppHandle) -> Result<(), CommandError> {
+    vault::spawn_scan(&app);
+    Ok(())
+}
+
 /// Schreibt das Grundgerüst in den leeren Vault-Ordner.
 #[tauri::command]
 pub async fn vault_create_skeleton(app: tauri::AppHandle) -> Result<VaultStatus, CommandError> {

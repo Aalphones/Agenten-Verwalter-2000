@@ -1,23 +1,44 @@
 //! Developer Vault: Ordner mit der Entwicklerbibliothek des Benutzers (ADR 068). Dieses Modul
-//! kennt bisher Einstellung, Status und Grundgerüst; der Index kommt in einer späteren Phase.
+//! kennt Einstellung, Status, Grundgerüst, die Index-Datei und den Abgleich im Hintergrund.
+pub mod index;
 pub mod model;
+pub mod scan;
 pub mod skeleton;
 
 use std::fs;
+use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
+use std::thread;
 
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::db::Database;
+use crate::error::CommandError;
 use crate::filesystem::workspace::{data_dir, home_dir};
 use crate::settings;
+use index::VaultIndex;
 use model::{VaultState, VaultStatus};
 
 pub const CHANGED_EVENT: &str = "vault://changed";
 
-/// Hält später die Verbindung zur Index-Datei und den laufenden Abgleich.
-pub struct VaultService {}
+const INDEX_DIR: &str = "vault";
+const INDEX_FILE: &str = "index.db";
+/// Älter als das, zieht eine Suche den Index vorher nach.
+const FRESH_MS: i64 = 30_000;
+
+/// Hält die Verbindung zur Index-Datei und den Stand des laufenden Abgleichs.
+pub struct VaultService {
+    /// Kanonischer Vault-Ordner, zu dem der Index geöffnet ist, und der Index.
+    index: Mutex<Option<(PathBuf, Arc<VaultIndex>)>>,
+    scanning: AtomicBool,
+    /// Eine Anforderung kam während eines Laufs: danach folgt genau ein weiterer.
+    again: AtomicBool,
+    /// Ende des letzten erfolgreichen Abgleichs in ms seit Epoche, 0 = noch keiner.
+    last_scan_ms: AtomicI64,
+    scan_error: Mutex<Option<String>>,
+}
 
 impl Default for VaultService {
     fn default() -> Self {
@@ -27,12 +48,75 @@ impl Default for VaultService {
 
 impl VaultService {
     pub fn new() -> VaultService {
-        VaultService {}
+        VaultService {
+            index: Mutex::new(None),
+            scanning: AtomicBool::new(false),
+            again: AtomicBool::new(false),
+            last_scan_ms: AtomicI64::new(0),
+            scan_error: Mutex::new(None),
+        }
     }
 }
 
-/// Stand des Vault aus den Einstellungen und dem Ordner; Zähler und Abgleichzeit füllt erst der Index.
+/// Stand des Vault: Einstellungen und Ordner, dazu Zähler, Abgleichzeit und Lauf aus dem Index.
 pub fn status(app: &AppHandle) -> VaultStatus {
+    let base: VaultStatus = folder_status(app);
+    if base.state != VaultState::Ready {
+        return base;
+    }
+    let service = app.state::<VaultService>();
+    let (files, artifacts, skipped): (u32, u32, u32) = counts(&service, base.dir.as_deref());
+    let last_scan_ms: i64 = service.last_scan_ms.load(Ordering::SeqCst);
+    let scan_error: Option<String> = service
+        .scan_error
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone();
+    let (state, message): (VaultState, Option<String>) = if service.scanning.load(Ordering::SeqCst)
+    {
+        (VaultState::Scanning, None)
+    } else if let Some(message) = scan_error {
+        (VaultState::Error, Some(message))
+    } else {
+        (VaultState::Ready, None)
+    };
+    VaultStatus {
+        state,
+        files,
+        artifacts,
+        skipped,
+        scanned_at: (last_scan_ms > 0).then_some(last_scan_ms),
+        message,
+        ..base
+    }
+}
+
+/// Zähler aus dem Index, wenn er schon zu diesem Ordner geöffnet ist; sonst Nullen.
+fn counts(service: &VaultService, dir: Option<&str>) -> (u32, u32, u32) {
+    let Some(resolved) = dir.and_then(|text: &str| fs::canonicalize(text).ok()) else {
+        return (0, 0, 0);
+    };
+    let opened: Option<Arc<VaultIndex>> = service
+        .index
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .as_ref()
+        .filter(|(opened_dir, _)| *opened_dir == resolved)
+        .map(|(_, index)| Arc::clone(index));
+    let Some(index) = opened else {
+        return (0, 0, 0);
+    };
+    match index.with(|connection| index::counts(connection)) {
+        Ok(counts) => (counts.files, counts.artifacts, counts.skipped),
+        Err(error) => {
+            eprintln!("Vault-Zähler nicht gelesen: {error}");
+            (0, 0, 0)
+        }
+    }
+}
+
+/// Stand allein aus Einstellungen und Ordner; `Ready` heißt hier „Ordner brauchbar“.
+fn folder_status(app: &AppHandle) -> VaultStatus {
     let database: Arc<Database> = Arc::clone(&app.state::<Arc<Database>>());
     let loaded = match settings::load(&database) {
         Ok(loaded) => loaded,
@@ -56,6 +140,115 @@ pub fn status(app: &AppHandle) -> VaultStatus {
             ..base(Some(dir_text), VaultState::Ready)
         },
     }
+}
+
+/// Öffnet bei Bedarf die Index-Datei zum aktuellen Vault-Ordner.
+pub fn index(app: &AppHandle) -> Result<Arc<VaultIndex>, CommandError> {
+    let base: VaultStatus = folder_status(app);
+    let Some(dir) = base.dir.filter(|_| base.state == VaultState::Ready) else {
+        return Err(CommandError::Internal(
+            "Der Vault ist nicht bereit.".to_owned(),
+        ));
+    };
+    open_index(app, Path::new(&dir))
+}
+
+fn open_index(app: &AppHandle, root: &Path) -> Result<Arc<VaultIndex>, CommandError> {
+    let service = app.state::<VaultService>();
+    let resolved: PathBuf = fs::canonicalize(root)?;
+    let mut guard = service.index.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some((opened_dir, opened)) = guard.as_ref()
+        && *opened_dir == resolved
+    {
+        return Ok(Arc::clone(opened));
+    }
+    // Erst schließen: Windows löscht eine Datei mit offener Verbindung nicht.
+    *guard = None;
+    let file: PathBuf = data_dir(app)?.join(INDEX_DIR).join(INDEX_FILE);
+    let opened: Arc<VaultIndex> = Arc::new(VaultIndex::open(&file, &resolved)?);
+    service.last_scan_ms.store(0, Ordering::SeqCst);
+    *guard = Some((resolved, Arc::clone(&opened)));
+    Ok(opened)
+}
+
+/// Startet einen Abgleich im Hintergrund. Läuft schon einer, folgt genau ein weiterer danach.
+/// Bei `Off`, `Missing` und `Error` des Ordners passiert nichts; der Index bleibt liegen.
+pub fn spawn_scan(app: &AppHandle) {
+    if folder_status(app).state != VaultState::Ready {
+        return;
+    }
+    let service = app.state::<VaultService>();
+    if service.scanning.swap(true, Ordering::SeqCst) {
+        service.again.store(true, Ordering::SeqCst);
+        return;
+    }
+    announce(app);
+    let worker_app: AppHandle = app.clone();
+    let spawned = thread::Builder::new()
+        .name("vault-scan".to_owned())
+        .spawn(move || scan_loop(&worker_app));
+    if let Err(error) = spawned {
+        eprintln!("Vault-Abgleich nicht gestartet: {error}");
+        service.scanning.store(false, Ordering::SeqCst);
+    }
+}
+
+/// Zieht den Index nach, wenn der letzte Abgleich mehr als 30 s her ist und keiner läuft.
+pub fn ensure_fresh(app: &AppHandle) {
+    let service = app.state::<VaultService>();
+    if service.scanning.load(Ordering::SeqCst) {
+        return;
+    }
+    let age_ms: i64 = now_ms() - service.last_scan_ms.load(Ordering::SeqCst);
+    if age_ms > FRESH_MS {
+        spawn_scan(app);
+    }
+}
+
+fn scan_loop(app: &AppHandle) {
+    let service = app.state::<VaultService>();
+    loop {
+        scan_once(app, &service);
+        if service.again.swap(false, Ordering::SeqCst) {
+            continue;
+        }
+        service.scanning.store(false, Ordering::SeqCst);
+        // Eine Anforderung zwischen dem Prüfen und dem Freigeben darf nicht verloren gehen.
+        if service.again.swap(false, Ordering::SeqCst)
+            && !service.scanning.swap(true, Ordering::SeqCst)
+        {
+            continue;
+        }
+        break;
+    }
+    announce(app);
+}
+
+fn scan_once(app: &AppHandle, service: &VaultService) {
+    let outcome = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(), CommandError> {
+        let index: Arc<VaultIndex> = index(app)?;
+        let Some(dir) = folder_status(app).dir else {
+            return Ok(());
+        };
+        scan::run(Path::new(&dir), &index)?;
+        Ok(())
+    }));
+    let failure: Option<String> = match outcome {
+        Ok(Ok(())) => None,
+        Ok(Err(error)) => Some(format!("Index nicht lesbar: {error}")),
+        Err(_) => Some("Index nicht lesbar: der Abgleich ist abgestürzt".to_owned()),
+    };
+    if failure.is_none() {
+        service.last_scan_ms.store(now_ms(), Ordering::SeqCst);
+    }
+    *service
+        .scan_error
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner) = failure;
+}
+
+fn now_ms() -> i64 {
+    chrono::Utc::now().timestamp_millis()
 }
 
 /// Sendet den aktuellen Stand an die Oberfläche.

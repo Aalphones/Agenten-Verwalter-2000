@@ -131,6 +131,8 @@ pub fn run() {
                 }
                 Err(error) => eprintln!("MCP-Zugang nicht gestartet: {error}"),
             }
+            // Im Hintergrund: der Start wartet nie auf den Abgleich.
+            vault::spawn_scan(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -277,6 +279,7 @@ pub fn run() {
             commands::environment::environment_mirror,
             commands::vault::vault_status,
             commands::vault::vault_create_skeleton,
+            commands::vault::vault_rescan,
             commands::codex::codex_models,
             commands::codex_account::codex_account_load,
             commands::codex_account::codex_account_login,

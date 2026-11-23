@@ -17,6 +17,12 @@ export function createVaultSkeleton(): Promise<VaultStatus> {
   return invoke<VaultStatus>('vault_create_skeleton');
 }
 
+/** Stößt den Abgleich im Hintergrund an und kehrt sofort zurück; den Verlauf meldet `onVaultChanged`.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} */
+export async function rescanVault(): Promise<void> {
+  await invoke('vault_rescan');
+}
+
 /** Meldet jeden Zustandswechsel des Vault. */
 export function onVaultChanged(callback: (status: VaultStatus) => void): Promise<UnlistenFn> {
   return listen<VaultStatus>(VAULT_CHANGED_EVENT, (event: Event<VaultStatus>) => {

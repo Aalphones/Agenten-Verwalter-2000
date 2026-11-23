@@ -40,6 +40,7 @@ pub async fn settings_update(
     }
     if changes_vault {
         vault::announce(&app);
+        vault::spawn_scan(&app);
     }
     // Das Kontingent gehört zum Abo der Betriebsart; der Stand der alten gilt nicht weiter.
     if changes_operating_mode

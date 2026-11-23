@@ -4,7 +4,7 @@ import { SettingRow } from '@/features/settings/SettingRow';
 import { useVaultStatus } from '@/features/vault/useVaultStatus';
 import { statusText } from '@/features/vault/vaultTexts';
 import { commandErrorText } from '@/lib/errors';
-import { createVaultSkeleton } from '@/lib/vault';
+import { createVaultSkeleton, rescanVault } from '@/lib/vault';
 import './VaultRows.css';
 
 export function VaultStatusRow(): ReactElement {
@@ -25,6 +25,16 @@ export function VaultStatusRow(): ReactElement {
       });
   }
 
+  function rescan(): void {
+    setSkeletonError(null);
+    rescanVault().catch((reason: unknown) => {
+      console.error('Vault nicht neu eingelesen', reason);
+      setSkeletonError(`Neu einlesen nicht möglich: ${commandErrorText(reason)}`);
+    });
+  }
+
+  const isScanning: boolean = status?.state === 'scanning';
+  const canRescan: boolean = status?.state === 'ready' || isScanning;
   const canCreateSkeleton: boolean =
     status !== null && status.isEmptyDir && status.state === 'ready';
   return (
@@ -32,6 +42,16 @@ export function VaultStatusRow(): ReactElement {
       <div className="vault-row__stack">
         <div className="vault-row__line">
           <span className="vault-row__text">{status === null ? '…' : statusText(status)}</span>
+          {canRescan && (
+            <button
+              type="button"
+              className="settings-view__button"
+              disabled={isScanning}
+              onClick={rescan}
+            >
+              Neu einlesen
+            </button>
+          )}
           {canCreateSkeleton && (
             <button
               type="button"
