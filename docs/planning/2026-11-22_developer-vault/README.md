@@ -126,3 +126,5 @@ pub fn search(app: &AppHandle, query: &VaultQuery) -> Result<VaultSearchResult, 
 ## Deviations from plan
 
 ## Follow-ups
+
+- **Bibliothek: Master-Ordner und Vault zusammenlegen** (Entscheidung des Benutzers 2026-11-23, eigener Plan direkt nach Phase 6): Der Master-Ordner wird zugleich zum Vault; Skills, Befehle und Ausgabestile sind als eigene Arten durchsuchbar; ein gemeinsamer Einstellungsabschnitt „Bibliothek“ (Ordner, Abgleich, Verknüpfungen, Suche, Suchindex); `memory/`, `hooks/` und Logs sind per `.vaultignore` ausgeschlossen. Dafür ist eine Änderung an ADR 068 nötig (dort: „liest nur den eingestellten Ordner“). Der Wissens-Vault bleibt getrennt. Skizze: Einstellungen „Bibliothek“ in [artifacts/vault-suchdialog.html](artifacts/vault-suchdialog.html).

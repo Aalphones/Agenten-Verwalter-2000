@@ -1,38 +1,29 @@
-# Entwurf: Vault-Suchdialog
+# Entwurf: Vault-Suche – drei Vorschläge
 
-**Status:** zur Abnahme vorgelegt (Phase 6, Station „Entwurf“). Grundlage der Station „Umsetzung“.
+**Status:** zur Abnahme vorgelegt (Phase 6, Station „Entwurf“, zweite Runde). Bei der Abnahme wählt der Benutzer einen Vorschlag und einen Einstieg; danach werden die AK in `phase-6-suchdialog.md` auf diesen Vorschlag festgelegt.
 
 ## Ansehen
 
-- [vault-suchdialog.html](vault-suchdialog.html) direkt im Browser öffnen; Einzeldatei, ohne Abhängigkeiten.
-- Entwurfsleiste oben (gehört nicht zur App): Zustand, Breite (390, 860, 1366, Voll), Thema, Agenten-Werkzeug, ⓘ Aufgabe.
-- Dialog öffnen: Knopf „Vault“ in der Sidebar, `Strg+K` oder „Dialog öffnen“.
-- Farben sind die Hex-Werte der Tokens aus `src/styles/theme.css` (Stand 2026-11-23). Datum, Treffer und Zahlen sind erfunden.
+- [vault-suchdialog.html](vault-suchdialog.html) im Browser öffnen; Einzeldatei.
+- Entwurfsleiste oben (nicht Teil der App): Vorschlag A/B/C, Einstieg Fußleiste/Oben, Einstellungen Heute/Bibliothek, Zustand, Breite, Thema, Agenten-Werkzeug, ⓘ Vergleich mit Stärken und Schwächen.
+- Seitenleiste, Einstellungszeilen und Schalter nach `src/app/Sidebar.css`, `SettingRow.css`, `Switch.css`; Farben aus `src/styles/theme.css` (Stand 2026-11-23). Treffer erfunden; Skill-, Befehls- und Stil-Namen echt.
 
-## Was der Entwurf zeigt
+## Vorschläge
 
-| Bereich | Zeigt |
-|---|---|
-| Sidebar | Knopf „Vault“ links neben „Archiv“ im Fuß; Einstellungen bleibt darunter |
-| Dialog | Titel + Statuszeile, Suchfeld mit ⓘ, Trefferliste, Fußzeile mit Zähler und Tastenhilfe |
-| Suche | entprellt 250 ms, leeres Feld sofort, Gruppe „Zuletzt geändert“ |
-| Trefferzeile | Titel + Art, Pfad (Monospace, von links gekürzt), Beschreibung, Ausschnitt mit Markierung |
-| Bedienung | ↑/↓, Enter öffnet, Strg+Enter zeigt im Ordner, Esc schließt; gewählte Zeile trägt „Öffnen“ und „Im Ordner zeigen“ |
-| Rückmeldung | Fußzeile nennt „Geöffnet: …“ bzw. „Im Ordner gezeigt: …“; der Dialog bleibt offen |
-| Zustände | bereit, viele Treffer (50 von 212), wird eingelesen, Vault leer, Erste Suche lädt, Suche fehlgeschlagen, Ordner fehlt, nichts gefunden, Öffnen fehlgeschlagen (Eintrag „Alte Notiz“) |
-| Breite | unter 576 px Blatt von unten, Ziele 44 px, Tippen wählt statt zu öffnen |
-| Agenten | Schalter blendet den gleichen Aufruf als `vault_search` ein |
+| Vorschlag | Form | Klick | Nach dem Öffnen |
+|---|---|---|---|
+| A · Liste | Archiv-Muster, Treffer mit Pfad, Beschreibung, Ausschnitt; Knöpfe in der Titelzeile der gewählten Zeile | erster wählt, zweiter öffnet | bleibt offen, Fußzeile bestätigt |
+| B · Palette | oben verankert, ein Treffer je Zeile; Beschreibung, Ausschnitt und Knöpfe in einer festen Leiste unten | öffnet | schließt, kurze Bestätigung |
+| C · Vorschau (Empfehlung) | Liste links, Vorschau rechts: Fundstelle mit Abschnitt und Zeile, Bild, Knöpfe fest oben | wählt; Doppelklick öffnet | bleibt offen |
 
-## Abweichungen von den AK
+Gemeinsam: Suchfeld mit Lupe, Leeren-Knopf und ⓘ; letzte Suche bleibt beim erneuten Öffnen markiert stehen; ↑/↓, Enter, Ctrl Enter (im Ordner), Esc; das Layout springt beim Wählen nicht; unter 576 px Blatt von unten mit 44-px-Zielen, C unter 768 px zweistufig.
 
-- Gruppenzeile „Zuletzt geändert“ bei leerem Feld.
-- Strg+Enter = „Im Ordner zeigen“; Tastenhilfe in der Fußzeile (nur ab 576 px).
-- Unter 576 px wählt Tippen nur, „Öffnen“ öffnet (sonst wäre „Im Ordner zeigen“ nicht erreichbar).
-- Der Dialog bleibt nach dem Öffnen offen; die Fußzeile bestätigt.
-- Fußzeile nennt zusätzlich „Index wird noch aufgebaut“, wenn `isScanning`.
-- Breite 40 rem statt 36 rem (Archiv), wegen Pfad und Ausschnitt.
+## Einstieg und Sichtbarkeit
 
-## Grenzen
+- Fußleiste: „Vault“ über „Archiv“, gleiche Bauart, `Ctrl K` rechts wie `Ctrl N` bei „Neues Vorhaben“.
+- Oben: Suchzeile „Vault durchsuchen“ unter „Neues Vorhaben“.
+- Beide nur bei gesetztem Ordner und eingeschaltetem Schalter; sonst kein Knopf, `Ctrl K` ohne Wirkung. Im Dummy unter Einstellungen schaltbar.
 
-- Das Suchfeld nutzt wie das Archiv den Rahmen `--color-border` (1,6 : 1 gegen den Grund); Bestandsstil, nicht geändert.
-- Markierungen stehen nur im Ausschnitt; Fundstellen in Titel oder Beschreibung bleiben unmarkiert.
+## Bibliothek (Folgeplan)
+
+Entscheidung 2026-11-23: Master-Ordner und Developer Vault werden ein Ordner („Bibliothek“); Umbau als eigener Plan nach Phase 6. Der Dummy zeigt dafür die Arten Skill, Befehl, Ausgabestil in der Suche und unter „Einstellungen: Bibliothek“ den gemeinsamen Abschnitt (Ordner, Abgleich der Skills, Verknüpfungen, Suche, Suchindex, Nicht durchsucht: `memory/`, `hooks/`, Logs). Phase 6 selbst ändert die Einstellungen nicht.
