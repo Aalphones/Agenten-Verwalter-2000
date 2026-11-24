@@ -4,7 +4,7 @@
 
 Der Master-Ordner (Skills, Befehle, Ausgabestile, `CLAUDE.md`) und der Developer Vault werden ein Ordner: die **Bibliothek**. Der Benutzer gibt nur noch diesen einen Ordner an. Der Verwalter gleicht daraus wie bisher Skills, Befehle, Ausgabestile und `CLAUDE.md` mit `~\.claude` ab und durchsucht zugleich Anweisungen (samt Gedächtnis: die Dateien direkt in `memory/`), Skills und das Wissen im Unterordner `_vault/`. Alles andere im Ordner (`memory/_archiv/`, `hooks/`, Logs, `settings.json`, `codex/`, `continue/`, `setup.cmd` …) liest der Verwalter nie — eine feste Erlaubnisliste; die Ausschlussdatei `.vaultignore` dient nur noch für einzelne Dateien innerhalb der Liste. Ein Ordner ohne Skills, Befehle, Ausgabestile und `CLAUDE.md` bleibt ein reiner Vault wie bisher.
 
-Entscheidungen und Begründung: [ADR 069](../../decisions/069-bibliothek.md) (ändert ADR 038 und ADR 068). Entwurf: [artifacts/README.md](artifacts/README.md).
+Entscheidungen und Begründung: [ADR 069](../../../decisions/069-bibliothek.md) (ändert ADR 038 und ADR 068). Entwurf: [artifacts/README.md](artifacts/README.md).
 
 ## Overview
 

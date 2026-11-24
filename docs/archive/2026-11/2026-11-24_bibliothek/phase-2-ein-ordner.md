@@ -7,7 +7,7 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 ## Kontext (vor dem Start lesen)
 
 - Plan-README: „Kontrakt“ (Abschnitte Einstellung, Status, Grundgerüst).
-- [ADR 069](../../decisions/069-bibliothek.md), [ADR 038](../../decisions/038-umgebung.md).
+- [ADR 069](../../../decisions/069-bibliothek.md), [ADR 038](../../../decisions/038-umgebung.md).
 - Entwurf: [artifacts/README.md](artifacts/README.md) → Einstellungen; Quelle `docs/archive/2026-11/2026-11-22_developer-vault/artifacts/vault-suchdialog.html`, Entwurfsleiste „Ausbau: Bibliothek“, Ansicht Einstellungen (Funktion, die `settings__section` „Bibliothek“ rendert).
 - Core: `src-tauri/src/settings/model.rs` (`Settings`, `SettingsChange`), `settings/mod.rs` (`KEY_*`, `DEFAULT_SETTINGS`, `load`, `update`), `src-tauri/src/commands/settings.rs` (`settings_update`, `changes_vault`), `src-tauri/src/environment/mod.rs` (`status`, `run_mirror`), `environment/model.rs` (`EnvironmentStatus`), `src-tauri/src/vault/mod.rs` (`folder_status`).
 - Oberfläche: `src/features/settings/settingsCatalog.ts` (Einträge `environmentLinks`, `masterDir`, `environmentMirror`, `vaultDir`, `vaultEnabled`, `vaultStatus`; Kategorie `skills`; `hasMasterDir`, `hasVaultDir`, `isVaultOn`), `src/features/settings/SettingsView.tsx` (`renderRow`, Fälle dieser Ids), `src/features/environment/MasterDirRow.tsx`, `EnvironmentMirrorRow.tsx`, `EnvironmentLinksRow.tsx`, `useEnvironment.ts`, `src/features/vault/VaultDirRow.tsx`, `VaultStatusRow.tsx`, `vaultTexts.ts`, `src/lib/settings.ts`.

@@ -9,7 +9,7 @@ Warum diese Phase vor allem anderen kommt: Phase 2 stellt den gelesenen Ordner a
 ## Kontext (vor dem Start lesen)
 
 - Plan-README: Abschnitt „Kontrakt“ (Typen, Regeln von `apply_place` und `place`, Status, Grundgerüst) — er ist verbindlich.
-- [ADR 069](../../decisions/069-bibliothek.md), [ADR 068](../../decisions/068-developer-vault.md).
+- [ADR 069](../../../decisions/069-bibliothek.md), [ADR 068](../../../decisions/068-developer-vault.md).
 - `src-tauri/src/vault/mod.rs` (`folder_status`, `is_empty_dir`, `brief_lines`), `scan.rs` (`run`, `walk`, `manifest_folders`, `folder_meta_of`, `sync_file`, `store_loaded`), `extract.rs` (`file_meta`, `folder_meta`), `meta.rs` (`split_frontmatter`, `parse_yaml`, `Meta`), `index.rs` (`SCHEMA_VERSION`, `read_meta`, `write_meta`), `search.rs` (`VaultHit`, `search_connection`), `tools.rs` (Texte), `skeleton.rs`, `model.rs`, `src-tauri/src/commands/vault.rs` (`vault_create_skeleton`), `src-tauri/src/environment/mirror.rs` (`has_mirrorable`).
 - `src-tauri/examples/vault-probe.rs`, `src-tauri/examples/gen-bindings.rs`.
 - `docs/conventions/rust.md`, `docs/conventions/linting.md`, `docs/code-map.md` (Zeile Developer Vault), `docs/glossary.md`.
