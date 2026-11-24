@@ -69,3 +69,16 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 - Sieben Ziele kurz geprüft.
 
 ## Report-Back
+
+### Tests
+
+## Report-Back (Tests)
+- Test-Files: `src-tauri/src/settings/mod.rs` (Modul `library_dir_tests`, 11 Tests; dazu Stub `library_dir_from` mit `unimplemented!` und `KEY_LIBRARY_DIR`, beide `#[allow(dead_code)]` — die Umsetzung ersetzt den Stub und entfernt die Attribute)
+- Test-Commit: siehe `git log` (Betreff „test(settings): Übernahme library_dir_from Phase 2 (rot)")
+- AK-Abdeckung (Übernahme, AK 4 und 8): nur `master_dir` · nur `vault_dir` · beide (master gewinnt) · leerer `master_dir` fällt auf `vault_dir` · leerer `library_dir` neben `master_dir` → `None` · leerer `library_dir` neben beiden → `None` · gesetzter `library_dir` geht vor · Trimmen von `library_dir` und übernommenem `master_dir` · nichts gesetzt → `None` · nach „Entfernen“ (alle drei leer) → `None`
+- Lauf-Kommando: `cargo test --manifest-path src-tauri/Cargo.toml library_dir_tests`
+- Rot-Beleg: „test result: FAILED. 0 passed; 11 failed" — alle am `unimplemented!`
+- Nicht per Test abgedeckt (Kontrakt: nur die reine Funktion): das Schreiben in `update` (master/vault leer in derselben Transaktion) und die Oberfläche — Belege per Probe und Bild in der Umsetzung.
+- Findings (für spätere Phasen): keine
+- Friktion/Lesson: Backslashes in Bash-Heredocs für Rust-Strings gehen verloren — Datei per Edit prüfen.
+- 🔴 / Offene Punkte: keine

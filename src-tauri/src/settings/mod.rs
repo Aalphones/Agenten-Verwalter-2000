@@ -28,6 +28,8 @@ const KEY_DEFAULT_MODE: &str = "default_mode";
 const KEY_OPERATING_MODE: &str = "operating_mode";
 const KEY_LOCAL_MODEL: &str = "local_model";
 const KEY_DEFAULT_CODEX_MODEL: &str = "default_codex_model";
+#[allow(dead_code)]
+const KEY_LIBRARY_DIR: &str = "library_dir";
 const KEY_MASTER_DIR: &str = "master_dir";
 const KEY_VAULT_DIR: &str = "vault_dir";
 const KEY_VAULT_ENABLED: &str = "vault_enabled";
@@ -418,4 +420,106 @@ fn stored_or<T: DeserializeOwned>(stored: &HashMap<String, String>, key: &str, d
         .get(key)
         .and_then(|text: &String| enum_from_text(text).ok())
         .unwrap_or(default)
+}
+
+/// Der Ordner der Bibliothek aus den gespeicherten Einstellungen (ADR 069).
+///
+/// Steht der Schlüssel `library_dir` (auch leer), gilt er; sonst der
+/// bisherige `master_dir`, sonst der bisherige `vault_dir`.
+#[allow(dead_code)]
+fn library_dir_from(_stored: &HashMap<String, String>) -> Option<String> {
+    unimplemented!("Phase 2: Übernahme aus master_dir und vault_dir")
+}
+
+#[cfg(test)]
+mod library_dir_tests {
+    use super::*;
+
+    fn stored(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn nur_master_dir_wird_zum_ordner() {
+        let rows = stored(&[(KEY_MASTER_DIR, r"G:\Meine Ablage\U104_Agents")]);
+        assert_eq!(
+            library_dir_from(&rows),
+            Some(r"G:\Meine Ablage\U104_Agents".to_owned())
+        );
+    }
+
+    #[test]
+    fn nur_vault_dir_wird_zum_ordner() {
+        let rows = stored(&[(KEY_VAULT_DIR, r"D:\Vault")]);
+        assert_eq!(library_dir_from(&rows), Some(r"D:\Vault".to_owned()));
+    }
+
+    #[test]
+    fn master_dir_geht_vor_vault_dir() {
+        let rows = stored(&[(KEY_MASTER_DIR, r"G:\Master"), (KEY_VAULT_DIR, r"D:\Vault")]);
+        assert_eq!(library_dir_from(&rows), Some(r"G:\Master".to_owned()));
+    }
+
+    #[test]
+    fn leerer_master_dir_faellt_auf_vault_dir_zurueck() {
+        let rows = stored(&[(KEY_MASTER_DIR, "  "), (KEY_VAULT_DIR, r"D:\Vault")]);
+        assert_eq!(library_dir_from(&rows), Some(r"D:\Vault".to_owned()));
+    }
+
+    #[test]
+    fn leerer_library_dir_neben_master_dir_ist_kein_ordner() {
+        let rows = stored(&[(KEY_LIBRARY_DIR, ""), (KEY_MASTER_DIR, r"G:\Master")]);
+        assert_eq!(library_dir_from(&rows), None);
+    }
+
+    #[test]
+    fn leerer_library_dir_neben_beiden_alten_ist_kein_ordner() {
+        let rows = stored(&[
+            (KEY_LIBRARY_DIR, "   "),
+            (KEY_MASTER_DIR, r"G:\Master"),
+            (KEY_VAULT_DIR, r"D:\Vault"),
+        ]);
+        assert_eq!(library_dir_from(&rows), None);
+    }
+
+    #[test]
+    fn gesetzter_library_dir_geht_vor_den_alten() {
+        let rows = stored(&[
+            (KEY_LIBRARY_DIR, r"E:\Bibliothek"),
+            (KEY_MASTER_DIR, r"G:\Master"),
+            (KEY_VAULT_DIR, r"D:\Vault"),
+        ]);
+        assert_eq!(library_dir_from(&rows), Some(r"E:\Bibliothek".to_owned()));
+    }
+
+    #[test]
+    fn library_dir_wird_getrimmt() {
+        let rows = stored(&[(KEY_LIBRARY_DIR, "  E:\\Bibliothek \n")]);
+        assert_eq!(library_dir_from(&rows), Some(r"E:\Bibliothek".to_owned()));
+    }
+
+    #[test]
+    fn uebernommener_master_dir_wird_getrimmt() {
+        let rows = stored(&[(KEY_MASTER_DIR, " G:\\Master ")]);
+        assert_eq!(library_dir_from(&rows), Some(r"G:\Master".to_owned()));
+    }
+
+    #[test]
+    fn ohne_jede_einstellung_ist_kein_ordner_gewaehlt() {
+        assert_eq!(library_dir_from(&stored(&[])), None);
+    }
+
+    #[test]
+    fn nach_dem_entfernen_kehrt_kein_alter_ordner_zurueck() {
+        // Entfernen schreibt library_dir, master_dir und vault_dir leer (Kontrakt).
+        let rows = stored(&[
+            (KEY_LIBRARY_DIR, ""),
+            (KEY_MASTER_DIR, ""),
+            (KEY_VAULT_DIR, ""),
+        ]);
+        assert_eq!(library_dir_from(&rows), None);
+    }
 }
