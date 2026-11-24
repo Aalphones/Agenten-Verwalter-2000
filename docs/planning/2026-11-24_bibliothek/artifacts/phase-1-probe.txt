@@ -1,0 +1,156 @@
+# Phase 1 — Probe-Belege (vault-probe, Index-Dateien im Scratchpad, Master nur gelesen; neu gemessen in Fix-Runde 1 nach dem Kontrakt mit Memories)
+
+## AK 1/2 — scan Bibliothek und vollständige artifacts-Liste
+$ vault-probe scan "G:\Meine Ablage\U104_Agents" <Probe-Index>
+gesehen 294 · gelesen 294 · entfernt 0 · übersprungen 0 · 6171 ms
+$ vault-probe artifacts <Probe-Index>
+CLAUDE.md · rules · Global User Instructions ·  · 1 Dateien · 13 Abschnitte
+_vault/AGENTS.md · note · Developer Vault — Regeln für Agenten ·  · 1 Dateien · 1 Abschnitte
+_vault/README.md · note · Developer Vault ·  · 1 Dateien · 4 Abschnitte
+_vault/design/README.md · note · UI/UX-Wissensbasis · design ui baukasten · 1 Dateien · 8 Abschnitte
+_vault/design/baukasten · design · UI-Baukasten · design ui css html · 4 Dateien · 199 Abschnitte
+_vault/design/bauteile/aktionen.md · component · Bauteile: Aktionen · design ui baukasten knopf button segment menü popover · 1 Dateien · 4 Abschnitte
+_vault/design/bauteile/eingabe.md · component · Bauteile: Eingabe · design ui baukasten formular eingabe textfeld select checkbox radio schalter switch slider datei datum · 1 Dateien · 13 Abschnitte
+_vault/inbox/README.md · note · Inbox ·  · 1 Dateien · 1 Abschnitte
+_vault/prinzipien/automatisiert-vor-klickstrecke.md · principle · Arbeitsabläufe zuerst automatisieren, Oberfläche nur zum Prüfen · ux mcp automatisierung entwurf · 1 Dateien · 3 Abschnitte
+_vault/prinzipien/keine-platzhalter-in-befehlen.md · principle · Keine Platzhalter in Befehlen mit sofortiger Wirkung · shell agenten sicherheit bash · 1 Dateien · 3 Abschnitte
+_vault/prinzipien/keine-zaehltests.md · principle · Keine Tests, die nur registrierte Dinge zählen · tests qualitaet · 1 Dateien · 1 Abschnitte
+_vault/prinzipien/name-wiederholt-kein-feld.md · principle · Ein Name wiederholt nie ein Feld, das daneben steht · benennung ux tickets commits · 1 Dateien · 1 Abschnitte
+_vault/prinzipien/pruefbare-abnahmekriterien.md · principle · Abnahmekriterien müssen Ja/Nein-prüfbar sein · planung abnahme ui entwurf · 1 Dateien · 3 Abschnitte
+_vault/prinzipien/verwechselbare-parameter-erzwingen.md · principle · Verwechselbare Parameter per * schlüsselwortpflichtig machen · python api-design robustheit · 1 Dateien · 2 Abschnitte
+_vault/rezepte/claude-code-hooks-statt-textregeln.md · recipe · Regeln, die im Text nicht greifen, als Claude-Code-Hook ans Werkzeug hängen · claude-code hooks agenten bash · 1 Dateien · 3 Abschnitte
+_vault/rezepte/claude-config-auf-mehrere-rechner.md · recipe · Claude-Code-Konfiguration über ein synchronisiertes Laufwerk auf mehrere Rechner verteilen · claude-code windows junction sync setup cmd node · 1 Dateien · 4 Abschnitte
+_vault/rezepte/git-repo-auf-cloud-laufwerk.md · recipe · Git-Repository auf einem Cloud-Laufwerk, das zwei Rechner beschreiben · git google-drive sync hooks bash · 1 Dateien · 4 Abschnitte
+_vault/rezepte/git-worktree-remove-und-junctions.md · recipe · git worktree remove löscht unter Windows durch Junctions hindurch · git worktree windows junction datenverlust bash powershell · 1 Dateien · 3 Abschnitte
+_vault/rezepte/versionsdeckel-einer-abhaengigkeit-uebersteuern.md · recipe · Veralteten Versionsdeckel einer fremden Abhängigkeit übersteuern · python uv abhaengigkeiten sicherheit lockfile · 1 Dateien · 3 Abschnitte
+_vault/snippets/windows-cmd-setup-bausteine.md · snippet · Bausteine für idempotente Setup-Skripte in reinem cmd.exe · windows cmd batch setup robocopy junction · 1 Dateien · 8 Abschnitte
+commands/audit.md · command · /audit ·  · 1 Dateien · 1 Abschnitte
+commands/bootstrap.md · command · /bootstrap ·  · 1 Dateien · 1 Abschnitte
+commands/implement.md · command · /implement ·  · 1 Dateien · 1 Abschnitte
+commands/plan.md · command · /plan ·  · 1 Dateien · 1 Abschnitte
+commands/research.md · command · /research ·  · 1 Dateien · 1 Abschnitte
+commands/review.md · command · /review ·  · 1 Dateien · 1 Abschnitte
+commands/session-review.md · command · /session-review ·  · 1 Dateien · 1 Abschnitte
+memory/MEMORY.md · memory · User-Level Memory Index ·  · 1 Dateien · 3 Abschnitte
+memory/feedback_anzahlfrage_ist_vollmessung.md · memory · Eine Anzahl-Frage verlangt die Vermessung des ganzen Suchraums ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_automatisiert_vor_klickstrecke.md · memory · feedback_automatisiert_vor_klickstrecke ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_blog_eigene_produkte_persoenlich.md · memory · feedback_blog_eigene_produkte_persoenlich ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_browser_ueber_chrome_extension.md · memory · feedback_browser_ueber_chrome_extension ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_entwurf_direkt_in_planung.md · memory · feedback_entwurf_direkt_in_planung ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_geflaggtes_sauber_loesen.md · memory · feedback_geflaggtes_sauber_loesen ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_keine_zaehltests.md · memory · feedback_keine_zaehltests ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_name_never_repeats_a_field.md · memory · feedback_name_never_repeats_a_field ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_pipeline_link_mitgeben.md · memory · feedback_pipeline_link_mitgeben ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_placeholder_in_live_effect_calls.md · memory · feedback_placeholder_in_live_effect_calls ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_proaktive_hinweise.md · memory · feedback_proaktive_hinweise ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_schwammiges_kritisieren.md · memory · feedback_schwammiges_kritisieren ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_scope_decided_in_design.md · memory · feedback_scope_decided_in_design ·  · 1 Dateien · 1 Abschnitte
+memory/feedback_wartezeit_transparent.md · memory · feedback_wartezeit_transparent ·  · 1 Dateien · 1 Abschnitte
+memory/lern-journal.md · memory · lern-journal ·  · 1 Dateien · 3 Abschnitte
+memory/reference_claude_config_sync.md · memory · reference_claude_config_sync ·  · 1 Dateien · 6 Abschnitte
+memory/user_arbeitsstil.md · memory · user_arbeitsstil ·  · 1 Dateien · 1 Abschnitte
+memory/user_glossary.md · memory · user_glossary ·  · 1 Dateien · 11 Abschnitte
+memory/user_skill_profile.md · memory · user_skill_profile ·  · 1 Dateien · 1 Abschnitte
+memory/user_text_preferences.md · memory · user_text_preferences ·  · 1 Dateien · 1 Abschnitte
+output-styles/butcher.md · style · butcher ·  · 1 Dateien · 3 Abschnitte
+output-styles/references/vera-historie.md · note · vera.md — Herkunft der Regeln ·  · 1 Dateien · 1 Abschnitte
+output-styles/station.md · style · station ·  · 1 Dateien · 1 Abschnitte
+output-styles/tony-stark.md · style · tony-stark ·  · 1 Dateien · 2 Abschnitte
+output-styles/trump.md · style · trump ·  · 1 Dateien · 7 Abschnitte
+output-styles/vera.md · style · vera ·  · 1 Dateien · 5 Abschnitte
+output-styles/yoda.md · style · yoda ·  · 1 Dateien · 8 Abschnitte
+output-styles/zorro.md · style · zorro ·  · 1 Dateien · 2 Abschnitte
+skills/audit · skill · audit ·  · 4 Dateien · 30 Abschnitte
+skills/code-health · skill · code-health ·  · 3 Dateien · 25 Abschnitte
+skills/collectivemind-platform · skill · collectivemind-platform ·  · 169 Dateien · 1677 Abschnitte
+skills/easter-eggs-butcher · skill · easter-eggs-butcher ·  · 1 Dateien · 15 Abschnitte
+skills/framework-tailwind · skill · framework-tailwind ·  · 2 Dateien · 5 Abschnitte
+skills/interview · skill · interview ·  · 2 Dateien · 9 Abschnitte
+skills/lang-angular · skill · lang-angular ·  · 3 Dateien · 6 Abschnitte
+skills/lang-go · skill · lang-go ·  · 2 Dateien · 3 Abschnitte
+skills/lang-kotlin · skill · lang-kotlin ·  · 3 Dateien · 4 Abschnitte
+skills/lang-python · skill · lang-python ·  · 3 Dateien · 5 Abschnitte
+skills/lang-react · skill · lang-react ·  · 2 Dateien · 4 Abschnitte
+skills/lang-typescript · skill · lang-typescript ·  · 2 Dateien · 4 Abschnitte
+skills/mode-bootstrap · skill · mode-bootstrap ·  · 4 Dateien · 24 Abschnitte
+skills/mode-committing · skill · mode-committing ·  · 4 Dateien · 25 Abschnitte
+skills/mode-debugging · skill · mode-debugging ·  · 2 Dateien · 4 Abschnitte
+skills/mode-dependencies · skill · mode-dependencies ·  · 1 Dateien · 4 Abschnitte
+skills/mode-design · skill · mode-design ·  · 4 Dateien · 17 Abschnitte
+skills/mode-implementing · skill · mode-implementing ·  · 7 Dateien · 63 Abschnitte
+skills/mode-planning · skill · mode-planning ·  · 4 Dateien · 39 Abschnitte
+skills/mode-reviewing · skill · mode-reviewing ·  · 3 Dateien · 14 Abschnitte
+skills/mode-web-frontend · skill · mode-web-frontend ·  · 2 Dateien · 8 Abschnitte
+skills/news · skill · news ·  · 1 Dateien · 9 Abschnitte
+skills/promptigofant-api · skill · promptigofant-api ·  · 1 Dateien · 7 Abschnitte
+skills/research · skill · research ·  · 2 Dateien · 5 Abschnitte
+skills/session-review · skill · session-review ·  · 4 Dateien · 28 Abschnitte
+
+## AK 3 — search (Gruppe/Untergruppe am Zeilenende)
+$ vault-probe search <Probe-Index> "Planung"
+Treffer: 8 von 10
+- _vault/prinzipien/pruefbare-abnahmekriterien.md · principle · Abnahmekriterien müssen Ja/Nein-prüfbar sein — Ein Kriterium wie „schön“ oder „nach Prototyp“ lässt sich nicht prüfen; dazu die Drift, wenn Pläne nach Features und Entwürfe nach Bildschirmen schneiden. (Abschnitt „Prüfbare Abnahmekriterien“, Zeile 10: vault_get path="_vault/prinzipien/pruefbare-abnahmekriterien.md" line=10) · wissen/prinzipien
+- memory/feedback_entwurf_direkt_in_planung.md · memory · feedback_entwurf_direkt_in_planung — Entwürfe (Mockup, Nachtrag im Design) baut die Planungs-Session selbst; im Agenten-Verwalter keine eigene Entwurfs-Phase oder -Station dafür anlegen (Zeile 8: vault_get path="memory/feedback_entwurf_direkt_in_planung.md" line=8) · anweisungen/gedaechtnis
+  …der User wählt „erst Entwurf“), baue ich ihn direkt in der laufenden **Planungs**-Session, lege ihn…
+- skills/mode-design · skill · mode-design — Entwürfe für Oberflächen bauen — Klickdummy, Mockup, Layout-Vorschlag, Entwurf einer Oberflächen-Phase beim Planen. TRIGGER bei "Entwurf", "Klickdummy", "Mockup", "Prototyp", "Layout besprechen", "Design vorschlagen", "Oberfläche skizzieren", "wie soll das aussehen"; oder wenn ein Plan eine… (Abschnitt „Entwurf bauen — beim ersten Vorlegen fertig, nicht nach vier Runden“, Zeile 6: vault_get path="skills/mode-design/SKILL.md" line=6) · skills/arbeitsweise
+  …project>/docs/conventions/design.md` oder die UI-Regeln des Projekt-**Planungs**-Skills; → `topics/layering.md`).
+- skills/mode-implementing · skill · mode-implementing — Load implementation workflow conventions when executing an existing plan from docs/planning/. TRIGGER when the user says "plan umsetzen", "implementiere den plan", "setz den plan um", "continue with phase", "weiter mit phase", "weitermachen wo wir waren", "resume", or invokes `/implement`; or when… (Abschnitt „Implementing Mode › Chesterton's Fence (Umsetzung)“, Zeile 83: vault_get path="skills/mode-implementing/SKILL.md" line=83) · skills/arbeitsweise
+  …Nichts still wegrationalisieren. (Vorab-Erklärung in der **Planung**: `mode-planning`.)
+- skills/audit · skill · audit — Den eigenen Regelsatz (Skills, Topics, CLAUDE.md, Anweisungen) evaluieren und verbessern — aus internen Signalen (improvement-logs/session-reviews), externen (research-Output) und dem Bestand selbst. Schlägt Maßnahmen vor, fasst zusammen, pflegt nach Bestätigung ein. TRIGGER nur auf explizite… (Abschnitt „Audit — Regelsatz evaluieren & verbessern › Capability-Baseline beim Modellwechsel“, Zeile 55: vault_get path="skills/audit/SKILL.md" line=55) · skills/werkzeuge
+  …jedes Modell, das den Regelsatz liest (Haupt-, **Planungs**-, Umsetzungsmodell); Release Notes und Model Cards nur ergänzend…
+- skills/mode-planning · skill · mode-planning — Load planning workflow conventions when the user is creating a plan, designing a feature, or setting up a phased TODO. TRIGGER when the user says "plan erstellen", "neuen plan", "feature planen", "TODO anlegen", "phasen aufteilen", "spec schreiben", "plan this", "let's plan"; or when creating a… (Abschnitt „Planning Mode › Zeremonie-Tier — wie viel Prozess? (bewusste Wahl)“, Zeile 37: vault_get path="skills/mode-planning/SKILL.md" line=37) · skills/arbeitsweise
+  …unabhängig:** das Zeremonie-Tier dreht nur die ***Planung*** runter — Ticket-Ref, Diff-Abnahme, Version-Bump/Tag…
+- skills/mode-bootstrap · skill · mode-bootstrap — Interaktiver Setup-Agent — Interview-geführte Neuanlage (aus Projekt-Kontext-MD) oder Migration eines Bestandsprojekts auf die Standard-Doku-Struktur (AGENTS.md-Hub + docs/). TRIGGER on `/bootstrap` (nicht `/init` — das ist der eingebaute CLAUDE.md-Befehl), "neues projekt aufsetzen", "projekt… (Abschnitt „Bootstrap Mode — Interaktiver Setup-Agent › Phase B: Ausführung › Migration (Brownfield)“, Zeile 144: vault_get path="skills/mode-bootstrap/SKILL.md" line=144) · skills/arbeitsweise
+  …Entrypoint | Convention | Code-Referenz | **Planung** aktiv | **Planung** stale | ADR-würdig | Kontext/Vision (→ PROJECT.md) | Unklar.  **M2…
+- memory/MEMORY.md · memory · User-Level Memory Index — > **Default location for cross-project rules is Skills, not Memory.** Every recurring guideline lives in `~/.claude/sync/skills/<skill>/SKILL.md` or `~/.claude/knowledge/topics/*.md` — those are loaded on demand by skill triggers (token-efficient). > > Memory is reserved for content that **doesn't… (Abschnitt „User-Level Memory Index › Current entries (Teil 1)“, Zeile 7: vault_get path="memory/MEMORY.md" line=7) · anweisungen/gedaechtnis
+  …in der **Planung**](feedback_entwurf_direkt_in_**planung**.md) — Entwürfe baut die **Planungs**-Session selbst, keine…
+$ vault-probe search <Probe-Index> "Inbox"
+Treffer: 4 von 4
+- _vault/inbox/README.md · note · Inbox — Hier landet alles, was noch nicht eingeordnet ist. Alles hier ist durchsuchbar. (Abschnitt „Inbox“, Zeile 1: vault_get path="_vault/inbox/README.md" line=1) · wissen/inbox
+  Hier landet alles, was noch nicht eingeordnet ist. Alles hier ist durchsuchbar.
+- _vault/AGENTS.md · note · Developer Vault — Regeln für Agenten — - Vor dem Bauen suchen: mit `vault_search` nach vorhandenen Snippets, Beispielen, Vorlagen und Designs, dann gezielt mit `vault_get` laden — nie den ganzen Vault lesen. - Gefundenes anpassen, nicht blind kopieren; die Herkunft im Ergebnis nennen (Pfad im Vault). - Nichts Projektbezogenes und nichts… (Abschnitt „Developer Vault — Regeln für Agenten“, Zeile 1: vault_get path="_vault/AGENTS.md" line=1) · wissen/
+  …Änderungen dort direkt, ohne Umweg über `**inbox**/`; Regeln in `design/README.md`. - Code aus dem Vault…
+- _vault/README.md · note · Developer Vault — Persönliche Entwicklerbibliothek: Snippets, Rezepte, Wissen, Ideen, Konzepte, Designs, Vorlagen und Skripte, die über einzelne Projekte hinaus nützlich sind. (Abschnitt „Developer Vault › Ablegen“, Zeile 5: vault_get path="_vault/README.md" line=5) · wissen/
+  - Neues ohne Nachdenken nach `**inbox**/` — eingeordnet wird später. - Ordner nach Thema und Verwendung anlegen, wenn sie…
+- _vault/design/README.md · note · UI/UX-Wissensbasis — Allgemeiner UI-Baukasten (HTML + CSS-Variablen), Bauteil-Katalog und Gestaltungswissen für Oberflächen-Entwürfe — Einstieg, Benutzen, Bauregeln, Pflege. (Abschnitt „UI/UX-Wissensbasis › Pflege“, Zeile 48: vault_get path="_vault/design/README.md" line=48) · wissen/design
+  …Änderungen in `design/` direkt, ohne Umweg über `**inbox**/`.
+$ vault-probe search <Probe-Index> "Zählprüfungen"
+Treffer: 1 von 1
+- memory/feedback_keine_zaehltests.md · memory · feedback_keine_zaehltests — Tests, die nur eine feste Anzahl registrierter Dinge (Werkzeuge, RPCs, Module) zählen, sind nutzlos — entfernen, nicht nachzählen (Zeile 8: vault_get path="memory/feedback_keine_zaehltests.md" line=8) · anweisungen/gedaechtnis
+  …apply:** Beim Schreiben von Tests keine festen **Zählprüfungen** auf Code-Inventar anlegen. Fällt ein solcher Test…
+
+## AK 4 — reiner Vault (_vault direkt)
+$ vault-probe scan "G:\Meine Ablage\U104_Agents\_vault" <zweiter Probe-Index>
+gesehen 22 · gelesen 22 · entfernt 0 · übersprungen 0 · 145 ms
+$ vault-probe search <zweiter Probe-Index> "Planung"
+Treffer: 1 von 1
+- prinzipien/pruefbare-abnahmekriterien.md · principle · Abnahmekriterien müssen Ja/Nein-prüfbar sein — Ein Kriterium wie „schön“ oder „nach Prototyp“ lässt sich nicht prüfen; dazu die Drift, wenn Pläne nach Features und Entwürfe nach Bildschirmen schneiden. (Abschnitt „Prüfbare Abnahmekriterien“, Zeile 10: vault_get path="prinzipien/pruefbare-abnahmekriterien.md" line=10) · wissen/prinzipien
+
+## AK 5 — schema_version 1 wird verworfen
+$ vault-probe scan … (zweiter Lauf ohne Änderung)
+gesehen 22 · gelesen 0 · entfernt 0 · übersprungen 0 · 34 ms
+meta schema_version auf 1 gesetzt: 1
+$ vault-probe scan …
+gesehen 22 · gelesen 22 · entfernt 0 · übersprungen 0 · 305 ms
+meta danach: 2
+
+## AK 6 — Grundgerüst (Probe-Ordner unter dem Scratchpad) (aus der Umsetzung #16; skeleton.rs in der Fix-Runde unverändert)
+-- Bibliothek (skills\x) ohne _vault:
+ok
+./_vault/AGENTS.md
+./_vault/README.md
+./_vault/inbox/README.md
+-- Bibliothek mit gefülltem _vault:
+Der Ordner ist nicht leer — das Grundgerüst wird nur in einen leeren Ordner geschrieben.
+./_vault/da.md
+-- reiner Vault, leer:
+ok
+./AGENTS.md
+./README.md
+./inbox/README.md
+-- reiner Vault, zweiter Aufruf:
+Der Ordner ist nicht leer — das Grundgerüst wird nur in einen leeren Ordner geschrieben.
+
+## AK 8 (Teil) — Master unverändert
+$ git -C "G:\Meine Ablage\U104_Agents" status --short | wc -l
+0

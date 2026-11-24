@@ -3,11 +3,13 @@
 //! `cargo run --manifest-path src-tauri/Cargo.toml --example vault-probe -- artifacts <Index-Datei>`
 //! `cargo run --manifest-path src-tauri/Cargo.toml --example vault-probe -- search <Index-Datei> "<Begriff>"`.
 //! `search` druckt die Textausgabe von `vault_search` (Kopfzeile `Treffer: <n> von <total>`, dann je
-//! Treffer eine Zeile).
+//! Treffer eine Zeile, ergänzt um ` · <group>/<subgroup>`).
 //! `scan` gleicht den Vault-Ordner mit der Index-Datei ab und druckt
 //! `gesehen <n> · gelesen <n> · entfernt <n> · übersprungen <n> · <ms> ms`. `artifacts` druckt je
 //! Artefakt der Index-Datei eine Zeile `<pfad> · <art> · <titel> · <tags> · <n> Dateien · <n>
-//! Abschnitte`. Nie gegen den Datenordner der App: die Index-Datei ist eine eigene Probe-Datei.
+//! Abschnitte`. `skeleton` schreibt das Grundgerüst wie die App (bei einer Bibliothek nach `_vault`)
+//! und druckt `ok` oder den Fehlersatz — nur gegen einen Probe-Ordner, nie gegen die Bibliothek.
+//! Nie gegen den Datenordner der App: die Index-Datei ist eine eigene Probe-Datei.
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -15,10 +17,10 @@ use std::process::ExitCode;
 use rusqlite::{Connection, OpenFlags};
 use verwalter_lib::vault::index::{self, ArtifactSummary, VaultIndex};
 use verwalter_lib::vault::scan;
-use verwalter_lib::vault::search::{self, VaultQuery, VaultSearchResult};
-use verwalter_lib::vault::tools;
+use verwalter_lib::vault::search::{self, VaultHit, VaultQuery};
+use verwalter_lib::vault::{resolve, skeleton, tools};
 
-const USAGE: &str = "Aufruf: vault-probe scan <Vault-Ordner> <Index-Datei> | vault-probe artifacts <Index-Datei> | vault-probe search <Index-Datei> \"<Begriff>\"";
+const USAGE: &str = "Aufruf: vault-probe scan <Vault-Ordner> <Index-Datei> | vault-probe artifacts <Index-Datei> | vault-probe search <Index-Datei> \"<Begriff>\" | vault-probe skeleton <Ordner>";
 
 fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let arguments: Vec<String> = env::args().skip(1).collect();
@@ -27,6 +29,7 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         ["scan", vault_dir, index_file] => run_scan(vault_dir, index_file),
         ["artifacts", index_file] => run_artifacts(index_file),
         ["search", index_file, text] => run_search(index_file, text),
+        ["skeleton", dir] => run_skeleton(dir),
         _ => {
             eprintln!("{USAGE}");
             Ok(ExitCode::from(2))
@@ -78,14 +81,34 @@ fn run_search(index_file: &str, text: &str) -> Result<ExitCode, Box<dyn std::err
         any_term: false,
     };
     let (hits, total) = search::search_connection(&connection, &query)?;
-    let result = VaultSearchResult {
-        hits,
-        total,
-        is_scanning: false,
-        scanned_at: None,
-    };
-    println!("{}", tools::format_result(&result));
+    println!("Treffer: {} von {}", hits.len(), total);
+    for hit in &hits {
+        println!("{}", with_place(&tools::format_hit(hit), hit));
+    }
     Ok(ExitCode::SUCCESS)
+}
+
+/// Schreibt das Grundgerüst wie die App und druckt `ok` oder den Fehlersatz.
+fn run_skeleton(dir: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    match skeleton::create(Path::new(dir)) {
+        Ok(()) => {
+            println!("ok");
+            Ok(ExitCode::SUCCESS)
+        }
+        Err(error) => {
+            println!("{}", resolve::sentence(error));
+            Ok(ExitCode::from(1))
+        }
+    }
+}
+
+/// Hängt ` · <group>/<subgroup>` an die erste Zeile eines Treffers.
+fn with_place(text: &str, hit: &VaultHit) -> String {
+    let place: String = format!(" · {}/{}", hit.group, hit.subgroup);
+    match text.split_once('\n') {
+        Some((first, rest)) => format!("{first}{place}\n{rest}"),
+        None => format!("{text}{place}"),
+    }
 }
 
 fn print_summary(summary: &ArtifactSummary) {

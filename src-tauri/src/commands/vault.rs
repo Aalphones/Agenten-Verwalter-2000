@@ -24,7 +24,8 @@ pub async fn vault_rescan(app: tauri::AppHandle) -> Result<(), CommandError> {
     Ok(())
 }
 
-/// Schreibt das Grundgerüst in den leeren Vault-Ordner.
+/// Schreibt das Grundgerüst in den leeren Vault-Ordner bzw. nach `_vault` der Bibliothek;
+/// `skeleton::create` prüft, dass das Ziel leer ist.
 #[tauri::command]
 pub async fn vault_create_skeleton(app: tauri::AppHandle) -> Result<VaultStatus, CommandError> {
     let current: VaultStatus = vault::status(&app);

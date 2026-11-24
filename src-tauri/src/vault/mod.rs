@@ -28,6 +28,7 @@ use crate::filesystem::workspace::{data_dir, home_dir};
 use crate::mcp_access::tools::ToolSet;
 use crate::settings;
 use index::VaultIndex;
+use library::VaultLayout;
 use model::{VaultState, VaultStatus};
 
 pub const CHANGED_EVENT: &str = "vault://changed";
@@ -144,10 +145,24 @@ fn folder_status(app: &AppHandle) -> VaultStatus {
             message: Some(message),
             ..base(Some(dir_text), state)
         },
-        Ok(()) => VaultStatus {
-            is_empty_dir: is_empty_dir(&dir),
-            ..base(Some(dir_text), VaultState::Ready)
-        },
+        Ok(()) => {
+            let layout: VaultLayout = library::layout(&dir);
+            VaultStatus {
+                layout: Some(layout),
+                can_create_skeleton: can_create_skeleton(&dir, layout),
+                ..base(Some(dir_text), VaultState::Ready)
+            }
+        }
+    }
+}
+
+fn can_create_skeleton(dir: &Path, layout: VaultLayout) -> bool {
+    match layout {
+        VaultLayout::Library => {
+            let knowledge: PathBuf = dir.join(library::KNOWLEDGE_DIR);
+            !knowledge.exists() || is_empty_dir(&knowledge)
+        }
+        VaultLayout::Plain => is_empty_dir(dir),
     }
 }
 
@@ -276,7 +291,8 @@ fn base(dir: Option<String>, state: VaultState) -> VaultStatus {
         skipped: 0,
         scanned_at: None,
         message: None,
-        is_empty_dir: false,
+        layout: None,
+        can_create_skeleton: false,
     }
 }
 
@@ -321,7 +337,8 @@ const BRIEF_DESCRIPTION_CHARS: usize = 120;
 const BRIEF_HEADLINE: &str = "Vault (passend zur Phase; laden mit vault_get):";
 
 /// Die Vault-Zeilen für die erste Nachricht einer Station: bis zu drei Treffer zu Titel und
-/// Beschreibung der Phase. Leer, wenn der Vault nicht angeboten wird oder nichts passt.
+/// Beschreibung der Phase. Leer, wenn der Vault nicht angeboten wird oder nichts passt. In einer
+/// Bibliothek nur aus dem Wissen: Skills und Anweisungen kennt die Station schon.
 pub fn brief_lines(
     app: &AppHandle,
     title: &str,
@@ -340,7 +357,7 @@ pub fn brief_lines(
             text,
             kind: None,
             tags: Vec::new(),
-            under: None,
+            under: knowledge_under(app),
             limit: BRIEF_LIMIT,
             any_term: true,
         },
@@ -351,6 +368,16 @@ pub fn brief_lines(
     let mut lines: Vec<String> = vec![BRIEF_HEADLINE.to_owned()];
     lines.extend(result.hits.iter().map(brief_hit_line));
     Ok(lines)
+}
+
+/// `_vault`, wenn der eingestellte Ordner eine Bibliothek ist; sonst keine Einschränkung.
+fn knowledge_under(app: &AppHandle) -> Option<String> {
+    let dir: PathBuf = folder_status(app).dir.map(PathBuf::from)?;
+    if dir.exists() && library::layout(&dir) == VaultLayout::Library {
+        Some(library::KNOWLEDGE_DIR.to_owned())
+    } else {
+        None
+    }
 }
 
 /// Die ersten verschiedenen Begriffe ab vier Zeichen, klein geschrieben.

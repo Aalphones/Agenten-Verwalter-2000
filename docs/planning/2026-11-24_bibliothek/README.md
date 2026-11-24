@@ -8,7 +8,7 @@ Entscheidungen und Begründung: [ADR 069](../../decisions/069-bibliothek.md) (ä
 
 | Phase | Titel | Stufe | Wave | Status | Schätzung |
 |---|---|---|---|---|---|
-| 1 | [Aufbau der Bibliothek im Core](phase-1-aufbau-im-core.md) | heikel | 1 | pending | 3 h |
+| 1 | [Aufbau der Bibliothek im Core](phase-1-aufbau-im-core.md) | heikel | 1 | complete | 3 h |
 | 2 | [Ein Ordner in den Einstellungen](phase-2-ein-ordner.md) | standard | 2 | pending | 2,5 h |
 | 3 | [Suchdialog mit Anweisungen, Skills und Wissen](phase-3-suchdialog-gruppen.md) | standard | 3 | pending | 2 h |
 

@@ -2,6 +2,8 @@
 use serde::Serialize;
 use ts_rs::TS;
 
+use super::library::VaultLayout;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum VaultState {
@@ -30,6 +32,9 @@ pub struct VaultStatus {
     pub scanned_at: Option<i64>,
     /// Ein Satz zu `Missing` und `Error`, sonst `None`.
     pub message: Option<String>,
-    /// Der Ordner existiert und enthält keine sichtbaren Einträge.
-    pub is_empty_dir: bool,
+    /// Aufbau des Ordners; `None` ohne brauchbaren Ordner.
+    pub layout: Option<VaultLayout>,
+    /// Das Grundgerüst lässt sich schreiben: in einem reinen Vault ist der Ordner ohne sichtbare
+    /// Einträge, in einer Bibliothek fehlt `_vault` oder hat keine sichtbaren Einträge.
+    pub can_create_skeleton: bool,
 }

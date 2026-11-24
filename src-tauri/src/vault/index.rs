@@ -9,10 +9,14 @@ use std::sync::{Mutex, PoisonError};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::error::CommandError;
+use crate::vault::library::{self, VaultLayout};
 
-const SCHEMA_VERSION: &str = "1";
+/// Version 2: Arten nach Ort und Erlaubnisliste der Bibliothek; ältere Indizes werden neu gebaut.
+const SCHEMA_VERSION: &str = "2";
 const META_SCHEMA_VERSION: &str = "schema_version";
 const META_VAULT_DIR: &str = "vault_dir";
+/// Layout des Ordners beim letzten Abgleich; die Suche leitet daraus Gruppe und Untergruppe ab.
+const META_LAYOUT: &str = "layout";
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -185,6 +189,17 @@ fn write_meta(connection: &Connection, key: &str, value: &str) -> rusqlite::Resu
         params![key, value],
     )?;
     Ok(())
+}
+
+pub fn set_layout(connection: &Connection, layout: VaultLayout) -> Result<(), CommandError> {
+    write_meta(connection, META_LAYOUT, library::layout_name(layout))?;
+    Ok(())
+}
+
+/// Das gespeicherte Layout; ohne Eintrag (noch kein Abgleich) ein reiner Vault.
+pub fn layout(connection: &Connection) -> Result<VaultLayout, CommandError> {
+    let name: Option<String> = read_meta(connection, META_LAYOUT)?;
+    Ok(library::layout_from_name(name.as_deref().unwrap_or("")))
 }
 
 pub fn file_row(connection: &Connection, path: &str) -> Result<Option<FileRow>, CommandError> {
