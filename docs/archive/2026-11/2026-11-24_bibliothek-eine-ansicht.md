@@ -6,7 +6,7 @@ Die Zusammenlegung (ADR 069, Plan `docs/archive/2026-11/2026-11-24_bibliothek/`)
 
 | Phase | Titel | Rating | Status |
 |---|---|---|---|
-| 1 | Abschnitt „Bibliothek“ auf drei Zeilen | standard | pending |
+| 1 | Abschnitt „Bibliothek“ auf drei Zeilen | standard | complete |
 
 Nur Oberfläche; Core, Bindings und Einstellungsschlüssel bleiben unverändert.
 
@@ -43,48 +43,48 @@ Nur Oberfläche; Core, Bindings und Einstellungsschlüssel bleiben unverändert.
 
 **Katalog** (`settingsCatalog.ts`)
 
-- [ ] Kategorie `skills`: `label: 'Bibliothek'`, `summary: 'Ordner · Abgleich · Suche'`.
-- [ ] Einträge `userSkills`, `projectSkills`, `environmentMirror`, `environmentLinks`, `vaultStatus`, `libraryScope` löschen; `isSearchOn` löschen (danach unbenutzt).
-- [ ] Neuer Eintrag `libraryMirror` direkt nach `libraryDir`: `category: 'skills'`, `section: 'Bibliothek'`, `label: 'Abgleich'`, ohne `isShown`, `info:` „Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Ordner der Bibliothek mit ~\\.claude nach Inhalt; die Änderungszeit entscheidet nur, welche Seite neuer ist. „Abgleichen“ kopiert, was im Ordner neuer ist oder lokal fehlt, und löscht nie. Die Zeile darunter zeigt den lokalen Skill-Ordner, den jede Session nutzt, und ob die Verknüpfungen (Junctions und symbolische Links unter ~\\.claude und dessen Unterordnern) ihr Ziel erreichen.“
-- [ ] `vaultEnabled` bleibt (`label: 'Suche'`, `isShown: hasLibraryDir`), neuer `info:` „Schaltet Einlesen, Suche (Seitenleiste und Strg+K) und die Werkzeuge der Agenten ein; der Abgleich läuft unabhängig davon. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist, und nur, was sich geändert hat. Durchsucht werden bei einer Bibliothek nur CLAUDE.md, AGENTS.md, skills/, commands/, output-styles/, memory/ (nur die Dateien direkt darin) und _vault/; ein Ordner ohne Skills wird ganz durchsucht. hooks/, Logs, settings.json, Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore bleiben draußen. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).“
-- [ ] Reihenfolge der Schlüssel im Abschnitt: `libraryDir`, `libraryMirror`, `vaultEnabled`.
+- [x] Kategorie `skills`: `label: 'Bibliothek'`, `summary: 'Ordner · Abgleich · Suche'`.
+- [x] Einträge `userSkills`, `projectSkills`, `environmentMirror`, `environmentLinks`, `vaultStatus`, `libraryScope` löschen; `isSearchOn` löschen (danach unbenutzt).
+- [x] Neuer Eintrag `libraryMirror` direkt nach `libraryDir`: `category: 'skills'`, `section: 'Bibliothek'`, `label: 'Abgleich'`, ohne `isShown`, `info:` „Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Ordner der Bibliothek mit ~\\.claude nach Inhalt; die Änderungszeit entscheidet nur, welche Seite neuer ist. „Abgleichen“ kopiert, was im Ordner neuer ist oder lokal fehlt, und löscht nie. Die Zeile darunter zeigt den lokalen Skill-Ordner, den jede Session nutzt, und ob die Verknüpfungen (Junctions und symbolische Links unter ~\\.claude und dessen Unterordnern) ihr Ziel erreichen.“
+- [x] `vaultEnabled` bleibt (`label: 'Suche'`, `isShown: hasLibraryDir`), neuer `info:` „Schaltet Einlesen, Suche (Seitenleiste und Strg+K) und die Werkzeuge der Agenten ein; der Abgleich läuft unabhängig davon. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist, und nur, was sich geändert hat. Durchsucht werden bei einer Bibliothek nur CLAUDE.md, AGENTS.md, skills/, commands/, output-styles/, memory/ (nur die Dateien direkt darin) und _vault/; ein Ordner ohne Skills wird ganz durchsucht. hooks/, Logs, settings.json, Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore bleiben draußen. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).“
+- [x] Reihenfolge der Schlüssel im Abschnitt: `libraryDir`, `libraryMirror`, `vaultEnabled`.
 
 **Texte** (`environmentTexts.ts`)
 
-- [ ] `linksSummary` ersetzen durch `export function linksText(links: LinkCheck): string`: `total === 0` → „keine Verknüpfungen“; keine kaputten → „alle ${total} Verknüpfungen erreichbar“; sonst „⚠ ${broken} von ${total} Verknüpfungen zeigen ins Leere“ (bei genau einer kaputten „zeigt“). Einziger bisheriger Nutzer ist `EnvironmentLinksRow` (wird gelöscht).
-- [ ] Kommentar an `isPending`: „Spiegeln“ → „Abgleichen“.
+- [x] `linksSummary` ersetzen durch `export function linksText(links: LinkCheck): string`: `total === 0` → „keine Verknüpfungen“; keine kaputten → „alle ${total} Verknüpfungen erreichbar“; sonst „⚠ ${broken} von ${total} Verknüpfungen zeigen ins Leere“ (bei genau einer kaputten „zeigt“). Einziger bisheriger Nutzer ist `EnvironmentLinksRow` (wird gelöscht).
+- [x] Kommentar an `isPending`: „Spiegeln“ → „Abgleichen“.
 
 **Zeile „Abgleich“** — neue Datei `src/features/environment/LibraryMirrorRow.tsx`
 
-- [ ] `export function LibraryMirrorRow({ userSkillsDir, userSkillCount }: { userSkillsDir: string; userSkillCount: number }): ReactElement`, `SettingRow id="libraryMirror"`, CSS `./EnvironmentRows.css`, Daten aus `useEnvironment()` (`status`, `error`, `mirrorError`, `isChecking`, `isMirroring`, `check`, `mirror`).
-- [ ] Erste Zeile (`environment-row__line`) = Zustand + genau ein Knopf, Fälle in dieser Reihenfolge:
+- [x] `export function LibraryMirrorRow({ userSkillsDir, userSkillCount }: { userSkillsDir: string; userSkillCount: number }): ReactElement`, `SettingRow id="libraryMirror"`, CSS `./EnvironmentRows.css`, Daten aus `useEnvironment()` (`status`, `error`, `mirrorError`, `isChecking`, `isMirroring`, `check`, `mirror`).
+- [x] Erste Zeile (`environment-row__line`) = Zustand + genau ein Knopf, Fälle in dieser Reihenfolge:
   - `status === null` → gedämpft „Lädt …“ (während `isChecking`) bzw. „—“; Knopf „Erneut prüfen“ (`check`, `disabled={isChecking}`).
   - `status.masterDir === null` → gedämpft „Kein Ordner gewählt“; Knopf „Erneut prüfen“.
   - `status.masterError !== null` → gedämpft `Kein Abgleich. ${masterError}`; Knopf „Erneut prüfen“.
   - `mirrorSummary(status.diffs) !== null` → Warnsatz (`environment-row__warn`) + Knopf „Abgleichen“ / „Gleicht ab …“ (`environment-row__primary`, `mirror`, `disabled={isMirroring}`); darunter die Liste aller `diffs` wie `renderList` in `EnvironmentMirrorRow`.
   - sonst → „Gleich“ bzw. `Gleich · ${mirroredText(lastMirror)}` (`environment-row__ok`) + Knopf „Erneut prüfen“; nicht ausstehende Diffs als `<details>` „n Hinweise“ wie bisher.
-- [ ] Zweite Zeile, sobald `status !== null`: gedämpft „Lokal “ + Pfad in `environment-row__mono` (`title` = Pfad) + ` · ${skillCountText} · ${linksText(status.links)}`; `skillCountText` = „1 Skill“ / „n Skills“ (aus `skillCountLabel` in `SettingsView.tsx` hierher verschieben). Bei kaputten Verknüpfungen das „⚠ …“ in `environment-row__warn` statt gedämpft.
-- [ ] Bei kaputten Verknüpfungen darunter je eine Zeile `environment-row__mono` „Pfad → Ziel“ (bzw. nur Pfad) und gedämpft „Ziel fehlt · zuletzt geprüft HH:MM“ (`formatClock(status.checkedAt)`) — übernommen aus `EnvironmentLinksRow.renderBroken`.
-- [ ] Darunter `error` und `mirrorError` als Warnzeilen.
-- [ ] `EnvironmentMirrorRow.tsx` und `EnvironmentLinksRow.tsx` löschen.
+- [x] Zweite Zeile, sobald `status !== null`: gedämpft „Lokal “ + Pfad in `environment-row__mono` (`title` = Pfad) + ` · ${skillCountText} · ${linksText(status.links)}`; `skillCountText` = „1 Skill“ / „n Skills“ (aus `skillCountLabel` in `SettingsView.tsx` hierher verschieben). Bei kaputten Verknüpfungen das „⚠ …“ in `environment-row__warn` statt gedämpft.
+- [x] Bei kaputten Verknüpfungen darunter je eine Zeile `environment-row__mono` „Pfad → Ziel“ (bzw. nur Pfad) und gedämpft „Ziel fehlt · zuletzt geprüft HH:MM“ (`formatClock(status.checkedAt)`) — übernommen aus `EnvironmentLinksRow.renderBroken`.
+- [x] Darunter `error` und `mirrorError` als Warnzeilen.
+- [x] `EnvironmentMirrorRow.tsx` und `EnvironmentLinksRow.tsx` löschen.
 
 **Zeile „Suche“** — neue Datei `src/features/vault/LibrarySearchRow.tsx`
 
-- [ ] `export function LibrarySearchRow({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: (checked: boolean) => void }): ReactElement`, `SettingRow id="vaultEnabled"`, CSS `./VaultRows.css`; `Switch` (gleicher Import wie in `SettingsView.tsx`) mit `label="Suche"`.
-- [ ] Aus: daneben `vault-row__muted` „aus · kein Einstieg, Ctrl K ohne Wirkung“.
-- [ ] An: daneben `statusText(status)` (bzw. „…“ ohne Status) und die Knöpfe „Neu einlesen“ / „Grundgerüst anlegen“ samt Zustand, Bedingungen und Fehlerzeilen 1:1 aus `VaultStatusRow.tsx`.
-- [ ] `VaultStatusRow.tsx` und `LibraryScopeRow.tsx` löschen.
+- [x] `export function LibrarySearchRow({ isEnabled, onToggle }: { isEnabled: boolean; onToggle: (checked: boolean) => void }): ReactElement`, `SettingRow id="vaultEnabled"`, CSS `./VaultRows.css`; `Switch` (gleicher Import wie in `SettingsView.tsx`) mit `label="Suche"`.
+- [x] Aus: daneben `vault-row__muted` „aus · kein Einstieg, Ctrl K ohne Wirkung“.
+- [x] An: daneben `statusText(status)` (bzw. „…“ ohne Status) und die Knöpfe „Neu einlesen“ / „Grundgerüst anlegen“ samt Zustand, Bedingungen und Fehlerzeilen 1:1 aus `VaultStatusRow.tsx`.
+- [x] `VaultStatusRow.tsx` und `LibraryScopeRow.tsx` löschen.
 
 **Seite** (`SettingsView.tsx`)
 
-- [ ] Fälle `userSkills`, `projectSkills`, `environmentLinks`, `environmentMirror`, `vaultStatus`, `libraryScope` löschen; neuer Fall `libraryMirror` → `<LibraryMirrorRow userSkillsDir={loaded.userSkillsDir} userSkillCount={loaded.userSkillCount} />`; Fall `vaultEnabled` → `<LibrarySearchRow isEnabled={current.vaultEnabled} onToggle={(checked) => { save({ kind: 'vaultEnabled', value: checked }).catch(() => undefined); }} />`.
-- [ ] `projectSkillsText`, `skillCountLabel`, `hasProjectSkills`, `useKnownRepositories`-Aufruf und die dann unbenutzten Importe entfernen. `renderRevealButton` bleibt (Workspaces).
+- [x] Fälle `userSkills`, `projectSkills`, `environmentLinks`, `environmentMirror`, `vaultStatus`, `libraryScope` löschen; neuer Fall `libraryMirror` → `<LibraryMirrorRow userSkillsDir={loaded.userSkillsDir} userSkillCount={loaded.userSkillCount} />`; Fall `vaultEnabled` → `<LibrarySearchRow isEnabled={current.vaultEnabled} onToggle={(checked) => { save({ kind: 'vaultEnabled', value: checked }).catch(() => undefined); }} />`.
+- [x] `projectSkillsText`, `skillCountLabel`, `hasProjectSkills`, `useKnownRepositories`-Aufruf und die dann unbenutzten Importe entfernen. `renderRevealButton` bleibt (Workspaces).
 
 **Doku**
 
-- [ ] `docs/code-map.md` Zeile „Bibliothek“: Kategorie „Bibliothek“ mit den Zeilen Ordner, Abgleich, Suche; Komponenten `LibraryMirrorRow`, `LibrarySearchRow` statt `EnvironmentLinksRow`, `EnvironmentMirrorRow`, `LibraryScopeRow`, `VaultStatusRow`.
-- [ ] `docs/glossary.md` „Spiegeln“: Knopf heißt „Abgleichen“.
-- [ ] `docs/decisions/069-bibliothek.md` unter Konsequenzen eine Zeile: „Oberfläche (2026-11-24): Kategorie „Bibliothek“ mit drei Zeilen — Ordner, Abgleich (inkl. lokalem Skill-Ordner und Verknüpfungen, ein Knopf), Suche (inkl. Indexstand); Projekt-Skills nur noch in der Repository-Auswahl.“
+- [x] `docs/code-map.md` Zeile „Bibliothek“: Kategorie „Bibliothek“ mit den Zeilen Ordner, Abgleich, Suche; Komponenten `LibraryMirrorRow`, `LibrarySearchRow` statt `EnvironmentLinksRow`, `EnvironmentMirrorRow`, `LibraryScopeRow`, `VaultStatusRow`.
+- [x] `docs/glossary.md` „Spiegeln“: Knopf heißt „Abgleichen“.
+- [x] `docs/decisions/069-bibliothek.md` unter Konsequenzen eine Zeile: „Oberfläche (2026-11-24): Kategorie „Bibliothek“ mit drei Zeilen — Ordner, Abgleich (inkl. lokalem Skill-Ordner und Verknüpfungen, ein Knopf), Suche (inkl. Indexstand); Projekt-Skills nur noch in der Repository-Auswahl.“
 
 ## Risiken / Konfidenz
 
@@ -93,10 +93,20 @@ Nur Oberfläche; Core, Bindings und Einstellungsschlüssel bleiben unverändert.
 
 ## Summary
 
+Einstellungen › Bibliothek zeigt drei Zeilen: Ordner, Abgleich (mit lokalem Skill-Ordner und Verknüpfungen, ein Knopf), Suche (mit Indexstand). Projekt-Skills nur noch in der Repository-Auswahl. Nur Oberfläche, keine Migration.
+
 ## Files touched
+
+`settingsCatalog.ts`, `SettingsView.tsx`, `environmentTexts.ts`, neu `LibraryMirrorRow.tsx` und `LibrarySearchRow.tsx`; gelöscht `EnvironmentMirrorRow`, `EnvironmentLinksRow`, `VaultStatusRow`, `LibraryScopeRow`; `docs/code-map.md`, `docs/glossary.md`, ADR 069.
 
 ## Commits
 
+Phasen-Commit `feat(settings)` und `chore(release): v0.70.0`.
+
 ## Deviations from plan
 
+Ohne Review-Station und ohne Sichtprüfung auf Wunsch des Users committet und getaggt.
+
 ## Follow-ups
+
+- Sichtprüfung in `pnpm tauri dev`: Einstellungen › Bibliothek, Suchfeld „Verknüpfungen“ muss „Abgleich“ zeigen.

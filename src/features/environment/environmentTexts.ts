@@ -5,7 +5,7 @@ import type { MirrorDiff } from '@/lib/bindings/MirrorDiff';
 import type { MirrorKind } from '@/lib/bindings/MirrorKind';
 import type { MirrorRun } from '@/lib/bindings/MirrorRun';
 
-/** Ein Eintrag, den „Spiegeln“ kopieren würde. */
+/** Ein Eintrag, den „Abgleichen“ kopieren würde. */
 export function isPending(diff: MirrorDiff): boolean {
   return diff.state === 'onlyMaster' || diff.state === 'masterNewer';
 }
@@ -18,14 +18,15 @@ export function needsAttention(status: EnvironmentStatus | null): boolean {
   return status.links.broken.length > 0 || status.diffs.some(isPending);
 }
 
-export function linksSummary(links: LinkCheck): string {
+export function linksText(links: LinkCheck): string {
   if (links.total === 0) {
-    return 'Keine Verknüpfungen';
+    return 'keine Verknüpfungen';
   }
   if (links.broken.length === 0) {
-    return `Alle ${String(links.total)} erreichbar`;
+    return `alle ${String(links.total)} Verknüpfungen erreichbar`;
   }
-  return `⚠ ${String(links.broken.length)} von ${String(links.total)} zeigt ins Leere`;
+  const verb: string = links.broken.length === 1 ? 'zeigt' : 'zeigen';
+  return `⚠ ${String(links.broken.length)} von ${String(links.total)} Verknüpfungen ${verb} ins Leere`;
 }
 
 function countText(count: number, singular: string, plural: string): string {

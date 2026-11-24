@@ -27,3 +27,4 @@ Ein Ordner „Bibliothek“ (`library_dir`). Enthält er Master-Inhalt, gleicht 
 - Der Index hat Schema-Version 2; jeder bestehende Index wird einmal neu aufgebaut.
 - Wer Master-Ordner und Vault bisher an getrennten Orten hatte, sieht nach dem Update den Master-Ordner; das Wissen muss nach `<Bibliothek>\_vault\` umziehen.
 - Lange Skill-Beschreibungen erzeugen Treffer; der Stationsauftrag schließt sie aus, im Dialog trennen die Gruppen.
+- Oberfläche (2026-11-24): Kategorie „Bibliothek“ mit drei Zeilen — Ordner, Abgleich (inkl. lokalem Skill-Ordner und Verknüpfungen, ein Knopf), Suche (inkl. Indexstand); Projekt-Skills nur noch in der Repository-Auswahl.

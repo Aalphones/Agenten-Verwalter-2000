@@ -17,14 +17,10 @@ import {
   selectedCodexModel,
 } from '@/features/codex/codexModels';
 import { useCodexModels } from '@/features/codex/useCodexModels';
-import { EnvironmentLinksRow } from '@/features/environment/EnvironmentLinksRow';
-import { EnvironmentMirrorRow } from '@/features/environment/EnvironmentMirrorRow';
+import { LibraryMirrorRow } from '@/features/environment/LibraryMirrorRow';
 import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { LibraryDirRow } from '@/features/vault/LibraryDirRow';
-import { LibraryScopeRow } from '@/features/vault/LibraryScopeRow';
-import '@/features/vault/VaultRows.css';
-import { VaultStatusRow } from '@/features/vault/VaultStatusRow';
-import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
+import { LibrarySearchRow } from '@/features/vault/LibrarySearchRow';
 import { SkinPackEditor } from '@/features/skins/SkinPackEditor';
 import { SkinSettingRow } from '@/features/skins/SkinSettingRow';
 import { ensureVera } from '@/features/skins/unlockVera';
@@ -58,7 +54,6 @@ import { useLocalModels } from '@/features/settings/useLocalModels';
 import { useSettingsUpdate } from '@/features/settings/useSettingsUpdate';
 import type { CodexModel } from '@/lib/bindings/CodexModel';
 import type { Effort } from '@/lib/bindings/Effort';
-import type { KnownRepository } from '@/lib/bindings/KnownRepository';
 import type { Mode } from '@/lib/bindings/Mode';
 import type { ModelId } from '@/lib/bindings/ModelId';
 import type { OperatingMode } from '@/lib/bindings/OperatingMode';
@@ -113,7 +108,6 @@ export function SettingsView({
   const isScrollingToRef = useRef<boolean>(false);
   const scrollLockRef = useRef<number | undefined>(undefined);
   const hasScrolledToStartRef = useRef<boolean>(false);
-  const { repositories, isLoading: areRepositoriesLoading } = useKnownRepositories();
   const { save, error: saveError } = useSettingsUpdate();
   const skinPacks = useSkinPacks();
   const editingPackId: string | null = useSkinsStore((state) => state.editingPackId);
@@ -265,21 +259,6 @@ export function SettingsView({
 
   function saveDefaultMode(mode: Mode, effort: Effort): void {
     save({ kind: 'defaultMode', mode, effort }).catch(() => undefined);
-  }
-
-  function projectSkillsText(): string {
-    if (areRepositoriesLoading) {
-      return '…';
-    }
-    const withSkills: KnownRepository[] = repositories.filter(
-      (repository: KnownRepository) => !repository.isMissing && repository.skillCount > 0,
-    );
-    if (withSkills.length === 0) {
-      return 'Keine Repository-Skills';
-    }
-    return withSkills
-      .map((repository: KnownRepository) => `${repository.name} ${String(repository.skillCount)}`)
-      .join(' · ');
   }
 
   function renderRevealButton(path: string): ReactElement {
@@ -516,31 +495,6 @@ export function SettingsView({
         );
       case 'cliVersion':
         return <CliVersionRow />;
-      case 'userSkills':
-        return (
-          <SettingRow id={id}>
-            <span className="settings-view__path-text">
-              <span className="settings-view__path" title={loaded.userSkillsDir}>
-                {loaded.userSkillsDir}
-              </span>
-              <span className="settings-view__extra">{skillCountLabel(loaded.userSkillCount)}</span>
-            </span>
-            {renderRevealButton(loaded.userSkillsDir)}
-          </SettingRow>
-        );
-      case 'projectSkills':
-        return (
-          <SettingRow id={id}>
-            <span className="settings-view__path-text">
-              <span className="settings-view__plain">{projectSkillsText()}</span>
-              {!areRepositoriesLoading && hasProjectSkills(repositories) && (
-                <span className="settings-view__extra">je Repository</span>
-              )}
-            </span>
-          </SettingRow>
-        );
-      case 'environmentLinks':
-        return <EnvironmentLinksRow />;
       case 'libraryDir':
         return (
           <LibraryDirRow
@@ -548,29 +502,22 @@ export function SettingsView({
             onSave={(value: string | null): Promise<boolean> => save({ kind: 'libraryDir', value })}
           />
         );
-      case 'environmentMirror':
-        return <EnvironmentMirrorRow />;
+      case 'libraryMirror':
+        return (
+          <LibraryMirrorRow
+            userSkillsDir={loaded.userSkillsDir}
+            userSkillCount={loaded.userSkillCount}
+          />
+        );
       case 'vaultEnabled':
         return (
-          <SettingRow id={id}>
-            <Switch
-              checked={current.vaultEnabled}
-              label="Suche"
-              onChange={(checked: boolean): void => {
-                save({ kind: 'vaultEnabled', value: checked }).catch(() => undefined);
-              }}
-            />
-            <span className="vault-row__muted">
-              {current.vaultEnabled
-                ? 'an · Suche in der Seitenleiste und Ctrl K'
-                : 'aus · kein Einstieg, Ctrl K ohne Wirkung'}
-            </span>
-          </SettingRow>
+          <LibrarySearchRow
+            isEnabled={current.vaultEnabled}
+            onToggle={(checked: boolean): void => {
+              save({ kind: 'vaultEnabled', value: checked }).catch(() => undefined);
+            }}
+          />
         );
-      case 'vaultStatus':
-        return <VaultStatusRow />;
-      case 'libraryScope':
-        return <LibraryScopeRow />;
       case 'skinFigures':
       case 'skinAnimations':
       case 'skinCelebrations':
@@ -719,14 +666,4 @@ export function SettingsView({
 
 function assertNever(value: never): never {
   throw new Error(`Zeile ohne Zweig in renderRow: ${String(value)}`);
-}
-
-function skillCountLabel(count: number): string {
-  return count === 1 ? '1 Skill' : `${String(count)} Skills`;
-}
-
-function hasProjectSkills(repositories: readonly KnownRepository[]): boolean {
-  return repositories.some(
-    (repository: KnownRepository) => !repository.isMissing && repository.skillCount > 0,
-  );
 }

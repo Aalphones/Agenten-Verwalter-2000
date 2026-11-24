@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
+import { Switch } from '@/components/Switch';
 import { SettingRow } from '@/features/settings/SettingRow';
 import { useVaultStatus } from '@/features/vault/useVaultStatus';
 import { statusText } from '@/features/vault/vaultTexts';
@@ -7,7 +8,12 @@ import { commandErrorText } from '@/lib/errors';
 import { createVaultSkeleton, rescanVault } from '@/lib/vault';
 import './VaultRows.css';
 
-export function VaultStatusRow(): ReactElement {
+interface LibrarySearchRowProps {
+  isEnabled: boolean;
+  onToggle: (checked: boolean) => void;
+}
+
+export function LibrarySearchRow({ isEnabled, onToggle }: LibrarySearchRowProps): ReactElement {
   const { status, error } = useVaultStatus();
   const [skeletonError, setSkeletonError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -37,33 +43,47 @@ export function VaultStatusRow(): ReactElement {
   const canRescan: boolean = status?.state === 'ready' || isScanning;
   const canCreateSkeleton: boolean =
     status !== null && status.canCreateSkeleton && status.state === 'ready';
+
+  function renderEnabled(): ReactElement {
+    return (
+      <>
+        <span className="vault-row__text">{status === null ? '…' : statusText(status)}</span>
+        {canRescan && (
+          <button
+            type="button"
+            className="settings-view__button"
+            disabled={isScanning}
+            onClick={rescan}
+          >
+            Neu einlesen
+          </button>
+        )}
+        {canCreateSkeleton && (
+          <button
+            type="button"
+            className="settings-view__button"
+            disabled={isCreating}
+            onClick={createSkeleton}
+          >
+            Grundgerüst anlegen
+          </button>
+        )}
+      </>
+    );
+  }
+
   return (
-    <SettingRow id="vaultStatus">
+    <SettingRow id="vaultEnabled">
       <div className="vault-row__stack">
         <div className="vault-row__line">
-          <span className="vault-row__text">{status === null ? '…' : statusText(status)}</span>
-          {canRescan && (
-            <button
-              type="button"
-              className="settings-view__button"
-              disabled={isScanning}
-              onClick={rescan}
-            >
-              Neu einlesen
-            </button>
-          )}
-          {canCreateSkeleton && (
-            <button
-              type="button"
-              className="settings-view__button"
-              disabled={isCreating}
-              onClick={createSkeleton}
-            >
-              Grundgerüst anlegen
-            </button>
+          <Switch checked={isEnabled} label="Suche" onChange={onToggle} />
+          {isEnabled ? (
+            renderEnabled()
+          ) : (
+            <span className="vault-row__muted">aus · kein Einstieg, Ctrl K ohne Wirkung</span>
           )}
         </div>
-        {error !== null && <span className="vault-row__warn">{error}</span>}
+        {isEnabled && error !== null && <span className="vault-row__warn">{error}</span>}
         {skeletonError !== null && <span className="vault-row__warn">{skeletonError}</span>}
       </div>
     </SettingRow>

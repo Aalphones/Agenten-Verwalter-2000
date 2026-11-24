@@ -19,7 +19,7 @@ export interface SettingsCategory {
 export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   { id: 'general', label: 'Allgemein', summary: 'Konto · Darstellung' },
   { id: 'agent', label: 'Agent', summary: 'Betriebsart · Modelle · Modus · Claude Code' },
-  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Bibliothek' },
+  { id: 'skills', label: 'Bibliothek', summary: 'Ordner · Abgleich · Suche' },
   { id: 'skins', label: 'Skins', summary: 'Figuren · Stil · Pakete' },
   { id: 'app', label: 'App', summary: 'Version · Ordner · Rechte' },
 ];
@@ -48,10 +48,6 @@ function isClaudeMode(settings: Settings): boolean {
 
 function hasLibraryDir(settings: Settings): boolean {
   return settings.libraryDir !== null;
-}
-
-function isSearchOn(settings: Settings): boolean {
-  return settings.libraryDir !== null && settings.vaultEnabled;
 }
 
 // Die Schlüsselreihenfolge ist die Anzeigereihenfolge.
@@ -141,57 +137,24 @@ const ENTRY_DATA = {
     info: 'Die Version der Claude-Kommandozeile, die der Verwalter für seine Agenten startet. „Aktualisieren“ führt claude update aus. Laufende Agenten behalten ihre alte Version bis zu ihrem nächsten Start; ist die Datei dabei gesperrt, schlägt die Aktualisierung fehl — dann die Sessions pausieren und es erneut versuchen.',
     isShown: isNotStandalone,
   },
-  userSkills: {
-    category: 'skills',
-    section: 'Skills',
-    label: 'Benutzer-Skills',
-    info: 'Skills aus deinem Benutzerordner stehen in jeder Session zur Verfügung.',
-  },
-  projectSkills: {
-    category: 'skills',
-    section: 'Skills',
-    label: 'Projekt-Skills',
-    info: 'Skills aus den .claude\\skills-Ordnern der Repositories einer Session. Welche gelten, hängt davon ab, welche Repositories die Session umfasst.',
-  },
   libraryDir: {
     category: 'skills',
     section: 'Bibliothek',
     label: 'Ordner',
     info: 'Ein Ordner für Anweisungen, Skills und Wissen, z. B. auf einem synchronisierten Laufwerk. Enthält er skills, commands, output-styles oder CLAUDE.md, gleicht der Verwalter diese mit ~\\.claude ab und sucht im Wissen unter _vault. Sonst ist der ganze Ordner Wissen. Der Verwalter liest ihn nur; der Suchindex liegt lokal in seinem Datenordner.',
   },
-  environmentMirror: {
+  libraryMirror: {
     category: 'skills',
     section: 'Bibliothek',
-    label: 'Abgleich der Skills',
-    info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Ordner der Bibliothek mit ~\\.claude nach Inhalt. Die Änderungszeit entscheidet nur, welche Seite neuer ist. „Spiegeln“ kopiert, was im Ordner neuer ist oder lokal fehlt, und löscht nie.',
-    isShown: hasLibraryDir,
-  },
-  environmentLinks: {
-    category: 'skills',
-    section: 'Bibliothek',
-    label: 'Verknüpfungen',
-    info: 'Junctions und symbolische Links direkt unter ~\\.claude und direkt in dessen Unterordnern, deren Ziel nicht erreichbar ist.',
+    label: 'Abgleich',
+    info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Ordner der Bibliothek mit ~\\.claude nach Inhalt; die Änderungszeit entscheidet nur, welche Seite neuer ist. „Abgleichen“ kopiert, was im Ordner neuer ist oder lokal fehlt, und löscht nie. Die Zeile darunter zeigt den lokalen Skill-Ordner, den jede Session nutzt, und ob die Verknüpfungen (Junctions und symbolische Links unter ~\\.claude und dessen Unterordnern) ihr Ziel erreichen.',
   },
   vaultEnabled: {
     category: 'skills',
     section: 'Bibliothek',
     label: 'Suche',
-    info: 'Schaltet Einlesen, Suche und die Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht für die Suche, die Agenten sehen keine Werkzeuge der Bibliothek. Der Abgleich der Skills läuft unabhängig davon.',
+    info: 'Schaltet Einlesen, Suche (Seitenleiste und Strg+K) und die Werkzeuge der Agenten ein; der Abgleich läuft unabhängig davon. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist, und nur, was sich geändert hat. Durchsucht werden bei einer Bibliothek nur CLAUDE.md, AGENTS.md, skills/, commands/, output-styles/, memory/ (nur die Dateien direkt darin) und _vault/; ein Ordner ohne Skills wird ganz durchsucht. hooks/, Logs, settings.json, Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore bleiben draußen. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).',
     isShown: hasLibraryDir,
-  },
-  vaultStatus: {
-    category: 'skills',
-    section: 'Bibliothek',
-    label: 'Suchindex',
-    info: 'Stand des Suchindex. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist; dabei liest der Verwalter nur Dateien, die sich geändert haben. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).',
-    isShown: isSearchOn,
-  },
-  libraryScope: {
-    category: 'skills',
-    section: 'Bibliothek',
-    label: 'Durchsucht',
-    info: 'Nur diese Teile liest der Verwalter für die Suche; aus memory/ nur die Dateien direkt darin. hooks/, Logs, settings.json und alles Übrige im Ordner bleiben draußen, ebenso Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore.',
-    isShown: isSearchOn,
   },
   skinFigures: {
     category: 'skins',
