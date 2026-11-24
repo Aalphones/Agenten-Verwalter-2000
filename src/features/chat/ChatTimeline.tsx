@@ -11,6 +11,9 @@ import { HandoffBar } from '@/features/chat/HandoffBar';
 import { PinnedUserMessage } from '@/features/chat/PinnedUserMessage';
 import { lastAnswerSeq } from '@/features/chat/handoff';
 import { QuestionBlock } from '@/features/chat/QuestionBlock';
+import { TimeLabel } from '@/features/chat/TimeLabel';
+import { TimeLine } from '@/features/chat/TimeLine';
+import { buildTimeMarks, type BlockTime } from '@/features/chat/timeMarks';
 import { NoticeBlock } from '@/features/notices/NoticeBlock';
 import { customMatchers, lookFor } from '@/features/skins/figureLook';
 import type { RunView } from '@/features/runs/runTexts';
@@ -135,6 +138,7 @@ export function ChatTimeline({
     () => buildBlocks(entries, backgroundByToolUseId, showsHandoff ? answerSeq : null),
     [entries, backgroundByToolUseId, showsHandoff, answerSeq],
   );
+  const timeMarks: BlockTime[] = useMemo(() => buildTimeMarks(blocks, Date.now()), [blocks]);
   const isWorking: boolean = session.status === 'starting' || session.status === 'running';
   const activeFigures: SkinPack | null = useSkinsStore((state) => state.activeFigures);
   // Wartet die Session auf ein Skript, steht unter dem Verlauf die Zeile des Fachs „Warten“, mit und ohne Figurenpaket.
@@ -447,6 +451,22 @@ export function ChatTimeline({
     );
   }
 
+  /** Linie davor und Zeit am Block; fehlt dem Eintrag die Zeit (Bestand), steht dort nichts. */
+  function renderTimeMark(
+    mark: BlockTime | undefined,
+    block: ChatBlock | undefined,
+  ): ReactElement | null {
+    if (mark === undefined || mark.at === null) {
+      return null;
+    }
+    return (
+      <>
+        {mark.separator !== null && <TimeLine separator={mark.separator} />}
+        {mark.showsTime && <TimeLabel at={mark.at} isUser={isUserBlock(block)} />}
+      </>
+    );
+  }
+
   function renderBlock(block: ChatBlock | undefined): ReactElement {
     if (block === undefined) {
       return renderStatusLine();
@@ -506,7 +526,15 @@ export function ChatTimeline({
                 className="chat-timeline__item"
                 style={{ transform: `translateY(${String(item.start + bottomOffset)}px)` }}
               >
-                <div className="chat-timeline__block" data-seq={blockSeq(blocks[item.index])}>
+                <div
+                  className={
+                    isUserBlock(blocks[item.index])
+                      ? 'chat-timeline__block chat-timeline__block--user'
+                      : 'chat-timeline__block'
+                  }
+                  data-seq={blockSeq(blocks[item.index])}
+                >
+                  {renderTimeMark(timeMarks[item.index], blocks[item.index])}
                   {renderBlock(blocks[item.index])}
                 </div>
               </div>
@@ -531,6 +559,10 @@ export function ChatTimeline({
       )}
     </>
   );
+}
+
+function isUserBlock(block: ChatBlock | undefined): boolean {
+  return block?.kind === 'entry' && block.entry.kind === 'user';
 }
 
 function blockSeq(block: ChatBlock | undefined): number | undefined {

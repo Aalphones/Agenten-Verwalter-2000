@@ -1,0 +1,33 @@
+.time-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-2xs) 0 var(--space-xl);
+  color: var(--color-fg-secondary);
+  font-size: 11.5px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--color-border);
+  }
+
+  &__label {
+    white-space: nowrap;
+  }
+
+  &--day &__label {
+    font-weight: 600;
+  }
+
+  &--gap {
+    color: var(--color-fg-muted);
+  }
+
+  &--gap::before,
+  &--gap::after {
+    border-top-style: dashed;
+    border-color: var(--color-border-subtle);
+  }
+}

@@ -1380,6 +1380,7 @@ impl SessionRegistry {
                     state.last_report = Some(found.stripped.clone());
                     state.push_entry(outbox, |seq: u32| ChatEntry::Notice {
                         seq,
+                        at: None,
                         notice: Notice::ReportUpdated {
                             at: found.at,
                             summary: found.summary.clone(),
@@ -1644,6 +1645,7 @@ impl SessionRegistry {
                 {
                     state.push_entry(outbox, |seq: u32| ChatEntry::Notice {
                         seq,
+                        at: None,
                         notice: Notice::ModelSwitched {
                             from: previous,
                             to: model,
@@ -2680,6 +2682,7 @@ impl SessionState {
     ) {
         self.compact_seq = Some(self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
             seq,
+            at: None,
             notice: Notice::Compacted {
                 trigger,
                 pre_tokens,
@@ -2718,7 +2721,14 @@ impl SessionState {
             post_tokens: *post_tokens,
             summary: Some(text),
         };
-        self.replace_entry(outbox, ChatEntry::Notice { seq, notice });
+        self.replace_entry(
+            outbox,
+            ChatEntry::Notice {
+                seq,
+                at: None,
+                notice,
+            },
+        );
     }
 
     /// Hält ein Ausweichen auf ein anderes Modell fest. Bei `retry` und `sticky` antwortet Claude
@@ -2740,6 +2750,7 @@ impl SessionState {
         let fallback_id: Option<ModelId> = ModelId::from_cli_id(&fallback_model);
         self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
             seq,
+            at: None,
             notice: Notice::ModelFallback {
                 original_model,
                 original_id,
@@ -2770,6 +2781,7 @@ impl SessionState {
         outbox.summary_dirty = true;
         self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
             seq,
+            at: None,
             notice: Notice::ModeChanged {
                 from: previous,
                 to: mode,
@@ -2960,7 +2972,8 @@ impl SessionState {
     /// Hängt einen Eintrag an; `build` bekommt seine `seq`.
     fn push_entry(&mut self, outbox: &mut Outbox, build: impl FnOnce(u32) -> ChatEntry) -> u32 {
         let seq = u32::try_from(self.entries.len()).unwrap_or(u32::MAX);
-        let entry = build(seq);
+        let mut entry = build(seq);
+        entry.stamp(now_ms());
         self.entries.push(entry.clone());
         outbox.entries.push(entry);
         seq
@@ -3010,10 +3023,15 @@ impl SessionState {
         self.auto_handoff_token
     }
 
-    fn replace_entry(&mut self, outbox: &mut Outbox, entry: ChatEntry) {
+    fn replace_entry(&mut self, outbox: &mut Outbox, mut entry: ChatEntry) {
         let Some(slot) = self.entries.get_mut(entry.seq() as usize) else {
             return;
         };
+        // Ein ersetzter Eintrag behält die Zeit, zu der er angelegt wurde.
+        let created_at: Option<f64> = slot.at();
+        if let Some(created_at) = created_at {
+            entry.stamp(created_at);
+        }
         *slot = entry.clone();
         outbox.entries.push(entry);
     }
@@ -3070,9 +3088,20 @@ impl SessionState {
 
     fn update_todos(&mut self, outbox: &mut Outbox, items: Vec<TodoItem>) {
         match self.todos_seq {
-            Some(seq) => self.replace_entry(outbox, ChatEntry::Todos { seq, items }),
+            Some(seq) => self.replace_entry(
+                outbox,
+                ChatEntry::Todos {
+                    seq,
+                    at: None,
+                    items,
+                },
+            ),
             None => {
-                let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Todos { seq, items });
+                let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Todos {
+                    seq,
+                    at: None,
+                    items,
+                });
                 self.todos_seq = Some(seq);
             }
         }
@@ -3138,6 +3167,7 @@ impl SessionState {
                 self.drop_auto_handoff(outbox);
                 let seq: u32 = self.push_entry(outbox, |seq: u32| ChatEntry::Text {
                     seq,
+                    at: None,
                     text,
                     unsourced: Vec::new(),
                 });
@@ -3148,6 +3178,7 @@ impl SessionState {
                 self.stop_thinking(outbox);
                 self.push_entry(outbox, |seq: u32| ChatEntry::Thinking {
                     seq,
+                    at: None,
                     text,
                     seconds,
                 });
@@ -3175,6 +3206,7 @@ impl SessionState {
                 let entry_tool_use_id = tool_use_id.clone();
                 let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Tool {
                     seq,
+                    at: None,
                     tool_use_id: entry_tool_use_id,
                     tool,
                     target,
@@ -3256,6 +3288,7 @@ impl SessionState {
             AgentEvent::Info(text) => {
                 self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
                     seq,
+                    at: None,
                     notice: Notice::Info { text },
                 });
             }
@@ -3445,6 +3478,7 @@ impl SessionState {
             let artifact_kind = crate::artifacts::kind_of_entry(&dir.join(&file));
             self.push_entry(outbox, |seq: u32| ChatEntry::Artifact {
                 seq,
+                at: None,
                 path: path.clone(),
                 file,
                 artifact_kind,
@@ -3685,6 +3719,7 @@ impl SessionState {
         let entry_questions = questions.clone();
         let seq = self.push_entry(outbox, |seq: u32| ChatEntry::Question {
             seq,
+            at: None,
             request_id: entry_request_id,
             question_kind,
             questions: entry_questions,
@@ -3740,6 +3775,7 @@ impl SessionState {
                 self.abandon_pending(outbox, "Nicht beantwortet");
                 self.push_entry(outbox, |seq: u32| ChatEntry::Error {
                     seq,
+                    at: None,
                     title: "Kontingent aufgebraucht".to_owned(),
                     text,
                 });
@@ -3751,6 +3787,7 @@ impl SessionState {
                 self.abandon_pending(outbox, "Nicht beantwortet");
                 self.push_entry(outbox, |seq: u32| ChatEntry::Error {
                     seq,
+                    at: None,
                     title: "Fehler vom Agenten".to_owned(),
                     text,
                 });
@@ -3791,6 +3828,7 @@ impl SessionState {
             }
             let entry = ChatEntry::Text {
                 seq,
+                at: None,
                 text: text.clone(),
                 unsourced,
             };
@@ -3827,6 +3865,7 @@ impl SessionState {
         }
         self.push_entry(outbox, |seq: u32| ChatEntry::Notice {
             seq,
+            at: None,
             notice: Notice::TurnSummary {
                 denials,
                 cost_usd,
@@ -3855,6 +3894,7 @@ impl SessionState {
         let code = exit_code.map_or_else(|| "unbekannt".to_owned(), |value: i32| value.to_string());
         self.push_entry(outbox, |seq: u32| ChatEntry::Error {
             seq,
+            at: None,
             title: "Agent beendet".to_owned(),
             text: format!("Claude wurde unerwartet beendet (Exit-Code {code})."),
         });
@@ -4261,6 +4301,7 @@ fn start_process(
     if state.has_agent_history && !resume {
         state.push_entry(outbox, |seq: u32| ChatEntry::Error {
             seq,
+            at: None,
             title: "Verlauf nicht übernommen".to_owned(),
             text: "Diese Session lief bisher in einer anderen Betriebsart. Der Agent kennt den 
                    bisherigen Verlauf nicht — schreib ihm kurz, worum es geht."
@@ -4277,6 +4318,7 @@ fn start_process(
             WorktreeCheck::Missing { name, reason } => {
                 state.push_entry(outbox, |seq: u32| ChatEntry::Error {
                     seq,
+                    at: None,
                     title: "Repository nicht gefunden".to_owned(),
                     text: format!(
                         "{name}: {reason} Der Agent arbeitet ohne dieses Repository weiter."

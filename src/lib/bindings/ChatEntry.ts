@@ -25,16 +25,36 @@ skill: SkillRef | null,
 /**
  * Review-Kommentare aus der Changes-Ansicht; Einträge von vorher haben das Feld nicht.
  */
-comments: Array<ReviewComment>, } | { "kind": "text", seq: number, text: string, 
+comments: Array<ReviewComment>, } | { "kind": "text", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, text: string, 
 /**
  * Pfade, Datei:Zeile-Angaben und Zahlen des Textes ohne Fundstelle (ADR 036), so
  * geschrieben wie im Text; Einträge von vorher haben das Feld nicht.
  */
-unsourced: Array<string>, } | { "kind": "thinking", seq: number, text: string, seconds: number, } | { "kind": "tool", seq: number, toolUseId: string, tool: string, target: string, state: ToolState, 
+unsourced: Array<string>, } | { "kind": "thinking", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, text: string, seconds: number, } | { "kind": "tool", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, toolUseId: string, tool: string, target: string, state: ToolState, 
 /**
  * Was der Befehl bewirkt (Bash, PowerShell); Einträge von vorher haben das Feld nicht.
  */
-description: string | null, } | { "kind": "todos", seq: number, items: Array<TodoItem>, } | { "kind": "artifact", seq: number, 
+description: string | null, } | { "kind": "todos", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, items: Array<TodoItem>, } | { "kind": "artifact", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, 
 /**
  * Ungekürzt, wie das Werkzeug ihn nannte.
  */
@@ -46,4 +66,16 @@ file: string,
 /**
  * Einträge von vorher haben das Feld nicht; sie waren alle HTML.
  */
-artifactKind: ArtifactKind, } | { "kind": "question", seq: number, requestId: string, questionKind: QuestionKind, questions: Array<Question>, answer: string | null, } | { "kind": "error", seq: number, title: string, text: string, } | { "kind": "notice", seq: number, notice: Notice, };
+artifactKind: ArtifactKind, } | { "kind": "question", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, requestId: string, questionKind: QuestionKind, questions: Array<Question>, answer: string | null, } | { "kind": "error", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, title: string, text: string, } | { "kind": "notice", seq: number, 
+/**
+ * Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+ */
+at: number | null, notice: Notice, };

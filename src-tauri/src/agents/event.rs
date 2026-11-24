@@ -205,6 +205,9 @@ pub enum ChatEntry {
     },
     Text {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         text: String,
         /// Pfade, Datei:Zeile-Angaben und Zahlen des Textes ohne Fundstelle (ADR 036), so
         /// geschrieben wie im Text; Einträge von vorher haben das Feld nicht.
@@ -213,11 +216,17 @@ pub enum ChatEntry {
     },
     Thinking {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         text: String,
         seconds: u32,
     },
     Tool {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         tool_use_id: String,
         tool: String,
         target: String,
@@ -228,11 +237,17 @@ pub enum ChatEntry {
     },
     Todos {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         items: Vec<TodoItem>,
     },
     /// Der Hauptagent hat mit `Write` ein Artefakt geschrieben (ADR 026, 047).
     Artifact {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         /// Ungekürzt, wie das Werkzeug ihn nannte.
         path: String,
         /// Name des Artefakts; bei einer Datei in einem Ordner der Ordner.
@@ -243,6 +258,9 @@ pub enum ChatEntry {
     },
     Question {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         request_id: String,
         question_kind: QuestionKind,
         questions: Vec<Question>,
@@ -250,12 +268,18 @@ pub enum ChatEntry {
     },
     Error {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         title: String,
         text: String,
     },
     /// Hinweis im Verlauf, ADR 033.
     Notice {
         seq: u32,
+        /// Zeitpunkt des Anlegens in Millisekunden; Einträge von vorher haben das Feld nicht.
+        #[serde(default)]
+        at: Option<f64>,
         notice: Notice,
     },
 }
@@ -272,6 +296,40 @@ impl ChatEntry {
             | ChatEntry::Question { seq, .. }
             | ChatEntry::Error { seq, .. }
             | ChatEntry::Notice { seq, .. } => *seq,
+        }
+    }
+
+    /// Wann der Eintrag angelegt wurde; bei Nachrichten des Nutzers ist es `sent_at`.
+    pub fn at(&self) -> Option<f64> {
+        match self {
+            ChatEntry::User { sent_at, .. } => Some(*sent_at),
+            ChatEntry::Text { at, .. }
+            | ChatEntry::Thinking { at, .. }
+            | ChatEntry::Tool { at, .. }
+            | ChatEntry::Todos { at, .. }
+            | ChatEntry::Artifact { at, .. }
+            | ChatEntry::Question { at, .. }
+            | ChatEntry::Error { at, .. }
+            | ChatEntry::Notice { at, .. } => *at,
+        }
+    }
+
+    /// Setzt die Zeit, falls der Eintrag noch keine hat; Nachrichten des Nutzers tragen `sent_at`.
+    pub fn stamp(&mut self, now: f64) {
+        match self {
+            ChatEntry::User { .. } => {}
+            ChatEntry::Text { at, .. }
+            | ChatEntry::Thinking { at, .. }
+            | ChatEntry::Tool { at, .. }
+            | ChatEntry::Todos { at, .. }
+            | ChatEntry::Artifact { at, .. }
+            | ChatEntry::Question { at, .. }
+            | ChatEntry::Error { at, .. }
+            | ChatEntry::Notice { at, .. } => {
+                if at.is_none() {
+                    *at = Some(now);
+                }
+            }
         }
     }
 }

@@ -18,6 +18,7 @@ export function StationQuestion({ sessionId, openQuestion }: StationQuestionProp
     (): QuestionEntry => ({
       kind: 'question',
       seq: openQuestion.seq,
+      at: null,
       requestId: openQuestion.requestId,
       questionKind: openQuestion.questionKind,
       questions: openQuestion.questions,

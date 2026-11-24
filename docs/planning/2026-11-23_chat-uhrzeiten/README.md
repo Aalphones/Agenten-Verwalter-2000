@@ -28,6 +28,10 @@ Jeder Eintrag im Chat-Verlauf trägt eine Uhrzeit, damit man sieht, wann etwas g
 8. Nur Theme-Tokens; Zeit- und Linientext mindestens 4,5:1 in hell und dunkel.
 9. Tests für die Logik (Minuten-Dedup, Tages- und Pausenlinie, Einträge ohne Zeit); `pnpm check` grün.
 
-## Offene Prüfung für die Station
+## Prüfung zur Neuaufbau-Quelle (erledigt)
 
-Wird der Verlauf nach einem Neustart aus einer Datei neu aufgebaut (Transkript), muss `at` dort aus dem Zeitfeld der Quelle kommen, sonst fehlt die Zeit nach dem Neustart. Die Station prüft das zuerst und meldet das Ergebnis.
+Der Verlauf wird nach einem Neustart nicht aus einer Datei neu aufgebaut: Er liegt als JSON je Eintrag in der Tabelle `chat_entries` (`db/chat_entries.rs`), `at` wird mitgespeichert. Ein Quellfeld ist nicht nötig; Bestandseinträge ohne `at` bleiben ohne Zeit.
+
+## Umsetzung
+
+Umgesetzt: `at` an allen Eintragsarten außer der Nachricht des Nutzers (`push_entry` setzt es beim Anlegen, `replace_entry` behält es); Logik in `src/features/chat/timeMarks.ts` mit Tests, Anzeige in `TimeLabel` und `TimeLine`. `pnpm check` grün, Tests grün (17); nicht in der echten App gelaufen.

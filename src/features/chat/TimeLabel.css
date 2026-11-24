@@ -1,0 +1,26 @@
+.time-label {
+  position: absolute;
+  top: var(--space-2xs);
+  right: var(--space-2xl);
+  width: 44px;
+  color: var(--color-fg-muted);
+  font-size: 11.5px;
+  line-height: 21px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  cursor: default;
+
+  /* Die Nachricht des Nutzers beginnt unter ihrem Außenabstand und dem Rahmen ihres Kastens. */
+  &--user {
+    top: var(--space-2xl);
+  }
+
+  @container main (max-width: 559px) {
+    position: static;
+    display: block;
+    width: auto;
+    margin-bottom: var(--space-2xs);
+    line-height: 18px;
+    text-align: left;
+  }
+}

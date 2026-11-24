@@ -12,7 +12,7 @@
 
 ## Prüfkette
 
-Lint, Typecheck und Build sind die Qualitätsschranke dieses Projekts — Tests gehören nicht dazu. Die einzigen sind die Unit-Tests der Fix-Runden-Auswahl in `src-tauri/src/implementation/tests.rs`; sie laufen von Hand mit `cargo test --manifest-path src-tauri/Cargo.toml`, `pnpm check` und CI fahren sie nicht. `pnpm check` fährt die Kette lokal, [.github/workflows/check.yml](../../.github/workflows/check.yml) identisch in GitHub Actions (plus die Bindings-Prüfung, siehe unten):
+Lint, Typecheck und Build sind die Qualitätsschranke dieses Projekts — Tests gehören nicht dazu. Die einzigen sind die Unit-Tests der Fix-Runden-Auswahl in `src-tauri/src/implementation/tests.rs`; sie laufen von Hand mit `cargo test --manifest-path src-tauri/Cargo.toml`, `pnpm check` und CI fahren sie nicht. Dazu kommen die Tests der Zeit- und Linienlogik des Verlaufs in `src/features/chat/timeMarks.test.ts` (`node:test`): Sie laufen ebenfalls von Hand, indem man die Datei mit `node node_modules/.pnpm/rolldown@<Version>/node_modules/rolldown/bin/cli.mjs src/features/chat/timeMarks.test.ts --platform node --format esm -o <Ausgabe>.mjs` bündelt und mit `node --test <Ausgabe>.mjs` startet. `pnpm check` fährt die Kette lokal, [.github/workflows/check.yml](../../.github/workflows/check.yml) identisch in GitHub Actions (plus die Bindings-Prüfung, siehe unten):
 
 ```text
 pnpm lint          ESLint

@@ -31,8 +31,14 @@
     width: 100%;
   }
 
+  /* Rechts bleibt Platz für die Zeit; unter 560 px steht sie über dem Block, dort entfällt er. */
   &__block {
+    position: relative;
     box-sizing: border-box;
-    padding: 0 var(--space-5xl) 14px;
+    padding: 0 72px 14px var(--space-5xl);
+
+    @container main (max-width: 559px) {
+      padding: 0 var(--space-2xl) 14px;
+    }
   }
 }
