@@ -9,6 +9,7 @@ import { Sidebar } from '@/app/Sidebar';
 import { useAppUpdateCheck } from '@/features/appupdate/useAppUpdate';
 import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { ArchiveDialog } from '@/features/archive/ArchiveDialog';
+import { VaultSearchDialog } from '@/features/vault/VaultSearchDialog';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
 import {
   commandDurations,
@@ -115,6 +116,11 @@ export function App(): ReactElement {
   const closeNewSession = useSessionsStore((state) => state.closeNewSession);
   const openSettings = useSessionsStore((state) => state.openSettings);
   const [isArchiveOpen, setIsArchiveOpen] = useState<boolean>(false);
+  const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
+  // Der Vault-Einstieg gilt nur mit gesetztem Ordner und eingeschaltetem Schalter.
+  const hasVault: boolean = useSettingsStore(
+    (state) => state.settings?.vaultDir != null && state.settings.vaultEnabled,
+  );
   const isBackgroundOpen: boolean = useBackgroundStore((state) => state.isOpen);
   const toggleBackground = useBackgroundStore((state) => state.toggle);
   const {
@@ -228,6 +234,22 @@ export function App(): ReactElement {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [openNewSession]);
+
+  useEffect(() => {
+    if (!hasVault) {
+      return undefined;
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsVaultOpen(true);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return (): void => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hasVault]);
 
   // Ohne gewählte Session öffnet sich die neueste (Sessions kommen neueste zuerst) — nach einem Neustart
   // steht sonst der Leerzustand vor einer vollen Sidebar.
@@ -808,6 +830,9 @@ export function App(): ReactElement {
         onOpenArchive={(): void => {
           setIsArchiveOpen(true);
         }}
+        onOpenVault={(): void => {
+          setIsVaultOpen(true);
+        }}
         onArchived={handleArchived}
         onSessionDeleted={handleSessionDeleted}
       />
@@ -836,6 +861,13 @@ export function App(): ReactElement {
             error={backgroundError}
           />
         </>
+      )}
+      {isVaultOpen && hasVault && (
+        <VaultSearchDialog
+          onClose={(): void => {
+            setIsVaultOpen(false);
+          }}
+        />
       )}
       {isArchiveOpen && (
         <ArchiveDialog

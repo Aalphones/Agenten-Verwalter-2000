@@ -30,20 +30,27 @@
 
 ### Core
 
-- [ ] `commands/vault.rs`: `vault_find(query: VaultQuery) -> VaultSearchResult` (begrenzt `limit` auf 1–50) und `vault_open(path: String, reveal: bool)`; Pfadprüfung aus `vault_get` in eine gemeinsame Funktion `vault::resolve(app, rel) -> Result<PathBuf, String>` ziehen und von beiden nutzen; registrieren.
-- [ ] `VaultQuery`, `VaultHit`, `VaultSearchResult` mit `derive(TS)`, in `gen-bindings.rs`, `pnpm bindings`.
+- [x] `commands/vault.rs`: `vault_find(query: VaultQuery) -> VaultSearchResult` (begrenzt `limit` auf 1–50) und `vault_open(path: String, reveal: bool)`; Pfadprüfung aus `vault_get` in eine gemeinsame Funktion `vault::resolve(app, rel) -> Result<PathBuf, String>` ziehen und von beiden nutzen; registrieren.
+- [x] `VaultQuery`, `VaultHit`, `VaultSearchResult` mit `derive(TS)`, in `gen-bindings.rs`, `pnpm bindings`.
 
 ### Oberfläche
 
-- [ ] `src/lib/vault.ts`: `findInVault(query)`, `openVaultPath(path, reveal)`.
-- [ ] `src/features/vault/useVaultSearch.ts` nach AK 3 (Muster `useArchiveSearch`).
-- [ ] `src/features/vault/snippetSegments.ts`: zerlegt einen Ausschnitt an ``/`` in `{ text, isMatch }[]`.
-- [ ] `src/features/vault/VaultHitRow.tsx` nach AK 4–5, `src/features/vault/VaultSearchDialog.tsx` + `VaultSearchDialog.css` (BEM `vault-search__…`) nach AK 2, 5, 6.
-- [ ] `src/app/Sidebar.tsx` + `Sidebar.css`: Fuß nach AK 1 umbauen — Symbolleiste `sidebar__toolbar` mit `sidebar__tool` (Vault, Archiv, Einstellungen; ersetzt die bisherigen Zeilen Archiv und Einstellungen), `UsageButton` darunter; Prop `onOpenVault`; `src/app/App.tsx`: `isVaultOpen`, Kürzel nach AK 1, Dialog einhängen.
+- [x] `src/lib/vault.ts`: `findInVault(query)`, `openVaultPath(path, reveal)`.
+- [x] `src/features/vault/useVaultSearch.ts` nach AK 3 (Muster `useArchiveSearch`).
+- [x] `src/features/vault/snippetSegments.ts`: zerlegt einen Ausschnitt an ``/`` in `{ text, isMatch }[]`.
+- [x] `src/features/vault/VaultHitRow.tsx` nach AK 4–5, `src/features/vault/VaultSearchDialog.tsx` + `VaultSearchDialog.css` (BEM `vault-search__…`) nach AK 2, 5, 6.
+- [x] `src/app/Sidebar.tsx` + `Sidebar.css`: Fuß nach AK 1 umbauen — Symbolleiste `sidebar__toolbar` mit `sidebar__tool` (Vault, Archiv, Einstellungen; ersetzt die bisherigen Zeilen Archiv und Einstellungen), `UsageButton` darunter; Prop `onOpenVault`; `src/app/App.tsx`: `isVaultOpen`, Kürzel nach AK 1, Dialog einhängen.
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Dialog, Hooks und Sidebar-Knopf in der Zeile „Developer Vault“.
-- [ ] `docs/glossary.md`: „Vault-Suche“ (Dialog, `Strg+K`).
+- [x] `docs/code-map.md`: Dialog, Hooks und Sidebar-Knopf in der Zeile „Developer Vault“.
+- [x] `docs/glossary.md`: „Vault-Suche“ (Dialog, `Strg+K`).
 
 ## Report-Back
+
+**Status:** complete (2026-11-24). `pnpm check` grün; nicht in der echten App gelaufen.
+
+- Core: `vault_find`, `vault_open`, `vault_preview` (zusätzlich zum Kontrakt: liefert ein Bild des Vault als `data:`-Adresse, weil der Asset-Bereich der App den Vault-Ordner nicht umfasst und nicht erweitert wurde). Gemeinsame Pfadprüfung `vault/resolve.rs` (`locate`, `resolve`) für `vault_get`, `vault_open` und `vault_preview`.
+- Oberfläche: `src/features/vault/VaultSearchDialog.tsx` und Zubehör; Fuß der Seitenleiste als Symbolleiste (`sidebar__toolbar`); `Strg+K` in `App.tsx`.
+- Abweichungen vom Entwurf: Vorschau zeigt kein „Anfang“ ohne Suche (der Core liefert dort keinen Text); Untergruppen und Zahlen links zählen nur die geladenen höchstens 50 Treffer (Fuß zeigt bei gekürzter Untergruppe „n+“); Haltepunkte der Breiten gelten für die Fensterbreite, nicht für eine Container-Breite; Bilder zeigen nur Artefakte der Art `image` (das `preview`-Feld aus dem Manifest wird noch nicht geladen); Öffnen und Im Ordner zeigen gelten für die Datei des besten Abschnitts (`file`).
+

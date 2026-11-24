@@ -142,20 +142,38 @@
     border-top: 1px solid var(--color-border-subtle);
   }
 
-  &__archive,
-  &__settings {
+  &__toolbar {
+    display: grid;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+    gap: 2px;
+    margin-bottom: var(--space-sm);
+  }
+
+  &__tool {
+    position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--space-md);
-    width: 100%;
-    height: 30px;
-    padding: 0 var(--space-md);
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    height: 44px;
+    padding: 0 2px;
     border: 0;
     border-radius: var(--radius-md);
     background: transparent;
     color: var(--color-fg-secondary);
     font: inherit;
+    font-size: 11px;
     cursor: pointer;
+
+    & > span:not(.sidebar__settings-dot) {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
     &:hover {
       background: var(--color-bg-hover);
@@ -173,10 +191,12 @@
   }
 
   &__settings-dot {
+    position: absolute;
+    top: 6px;
+    right: 8px;
     flex-shrink: 0;
     width: 8px;
     height: 8px;
-    margin-left: auto;
     border-radius: 50%;
 
     &--update {
@@ -188,7 +208,7 @@
     }
 
     & + & {
-      margin-left: var(--space-xs);
+      right: 20px;
     }
   }
 

@@ -13,7 +13,7 @@ Entscheidungen und Begründung: [ADR 068](../../decisions/068-developer-vault.md
 | 3 | [Metadaten und Abschnitte](phase-3-metadaten-abschnitte.md) | heikel | complete |
 | 4 | [Suche und Werkzeuge für Agenten](phase-4-suche-werkzeuge.md) | heikel | complete |
 | 5 | [Vault-Treffer im Auftrag der Station](phase-5-stationsauftrag.md) | standard | complete |
-| 6 | [Suchdialog](phase-6-suchdialog.md) | standard | pending |
+| 6 | [Suchdialog](phase-6-suchdialog.md) | standard | complete |
 
 Reihenfolge strikt 1 → 6; jede Phase baut auf der vorigen auf. Phase 6 beginnt mit einem Klickdummy, den der Benutzer abnimmt (Ablage `artifacts/`).
 
@@ -96,7 +96,7 @@ pub fn search(app: &AppHandle, query: &VaultQuery) -> Result<VaultSearchResult, 
 
 `snippet` enthält die Fundstellen zwischen den Zeichen `\u{E000}` (Anfang) und `\u{E001}` (Ende); die Oberfläche macht daraus Markierungen, das Werkzeug ersetzt sie durch `**`.
 
-**Tauri-Commands** (`src-tauri/src/commands/vault.rs`, Wrapper `src/lib/vault.ts`): `vault_status() -> VaultStatus` · `vault_rescan() -> ()` · `vault_create_skeleton() -> VaultStatus` · `vault_find(query: VaultQuery) -> VaultSearchResult` · `vault_open(path: String, reveal: bool) -> ()`.
+**Tauri-Commands** (`src-tauri/src/commands/vault.rs`, Wrapper `src/lib/vault.ts`): `vault_status() -> VaultStatus` · `vault_rescan() -> ()` · `vault_create_skeleton() -> VaultStatus` · `vault_find(query: VaultQuery) -> VaultSearchResult` · `vault_open(path: String, reveal: bool) -> ()` · `vault_preview(path: String) -> String` (Bild als `data:`-Adresse für die Vorschau, Phase 6).
 
 ## Finale Abnahmekriterien
 

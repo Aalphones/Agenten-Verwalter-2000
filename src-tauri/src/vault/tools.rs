@@ -11,13 +11,12 @@ use rusqlite::Connection;
 use serde_json::{Value, json};
 use tauri::{AppHandle, Manager};
 
-use super::index::{self, FileRow, VaultIndex};
-use super::model::VaultStatus;
+use super::index::{FileRow, VaultIndex};
+use super::resolve::{Located, sentence};
 use super::search::{
     self, MARK_END, MARK_START, VaultHit, VaultQuery, VaultSearchResult, escape_like,
 };
 use crate::db::Database;
-use crate::error::CommandError;
 use crate::filesystem::native_path;
 use crate::mcp_access::tools::{ToolCall, ToolResult, ToolSet, ToolSpec};
 use crate::settings;
@@ -28,7 +27,6 @@ const GET: &str = "vault_get";
 const SEARCH_DESCRIPTION: &str = "Durchsucht den Developer Vault des Benutzers (Snippets, Wissen, Ideen, Designs, Vorlagen, Skripte) nach Titel, Tags, Dateinamen und Text. Liefert kurze Treffer mit Pfad; Inhalte lädt vault_get.";
 const GET_DESCRIPTION: &str = "Lädt aus dem Developer Vault einen Abschnitt (path und line aus vault_search), eine Datei, die Dateiliste eines Ordners oder ein Bild.";
 const UNAVAILABLE: &str = "Der Developer Vault ist nicht eingerichtet (Einstellungen → Skills & Umgebung → Developer Vault).";
-const OUTSIDE: &str = "Der Pfad liegt außerhalb des Vault.";
 
 const DEFAULT_LIMIT: u64 = 8;
 const MAX_LIMIT: u64 = 20;
@@ -115,14 +113,6 @@ impl ToolSet for VaultTools {
 
     fn unavailable_message(&self) -> &'static str {
         UNAVAILABLE
-    }
-}
-
-/// Ein Fehler des Core als Satz für den Agenten, ohne das Präfix der Fehlerart.
-fn sentence(error: CommandError) -> String {
-    match error {
-        CommandError::Internal(text) => text,
-        other => other.to_string(),
     }
 }
 
@@ -249,22 +239,12 @@ fn run_get(call: &ToolCall) -> Result<ToolResult, String> {
                 .ok_or_else(|| "line muss eine ganze Zahl ab 1 sein.".to_owned())?,
         ),
     };
-    let status: VaultStatus = super::status(call.app);
-    search::ensure_usable(&status).map_err(sentence)?;
-    let index: Arc<VaultIndex> = super::index(call.app).map_err(sentence)?;
-    let root: PathBuf = status
-        .dir
-        .map(PathBuf::from)
-        .ok_or_else(|| search::NOT_SET_UP.to_owned())?;
-    let target = Target { root, index };
-    if !path.is_empty() {
-        crate::files::checked_path(&target.root, &path).map_err(|_| OUTSIDE.to_owned())?;
-    }
-    let found: Option<FileRow> = target
-        .index
-        .with(|connection: &mut Connection| index::file_row(connection, &path))
-        .map_err(sentence)?;
-    match found {
+    let located: Located = super::resolve::locate(call.app, &path)?;
+    let target = Target {
+        root: located.root,
+        index: located.index,
+    };
+    match located.row {
         Some(row) => get_file(&target, &row, line),
         None => get_folder(&target, &path),
     }
@@ -313,6 +293,39 @@ fn get_image(target: &Target, row: &FileRow, size_text: &str) -> Result<ToolResu
         data: STANDARD.encode(bytes),
         mime_type: mime_type.to_owned(),
     })
+}
+
+/// Ein Bild des Vault als `data:`-Adresse für die Vorschau im Suchdialog; gleiche Prüfung und
+/// gleiche Größengrenze wie `vault_get`.
+pub fn image_data_url(app: &AppHandle, path: &str) -> Result<String, String> {
+    let path: String = path.replace('\\', "/").trim_matches('/').to_owned();
+    let located: Located = super::resolve::locate(app, &path)?;
+    let row: FileRow = located
+        .row
+        .ok_or_else(|| format!("Nicht im Vault-Index: {path}."))?;
+    if let Some(error) = &row.error {
+        return Err(format!(
+            "Diese Datei konnte nicht eingelesen werden: {error}"
+        ));
+    }
+    let extension: String = Path::new(&row.path)
+        .extension()
+        .map(|text| text.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    let mime: &str = IMAGE_TYPES
+        .iter()
+        .find(|(known, _)| *known == extension)
+        .map(|(_, mime)| *mime)
+        .ok_or_else(|| "Kein Bild.".to_owned())?;
+    if row.size > MAX_IMAGE_BYTES {
+        return Err(format!(
+            "Bild ({}) — größer als 5 MiB, wird nicht geladen.",
+            format_size(row.size)
+        ));
+    }
+    let bytes: Vec<u8> = fs::read(located.root.join(native_path(&row.path)))
+        .map_err(|error| format!("Datei nicht lesbar: {error}"))?;
+    Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
 }
 
 struct SectionRow {

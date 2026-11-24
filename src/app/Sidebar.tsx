@@ -67,6 +67,7 @@ interface SidebarProps {
   onNew: () => void;
   onOpenSettings: () => void;
   onOpenArchive: () => void;
+  onOpenVault: () => void;
   onArchived: (projectId: string) => void;
   onSessionDeleted: (session: SessionSummary, isProjectDeleted: boolean) => void;
 }
@@ -88,6 +89,7 @@ export function Sidebar({
   onNew,
   onOpenSettings,
   onOpenArchive,
+  onOpenVault,
   onArchived,
   onSessionDeleted,
 }: SidebarProps): ReactElement {
@@ -105,6 +107,10 @@ export function Sidebar({
     const operatingMode: string = state.settings?.operatingMode ?? 'claude';
     return operatingMode === 'claude' || operatingMode === 'codex';
   });
+  // Der Vault-Einstieg erscheint nur mit gesetztem Ordner und eingeschaltetem Schalter.
+  const hasVault: boolean = useSettingsStore(
+    (state) => state.settings?.vaultDir != null && state.settings.vaultEnabled,
+  );
   const hasAppUpdate: boolean = useAppUpdateStore((state) => state.status?.hasUpdate === true);
   const needsEnvironmentAttention: boolean = useEnvironmentStore((state) =>
     needsAttention(state.status),
@@ -511,59 +517,85 @@ export function Sidebar({
         </p>
       )}
       <div className="sidebar__footer">
+        <div className="sidebar__toolbar">
+          {hasVault && (
+            <button
+              type="button"
+              className="sidebar__tool"
+              title="Developer Vault durchsuchen (Ctrl K)"
+              onClick={onOpenVault}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 1.5h7.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 1 2 10.5v-8A1 1 0 0 1 3 1.5zM2 10.5A1.5 1.5 0 0 1 3.5 9h8" />
+              </svg>
+              <span>Vault</span>
+            </button>
+          )}
+          <button type="button" className="sidebar__tool" title="Archiv" onClick={onOpenArchive}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3" />
+            </svg>
+            <span>Archiv</span>
+          </button>
+          <button
+            type="button"
+            className={`sidebar__tool${isSettingsOpen ? ' sidebar__tool--active' : ''}`}
+            title="Einstellungen"
+            aria-current={isSettingsOpen ? 'page' : undefined}
+            onClick={onOpenSettings}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12" />
+              <circle cx="9" cy="4" r="1.5" />
+              <circle cx="5" cy="10" r="1.5" />
+            </svg>
+            <span>Einstellungen</span>
+            {hasAppUpdate && (
+              <span
+                className="sidebar__settings-dot sidebar__settings-dot--update"
+                role="img"
+                aria-label="Neue Version verfügbar"
+              />
+            )}
+            {needsEnvironmentAttention && (
+              <span
+                className="sidebar__settings-dot sidebar__settings-dot--environment"
+                role="img"
+                aria-label="Umgebung braucht Aufmerksamkeit"
+              />
+            )}
+          </button>
+        </div>
         {hasUsage && <UsageButton />}
-        <button type="button" className="sidebar__archive" onClick={onOpenArchive}>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M1.5 3h11v2.5h-11zM2.5 5.5V12h9V5.5M5.5 8h3" />
-          </svg>
-          <span>Archiv</span>
-        </button>
-        <button
-          type="button"
-          className={`sidebar__settings${isSettingsOpen ? ' sidebar__settings--active' : ''}`}
-          aria-current={isSettingsOpen ? 'page' : undefined}
-          onClick={onOpenSettings}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M2 4h5.5M10.5 4H12M2 10h1.5M6.5 10H12" />
-            <circle cx="9" cy="4" r="1.5" />
-            <circle cx="5" cy="10" r="1.5" />
-          </svg>
-          <span>Einstellungen</span>
-          {hasAppUpdate && (
-            <span
-              className="sidebar__settings-dot sidebar__settings-dot--update"
-              role="img"
-              aria-label="Neue Version verfügbar"
-            />
-          )}
-          {needsEnvironmentAttention && (
-            <span
-              className="sidebar__settings-dot sidebar__settings-dot--environment"
-              role="img"
-              aria-label="Umgebung braucht Aufmerksamkeit"
-            />
-          )}
-        </button>
       </div>
     </nav>
   );

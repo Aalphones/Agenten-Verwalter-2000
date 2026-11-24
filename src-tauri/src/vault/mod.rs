@@ -4,10 +4,13 @@ pub mod extract;
 pub mod index;
 pub mod meta;
 pub mod model;
+pub mod resolve;
 pub mod scan;
 pub mod search;
 pub mod skeleton;
 pub mod tools;
+
+pub use resolve::resolve;
 
 use std::fs;
 use std::panic::{self, AssertUnwindSafe};
