@@ -4,7 +4,7 @@
 
 ## Kontext — lesen vor dem Start
 
-- `README.md` dieses Plans (Kontrakt: Index-Schema, `VaultStatus`) und [ADR 068](../../decisions/068-developer-vault.md).
+- `README.md` dieses Plans (Kontrakt: Index-Schema, `VaultStatus`) und [ADR 068](../../../decisions/068-developer-vault.md).
 - Ergebnis von Phase 1: `src-tauri/src/vault/`.
 - Muster Verbindung hinter einem Mutex: `src-tauri/src/db/mod.rs` (`Database::open`, `with`, Pragmas). Die Index-Datei bekommt eine **eigene** Struktur, nicht `Database` (deren `open` fährt die Migrationen der Hauptdatenbank).
 - Muster Thread mit Ereignis: `src-tauri/src/sessions/auto_handoff.rs` (eigener Thread, `app.emit`).

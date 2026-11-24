@@ -1,6 +1,6 @@
 # Plan: Uhrzeiten im Chat
 
-**Status:** freigegeben (Entwurf am 2026-11-23 abgenommen). Eine Phase, eine Umsetzungs-Station; im Plan „Developer Vault – Bibliothekskern“ als Phase 6a eingehängt.
+**Status:** complete (umgesetzt in f120bce, Release v0.68.0; Entwurf am 2026-11-23 abgenommen). Eine Phase, eine Umsetzungs-Station; im Plan „Developer Vault – Bibliothekskern“ als Phase 6a eingehängt.
 
 ## Ziel
 
@@ -8,7 +8,7 @@ Jeder Eintrag im Chat-Verlauf trägt eine Uhrzeit, damit man sieht, wann etwas g
 
 ## Entwurf (verbindlich)
 
-[docs/design/2026-11-23_chat-uhrzeiten/](../../design/2026-11-23_chat-uhrzeiten/README.md). Abweichung vom Dummy: Er hat die Modi „Aus“ und „Beim Überfahren“, einen Einstellungsreiter und einen Schalter „Pausen markieren“. Alles davon entfällt; umgesetzt wird nur der Modus „Immer“ mit festen Pausenlinien.
+[docs/design/2026-11-23_chat-uhrzeiten/](../../../design/2026-11-23_chat-uhrzeiten/README.md). Abweichung vom Dummy: Er hat die Modi „Aus“ und „Beim Überfahren“, einen Einstellungsreiter und einen Schalter „Pausen markieren“. Alles davon entfällt; umgesetzt wird nur der Modus „Immer“ mit festen Pausenlinien.
 
 ## Entscheidungen
 

@@ -4,7 +4,7 @@
 
 ## Kontext — lesen vor dem Start
 
-- `README.md` dieses Plans (Kontrakt: Tabellen `artifacts`, `sections`) und [ADR 068](../../decisions/068-developer-vault.md).
+- `README.md` dieses Plans (Kontrakt: Tabellen `artifacts`, `sections`) und [ADR 068](../../../decisions/068-developer-vault.md).
 - Ergebnis von Phase 2: `src-tauri/src/vault/index.rs`, `scan.rs`.
 - Vorhandener Frontmatter-Leser `src-tauri/src/skills/frontmatter.rs` — **nicht ändern** (Skills hängen daran); er kennt keine Listen. Der Vault bekommt einen eigenen Leser.
 - HTML zu Text: Aufruf von `html2text::from_read` in `src-tauri/src/standalone/tools/web_fetch.rs`.

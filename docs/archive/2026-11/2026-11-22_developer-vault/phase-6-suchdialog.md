@@ -2,11 +2,11 @@
 
 **Stufe:** standard · **Ziel:** Der Benutzer durchsucht den Vault selbst: Knopf „Vault“ im Fuß der Sidebar und `Strg+K` öffnen einen Dialog, der beim Tippen sucht und einen Treffer mit dem Standardprogramm öffnet oder im Ordner zeigt.
 
-**Design:** Entwurf zuerst (Entscheidung des Benutzers bei der Freigabe). Die Phase hat drei Stationen: **Entwurf** — Klickdummy des Suchdialogs als HTML nach `mode-design`, Quellen unter `docs/planning/2026-11-22_developer-vault/artifacts/` samt `artifacts/README.md`, Ausgangspunkt ist die Struktur der AK unten und das Muster des Archiv-Dialogs; **Entwurf abnehmen** — durch den Benutzer; **Umsetzung** — gegen den abgenommenen Entwurf. Weicht der Entwurf von einer AK unten ab, gilt der Entwurf; die Entwurfs-Station passt die AK in dieser Datei an.
+**Design:** Entwurf zuerst (Entscheidung des Benutzers bei der Freigabe). Die Phase hat drei Stationen: **Entwurf** — Klickdummy des Suchdialogs als HTML nach `mode-design`, Quellen unter `artifacts/` des Plans samt `artifacts/README.md`, Ausgangspunkt ist die Struktur der AK unten und das Muster des Archiv-Dialogs; **Entwurf abnehmen** — durch den Benutzer; **Umsetzung** — gegen den abgenommenen Entwurf. Weicht der Entwurf von einer AK unten ab, gilt der Entwurf; die Entwurfs-Station passt die AK in dieser Datei an.
 
 ## Kontext — lesen vor dem Start
 
-- `README.md` dieses Plans (Kontrakt: `vault_find`, `vault_open`, `VaultHit`) und [ADR 068](../../decisions/068-developer-vault.md).
+- `README.md` dieses Plans (Kontrakt: `vault_find`, `vault_open`, `VaultHit`) und [ADR 068](../../../decisions/068-developer-vault.md).
 - Muster Dialog mit Suche: `src/features/archive/ArchiveDialog.tsx` + `.css`, `useArchiveSearch.ts` (Entprellung 250 ms, leerer Text ohne Verzögerung), Öffnen in `src/app/App.tsx` (`isArchiveOpen`), Knopf in `src/app/Sidebar.tsx` (`sidebar__footer`, `sidebar__archive`).
 - Muster Tastenkürzel: Handler für `Strg+P` in `src/app/App.tsx`.
 - Muster Öffnen/Im Ordner zeigen: `src-tauri/src/commands/artifacts.rs` (`open_path`, `reveal_item_in_dir`).

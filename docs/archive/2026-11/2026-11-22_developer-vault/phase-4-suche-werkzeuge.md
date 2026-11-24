@@ -4,7 +4,7 @@
 
 ## Kontext — lesen vor dem Start
 
-- `README.md` dieses Plans (Kontrakt: `VaultQuery`, `VaultHit`, `VaultSearchResult`, Werkzeug-Eingaben) und [ADR 068](../../decisions/068-developer-vault.md).
+- `README.md` dieses Plans (Kontrakt: `VaultQuery`, `VaultHit`, `VaultSearchResult`, Werkzeug-Eingaben) und [ADR 068](../../../decisions/068-developer-vault.md).
 - Ergebnis von Phase 2 und 3: `src-tauri/src/vault/`.
 - MCP-Zugang: `src-tauri/src/mcp_access/tools.rs` (Trait `ToolSet`, `ToolResult`), `rpc.rs` (Antwort von `tools/call`), `mod.rs` (`tool_sets()`), ADR 046.
 - Muster eines Satzes mit Schalter: `src-tauri/src/skins/tools.rs` (`offered`, `unavailable_message`); Muster eines einfachen Satzes: `src-tauri/src/artifacts/tools.rs`.

@@ -4,7 +4,7 @@
 
 ## Kontext — lesen vor dem Start
 
-- `README.md` dieses Plans und [ADR 068](../../decisions/068-developer-vault.md).
+- `README.md` dieses Plans und [ADR 068](../../../decisions/068-developer-vault.md).
 - `src-tauri/src/implementation/start.rs`: `first_message` (Aufbau der ersten Nachricht) und `start_claimed` (einzige Aufrufstelle, ermittelt dort schon die Git-Lage).
 - Ergebnis von Phase 4: `vault::search::search`, `VaultQuery` mit `any_term`.
 - ADR 048 (Umsetzung), ADR 061 (schlanke Werkzeuge in Stationen).

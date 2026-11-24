@@ -4,7 +4,7 @@
 
 ## Kontext — lesen vor dem Start
 
-- `README.md` dieses Plans (Kontrakt: Einstellungen, `VaultStatus`, Ereignis, Commands) und [ADR 068](../../decisions/068-developer-vault.md).
+- `README.md` dieses Plans (Kontrakt: Einstellungen, `VaultStatus`, Ereignis, Commands) und [ADR 068](../../../decisions/068-developer-vault.md).
 - Muster Einstellung mit Ordner: `src-tauri/src/settings/mod.rs` (`KEY_MASTER_DIR`, Feld `master_dir` in `DEFAULT_SETTINGS`, `load`, Zweig `SettingsChange::MasterDir` in `update`), `src-tauri/src/settings/model.rs` (`Settings`, `SettingsChange`), `src-tauri/src/commands/settings.rs` (`settings_update`).
 - Muster Dienst mit Status: `src-tauri/src/environment/mod.rs` (`EnvironmentService`, `build_status`), `src-tauri/src/environment/model.rs`.
 - Muster Oberfläche: `src/features/environment/MasterDirRow.tsx` (Ordner wählen/ändern/entfernen), Zeile `autoContinueAtLimit` in `src/features/settings/SettingsView.tsx` (Schalter), `src/features/settings/settingsCatalog.ts` (Einträge `masterDir`, Kategorie `skills`).

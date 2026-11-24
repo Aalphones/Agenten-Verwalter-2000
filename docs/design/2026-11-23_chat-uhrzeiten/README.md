@@ -1,6 +1,6 @@
 # Design-Entwurf: Uhrzeiten im Chat
 
-**Status:** abgenommen am 2026-11-23 als Grundlage des Plans [Uhrzeiten im Chat](../../planning/2026-11-23_chat-uhrzeiten/README.md). Abweichung bei der Umsetzung: keine Einstellung, nur der Modus „Immer“ mit festen Pausenlinien (siehe Plan).
+**Status:** abgenommen am 2026-11-23 als Grundlage des Plans [Uhrzeiten im Chat](../../archive/2026-11/2026-11-23_chat-uhrzeiten/README.md). Abweichung bei der Umsetzung: keine Einstellung, nur der Modus „Immer“ mit festen Pausenlinien (siehe Plan).
 
 ## Ansehen
 

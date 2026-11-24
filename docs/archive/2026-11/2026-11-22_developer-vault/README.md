@@ -2,7 +2,7 @@
 
 Ein frei wählbarer Ordner wird zur persönlichen Entwicklerbibliothek des Verwalters: Snippets, Wissen, Ideen, Konzepte, Designs, Vorlagen, Skripte. Der Verwalter liest ihn in eine eigene, wegwerfbare Index-Datei ein, durchsucht ihn mit SQLite FTS5 und gibt Agenten zwei Werkzeuge (`vault_search`, `vault_get`); der Benutzer bekommt einen Suchdialog. Der Vault bleibt eine gewöhnliche Dateiablage — der Verwalter schreibt nur beim Anlegen des Grundgerüsts hinein. Ohne Vault-Ordner ändert sich am Verwalter nichts.
 
-Entscheidungen und Begründung: [ADR 068](../../decisions/068-developer-vault.md). Folgepläne (in dieser Reihenfolge, je eigener Plan): Zusammenarbeit der Stationen (Nachrichten, Suche in früheren Sessions) → semantische Suche mit lokalem ONNX-Modell → Wissenskandidaten aus Retros.
+Entscheidungen und Begründung: [ADR 068](../../../decisions/068-developer-vault.md). Folgepläne (in dieser Reihenfolge, je eigener Plan): Zusammenarbeit der Stationen (Nachrichten, Suche in früheren Sessions) → semantische Suche mit lokalem ONNX-Modell → Wissenskandidaten aus Retros.
 
 ## Overview
 
@@ -119,12 +119,22 @@ pub fn search(app: &AppHandle, query: &VaultQuery) -> Result<VaultSearchResult, 
 
 ## Summary
 
+Der Developer Vault (ADR 068): Einstellung und Status im Abschnitt „Vault“, eigene Index-Datei mit Abgleich im Hintergrund, Artefakte mit Metadaten und Abschnitten, Suche mit den Agenten-Werkzeugen `vault_search` und `vault_get`, bis zu drei Vault-Treffer in der ersten Nachricht einer Station und ein Suchdialog (Knopf „Vault“, Strg K, Öffnen und Im Ordner zeigen).
+
 ## Files touched
+
+Rust: `src-tauri/src/vault/`, `commands/vault.rs`, Einstellungen und Bindings. Oberfläche: Vault-Abschnitt der Einstellungen und Suchdialog. Doku: ADR 068, `docs/konzept-vault.md`.
 
 ## Commits
 
+a767199 (Phase 1), 09e98b1 (2), 72a4d54 (3), 8a76250 (4), eba8088 (5), 17e91aa (6).
+
 ## Deviations from plan
 
+- Phase 6 bekam einen Klickdummy, den der Benutzer abgenommen hat; die AK 2, 3 und 5 wurden daran angepasst.
+
 ## Follow-ups
+
+- Nicht in der echten App gelaufen: alle sechs Phasen sind nur per `pnpm check` (und die Proben `vault-probe`) belegt; offen sind zudem `mcp-probe list` und das Bild aus `vault_get` in einer echten Session.
 
 - **Bibliothek: Master-Ordner und Vault zusammenlegen** (Entscheidung des Benutzers 2026-11-23, eigener Plan direkt nach Phase 6): Der Master-Ordner wird zugleich zum Vault; Skills, Befehle und Ausgabestile sind als eigene Arten durchsuchbar; ein gemeinsamer Einstellungsabschnitt „Bibliothek“ (Ordner, Abgleich, Verknüpfungen, Suche, Suchindex); `memory/`, `hooks/` und Logs sind per `.vaultignore` ausgeschlossen. Dafür ist eine Änderung an ADR 068 nötig (dort: „liest nur den eingestellten Ordner“). Der Wissens-Vault bleibt getrennt. Skizze: Einstellungen „Bibliothek“ in [artifacts/vault-suchdialog.html](artifacts/vault-suchdialog.html).
