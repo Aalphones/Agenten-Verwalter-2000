@@ -24,7 +24,7 @@ Warum diese Phase vor allem anderen kommt: Phase 2 stellt den gelesenen Ordner a
 5. Ein Probe-Index mit `schema_version` `1` wird beim nächsten `scan` verworfen und neu aufgebaut (`gelesen` = Zahl aller Dateien).
 6. `skeleton::create` auf einen Ordner mit `skills\` und ohne `_vault\` legt `_vault\README.md`, `_vault\AGENTS.md`, `_vault\inbox\README.md` an und schreibt sonst nichts; existiert `_vault\` mit Inhalt, endet es mit dem Satz aus `NOT_EMPTY`. Für einen reinen Vault unverändert. (Beleg in einem Ordner unter dem Scratchpad, nie im Master.)
 7. `brief_lines` sucht in einer Bibliothek nur unter `_vault` (`under`).
-8. `pnpm check` grün.
+8. `pnpm check` grün; die Tests aus README → „Tests“ (Phase 1) laufen grün mit `cargo test --manifest-path src-tauri/Cargo.toml vault::library`.
 
 ## Checkliste
 

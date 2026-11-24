@@ -82,6 +82,13 @@ Regeln von `place` (Gruppen-Ids und Untergruppen-Ids, Labels nur in der Oberflä
 
 **Grundgerüst**: `skeleton::create(dir)` schreibt bei Library nach `<dir>\_vault\` (Ordner wird angelegt, wenn er fehlt; nur wenn er leer ist), bei Plain wie bisher nach `<dir>\` (nur wenn leer). Sonst schreibt der Verwalter nichts in die Bibliothek.
 
+## Tests
+
+- **Phase 1:** Rust-Tests (`#[cfg(test)] mod tests` in `src-tauri/src/vault/library.rs`) für `is_included_top`, `skill_folders`, `apply_place` und `place` nach den Tabellen im Kontrakt, dazu `layout` gegen zwei Ordner unter `std::env::temp_dir()` (mit `skills\` bzw. ohne), die der Test selbst anlegt und wieder löscht. Keine neue Abhängigkeit.
+- **Phase 2:** Rust-Test für die Übernahme der Einstellung als reine Funktion `library_dir_from(stored: &HashMap<String, String>) -> Option<String>` in `settings/mod.rs` (Fälle: nur `master_dir`; nur `vault_dir`; beide; `library_dir` leer neben gesetztem `master_dir` → `None`).
+- **Phase 3:** keine automatisierten Tests — das Projekt hat kein Testwerkzeug für die Oberfläche, und dieser Plan führt keins ein. Belegt wird mit Bildern.
+- Lauf: `cargo test --manifest-path src-tauri/Cargo.toml <modul>` und `pnpm check`. Die Bestands-Tests sind Grundlage; schlagen sie schon vor Phase 1 fehl, wird das vor dem ersten Edit gemeldet.
+
 ## Finale Abnahmekriterien
 
 1. In den Einstellungen gibt es einen Abschnitt „Bibliothek“ mit genau einer Ordnerwahl; die Abschnitte „Umgebung“ und „Developer Vault“ gibt es nicht mehr.

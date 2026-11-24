@@ -25,14 +25,14 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 7. „Grundgerüst anlegen“ erscheint im „Suchindex“, wenn `canCreateSkeleton` gilt; Klick schreibt bei einer Bibliothek nach `_vault\`.
 8. Nach „Entfernen“ bleibt der Ordner auch nach einem Neustart leer (keine Rückkehr über `master_dir`/`vault_dir`).
 9. Der Index der eingestellten Bibliothek enthält keinen Pfad unter `memory/` (Beleg: `vault_search` mit `under: "memory"` liefert 0 Treffer; `vault_get` auf `memory/MEMORY.md` liefert den Fehlersatz).
-10. `pnpm check` grün; `git -C "G:\Meine Ablage\U104_Agents" status --short` leer.
+10. `pnpm check` grün; der Test aus README → „Tests“ (Phase 2) läuft grün; `git -C "G:\Meine Ablage\U104_Agents" status --short` leer.
 
 ## Checkliste
 
 ### Core
 
 - [ ] `settings/model.rs`: Felder `master_dir`, `vault_dir` entfernen; `pub library_dir: Option<String>` mit Doc-Kommentar „Ordner der Bibliothek: Anweisungen, Skills, Befehle, Ausgabestile und Wissen (ADR 069); `None`, solange keiner gewählt ist.“; `SettingsChange::MasterDir`, `SettingsChange::VaultDir` entfernen, `LibraryDir { value: Option<String> }` mit Doc-Kommentar „`None` oder ein leerer Text entfernt den Ordner der Bibliothek.“
-- [ ] `settings/mod.rs`: `const KEY_LIBRARY_DIR: &str = "library_dir";` `KEY_MASTER_DIR` und `KEY_VAULT_DIR` bleiben (nur noch für die Übernahme). `DEFAULT_SETTINGS.library_dir: None`. In `load`: `library_dir` = wenn `stored.contains_key(KEY_LIBRARY_DIR)`, dessen getrimmter Wert (leer → `None`); sonst getrimmter `master_dir`, sonst getrimmter `vault_dir` (leer → `None`). In `update` für `LibraryDir`: `library_dir` schreiben (getrimmt oder `""`), dazu `master_dir` und `vault_dir` mit `""` — in derselben Transaktion.
+- [ ] `settings/mod.rs`: `const KEY_LIBRARY_DIR: &str = "library_dir";` `KEY_MASTER_DIR` und `KEY_VAULT_DIR` bleiben (nur noch für die Übernahme). `DEFAULT_SETTINGS.library_dir: None`. Die Übernahme ist eine reine Funktion `fn library_dir_from(stored: &HashMap<String, String>) -> Option<String>`, die `load` aufruft (Test: README → „Tests“): `library_dir` = wenn `stored.contains_key(KEY_LIBRARY_DIR)`, dessen getrimmter Wert (leer → `None`); sonst getrimmter `master_dir`, sonst getrimmter `vault_dir` (leer → `None`). In `update` für `LibraryDir`: `library_dir` schreiben (getrimmt oder `""`), dazu `master_dir` und `vault_dir` mit `""` — in derselben Transaktion.
 - [ ] `commands/settings.rs`: `changes_vault` trifft `LibraryDir { .. } | VaultEnabled { .. }`.
 - [ ] `environment/mod.rs` `status` und `run_mirror`: `settings::load(database)?.library_dir`. `EnvironmentStatus.master_dir` und `master_error` behalten Namen und Bedeutung (der Ordner, mit dem abgeglichen wird); Doc-Kommentar in `environment/model.rs` auf „Ordner der Bibliothek“.
 - [ ] `vault/mod.rs` `folder_status`: `loaded.library_dir` statt `loaded.vault_dir`.
