@@ -16,7 +16,8 @@ Datei im Browser öffnen, in der Entwurfsleiste oben „Ausbau: Bibliothek“ w�
 
 ## Abweichungen vom Entwurf (entschieden 2026-11-24)
 
-- **Letzte Zeile der Einstellungen:** statt „Nicht durchsucht · aus .vaultignore: memory/ · hooks/ · Logs“ heißt sie „Durchsucht“ und nennt die Erlaubnisliste (`CLAUDE.md · AGENTS.md · skills/ · commands/ · output-styles/ · _vault/`). Grund: Entscheidung des Benutzers für eine feste Erlaubnisliste mit Wissen in `_vault/` statt einer Ausschlussdatei.
+- **Letzte Zeile der Einstellungen:** statt „Nicht durchsucht · aus .vaultignore: memory/ · hooks/ · Logs“ heißt sie „Durchsucht“ und nennt die Erlaubnisliste (`CLAUDE.md · AGENTS.md · skills/ · commands/ · output-styles/ · memory/ · _vault/`). Grund: Entscheidung des Benutzers für eine feste Erlaubnisliste mit Wissen in `_vault/` statt einer Ausschlussdatei.
+- **Memories sichtbar:** Anweisungen bekommt eine dritte Untergruppe „Gedächtnis“ (die Dateien direkt in `memory/`), Entscheidung des Benutzers 2026-11-24.
 - **Wissen-Untergruppen:** der erste Ordner **unter `_vault/`**, nicht der erste Ordner im Pfad.
 - **Verknüpfungen** bleibt auch ohne gewählten Ordner sichtbar (im Entwurf nur mit Ordner): der Punkt an der Kategorie für kaputte Verknüpfungen zeigt sonst auf eine unsichtbare Zeile.
 
