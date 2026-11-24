@@ -2,6 +2,7 @@
 //! kennt Einstellung, Status, Grundgerüst, die Index-Datei und den Abgleich im Hintergrund.
 pub mod extract;
 pub mod index;
+pub mod library;
 pub mod meta;
 pub mod model;
 pub mod resolve;

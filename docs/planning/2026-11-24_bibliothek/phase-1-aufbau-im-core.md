@@ -85,3 +85,20 @@ Warum diese Phase vor allem anderen kommt: Phase 2 stellt den gelesenen Ordner a
 - Sieben Ziele kurz geprüft (Token-Effizienz, Code-Qualität, Umsetzungsgenauigkeit, Stabilität, Wartbarkeit, Sicherheit — Erlaubnisliste statt Ausschlussliste —, Einfachheit).
 
 ## Report-Back
+
+### Report-Back (Tests)
+
+- Test-Files: `src-tauri/src/vault/library.rs` (`#[cfg(test)] mod tests`, 27 Tests). Das Modul trägt die Signaturen aus dem Kontrakt als `unimplemented!("Phase 1 Umsetzung")`-Stubs, damit die Tests kompilieren und einzeln rot sind; `VaultLayout` steht schon mit den Derives aus der Checkliste. `pub mod library;` in `vault/mod.rs` eingehängt. Die Umsetzung ersetzt die Stub-Rümpfe, die Tests bleiben unverändert.
+- Test-Commit: siehe `git log --oneline -1 -- src-tauri/src/vault/library.rs` auf `feature/bibliothek` (`test(vault): AK-Tests Bibliothek Phase 1 (rot)`).
+- AK-Abdeckung (Kontrakt-Tabellen; AK 8 verlangt sie grün):
+  - `layout`: `layout_is_library_for_folder_with_skills`, `layout_is_library_for_folder_with_claude_md`, `layout_is_plain_for_folder_without_skills` (Ordner unter `temp_dir()`, per Drop gelöscht); `layout_name_round_trips_and_unknown_is_plain`.
+  - `is_included_top` (AK 1, Erlaubnisliste): `plain_includes_every_top_entry`, `library_includes_allowlisted_folders`, `library_includes_allowlisted_files`, `library_allowlist_ignores_case`, `library_excludes_folders_outside_allowlist` (memory, hooks, codex, continue, references, _stylePakete, .claude, knowledge), `library_excludes_files_outside_allowlist` (settings.json, Logs, setup.cmd, SETUP.md, MIGRATION.md, merge-hooks.cjs, .gitignore, .gitattributes, README.md), `library_matches_folders_only_as_folders_and_files_only_as_files`.
+  - `skill_folders` (AK 2, ein Artefakt je Skill-Ordner): `library_skill_folders_are_folders_with_skill_md` (genau drei Teile, `skill.md` in beliebiger Schreibweise, nicht tiefer, nicht `_vault`), `plain_has_no_skill_folders`.
+  - `apply_place` (AK 2): `apply_place_marks_root_rules`, `apply_place_marks_direct_output_styles`, `apply_place_marks_direct_commands_with_slash_title`, `apply_place_accepts_md_extension_in_any_case` (`commands/review.MD` → `/review`), `apply_place_marks_skill_folders`, `apply_place_leaves_everything_else_unchanged` (inkl. `_vault/CLAUDE.md`, nicht-direkte und nicht-`.md`), `apply_place_does_nothing_in_plain_vault`.
+  - `place` (AK 3, 4): `place_puts_root_rules_under_grundregeln`, `place_puts_output_styles_under_ausgabestile`, `place_sorts_skills_by_prefix` (Ordner- und Dateipfade), `place_puts_commands_under_skills_befehle`, `place_puts_knowledge_folder_as_subgroup`, `place_puts_knowledge_root_file_in_main_folder`, `place_in_plain_vault_is_always_wissen_by_first_folder`.
+  - Nicht als Unit-Test: AK 1–6 als Probe-Läufe gegen den echten Master, AK 7 (`brief_lines`), Index-Version und Grundgerüst — Belege der Umsetzung nach DoD.
+- Lauf-Kommando: `cargo test --manifest-path src-tauri/Cargo.toml vault::library`
+- Rot-Beleg: `test result: FAILED. 0 passed; 27 failed; 0 ignored; 0 measured; 25 filtered out` — alle 27 mit `not implemented: Phase 1 Umsetzung`, kein Fehlschlag aus anderem Grund.
+- Findings (für spätere Phasen): keine
+- Friktion/Lesson: Der erste `cargo test` im frischen Arbeitsbaum kompiliert alles neu (über 10 Minuten) — im Hintergrund starten.
+- 🔴 / Offene Punkte: keine. Annahme aus dem Kontrakt: `place` vergleicht Präfixe (`skills/`, `mode-` …) so, wie der Pfad steht; Schreibweise dort nicht getestet.
