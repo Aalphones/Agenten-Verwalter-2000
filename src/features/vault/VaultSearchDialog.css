@@ -235,6 +235,18 @@
     }
   }
 
+  &__nav-group--anweisungen {
+    --group-color: var(--color-group-rules);
+  }
+
+  &__nav-group--skills {
+    --group-color: var(--color-group-skills);
+  }
+
+  &__nav-group--wissen {
+    --group-color: var(--color-group-knowledge);
+  }
+
   &__nav-subs {
     margin-left: 16px;
     padding-left: 4px;

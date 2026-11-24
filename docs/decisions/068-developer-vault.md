@@ -1,6 +1,6 @@
 # 068 — Developer Vault: eigener Ordner, wegwerfbarer FTS5-Index, Werkzeuge für Agenten
 
-**Status:** angenommen · **Datum:** 2026-11-22
+**Status:** angenommen · teilweise abgelöst durch ADR 069 (Ordner, Erlaubnisliste, Grundgerüst) · **Datum:** 2026-11-22
 
 ## Kontext
 

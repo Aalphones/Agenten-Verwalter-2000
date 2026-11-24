@@ -45,6 +45,13 @@ export function KindIcon({ kind, size }: IconProps & { kind: string }): ReactEle
           <path d="m1.5 9.5 3-3 3 3 2-2 3 3" />
         </Frame>
       );
+    case 'skill':
+    case 'command':
+      return <SkillIcon size={size} />;
+    case 'rules':
+    case 'style':
+    case 'memory':
+      return <RulesIcon size={size} />;
     default:
       return (
         <Frame size={size}>
@@ -52,6 +59,32 @@ export function KindIcon({ kind, size }: IconProps & { kind: string }): ReactEle
         </Frame>
       );
   }
+}
+
+export function RulesIcon({ size }: IconProps): ReactElement {
+  return (
+    <Frame size={size}>
+      <path d="M3 1.5h6l2.5 2.5v8.5H3zM5 6h4.5M5 8.5h4.5M5 11h2.5" />
+    </Frame>
+  );
+}
+
+export function SkillIcon({ size }: IconProps): ReactElement {
+  return (
+    <Frame size={size}>
+      <path d="M7 1.5 8.4 5l3.6.3-2.8 2.3.9 3.6L7 9.3l-3.1 1.9.9-3.6L2 5.3 5.6 5z" />
+    </Frame>
+  );
+}
+
+export function GroupIcon({ group, size }: IconProps & { group: string }): ReactElement {
+  if (group === 'anweisungen') {
+    return <RulesIcon size={size} />;
+  }
+  if (group === 'skills') {
+    return <SkillIcon size={size} />;
+  }
+  return <BookIcon size={size} />;
 }
 
 export function SearchIcon({ size }: IconProps): ReactElement {

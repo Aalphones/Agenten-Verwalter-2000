@@ -1,6 +1,6 @@
 # Phase 3 — Suchdialog mit Anweisungen, Skills und Wissen
 
-**Stufe:** standard · **Wave:** 3 · **Sichtabnahme:** Suchdialog „Bibliothek“ (Strg K) und Knopf „Bibliothek“ in der Symbolleiste der Seitenleiste
+**Stufe:** standard · **Wave:** 3 · **Status:** complete · **Sichtabnahme:** Suchdialog „Bibliothek“ (Strg K) und Knopf „Bibliothek“ in der Symbolleiste der Seitenleiste
 
 Der Suchdialog gliedert die Treffer nach den Gruppen aus Phase 1 (`VaultHit.group`, `VaultHit.subgroup`) so, wie der abgenommene Entwurf es in der Stufe „Bibliothek“ zeigt. Titel und Knopf heißen „Bibliothek“.
 
@@ -67,3 +67,7 @@ Der Suchdialog gliedert die Treffer nach den Gruppen aus Phase 1 (`VaultHit.grou
 - Sieben Ziele kurz geprüft.
 
 ## Report-Back
+
+- Umgesetzt: `vaultGroups.ts` (`LIBRARY_GROUPS`, `groupCounts`, `parseScope`, `inScope`, `subgroupLabel`), Dialog mit Gruppen und Untergruppen links, Chips unter 768 px aus den vorhandenen Gruppen, Ctrl 0–n nach vorhandenen Gruppen, Ort in der Vorschau, Symbole `RulesIcon`/`SkillIcon`/`GroupIcon`, Tokens `--color-group-*` in drei Blöcken, Titel und Knopf „Bibliothek“.
+- Belege: `pnpm check` grün (Exit 0). AK 1–10 am Code abgeglichen; Bilder und Lauf in der echten App nicht erstellt (Profil private).
+- Findings: das Inbox-Finding betrifft den Dialog nicht (er zeigt keinen Inbox-Status) → Follow-up in der README.

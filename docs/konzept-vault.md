@@ -52,6 +52,8 @@ Wissen und Artefakte, die über einzelne Projekte hinaus nützlich sind, auch sp
 
 ## 5. Aufbau des Vaults
 
+**Seit ADR 069 ein Ordner:** Master-Ordner und Vault sind die Bibliothek; das Wissen liegt darin unter `_vault/`, Anweisungen und Skills daneben, durchsucht über eine feste Erlaubnisliste.
+
 **Bibliothek statt starres Schema.** Ein Eintrag kann eine Datei, ein Snippet, eine Dateigruppe, ein Ordner mit Beispielimplementierung, ein kleines Projekt, ein Konzept mit Anhängen, ein Designpaket oder eine Sammlung von Varianten sein. Der Katalog beschreibt, verändert aber nicht die Form.
 
 **Startstruktur als Vorschlag**, keine leeren Kategorien auf Vorrat: `inbox/` (ideas, concepts, snippets, designs, files), `library/` (development, ui-ux, templates, concepts, tools), `agent-guidance/` (topics, skills, mechanisms, capabilities, workflows), `prompts/`, `_tools/`. Die Ordner wachsen mit der Nutzung.

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { snippetSegments } from '@/features/vault/snippetSegments';
 import type { SnippetSegment } from '@/features/vault/snippetSegments';
-import { BookIcon, FolderIcon, OpenIcon } from '@/features/vault/VaultIcons';
-import { folderLabel, folderOf } from '@/features/vault/vaultGroups';
+import { FolderIcon, GroupIcon, OpenIcon } from '@/features/vault/VaultIcons';
+import { groupLabel, subgroupLabel } from '@/features/vault/vaultGroups';
 import type { VaultHit } from '@/lib/bindings/VaultHit';
 import { loadVaultImage } from '@/lib/vault';
 
@@ -49,18 +49,18 @@ export function VaultPreview({ hit, hasQuery, onBack, onAct }: VaultPreviewProps
   if (hit === null) {
     return <p className="vault-search__none">Nichts gewählt.</p>;
   }
-  const folder: string = folderOf(hit.path);
+  const subLabel: string = subgroupLabel(hit.group, hit.subgroup);
   const hasWhere: boolean = hit.heading !== '' || hit.line > 1;
   const segments: SnippetSegment[] = snippetSegments(hit.snippet);
   return (
     <>
       <button type="button" className="vault-search__back" onClick={onBack}>
-        ← {folderLabel(folder)}
+        ← {subLabel}
       </button>
       <div className="vault-search__preview-head">
         <p className="vault-search__crumb">
-          <BookIcon size={12} />
-          Wissen › {folderLabel(folder)}
+          <GroupIcon group={hit.group} size={12} />
+          {groupLabel(hit.group)} › {subLabel}
         </p>
         <h4 className="vault-search__preview-title">{hit.title}</h4>
         {hit.description !== '' && <p className="vault-search__preview-desc">{hit.description}</p>}
