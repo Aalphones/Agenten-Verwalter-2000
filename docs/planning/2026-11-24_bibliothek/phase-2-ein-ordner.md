@@ -21,10 +21,10 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 3. „Ordner“ ohne Wert: „Kein Ordner“ + Knopf „Wählen …“; mit Wert: Pfad in Festbreitenschrift + „Ändern …“ + „Entfernen“. Nach dem Speichern laufen Prüfung der Umgebung und Abgleich der Suche ohne weiteren Klick.
 4. Nach dem Update zeigt „Ordner“ auf diesem Rechner `G:\Meine Ablage\U104_Agents` (Übernahme aus `master_dir`), ohne dass gespeichert wurde.
 5. Mit einem Ordner ohne `skills`, `commands`, `output-styles` und `CLAUDE.md` zeigt „Abgleich der Skills“: „Kein Abgleich. Im Ordner liegen weder skills, commands, output-styles noch CLAUDE.md.“; die Suche funktioniert.
-6. „Durchsucht“ zeigt bei einer Bibliothek `CLAUDE.md · AGENTS.md · skills/ · commands/ · output-styles/ · _vault/`, bei einem reinen Vault „der ganze Ordner“.
+6. „Durchsucht“ zeigt bei einer Bibliothek `CLAUDE.md · AGENTS.md · skills/ · commands/ · output-styles/ · memory/ · _vault/`, bei einem reinen Vault „der ganze Ordner“.
 7. „Grundgerüst anlegen“ erscheint im „Suchindex“, wenn `canCreateSkeleton` gilt; Klick schreibt bei einer Bibliothek nach `_vault\`.
 8. Nach „Entfernen“ bleibt der Ordner auch nach einem Neustart leer (keine Rückkehr über `master_dir`/`vault_dir`).
-9. Der Index der eingestellten Bibliothek enthält keinen Pfad unter `memory/` (Beleg: `vault_search` mit `under: "memory"` liefert 0 Treffer; `vault_get` auf `memory/MEMORY.md` liefert den Fehlersatz).
+9. Der Index der eingestellten Bibliothek enthält nichts unter `memory/_archiv/` und nicht `memory/feedback_local_login_credentials.md` (Beleg: `vault_search` mit `under: "memory/_archiv"` liefert 0 Treffer; `vault_get` auf `memory/feedback_local_login_credentials.md` und auf `hooks/post-edit.sh` liefert je den Fehlersatz; `vault_get` auf `memory/MEMORY.md` liefert die Datei).
 10. `pnpm check` grün; der Test aus README → „Tests“ (Phase 2) läuft grün; `git -C "G:\Meine Ablage\U104_Agents" status --short` leer.
 
 ## Checkliste
@@ -47,7 +47,7 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
   - `environmentLinks` · „Verknüpfungen“ · bisheriger Text · immer sichtbar
   - `vaultEnabled` · „Suche“ · „Schaltet Einlesen, Suche und die Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht für die Suche, die Agenten sehen keine Werkzeuge der Bibliothek. Der Abgleich der Skills läuft unabhängig davon.“ · `isShown: hasLibraryDir`
   - `vaultStatus` · „Suchindex“ · bisheriger Text, letzter Satz: „„Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).“ · `isShown: isSearchOn`
-  - `libraryScope` (neu) · „Durchsucht“ · „Nur diese Teile liest der Verwalter für die Suche. memory/, hooks/, Logs, settings.json und alles Übrige im Ordner bleiben draußen. Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore ebenfalls.“ · `isShown: isSearchOn`
+  - `libraryScope` (neu) · „Durchsucht“ · „Nur diese Teile liest der Verwalter für die Suche; aus memory/ nur die Dateien direkt darin. hooks/, Logs, settings.json und alles Übrige im Ordner bleiben draußen, ebenso Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore.“ · `isShown: isSearchOn`
 - [ ] `SettingsView.tsx` `renderRow`: Fälle `masterDir`/`vaultDir` entfernen; `libraryDir` → `<LibraryDirRow libraryDir={current.libraryDir} onSave={(value) => save({ kind: 'libraryDir', value })} />`; `vaultEnabled` behält den `Switch`, `label="Suche"`; `libraryScope` → neue Komponente `src/features/vault/LibraryScopeRow.tsx` (`SettingRow id="libraryScope"`, liest `useVaultStatus`, zeigt bei `status.layout === 'library'` den Text aus AK 6, bei `'plain'` „der ganze Ordner“, ohne Layout nichts).
 - [ ] `EnvironmentMirrorRow.tsx`: bei `status.masterError !== null` den Text `Kein Abgleich. ${status.masterError}` statt „Kein Abgleich, solange der Master-Ordner ungültig ist.“
 - [ ] Schalter „Suche“: rechts neben dem `Switch` (der keinen eigenen Begleittext kennt) ein `<span className="vault-row__muted">` mit dem Text aus dem Entwurf — an: „an · Suche in der Seitenleiste und Ctrl K“, aus: „aus · kein Einstieg, Ctrl K ohne Wirkung“; `SettingsView.tsx` importiert dafür `@/features/vault/VaultRows.css`, falls noch nicht geschehen. `LibraryScopeRow` nutzt `vault-row__mono` für die Liste und `vault-row__text` für „der ganze Ordner“.
@@ -63,7 +63,7 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 
 - AK 1–10 erfüllt; Belege im Report-Back.
 - **Sichtbares Ergebnis:** Der Benutzer öffnet Einstellungen › Skills & Umgebung und sieht einen Abschnitt „Bibliothek“ mit seinem Master-Ordner, Abgleich, Verknüpfungen, Suche, Suchindex und „Durchsucht“.
-- **Reviewable Artifact:** `artifacts/phase-2-bibliothek-hell.png` und `artifacts/phase-2-bibliothek-dunkel.png` (Abschnitt mit Ordner und eingeschalteter Suche), `artifacts/phase-2-ohne-ordner.png`; dazu im Report-Back die Antworten von `vault_search` (`under: "memory"`) und `vault_get` (`memory/MEMORY.md`) aus einer echten Session oder per `mcp-probe call`.
+- **Reviewable Artifact:** `artifacts/phase-2-bibliothek-hell.png` und `artifacts/phase-2-bibliothek-dunkel.png` (Abschnitt mit Ordner und eingeschalteter Suche), `artifacts/phase-2-ohne-ordner.png`; dazu im Report-Back die Antworten der Aufrufe aus AK 9 aus einer echten Session oder per `mcp-probe call`.
 - Kommandos: `pnpm bindings`, `pnpm check` (Zusammenfassungszeile), `pnpm tauri dev` für die Bilder.
 - Dateien: Code-Map, Glossar, ADR 038 nachgezogen.
 - Sieben Ziele kurz geprüft.

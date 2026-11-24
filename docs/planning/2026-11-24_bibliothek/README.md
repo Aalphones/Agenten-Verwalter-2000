@@ -1,6 +1,6 @@
 # Plan: Bibliothek — ein Ordner für Anweisungen, Skills und Wissen
 
-Der Master-Ordner (Skills, Befehle, Ausgabestile, `CLAUDE.md`) und der Developer Vault werden ein Ordner: die **Bibliothek**. Der Benutzer gibt nur noch diesen einen Ordner an. Der Verwalter gleicht daraus wie bisher Skills, Befehle, Ausgabestile und `CLAUDE.md` mit `~\.claude` ab und durchsucht zugleich Anweisungen, Skills und das Wissen im Unterordner `_vault/`. Alles andere im Ordner (`memory/`, `hooks/`, Logs, `settings.json`, `codex/`, `continue/`, `setup.cmd` …) liest der Verwalter nie — eine feste Erlaubnisliste, keine Ausschlussdatei. Ein Ordner ohne Skills, Befehle, Ausgabestile und `CLAUDE.md` bleibt ein reiner Vault wie bisher.
+Der Master-Ordner (Skills, Befehle, Ausgabestile, `CLAUDE.md`) und der Developer Vault werden ein Ordner: die **Bibliothek**. Der Benutzer gibt nur noch diesen einen Ordner an. Der Verwalter gleicht daraus wie bisher Skills, Befehle, Ausgabestile und `CLAUDE.md` mit `~\.claude` ab und durchsucht zugleich Anweisungen (samt Gedächtnis: die Dateien direkt in `memory/`), Skills und das Wissen im Unterordner `_vault/`. Alles andere im Ordner (`memory/_archiv/`, `hooks/`, Logs, `settings.json`, `codex/`, `continue/`, `setup.cmd` …) liest der Verwalter nie — eine feste Erlaubnisliste; die Ausschlussdatei `.vaultignore` dient nur noch für einzelne Dateien innerhalb der Liste. Ein Ordner ohne Skills, Befehle, Ausgabestile und `CLAUDE.md` bleibt ein reiner Vault wie bisher.
 
 Entscheidungen und Begründung: [ADR 069](../../decisions/069-bibliothek.md) (ändert ADR 038 und ADR 068). Entwurf: [artifacts/README.md](artifacts/README.md).
 
@@ -12,7 +12,7 @@ Entscheidungen und Begründung: [ADR 069](../../decisions/069-bibliothek.md) (ä
 | 2 | [Ein Ordner in den Einstellungen](phase-2-ein-ordner.md) | standard | 2 | pending | 2,5 h |
 | 3 | [Suchdialog mit Anweisungen, Skills und Wissen](phase-3-suchdialog-gruppen.md) | standard | 3 | pending | 2 h |
 
-Reihenfolge strikt 1 → 2 → 3. Phase 2 stellt den gelesenen Ordner auf den Master-Ordner um; vorher muss die Erlaubnisliste aus Phase 1 stehen, sonst landen `memory/` und die Logs im Index und über `vault_get` bei den Agenten. Phase 3 braucht die Gruppenfelder aus Phase 1 und die Benennung aus Phase 2; drei Phasen parallel zu schneiden spart hier keine Zeit. Erste Sichtabnahme: Phase 2 (Einstellungen › Skills & Umgebung › Bibliothek).
+Reihenfolge strikt 1 → 2 → 3. Phase 2 stellt den gelesenen Ordner auf den Master-Ordner um; vorher muss die Erlaubnisliste aus Phase 1 stehen, sonst landen `hooks/`, die Logs, `settings.json` und `memory/_archiv/` im Index und über `vault_get` bei den Agenten. Phase 3 braucht die Gruppenfelder aus Phase 1 und die Benennung aus Phase 2; drei Phasen parallel zu schneiden spart hier keine Zeit. Erste Sichtabnahme: Phase 2 (Einstellungen › Skills & Umgebung › Bibliothek).
 
 ## Kontrakt
 
@@ -34,9 +34,13 @@ pub fn layout_name(layout: VaultLayout) -> &'static str;          // "library" |
 pub fn layout_from_name(name: &str) -> VaultLayout;               // unbekannt = Plain
 
 /// Ob ein Eintrag der ersten Ebene eingelesen wird. Plain: immer. Library: nur die Ordner
-/// `skills`, `commands`, `output-styles`, `_vault` und die Dateien `CLAUDE.md`, `AGENTS.md`;
-/// Vergleich ohne Beachtung der Schreibweise.
+/// `skills`, `commands`, `output-styles`, `memory`, `_vault` und die Dateien `CLAUDE.md`,
+/// `AGENTS.md`; Vergleich ohne Beachtung der Schreibweise.
 pub fn is_included_top(layout: VaultLayout, name: &str, is_dir: bool) -> bool;
+
+/// Library: Unterordner von `memory` (z. B. `memory/_archiv`) werden nicht betreten — aus
+/// `memory` zählen nur die Dateien direkt darin. Plain: immer `true`.
+pub fn is_included_below(layout: VaultLayout, parent_top: &str, is_dir: bool) -> bool;
 
 /// Library: `skills/<name>`, wenn `skills/<name>/SKILL.md` unter den Dateien ist.
 pub fn skill_folders(layout: VaultLayout, files: &[&str]) -> HashSet<String>;
@@ -55,6 +59,7 @@ Regeln von `apply_place` (Library; `artifact` = Pfad des Artefakts):
 | `CLAUDE.md`, `AGENTS.md` (Wurzel) | `rules` | unverändert | unverändert |
 | `output-styles/<x>.md` (direkt) | `style` | unverändert | unverändert |
 | `commands/<x>.md` (direkt) | `command` | `/<x>` | unverändert |
+| `memory/<x>.md` (direkt) | `memory` | unverändert | unverändert |
 | `skills/<x>` (Skill-Ordner) | `skill` | `<x>` | `skills/<x>/SKILL.md` |
 | alles andere | unverändert | unverändert | unverändert |
 
@@ -64,6 +69,7 @@ Regeln von `place` (Gruppen-Ids und Untergruppen-Ids, Labels nur in der Oberflä
 |---|---|---|---|
 | Library | `CLAUDE.md`, `AGENTS.md` | `anweisungen` | `grundregeln` |
 | Library | `output-styles/…` | `anweisungen` | `ausgabestile` |
+| Library | `memory/…` | `anweisungen` | `gedaechtnis` |
 | Library | `skills/mode-…` | `skills` | `arbeitsweise` |
 | Library | `skills/lang-…` | `skills` | `sprachen` |
 | Library | `skills/framework-…` | `skills` | `frameworks` |
@@ -84,7 +90,7 @@ Regeln von `place` (Gruppen-Ids und Untergruppen-Ids, Labels nur in der Oberflä
 
 ## Tests
 
-- **Phase 1:** Rust-Tests (`#[cfg(test)] mod tests` in `src-tauri/src/vault/library.rs`) für `is_included_top`, `skill_folders`, `apply_place` und `place` nach den Tabellen im Kontrakt, dazu `layout` gegen zwei Ordner unter `std::env::temp_dir()` (mit `skills\` bzw. ohne), die der Test selbst anlegt und wieder löscht. Keine neue Abhängigkeit.
+- **Phase 1:** Rust-Tests (`#[cfg(test)] mod tests` in `src-tauri/src/vault/library.rs`) für `is_included_top`, `is_included_below`, `skill_folders`, `apply_place` und `place` nach den Tabellen im Kontrakt, dazu `layout` gegen zwei Ordner unter `std::env::temp_dir()` (mit `skills\` bzw. ohne), die der Test selbst anlegt und wieder löscht. Keine neue Abhängigkeit.
 - **Phase 2:** Rust-Test für die Übernahme der Einstellung als reine Funktion `library_dir_from(stored: &HashMap<String, String>) -> Option<String>` in `settings/mod.rs` (Fälle: nur `master_dir`; nur `vault_dir`; beide; `library_dir` leer neben gesetztem `master_dir` → `None`).
 - **Phase 3:** keine automatisierten Tests — das Projekt hat kein Testwerkzeug für die Oberfläche, und dieser Plan führt keins ein. Belegt wird mit Bildern.
 - Lauf: `cargo test --manifest-path src-tauri/Cargo.toml <modul>` und `pnpm check`. Die Bestands-Tests sind Grundlage; schlagen sie schon vor Phase 1 fehl, wird das vor dem ersten Edit gemeldet.
@@ -93,10 +99,10 @@ Regeln von `place` (Gruppen-Ids und Untergruppen-Ids, Labels nur in der Oberflä
 
 1. In den Einstellungen gibt es einen Abschnitt „Bibliothek“ mit genau einer Ordnerwahl; die Abschnitte „Umgebung“ und „Developer Vault“ gibt es nicht mehr.
 2. Nach dem Update zeigt die Ordnerzeile ohne Zutun den bisherigen Master-Ordner (`G:\Meine Ablage\U104_Agents`); Abgleich und Suche arbeiten damit.
-3. Der Index der Bibliothek `U104_Agents` enthält keinen Pfad unter `memory/`, `hooks/`, `codex/`, `continue/`, `references/`, `_stylePakete/` und keine der Dateien `settings.json`, `improvement-log.md`, `skill-evolution-log.md`, `setup.cmd`, `SETUP.md`, `MIGRATION.md`, `merge-hooks.cjs`; `vault_get` auf `memory/MEMORY.md` endet mit einem Fehlersatz.
-4. `vault_search` findet Skills (Art `skill`, ein Treffer je Skill-Ordner), Befehle (Art `command`, Titel `/plan`), Ausgabestile (Art `style`), `CLAUDE.md` (Art `rules`) und die Einträge unter `_vault/`.
-5. Der Suchdialog heißt „Bibliothek“ und gliedert links nach Anweisungen (Grundregeln, Ausgabestile), Skills (Arbeitsweise, Sprachen, Frameworks, Werkzeuge, Befehle) und Wissen (je Ordner unter `_vault/`); Gruppen ohne Treffer fehlen.
-6. Die erste Nachricht einer Station nennt nur Treffer aus `_vault/`, nie einen Skill oder eine Anweisung.
+3. Der Index der Bibliothek `U104_Agents` enthält keinen Pfad unter `memory/_archiv/`, `hooks/`, `codex/`, `continue/`, `references/`, `_stylePakete/` und keine der Dateien `memory/feedback_local_login_credentials.md` (ausgeschlossen per `.vaultignore` im Master-Ordner), `settings.json`, `improvement-log.md`, `skill-evolution-log.md`, `setup.cmd`, `SETUP.md`, `MIGRATION.md`, `merge-hooks.cjs`; `vault_get` auf eine dieser Dateien endet mit einem Fehlersatz.
+4. `vault_search` findet Skills (Art `skill`, ein Treffer je Skill-Ordner), Befehle (Art `command`, Titel `/plan`), Ausgabestile (Art `style`), `CLAUDE.md` (Art `rules`), Memories (Art `memory`) und die Einträge unter `_vault/`.
+5. Der Suchdialog heißt „Bibliothek“ und gliedert links nach Anweisungen (Grundregeln, Ausgabestile, Gedächtnis), Skills (Arbeitsweise, Sprachen, Frameworks, Werkzeuge, Befehle) und Wissen (je Ordner unter `_vault/`); Gruppen ohne Treffer fehlen.
+6. Die erste Nachricht einer Station nennt nur Treffer aus `_vault/`, nie einen Skill, eine Anweisung oder eine Memory.
 7. Ein Ordner ohne `skills`, `commands`, `output-styles` und `CLAUDE.md` funktioniert als reiner Vault wie vor dem Plan (alles eingelesen, nur Gruppe Wissen, Grundgerüst nur in einen leeren Ordner); der Abgleich meldet dann, dass im Ordner nichts abzugleichen ist.
 8. `setup.cmd` läuft nach dem Umbau unverändert: die Umsetzung ändert keine Datei im Master-Ordner (`git -C "G:\Meine Ablage\U104_Agents" status --short` ist nach jeder Phase leer, kein Commit einer Phasen-Session liegt im Master), und im Code schreibt außer `vault/skeleton.rs` nichts in die Bibliothek.
 

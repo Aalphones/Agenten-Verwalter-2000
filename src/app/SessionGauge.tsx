@@ -52,6 +52,11 @@ export function SessionGauge({ session, runtime }: SessionGaugeProps): ReactElem
   }
   titleLines.push(`Laufzeit ${runtime}`, CLICK_HINT);
 
+  // Der Browser baut den Tooltip bei jeder Titeländerung neu auf (Flackern). Laufzeit, Cache-Restzeit
+  // und Kontext ändern sich laufend — also den Text beim Daraufzeigen einfrieren.
+  const liveTitle: string = titleLines.join('\n');
+  const [frozenTitle, setFrozenTitle] = useState<string | null>(null);
+
   function close(): void {
     setIsOpen(false);
   }
@@ -63,7 +68,16 @@ export function SessionGauge({ session, runtime }: SessionGaugeProps): ReactElem
         className="session-gauge__trigger"
         aria-expanded={isOpen}
         aria-label="Kontext, Prompt-Cache und Laufzeit"
-        title={titleLines.join('\n')}
+        title={frozenTitle ?? liveTitle}
+        onMouseEnter={(): void => {
+          setFrozenTitle(liveTitle);
+        }}
+        onMouseLeave={(): void => {
+          setFrozenTitle(null);
+        }}
+        onBlur={(): void => {
+          setFrozenTitle(null);
+        }}
         onClick={(): void => {
           setIsOpen((current: boolean) => !current);
         }}
