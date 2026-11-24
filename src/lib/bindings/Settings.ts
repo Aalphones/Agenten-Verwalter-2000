@@ -21,16 +21,12 @@ localModel: string | null,
  */
 defaultCodexModel: string | null, 
 /**
- * Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`, mit dem die
- * Umgebung abgeglichen wird (ADR 038); `None`, solange keiner gewählt ist.
+ * Ordner der Bibliothek: Anweisungen, Skills, Befehle, Ausgabestile und Wissen (ADR 069);
+ * `None`, solange keiner gewählt ist.
  */
-masterDir: string | null, 
+libraryDir: string | null, 
 /**
- * Ordner der Entwicklerbibliothek (Developer Vault, ADR 068); `None`, solange keiner gewählt ist.
- */
-vaultDir: string | null, 
-/**
- * Ob der Vault eingelesen und durchsucht wird; Standard aus.
+ * Ob die Bibliothek eingelesen und durchsucht wird; Standard aus.
  */
 vaultEnabled: boolean, 
 /**

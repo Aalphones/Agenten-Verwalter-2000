@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
 import { Dialog } from '@/components/Dialog';
 import { rowId, VaultHitRow } from '@/features/vault/VaultHitRow';
-import { BookIcon, InfoIcon, SearchIcon } from '@/features/vault/VaultIcons';
+import { GroupIcon, InfoIcon, SearchIcon } from '@/features/vault/VaultIcons';
 import { VaultPreview } from '@/features/vault/VaultPreview';
 import { useVaultSearch } from '@/features/vault/useVaultSearch';
 import type { VaultSearch } from '@/features/vault/useVaultSearch';
@@ -10,14 +10,20 @@ import { useVaultStatus } from '@/features/vault/useVaultStatus';
 import {
   ALL_SCOPE,
   buildSections,
-  folderCounts,
-  folderLabel,
-  scopeFolder,
-  scopeOfFolder,
-  VAULT_GROUPS,
+  groupCounts,
+  groupLabel,
+  inScope,
+  parseScope,
+  scopeOfGroup,
+  scopeOfSubgroup,
   visibleHits,
 } from '@/features/vault/vaultGroups';
-import type { VaultFolderCount, VaultSection } from '@/features/vault/vaultGroups';
+import type {
+  GroupCount,
+  ParsedScope,
+  SubgroupCount,
+  VaultSection,
+} from '@/features/vault/vaultGroups';
 import { statusText } from '@/features/vault/vaultTexts';
 import type { VaultHit } from '@/lib/bindings/VaultHit';
 import { commandErrorText } from '@/lib/errors';
@@ -30,7 +36,6 @@ const SEARCH_INFO =
   'Sucht in Titeln, Tags, Dateinamen und Texten. Wortanfänge genügen; mehrere Wörter müssen alle vorkommen.';
 /** Unter dieser Fensterbreite öffnet die Vorschau als zweite Stufe. */
 const DETAIL_BREAKPOINT = 1180;
-const GROUP_ID: string = VAULT_GROUPS[0].id;
 
 /** Die letzte Suche bleibt beim erneuten Öffnen im Feld stehen. */
 let lastQuery = '';
@@ -39,11 +44,26 @@ interface VaultSearchDialogProps {
   onClose: () => void;
 }
 
+/** Ob die Gruppe oder Untergruppe des Scopes unter den Treffern vorkommt. */
+function scopeExists(groups: GroupCount[], scope: string): boolean {
+  const { group, subgroup }: ParsedScope = parseScope(scope);
+  if (group === null) {
+    return true;
+  }
+  const entry: GroupCount | undefined = groups.find(
+    (candidate: GroupCount) => candidate.group === group,
+  );
+  if (entry === undefined) {
+    return false;
+  }
+  return subgroup === null || entry.subs.some((sub: SubgroupCount) => sub.subgroup === subgroup);
+}
+
 function fileName(path: string): string {
   return path.split('/').pop() ?? path;
 }
 
-/** Suchdialog des Developer Vault: Gruppen links, Liste in der Mitte, Vorschau rechts. */
+/** Suchdialog der Bibliothek: Gruppen links, Liste in der Mitte, Vorschau rechts. */
 export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactElement {
   const search: VaultSearch = useVaultSearch(lastQuery);
   const { status } = useVaultStatus();
@@ -56,13 +76,9 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
   const inputRef = useRef<HTMLInputElement>(null);
 
   const hasQuery: boolean = search.shownQuery.trim() !== '';
-  const folders: VaultFolderCount[] = useMemo(() => folderCounts(search.hits), [search.hits]);
-  // Eine Untergruppe, die es zu diesem Treffersatz nicht gibt, fällt auf „Alle“ zurück.
-  const folder: string | null = scopeFolder(scope);
-  const activeScope: string =
-    folder !== null && !folders.some((entry: VaultFolderCount) => entry.folder === folder)
-      ? ALL_SCOPE
-      : scope;
+  const groups: GroupCount[] = useMemo(() => groupCounts(search.hits), [search.hits]);
+  // Eine Gruppe oder Untergruppe, die es zu diesem Treffersatz nicht gibt, fällt auf „Alle“ zurück.
+  const activeScope: string = scopeExists(groups, scope) ? scope : ALL_SCOPE;
   const sections: VaultSection[] = useMemo(
     () => buildSections(search.hits, activeScope, hasQuery),
     [search.hits, activeScope, hasQuery],
@@ -162,8 +178,11 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
       const index: number = Number(event.key);
       if (index === 0) {
         chooseScope(ALL_SCOPE);
-      } else if (index <= VAULT_GROUPS.length && search.hits.length > 0) {
-        chooseScope(GROUP_ID);
+      } else {
+        const target: GroupCount | undefined = groups[index - 1];
+        if (target !== undefined) {
+          chooseScope(scopeOfGroup(target.group));
+        }
       }
     } else if (
       event.ctrlKey &&
@@ -179,8 +198,7 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
   const scopedCount: number =
     activeScope === ALL_SCOPE
       ? search.total
-      : search.hits.filter((hit: VaultHit) => folder === null || hit.path.startsWith(`${folder}/`))
-          .length;
+      : search.hits.filter((hit: VaultHit) => inScope(hit, activeScope)).length;
   const isTruncated: boolean = search.hits.length < search.total;
   const footerCount: string =
     activeScope !== ALL_SCOPE && isTruncated ? `${String(scopedCount)}+` : String(scopedCount);
@@ -199,7 +217,7 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
         );
       }
       const text: string =
-        hasQuery || search.hits.length > 0 ? 'Nichts gefunden.' : 'Der Vault ist noch leer.';
+        hasQuery || search.hits.length > 0 ? 'Nichts gefunden.' : 'Die Bibliothek ist noch leer.';
       return <p className="vault-search__empty">{text}</p>;
     }
     return (
@@ -212,8 +230,11 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
                   'Zuletzt geändert'
                 ) : (
                   <>
-                    <BookIcon size={12} />
-                    <span className="vault-search__crumb-group">Wissen ›</span> {section.label}
+                    <GroupIcon group={section.group} size={12} />
+                    <span className="vault-search__crumb-group">
+                      {groupLabel(section.group)} ›
+                    </span>{' '}
+                    {section.label}
                   </>
                 )}
                 {section.more > 0 && (
@@ -221,7 +242,7 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
                     type="button"
                     className="vault-search__more"
                     onClick={(): void => {
-                      chooseScope(scopeOfFolder(section.key));
+                      chooseScope(scopeOfSubgroup(section.group, section.subgroup));
                     }}
                   >
                     alle {section.more} zeigen
@@ -264,7 +285,7 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
       >
         <header className="vault-search__header">
           <h3 id={TITLE_ID} className="vault-search__title">
-            Developer Vault
+            Bibliothek
           </h3>
           <div className="vault-search__search">
             <span className="vault-search__search-icon">
@@ -279,8 +300,8 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
               aria-autocomplete="list"
               aria-activedescendant={selectedKey === null ? undefined : rowId(selectedKey)}
               className="vault-search__input"
-              placeholder="Snippets, Notizen, Vorlagen durchsuchen"
-              aria-label="Developer Vault durchsuchen"
+              placeholder="Anweisungen, Skills, Wissen durchsuchen"
+              aria-label="Bibliothek durchsuchen"
               autoComplete="off"
               value={search.query}
               onChange={(event: ChangeEvent<HTMLInputElement>): void => {
@@ -339,19 +360,20 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
           >
             Alle <span className="vault-search__count">{search.total}</span>
           </button>
-          {search.hits.length > 0 && (
+          {groups.map((entry: GroupCount) => (
             <button
+              key={entry.group}
               type="button"
               className="vault-search__chip"
-              aria-pressed={activeScope !== ALL_SCOPE}
+              aria-pressed={parseScope(activeScope).group === entry.group}
               onClick={(): void => {
-                chooseScope(GROUP_ID);
+                chooseScope(scopeOfGroup(entry.group));
               }}
             >
-              <BookIcon size={13} />
-              Wissen <span className="vault-search__count">{search.hits.length}</span>
+              <GroupIcon group={entry.group} size={13} />
+              {entry.label} <span className="vault-search__count">{entry.count}</span>
             </button>
-          )}
+          ))}
         </div>
         <div className="vault-search__body">
           <nav className="vault-search__nav" aria-label="Gruppen">
@@ -366,38 +388,41 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
               {allLabel}
               <span className="vault-search__count">{search.total}</span>
             </button>
-            {search.hits.length > 0 && (
-              <div className="vault-search__nav-group">
+            {groups.map((entry: GroupCount) => (
+              <div
+                key={entry.group}
+                className={`vault-search__nav-group vault-search__nav-group--${entry.group}`}
+              >
                 <button
                   type="button"
                   className="vault-search__nav-head"
-                  aria-current={activeScope === GROUP_ID}
+                  aria-current={activeScope === scopeOfGroup(entry.group)}
                   onClick={(): void => {
-                    chooseScope(GROUP_ID);
+                    chooseScope(scopeOfGroup(entry.group));
                   }}
                 >
-                  <BookIcon size={13} />
-                  Wissen
-                  <span className="vault-search__count">{search.hits.length}</span>
+                  <GroupIcon group={entry.group} size={13} />
+                  {entry.label}
+                  <span className="vault-search__count">{entry.count}</span>
                 </button>
                 <div className="vault-search__nav-subs">
-                  {folders.map((entry: VaultFolderCount) => (
+                  {entry.subs.map((sub: SubgroupCount) => (
                     <button
-                      key={entry.folder}
+                      key={sub.subgroup}
                       type="button"
                       className="vault-search__nav-item"
-                      aria-current={activeScope === scopeOfFolder(entry.folder)}
+                      aria-current={activeScope === scopeOfSubgroup(entry.group, sub.subgroup)}
                       onClick={(): void => {
-                        chooseScope(scopeOfFolder(entry.folder));
+                        chooseScope(scopeOfSubgroup(entry.group, sub.subgroup));
                       }}
                     >
-                      {folderLabel(entry.folder)}
-                      <span className="vault-search__count">{entry.count}</span>
+                      {sub.label}
+                      <span className="vault-search__count">{sub.count}</span>
                     </button>
                   ))}
                 </div>
               </div>
-            )}
+            ))}
           </nav>
           <div id={LIST_ID} className="vault-search__list" role="listbox" aria-label="Einträge">
             {renderList()}
@@ -423,7 +448,7 @@ export function VaultSearchDialog({ onClose }: VaultSearchDialogProps): ReactEle
           {doneText !== '' && <span className="vault-search__done">{doneText}</span>}
           <span className="vault-search__keys">
             <kbd>↑</kbd> <kbd>↓</kbd> wählen · <kbd>Enter</kbd> öffnen · <kbd>Ctrl Enter</kbd> im
-            Ordner · <kbd>Ctrl 0–{VAULT_GROUPS.length}</kbd> Gruppe · <kbd>Esc</kbd> schließen
+            Ordner · <kbd>Ctrl 0–{groups.length}</kbd> Gruppe · <kbd>Esc</kbd> schließen
           </span>
         </footer>
       </div>

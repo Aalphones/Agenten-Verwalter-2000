@@ -69,9 +69,9 @@ pub struct MirrorRun {
 #[serde(rename_all = "camelCase")]
 pub struct EnvironmentStatus {
     pub links: LinkCheck,
-    /// Der eingestellte Master-Ordner, auch wenn er ungültig ist.
+    /// Der eingestellte Ordner der Bibliothek, auch wenn er ungültig ist.
     pub master_dir: Option<String>,
-    /// Ein Satz, warum der Master-Ordner nicht abgeglichen wird.
+    /// Ein Satz, warum der Ordner der Bibliothek nicht abgeglichen wird.
     pub master_error: Option<String>,
     /// Sortiert nach Art, dann Name.
     pub diffs: Vec<MirrorDiff>,

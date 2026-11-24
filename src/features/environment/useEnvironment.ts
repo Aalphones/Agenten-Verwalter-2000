@@ -13,7 +13,7 @@ interface Environment {
   isMirroring: boolean;
   /** Prüft erneut. */
   check: () => void;
-  /** Kopiert aus dem Master-Ordner und zeigt danach den neuen Stand. */
+  /** Kopiert aus dem Ordner der Bibliothek und zeigt danach den neuen Stand. */
   mirror: () => void;
 }
 

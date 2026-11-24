@@ -32,7 +32,7 @@ pub async fn settings_update(
     let changes_skin_style = matches!(change, SettingsChange::SkinStyle { .. });
     let changes_vault = matches!(
         change,
-        SettingsChange::VaultDir { .. } | SettingsChange::VaultEnabled { .. }
+        SettingsChange::LibraryDir { .. } | SettingsChange::VaultEnabled { .. }
     );
     let updated = settings::update(&database, change)?;
     if changes_skin_style {

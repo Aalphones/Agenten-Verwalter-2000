@@ -1,12 +1,13 @@
-//! Grundgerüst für einen leeren Vault-Ordner (ADR 068). Das Einzige, was der Verwalter in den
-//! Vault schreibt.
+//! Grundgerüst in einen leeren Vault-Ordner bzw. in `_vault` einer Bibliothek (ADR 068, ADR 069).
+//! Das Einzige, was der Verwalter in die Bibliothek schreibt.
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::error::CommandError;
 
 use super::is_empty_dir;
+use super::library::{self, VaultLayout};
 
 const NOT_EMPTY: &str =
     "Der Ordner ist nicht leer — das Grundgerüst wird nur in einen leeren Ordner geschrieben.";
@@ -55,15 +56,24 @@ const INBOX_README: &str = "# Inbox
 Hier landet alles, was noch nicht eingeordnet ist. Alles hier ist durchsuchbar.
 ";
 
-/// Schreibt `README.md`, `AGENTS.md` und `inbox/README.md`; überschreibt nie eine Datei.
+/// Schreibt `README.md`, `AGENTS.md` und `inbox/README.md` in den Ordner des Wissens — bei einer
+/// Bibliothek `_vault` (wird angelegt, wenn er fehlt), sonst `dir` selbst. Nur in einen leeren
+/// Ordner; überschreibt nie eine Datei.
 pub fn create(dir: &Path) -> Result<(), CommandError> {
-    if !is_empty_dir(dir) {
+    let target: PathBuf = match library::layout(dir) {
+        VaultLayout::Library => dir.join(library::KNOWLEDGE_DIR),
+        VaultLayout::Plain => dir.to_path_buf(),
+    };
+    if !target.exists() {
+        fs::create_dir_all(&target).map_err(io_error)?;
+    }
+    if !is_empty_dir(&target) {
         return Err(CommandError::Internal(NOT_EMPTY.to_owned()));
     }
-    fs::create_dir_all(dir.join("inbox")).map_err(io_error)?;
-    write_new(&dir.join("README.md"), README)?;
-    write_new(&dir.join("AGENTS.md"), AGENTS)?;
-    write_new(&dir.join("inbox").join("README.md"), INBOX_README)
+    fs::create_dir_all(target.join("inbox")).map_err(io_error)?;
+    write_new(&target.join("README.md"), README)?;
+    write_new(&target.join("AGENTS.md"), AGENTS)?;
+    write_new(&target.join("inbox").join("README.md"), INBOX_README)
 }
 
 fn write_new(path: &Path, text: &str) -> Result<(), CommandError> {

@@ -36,7 +36,7 @@ export function VaultStatusRow(): ReactElement {
   const isScanning: boolean = status?.state === 'scanning';
   const canRescan: boolean = status?.state === 'ready' || isScanning;
   const canCreateSkeleton: boolean =
-    status !== null && status.isEmptyDir && status.state === 'ready';
+    status !== null && status.canCreateSkeleton && status.state === 'ready';
   return (
     <SettingRow id="vaultStatus">
       <div className="vault-row__stack">

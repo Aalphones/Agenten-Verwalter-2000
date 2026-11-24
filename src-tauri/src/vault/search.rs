@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use ts_rs::TS;
 
-use super::index::VaultIndex;
+use super::index::{self, VaultIndex};
+use super::library::{self, Place, VaultLayout};
 use super::model::{VaultState, VaultStatus};
 use crate::error::CommandError;
 
@@ -50,6 +51,11 @@ pub struct VaultHit {
     pub snippet: String,
     pub status: String,
     pub preview: Option<String>,
+    /// Gruppe nach dem Ort: `anweisungen`, `skills` oder `wissen`.
+    pub group: String,
+    /// Untergruppe innerhalb der Gruppe, z. B. `arbeitsweise` oder ein Ordner im Wissen; leer für
+    /// den Hauptordner des Wissens.
+    pub subgroup: String,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -103,6 +109,20 @@ pub fn search_index(
 
 /// Wie `search_index`, auf einer schon offenen Verbindung (das Prüfprogramm öffnet schreibgeschützt).
 pub fn search_connection(
+    connection: &Connection,
+    query: &VaultQuery,
+) -> Result<(Vec<VaultHit>, u32), CommandError> {
+    let (mut hits, total): (Vec<VaultHit>, u32) = find_hits(connection, query)?;
+    let layout: VaultLayout = index::layout(connection)?;
+    for hit in &mut hits {
+        let Place { group, subgroup } = library::place(layout, &hit.path);
+        hit.group = group.to_owned();
+        hit.subgroup = subgroup;
+    }
+    Ok((hits, total))
+}
+
+fn find_hits(
     connection: &Connection,
     query: &VaultQuery,
 ) -> Result<(Vec<VaultHit>, u32), CommandError> {
@@ -221,6 +241,8 @@ fn run_fts(
             snippet: row.get(7)?,
             status: row.get(8)?,
             preview: row.get(9)?,
+            group: String::new(),
+            subgroup: String::new(),
         });
         if hits.len() >= limit {
             break;
@@ -260,6 +282,8 @@ fn list_recent(
                 snippet: String::new(),
                 status: row.get(5)?,
                 preview: row.get(6)?,
+                group: String::new(),
+                subgroup: String::new(),
             })
         })?
         .collect::<rusqlite::Result<Vec<VaultHit>>>()?;

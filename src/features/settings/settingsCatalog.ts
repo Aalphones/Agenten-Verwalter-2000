@@ -19,7 +19,7 @@ export interface SettingsCategory {
 export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   { id: 'general', label: 'Allgemein', summary: 'Konto · Darstellung' },
   { id: 'agent', label: 'Agent', summary: 'Betriebsart · Modelle · Modus · Claude Code' },
-  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Umgebung · Vault' },
+  { id: 'skills', label: 'Skills & Umgebung', summary: 'Skills · Bibliothek' },
   { id: 'skins', label: 'Skins', summary: 'Figuren · Stil · Pakete' },
   { id: 'app', label: 'App', summary: 'Version · Ordner · Rechte' },
 ];
@@ -46,16 +46,12 @@ function isClaudeMode(settings: Settings): boolean {
   return settings.operatingMode === 'claude';
 }
 
-function hasMasterDir(settings: Settings): boolean {
-  return settings.masterDir !== null;
+function hasLibraryDir(settings: Settings): boolean {
+  return settings.libraryDir !== null;
 }
 
-function hasVaultDir(settings: Settings): boolean {
-  return settings.vaultDir !== null;
-}
-
-function isVaultOn(settings: Settings): boolean {
-  return settings.vaultDir !== null && settings.vaultEnabled;
+function isSearchOn(settings: Settings): boolean {
+  return settings.libraryDir !== null && settings.vaultEnabled;
 }
 
 // Die Schlüsselreihenfolge ist die Anzeigereihenfolge.
@@ -157,44 +153,45 @@ const ENTRY_DATA = {
     label: 'Projekt-Skills',
     info: 'Skills aus den .claude\\skills-Ordnern der Repositories einer Session. Welche gelten, hängt davon ab, welche Repositories die Session umfasst.',
   },
-  environmentLinks: {
+  libraryDir: {
     category: 'skills',
-    section: 'Umgebung',
-    label: 'Verknüpfungen',
-    info: 'Junctions und symbolische Links direkt unter ~\\.claude und direkt in dessen Unterordnern, deren Ziel nicht erreichbar ist.',
-  },
-  masterDir: {
-    category: 'skills',
-    section: 'Umgebung',
-    label: 'Master-Ordner',
-    info: 'Ordner mit den Originalen deiner Skills, Befehle, Ausgabestile und der Datei CLAUDE.md, z. B. auf einem synchronisierten Laufwerk. Erwartet mindestens einen der Unterordner skills, commands, output-styles oder die Datei CLAUDE.md.',
+    section: 'Bibliothek',
+    label: 'Ordner',
+    info: 'Ein Ordner für Anweisungen, Skills und Wissen, z. B. auf einem synchronisierten Laufwerk. Enthält er skills, commands, output-styles oder CLAUDE.md, gleicht der Verwalter diese mit ~\\.claude ab und sucht im Wissen unter _vault. Sonst ist der ganze Ordner Wissen. Der Verwalter liest ihn nur; der Suchindex liegt lokal in seinem Datenordner.',
   },
   environmentMirror: {
     category: 'skills',
-    section: 'Umgebung',
-    label: 'Abgleich',
-    info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Master-Ordner mit ~\\.claude nach Inhalt. Die Änderungszeit entscheidet nur, welche Seite neuer ist. „Spiegeln“ kopiert, was im Master neuer ist oder lokal fehlt, und löscht nie.',
-    isShown: hasMasterDir,
+    section: 'Bibliothek',
+    label: 'Abgleich der Skills',
+    info: 'Vergleicht Skills, Befehle, Ausgabestile und CLAUDE.md im Ordner der Bibliothek mit ~\\.claude nach Inhalt. Die Änderungszeit entscheidet nur, welche Seite neuer ist. „Spiegeln“ kopiert, was im Ordner neuer ist oder lokal fehlt, und löscht nie.',
+    isShown: hasLibraryDir,
   },
-  vaultDir: {
+  environmentLinks: {
     category: 'skills',
-    section: 'Developer Vault',
-    label: 'Vault-Ordner',
-    info: 'Ordner deiner Entwicklerbibliothek: Snippets, Wissen, Ideen, Designs, Vorlagen, Skripte. Jeder Ordner geht, auch ein synchronisierter oder einer in einem Git-Repository. Der Verwalter liest ihn nur; der Suchindex liegt lokal in seinem Datenordner.',
+    section: 'Bibliothek',
+    label: 'Verknüpfungen',
+    info: 'Junctions und symbolische Links direkt unter ~\\.claude und direkt in dessen Unterordnern, deren Ziel nicht erreichbar ist.',
   },
   vaultEnabled: {
     category: 'skills',
-    section: 'Developer Vault',
-    label: 'Developer Vault',
-    info: 'Schaltet Einlesen, Suche und die Vault-Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht, die Agenten sehen keine Vault-Werkzeuge.',
-    isShown: hasVaultDir,
+    section: 'Bibliothek',
+    label: 'Suche',
+    info: 'Schaltet Einlesen, Suche und die Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht für die Suche, die Agenten sehen keine Werkzeuge der Bibliothek. Der Abgleich der Skills läuft unabhängig davon.',
+    isShown: hasLibraryDir,
   },
   vaultStatus: {
     category: 'skills',
-    section: 'Developer Vault',
-    label: 'Status',
-    info: 'Stand des Suchindex. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist; dabei liest der Verwalter nur Dateien, die sich geändert haben. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ in einen leeren Ordner.',
-    isShown: isVaultOn,
+    section: 'Bibliothek',
+    label: 'Suchindex',
+    info: 'Stand des Suchindex. Eingelesen wird beim Start und vor einer Suche, wenn der letzte Abgleich älter als 30 Sekunden ist; dabei liest der Verwalter nur Dateien, die sich geändert haben. „Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).',
+    isShown: isSearchOn,
+  },
+  libraryScope: {
+    category: 'skills',
+    section: 'Bibliothek',
+    label: 'Durchsucht',
+    info: 'Nur diese Teile liest der Verwalter für die Suche; aus memory/ nur die Dateien direkt darin. hooks/, Logs, settings.json und alles Übrige im Ordner bleiben draußen, ebenso Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore.',
+    isShown: isSearchOn,
   },
   skinFigures: {
     category: 'skins',

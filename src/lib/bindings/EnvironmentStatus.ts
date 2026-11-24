@@ -5,11 +5,11 @@ import type { MirrorRun } from "./MirrorRun";
 
 export type EnvironmentStatus = { links: LinkCheck, 
 /**
- * Der eingestellte Master-Ordner, auch wenn er ungültig ist.
+ * Der eingestellte Ordner der Bibliothek, auch wenn er ungültig ist.
  */
 masterDir: string | null, 
 /**
- * Ein Satz, warum der Master-Ordner nicht abgeglichen wird.
+ * Ein Satz, warum der Ordner der Bibliothek nicht abgeglichen wird.
  */
 masterError: string | null, 
 /**

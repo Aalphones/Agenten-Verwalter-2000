@@ -24,9 +24,10 @@ use crate::settings;
 const SEARCH: &str = "vault_search";
 const GET: &str = "vault_get";
 
-const SEARCH_DESCRIPTION: &str = "Durchsucht den Developer Vault des Benutzers (Snippets, Wissen, Ideen, Designs, Vorlagen, Skripte) nach Titel, Tags, Dateinamen und Text. Liefert kurze Treffer mit Pfad; Inhalte lädt vault_get.";
-const GET_DESCRIPTION: &str = "Lädt aus dem Developer Vault einen Abschnitt (path und line aus vault_search), eine Datei, die Dateiliste eines Ordners oder ein Bild.";
-const UNAVAILABLE: &str = "Der Developer Vault ist nicht eingerichtet (Einstellungen → Skills & Umgebung → Developer Vault).";
+const SEARCH_DESCRIPTION: &str = "Durchsucht die Bibliothek des Benutzers: Wissen (Snippets, Rezepte, Ideen, Designs, Vorlagen, Skripte) und, falls vorhanden, Anweisungen, Memories, Skills, Befehle und Ausgabestile — nach Titel, Tags, Dateinamen und Text. Liefert kurze Treffer mit Pfad; Inhalte lädt vault_get.";
+const GET_DESCRIPTION: &str = "Lädt aus der Bibliothek einen Abschnitt (path und line aus vault_search), eine Datei, die Dateiliste eines Ordners oder ein Bild.";
+const UNAVAILABLE: &str =
+    "Die Bibliothek ist nicht eingerichtet (Einstellungen → Skills & Umgebung → Bibliothek).";
 
 const DEFAULT_LIMIT: u64 = 8;
 const MAX_LIMIT: u64 = 20;
@@ -65,13 +66,13 @@ impl ToolSet for VaultTools {
                             "type": "string",
                             "description": "Suchtext; darf leer sein, dann kommen die zuletzt geänderten Artefakte."
                         },
-                        "kind": { "type": "string", "description": "Art des Artefakts, z. B. snippet." },
+                        "kind": { "type": "string", "description": "Art des Artefakts, z. B. snippet, note, skill, command, style, rules, memory." },
                         "tags": {
                             "type": "array",
                             "items": { "type": "string" },
                             "description": "Jeder Tag muss am Artefakt stehen."
                         },
-                        "under": { "type": "string", "description": "Pfad-Präfix relativ zum Vault." },
+                        "under": { "type": "string", "description": "Pfad-Präfix relativ zur Bibliothek, z. B. _vault oder skills." },
                         "limit": { "type": "integer", "minimum": 1, "maximum": 20, "description": "Höchstzahl der Treffer, Standard 8." }
                     },
                     "required": ["query"],
@@ -84,7 +85,7 @@ impl ToolSet for VaultTools {
                 input_schema: json!({
                     "type": "object",
                     "properties": {
-                        "path": { "type": "string", "description": "Pfad relativ zum Vault: Datei oder Ordner." },
+                        "path": { "type": "string", "description": "Pfad relativ zur Bibliothek: Datei oder Ordner." },
                         "line": { "type": "integer", "minimum": 1, "description": "Startzeile eines Abschnitts aus vault_search." }
                     },
                     "required": ["path"],
@@ -108,7 +109,7 @@ impl ToolSet for VaultTools {
             return false;
         };
         settings::load(&database)
-            .is_ok_and(|loaded| loaded.vault_enabled && loaded.vault_dir.is_some())
+            .is_ok_and(|loaded| loaded.vault_enabled && loaded.library_dir.is_some())
     }
 
     fn unavailable_message(&self) -> &'static str {
@@ -187,7 +188,7 @@ pub fn format_result(result: &VaultSearchResult) -> String {
     text
 }
 
-fn format_hit(hit: &VaultHit) -> String {
+pub fn format_hit(hit: &VaultHit) -> String {
     let mut text: String = format!(
         "- {} · {} · {} — {}",
         hit.path, hit.kind, hit.title, hit.description

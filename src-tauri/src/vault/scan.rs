@@ -12,13 +12,15 @@ use sha2::{Digest, Sha256};
 use crate::error::CommandError;
 use crate::vault::extract::{self, FileKind, SectionInput};
 use crate::vault::index::{self, ArtifactFts, ArtifactRow, FileRow, VaultIndex, delete_file};
-use crate::vault::meta::Meta;
+use crate::vault::library::{self, VaultLayout};
+use crate::vault::meta::{self, Meta};
 
 /// Größere Dateien werden nicht gelesen; ihr Name bleibt auffindbar.
 const MAX_READ_BYTES: u64 = 2 * 1024 * 1024;
 const IGNORE_FILE: &str = ".vaultignore";
 const MANIFEST_NAMES: [&str; 2] = ["manifest.yaml", "manifest.yml"];
 const README_NAME: &str = "README.md";
+const SKILL_NAME: &str = "SKILL.md";
 /// Anfang einer Datei, nach dem `file_kind` bei unbekannter Endung urteilt.
 const HEAD_BYTES: usize = 8 * 1024;
 
@@ -35,7 +37,7 @@ struct Entry {
     rel: String,
     size: i64,
     modified_ms: i64,
-    /// Pfad des Artefakts: die Datei selbst oder der Ordner mit `manifest.yaml`.
+    /// Pfad des Artefakts: die Datei selbst, der Ordner mit `manifest.yaml` oder ein Skill-Ordner.
     artifact: String,
 }
 
@@ -46,13 +48,16 @@ struct FolderFts {
 }
 
 /// Gleicht den Index mit dem Ordner ab. Je Datei eine eigene Transaktion; eine nicht lesbare
-/// Datei wird als übersprungen vermerkt und bricht den Lauf nicht ab.
+/// Datei wird als übersprungen vermerkt und bricht den Lauf nicht ab. Das Layout des Ordners
+/// (Bibliothek oder reiner Vault) bestimmt, was gelesen wird, und landet für die Suche im Index.
 pub fn run(root: &Path, index: &VaultIndex) -> Result<ScanReport, CommandError> {
     let started: Instant = Instant::now();
+    let layout: VaultLayout = library::layout(root);
+    index.with(|connection| index::set_layout(connection, layout))?;
     let mut report = ScanReport::default();
-    let mut entries: Vec<Entry> = walk(root, &mut report);
+    let mut entries: Vec<Entry> = walk(root, layout, &mut report);
     report.seen = entries.len() as u32;
-    let folders: HashSet<String> = manifest_folders(&entries);
+    let folders: HashSet<String> = artifact_folders(&entries, layout);
     for entry in &mut entries {
         entry.artifact = artifact_of(&entry.rel, &folders);
     }
@@ -64,7 +69,7 @@ pub fn run(root: &Path, index: &VaultIndex) -> Result<ScanReport, CommandError> 
         .collect();
     let dirty: Vec<String> = dirty_folders(&entries, &work, &stored, &folders);
     let folder_fts: HashMap<String, FolderFts> =
-        put_folder_artifacts(root, index, &entries, &dirty, &mut work)?;
+        put_folder_artifacts(root, index, layout, &entries, &dirty, &mut work)?;
     let forced: HashSet<usize> = forced_members(&entries, &work, &stored, &dirty);
     for (position, entry) in entries.iter().enumerate() {
         if !work[position] && !forced.contains(&position) {
@@ -72,7 +77,13 @@ pub fn run(root: &Path, index: &VaultIndex) -> Result<ScanReport, CommandError> 
         }
         let fts: Option<&FolderFts> = folder_fts.get(&entry.artifact);
         let is_forced: bool = forced.contains(&position);
-        sync_file(root, index, entry, stored.get(&entry.rel), fts, is_forced)?;
+        let file = FileSync {
+            entry,
+            stored: stored.get(&entry.rel),
+            folder: fts,
+            is_forced,
+        };
+        sync_file(root, index, layout, &file)?;
         report.read += 1;
     }
     report.skipped += index.with(|connection| Ok(index::counts(connection)?.skipped))?;
@@ -82,7 +93,8 @@ pub fn run(root: &Path, index: &VaultIndex) -> Result<ScanReport, CommandError> 
     Ok(report)
 }
 
-fn walk(root: &Path, report: &mut ScanReport) -> Vec<Entry> {
+/// Alle Dateien unter `root`; in einer Bibliothek nur unter den Einträgen der Erlaubnisliste.
+fn walk(root: &Path, layout: VaultLayout, report: &mut ScanReport) -> Vec<Entry> {
     let walker = WalkBuilder::new(root)
         .hidden(true)
         .git_ignore(true)
@@ -92,6 +104,22 @@ fn walk(root: &Path, report: &mut ScanReport) -> Vec<Entry> {
         .require_git(false)
         .follow_links(false)
         .add_custom_ignore_filename(IGNORE_FILE)
+        .filter_entry(move |entry: &DirEntry| {
+            let is_dir = entry.file_type().is_some_and(|kind| kind.is_dir());
+            match entry.depth() {
+                1 => library::is_included_top(layout, &entry.file_name().to_string_lossy(), is_dir),
+                2 => {
+                    let parent = entry
+                        .path()
+                        .parent()
+                        .and_then(Path::file_name)
+                        .map(|name| name.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    library::is_included_below(layout, &parent, is_dir)
+                }
+                _ => true,
+            }
+        })
         .build();
     let mut entries: Vec<Entry> = Vec::new();
     for item in walker {
@@ -123,6 +151,17 @@ fn entry_of(root: &Path, found: &DirEntry) -> Option<Entry> {
         modified_ms: modified.as_millis() as i64,
         artifact: String::new(),
     })
+}
+
+/// Ordner-Artefakte: Ordner mit Manifest-Datei und in einer Bibliothek die Skill-Ordner.
+fn artifact_folders(entries: &[Entry], layout: VaultLayout) -> HashSet<String> {
+    let files: Vec<&str> = entries
+        .iter()
+        .map(|entry: &Entry| entry.rel.as_str())
+        .collect();
+    let mut folders: HashSet<String> = manifest_folders(entries);
+    folders.extend(library::skill_folders(layout, &files));
+    folders
 }
 
 /// Ordner, die eine `manifest.yaml` oder `manifest.yml` tragen. Eine Manifest-Datei im Vault-Ordner
@@ -197,6 +236,7 @@ fn dirty_folders(
 fn put_folder_artifacts(
     root: &Path,
     index: &VaultIndex,
+    layout: VaultLayout,
     entries: &[Entry],
     dirty_folders: &[String],
     changed: &mut [bool],
@@ -207,7 +247,7 @@ fn put_folder_artifacts(
             .iter()
             .filter(|entry: &&Entry| &entry.artifact == folder)
             .collect();
-        let meta: Meta = folder_meta_of(root, folder, &members);
+        let meta: Meta = folder_meta_of(root, folder, &members, layout);
         let latest: i64 = members
             .iter()
             .map(|entry: &&Entry| entry.modified_ms)
@@ -262,24 +302,55 @@ fn forced_members(
         .collect()
 }
 
-fn folder_meta_of(root: &Path, folder: &str, members: &[&Entry]) -> Meta {
+/// Metadaten eines Ordner-Artefakts. Ohne Manifest-Datei, aber mit `SKILL.md` (Skill-Ordner) ist
+/// das Frontmatter der `SKILL.md` das Manifest; danach setzt der Ort Art, Titel und Einstieg.
+fn folder_meta_of(root: &Path, folder: &str, members: &[&Entry], layout: VaultLayout) -> Meta {
     let files: HashSet<String> = members
         .iter()
         .map(|entry: &&Entry| entry.rel.clone())
         .collect();
-    let manifest: String = MANIFEST_NAMES
+    let manifest_path: Option<String> = MANIFEST_NAMES
         .iter()
         .map(|name: &&str| format!("{folder}/{name}"))
-        .find(|path: &String| files.contains(path))
-        .and_then(|path: String| read_small_text(root, &path))
-        .unwrap_or_default();
+        .find(|path: &String| files.contains(path));
+    let (manifest, readme): (String, Option<String>) = match manifest_path {
+        Some(path) => (
+            read_small_text(root, &path).unwrap_or_default(),
+            folder_readme(root, folder, &files),
+        ),
+        None => match skill_file(folder, &files) {
+            Some(path) => (skill_frontmatter(root, path), None),
+            None => (String::new(), folder_readme(root, folder, &files)),
+        },
+    };
+    let mut found: Meta = extract::folder_meta(folder, &manifest, readme.as_deref(), &files);
+    library::apply_place(layout, folder, &mut found);
+    found
+}
+
+fn folder_readme(root: &Path, folder: &str, files: &HashSet<String>) -> Option<String> {
     let readme_path: String = format!("{folder}/{README_NAME}");
-    let readme: Option<String> = if files.contains(&readme_path) {
+    if files.contains(&readme_path) {
         read_small_text(root, &readme_path)
     } else {
         None
-    };
-    extract::folder_meta(folder, &manifest, readme.as_deref(), &files)
+    }
+}
+
+/// Die `SKILL.md` direkt im Ordner, in beliebiger Schreibweise.
+fn skill_file<'a>(folder: &str, files: &'a HashSet<String>) -> Option<&'a str> {
+    files.iter().map(String::as_str).find(|path: &&str| {
+        path.strip_prefix(folder)
+            .and_then(|rest: &str| rest.strip_prefix('/'))
+            .is_some_and(|name: &str| name.eq_ignore_ascii_case(SKILL_NAME))
+    })
+}
+
+/// Der YAML-Teil des Frontmatters einer `SKILL.md`; leer, wenn sie keins hat.
+fn skill_frontmatter(root: &Path, path: &str) -> String {
+    let text: String = read_small_text(root, path).unwrap_or_default();
+    let (yaml, _, _) = meta::split_frontmatter(&text);
+    yaml.unwrap_or("").to_owned()
 }
 
 fn read_small_text(root: &Path, rel: &str) -> Option<String> {
@@ -292,19 +363,27 @@ fn read_small_text(root: &Path, rel: &str) -> Option<String> {
     Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
+/// Eine Datei, die der Lauf einliest, samt gespeichertem Stand und Ordner-Artefakt.
+#[derive(Clone, Copy)]
+struct FileSync<'a> {
+    entry: &'a Entry,
+    stored: Option<&'a FileRow>,
+    folder: Option<&'a FolderFts>,
+    /// Neu einlesen, obwohl die Datei unverändert ist (siehe `forced_members`).
+    is_forced: bool,
+}
+
 /// Vergleicht eine Datei mit dem gespeicherten Stand und zieht den Index nach.
 fn sync_file(
     root: &Path,
     index: &VaultIndex,
-    entry: &Entry,
-    stored: Option<&FileRow>,
-    folder: Option<&FolderFts>,
-    is_forced: bool,
+    layout: VaultLayout,
+    file: &FileSync,
 ) -> Result<(), CommandError> {
-    let loaded: Result<Loaded, String> = load(&root.join(native(&entry.rel)), entry.size);
+    let loaded: Result<Loaded, String> = load(&root.join(native(&file.entry.rel)), file.entry.size);
     match loaded {
-        Err(message) => store_failure(index, entry, message)?,
-        Ok(loaded) => store_loaded(index, entry, stored, folder, is_forced, loaded)?,
+        Err(message) => store_failure(index, file.entry, message)?,
+        Ok(loaded) => store_loaded(index, layout, *file, loaded)?,
     }
     Ok(())
 }
@@ -361,12 +440,16 @@ fn store_failure(index: &VaultIndex, entry: &Entry, message: String) -> Result<(
 
 fn store_loaded(
     index: &VaultIndex,
-    entry: &Entry,
-    stored: Option<&FileRow>,
-    folder: Option<&FolderFts>,
-    is_forced: bool,
+    layout: VaultLayout,
+    file: FileSync,
     loaded: Loaded,
 ) -> Result<(), CommandError> {
+    let FileSync {
+        entry,
+        stored,
+        folder,
+        is_forced,
+    } = file;
     let has_same_content: bool = !is_forced
         && stored.is_some_and(|row: &FileRow| {
             row.error.is_none()
@@ -389,7 +472,8 @@ fn store_loaded(
     let own_row: Option<ArtifactRow> = match folder {
         Some(_) => None,
         None => {
-            let meta: Meta = extract::file_meta(kind, &entry.rel, text.as_deref());
+            let mut meta: Meta = extract::file_meta(kind, &entry.rel, text.as_deref());
+            library::apply_place(layout, &entry.rel, &mut meta);
             Some(artifact_row(&entry.rel, &meta, entry.modified_ms))
         }
     };

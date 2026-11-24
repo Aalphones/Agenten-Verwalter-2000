@@ -56,7 +56,7 @@ pub fn status(
     service: &EnvironmentService,
 ) -> Result<EnvironmentStatus, CommandError> {
     let claude_dir: PathBuf = claude_dir(app)?;
-    let master_dir: Option<String> = settings::load(database)?.master_dir;
+    let master_dir: Option<String> = settings::load(database)?.library_dir;
     Ok(build_status(&claude_dir, master_dir, service))
 }
 
@@ -68,7 +68,7 @@ pub fn run_mirror(
     service: &EnvironmentService,
 ) -> Result<EnvironmentStatus, CommandError> {
     let claude_dir: PathBuf = claude_dir(app)?;
-    let master_dir: Option<String> = settings::load(database)?.master_dir;
+    let master_dir: Option<String> = settings::load(database)?.library_dir;
     if let Some(master) = &master_dir
         && validate_master(Path::new(master), &claude_dir).is_ok()
     {

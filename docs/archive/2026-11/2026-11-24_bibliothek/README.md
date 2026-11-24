@@ -1,16 +1,18 @@
 # Plan: Bibliothek — ein Ordner für Anweisungen, Skills und Wissen
 
+**Status:** complete (alle 3 Phasen, Release v0.69.0)
+
 Der Master-Ordner (Skills, Befehle, Ausgabestile, `CLAUDE.md`) und der Developer Vault werden ein Ordner: die **Bibliothek**. Der Benutzer gibt nur noch diesen einen Ordner an. Der Verwalter gleicht daraus wie bisher Skills, Befehle, Ausgabestile und `CLAUDE.md` mit `~\.claude` ab und durchsucht zugleich Anweisungen (samt Gedächtnis: die Dateien direkt in `memory/`), Skills und das Wissen im Unterordner `_vault/`. Alles andere im Ordner (`memory/_archiv/`, `hooks/`, Logs, `settings.json`, `codex/`, `continue/`, `setup.cmd` …) liest der Verwalter nie — eine feste Erlaubnisliste; die Ausschlussdatei `.vaultignore` dient nur noch für einzelne Dateien innerhalb der Liste. Ein Ordner ohne Skills, Befehle, Ausgabestile und `CLAUDE.md` bleibt ein reiner Vault wie bisher.
 
-Entscheidungen und Begründung: [ADR 069](../../decisions/069-bibliothek.md) (ändert ADR 038 und ADR 068). Entwurf: [artifacts/README.md](artifacts/README.md).
+Entscheidungen und Begründung: [ADR 069](../../../decisions/069-bibliothek.md) (ändert ADR 038 und ADR 068). Entwurf: [artifacts/README.md](artifacts/README.md).
 
 ## Overview
 
 | Phase | Titel | Stufe | Wave | Status | Schätzung |
 |---|---|---|---|---|---|
-| 1 | [Aufbau der Bibliothek im Core](phase-1-aufbau-im-core.md) | heikel | 1 | pending | 3 h |
-| 2 | [Ein Ordner in den Einstellungen](phase-2-ein-ordner.md) | standard | 2 | pending | 2,5 h |
-| 3 | [Suchdialog mit Anweisungen, Skills und Wissen](phase-3-suchdialog-gruppen.md) | standard | 3 | pending | 2 h |
+| 1 | [Aufbau der Bibliothek im Core](phase-1-aufbau-im-core.md) | heikel | 1 | complete | 3 h |
+| 2 | [Ein Ordner in den Einstellungen](phase-2-ein-ordner.md) | standard | 2 | complete | 2,5 h |
+| 3 | [Suchdialog mit Anweisungen, Skills und Wissen](phase-3-suchdialog-gruppen.md) | standard | 3 | complete | 2 h |
 
 Reihenfolge strikt 1 → 2 → 3. Phase 2 stellt den gelesenen Ordner auf den Master-Ordner um; vorher muss die Erlaubnisliste aus Phase 1 stehen, sonst landen `hooks/`, die Logs, `settings.json` und `memory/_archiv/` im Index und über `vault_get` bei den Agenten. Phase 3 braucht die Gruppenfelder aus Phase 1 und die Benennung aus Phase 2; drei Phasen parallel zu schneiden spart hier keine Zeit. Erste Sichtabnahme: Phase 2 (Einstellungen › Skills & Umgebung › Bibliothek).
 
@@ -114,10 +116,26 @@ Regeln von `place` (Gruppen-Ids und Untergruppen-Ids, Labels nur in der Oberflä
 
 ## Summary
 
+Master-Ordner und Vault sind ein Ordner, die Bibliothek (ADR 069). Phase 1: Erlaubnisliste, Arten und Gruppen nach Ort, Memories, Index Version 2 im Core. Phase 2: Einstellung `library_dir` ersetzt `master_dir` und `vault_dir`, ein Abschnitt „Bibliothek“ in den Einstellungen. Phase 3: Suchdialog „Bibliothek“ mit den Gruppen Anweisungen, Skills und Wissen samt Untergruppen und Gruppenfarben, Knopf „Bibliothek“ in der Seitenleiste.
+
 ## Files touched
+
+- Core: `src-tauri/src/vault/` (`library.rs` neu, `scan.rs`, `search.rs`, `index.rs`, `model.rs`, `skeleton.rs`, `tools.rs`), `settings/`, `environment/`, `commands/settings.rs`.
+- Oberfläche: `src/features/vault/` (`vaultGroups.ts`, `VaultSearchDialog.tsx`/`.css`, `VaultPreview.tsx`, `VaultIcons.tsx`, `LibraryDirRow.tsx`, `LibraryScopeRow.tsx`), `src/features/settings/`, `src/features/environment/`, `src/app/Sidebar.tsx`, `src/styles/theme.css`, Bindings.
+- Doku: ADR 069, ADR 038 und 068 (Statuszeile), `docs/code-map.md`, `docs/glossary.md`, `docs/konzept-vault.md`.
 
 ## Commits
 
+`e99bac5` und `5ec2ca0` (Phase 1), `96519b2` und `4662aea` (Phase 2), Phase 3 und Archiv siehe `git log` auf `main`.
+
 ## Deviations from plan
 
+- Phase 3: keine Bilder (`artifacts/phase-3-*.png`) — das Profil schreibt keine Live-Läufe vor; die Oberfläche ist nur per `pnpm check` belegt, nicht in der echten App gelaufen.
+- Phase 2: der Plan sah eine Review-Station vor; sie entfiel im Profil „private“.
+
 ## Follow-ups
+
+- Oberfläche (Einstellungen „Bibliothek“, Suchdialog mit Gruppen, Breakpoints, Gruppenfarben hell/dunkel) in der echten App ansehen.
+- `extract::finish` erkennt `inbox/` nur am Pfadanfang; in einer Bibliothek liegt es unter `_vault/inbox/` (Status `inbox` fehlt dort; die Oberfläche zeigt ihn nirgends).
+- Layout-Wechsel eines bereits eingelesenen Ordners ordnet unveränderte Dateien nicht neu ein (FINDINGS).
+- `library::apply_place` hielte eine lose Datei ohne Endung in `skills\` für einen Skill (FINDINGS).

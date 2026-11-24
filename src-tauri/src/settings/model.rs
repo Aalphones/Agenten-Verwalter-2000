@@ -74,12 +74,10 @@ pub struct Settings {
     pub local_model: Option<String>,
     /// Modell für neue Vorhaben in der Betriebsart Codex; `None` = Standardmodell von Codex.
     pub default_codex_model: Option<String>,
-    /// Ordner mit den Originalen von Skills, Befehlen, Ausgabestilen und `CLAUDE.md`, mit dem die
-    /// Umgebung abgeglichen wird (ADR 038); `None`, solange keiner gewählt ist.
-    pub master_dir: Option<String>,
-    /// Ordner der Entwicklerbibliothek (Developer Vault, ADR 068); `None`, solange keiner gewählt ist.
-    pub vault_dir: Option<String>,
-    /// Ob der Vault eingelesen und durchsucht wird; Standard aus.
+    /// Ordner der Bibliothek: Anweisungen, Skills, Befehle, Ausgabestile und Wissen (ADR 069);
+    /// `None`, solange keiner gewählt ist.
+    pub library_dir: Option<String>,
+    /// Ob die Bibliothek eingelesen und durchsucht wird; Standard aus.
     pub vault_enabled: bool,
     /// Ob der Verlauf Angaben ohne Fundstelle unterstreicht (ADR 036); der Core ermittelt sie immer.
     pub mark_unsourced: bool,
@@ -154,12 +152,8 @@ pub enum SettingsChange {
     DefaultCodexModel {
         value: Option<String>,
     },
-    /// `None` oder ein leerer Text entfernt den Master-Ordner.
-    MasterDir {
-        value: Option<String>,
-    },
-    /// `None` oder ein leerer Text entfernt den Vault-Ordner.
-    VaultDir {
+    /// `None` oder ein leerer Text entfernt den Ordner der Bibliothek.
+    LibraryDir {
         value: Option<String>,
     },
     VaultEnabled {

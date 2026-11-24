@@ -12,4 +12,13 @@ file: string, kind: string, title: string, description: string, heading: string,
 /**
  * Fundstellen zwischen `\u{E000}` und `\u{E001}`.
  */
-snippet: string, status: string, preview: string | null, };
+snippet: string, status: string, preview: string | null, 
+/**
+ * Gruppe nach dem Ort: `anweisungen`, `skills` oder `wissen`.
+ */
+group: string, 
+/**
+ * Untergruppe innerhalb der Gruppe, z. B. `arbeitsweise` oder ein Ordner im Wissen; leer für
+ * den Hauptordner des Wissens.
+ */
+subgroup: string, };

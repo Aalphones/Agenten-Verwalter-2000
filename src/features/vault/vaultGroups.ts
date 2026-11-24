@@ -1,9 +1,34 @@
 import type { VaultHit } from '@/lib/bindings/VaultHit';
 
-/** Gruppen des Dialogs. In Phase 6 gibt es nur „Wissen“ (der Vault-Ordner); Anweisungen und Skills
- *  kommen mit dem Folgeplan Bibliothek. */
-export const VAULT_GROUPS = [{ id: 'wissen', label: 'Wissen' }] as const;
+type SubgroupDefinition = readonly [id: string, label: string];
 
+/** Gruppen der Bibliothek in der Reihenfolge des Dialogs; die Untergruppen des Wissens sind die
+ *  Ordner unter `_vault/` und kommen aus den Treffern. */
+export const LIBRARY_GROUPS = [
+  {
+    id: 'anweisungen',
+    label: 'Anweisungen',
+    subs: [
+      ['grundregeln', 'Grundregeln'],
+      ['ausgabestile', 'Ausgabestile'],
+      ['gedaechtnis', 'Gedächtnis'],
+    ],
+  },
+  {
+    id: 'skills',
+    label: 'Skills',
+    subs: [
+      ['arbeitsweise', 'Arbeitsweise'],
+      ['sprachen', 'Sprachen'],
+      ['frameworks', 'Frameworks'],
+      ['werkzeuge', 'Werkzeuge'],
+      ['befehle', 'Befehle'],
+    ],
+  },
+  { id: 'wissen', label: 'Wissen', subs: [] },
+] as const;
+
+export const KNOWLEDGE_GROUP = 'wissen';
 export const ALL_SCOPE = 'all';
 export const RECENT_COUNT = 10;
 /** Ohne Gruppenwahl zeigt jeder Abschnitt höchstens so viele Einträge. */
@@ -11,61 +36,134 @@ export const SECTION_LIMIT = 4;
 
 const ROOT_LABEL = 'Hauptordner';
 
-/** Der erste Ordner im Pfad; leer bei einer Datei im Wurzelordner des Vault. */
-export function folderOf(path: string): string {
-  const slash: number = path.indexOf('/');
-  return slash < 0 ? '' : path.slice(0, slash);
+/** `all` · `<Gruppe>` · `<Gruppe>/<Untergruppe>` (die Untergruppe darf leer sein: `wissen/`). */
+export function scopeOfGroup(group: string): string {
+  return group;
 }
 
-export function folderLabel(folder: string): string {
-  return folder === '' ? ROOT_LABEL : folder;
+export function scopeOfSubgroup(group: string, subgroup: string): string {
+  return `${group}/${subgroup}`;
 }
 
-/** `wissen` für die ganze Gruppe, `wissen/<Ordner>` für eine Untergruppe, sonst `all`. */
-export function scopeOfFolder(folder: string): string {
-  return `wissen/${folder}`;
+export interface ParsedScope {
+  group: string | null;
+  subgroup: string | null;
 }
 
-export function scopeFolder(scope: string): string | null {
-  return scope.startsWith('wissen/') ? scope.slice('wissen/'.length) : null;
+export function parseScope(scope: string): ParsedScope {
+  if (scope === ALL_SCOPE) {
+    return { group: null, subgroup: null };
+  }
+  const slash: number = scope.indexOf('/');
+  if (slash < 0) {
+    return { group: scope, subgroup: null };
+  }
+  return { group: scope.slice(0, slash), subgroup: scope.slice(slash + 1) };
 }
 
-function inScope(hit: VaultHit, scope: string): boolean {
-  const folder: string | null = scopeFolder(scope);
-  return folder === null || folderOf(hit.path) === folder;
+export function inScope(hit: VaultHit, scope: string): boolean {
+  const { group, subgroup }: ParsedScope = parseScope(scope);
+  if (group === null) {
+    return true;
+  }
+  return hit.group === group && (subgroup === null || hit.subgroup === subgroup);
+}
+
+export function groupLabel(group: string): string {
+  return LIBRARY_GROUPS.find((entry) => entry.id === group)?.label ?? group;
+}
+
+/** Label der Untergruppe; im Wissen der Ordnername, leer = „Hauptordner“. */
+export function subgroupLabel(group: string, subgroup: string): string {
+  if (group === KNOWLEDGE_GROUP) {
+    return subgroup === '' ? ROOT_LABEL : subgroup;
+  }
+  const definitions: readonly SubgroupDefinition[] =
+    LIBRARY_GROUPS.find((entry) => entry.id === group)?.subs ?? [];
+  return definitions.find((entry: SubgroupDefinition) => entry[0] === subgroup)?.[1] ?? subgroup;
+}
+
+export interface SubgroupCount {
+  subgroup: string;
+  label: string;
+  count: number;
+}
+
+export interface GroupCount {
+  group: string;
+  label: string;
+  count: number;
+  subs: SubgroupCount[];
+}
+
+function compareKnowledgeFolders(left: string, right: string): number {
+  if (left === right) {
+    return 0;
+  }
+  if (left === '') {
+    return 1;
+  }
+  if (right === '') {
+    return -1;
+  }
+  return left.localeCompare(right, 'de');
+}
+
+function subgroupOrder(group: string, subgroups: string[]): string[] {
+  if (group === KNOWLEDGE_GROUP) {
+    return [...subgroups].sort(compareKnowledgeFolders);
+  }
+  const definitions: readonly SubgroupDefinition[] =
+    LIBRARY_GROUPS.find((entry) => entry.id === group)?.subs ?? [];
+  const known: string[] = definitions
+    .map((entry: SubgroupDefinition) => entry[0])
+    .filter((id: string) => subgroups.includes(id));
+  const unknown: string[] = subgroups
+    .filter((id: string) => !known.includes(id))
+    .sort((left: string, right: string) => left.localeCompare(right, 'de'));
+  return [...known, ...unknown];
+}
+
+/** Gruppen mit Zahl unter den geladenen Treffern, in der Reihenfolge von `LIBRARY_GROUPS`; Gruppen
+ *  und Untergruppen ohne Treffer fehlen. */
+export function groupCounts(hits: VaultHit[]): GroupCount[] {
+  const counts: GroupCount[] = [];
+  for (const definition of LIBRARY_GROUPS) {
+    const inGroup: VaultHit[] = hits.filter((hit: VaultHit) => hit.group === definition.id);
+    if (inGroup.length === 0) {
+      continue;
+    }
+    const perSubgroup = new Map<string, number>();
+    for (const hit of inGroup) {
+      perSubgroup.set(hit.subgroup, (perSubgroup.get(hit.subgroup) ?? 0) + 1);
+    }
+    counts.push({
+      group: definition.id,
+      label: definition.label,
+      count: inGroup.length,
+      subs: subgroupOrder(definition.id, Array.from(perSubgroup.keys())).map(
+        (subgroup: string): SubgroupCount => ({
+          subgroup,
+          label: subgroupLabel(definition.id, subgroup),
+          count: perSubgroup.get(subgroup) ?? 0,
+        }),
+      ),
+    });
+  }
+  return counts;
 }
 
 export interface VaultSection {
-  /** `recent` oder der Ordner der Untergruppe (leer für den Hauptordner). */
+  /** `recent` oder `<Gruppe>/<Untergruppe>`. */
   key: string;
-  /** `null` bei „Zuletzt geändert“ und in einer gewählten Untergruppe (dort steht der Ordner schon links). */
+  group: string;
+  subgroup: string;
+  /** `null` bei „Zuletzt geändert“ und in einer gewählten Untergruppe (dort steht sie schon links). */
   label: string | null;
   isRecent: boolean;
   items: VaultHit[];
   /** Zahl aller Einträge der Untergruppe, wenn `items` gekürzt ist; sonst 0. */
   more: number;
-}
-
-export interface VaultFolderCount {
-  folder: string;
-  count: number;
-}
-
-/** Untergruppen mit Zahl der Einträge unter den geladenen Treffern, in der Reihenfolge ihres ersten Treffers. */
-export function folderCounts(hits: VaultHit[]): VaultFolderCount[] {
-  const counts = new Map<string, number>();
-  for (const hit of hits) {
-    const folder: string = folderOf(hit.path);
-    counts.set(folder, (counts.get(folder) ?? 0) + 1);
-  }
-  return Array.from(counts, ([folder, count]) => ({ folder, count })).sort(
-    (left: VaultFolderCount, right: VaultFolderCount) =>
-      left.folder === ''
-        ? 1
-        : right.folder === ''
-          ? -1
-          : left.folder.localeCompare(right.folder, 'de'),
-  );
 }
 
 /** Die Abschnitte der Liste: ohne Suche und ohne Gruppenwahl „Zuletzt geändert“, sonst je Untergruppe. */
@@ -78,6 +176,8 @@ export function buildSections(hits: VaultHit[], scope: string, hasQuery: boolean
     return [
       {
         key: 'recent',
+        group: '',
+        subgroup: '',
         label: null,
         isRecent: true,
         items: scoped.slice(0, RECENT_COUNT),
@@ -86,17 +186,23 @@ export function buildSections(hits: VaultHit[], scope: string, hasQuery: boolean
     ];
   }
   const limit: number = scope === ALL_SCOPE ? SECTION_LIMIT : Number.POSITIVE_INFINITY;
-  const isFolderScope: boolean = scopeFolder(scope) !== null;
-  return folderCounts(scoped).map(({ folder }: VaultFolderCount): VaultSection => {
-    const items: VaultHit[] = scoped.filter((hit: VaultHit) => folderOf(hit.path) === folder);
-    return {
-      key: folder,
-      label: isFolderScope ? null : folderLabel(folder),
-      isRecent: false,
-      items: items.slice(0, limit),
-      more: items.length > limit ? items.length : 0,
-    };
-  });
+  const isSubgroupScope: boolean = parseScope(scope).subgroup !== null;
+  return groupCounts(scoped).flatMap((entry: GroupCount): VaultSection[] =>
+    entry.subs.map((sub: SubgroupCount): VaultSection => {
+      const items: VaultHit[] = scoped.filter(
+        (hit: VaultHit) => hit.group === entry.group && hit.subgroup === sub.subgroup,
+      );
+      return {
+        key: scopeOfSubgroup(entry.group, sub.subgroup),
+        group: entry.group,
+        subgroup: sub.subgroup,
+        label: isSubgroupScope ? null : sub.label,
+        isRecent: false,
+        items: items.slice(0, limit),
+        more: items.length > limit ? items.length : 0,
+      };
+    }),
+  );
 }
 
 export function visibleHits(sections: VaultSection[]): VaultHit[] {

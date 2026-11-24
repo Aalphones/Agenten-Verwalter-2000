@@ -109,7 +109,7 @@ export function Sidebar({
   });
   // Der Vault-Einstieg erscheint nur mit gesetztem Ordner und eingeschaltetem Schalter.
   const hasVault: boolean = useSettingsStore(
-    (state) => state.settings?.vaultDir != null && state.settings.vaultEnabled,
+    (state) => state.settings?.libraryDir != null && state.settings.vaultEnabled,
   );
   const hasAppUpdate: boolean = useAppUpdateStore((state) => state.status?.hasUpdate === true);
   const needsEnvironmentAttention: boolean = useEnvironmentStore((state) =>
@@ -522,7 +522,7 @@ export function Sidebar({
             <button
               type="button"
               className="sidebar__tool"
-              title="Developer Vault durchsuchen (Ctrl K)"
+              title="Bibliothek durchsuchen (Ctrl K)"
               onClick={onOpenVault}
             >
               <svg
@@ -538,7 +538,7 @@ export function Sidebar({
               >
                 <path d="M3 1.5h7.5a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 1 2 10.5v-8A1 1 0 0 1 3 1.5zM2 10.5A1.5 1.5 0 0 1 3.5 9h8" />
               </svg>
-              <span>Vault</span>
+              <span>Bibliothek</span>
             </button>
           )}
           <button type="button" className="sidebar__tool" title="Archiv" onClick={onOpenArchive}>

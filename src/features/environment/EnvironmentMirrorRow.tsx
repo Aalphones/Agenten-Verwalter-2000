@@ -87,9 +87,7 @@ export function EnvironmentMirrorRow(): ReactElement {
     }
     if (status.masterError !== null) {
       return (
-        <span className="environment-row__muted">
-          Kein Abgleich, solange der Master-Ordner ungültig ist.
-        </span>
+        <span className="environment-row__muted">{`Kein Abgleich. ${status.masterError}`}</span>
       );
     }
     const summary: string | null = mirrorSummary(status.diffs);
