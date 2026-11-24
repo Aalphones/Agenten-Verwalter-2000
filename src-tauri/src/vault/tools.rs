@@ -109,7 +109,7 @@ impl ToolSet for VaultTools {
             return false;
         };
         settings::load(&database)
-            .is_ok_and(|loaded| loaded.vault_enabled && loaded.vault_dir.is_some())
+            .is_ok_and(|loaded| loaded.vault_enabled && loaded.library_dir.is_some())
     }
 
     fn unavailable_message(&self) -> &'static str {

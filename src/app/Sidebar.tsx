@@ -109,7 +109,7 @@ export function Sidebar({
   });
   // Der Vault-Einstieg erscheint nur mit gesetztem Ordner und eingeschaltetem Schalter.
   const hasVault: boolean = useSettingsStore(
-    (state) => state.settings?.vaultDir != null && state.settings.vaultEnabled,
+    (state) => state.settings?.libraryDir != null && state.settings.vaultEnabled,
   );
   const hasAppUpdate: boolean = useAppUpdateStore((state) => state.status?.hasUpdate === true);
   const needsEnvironmentAttention: boolean = useEnvironmentStore((state) =>

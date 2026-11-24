@@ -3,17 +3,20 @@ import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { useEnvironment } from '@/features/environment/useEnvironment';
 import { SettingRow } from '@/features/settings/SettingRow';
+import { useVaultStatus } from '@/features/vault/useVaultStatus';
+import type { VaultStatus } from '@/lib/bindings/VaultStatus';
 import { commandErrorText } from '@/lib/errors';
-import './EnvironmentRows.css';
+import './VaultRows.css';
 
-interface MasterDirRowProps {
-  masterDir: string | null;
+interface LibraryDirRowProps {
+  libraryDir: string | null;
   /** `true`, wenn gespeichert wurde. */
   onSave: (value: string | null) => Promise<boolean>;
 }
 
-export function MasterDirRow({ masterDir, onSave }: MasterDirRowProps): ReactElement {
-  const { status, check } = useEnvironment();
+export function LibraryDirRow({ libraryDir, onSave }: LibraryDirRowProps): ReactElement {
+  const { status } = useVaultStatus();
+  const { check } = useEnvironment();
   const [pickError, setPickError] = useState<string | null>(null);
 
   function saveAndCheck(value: string | null): void {
@@ -28,7 +31,7 @@ export function MasterDirRow({ masterDir, onSave }: MasterDirRowProps): ReactEle
 
   function pick(): void {
     setPickError(null);
-    open({ directory: true, multiple: false, title: 'Master-Ordner wählen' })
+    open({ directory: true, multiple: false, title: 'Ordner der Bibliothek wählen' })
       .then((path: string | null) => {
         if (path !== null) {
           saveAndCheck(path);
@@ -41,10 +44,10 @@ export function MasterDirRow({ masterDir, onSave }: MasterDirRowProps): ReactEle
   }
 
   function renderValue(): ReactElement {
-    if (masterDir === null) {
+    if (libraryDir === null) {
       return (
         <>
-          <span className="environment-row__muted">Kein Master-Ordner</span>
+          <span className="vault-row__muted">Kein Ordner</span>
           <button type="button" className="settings-view__button" onClick={pick}>
             Wählen …
           </button>
@@ -53,8 +56,8 @@ export function MasterDirRow({ masterDir, onSave }: MasterDirRowProps): ReactEle
     }
     return (
       <>
-        <span className="environment-row__mono" title={masterDir}>
-          {masterDir}
+        <span className="vault-row__mono" title={libraryDir}>
+          {libraryDir}
         </span>
         <button type="button" className="settings-view__button" onClick={pick}>
           Ändern …
@@ -72,14 +75,21 @@ export function MasterDirRow({ masterDir, onSave }: MasterDirRowProps): ReactEle
     );
   }
 
-  const masterError: string | null = masterDir === null ? null : (status?.masterError ?? null);
+  const dirError: string | null = libraryDir === null ? null : problemText(status);
   return (
-    <SettingRow id="masterDir">
-      <div className="environment-row__stack">
-        <div className="environment-row__line">{renderValue()}</div>
-        {masterError !== null && <span className="environment-row__warn">{masterError}</span>}
-        {pickError !== null && <span className="environment-row__warn">{pickError}</span>}
+    <SettingRow id="libraryDir">
+      <div className="vault-row__stack">
+        <div className="vault-row__line">{renderValue()}</div>
+        {dirError !== null && <span className="vault-row__warn">{dirError}</span>}
+        {pickError !== null && <span className="vault-row__warn">{pickError}</span>}
       </div>
     </SettingRow>
   );
+}
+
+function problemText(status: VaultStatus | null): string | null {
+  if (status === null || (status.state !== 'missing' && status.state !== 'error')) {
+    return null;
+  }
+  return status.message;
 }

@@ -19,9 +19,10 @@ import {
 import { useCodexModels } from '@/features/codex/useCodexModels';
 import { EnvironmentLinksRow } from '@/features/environment/EnvironmentLinksRow';
 import { EnvironmentMirrorRow } from '@/features/environment/EnvironmentMirrorRow';
-import { MasterDirRow } from '@/features/environment/MasterDirRow';
 import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
-import { VaultDirRow } from '@/features/vault/VaultDirRow';
+import { LibraryDirRow } from '@/features/vault/LibraryDirRow';
+import { LibraryScopeRow } from '@/features/vault/LibraryScopeRow';
+import '@/features/vault/VaultRows.css';
 import { VaultStatusRow } from '@/features/vault/VaultStatusRow';
 import { useKnownRepositories } from '@/features/repositories/useKnownRepositories';
 import { SkinPackEditor } from '@/features/skins/SkinPackEditor';
@@ -540,36 +541,36 @@ export function SettingsView({
         );
       case 'environmentLinks':
         return <EnvironmentLinksRow />;
-      case 'masterDir':
+      case 'libraryDir':
         return (
-          <MasterDirRow
-            masterDir={current.masterDir}
-            onSave={(value: string | null): Promise<boolean> => save({ kind: 'masterDir', value })}
+          <LibraryDirRow
+            libraryDir={current.libraryDir}
+            onSave={(value: string | null): Promise<boolean> => save({ kind: 'libraryDir', value })}
           />
         );
       case 'environmentMirror':
         return <EnvironmentMirrorRow />;
-      case 'vaultDir':
-        return (
-          <VaultDirRow
-            vaultDir={current.vaultDir}
-            onSave={(value: string | null): Promise<boolean> => save({ kind: 'vaultDir', value })}
-          />
-        );
       case 'vaultEnabled':
         return (
           <SettingRow id={id}>
             <Switch
               checked={current.vaultEnabled}
-              label="Developer Vault"
+              label="Suche"
               onChange={(checked: boolean): void => {
                 save({ kind: 'vaultEnabled', value: checked }).catch(() => undefined);
               }}
             />
+            <span className="vault-row__muted">
+              {current.vaultEnabled
+                ? 'an · Suche in der Seitenleiste und Ctrl K'
+                : 'aus · kein Einstieg, Ctrl K ohne Wirkung'}
+            </span>
           </SettingRow>
         );
       case 'vaultStatus':
         return <VaultStatusRow />;
+      case 'libraryScope':
+        return <LibraryScopeRow />;
       case 'skinFigures':
       case 'skinAnimations':
       case 'skinCelebrations':

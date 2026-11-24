@@ -9,7 +9,7 @@ Entscheidungen und Begründung: [ADR 069](../../decisions/069-bibliothek.md) (ä
 | Phase | Titel | Stufe | Wave | Status | Schätzung |
 |---|---|---|---|---|---|
 | 1 | [Aufbau der Bibliothek im Core](phase-1-aufbau-im-core.md) | heikel | 1 | complete | 3 h |
-| 2 | [Ein Ordner in den Einstellungen](phase-2-ein-ordner.md) | standard | 2 | pending | 2,5 h |
+| 2 | [Ein Ordner in den Einstellungen](phase-2-ein-ordner.md) | standard | 2 | complete | 2,5 h |
 | 3 | [Suchdialog mit Anweisungen, Skills und Wissen](phase-3-suchdialog-gruppen.md) | standard | 3 | pending | 2 h |
 
 Reihenfolge strikt 1 → 2 → 3. Phase 2 stellt den gelesenen Ordner auf den Master-Ordner um; vorher muss die Erlaubnisliste aus Phase 1 stehen, sonst landen `hooks/`, die Logs, `settings.json` und `memory/_archiv/` im Index und über `vault_get` bei den Agenten. Phase 3 braucht die Gruppenfelder aus Phase 1 und die Benennung aus Phase 2; drei Phasen parallel zu schneiden spart hier keine Zeit. Erste Sichtabnahme: Phase 2 (Einstellungen › Skills & Umgebung › Bibliothek).

@@ -132,7 +132,7 @@ fn folder_status(app: &AppHandle) -> VaultStatus {
         Ok(loaded) => loaded,
         Err(error) => return failure(None, format!("Einstellungen nicht lesbar: {error}")),
     };
-    let Some(dir_text) = loaded.vault_dir.filter(|_| loaded.vault_enabled) else {
+    let Some(dir_text) = loaded.library_dir.filter(|_| loaded.vault_enabled) else {
         return base(None, VaultState::Off);
     };
     let dir: PathBuf = PathBuf::from(&dir_text);

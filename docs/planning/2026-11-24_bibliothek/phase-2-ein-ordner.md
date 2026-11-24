@@ -1,6 +1,6 @@
 # Phase 2 — Ein Ordner in den Einstellungen
 
-**Stufe:** standard · **Wave:** 2 · **Sichtabnahme:** Einstellungen › Skills & Umgebung, Abschnitt „Bibliothek“
+**Stufe:** standard · **Wave:** 2 · **Sichtabnahme:** Einstellungen › Skills & Umgebung, Abschnitt „Bibliothek“ · **Status:** complete
 
 Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgleich (ADR 038) und Suche (ADR 068) lesen denselben Ordner. Die Abschnitte „Umgebung“ und „Developer Vault“ werden ein Abschnitt „Bibliothek“ nach dem abgenommenen Entwurf.
 
@@ -31,33 +31,33 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 
 ### Core
 
-- [ ] `settings/model.rs`: Felder `master_dir`, `vault_dir` entfernen; `pub library_dir: Option<String>` mit Doc-Kommentar „Ordner der Bibliothek: Anweisungen, Skills, Befehle, Ausgabestile und Wissen (ADR 069); `None`, solange keiner gewählt ist.“; `SettingsChange::MasterDir`, `SettingsChange::VaultDir` entfernen, `LibraryDir { value: Option<String> }` mit Doc-Kommentar „`None` oder ein leerer Text entfernt den Ordner der Bibliothek.“
-- [ ] `settings/mod.rs`: `const KEY_LIBRARY_DIR: &str = "library_dir";` `KEY_MASTER_DIR` und `KEY_VAULT_DIR` bleiben (nur noch für die Übernahme). `DEFAULT_SETTINGS.library_dir: None`. Die Übernahme ist eine reine Funktion `fn library_dir_from(stored: &HashMap<String, String>) -> Option<String>`, die `load` aufruft (Test: README → „Tests“): `library_dir` = wenn `stored.contains_key(KEY_LIBRARY_DIR)`, dessen getrimmter Wert (leer → `None`); sonst getrimmter `master_dir`, sonst getrimmter `vault_dir` (leer → `None`). In `update` für `LibraryDir`: `library_dir` schreiben (getrimmt oder `""`), dazu `master_dir` und `vault_dir` mit `""` — in derselben Transaktion.
-- [ ] `commands/settings.rs`: `changes_vault` trifft `LibraryDir { .. } | VaultEnabled { .. }`.
-- [ ] `environment/mod.rs` `status` und `run_mirror`: `settings::load(database)?.library_dir`. `EnvironmentStatus.master_dir` und `master_error` behalten Namen und Bedeutung (der Ordner, mit dem abgeglichen wird); Doc-Kommentar in `environment/model.rs` auf „Ordner der Bibliothek“.
-- [ ] `vault/mod.rs` `folder_status`: `loaded.library_dir` statt `loaded.vault_dir`.
-- [ ] `pnpm bindings`.
+- [x] `settings/model.rs`: Felder `master_dir`, `vault_dir` entfernen; `pub library_dir: Option<String>` mit Doc-Kommentar „Ordner der Bibliothek: Anweisungen, Skills, Befehle, Ausgabestile und Wissen (ADR 069); `None`, solange keiner gewählt ist.“; `SettingsChange::MasterDir`, `SettingsChange::VaultDir` entfernen, `LibraryDir { value: Option<String> }` mit Doc-Kommentar „`None` oder ein leerer Text entfernt den Ordner der Bibliothek.“
+- [x] `settings/mod.rs`: `const KEY_LIBRARY_DIR: &str = "library_dir";` `KEY_MASTER_DIR` und `KEY_VAULT_DIR` bleiben (nur noch für die Übernahme). `DEFAULT_SETTINGS.library_dir: None`. Die Übernahme ist eine reine Funktion `fn library_dir_from(stored: &HashMap<String, String>) -> Option<String>`, die `load` aufruft (Test: README → „Tests“): `library_dir` = wenn `stored.contains_key(KEY_LIBRARY_DIR)`, dessen getrimmter Wert (leer → `None`); sonst getrimmter `master_dir`, sonst getrimmter `vault_dir` (leer → `None`). In `update` für `LibraryDir`: `library_dir` schreiben (getrimmt oder `""`), dazu `master_dir` und `vault_dir` mit `""` — in derselben Transaktion.
+- [x] `commands/settings.rs`: `changes_vault` trifft `LibraryDir { .. } | VaultEnabled { .. }`.
+- [x] `environment/mod.rs` `status` und `run_mirror`: `settings::load(database)?.library_dir`. `EnvironmentStatus.master_dir` und `master_error` behalten Namen und Bedeutung (der Ordner, mit dem abgeglichen wird); Doc-Kommentar in `environment/model.rs` auf „Ordner der Bibliothek“.
+- [x] `vault/mod.rs` `folder_status`: `loaded.library_dir` statt `loaded.vault_dir`.
+- [x] `pnpm bindings`.
 
 ### Oberfläche
 
-- [ ] Neue Datei `src/features/vault/LibraryDirRow.tsx` aus `VaultDirRow.tsx` (Aufbau, Ordnerwahl, Entfernen) und `MasterDirRow.tsx` (nach dem Speichern `check()` aus `useEnvironment`); Props `libraryDir: string | null`, `onSave`; `SettingRow id="libraryDir"`; Titel des Auswahldialogs „Ordner der Bibliothek wählen“; leerer Wert „Kein Ordner“. Zeigt **keinen** `masterError` (ein reiner Vault ist gültig). `MasterDirRow.tsx` und `VaultDirRow.tsx` löschen.
-- [ ] `settingsCatalog.ts`: Einträge `masterDir` und `vaultDir` entfernen; neuer Eintrag `libraryDir` vor `environmentMirror`; Reihenfolge der Schlüssel im Objekt = Reihenfolge der Zeilen aus AK 2. Alle sechs mit `section: 'Bibliothek'`. Kategorie-`summary` `'Skills · Bibliothek'`. Hilfsfunktionen: `hasLibraryDir` (`settings.libraryDir !== null`), `isSearchOn` (`libraryDir !== null && vaultEnabled`); `hasMasterDir`, `hasVaultDir`, `isVaultOn` entfernen. Labels und ⓘ-Texte:
+- [x] Neue Datei `src/features/vault/LibraryDirRow.tsx` aus `VaultDirRow.tsx` (Aufbau, Ordnerwahl, Entfernen) und `MasterDirRow.tsx` (nach dem Speichern `check()` aus `useEnvironment`); Props `libraryDir: string | null`, `onSave`; `SettingRow id="libraryDir"`; Titel des Auswahldialogs „Ordner der Bibliothek wählen“; leerer Wert „Kein Ordner“. Zeigt **keinen** `masterError` (ein reiner Vault ist gültig). `MasterDirRow.tsx` und `VaultDirRow.tsx` löschen.
+- [x] `settingsCatalog.ts`: Einträge `masterDir` und `vaultDir` entfernen; neuer Eintrag `libraryDir` vor `environmentMirror`; Reihenfolge der Schlüssel im Objekt = Reihenfolge der Zeilen aus AK 2. Alle sechs mit `section: 'Bibliothek'`. Kategorie-`summary` `'Skills · Bibliothek'`. Hilfsfunktionen: `hasLibraryDir` (`settings.libraryDir !== null`), `isSearchOn` (`libraryDir !== null && vaultEnabled`); `hasMasterDir`, `hasVaultDir`, `isVaultOn` entfernen. Labels und ⓘ-Texte:
   - `libraryDir` · „Ordner“ · „Ein Ordner für Anweisungen, Skills und Wissen, z. B. auf einem synchronisierten Laufwerk. Enthält er skills, commands, output-styles oder CLAUDE.md, gleicht der Verwalter diese mit ~\.claude ab und sucht im Wissen unter _vault. Sonst ist der ganze Ordner Wissen. Der Verwalter liest ihn nur; der Suchindex liegt lokal in seinem Datenordner.“
   - `environmentMirror` · „Abgleich der Skills“ · bisheriger Text, „Master-Ordner“ → „Ordner der Bibliothek“ · `isShown: hasLibraryDir`
   - `environmentLinks` · „Verknüpfungen“ · bisheriger Text · immer sichtbar
   - `vaultEnabled` · „Suche“ · „Schaltet Einlesen, Suche und die Werkzeuge der Agenten ein. Aus: der Verwalter liest den Ordner nicht für die Suche, die Agenten sehen keine Werkzeuge der Bibliothek. Der Abgleich der Skills läuft unabhängig davon.“ · `isShown: hasLibraryDir`
   - `vaultStatus` · „Suchindex“ · bisheriger Text, letzter Satz: „„Grundgerüst anlegen“ schreibt README.md, AGENTS.md und inbox/ nach _vault (bzw. in einen leeren Ordner ohne Skills).“ · `isShown: isSearchOn`
   - `libraryScope` (neu) · „Durchsucht“ · „Nur diese Teile liest der Verwalter für die Suche; aus memory/ nur die Dateien direkt darin. hooks/, Logs, settings.json und alles Übrige im Ordner bleiben draußen, ebenso Dateien mit führendem Punkt und Einträge aus .gitignore oder .vaultignore.“ · `isShown: isSearchOn`
-- [ ] `SettingsView.tsx` `renderRow`: Fälle `masterDir`/`vaultDir` entfernen; `libraryDir` → `<LibraryDirRow libraryDir={current.libraryDir} onSave={(value) => save({ kind: 'libraryDir', value })} />`; `vaultEnabled` behält den `Switch`, `label="Suche"`; `libraryScope` → neue Komponente `src/features/vault/LibraryScopeRow.tsx` (`SettingRow id="libraryScope"`, liest `useVaultStatus`, zeigt bei `status.layout === 'library'` den Text aus AK 6, bei `'plain'` „der ganze Ordner“, ohne Layout nichts).
-- [ ] `EnvironmentMirrorRow.tsx`: bei `status.masterError !== null` den Text `Kein Abgleich. ${status.masterError}` statt „Kein Abgleich, solange der Master-Ordner ungültig ist.“
-- [ ] Schalter „Suche“: rechts neben dem `Switch` (der keinen eigenen Begleittext kennt) ein `<span className="vault-row__muted">` mit dem Text aus dem Entwurf — an: „an · Suche in der Seitenleiste und Ctrl K“, aus: „aus · kein Einstieg, Ctrl K ohne Wirkung“; `SettingsView.tsx` importiert dafür `@/features/vault/VaultRows.css`, falls noch nicht geschehen. `LibraryScopeRow` nutzt `vault-row__mono` für die Liste und `vault-row__text` für „der ganze Ordner“.
-- [ ] Texte mit „Master-Ordner“ oder „Developer Vault“ in `src/features/environment/`, `src/features/vault/vaultTexts.ts` und `src/features/settings/` auf „Ordner der Bibliothek“ bzw. „Bibliothek“ (Grep nach beiden Begriffen, jeder Treffer entschieden; Treffer im Suchdialog und in `Sidebar.tsx` gehören zu Phase 3 und bleiben).
+- [x] `SettingsView.tsx` `renderRow`: Fälle `masterDir`/`vaultDir` entfernen; `libraryDir` → `<LibraryDirRow libraryDir={current.libraryDir} onSave={(value) => save({ kind: 'libraryDir', value })} />`; `vaultEnabled` behält den `Switch`, `label="Suche"`; `libraryScope` → neue Komponente `src/features/vault/LibraryScopeRow.tsx` (`SettingRow id="libraryScope"`, liest `useVaultStatus`, zeigt bei `status.layout === 'library'` den Text aus AK 6, bei `'plain'` „der ganze Ordner“, ohne Layout nichts).
+- [x] `EnvironmentMirrorRow.tsx`: bei `status.masterError !== null` den Text `Kein Abgleich. ${status.masterError}` statt „Kein Abgleich, solange der Master-Ordner ungültig ist.“
+- [x] Schalter „Suche“: rechts neben dem `Switch` (der keinen eigenen Begleittext kennt) ein `<span className="vault-row__muted">` mit dem Text aus dem Entwurf — an: „an · Suche in der Seitenleiste und Ctrl K“, aus: „aus · kein Einstieg, Ctrl K ohne Wirkung“; `SettingsView.tsx` importiert dafür `@/features/vault/VaultRows.css`, falls noch nicht geschehen. `LibraryScopeRow` nutzt `vault-row__mono` für die Liste und `vault-row__text` für „der ganze Ordner“.
+- [x] Texte mit „Master-Ordner“ oder „Developer Vault“ in `src/features/environment/`, `src/features/vault/vaultTexts.ts` und `src/features/settings/` auf „Ordner der Bibliothek“ bzw. „Bibliothek“ (Grep nach beiden Begriffen, jeder Treffer entschieden; Treffer im Suchdialog und in `Sidebar.tsx` gehören zu Phase 3 und bleiben).
 
 ### Doku
 
-- [ ] `docs/code-map.md`: Zeilen „Umgebung“ und „Developer Vault“ zu einer Zeile „Bibliothek“ zusammenführen (Abgleich `environment/`, Suche `vault/`, Einstellung `library_dir`, neue Komponenten `LibraryDirRow`, `LibraryScopeRow`); Zeile „Einstellungen“: `master_dir` → `library_dir`.
-- [ ] `docs/glossary.md`: „Master-Ordner“ → verweist auf „Bibliothek“.
-- [ ] `docs/decisions/038-umgebung.md`: Statuszeile „angenommen · teilweise abgelöst durch ADR 069 (Ordner = Bibliothek)“.
+- [x] `docs/code-map.md`: Zeilen „Umgebung“ und „Developer Vault“ zu einer Zeile „Bibliothek“ zusammenführen (Abgleich `environment/`, Suche `vault/`, Einstellung `library_dir`, neue Komponenten `LibraryDirRow`, `LibraryScopeRow`); Zeile „Einstellungen“: `master_dir` → `library_dir`.
+- [x] `docs/glossary.md`: „Master-Ordner“ → verweist auf „Bibliothek“.
+- [x] `docs/decisions/038-umgebung.md`: Statuszeile „angenommen · teilweise abgelöst durch ADR 069 (Ordner = Bibliothek)“.
 
 ## Definition of Done
 
@@ -82,3 +82,14 @@ Die Einstellungen `master_dir` und `vault_dir` werden eine: `library_dir`. Abgle
 - Findings (für spätere Phasen): keine
 - Friktion/Lesson: Backslashes in Bash-Heredocs für Rust-Strings gehen verloren — Datei per Edit prüfen.
 - 🔴 / Offene Punkte: keine
+
+## Report-Back (Umsetzung)
+- Geänderte Files: Core `settings/model.rs`, `settings/mod.rs`, `commands/settings.rs`, `environment/mod.rs`, `environment/model.rs`, `vault/mod.rs`, `vault/tools.rs`; Bindings `Settings.ts`, `SettingsChange.ts`, `EnvironmentStatus.ts`; Oberfläche neu `LibraryDirRow.tsx`, `LibraryScopeRow.tsx`, geändert `settingsCatalog.ts`, `SettingsView.tsx`, `EnvironmentMirrorRow.tsx`, `useEnvironment.ts`, `App.tsx`, `Sidebar.tsx` (nur Feldname `libraryDir`), gelöscht `MasterDirRow.tsx`, `VaultDirRow.tsx`; Doku `code-map.md`, `glossary.md`, ADR 038.
+- Entscheidungen: `library_dir_from` ersetzt den Stub, Attribute `allow(dead_code)` entfernt; `KEY_MASTER_DIR`/`KEY_VAULT_DIR` bleiben für Übernahme und Leeren in `update`. `environmentTexts.ts` behält „im Master neuer“ (Zustandsname `masterNewer`, Phase-3-Wortwahl offen). Rust-Meldungen mit „Vault-Ordner“ (außerhalb `src/`) nicht angefasst.
+- Abweichungen vom Plan: keine.
+- Tests: `cargo test --manifest-path src-tauri/Cargo.toml --lib` → „test result: ok. 71 passed; 0 failed"; `library_dir_tests` 11/11 grün; `pnpm check` → exit 0; Master-Ordner `git status --short` leer.
+- Findings (für spätere Phasen): keine neuen; der Layout-Wechsel-Randfall aus FINDINGS (→ Phase 2) bleibt offen (nur Randfall, kein Code in dieser Phase).
+- Vorschlag Commits: `feat(settings): library_dir ersetzt master_dir und vault_dir, Abschnitt Bibliothek` (alles außer Doku) + `docs: Code-Map, Glossar, ADR 038 für Bibliothek`.
+- Friktion/Lesson: Backslashes in Python-Heredocs für TS-Strings gehen verloren — per Grep prüfen.
+- Unsicherste Stelle: Oberfläche nur per `pnpm check` belegt, nicht in der echten App gelaufen (AK 1–3, 5–7 und Bilder `artifacts/phase-2-*.png` fehlen); Check: `pnpm tauri dev`, Einstellungen › Skills & Umgebung. AK 4 per Test belegt (Übernahme), nicht am echten Datenbestand.
+- 🔴 / Offene Punkte: Bilder und AK-9-Aufrufe aus einer echten Session stehen aus.

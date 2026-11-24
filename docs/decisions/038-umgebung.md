@@ -1,6 +1,6 @@
 # 038 — Umgebung in den Einstellungen
 
-**Status:** angenommen · **Datum:** 2026-11-04
+**Status:** angenommen · teilweise abgelöst durch ADR 069 (Ordner = Bibliothek) · **Datum:** 2026-11-04
 
 ## Kontext
 

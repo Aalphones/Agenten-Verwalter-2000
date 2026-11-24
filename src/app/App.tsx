@@ -119,7 +119,7 @@ export function App(): ReactElement {
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
   // Der Vault-Einstieg gilt nur mit gesetztem Ordner und eingeschaltetem Schalter.
   const hasVault: boolean = useSettingsStore(
-    (state) => state.settings?.vaultDir != null && state.settings.vaultEnabled,
+    (state) => state.settings?.libraryDir != null && state.settings.vaultEnabled,
   );
   const isBackgroundOpen: boolean = useBackgroundStore((state) => state.isOpen);
   const toggleBackground = useBackgroundStore((state) => state.toggle);
