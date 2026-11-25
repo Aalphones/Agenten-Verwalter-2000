@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP-Dialog · Entwurf</title>
+<style>
+:root{
+  --font-sans:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;
+  --font-mono:'Cascadia Code','Cascadia Mono',Consolas,ui-monospace,monospace;
+  --fs-2xs:11px;--fs-xs:12px;--fs-sm:12.5px;--fs-md:13px;--fs-lg:13.5px;
+  --s2xs:2px;--sxs:4px;--ssm:6px;--smd:8px;--slg:10px;--sxl:12px;--s2xl:16px;--s3xl:20px;
+  --r-sm:4px;--r-md:6px;--r-lg:8px;--r-full:999px;
+  --dur:160ms;--ease:cubic-bezier(.2,0,0,1);
+  /* hell – Werte aus src/styles/theme.css */
+  --bg-base:#fff;--bg-sidebar:#f8f8f8;--bg-surface:#fff;--bg-hover:#f0f0f0;--bg-selected:#e4e6f1;
+  --border-subtle:#e5e5e5;--border:#cecece;
+  --fg:#3c3c3c;--fg2:#555;--fg-muted:#6e6e6e;
+  --accent:#c4572f;--on-accent:#fff;--accent-subtle:color-mix(in srgb,#c4572f 10%,transparent);--accent-text:#a8461f;
+  --toggle-on:#c4572f;--toggle-off:#c8c8c8;--on-toggle:#fff;
+  --ok:#16803c;--wait:#a86a00;--wait-subtle:color-mix(in srgb,#a86a00 10%,transparent);
+  --err:#d23b33;--err-subtle:#fdeceb;--run:#2563eb;--run-subtle:color-mix(in srgb,#2563eb 10%,transparent);
+  --scrim:rgb(0 0 0/.28);--shadow:0 10px 30px rgb(0 0 0/.14);
+  color-scheme:light;
+}
+/* dunkel – Theme-Tokens, Akzent wie der aktive Skin im Screenshot (Lime, dunkle Schrift darauf) */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg-base:#1f1f1f;--bg-sidebar:#181818;--bg-surface:#252526;--bg-hover:#2e2e30;--bg-selected:#37373d;
+  --border-subtle:#2b2b2b;--border:#3c3c3c;--fg:#d4d4d4;--fg2:#b0b0b0;--fg-muted:#8f8f8f;
+  --accent:#dcf41a;--on-accent:#1a1d00;--accent-subtle:color-mix(in srgb,#dcf41a 14%,transparent);--accent-text:#dcf41a;
+  --toggle-on:#dcf41a;--toggle-off:#4a4a4f;--on-toggle:#f5f5f5;
+  --ok:#4cc38a;--wait:#f2b33d;--wait-subtle:color-mix(in srgb,#f2b33d 11%,transparent);
+  --err:#f47067;--err-subtle:color-mix(in srgb,#f47067 11%,transparent);--run:#5b9dff;--run-subtle:color-mix(in srgb,#5b9dff 14%,transparent);
+  --scrim:rgb(0 0 0/.55);--shadow:0 10px 30px rgb(0 0 0/.45);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg-base:#1f1f1f;--bg-sidebar:#181818;--bg-surface:#252526;--bg-hover:#2e2e30;--bg-selected:#37373d;
+  --border-subtle:#2b2b2b;--border:#3c3c3c;--fg:#d4d4d4;--fg2:#b0b0b0;--fg-muted:#8f8f8f;
+  --accent:#dcf41a;--on-accent:#1a1d00;--accent-subtle:color-mix(in srgb,#dcf41a 14%,transparent);--accent-text:#dcf41a;
+  --toggle-on:#dcf41a;--toggle-off:#4a4a4f;--on-toggle:#f5f5f5;
+  --ok:#4cc38a;--wait:#f2b33d;--wait-subtle:color-mix(in srgb,#f2b33d 11%,transparent);
+  --err:#f47067;--err-subtle:color-mix(in srgb,#f47067 11%,transparent);--run:#5b9dff;--run-subtle:color-mix(in srgb,#5b9dff 14%,transparent);
+  --scrim:rgb(0 0 0/.55);--shadow:0 10px 30px rgb(0 0 0/.45);color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg-base);color:var(--fg);font:var(--fs-md)/1.45 var(--font-sans);display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg{flex-shrink:0}
+.mono{font-family:var(--font-mono)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- Entwurfsleiste (nicht Teil des Produkts) ---------- */
+.dbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--smd) var(--sxl);padding:var(--smd) var(--s2xl);background:var(--bg-sidebar);border-bottom:1px solid var(--border);font-size:var(--fs-xs);color:var(--fg2)}
+.dbar b{color:var(--fg);font-weight:600}
+.dbar label{display:flex;align-items:center;gap:var(--ssm)}
+.dbar select{height:26px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-surface);padding:0 var(--ssm)}
+.dbar .sp{flex:1}
+.dbar .bp{font-family:var(--font-mono);color:var(--fg-muted)}
+.chipbtn{height:26px;padding:0 var(--slg);border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-surface);cursor:pointer;display:inline-flex;align-items:center;gap:var(--sxs)}
+.chipbtn:hover{border-color:var(--fg-muted)}
+.chipbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-subtle)}
+.info{position:fixed;right:16px;top:48px;z-index:90;width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 70px);overflow:auto;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:var(--s2xl) var(--s3xl);font-size:var(--fs-sm)}
+.info h3{margin:var(--sxl) 0 var(--sxs);font-size:var(--fs-md)}
+.info h3:first-child{margin-top:0}
+.info ul{margin:0;padding-left:18px}
+.info li{margin:2px 0}
+
+/* ---------- Bühne: App-Hintergrund + Scrim ---------- */
+.stage-wrap{flex:1;min-height:0;display:flex;justify-content:center;background:var(--bg-sidebar);overflow:auto}
+.stage{position:relative;width:100%;height:100%;min-height:640px;container-type:inline-size;container-name:stage;background:var(--bg-base);overflow:hidden}
+.stage[data-w="390"]{width:390px;height:844px;flex-shrink:0;margin:16px;border:1px solid var(--border)}
+.stage[data-w="860"]{width:860px;height:900px;flex-shrink:0;margin:16px;border:1px solid var(--border)}
+.fakeapp{position:absolute;inset:0;display:flex}
+.fakeapp .side{width:220px;background:var(--bg-sidebar);border-right:1px solid var(--border-subtle);padding:16px}
+.fakeapp .main{flex:1;padding:24px}
+.fakeapp .ln{height:10px;border-radius:5px;background:var(--bg-hover);margin:10px 0}
+@container stage (max-width:700px){.fakeapp .side{display:none}}
+.scrim{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* ---------- Dialog ---------- */
+.dlg{width:680px;max-width:100%;max-height:min(800px,100%);display:flex;flex-direction:column;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+@container stage (max-width:600px){
+  .scrim{align-items:flex-end;padding:0}
+  .dlg{width:100%;max-height:92%;border-radius:14px 14px 0 0;border-bottom:0}
+  .dlg::before{content:"";align-self:center;width:36px;height:4px;border-radius:2px;background:var(--border);margin-top:8px}
+}
+.head{display:flex;align-items:flex-start;gap:var(--sxl);padding:var(--s2xl) var(--s2xl) var(--sxl) var(--s3xl)}
+.heading{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--s2xs)}
+.title{margin:0;font-size:15px;font-weight:600}
+.subtitle{font-size:var(--fs-xs);color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent{display:flex;align-items:center;gap:var(--ssm);font-size:var(--fs-xs);color:var(--fg2);margin-top:2px}
+.iconbtn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:var(--r-md);background:transparent;color:var(--fg2);cursor:pointer;padding:0;transition:background var(--dur) var(--ease)}
+.iconbtn:hover:not(:disabled){background:var(--bg-hover);color:var(--fg)}
+.iconbtn:active:not(:disabled){transform:scale(.94)}
+.iconbtn:disabled{color:var(--fg-muted);opacity:.45;cursor:default}
+.iconbtn.danger:hover:not(:disabled){color:var(--err)}
+@container stage (max-width:600px){.iconbtn{width:40px;height:40px}}
+
+.tools{display:flex;gap:var(--smd);padding:0 var(--s3xl) var(--sxl)}
+.search{position:relative;flex:1;display:flex;align-items:center;color:var(--fg-muted)}
+.search svg{position:absolute;left:10px}
+.search input{width:100%;height:30px;padding:0 10px 0 32px;border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--bg-base);color:var(--fg)}
+.search input:focus{outline:2px solid var(--accent);outline-offset:0}
+.btn{height:30px;padding:0 var(--sxl);border-radius:var(--r-md);border:1px solid var(--border);background:transparent;color:var(--fg);display:inline-flex;align-items:center;gap:var(--ssm);cursor:pointer;white-space:nowrap;transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.btn:hover:not(:disabled){border-color:var(--fg-muted);background:var(--bg-hover)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{color:var(--fg-muted);cursor:default;opacity:.6}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.primary:hover:not(:disabled){background:var(--accent);filter:brightness(1.06)}
+.btn.quiet{border-color:transparent}
+.btn.small{height:26px;font-size:var(--fs-xs);padding:0 var(--slg)}
+@container stage (max-width:600px){.btn{height:40px}.btn .lbl-long{display:none}}
+
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:var(--smd) var(--sxl);margin:0 var(--s3xl) var(--sxl);padding:var(--smd) var(--sxl);border-radius:var(--r-md);font-size:var(--fs-sm)}
+.banner.wait{background:var(--wait-subtle)}
+.banner.wait svg{color:var(--wait)}
+.banner.err{background:var(--err-subtle)}
+.banner .txt{flex:1;min-width:200px;display:flex;gap:var(--smd);align-items:flex-start}
+.banner .txt svg{margin-top:2px}
+
+.list{flex:1;min-height:0;overflow-y:auto;padding:0 14px var(--sxl)}
+.group{margin-top:var(--smd)}
+.ghead{display:flex;align-items:baseline;gap:var(--smd);padding:var(--slg) var(--ssm) var(--ssm);flex-wrap:wrap}
+.gname{font-size:var(--fs-xs);font-weight:600;color:var(--fg2);display:inline-flex;align-items:center;gap:var(--ssm)}
+.gname svg{color:var(--fg-muted);align-self:center}
+.gcount{font-size:var(--fs-xs);color:var(--fg-muted)}
+.gwhere{font-size:var(--fs-2xs);color:var(--fg-muted);margin-left:auto}
+.gwhere .mono{font-size:var(--fs-2xs)}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ssm)}
+.gempty{padding:var(--smd) var(--sxl);border:1px dashed var(--border);border-radius:var(--r-lg);font-size:var(--fs-sm);color:var(--fg-muted);display:flex;align-items:center;gap:var(--smd);flex-wrap:wrap}
+
+.row{border:1px solid var(--border-subtle);border-radius:var(--r-lg);transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease)}
+.row:hover{border-color:var(--border)}
+.row.open{border-color:var(--border);background:var(--bg-hover)}
+.row.off .name,.row.off .meta{opacity:.55}
+.row.new{border-color:var(--accent)}
+.rhead{display:grid;grid-template-columns:minmax(0,1fr) 128px auto 40px;align-items:center;gap:var(--ssm);padding:var(--sxs) var(--smd) var(--sxs) var(--sxs)}
+.rtoggle{display:flex;align-items:center;gap:var(--slg);min-width:0;min-height:40px;padding:var(--sxs) var(--ssm);border:0;border-radius:var(--r-md);background:transparent;text-align:left;cursor:pointer}
+.chev{display:flex;color:var(--fg-muted);transition:transform var(--dur) var(--ease)}
+.row.open .chev{transform:rotate(90deg)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--fg-muted);flex-shrink:0}
+.dot.ok{background:var(--ok)}.dot.err{background:var(--err)}.dot.wait{background:var(--wait)}.dot.run{background:var(--run)}
+.dot.hollow{background:transparent;border:1.5px solid var(--fg-muted)}
+.rtext{display:flex;flex-direction:column;min-width:0}
+.name{font-family:var(--font-mono);font-size:var(--fs-lg);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:var(--fs-xs);color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status{font-size:var(--fs-sm);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status.ok{color:var(--ok)}.status.err{color:var(--err)}.status.wait{color:var(--wait)}.status.muted{color:var(--fg-muted)}.status.run{color:var(--run)}
+.acts{display:flex;gap:2px}
+.meta .st-inline{display:none}
+.lock{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-2xs);color:var(--fg-muted);padding:0 6px;height:28px}
+@container stage (max-width:600px){
+  .rhead{grid-template-columns:minmax(0,1fr) 44px;grid-template-areas:"t s" "a a";row-gap:0}
+  .rtoggle{grid-area:t}.switchcell{grid-area:s}
+  .status{display:none}
+  .acts{grid-area:a;justify-content:flex-start;padding-left:34px;padding-bottom:4px;flex-wrap:wrap}
+  .meta .st-inline{display:inline}
+}
+.meta .st-inline.ok{color:var(--ok)}.meta .st-inline.err{color:var(--err)}.meta .st-inline.wait{color:var(--wait)}
+
+/* Kippschalter */
+.switch{position:relative;width:34px;height:20px;border-radius:var(--r-full);border:0;background:var(--toggle-off);cursor:pointer;padding:0;transition:background var(--dur) var(--ease)}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--on-toggle);transition:transform var(--dur) var(--ease)}
+.switch[aria-checked="true"]{background:var(--toggle-on)}
+.switch[aria-checked="true"]::after{transform:translateX(14px)}
+.switch:disabled{opacity:.4;cursor:default}
+@container stage (max-width:600px){.switch{width:40px;height:24px}.switch::after{width:18px;height:18px}.switch[aria-checked="true"]::after{transform:translateX(16px)}}
+
+/* Details */
+.detail{padding:var(--sxs) var(--s2xl) var(--s2xl) 46px;display:flex;flex-direction:column;gap:var(--sxl)}
+@container stage (max-width:600px){.detail{padding-left:var(--sxl)}}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:var(--sxs) var(--sxl);font-size:var(--fs-sm);margin:0}
+.kv dt{color:var(--fg-muted)}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+@container stage (max-width:600px){.kv{grid-template-columns:1fr}.kv dd{margin-bottom:6px}}
+.secret{display:inline-flex;align-items:center;gap:var(--ssm)}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent-text);cursor:pointer;font-size:var(--fs-xs);text-decoration:underline;text-underline-offset:2px}
+.errbox{border-left:3px solid var(--err);background:var(--err-subtle);padding:var(--smd) var(--sxl);border-radius:0 var(--r-md) var(--r-md) 0;font-size:var(--fs-sm)}
+.errbox b{display:block;margin-bottom:2px}
+.errbox pre{margin:6px 0 0;font:var(--fs-xs)/1.4 var(--font-mono);white-space:pre-wrap;color:var(--fg2)}
+.toolhead{font-size:var(--fs-xs);color:var(--fg-muted);margin-bottom:var(--sxs)}
+.toolchips{display:flex;flex-wrap:wrap;gap:4px}
+.toolchips span{font:var(--fs-2xs)/1 var(--font-mono);padding:4px 6px;border-radius:var(--r-sm);background:var(--bg-base);color:var(--fg2)}
+.inspect{display:flex;flex-direction:column;gap:6px}
+.instr{margin:0;padding:var(--smd) var(--sxl);border-left:2px solid var(--border);font-size:var(--fs-sm);color:var(--fg2)}
+.toollist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1px solid var(--border-subtle);border-radius:var(--r-md)}
+.toollist li+li{border-top:1px solid var(--border-subtle)}
+.toollist summary{cursor:pointer;padding:6px 10px;font-size:var(--fs-xs)}
+.toollist details span{display:block;padding:0 10px 8px 22px;font-size:var(--fs-xs);color:var(--fg2)}
+.toollist .hint{padding:6px 10px}
+.hint{font-size:var(--fs-2xs);color:var(--fg-muted)}
+
+/* Rückgängig-Zeile */
+.undo{display:flex;align-items:center;gap:var(--sxl);padding:var(--smd) var(--sxl);border:1px dashed var(--border);border-radius:var(--r-lg);font-size:var(--fs-sm);color:var(--fg2)}
+.undo .grow{flex:1;min-width:0}
+.undo progress{width:60px;height:4px;appearance:none;border:0;border-radius:2px;background:var(--border);overflow:hidden}
+.undo progress::-webkit-progress-bar{background:var(--border)}
+.undo progress::-webkit-progress-value{background:var(--fg-muted)}
+
+.empty{padding:var(--s3xl) var(--s3xl) var(--s3xl);display:flex;flex-direction:column;align-items:flex-start;gap:var(--smd);font-size:var(--fs-sm);color:var(--fg2)}
+.empty h3{margin:0;font-size:var(--fs-lg);color:var(--fg)}
+.skeleton{height:48px;border-radius:var(--r-lg);background:var(--bg-hover);margin:6px 0;animation:pulse 1.2s infinite alternate}
+@keyframes pulse{to{opacity:.5}}
+
+.foot{display:flex;align-items:center;gap:var(--sxl);padding:var(--sxl) var(--s2xl) var(--sxl) var(--s3xl);border-top:1px solid var(--border-subtle)}
+.foot .ft{flex:1;min-width:0;display:flex;flex-direction:column;font-size:var(--fs-xs);color:var(--fg-muted)}
+
+/* ---------- Formular (Hinzufügen / Bearbeiten) ---------- */
+.form{flex:1;min-height:0;overflow-y:auto;padding:0 var(--s3xl) var(--s2xl);display:flex;flex-direction:column;gap:var(--s2xl)}
+.fs{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ssm);min-width:0}
+.fs legend,.flabel{font-size:var(--fs-xs);font-weight:600;color:var(--fg2);padding:0;margin-bottom:var(--sxs)}
+.scopes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ssm)}
+@container stage (max-width:600px){.scopes{grid-template-columns:1fr}}
+.scope{position:relative;display:flex;flex-direction:column;gap:2px;padding:var(--smd) var(--slg) var(--smd) 32px;border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-sm)}
+.scope:hover{border-color:var(--fg-muted)}
+.scope input{position:absolute;left:10px;top:11px;accent-color:var(--accent);margin:0}
+.scope:has(input:checked){border-color:var(--accent);background:var(--accent-subtle)}
+.scope b{font-weight:600}
+.scope small{color:var(--fg-muted);font-size:var(--fs-2xs)}
+.scope .mono{font-size:var(--fs-2xs)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;align-self:flex-start}
+.seg button{height:28px;padding:0 var(--sxl);border:0;background:transparent;cursor:pointer;font-size:var(--fs-sm)}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button[aria-pressed="true"]{background:var(--accent-subtle);color:var(--accent-text);font-weight:600}
+@container stage (max-width:600px){.seg button{height:40px}}
+.field{display:flex;flex-direction:column;gap:var(--sxs);min-width:0}
+.field input,.field textarea,.field select{width:100%;height:30px;padding:0 var(--slg);border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-base)}
+.field textarea{height:auto;min-height:120px;padding:var(--smd) var(--slg);font-family:var(--font-mono);font-size:var(--fs-xs);resize:vertical}
+.field input:focus,.field textarea:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.field input.mono{font-size:var(--fs-sm)}
+.field .msg{font-size:var(--fs-2xs);color:var(--fg-muted)}
+.field.invalid input{border-color:var(--err)}
+.field.invalid .msg{color:var(--err)}
+@container stage (max-width:600px){.field input,.field select{height:40px}}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:var(--sxl)}
+@container stage (max-width:600px){.grid2{grid-template-columns:1fr}}
+.kvrows{display:flex;flex-direction:column;gap:var(--ssm)}
+.kvrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto 28px;gap:var(--ssm);align-items:center}
+.kvrow input{height:30px;padding:0 var(--slg);border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-base);font-family:var(--font-mono);font-size:var(--fs-xs);min-width:0}
+.kvrow label{display:flex;align-items:center;gap:4px;font-size:var(--fs-2xs);color:var(--fg-muted);white-space:nowrap}
+.kvrow label input{height:auto;accent-color:var(--accent)}
+@container stage (max-width:600px){.kvrow{grid-template-columns:1fr 40px;}.kvrow .v{grid-column:1/-1;grid-row:2}.kvrow label{grid-row:3}.kvrow input{height:40px}}
+.warn{display:flex;gap:var(--smd);align-items:flex-start;padding:var(--smd) var(--sxl);border-radius:var(--r-md);background:var(--wait-subtle);font-size:var(--fs-xs)}
+.warn svg{color:var(--wait);margin-top:1px}
+.testres{display:flex;align-items:center;gap:var(--ssm);font-size:var(--fs-sm)}
+.testres.ok{color:var(--ok)}.testres.err{color:var(--err)}.testres.run{color:var(--run)}
+.formfoot{display:flex;align-items:center;gap:var(--smd);padding:var(--sxl) var(--s2xl) var(--sxl) var(--s3xl);border-top:1px solid var(--border-subtle);flex-wrap:wrap}
+.formfoot .grow{flex:1}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="dbar" role="toolbar" aria-label="Entwurfsleiste">
+  <b>Entwurf · MCP-Dialog</b>
+  <label>Zustand
+    <select id="d-state">
+      <option value="running">Agent läuft</option>
+      <option value="idle">Agent ruht</option>
+      <option value="new">Neue Session (nie gestartet)</option>
+      <option value="loading">Lädt</option>
+      <option value="none">Keine Server eingerichtet</option>
+    </select>
+  </label>
+  <label>Breite
+    <select id="d-width">
+      <option value="auto">Fenster</option>
+      <option value="860">Tablet 860</option>
+      <option value="390">Handy 390</option>
+    </select>
+  </label>
+  <button type="button" class="chipbtn" id="d-theme">Hell/Dunkel</button>
+  <span class="bp" id="d-bp"></span>
+  <span class="sp"></span>
+  <button type="button" class="chipbtn" id="d-info" aria-expanded="false">Wofür &amp; offene Fragen</button>
+</div>
+<div class="info" id="info" hidden>
+  <h3>Wofür</h3>
+  <ul>
+    <li>Sehen, welche MCP-Server der Agent dieser Session bekommt — auch bevor er läuft.</li>
+    <li>Server ein-/ausschalten, hinzufügen, bearbeiten, entfernen.</li><li>Werkzeugbeschreibungen und Server-Anweisungen ansehen.</li>
+    <li>Klar sehen, <b>wo</b> ein Server liegt: an mir (alle Vorhaben), im Projekt (geteilt) oder nur bei mir im Projekt.</li>
+  </ul>
+  <h3>Gegenüber heute</h3>
+  <ul>
+    <li>Liste kommt bei ruhendem Agenten aus den Konfigurationsdateien statt leerem Hinweis.</li>
+    <li>Gruppen nach Ablageort. Heute landen die <span class="mono">.mcp.json</span> der Repositories als „Kommandozeile“, weil der Verwalter sie per <span class="mono">--mcp-config</span> nachreicht.</li>
+    <li>Fest eingebundene Server (Verwalter, claude.ai, Organisation) mit Schloss: schaltbar, nicht editierbar.</li>
+    <li>Entfernen mit Rückgängig statt Rückfrage.</li>
+  </ul>
+  <h3>Entschieden</h3>
+  <ul>
+    <li>Änderungen bei laufendem Agenten wirken ab der nächsten Nachricht (Neustart mit Verlauf), nicht live.</li>
+    <li>„Verbindung testen“ und „Werkzeuge &amp; Anweisungen ansehen“ laufen über den eigenen MCP-Client des Verwalters, auch ohne Agent.</li>
+    <li>Header- und Umgebungswerte bleiben verborgen; nur <span class="mono">${VARIABLE}</span>-Verweise sind lesbar.</li>
+  </ul>
+  <h3>Beispielwerte</h3>
+  <ul>
+    <li>Servernamen und Werkzeug-Anzahlen aus dem Screenshot; Zuordnung zu Repositories, Pfade, Header und Werkzeugnamen außer dispatch/verwalter sind erfunden.</li>
+  </ul>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage" data-w="auto">
+    <div class="fakeapp" aria-hidden="true">
+      <div class="side"><div class="ln" style="width:70%"></div><div class="ln"></div><div class="ln" style="width:55%"></div><div class="ln" style="width:80%"></div></div>
+      <div class="main"><div class="ln" style="width:40%"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:75%"></div><div class="ln" style="width:85%"></div></div>
+    </div>
+    <div class="scrim">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-title" id="dlg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Symbole (16 px, Strich) ---------- */
+const I={
+ chev:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>',
+ close:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+ search:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>',
+ plus:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
+ reload:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5v2.5h-2.5"/></svg>',
+ edit:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13H3v-3z"/></svg>',
+ trash:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>',
+ lock:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>',
+ user:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="5.5" r="2.5"/><path d="M3 13.5c.8-2.4 2.7-3.5 5-3.5s4.2 1.1 5 3.5"/></svg>',
+ repo:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2.5h8.5v10H4.5a1 1 0 0 0-1 1z"/><path d="M3.5 13.5v-11"/><path d="M6 5.5h4"/></svg>',
+ me:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2.5h8.5v10H4.5a1 1 0 0 0-1 1z"/><circle cx="8" cy="6.5" r="1.6"/><path d="M5.8 10.5c.4-1 1.2-1.5 2.2-1.5s1.8.5 2.2 1.5"/></svg>',
+ clock:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>',
+ warn:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5l6 11H2z"/><path d="M8 6.5v3M8 11.5v.01"/></svg>',
+ back:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg>',
+ check:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>',
+};
+
+/* ---------- Daten ---------- */
+const REPOS=['gymid','ants-manager']; // Beispiel: Repositories des Vorhabens
+const GROUPS=[
+ {key:'user',icon:I.user,name:'Mein Benutzer',where:'alle Vorhaben · <span class="mono">~/.claude.json</span>'},
+ {key:'project:gymid',icon:I.repo,name:'Projekt gymid',where:'geteilt im Repo · <span class="mono">gymid/.mcp.json</span>'},
+ {key:'project:ants-manager',icon:I.repo,name:'Projekt ants-manager',where:'geteilt im Repo · <span class="mono">ants-manager/.mcp.json</span>'},
+ {key:'local',icon:I.me,name:'Nur ich, in diesem Vorhaben',where:'nicht geteilt · <span class="mono">~/.claude.json</span> je Vorhaben'},
+ {key:'managed',icon:I.lock,name:'Fest eingebunden',where:'nicht änderbar'},
+];
+const DISPATCH_TOOLS=['get_editorial_brief','create_post','update_post','submit_post','list_posts','get_post','search_posts','add_to_queue','list_queue','upload_media','get_style_guide','rebuild_site'];
+const VERWALTER_TOOLS=['artifact_list','artifact_show','implementation_create','implementation_get','implementation_complete_station','vault_search','vault_get','skin_list','skin_activate'];
+let servers=[
+ {id:1,name:'dispatch',scope:'user',t:'HTTPS',target:'https://quantum-canvas.de/mcp',tools:37,status:'connected',on:true,headers:[['Authorization','Bearer ••••••••',true]],toolNames:DISPATCH_TOOLS},
+ {id:2,name:'manager',scope:'project:ants-manager',t:'HTTPS',target:'https://manager.i.ants.house/mcp',tools:85,status:'connected',on:true,headers:[]},
+ {id:3,name:'test-control',scope:'project:gymid',t:'HTTPS',target:'https://labor00.gymid.ai.i.ants.house:9443/mcp',tools:20,status:'connected',on:true,headers:[]},
+ {id:4,name:'gymid-labor00',scope:'project:gymid',t:'HTTPS',target:'https://labor00.gymid.ai.i.ants.house/mcp',tools:17,status:'connected',on:true,headers:[['X-Api-Key','${GYMID_KEY}',false]]},
+ {id:5,name:'gymid-daenischburg',scope:'project:gymid',t:'HTTP',target:'http://new.daenischburg.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:true,headers:[]},
+ {id:6,name:'gymid-schwerin',scope:'project:gymid',t:'HTTP',target:'http://schwerin.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:true,headers:[]},
+ {id:7,name:'gymid-weilderstadt',scope:'project:gymid',t:'HTTP',target:'http://weilderstadt.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:false,headers:[]},
+ {id:8,name:'gymid-aggregator',scope:'project:gymid',t:'HTTPS',target:'https://aggregator.gymid.comi.de/mcp',tools:2,status:'connected',on:true,headers:[]},
+ {id:9,name:'gymid-verwaltung',scope:'project:gymid',t:'stdio',target:'python -m gymid_verwaltung.mcp',tools:0,status:'failed',on:true,env:[['GYMID_DB','postgres://…',true]],
+   error:'ModuleNotFoundError: No module named \'gymid_verwaltung\'\n  at python -m gymid_verwaltung.mcp (exit 1)'},
+ {id:10,name:'playwright',scope:'local',t:'stdio',target:'npx @playwright/mcp@0.0.41',tools:21,status:'needsAuth',on:true,env:[]},
+ {id:11,name:'verwalter',scope:'managed',managedBy:'vom Verwalter für jede Session',t:'stdio',target:'agenten-verwalter --mcp',tools:28,status:'connected',on:true,toolNames:VERWALTER_TOOLS},
+ {id:12,name:'Google Drive',scope:'managed',managedBy:'claude.ai-Connector',t:'HTTPS',target:'claude.ai',tools:6,status:'pending',on:true},
+];
+const STATUS={
+ connected:['Verbunden','ok'],failed:['Fehlgeschlagen','err'],needsAuth:['Anmeldung nötig','wait'],pending:['Verbindet …','run'],
+ off:['Aus','muted'],idle:['Startet mit Agent','muted'],fresh:['Ab nächster Nachricht','wait'],
+};
+
+/* ---------- Zustand ---------- */
+const st={inspect:{},agent:'running',filter:'',open:null,view:'list',editId:null,removed:null,pending:0,dirtyIds:new Set(),form:null};
+let undoTimer=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const host=s=>s.target.replace(/^https?:\/\//,'').replace(/\/mcp$/,'');
+
+function statusOf(s){
+  if(!s.on) return 'off';
+  if(st.dirtyIds.has(s.id)&&st.agent==='running') return 'fresh';
+  if(st.agent!=='running') return 'idle';
+  return s.status;
+}
+function meta(s){
+  const parts=[s.t, s.t==='stdio'?s.target.split(' ')[0]:host(s)];
+  if(s.scope==='managed') parts[1]=s.managedBy;
+  if(st.agent==='running'&&s.on&&s.status==='connected'&&!st.dirtyIds.has(s.id)) parts.push(s.tools===1?'1 Werkzeug':s.tools+' Werkzeuge');
+  return parts.map(esc).join(' · ');
+}
+
+/* ---------- Rendern ---------- */
+function render(){
+  const d=$('#dlg');
+  d.innerHTML = st.view==='list' ? listView() : formView();
+  bind();
+}
+function headHtml(title,sub){
+  const ag={running:['ok','Agent läuft · Stand live'],idle:['hollow','Agent ruht · Stand aus den Konfigurationsdateien'],new:['hollow','Noch nicht gestartet · Stand aus den Konfigurationsdateien'],loading:['run','Agent startet …'],none:['ok','Agent läuft']}[st.agent];
+  return `<div class="head"><div class="heading"><h2 class="title" id="dlg-title">${title}</h2><span class="subtitle">${sub}</span>
+    <span class="agent"><span class="dot ${ag[0]==='ok'?'ok':ag[0]==='run'?'run':'hollow'}"></span>${ag[1]}</span></div>
+    <button type="button" class="iconbtn" data-a="close" aria-label="Schließen">${I.close}</button></div>`;
+}
+function listView(){
+  let h=headHtml('MCP-Server','Session #1 Onboarding Vertrag: Daten und MCP-Tools');
+  if(st.agent==='loading'){
+    return h+`<div class="list" style="padding-top:8px">${'<div class="skeleton"></div>'.repeat(5)}</div>`+foot('MCP-Server werden geladen …');
+  }
+  if(st.agent==='none'){
+    return h+`<div class="empty"><h3>Noch keine MCP-Server</h3><span>Ein MCP-Server gibt dem Agenten zusätzliche Werkzeuge, z. B. Zugriff auf ein Ticketsystem.</span>
+      <button type="button" class="btn primary" data-a="add">${I.plus}Server hinzufügen</button>
+      <span class="hint">Oder eine vorhandene Konfiguration als JSON einfügen.</span></div>`+foot('');
+  }
+  h+=`<div class="tools"><label class="search"><span class="sr">Server filtern</span>${I.search}<input type="text" id="filter" placeholder="Server filtern …" value="${esc(st.filter)}"></label>
+      <button type="button" class="btn primary" data-a="add">${I.plus}<span>Server <span class="lbl-long">hinzufügen</span></span></button></div>`;
+  if(st.pending>0&&st.agent==='running'){
+    h+=`<div class="banner wait" role="status"><span class="txt">${I.clock}<span>${st.pending===1?'1 Änderung wirkt':st.pending+' Änderungen wirken'} ab der nächsten Nachricht – der Agent startet dann neu.</span></span></div>`;
+  }
+  if(st.agent==='idle'||st.agent==='new'){
+    h+=`<div class="banner wait" role="status" style="background:var(--bg-hover)"><span class="txt">${I.clock}<span>Verbindungszustand erscheint, sobald der Agent läuft. Schalten, Bearbeiten und Werkzeuge ansehen geht schon jetzt.</span></span></div>`;
+  }
+  h+='<div class="list" id="list">';
+  const needle=st.filter.trim().toLowerCase();
+  let any=false;
+  for(const g of GROUPS){
+    const items=servers.filter(s=>s.scope===g.key&&s.name.toLowerCase().includes(needle));
+    const showUndo=st.removed&&st.removed.s.scope===g.key;
+    if(!items.length&&!showUndo){
+      if(g.key==='local'&&!needle){ any=true;
+        h+=`<section class="group"><div class="ghead"><span class="gname">${g.icon}${g.name}</span><span class="gwhere">${g.where}</span></div>
+            <div class="gempty">Server, die nur du in diesem Vorhaben brauchst. <button type="button" class="linkbtn" data-a="add" data-scope="local">Hier hinzufügen</button></div></section>`;
+      }
+      continue;
+    }
+    any=true;
+    h+=`<section class="group"><div class="ghead"><span class="gname">${g.icon}${g.name}</span><span class="gcount">${items.length}</span><span class="gwhere">${g.where}</span></div><ul class="rows">`;
+    for(const s of items) h+=rowHtml(s);
+    if(showUndo) h+=undoHtml();
+    h+='</ul></section>';
+  }
+  if(!any) h+=`<p class="hint" style="padding:16px 6px">Kein Server passt zu „${esc(st.filter.trim())}“.</p>`;
+  h+='</div>';
+  return h+foot(summary());
+}
+function rowHtml(s){
+  const k=statusOf(s), [word,cls]=STATUS[k];
+  const locked=s.scope==='managed';
+  const open=st.open===s.id;
+  const canReconnect=st.agent==='running'&&s.on&&!st.dirtyIds.has(s.id);
+  let acts='';
+  if(s.status==='needsAuth'&&st.agent==='running'&&s.on) acts+=`<button type="button" class="btn small" data-a="auth" data-id="${s.id}">Anmelden</button>`;
+  acts+=`<button type="button" class="iconbtn" data-a="reconnect" data-id="${s.id}" ${canReconnect?'':'disabled'} aria-label="${esc(s.name)} neu verbinden" title="${canReconnect?'Neu verbinden':'Neu verbinden geht nur bei laufendem Agenten'}">${I.reload}</button>`;
+  if(locked){
+    acts+=`<span class="lock" title="${esc(s.managedBy)}">${I.lock}<span>fest</span></span>`;
+  }else{
+    acts+=`<button type="button" class="iconbtn" data-a="edit" data-id="${s.id}" aria-label="${esc(s.name)} bearbeiten" title="Bearbeiten">${I.edit}</button>
+           <button type="button" class="iconbtn danger" data-a="remove" data-id="${s.id}" aria-label="${esc(s.name)} entfernen" title="Entfernen">${I.trash}</button>`;
+  }
+  return `<li class="row ${open?'open':''} ${s.on?'':'off'} ${k==='fresh'?'new':''}">
+   <div class="rhead">
+    <button type="button" class="rtoggle" data-a="expand" data-id="${s.id}" aria-expanded="${open}">
+      <span class="chev">${I.chev}</span><span class="dot ${cls==='muted'?(k==='off'?'':'hollow'):cls}"></span>
+      <span class="rtext"><span class="name">${esc(s.name)}</span><span class="meta"><span class="st-inline ${cls}">${word} · </span>${meta(s)}</span></span>
+    </button>
+    <span class="status ${cls}">${word}</span>
+    <span class="acts">${acts}</span>
+    <span class="switchcell"><button type="button" class="switch" role="switch" aria-checked="${s.on}" data-a="toggle" data-id="${s.id}" aria-label="${esc(s.name)} ${s.on?'ausschalten':'einschalten'}" title="${s.on?'Ausschalten: der Agent sieht die Werkzeuge nicht mehr. Gilt für alle Sessions dieses Vorhabens.':'Einschalten'}"></button></span>
+   </div>
+   ${open?detailHtml(s):''}
+  </li>`;
+}
+function detailHtml(s){
+  const g=GROUPS.find(g=>g.key===s.scope);
+  let h='<div class="detail">';
+  if(statusOf(s)==='failed') h+=`<div class="errbox"><b>Verbindung fehlgeschlagen</b>Der Server-Befehl bricht beim Start ab. Prüfe, ob das Python-Paket im Repo installiert ist, dann neu verbinden.<pre>${esc(s.error)}</pre></div>`;
+  if(statusOf(s)==='needsAuth') h+=`<div class="errbox" style="border-color:var(--wait);background:var(--wait-subtle)"><b>Anmeldung nötig</b>„Anmelden“ öffnet die Anmeldeseite im Browser; danach verbindet sich der Server von selbst.</div>`;
+  h+=`<dl class="kv"><dt>Gespeichert in</dt><dd>${g.name} · ${g.where}</dd>
+      <dt>Art</dt><dd>${s.t==='stdio'?'Programm (stdio)':s.t}</dd>
+      <dt>${s.t==='stdio'?'Befehl':'Adresse'}</dt><dd class="mono" style="font-size:var(--fs-xs)">${esc(s.target)}</dd>`;
+  const kv=(s.headers||s.env||[]);
+  if(kv.length){
+    h+=`<dt>${s.headers?'Header':'Umgebung'}</dt><dd>${kv.map(([k,v,sec])=>`<div class="secret"><span class="mono" style="font-size:var(--fs-xs)">${esc(k)}: ${sec?'••••••••':esc(v)}</span>${sec?'<span class="hint">gesetzt · ändern unter Bearbeiten</span>':''}</div>`).join('')}</dd>`;
+  }
+  h+='</dl>';
+  if(s.scope!=='managed'||s.toolNames){
+    h+=inspectHtml(s);
+  }
+  if(false){
+    const names=s.toolNames||Array.from({length:Math.min(s.tools,12)},(_,i)=>`werkzeug_${i+1}`);
+    h+=`<div><div class="toolhead">Werkzeuge (${s.tools})${s.toolNames?'':' · Namen Beispiel'}</div><div class="toolchips">${names.map(n=>`<span>${esc(n)}</span>`).join('')}${s.tools>names.length?`<span>+${s.tools-names.length} weitere</span>`:''}</div></div>`;
+  }else if(!s.on){
+    h+='<span class="hint">Ausgeschaltet – der Agent sieht die Werkzeuge dieses Servers nicht.</span>';
+  }
+  if(s.scope==='managed') h+=`<span class="hint">${I.lock} ${esc(s.managedBy)} – ändern geht nur dort.</span>`;
+  return h+'</div>';
+}
+function inspectHtml(s){
+  const ins=st.inspect[s.id];
+  if(!ins) return `<div><button type="button" class="btn small" data-a="inspect" data-id="${s.id}">Werkzeuge &amp; Anweisungen ansehen</button> <span class="hint">${st.agent==='running'?'':'geht auch bei ruhendem Agenten'}</span></div>`;
+  if(ins==='run') return `<span class="testres run">${I.clock}Frage den Server …</span>`;
+  const names=s.toolNames||Array.from({length:Math.min(s.tools,6)},(_,i)=>`werkzeug_${i+1}`);
+  return `<div class="inspect"><div class="toolhead">Server-Anweisungen${s.toolNames?'':' · Beispieltext'}</div>
+    <p class="instr">${s.name==='dispatch'?'DISPATCH ist das Redaktionssystem eines persönlichen Blogs. Beginne jede Redaktionsaufgabe mit get_editorial_brief …':'Dieser Server liefert Daten aus '+esc(s.name)+'. Nutze zuerst die Suchwerkzeuge, bevor du Einträge änderst.'}</p>
+    <div class="toolhead">Werkzeuge (${s.tools})${s.toolNames?'':' · Namen und Texte Beispiel'}</div>
+    <ul class="toollist">${names.map(n=>`<li><details><summary class="mono">${esc(n)}</summary><span>Beschreibung von ${esc(n)} aus tools/list (Beispiel).</span></details></li>`).join('')}${s.tools>names.length?`<li class="hint">+${s.tools-names.length} weitere</li>`:''}</ul></div>`;
+}
+function undoHtml(){
+  const r=st.removed, g=GROUPS.find(g=>g.key===r.s.scope);
+  return `<li class="undo" role="status"><span class="grow"><b class="mono">${esc(r.s.name)}</b> entfernt aus ${g.name}${r.s.scope.startsWith('project')?' – betrifft alle im Repo':''}</span>
+    <progress id="undo-prog" max="100" value="100" aria-label="Zeit zum Rückgängigmachen"></progress>
+    <button type="button" class="btn small" data-a="undo">Rückgängig</button></li>`;
+}
+function summary(){
+  const on=servers.filter(s=>s.on);
+  if(st.agent!=='running') return `${servers.length} Server · ${on.length} eingeschaltet`;
+  const c=n=>servers.filter(s=>s.on&&!st.dirtyIds.has(s.id)&&s.status===n).length;
+  let t=`${c('connected')} von ${on.length} verbunden`;
+  if(c('failed')) t+=` · ${c('failed')} fehlgeschlagen`;
+  if(c('needsAuth')) t+=` · ${c('needsAuth')} Anmeldung nötig`;
+  const off=servers.length-on.length; if(off) t+=` · ${off} aus`;
+  return t;
+}
+function foot(text){
+  return `<div class="foot"><span class="ft"><span>${text}</span><span>Ausschalten gilt für alle Sessions dieses Vorhabens.</span></span>
+    <button type="button" class="btn" data-a="close">Schließen</button></div>`;
+}
+
+/* ---------- Formular ---------- */
+function newForm(scope){
+  return {id:null,scope:scope||'project:gymid',name:'',t:'HTTPS',target:'',kv:[['','',false]],mode:'fields',test:null,touched:false,json:''};
+}
+function formFromServer(s){
+  return {id:s.id,scope:s.scope,name:s.name,t:s.t,target:s.target,kv:(s.headers||s.env||[]).map(r=>[...r]).concat([['','',false]]),mode:'fields',test:null,touched:false,json:''};
+}
+function formView(){
+  const f=st.form, isEdit=f.id!==null;
+  const dup=f.name&&servers.some(s=>s.name===f.name.trim()&&s.id!==f.id);
+  const badName=f.touched&&(!f.name.trim()||dup);
+  const badTarget=f.touched&&!f.target.trim();
+  const secretInProject=f.scope.startsWith('project')&&f.kv.some(r=>r[2]&&r[1]&&!/^\$\{/.test(r[1]));
+  let h=`<div class="head"><button type="button" class="iconbtn" data-a="back" aria-label="Zurück zur Liste">${I.back}</button>
+     <div class="heading"><h2 class="title" id="dlg-title">${isEdit?'Server bearbeiten':'Server hinzufügen'}</h2><span class="subtitle">${isEdit?esc(f.name):'Session #1 Onboarding Vertrag: Daten und MCP-Tools'}</span></div>
+     <button type="button" class="iconbtn" data-a="close" aria-label="Schließen">${I.close}</button></div>`;
+  h+='<div class="form">';
+  h+=`<fieldset class="fs"><legend>Wo soll der Server gelten?</legend><div class="scopes">
+      ${scopeOpt('user','Mein Benutzer','In allen Vorhaben','~/.claude.json')}
+      ${scopeOpt('project','Projekt','Geteilt mit allen im Repo',`<select id="f-repo" aria-label="Repository" style="margin-top:4px;height:24px;border:1px solid var(--border);border-radius:4px;background:var(--bg-base);font-size:var(--fs-2xs)">${REPOS.map(r=>`<option ${f.scope==='project:'+r?'selected':''}>${r}</option>`).join('')}</select>`,true)}
+      ${scopeOpt('local','Nur ich, im Vorhaben','Nicht geteilt','~/.claude.json')}
+     </div></fieldset>`;
+  h+=`<div class="seg" role="group" aria-label="Eingabeart"><button type="button" data-a="mode" data-v="fields" aria-pressed="${f.mode==='fields'}">Felder</button><button type="button" data-a="mode" data-v="json" aria-pressed="${f.mode==='json'}">JSON einfügen</button></div>`;
+  if(f.mode==='json'){
+    h+=`<div class="field"><label class="flabel" for="f-json">Konfiguration</label><textarea id="f-json" spellcheck="false" placeholder='{ "mcpServers": { "jira": { "type": "http", "url": "https://…" } } }'>${esc(f.json)}</textarea>
+        <span class="msg">Format wie in <span class="mono">.mcp.json</span> oder Claude Desktop; mehrere Server auf einmal gehen.</span></div>`;
+  }else{
+    h+=`<div class="grid2">
+      <div class="field ${badName?'invalid':''}"><label class="flabel" for="f-name">Name</label><input id="f-name" class="mono" value="${esc(f.name)}" placeholder="z. B. jira" autocomplete="off">
+        <span class="msg">${badName?(dup?'Name gibt es schon – der Agent würde nur einen sehen.':'Name fehlt.'):'Unter diesem Namen sieht der Agent die Werkzeuge.'}</span></div>
+      <div class="field"><span class="flabel">Art</span><div class="seg" role="group" aria-label="Art">
+        ${['HTTPS','stdio','SSE'].map(t=>`<button type="button" data-a="ttype" data-v="${t}" aria-pressed="${(f.t==='HTTP'?'HTTPS':f.t)===t}">${t==='HTTPS'?'HTTP(S)':t==='stdio'?'Programm':t}</button>`).join('')}</div></div>
+     </div>
+     <div class="field ${badTarget?'invalid':''}"><label class="flabel" for="f-target">${f.t==='stdio'?'Befehl mit Argumenten':'Adresse'}</label>
+       <input id="f-target" class="mono" value="${esc(f.target)}" placeholder="${f.t==='stdio'?'npx -y @modelcontextprotocol/server-github':'https://example.com/mcp'}">
+       <span class="msg">${badTarget?(f.t==='stdio'?'Befehl fehlt.':'Adresse fehlt.'):(f.t==='stdio'?'Läuft im Arbeitsordner der Session.':'Anmeldung per OAuth erkennt der Agent selbst.')}</span></div>
+     <div class="field"><span class="flabel">${f.t==='stdio'?'Umgebungsvariablen':'Header'}</span><div class="kvrows">
+       ${f.kv.map((r,i)=>`<div class="kvrow"><input data-kv="${i}" data-c="0" value="${esc(r[0])}" placeholder="${f.t==='stdio'?'NAME':'Authorization'}" aria-label="Schlüssel ${i+1}">
+         <input class="v" data-kv="${i}" data-c="1" type="${r[2]?'password':'text'}" value="${esc(r[1])}" placeholder="Wert oder \${VARIABLE}" aria-label="Wert ${i+1}">
+         <label><input type="checkbox" data-kvsec="${i}" ${r[2]?'checked':''}>geheim</label>
+         <button type="button" class="iconbtn danger" data-a="kvdel" data-i="${i}" aria-label="Zeile ${i+1} entfernen" ${f.kv.length===1&&!r[0]&&!r[1]?'disabled':''}>${I.trash}</button></div>`).join('')}
+       </div><button type="button" class="linkbtn" data-a="kvadd" style="align-self:flex-start;margin-top:4px">+ Zeile</button></div>`;
+    if(secretInProject) h+=`<div class="warn" role="alert">${I.warn}<span><b>Geheimnis landet im Repo.</b> <span class="mono">.mcp.json</span> wird mit dem Team geteilt. Als <span class="mono">\${VARIABLE}</span> verweisen oder „Nur ich, im Vorhaben“ wählen.</span></div>`;
+  }
+  h+='</div>';
+  const t=f.test;
+  const tr=!t?'':t==='run'?`<span class="testres run">${I.clock}Verbinde …</span>`:t==='ok'?`<span class="testres ok">${I.check}Verbunden · 14 Werkzeuge</span>`:`<span class="testres err">${I.warn}Keine Antwort von der Adresse</span>`;
+  h+=`<div class="formfoot"><button type="button" class="btn" data-a="test" ${f.mode==='json'?'disabled':''}>Verbindung testen</button>${tr}<span class="grow"></span>
+      <button type="button" class="btn quiet" data-a="back">Abbrechen</button>
+      <button type="button" class="btn primary" data-a="save">${isEdit?'Änderungen speichern':'Server hinzufügen'}</button></div>`;
+  return h;
+}
+function scopeOpt(v,title,sub,extra,isProject){
+  const f=st.form, checked=isProject?f.scope.startsWith('project'):f.scope===v;
+  return `<label class="scope"><input type="radio" name="scope" value="${v}" ${checked?'checked':''}><b>${title}</b><small>${sub}</small>${isProject?extra:`<small class="mono">${extra}</small>`}</label>`;
+}
+
+/* ---------- Bedienung ---------- */
+function bind(){
+  const fi=$('#filter');
+  if(fi) fi.oninput=e=>{st.filter=e.target.value;const pos=e.target.selectionStart;render();const n=$('#filter');n.focus();n.setSelectionRange(pos,pos)};
+  if(st.view==='form'){
+    const f=st.form;
+    const on=(sel,fn)=>{const el=$(sel);if(el) el.oninput=fn};
+    on('#f-name',e=>{f.name=e.target.value});
+    on('#f-target',e=>{f.target=e.target.value});
+    on('#f-json',e=>{f.json=e.target.value});
+    document.querySelectorAll('[data-kv]').forEach(el=>el.oninput=e=>{f.kv[+el.dataset.kv][+el.dataset.c]=e.target.value;if(+el.dataset.c===1)rerenderWarn()});
+    document.querySelectorAll('[data-kvsec]').forEach(el=>el.onchange=()=>{f.kv[+el.dataset.kvsec][2]=el.checked;render()});
+    document.querySelectorAll('input[name=scope]').forEach(el=>el.onchange=()=>{f.scope=el.value==='project'?'project:'+$('#f-repo').value:el.value;render()});
+    const rp=$('#f-repo'); if(rp) rp.onchange=()=>{f.scope='project:'+rp.value;render()};
+  }
+  if(st.removed){const p=$('#undo-prog');if(p){const left=Math.max(0,100-(Date.now()-st.removed.at)/60);p.value=left}}
+}
+let warnT=null;
+function rerenderWarn(){clearTimeout(warnT);warnT=setTimeout(()=>{const a=document.activeElement, kv=a&&a.dataset.kv, c=a&&a.dataset.c;render();if(kv!==undefined){const n=document.querySelector(`[data-kv="${kv}"][data-c="${c}"]`);if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}}},500)}
+
+function markChanged(id){ if(st.agent==='running'){st.dirtyIds.add(id);st.pending++} }
+
+$('#dlg').addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]'); if(!b||b.disabled) return;
+  const a=b.dataset.a, id=+b.dataset.id, s=servers.find(x=>x.id===id);
+  switch(a){
+    case 'close': flash('Dialog geschlossen (im Entwurf bleibt er offen)'); break;
+    case 'expand': st.open=st.open===id?null:id; break;
+    case 'toggle': s.on=!s.on; break;
+    case 'reconnect': s.status='pending'; render(); setTimeout(()=>{s.status=s.name==='gymid-verwaltung'?'failed':'connected';render()},1200); return;
+    case 'auth': s.status='pending'; render(); setTimeout(()=>{s.status='connected';render()},1500); return;
+    case 'add': st.form=newForm(b.dataset.scope); st.view='form'; break;
+    case 'edit': st.form=formFromServer(s); st.view='form'; break;
+    case 'remove':
+      commitRemoval();
+      st.removed={s,idx:servers.indexOf(s),at:Date.now()}; servers=servers.filter(x=>x!==s); if(st.open===id) st.open=null;
+      undoTimer=setInterval(()=>{const p=$('#undo-prog');const left=100-(Date.now()-st.removed.at)/60;if(left<=0){commitRemoval();render()}else if(p)p.value=left},100);
+      break;
+    case 'inspect': st.inspect[id]='run'; render(); setTimeout(()=>{st.inspect[id]='ok';render()},900); return;
+    case 'undo': clearInterval(undoTimer); servers.splice(st.removed.idx,0,st.removed.s); st.removed=null; break;
+    case 'restart': st.agent='loading'; st.pending=0; st.dirtyIds.clear(); $('#d-state').value='loading'; render(); setTimeout(()=>{st.agent='running';$('#d-state').value='running';render()},1400); return;
+    case 'reveal': b.previousElementSibling.textContent=b.previousElementSibling.textContent.replace('••••••••','sk-live-Beispielwert'); b.remove(); return;
+    case 'back': st.view='list'; break;
+    case 'mode': st.form.mode=b.dataset.v; break;
+    case 'ttype': st.form.t=b.dataset.v; break;
+    case 'kvadd': st.form.kv.push(['','',false]); break;
+    case 'kvdel': st.form.kv.splice(+b.dataset.i,1); if(!st.form.kv.length) st.form.kv.push(['','',false]); break;
+    case 'test': st.form.test='run'; render(); setTimeout(()=>{st.form.test=/^https?:\/\/\S+\.\S+/.test(st.form.target)||st.form.t==='stdio'&&st.form.target?'ok':'fail';render()},1100); return;
+    case 'save': {
+      const f=st.form;
+      if(f.mode==='json'){ if(!f.json.trim()){flash('JSON fehlt');return} f.name=f.name||'aus-json'; f.target=f.target||'https://beispiel/mcp'; }
+      f.touched=true;
+      if(!f.name.trim()||!f.target.trim()||servers.some(s=>s.name===f.name.trim()&&s.id!==f.id)) break;
+      const kv=f.kv.filter(r=>r[0]);
+      if(f.id!==null){ const s=servers.find(x=>x.id===f.id); Object.assign(s,{name:f.name.trim(),scope:f.scope,t:f.t,target:f.target.trim()}); if(f.t==='stdio'){s.env=kv;delete s.headers}else{s.headers=kv;delete s.env} markChanged(s.id); st.open=s.id; }
+      else { const ns={id:Date.now(),name:f.name.trim(),scope:f.scope,t:f.t,target:f.target.trim(),tools:14,status:'connected',on:true}; if(f.t==='stdio')ns.env=kv;else ns.headers=kv; servers.push(ns); markChanged(ns.id); st.open=ns.id; }
+      st.view='list'; break;
+    }
+  }
+  render();
+});
+function commitRemoval(){ if(st.removed){ clearInterval(undoTimer); markChanged(-st.removed.s.id); st.removed=null; } }
+function flash(t){ const n=document.createElement('div'); n.textContent=t; n.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg-surface);padding:8px 14px;border-radius:6px;font-size:12px;z-index:99'; document.body.append(n); setTimeout(()=>n.remove(),1600); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&st.view==='form'){st.view='list';render()} if((e.ctrlKey||e.metaKey)&&e.key==='z'&&st.removed){e.preventDefault();$('[data-a=undo]').click()} });
+
+/* ---------- Entwurfsleiste ---------- */
+$('#d-state').onchange=e=>{st.agent=e.target.value; if(st.agent!=='running'){st.pending=0;st.dirtyIds.clear()} st.view='list'; render()};
+$('#d-width').onchange=e=>{$('#stage').dataset.w=e.target.value; bp()};
+$('#d-theme').onclick=()=>{const r=document.documentElement, dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme=dark?'light':'dark'};
+$('#d-info').onclick=e=>{const i=$('#info');i.hidden=!i.hidden;e.currentTarget.setAttribute('aria-expanded',String(!i.hidden))};
+function bp(){const w=$('#stage').getBoundingClientRect().width; $('#d-bp').textContent=`${Math.round(w)} px · ${w<=600?'Blatt von unten':w<=900?'Tablet':'Dialog'}`}
+addEventListener('resize',bp);
+const q=new URLSearchParams(location.search);
+if(q.get('state')){st.agent=q.get('state');$('#d-state').value=st.agent}
+if(q.get('w')){$('#stage').dataset.w=q.get('w');$('#d-width').value=q.get('w')}
+if(q.get('open')) st.open=+q.get('open');
+if(q.get('view')==='form'){st.form=newForm();st.view='form'}
+if(q.get('theme')) document.documentElement.dataset.theme=q.get('theme');
+render(); bp();
+</script>
+</body>
+</html>
