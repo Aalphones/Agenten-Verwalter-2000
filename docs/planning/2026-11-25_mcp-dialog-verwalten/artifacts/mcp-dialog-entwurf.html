@@ -68,7 +68,7 @@ svg{flex-shrink:0}
 
 /* ---------- Bühne: App-Hintergrund + Scrim ---------- */
 .stage-wrap{flex:1;min-height:0;display:flex;justify-content:center;background:var(--bg-sidebar);overflow:auto}
-.stage{position:relative;width:100%;height:100%;min-height:640px;container-type:inline-size;container-name:stage;background:var(--bg-base);overflow:hidden}
+.stage{transform:translateZ(0);position:relative;width:100%;height:100%;min-height:640px;container-type:inline-size;container-name:stage;background:var(--bg-base);overflow:hidden}
 .stage[data-w="390"]{width:390px;height:844px;flex-shrink:0;margin:16px;border:1px solid var(--border)}
 .stage[data-w="860"]{width:860px;height:900px;flex-shrink:0;margin:16px;border:1px solid var(--border)}
 .fakeapp{position:absolute;inset:0;display:flex}
@@ -165,6 +165,12 @@ svg{flex-shrink:0}
 .switch[aria-checked="true"]{background:var(--toggle-on)}
 .switch[aria-checked="true"]::after{transform:translateX(14px)}
 .switch:disabled{opacity:.4;cursor:default}
+.switchcell{position:relative}
+.offpop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;width:250px;padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);font-size:var(--fs-sm)}
+.offpop b{font-size:var(--fs-xs);color:var(--fg2)}
+.offpop .btn{justify-content:flex-start;height:auto;min-height:30px;padding:6px 10px;flex-direction:column;align-items:flex-start;gap:0;white-space:normal;text-align:left}
+.offpop .btn small{font-size:var(--fs-2xs);color:var(--fg-muted);font-weight:400}
+@container stage (max-width:600px){.offpop{position:fixed;left:12px;right:12px;top:auto;bottom:12px;width:auto}}
 @container stage (max-width:600px){.switch{width:40px;height:24px}.switch::after{width:18px;height:18px}.switch[aria-checked="true"]::after{transform:translateX(16px)}}
 
 /* Details */
@@ -288,7 +294,7 @@ svg{flex-shrink:0}
     <li>Liste kommt bei ruhendem Agenten aus den Konfigurationsdateien statt leerem Hinweis.</li>
     <li>Gruppen nach Ablageort. Heute landen die <span class="mono">.mcp.json</span> der Repositories als „Kommandozeile“, weil der Verwalter sie per <span class="mono">--mcp-config</span> nachreicht.</li>
     <li>Fest eingebundene Server (Verwalter, claude.ai, Organisation) mit Schloss: schaltbar, nicht editierbar.</li>
-    <li>Entfernen mit Rückgängig statt Rückfrage.</li>
+    <li>Entfernen mit Rückgängig statt Rückfrage.</li><li>Ausschalten fragt: nur dieses Vorhaben oder überall (merkt sich der Verwalter, auch für neue Vorhaben).</li>
   </ul>
   <h3>Entschieden</h3>
   <ul>
@@ -352,7 +358,7 @@ let servers=[
  {id:4,name:'gymid-labor00',scope:'project:gymid',t:'HTTPS',target:'https://labor00.gymid.ai.i.ants.house/mcp',tools:17,status:'connected',on:true,headers:[['X-Api-Key','${GYMID_KEY}',false]]},
  {id:5,name:'gymid-daenischburg',scope:'project:gymid',t:'HTTP',target:'http://new.daenischburg.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:true,headers:[]},
  {id:6,name:'gymid-schwerin',scope:'project:gymid',t:'HTTP',target:'http://schwerin.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:true,headers:[]},
- {id:7,name:'gymid-weilderstadt',scope:'project:gymid',t:'HTTP',target:'http://weilderstadt.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:false,headers:[]},
+ {id:7,name:'gymid-weilderstadt',scope:'project:gymid',t:'HTTP',target:'http://weilderstadt.gymid.ai.i.ants.house:1337/mcp',tools:15,status:'connected',on:false,everywhere:true,headers:[]},
  {id:8,name:'gymid-aggregator',scope:'project:gymid',t:'HTTPS',target:'https://aggregator.gymid.comi.de/mcp',tools:2,status:'connected',on:true,headers:[]},
  {id:9,name:'gymid-verwaltung',scope:'project:gymid',t:'stdio',target:'python -m gymid_verwaltung.mcp',tools:0,status:'failed',on:true,env:[['GYMID_DB','postgres://…',true]],
    error:'ModuleNotFoundError: No module named \'gymid_verwaltung\'\n  at python -m gymid_verwaltung.mcp (exit 1)'},
@@ -362,7 +368,7 @@ let servers=[
 ];
 const STATUS={
  connected:['Verbunden','ok'],failed:['Fehlgeschlagen','err'],needsAuth:['Anmeldung nötig','wait'],pending:['Verbindet …','run'],
- off:['Aus','muted'],idle:['Startet mit Agent','muted'],fresh:['Ab nächster Nachricht','wait'],
+ off:['Aus','muted'],offall:['Aus · überall','muted'],idle:['Startet mit Agent','muted'],fresh:['Ab nächster Nachricht','wait'],
 };
 
 /* ---------- Zustand ---------- */
@@ -373,7 +379,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const host=s=>s.target.replace(/^https?:\/\//,'').replace(/\/mcp$/,'');
 
 function statusOf(s){
-  if(!s.on) return 'off';
+  if(!s.on) return s.everywhere?'offall':'off';
   if(st.dirtyIds.has(s.id)&&st.agent==='running') return 'fresh';
   if(st.agent!=='running') return 'idle';
   return s.status;
@@ -460,7 +466,9 @@ function rowHtml(s){
     </button>
     <span class="status ${cls}">${word}</span>
     <span class="acts">${acts}</span>
-    <span class="switchcell"><button type="button" class="switch" role="switch" aria-checked="${s.on}" data-a="toggle" data-id="${s.id}" aria-label="${esc(s.name)} ${s.on?'ausschalten':'einschalten'}" title="${s.on?'Ausschalten: der Agent sieht die Werkzeuge nicht mehr. Gilt für alle Sessions dieses Vorhabens.':'Einschalten'}"></button></span>
+    <span class="switchcell"><button type="button" class="switch" role="switch" aria-checked="${s.on}" data-a="toggle" data-id="${s.id}" aria-haspopup="${s.on}" aria-label="${esc(s.name)} ${s.on?'ausschalten':'einschalten'}" title="${s.on?'Ausschalten – nur hier oder überall':(s.everywhere?'Einschalten – gilt wieder in allen Vorhaben':'Einschalten')}"></button>${st.offAsk===s.id?`<div class="offpop" role="dialog" aria-label="${esc(s.name)} ausschalten"><b>${esc(s.name)} ausschalten</b>
+      <button type="button" class="btn" data-a="offhere" data-id="${s.id}" autofocus>Nur in diesem Vorhaben<small>Neue Sessions hier starten ohne ihn</small></button>
+      <button type="button" class="btn" data-a="offall" data-id="${s.id}">Überall<small>Auch in neuen Vorhaben aus, bis du ihn einschaltest</small></button></div>`:''}</span>
    </div>
    ${open?detailHtml(s):''}
   </li>`;
@@ -517,7 +525,7 @@ function summary(){
   return t;
 }
 function foot(text){
-  return `<div class="foot"><span class="ft"><span>${text}</span><span>Ausschalten gilt für alle Sessions dieses Vorhabens.</span></span>
+  return `<div class="foot"><span class="ft"><span>${text}</span><span>Ausschalten wahlweise nur hier oder überall.</span></span>
     <button type="button" class="btn" data-a="close">Schließen</button></div>`;
 }
 
@@ -606,7 +614,9 @@ $('#dlg').addEventListener('click',e=>{
   switch(a){
     case 'close': flash('Dialog geschlossen (im Entwurf bleibt er offen)'); break;
     case 'expand': st.open=st.open===id?null:id; break;
-    case 'toggle': s.on=!s.on; break;
+    case 'toggle': if(s.on){st.offAsk=st.offAsk===id?null:id}else{s.on=true;s.everywhere=false} break;
+    case 'offhere': s.on=false; s.everywhere=false; st.offAsk=null; break;
+    case 'offall': s.on=false; s.everywhere=true; st.offAsk=null; break;
     case 'reconnect': s.status='pending'; render(); setTimeout(()=>{s.status=s.name==='gymid-verwaltung'?'failed':'connected';render()},1200); return;
     case 'auth': s.status='pending'; render(); setTimeout(()=>{s.status='connected';render()},1500); return;
     case 'add': st.form=newForm(b.dataset.scope); st.view='form'; break;
@@ -641,7 +651,7 @@ $('#dlg').addEventListener('click',e=>{
 });
 function commitRemoval(){ if(st.removed){ clearInterval(undoTimer); markChanged(-st.removed.s.id); st.removed=null; } }
 function flash(t){ const n=document.createElement('div'); n.textContent=t; n.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg-surface);padding:8px 14px;border-radius:6px;font-size:12px;z-index:99'; document.body.append(n); setTimeout(()=>n.remove(),1600); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&st.view==='form'){st.view='list';render()} if((e.ctrlKey||e.metaKey)&&e.key==='z'&&st.removed){e.preventDefault();$('[data-a=undo]').click()} });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&st.offAsk){st.offAsk=null;render();return} if(e.key==='Escape'&&st.view==='form'){st.view='list';render()} if((e.ctrlKey||e.metaKey)&&e.key==='z'&&st.removed){e.preventDefault();$('[data-a=undo]').click()} });
 
 /* ---------- Entwurfsleiste ---------- */
 $('#d-state').onchange=e=>{st.agent=e.target.value; if(st.agent!=='running'){st.pending=0;st.dirtyIds.clear()} st.view='list'; render()};
@@ -654,6 +664,7 @@ const q=new URLSearchParams(location.search);
 if(q.get('state')){st.agent=q.get('state');$('#d-state').value=st.agent}
 if(q.get('w')){$('#stage').dataset.w=q.get('w');$('#d-width').value=q.get('w')}
 if(q.get('open')) st.open=+q.get('open');
+if(q.get('ask')) st.offAsk=+q.get('ask');
 if(q.get('view')==='form'){st.form=newForm();st.view='form'}
 if(q.get('theme')) document.documentElement.dataset.theme=q.get('theme');
 render(); bp();

@@ -44,7 +44,11 @@ pub struct McpConfigEntry {
 
 pub struct McpPair { pub key: String, pub value: Option<String> } // None = verborgen (kein reiner ${VAR}-Verweis)
 
-pub struct McpConfigView { pub sources: Vec<McpSource>, pub config_changed: bool }
+pub struct McpConfigView {
+    pub sources: Vec<McpSource>,
+    pub config_changed: bool,
+    pub disabled_everywhere: Vec<String>, // Namen, die der Verwalter in allen Vorhaben aus hält
+}
 
 pub struct McpDraft {
     pub source_id: String,
@@ -69,7 +73,7 @@ Commands (`src-tauri/src/commands/mcp.rs`), alle mit `session_id`:
 | `mcp_config_load(sessionId)` | `McpConfigView` | 1 |
 | `mcp_config_save(sessionId, draft)` | `()`; Fehler `CommandError::Invalid` mit Satz | 2 |
 | `mcp_config_remove(sessionId, sourceId, name)` | `()` | 2 |
-| `mcp_toggle(sessionId, server, enabled)` | wie heute; ohne Agent schreibt der Core die Datei und gibt `true` zurück | 2 |
+| `mcp_toggle(sessionId, server, enabled, everywhere)` | wie heute; ohne Agent schreibt der Core die Datei und gibt `true` zurück. `everywhere: true` beim Ausschalten nimmt den Namen in die Liste „überall aus“; jedes Einschalten nimmt ihn heraus | 2 |
 | `mcp_probe(sessionId, draft)` | `McpProbeResult` | 3 |
 | `mcp_inspect(sessionId, sourceId, name)` | `McpProbeResult` | 3 |
 
@@ -85,7 +89,8 @@ Jede Schreib-Aktion sendet danach `mcp://changed` für **alle** Sessions (Benutz
 6. Nach einer Änderung bei laufendem Agenten steht „Änderung wirkt ab der nächsten Nachricht“; die nächste Nachricht an den ruhenden Agenten startet ihn neu mit Verlauf, ein arbeitender Agent wird nicht unterbrochen.
 7. „Verbindung testen“ und „Werkzeuge & Anweisungen ansehen“ funktionieren ohne Agent und zeigen Werkzeugnamen mit Beschreibung sowie die Server-Anweisungen oder einen Fehlersatz.
 8. Kein Header- oder Umgebungswert (außer reinen `${VARIABLE}`-Verweisen) erreicht die Oberfläche, das Protokoll oder eine Fehlermeldung.
-9. Handy-Breite (390 px): Dialog als Blatt von unten, alle Aktionen erreichbar, keine waagerechte Bildlaufleiste.
+9. Ausschalten fragt „Nur in diesem Vorhaben“ / „Überall“. „Überall“ bleibt im Verwalter gespeichert und gilt auch in Vorhaben, die danach entstehen, bis der Server irgendwo wieder eingeschaltet wird; dann ist er in allen Vorhaben des Verwalters wieder an.
+10. Handy-Breite (390 px): Dialog als Blatt von unten, alle Aktionen erreichbar, keine waagerechte Bildlaufleiste.
 
 ## Von mir gesetzt
 
@@ -96,6 +101,9 @@ Jede Schreib-Aktion sendet danach `mcp://changed` für **alle** Sessions (Benutz
 - Header-Werte werden nicht angezeigt, auch nicht auf Klick (abweichend vom ersten Entwurf mit „zeigen“).
 - `serde_json` bekommt das Feature `preserve_order`, damit `~/.claude.json` nicht umsortiert wird.
 - Codex-Sessions: nicht Teil des Plans.
+- „Überall aus“ gilt nur für Vorhaben des Verwalters (Workspaces unter seinem Workspace-Ordner), nicht für Claude-Sitzungen außerhalb.
+- Einschalten eines „überall aus“-Servers wirkt überall, ohne Rückfrage: die Liste ist ein Wunsch des Benutzers, kein Vorhaben-Zustand.
+- Ablage als Einstellung `mcp_disabled_everywhere` (JSON-Liste) in der bestehenden Einstellungstabelle — keine Migration.
 
 ## Konfidenz
 

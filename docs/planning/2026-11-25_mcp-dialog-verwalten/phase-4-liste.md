@@ -17,9 +17,10 @@
 6. Zeile (feste Spalten wie Entwurf): Pfeil, Punkt, Name (Mono), Metazeile „Art · Host/Befehl · N Werkzeuge“; rechts Status-Wort (128 px Spalte), Knöpfe Neu verbinden (nur mit Agent aktiv) · Bearbeiten · Entfernen, Kippschalter. Fest eingebunden: statt Bearbeiten/Entfernen ein Schloss „fest“. Status ohne Agent „Startet mit Agent“, ausgeschaltet „Aus“; ein Konfig-Eintrag, den der laufende Agent nicht meldet (neu hinzugefügt), „Ab nächster Nachricht“. Überdeckte Einträge: Metazeile endet mit „überdeckt von <Gruppe>“.
 7. Details: „Gespeichert in“, „Art“, „Adresse“/„Befehl“, „Header“/„Umgebung“ (verborgene Werte als „••••••••“ + „gesetzt · ändern unter Bearbeiten“), Fehlerkasten bei `failed`/`needsAuth` wie heute, Knopf „Werkzeuge & Anweisungen ansehen“ (Phase 5 füllt ihn; bis dahin ausgeblendet).
 8. Entfernen: Zeile wird sofort zur Rückgängig-Zeile „<Name> entfernt aus <Gruppe>“ (+ „– betrifft alle im Repo“ bei Repository) mit Balken und Knopf „Rückgängig“, Strg+Z wirkt; nach 6 s `removeMcpServer`. Schließen des Dialogs führt eine offene Entfernung sofort aus.
-9. Fußzeile: Zusammenfassung (mit Agent wie heute `summaryText`, ohne Agent „N Server · M eingeschaltet“) + „Ausschalten gilt für alle Sessions dieses Vorhabens.“ + „Schließen“.
+9. Fußzeile: Zusammenfassung (mit Agent wie heute `summaryText`, ohne Agent „N Server · M eingeschaltet“) + „Ausschalten wahlweise nur hier oder überall.“ + „Schließen“.
 10. Unter 600 px Containerbreite: Blatt von unten, Statuswort wandert vor die Metazeile, Aktionen in eigener Zeile, Ziele ≥ 40 px.
-11. `useSessionMcp` lädt zusätzlich `loadMcpConfig` beim Öffnen und bei jedem `mcp://changed`; der Dialog rendert, sobald die Konfiguration da ist, auch wenn `servers` `null` ist.
+11. Kippschalter aus → Auswahl direkt am Schalter (unter 600 px als Blatt unten): Titel „<Name> ausschalten“, Knopf „Nur in diesem Vorhaben“ (Zusatz „Neue Sessions hier starten ohne ihn“, Fokus beim Öffnen, Enter wählt) und „Überall“ (Zusatz „Auch in neuen Vorhaben aus, bis du ihn einschaltest“); Esc oder Klick daneben bricht ab. Einschalten ohne Auswahl. Status-Wort für Namen in `disabledEverywhere`: „Aus · überall“; Tooltip des Schalters dann „Einschalten – gilt wieder in allen Vorhaben“. Fußzeile: „Ausschalten wahlweise nur hier oder überall.“
+12. `useSessionMcp` lädt zusätzlich `loadMcpConfig` beim Öffnen und bei jedem `mcp://changed`; der Dialog rendert, sobald die Konfiguration da ist, auch wenn `servers` `null` ist.
 
 ## Checkliste
 

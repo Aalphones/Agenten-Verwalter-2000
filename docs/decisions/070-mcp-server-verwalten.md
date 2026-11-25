@@ -12,6 +12,7 @@ Der Dialog „MCP-Server“ zeigt nur, was der laufende Agent meldet (ADR 013). 
 - **Änderungen bei laufendem Agenten:** (a) live über `mcp_set_servers` — verworfen (undokumentiert, ungemessen; Entscheidung des Benutzers); (b) Neustart: die Session merkt sich beim Prozessstart einen Fingerabdruck der MCP-Konfiguration; weicht er ab und ruht der Agent, startet die nächste Nachricht ihn neu (wie ein neues Repository) — gewählt.
 - **Verbindung testen, Werkzeuge ansehen:** über den eigenen MCP-Client des autarken Agenten (`standalone/mcp/client.rs`) direkt aus dem Core — gewählt; funktioniert ohne Agent. OAuth kann der Client nicht; dann ein klarer Satz statt eines Tests.
 - **Aus-Schalter ohne Agent:** der Core schreibt `disabledMcpServers` im Eintrag des Workspace in `~/.claude.json`, genau wie die Kommandozeile.
+- **Reichweite des Ausschaltens:** Claude merkt sich „aus“ nur je Arbeitsordner, ein neues Vorhaben startet den Server wieder. (a) immer nur dieses Vorhaben; (b) immer überall; (c) beim Ausschalten wählen — gewählt (Entscheidung des Benutzers 2026-11-25). „Überall“ speichert der Verwalter als Einstellung `mcp_disabled_everywhere` und trägt sie vor jedem Agent-Start in `disabledMcpServers` des Workspace ein; Einschalten hebt es in allen Vorhaben des Verwalters auf.
 - **Zugangsdaten:** Header- und Umgebungswerte gehen nie an die Oberfläche; nur reine `${VARIABLE}`-Verweise sind lesbar. Beim Bearbeiten heißt ein leer gelassener Wert „unverändert“.
 - **Entfernen:** ohne Rückfrage, mit Rückgängig: die Oberfläche führt das Entfernen erst nach 6 s aus.
 
