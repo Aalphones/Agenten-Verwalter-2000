@@ -12,6 +12,7 @@ pub mod repositories;
 pub mod runs;
 pub mod session_commits;
 pub mod session_files;
+pub mod session_links;
 pub mod session_repositories;
 pub mod session_ticket_worktrees;
 pub mod sessions;

@@ -49,6 +49,9 @@ pub struct SessionRow {
     pub name_auto: bool,
     /// Umsetzung, zu der diese Session eine Rückfrage ist (ADR 048); nach dem Anlegen unveränderlich.
     pub inquiry_of: Option<String>,
+    /// Scratchpad-Ordner, den die Kommandozeile meldet (ADR 071); nur gelesen — geschrieben wird er
+    /// über `set_cli_scratchpad`, `upsert` lässt ihn stehen.
+    pub cli_scratchpad_dir: Option<String>,
 }
 
 /// Die Zeile, wie sie in der Datenbank steht; die Enum-Texte werden erst danach umgewandelt,
@@ -80,6 +83,7 @@ struct StoredRow {
     prompt_cache: Option<String>,
     name_auto: bool,
     inquiry_of: Option<String>,
+    cli_scratchpad_dir: Option<String>,
 }
 
 impl StoredRow {
@@ -111,6 +115,7 @@ impl StoredRow {
             prompt_cache: row.get(23)?,
             name_auto: row.get(24)?,
             inquiry_of: row.get(25)?,
+            cli_scratchpad_dir: row.get(26)?,
         })
     }
 
@@ -141,6 +146,7 @@ impl StoredRow {
             codex_model: self.codex_model,
             name_auto: self.name_auto,
             inquiry_of: self.inquiry_of,
+            cli_scratchpad_dir: self.cli_scratchpad_dir,
             prompt_cache: self
                 .prompt_cache
                 .as_deref()
@@ -152,7 +158,8 @@ impl StoredRow {
 /// Legt die Zeile an oder aktualisiert sie; `scratchpad_dir` kommt mit dem ersten `init` dazu.
 /// `created_at`, `workspace_dir`, `project_id`, `number`, `inquiry_of` und `archived_at` bleiben,
 /// wie sie sind: der Arbeitsordner einer Session ändert sich nie, ihr Vorhaben, ihre Nummer und
-/// ihre Umsetzung auch nicht. Die TL;DR-Spalten schreibt nur `db::tldr`.
+/// ihre Umsetzung auch nicht. Die TL;DR-Spalten schreibt nur `db::tldr`, `cli_scratchpad_dir` nur
+/// `set_cli_scratchpad`.
 pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandError> {
     connection.execute(
         "INSERT INTO sessions (id, name, status, model, effort, mode, created_at, running_ms, \
@@ -210,6 +217,19 @@ pub fn upsert(connection: &Connection, row: &SessionRow) -> Result<(), CommandEr
     Ok(())
 }
 
+/// Merkt den Scratchpad-Ordner, den die Kommandozeile meldet (ADR 071).
+pub fn set_cli_scratchpad(
+    connection: &Connection,
+    session_id: &str,
+    dir: &str,
+) -> Result<(), CommandError> {
+    connection.execute(
+        "UPDATE sessions SET cli_scratchpad_dir = ?2 WHERE id = ?1",
+        params![session_id, dir],
+    )?;
+    Ok(())
+}
+
 /// Alle nicht archivierten Sessions, neueste zuerst. `COALESCE` fängt eine Zeile ohne Vorhaben ab:
 /// die Session ist dann ihr eigenes Vorhaben, wie die Migration es für alle Altbestände festlegt.
 pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandError> {
@@ -217,7 +237,8 @@ pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandEr
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              COALESCE(project_id, id), number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, \
-             handoff_line, chrome, codex_model, prompt_cache, name_auto, inquiry_of \
+             handoff_line, chrome, codex_model, prompt_cache, name_auto, inquiry_of, \
+             cli_scratchpad_dir \
          FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC",
     )?;
     let stored: Vec<StoredRow> = statement
@@ -235,7 +256,7 @@ pub fn load_for_project(
         "SELECT id, name, status, model, effort, mode, created_at, running_ms, \
              context_used, context_window, has_agent_history, workspace_dir, scratchpad_dir, \
              project_id, number, tldr, tldr_at, tldr_seq, last_activity_at, seen_at, handoff_line, \
-             chrome, codex_model, prompt_cache, name_auto, inquiry_of \
+             chrome, codex_model, prompt_cache, name_auto, inquiry_of, cli_scratchpad_dir \
          FROM sessions WHERE project_id = ?1 ORDER BY number",
     )?;
     let stored: Vec<StoredRow> = statement

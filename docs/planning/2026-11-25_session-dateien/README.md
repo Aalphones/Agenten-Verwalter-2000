@@ -6,7 +6,7 @@ Ziel: Im Reiter „Dateien“ steht unter den Repositories ein Knoten „Session
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Kern: Verweise im Chat erfassen, Scratchpad der Kommandozeile merken | [phase-1-kern-erfassen.md](phase-1-kern-erfassen.md) | standard | pending |
+| 1 | Kern: Verweise im Chat erfassen, Scratchpad der Kommandozeile merken | [phase-1-kern-erfassen.md](phase-1-kern-erfassen.md) | standard | complete |
 | 2 | Kern: Liste der Session-Dateien, Lesen, Grenze, Dateilink-Ziele, Sperre | [phase-2-kern-liste.md](phase-2-kern-liste.md) | heikel | pending |
 | 3 | Kern: Betrachter-Adresse für einzelne Dateien | [phase-3-kern-betrachter.md](phase-3-kern-betrachter.md) | heikel | pending |
 | 4 | Knoten „Session-Dateien“ und Sprünge aus dem Chat | [phase-4-knoten-links.md](phase-4-knoten-links.md) | standard | pending |

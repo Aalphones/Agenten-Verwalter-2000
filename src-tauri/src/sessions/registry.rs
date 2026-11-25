@@ -50,7 +50,7 @@ use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
-    session_commits, session_files, session_repositories, session_ticket_worktrees,
+    session_commits, session_files, session_links, session_repositories, session_ticket_worktrees,
     tool_details as tool_detail_rows,
 };
 use crate::error::CommandError;
@@ -70,6 +70,7 @@ use crate::review::{
     model::{CommentTarget, ReviewComment},
 };
 use crate::runs::{self, model::RunStatus};
+use crate::session_files::links::link_candidates;
 use crate::sessions::auto_handoff::{
     self, AUTO_HANDOFF_CHAIN_LIMIT, AUTO_HANDOFF_DELAY, FollowUp, ScheduledHandoff,
 };
@@ -333,6 +334,8 @@ struct SessionState {
     /// die Ausgabe laufender Vordergrund-Befehle nach `<task_id>.output`. Nicht dokumentiert, nur
     /// im Speicher.
     cli_tasks_dir: Option<PathBuf>,
+    /// Der Scratchpad-Ordner, den die Kommandozeile zuletzt gemeldet hat; gespeichert (ADR 071).
+    cli_scratchpad_dir: Option<String>,
     /// Einträge, deren Ausgabedatei gerade ein Wächter liest (`run_watch`); höchstens einer je Eintrag.
     watched_runs: HashSet<String>,
     /// Ordner `.artefakte` des Vorhabens, gesetzt bei jedem Agent-Start; daran erkennt `apply_event`
@@ -433,6 +436,10 @@ struct Outbox {
     ticket_worktrees: Vec<(u32, String)>,
     /// Von Agent oder Subagent geschriebene Dateien als (normalisierter Pfad, ms).
     touched_files: Vec<(String, f64)>,
+    /// Absolute Dateipfade aus den Agenten-Antworten als (Pfad, ms), ADR 071.
+    linked_files: Vec<(String, f64)>,
+    /// Neu gemeldeter Scratchpad-Ordner der Kommandozeile; gespeichert in `cli_scratchpad_dir`.
+    cli_scratchpad: Option<String>,
     /// Zeitfenster beendeter Git-Befehle; nach dem Freigeben der Sperre sucht ein Thread darin die
     /// eigenen Commits.
     commit_windows: Vec<(f64, f64)>,
@@ -2459,6 +2466,7 @@ impl SessionState {
             background: Vec::new(),
             scratchpad_dir: None,
             cli_tasks_dir: None,
+            cli_scratchpad_dir: None,
             watched_runs: HashSet::new(),
             artifacts_dir: None,
             ticket_roots: Vec::new(),
@@ -2505,6 +2513,7 @@ impl SessionState {
         state.codex_model = row.codex_model.clone();
         state.process_chrome = row.chrome;
         state.scratchpad_dir = row.scratchpad_dir.clone();
+        state.cli_scratchpad_dir = row.cli_scratchpad_dir.clone();
         state.inquiry_of = row.inquiry_of.clone();
         state.idle_since = None;
         state.entries_loaded = false;
@@ -3165,6 +3174,9 @@ impl SessionState {
                 }
                 self.handoff_stop = handoff::stop_reason(&text);
                 self.drop_auto_handoff(outbox);
+                for path in link_candidates(&text) {
+                    outbox.linked_files.push((path, now_ms()));
+                }
                 let seq: u32 = self.push_entry(outbox, |seq: u32| ChatEntry::Text {
                     seq,
                     at: None,
@@ -3313,11 +3325,17 @@ impl SessionState {
             }
             // Den Ordner gibt die App vor (`use_scratchpad`); meldet die Kommandozeile doch einen
             // eigenen, schreibt der Agent trotzdem in den vorgegebenen. Gebraucht wird der gemeldete
-            // nur für den Ordner `tasks` daneben, in dem die Ausgabe laufender Befehle liegt.
+            // nur für den Ordner `tasks` daneben, in dem die Ausgabe laufender Befehle liegt, und für
+            // die Session-Dateien (ADR 071): Dateien dort, die ein Agent per Shell anlegt, zeigt der
+            // Reiter „Dateien“ auch nach einem Neustart.
             AgentEvent::ScratchpadDir(dir) => {
                 self.cli_tasks_dir = Path::new(&dir)
                     .parent()
                     .map(|parent: &Path| parent.join(CLI_TASKS_DIR));
+                if self.cli_scratchpad_dir.as_deref() != Some(dir.as_str()) {
+                    self.cli_scratchpad_dir = Some(dir.clone());
+                    outbox.cli_scratchpad = Some(dir);
+                }
             }
             AgentEvent::CommandStarted {
                 tool_use_id,
@@ -4086,6 +4104,7 @@ fn row_of(session: &Session, state: &SessionState) -> SessionRow {
         tldr_at: None,
         tldr_seq: None,
         inquiry_of: state.inquiry_of.clone(),
+        cli_scratchpad_dir: state.cli_scratchpad_dir.clone(),
     }
 }
 
@@ -4129,6 +4148,12 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &mut Outbox) {
         }
         if !outbox.touched_files.is_empty() {
             session_files::upsert_all(connection, &session.id, &outbox.touched_files)?;
+        }
+        if !outbox.linked_files.is_empty() {
+            session_links::upsert_all(connection, &session.id, &outbox.linked_files)?;
+        }
+        if let Some(dir) = &outbox.cli_scratchpad {
+            session_rows::set_cli_scratchpad(connection, &session.id, dir)?;
         }
         Ok(())
     });

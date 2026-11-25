@@ -32,6 +32,7 @@ pub mod repositories;
 pub mod retro;
 pub mod review;
 pub mod runs;
+pub mod session_files;
 pub mod sessions;
 pub mod settings;
 pub mod side;

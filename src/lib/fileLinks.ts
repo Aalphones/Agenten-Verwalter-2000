@@ -17,7 +17,8 @@ export const OPENABLE_EXTENSIONS: readonly string[] = [
   'txt',
 ];
 
-/** Quelltext- und Konfigurationsdateien, die „Dateien“ anzeigt; auch sie erscheinen als Link im Chat. */
+/** Gespiegelt aus `file_links::VIEWABLE_EXTENSIONS`: Quelltext- und Konfigurationsdateien, die „Dateien“
+ *  anzeigt; auch sie erscheinen als Link im Chat. */
 export const VIEWABLE_EXTENSIONS: readonly string[] = [
   'ts',
   'tsx',

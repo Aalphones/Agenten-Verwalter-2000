@@ -16,6 +16,15 @@ pub const OPENABLE_EXTENSIONS: &[&str] = &[
     "html", "htm", "pdf", "svg", "png", "jpg", "jpeg", "gif", "webp", "md", "txt",
 ];
 
+/// Quelltext- und Konfigurationsdateien, die „Dateien“ anzeigt; auch sie erscheinen als Link im Chat.
+/// Gespiegelt in `src/lib/fileLinks.ts` (nur Darstellung).
+pub const VIEWABLE_EXTENSIONS: &[&str] = &[
+    "ts", "tsx", "js", "jsx", "mjs", "cjs", "rs", "py", "json", "jsonc", "css", "scss", "sass",
+    "less", "vue", "svelte", "yml", "yaml", "toml", "ini", "sh", "ps1", "cmd", "bat", "sql", "kt",
+    "kts", "java", "gradle", "xml", "cs", "go", "rb", "php", "c", "h", "cpp", "hpp", "swift",
+    "dart", "proto", "graphql", "csv", "log", "lock",
+];
+
 /// Endungen, die immer das Standardprogramm öffnet; die Ansicht „Dateien“ zeigt sie nicht.
 /// Gespiegelt in `src/lib/fileLinks.ts` (`isExternalLink`).
 pub const EXTERNAL_EXTENSIONS: &[&str] = &["html", "htm", "pdf"];
@@ -213,7 +222,7 @@ fn locate(cleaned: &str, roots: &LinkRoots) -> Result<(PathBuf, PathBuf), Comman
     Ok((found, canonical))
 }
 
-fn clean(raw: &str) -> String {
+pub(crate) fn clean(raw: &str) -> String {
     strip_line_number(without_scheme(raw.trim())).replace('/', MAIN_SEPARATOR_STR)
 }
 

@@ -254,7 +254,7 @@ fn normalize(path: &str) -> String {
 
 /// Entfernt Code-Blöcke mit Zaun (` ``` ` oder `~~~`); Inline-Code bleibt stehen. Ein nicht
 /// geschlossener Block reicht bis zum Ende.
-fn strip_fences(text: &str) -> String {
+pub(crate) fn strip_fences(text: &str) -> String {
     let mut kept: Vec<&str> = Vec::new();
     // Zaunzeichen und Länge des offenen Blocks.
     let mut open_fence: Option<(char, usize)> = None;
