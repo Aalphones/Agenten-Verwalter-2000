@@ -35,7 +35,7 @@ Rating: standard. Jede Agenten-Antwort trägt ihre absoluten Dateiverweise in di
 
 ## Report-Back
 
-**Ergebnis:** Status `complete`, alle fünf AK erfüllt bis auf die Lint-Stufe von `pnpm check` (unten). Migration 22 liegt an, jede Agenten-Antwort trägt ihre absoluten Dateipfade in `session_links` ein, der Scratchpad der Kommandozeile steht in `sessions.cli_scratchpad_dir`. Sichtbar ändert sich nichts.
+**Ergebnis:** Status `complete`, alle fünf AK erfüllt, `pnpm check` grün. Migration 22 liegt an, jede Agenten-Antwort trägt ihre absoluten Dateipfade in `session_links` ein, der Scratchpad der Kommandozeile steht in `sessions.cli_scratchpad_dir`. Sichtbar ändert sich nichts.
 
 **Geändert:** `db/migrations/022_session_links.sql` und `migrations.rs`; `db/session_links.rs` (`upsert_all`, `load`, `is_scanned`, `mark_scanned`); `db/sessions.rs` (`SessionRow.cli_scratchpad_dir`, `set_cli_scratchpad`, Spalte in beiden Abfragen); `file_links/mod.rs` (`VIEWABLE_EXTENSIONS`, `clean` `pub(crate)`); `sourcing/mod.rs` (`strip_fences` `pub(crate)`); `session_files/{mod,links}.rs` (`link_candidates`); `sessions/registry.rs` (`Outbox.linked_files`/`cli_scratchpad`, `SessionState.cli_scratchpad_dir`, Zweige `Text` und `ScratchpadDir`, `persist`, `row_of`); Kommentar in `src/lib/fileLinks.ts`; `docs/code-map.md`.
 
@@ -45,8 +45,8 @@ Rating: standard. Jede Agenten-Antwort trägt ihre absoluten Dateiverweise in di
 - `pub mod session_files;` statt `mod …;` in `lib.rs`, wie alle anderen Module (Beispiele und Prüfprogramme brauchen sie öffentlich).
 - `SessionRow` trägt `cli_scratchpad_dir` nur zum Lesen; `upsert` schreibt die Spalte nicht (wie bei den TL;DR-Spalten), `set_cli_scratchpad` tut es.
 
-**Belegt:** Wegwerf-Probelauf (nicht committet) mit der Beispielantwort aus AK 2 plus `.gitignore`, UNC-Pfad, `https://…`, Titel im Link, `%20`, Pfad mit Klammern, doppelte Backticks: Ausgabe `C:\Users\u\x.mp4`, `…\b.log`, `…\r.pdf`, `…\mit leer.csv`, `…\zwei.md`, `C:\Program Files (x86)\a.txt`; relative Pfade, `state.open`, Block-Inhalt, UNC, Adressen fehlen; Dublette einmal. Migration auf einer leeren Datenbank: `user_version` 22, `links_scanned` 0, `cli_scratchpad_dir` NULL; zweimal derselben Pfad hebt nur `last_seen_at`. `pnpm typecheck`, `format:check`, `build`, `rust:fmt`, `rust:clippy` grün.
+**Belegt:** Wegwerf-Probelauf (nicht committet) mit der Beispielantwort aus AK 2 plus `.gitignore`, UNC-Pfad, `https://…`, Titel im Link, `%20`, Pfad mit Klammern, doppelte Backticks: Ausgabe `C:\Users\u\x.mp4`, `…\b.log`, `…\r.pdf`, `…\mit leer.csv`, `…\zwei.md`, `C:\Program Files (x86)\a.txt`; relative Pfade, `state.open`, Block-Inhalt, UNC, Adressen fehlen; Dublette einmal. Migration auf einer leeren Datenbank: `user_version` 22, `links_scanned` 0, `cli_scratchpad_dir` NULL; zweimal derselben Pfad hebt nur `last_seen_at`. `pnpm check` komplett grün.
 
-**Offen 🟡:** `pnpm lint` ist rot, aber nicht durch diese Phase: ESLint scheitert an `docs/planning/2026-11-25_bibliothek-bearbeiten/artifacts/_entwurf-bibliothek-bearbeiten/daten.js` (Commit `d8a1d15` aus dem Plan „Bibliothek“; die Ignorierliste in `eslint.config.js` kennt nur `*.cjs`). Mein Code lint-frei (einziger Fund der Datei). Nicht angefasst, da Ignorierliste ein Gate ist.
+**Lint-Gate:** `pnpm lint` war vor dieser Phase schon rot: ESLint scheiterte an `docs/planning/2026-11-25_bibliothek-bearbeiten/artifacts/_entwurf-bibliothek-bearbeiten/daten.js` (Commit `d8a1d15`; die Ignorierliste kannte nur `*.cjs`). Auf dein Go erweitert zu `docs/**/artifacts/**/*.{cjs,js}` in `eslint.config.js`, eigener Commit; kein Fund im Code dieser Phase.
 
 **Nicht belegt:** die zwei Registry-Zweige (`Text`, `ScratchpadDir`) in einer laufenden App; geprüft nur über Übersetzung und Clippy, nicht über einen echten Agenten-Lauf.
