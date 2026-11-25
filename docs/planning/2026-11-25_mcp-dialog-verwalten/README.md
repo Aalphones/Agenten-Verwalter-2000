@@ -73,7 +73,7 @@ Commands (`src-tauri/src/commands/mcp.rs`), alle mit `session_id`:
 | `mcp_config_load(sessionId)` | `McpConfigView` | 1 |
 | `mcp_config_save(sessionId, draft)` | `()`; Fehler `CommandError::Invalid` mit Satz | 2 |
 | `mcp_config_remove(sessionId, sourceId, name)` | `()` | 2 |
-| `mcp_toggle(sessionId, server, enabled, everywhere)` | wie heute; ohne Agent schreibt der Core die Datei und gibt `true` zurück. `everywhere: true` beim Ausschalten nimmt den Namen in die Liste „überall aus“; jedes Einschalten nimmt ihn heraus | 2 |
+| `mcp_toggle(sessionId, server, enabled, everywhere)` | wie heute; ohne Agent schreibt der Core die Datei und gibt `true` zurück. `everywhere: true` beim Ausschalten nimmt den Namen in die Liste „überall aus“; Einschalten und „hier aus“ (`enabled: false, everywhere: false`) nehmen ihn heraus | 2 |
 | `mcp_probe(sessionId, draft)` | `McpProbeResult` | 3 |
 | `mcp_inspect(sessionId, sourceId, name)` | `McpProbeResult` | 3 |
 
@@ -89,7 +89,7 @@ Jede Schreib-Aktion sendet danach `mcp://changed` für **alle** Sessions (Benutz
 6. Nach einer Änderung bei laufendem Agenten steht „Änderung wirkt ab der nächsten Nachricht“; die nächste Nachricht an den ruhenden Agenten startet ihn neu mit Verlauf, ein arbeitender Agent wird nicht unterbrochen.
 7. „Verbindung testen“ und „Werkzeuge & Anweisungen ansehen“ funktionieren ohne Agent und zeigen Werkzeugnamen mit Beschreibung sowie die Server-Anweisungen oder einen Fehlersatz.
 8. Kein Header- oder Umgebungswert (außer reinen `${VARIABLE}`-Verweisen) erreicht die Oberfläche, das Protokoll oder eine Fehlermeldung.
-9. Ausschalten fragt „Nur in diesem Vorhaben“ / „Überall“. „Überall“ bleibt im Verwalter gespeichert und gilt auch in Vorhaben, die danach entstehen, bis der Server irgendwo wieder eingeschaltet wird; dann ist er in allen Vorhaben des Verwalters wieder an.
+9. Jeder Server hat einen dreistufigen Schalter: an · aus in diesem Vorhaben · überall aus. „Überall“ bleibt im Verwalter gespeichert und gilt auch in Vorhaben, die danach entstehen, bis der Server irgendwo wieder eingeschaltet wird; dann ist er in allen Vorhaben des Verwalters wieder an.
 10. Handy-Breite (390 px): Dialog als Blatt von unten, alle Aktionen erreichbar, keine waagerechte Bildlaufleiste.
 
 ## Von mir gesetzt
