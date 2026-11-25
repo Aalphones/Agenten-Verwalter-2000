@@ -1,6 +1,7 @@
 //! Schreibende Git-Befehle der Changes einer Session (ADR 025): Commit, Push, Pull, Fetch, Branch
 //! wechseln, anlegen und löschen, Verwerfen, Stash, Merge, Rebase, Ticket-Worktree. Ob die Sperre
 //! greift, prüft der Command davor.
+use std::io;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
@@ -250,8 +251,7 @@ pub fn create_ticket_worktree(main_dir: &Path, name: &str) -> Result<String, Com
     Ok(folder)
 }
 
-/// `code <dir>`; unter Windows über `cmd`, weil `code` dort ein `.cmd`-Skript ist, das ein direkter
-/// Start nicht findet.
+/// `code <dir>`.
 pub fn open_in_vs_code(dir: &Path) -> Result<(), CommandError> {
     let mut command = code_command();
     command.arg(dir);
@@ -274,11 +274,12 @@ pub fn open_file_in_vs_code(file: &Path, line: Option<u32>) -> Result<(), Comman
     run_code(command)
 }
 
+/// Unter Windows ist `code` ein `.cmd`-Skript, das ein direkter Start nur mit Endung findet — und
+/// nur dann maskiert Rust die Argumente für `cmd`. Über `cmd /C code` führte `cmd` bei einem
+/// Dateinamen mit `&` den Rest des Namens als Befehl aus; die Namen kommen auch vom Agenten.
 fn code_command() -> Command {
     if cfg!(windows) {
-        let mut through_cmd = Command::new("cmd");
-        through_cmd.args(["/C", "code"]);
-        through_cmd
+        Command::new("code.cmd")
     } else {
         Command::new("code")
     }
@@ -287,8 +288,12 @@ fn code_command() -> Command {
 fn run_code(mut command: Command) -> Result<(), CommandError> {
     command.stdin(Stdio::null());
     hide_console(&mut command);
-    let output = command.output()?;
-    if output.status.success() {
+    let succeeded: bool = match command.output() {
+        Ok(output) => output.status.success(),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => false,
+        Err(error) => return Err(error.into()),
+    };
+    if succeeded {
         return Ok(());
     }
     Err(CommandError::Git(
