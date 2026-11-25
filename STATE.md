@@ -1,6 +1,7 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-11-25_mcp-dialog-verwalten/` (ADR 070, keine Migration) — MCP-Server im Dialog verwalten, 5 Phasen, alle pending; Umsetzung im Verwalter angelegt.
+**Freigegeben, geparkt:** `docs/planning/2026-11-25_bibliothek-bearbeiten/` (ADR 072 reserviert, keine Migration) — Bibliothek im Verwalter ansehen, bearbeiten, anlegen, löschen; Suchdialog entfällt; 6 Phasen, alle pending; Umsetzung im Verwalter angelegt.
 **Folgepläne nach der Bibliothek** (je eigener Plan, erst im Detail planen, wenn er dran ist). Reihenfolge, je eigener Plan, erst im Detail planen, wenn er dran ist — Grundlage samt Skizzen: `docs/konzept-vault.md`: Zusammenarbeit der Stationen (Nachrichten, Suche in früheren Sessions, Migration 022) → semantische Suche mit lokalem ONNX-Modell (Modell-Probe zuerst) → Wissenskandidaten aus Retros.
 **Nächster Schritt:** Phase 1 von MCP-Dialog verwalten (Core: Konfiguration lesen). Danach: nächster Folgeplan nach `docs/konzept-vault.md` (Zusammenarbeit der Stationen), erst im Detail planen, wenn er dran ist.
 **Zuletzt archiviert (Bibliothek):** `docs/archive/2026-11/2026-11-24_bibliothek/` (ADR 069, keine Migration), Release `v0.69.0` — alle 3 Phasen complete; Oberfläche (Einstellungen, Suchdialog mit Gruppen) nur per `pnpm check` belegt, nicht in der echten App gelaufen; Follow-ups in der README.
