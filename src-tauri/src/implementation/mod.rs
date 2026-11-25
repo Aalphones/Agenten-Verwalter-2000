@@ -204,7 +204,8 @@ pub fn plan_completion(
     }
     let (phase, station) = find_station(view, station_id)
         .ok_or_else(|| "Diese Station gehört nicht zur Umsetzung.".to_owned())?;
-    if station.state == StationState::Done {
+    // Nicht am Zustand prüfen: eine fertig gemeldete Station kann wieder aktiv sein.
+    if station.completed_at.is_some() {
         return Err("Diese Station ist schon fertig gemeldet.".to_owned());
     }
     if !fix_needed {
@@ -443,12 +444,13 @@ fn station_view(station: &StationRow, live: &HashMap<String, SessionLive>) -> St
         .session_id
         .as_ref()
         .and_then(|session_id: &String| live.get(session_id));
-    let state = if station.completed_at.is_some() {
-        StationState::Done
-    } else {
-        session.map_or(StationState::Pending, |session: &SessionLive| {
-            state_of(session)
-        })
+    let live_state = session.map(state_of);
+    // Fertig gemeldet bleibt fertig — außer die Session arbeitet wieder (Rückfrage, Nachbesserung):
+    // dann zählt der Live-Zustand, damit die Station als aktiv erscheint und in der Leiste auftaucht.
+    let state = match (station.completed_at, live_state) {
+        (Some(_), Some(live)) if is_active(live) => live,
+        (Some(_), _) => StationState::Done,
+        (None, live) => live.unwrap_or(StationState::Pending),
     };
     StationView {
         id: station.id.clone(),
@@ -489,6 +491,18 @@ fn state_of(session: &SessionLive) -> StationState {
         SessionStatus::Completed | SessionStatus::Paused => StationState::WaitsForYou,
         SessionStatus::Error | SessionStatus::Cancelled => StationState::Error,
     }
+}
+
+/// Die Session arbeitet gerade oder wartet auf etwas, das sie selbst angestoßen hat.
+fn is_active(state: StationState) -> bool {
+    matches!(
+        state,
+        StationState::Starting
+            | StationState::Running
+            | StationState::WaitsForScript
+            | StationState::WaitsForLimit
+            | StationState::Asking
+    )
 }
 
 /// Stationen ohne Session, die starten dürfen: eine Station des Benutzers wartet auf ihn, eine des
