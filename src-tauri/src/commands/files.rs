@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::changes::{
     self,
     model::{ChangesReach, FileDiff},
@@ -23,7 +21,7 @@ pub async fn files_tree(
     session_id: String,
     key: String,
 ) -> Result<RepoTree, CommandError> {
-    let dir = entry_dir(&registry, &session_id, &key)?;
+    let dir = files::entry_dir(&registry, &session_id, &key)?;
     files::tree::tree(&dir)
 }
 
@@ -35,7 +33,7 @@ pub async fn files_ignored_children(
     key: String,
     path: String,
 ) -> Result<Vec<DirEntry>, CommandError> {
-    let dir = entry_dir(&registry, &session_id, &key)?;
+    let dir = files::entry_dir(&registry, &session_id, &key)?;
     files::tree::ignored_children(&dir, &path)
 }
 
@@ -47,7 +45,7 @@ pub async fn files_read(
     key: String,
     path: String,
 ) -> Result<FileContent, CommandError> {
-    let dir = entry_dir(&registry, &session_id, &key)?;
+    let dir = files::entry_dir(&registry, &session_id, &key)?;
     files::read::read(&dir, &path)
 }
 
@@ -84,21 +82,7 @@ pub async fn files_open_in_editor(
     path: String,
     line: Option<u32>,
 ) -> Result<(), CommandError> {
-    let dir = entry_dir(&registry, &session_id, &key)?;
+    let dir = files::entry_dir(&registry, &session_id, &key)?;
     let file = files::checked_path(&dir, &path)?;
     git::actions::open_file_in_vs_code(&file, line)
-}
-
-/// Der Ordner des Eintrags `key` — nur einer, den `sources` für das Vorhaben selbst gebaut hat.
-fn entry_dir(
-    registry: &SessionRegistry,
-    session_id: &str,
-    key: &str,
-) -> Result<PathBuf, CommandError> {
-    let input = registry.changes_input(session_id, ChangesReach::Project)?;
-    let source = changes::sources::find(&input, key)?;
-    if let Some(error) = source.error {
-        return Err(CommandError::Git(error));
-    }
-    Ok(source.dir)
 }

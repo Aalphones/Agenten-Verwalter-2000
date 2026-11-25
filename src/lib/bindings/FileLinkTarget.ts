@@ -3,4 +3,4 @@
 /**
  * Wohin ein Klick auf einen Dateilink führt (ADR 067).
  */
-export type FileLinkTarget = { "kind": "view", key: string, path: string, line: number | null, } | { "kind": "external" } | { "kind": "name", name: string, };
+export type FileLinkTarget = { "kind": "view", key: string, path: string, line: number | null, } | { "kind": "external" } | { "kind": "name", name: string, } | { "kind": "sessionFile", path: string, line: number | null, } | { "kind": "artifact", file: string, };

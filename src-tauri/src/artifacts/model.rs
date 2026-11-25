@@ -79,6 +79,10 @@ pub struct Artifact {
     pub entries: Option<u32>,
     /// Html, Site oder ein Typ mit Betrachter; sonst zeigt die Oberfläche die Rest-Karte.
     pub viewable: bool,
+    /// „Mit Standardprogramm öffnen“ ist gesperrt (ADR 071); bei einer Website zählt ihre
+    /// `index.html`, ein Ordner geht in den Explorer.
+    #[serde(default)]
+    pub executable: bool,
     /// Letzte Änderung, ms seit 1970.
     pub modified_at: f64,
     /// Session des Vorhabens, die das Artefakt angelegt hat (Tabelle `session_files`, kleinste erste

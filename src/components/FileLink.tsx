@@ -12,18 +12,20 @@ interface FileLinkProps {
   children: ReactNode;
 }
 
-/** Dateiverweis im Chat: Quelltext und Dokumente öffnen in „Dateien“, HTML und PDF im Standardprogramm. Wohin
- *  der Link führt und ob er im Vorhaben liegt, entscheidet erst der Core beim Klick. */
+/** Dateiverweis im Chat: Dateien eines Repositorys öffnen in „Dateien“, HTML des Vorhabens im
+ *  Standardprogramm. Wohin der Link führt und ob die Datei geöffnet werden darf, entscheidet erst der Core beim
+ *  Klick. */
 export function FileLink({ sessionId, path, children }: FileLinkProps): ReactElement {
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
 
   async function follow(): Promise<void> {
     const target: FileLinkTarget = await resolveFileLink(sessionId, path);
-    if (target.kind === 'external') {
-      await openFileLink(sessionId, path);
-    } else {
+    // Session-Dateien und Artefakte haben noch keine eigene Ansicht und gehen ans Standardprogramm.
+    if (target.kind === 'view' || target.kind === 'name') {
       openFromLink(sessionId, target);
+    } else {
+      await openFileLink(sessionId, path);
     }
   }
 

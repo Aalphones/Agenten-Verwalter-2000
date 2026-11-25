@@ -23,6 +23,11 @@ entries: number | null,
  */
 viewable: boolean, 
 /**
+ * „Mit Standardprogramm öffnen“ ist gesperrt (ADR 071); bei einer Website zählt ihre
+ * `index.html`, ein Ordner geht in den Explorer.
+ */
+executable: boolean, 
+/**
  * Letzte Änderung, ms seit 1970.
  */
 modifiedAt: number, 

@@ -18,6 +18,7 @@ use model::{Artifact, ArtifactKind, ArtifactOwner};
 
 use crate::changes::attribution::{NORMALIZED_SEPARATOR, normalize_path};
 use crate::error::CommandError;
+use crate::file_links;
 
 pub const DIR_NAME: &str = ".artefakte";
 
@@ -308,6 +309,7 @@ fn file_item(path: &Path, file: String, entry: &fs::DirEntry) -> Artifact {
             .map_or(0.0, |metadata: &fs::Metadata| metadata.len() as f64),
         entries: None,
         viewable: is_viewable(kind),
+        executable: file_links::is_executable(path),
         modified_at: metadata.as_ref().map_or(0.0, modified_ms),
         file,
         session_id: None,
@@ -334,6 +336,7 @@ fn folder_item(path: &Path, file: String) -> Artifact {
         size: stats.size,
         entries: Some(stats.entries),
         viewable: is_viewable(kind),
+        executable: kind == ArtifactKind::Site && file_links::is_executable(&index),
         modified_at: stats.modified_at,
         file,
         session_id: None,

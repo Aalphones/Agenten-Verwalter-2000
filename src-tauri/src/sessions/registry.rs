@@ -50,8 +50,8 @@ use crate::db::projects::{self as project_rows, ProjectRow};
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::{
     Database, background as background_rows, chat_entries, repositories as repository_rows,
-    session_commits, session_files, session_links, session_repositories, session_ticket_worktrees,
-    tool_details as tool_detail_rows,
+    session_commits, session_files as session_file_rows, session_links, session_repositories,
+    session_ticket_worktrees, tool_details as tool_detail_rows,
 };
 use crate::error::CommandError;
 use crate::files::history::{HistoryInput, SessionRef};
@@ -97,6 +97,7 @@ mod overlaps;
 mod restore;
 mod retro;
 mod run_watch;
+mod session_files;
 mod side;
 mod skins;
 mod terminal;
@@ -1997,7 +1998,7 @@ impl SessionRegistry {
         let own = self.database.with(|connection| {
             Ok(Ownership {
                 commits: session_commits::load_for(connection, &ids)?,
-                touched: session_files::load_for(connection, &ids)?,
+                touched: session_file_rows::load_for(connection, &ids)?,
                 untracked_before: session_rows::untracked_before(connection, &ids)?,
             })
         })?;
@@ -4147,7 +4148,7 @@ fn persist(session: &Session, state: &mut SessionState, outbox: &mut Outbox) {
             )?;
         }
         if !outbox.touched_files.is_empty() {
-            session_files::upsert_all(connection, &session.id, &outbox.touched_files)?;
+            session_file_rows::upsert_all(connection, &session.id, &outbox.touched_files)?;
         }
         if !outbox.linked_files.is_empty() {
             session_links::upsert_all(connection, &session.id, &outbox.linked_files)?;

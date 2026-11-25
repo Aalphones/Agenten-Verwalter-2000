@@ -15,10 +15,15 @@ const INVALID_PATH: &str = "Ungültiger Pfad";
 const DIRECTORY_PREVIEW: &str = "Ordner haben keine Vorschau";
 const WORKSPACE_FOLDER: &str = ".scratchpad";
 
-/// Legt `<Workspace>\.scratchpad\<session-id>` an, falls er fehlt (ADR 022). Die Kommandozeile
-/// meldet im Betrieb mit `-p` keinen eigenen Ordner; die App gibt dem Agenten diesen vor.
+/// `<Workspace>\.scratchpad\<session-id>`, auch wenn es ihn nicht gibt.
+pub fn dir_of(workspace: &Path, session_id: &str) -> PathBuf {
+    workspace.join(WORKSPACE_FOLDER).join(session_id)
+}
+
+/// Legt `dir_of` an, falls er fehlt (ADR 022). Die Kommandozeile meldet im Betrieb mit `-p` keinen
+/// eigenen Ordner; die App gibt dem Agenten diesen vor.
 pub fn prepare(workspace: &Path, session_id: &str) -> io::Result<PathBuf> {
-    let dir = workspace.join(WORKSPACE_FOLDER).join(session_id);
+    let dir = dir_of(workspace, session_id);
     fs::create_dir_all(&dir)?;
     Ok(dir)
 }

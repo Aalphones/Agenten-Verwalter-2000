@@ -20,6 +20,7 @@ pub mod mcp;
 pub mod projects;
 pub mod repositories;
 pub mod retro;
+pub mod session_files;
 pub mod sessions;
 pub mod settings;
 pub mod side;

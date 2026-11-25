@@ -195,11 +195,7 @@ fn extension_of(cleaned: &str) -> Option<String> {
     Some(cleaned[last_dot + 1..].to_ascii_lowercase())
 }
 
-/// Absolut im Sinne des Betriebssystems; ein UNC-Pfad (`\\server\…`) zählt nicht, denn ihn zu lesen
-/// hieße, einen fremden Rechner anzufragen.
+/// Absolut im Sinne des Betriebssystems; ein Netzwerkpfad zählt nicht (`file_links::is_network_path`).
 fn is_absolute_path(cleaned: &str) -> bool {
-    if cfg!(windows) && cleaned.starts_with(r"\\") {
-        return false;
-    }
-    Path::new(cleaned).is_absolute()
+    !file_links::is_network_path(cleaned) && Path::new(cleaned).is_absolute()
 }

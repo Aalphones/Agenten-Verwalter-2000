@@ -8,8 +8,8 @@ use crate::error::CommandError;
 use crate::file_links::{self, FileLinkTarget};
 use crate::sessions::registry::SessionRegistry;
 
-/// Sagt, wohin ein Dateilink aus dem Chat führt (ADR 067): in „Dateien“, ins Standardprogramm oder
-/// zur Suche nach dem Namen. Öffnet selbst nichts.
+/// Sagt, wohin ein Dateilink aus dem Chat führt (ADR 067, 071): in „Dateien“, in „Artefakte“, ins
+/// Standardprogramm oder zur Suche nach dem Namen. Öffnet selbst nichts.
 #[tauri::command]
 pub async fn file_link_resolve(
     registry: tauri::State<'_, SessionRegistry>,
@@ -21,7 +21,17 @@ pub async fn file_link_resolve(
         .into_iter()
         .map(|source: sources::Source| (source.key, source.dir))
         .collect();
-    file_links::target(&path, &file_links::roots(&input), &entries)
+    let target = file_links::target(
+        &path,
+        &file_links::roots(&input),
+        &entries,
+        &registry.artifacts_dir(&session_id)?,
+    )?;
+    // Angeklickt heißt genannt: erst damit darf die App die Datei zeigen.
+    if let FileLinkTarget::SessionFile { path: file, .. } = &target {
+        registry.record_linked_file(&session_id, file)?;
+    }
+    Ok(target)
 }
 
 /// Öffnet einen Dateiverweis aus dem Chat mit dem Standardprogramm (ADR 023). Der Pfad kommt aus

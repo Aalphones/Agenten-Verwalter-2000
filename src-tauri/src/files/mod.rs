@@ -10,11 +10,26 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::changes;
+use crate::changes::{self, model::ChangesReach};
 use crate::error::CommandError;
 use crate::filesystem::native_path;
+use crate::sessions::registry::SessionRegistry;
 
 const OUTSIDE_REPOSITORY: &str = "Liegt außerhalb des Repositorys";
+
+/// Der Ordner des Eintrags `key` — nur einer, den `sources` für das Vorhaben selbst gebaut hat.
+pub(crate) fn entry_dir(
+    registry: &SessionRegistry,
+    session_id: &str,
+    key: &str,
+) -> Result<PathBuf, CommandError> {
+    let input = registry.changes_input(session_id, ChangesReach::Project)?;
+    let source = changes::sources::find(&input, key)?;
+    if let Some(error) = source.error {
+        return Err(CommandError::Git(error));
+    }
+    Ok(source.dir)
+}
 
 /// `path` aus der Oberfläche als Pfad in `dir` — nur, wenn er dort bleibt: kein `..`, kein absoluter
 /// Pfad, und nach dem Auflösen symbolischer Links noch in `dir`. Gibt es den Pfad nicht, kommt er

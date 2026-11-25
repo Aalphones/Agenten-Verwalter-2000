@@ -19,10 +19,11 @@ export function filesViewKeyOfSession(sessionId: string): string {
 }
 
 /** Merkt das Ziel eines Dateilinks und schaltet den Reiter „Dateien“ ein; `FilesView` öffnet es, sobald die
- *  Changes (und für einen Namen die Bäume aller Repositories) geladen sind. `external` öffnet der Aufrufer. */
+ *  Changes (und für einen Namen die Bäume aller Repositories) geladen sind. Alle anderen Ziele öffnet der
+ *  Aufrufer. */
 export function openFromLink(
   sessionId: string,
-  target: Exclude<FileLinkTarget, { kind: 'external' }>,
+  target: Extract<FileLinkTarget, { kind: 'view' | 'name' }>,
 ): void {
   let pending: PendingLink;
   if (target.kind === 'view') {

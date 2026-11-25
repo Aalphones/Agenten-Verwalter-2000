@@ -67,8 +67,9 @@ export const VIEWABLE_EXTENSIONS: readonly string[] = [
   'lock',
 ];
 
-/** Gespiegelt aus `file_links::EXTERNAL_EXTENSIONS`: öffnen immer im Standardprogramm. */
-const EXTERNAL_EXTENSIONS: readonly string[] = ['html', 'htm', 'pdf'];
+/** Gespiegelt aus `file_links::EXTERNAL_EXTENSIONS`: öffnen im Standardprogramm, wenn sie im Vorhaben
+ *  liegen. */
+const EXTERNAL_EXTENSIONS: readonly string[] = ['html', 'htm'];
 
 const FILE_URL_PREFIX = 'file:///';
 const MAX_PATH_LENGTH = 400;
@@ -116,7 +117,7 @@ export function filePathOf(text: string): string | null {
   return trimmed;
 }
 
-/** HTML und PDF öffnen im Standardprogramm, alles andere in „Dateien“. */
+/** Ob der Link als „öffnet im Standardprogramm“ gekennzeichnet wird; nur nach der Endung. */
 export function isExternalLink(path: string): boolean {
   const extension: string | null = extensionOf(path.trim());
   return extension !== null && EXTERNAL_EXTENSIONS.includes(extension);

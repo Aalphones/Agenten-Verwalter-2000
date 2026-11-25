@@ -5,6 +5,7 @@ use tauri_plugin_opener::OpenerExt;
 
 use crate::artifacts::{self, model::ArtifactList, server::ArtifactServer};
 use crate::error::CommandError;
+use crate::file_links;
 use crate::sessions::registry::SessionRegistry;
 
 const SERVER_MISSING: &str = "Der Server für Artefakte ist nicht gestartet";
@@ -31,9 +32,9 @@ pub async fn artifacts_list(
 }
 
 /// Öffnet ein Artefakt mit dem Standardprogramm, einen Ordner im Explorer, eine Website über ihre
-/// `index.html`. `file` kommt aus der
-/// Oberfläche: nur ein Name direkt im Ordner, und `artifacts::resolve_entry` prüft die Grenze,
-/// bevor etwas geöffnet wird.
+/// `index.html`. `file` kommt aus der Oberfläche: nur ein Name direkt im Ordner, und
+/// `artifacts::resolve_entry` prüft die Grenze, bevor etwas geöffnet wird. Ausführbare Dateien
+/// lehnt `file_links::program_target` ab (ADR 071).
 #[tauri::command]
 pub async fn artifact_open_default(
     app: tauri::AppHandle,
@@ -46,6 +47,11 @@ pub async fn artifact_open_default(
     let index_page = target.join(artifacts::INDEX_PAGE);
     let target = if index_page.is_file() {
         index_page
+    } else {
+        target
+    };
+    let target = if target.is_file() {
+        file_links::program_target(&target)?
     } else {
         target
     };

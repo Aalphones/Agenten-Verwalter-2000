@@ -230,6 +230,22 @@ pub fn set_cli_scratchpad(
     Ok(())
 }
 
+/// Der zuletzt gemeldete Scratchpad-Ordner der Kommandozeile; `None`, solange keiner gemeldet ist.
+pub fn load_cli_scratchpad(
+    connection: &Connection,
+    session_id: &str,
+) -> Result<Option<String>, CommandError> {
+    let dir: Option<String> = connection
+        .query_row(
+            "SELECT cli_scratchpad_dir FROM sessions WHERE id = ?1",
+            params![session_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten();
+    Ok(dir)
+}
+
 /// Alle nicht archivierten Sessions, neueste zuerst. `COALESCE` fängt eine Zeile ohne Vorhaben ab:
 /// die Session ist dann ihr eigenes Vorhaben, wie die Migration es für alle Altbestände festlegt.
 pub fn load_active(connection: &Connection) -> Result<Vec<SessionRow>, CommandError> {

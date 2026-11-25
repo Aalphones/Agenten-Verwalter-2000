@@ -55,6 +55,9 @@ use verwalter_lib::{
     retro::model::{RetroExport, RetroProgress},
     review::model::{CommentTarget, ReviewComment},
     runs::model::{ProgressUnit, RunProgress, RunStatus},
+    session_files::model::{
+        FileRef, SessionFile, SessionFileGroup, SessionFileOrigin, SessionFilesListing,
+    },
     sessions::model::{
         AwaitedScript, ChatEntryEvent, ChatPage, HandoffStartedEvent, SessionOverlap,
         SessionStatus, SessionSummary,
@@ -94,6 +97,11 @@ fn main() -> Result<(), ts_rs::ExportError> {
     DirEntry::export_all(&cfg)?;
     FileContent::export_all(&cfg)?;
     FileLinkTarget::export_all(&cfg)?;
+    SessionFileOrigin::export_all(&cfg)?;
+    SessionFile::export_all(&cfg)?;
+    SessionFileGroup::export_all(&cfg)?;
+    SessionFilesListing::export_all(&cfg)?;
+    FileRef::export_all(&cfg)?;
     HistoryFile::export_all(&cfg)?;
     HistoryCommit::export_all(&cfg)?;
     HistorySession::export_all(&cfg)?;
