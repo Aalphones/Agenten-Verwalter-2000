@@ -1,0 +1,45 @@
+# Phase 4 — Knoten „Session-Dateien“ und Sprünge aus dem Chat
+
+Rating: standard. Im Baum des Reiters „Dateien“ steht unter den Repositories der Knoten „Session-Dateien“ mit Gruppen je Session, Orten, Ordnern und Dateien. Ein Klick auf eine Session-Datei öffnet sie rechts (vorerst als Text über `session_file_read`; Betrachter und Knöpfe folgen in Phase 5). Dateilinks im Chat springen dorthin bzw. in den Reiter „Artefakte“. Aussehen: Entwurf, Bildschirm „Dateien“ und „Chat“.
+
+## Kontext (lesen)
+
+- [README.md](README.md) → Kontrakt (Typen, Befehle, Dateilink), „Von mir gesetzt“
+- [artifacts/entwurf-session-dateien.html](artifacts/entwurf-session-dateien.html) (verbindlich; Erläuterung und Adressen in [artifacts/README.md](artifacts/README.md))
+- `src/features/files/FilesView.tsx` — `renderTree`, `buildTreeRows`-Aufruf, `stamp`, Auflösen von `pendingLink`; `src/features/files/RepoTree.tsx` — `RepoTreeProps`, `estimateHeight`, `isExpandable`, `isOpenRow`, `isFocusable`, `renderRow`, Tastatur; `src/features/files/RepoTree.css`
+- `src/features/files/buildTreeRows.ts` — `TreeRow`, `RowOf`; `src/features/files/FileTypeIcon.tsx`
+- `src/stores/files.ts` — `OpenTarget`, `PendingLink`, `FilesSelection`, `update`
+- `src/features/files/openFromLink.ts` — `openFromLink`, `LinkOutcome`, `filesViewKeyOfSession`
+- `src/components/FileLink.tsx`, `src/lib/fileLinks.ts` (`isExternalLink`)
+- `src/stores/artifacts.ts` (`select`), `src/stores/sessions.ts` (`showView`, Vorhaben der Session), `src/app/App.tsx` (Reaktion auf `artifacts://show` als Vorbild für den Sprung)
+- `docs/conventions/react.md`, `docs/conventions/typescript.md`, `docs/conventions/tailwind.md`
+- Fehlerklassen geprüft (Vault `frameworks/react`, `sprachen/typescript`): keine einschlägig (die React-Einträge betreffen Tests).
+
+## AK
+
+1. Der Knoten steht unter dem letzten Repository-Knoten, Kopf wie ein Repository-Knoten: Titel „Session-Dateien“, Unterzeile „<n> Sessions · <m> Dateien“ (Zahlen mit Tausenderpunkt), beim Laden „werden gelesen …“. Ohne Gruppen fehlt der Knoten ganz.
+2. Je Gruppe eine aufklappbare Zeile: `#<Nr>` (Monospace, fett), Name, bei der eigenen Session „diese Session“ in Akzentfarbe, rechts die Zahl der Dateien als Zählerpille. Darunter je vorhandenem Ort eine Zeile „Scratchpad“, „Scratchpad Kommandozeile“, „Weitere Orte“ mit Zählerpille; der Titel (Tooltip) nennt den vollen Ordner.
+3. In den Scratchpad-Orten Ordner als aufklappbare Zeilen (Teile mit „ / “ getrennt) und Dateien darunter; in „Weitere Orte“ je Elternordner eine aufklappbare Zeile mit dem vollen Pfad in Monospace, links gekürzt (`direction: rtl`). Dateizeilen: Typ-Symbol (`FileTypeIcon`), Name, „verlinkt“ (nur `linked && !written` außerhalb der Scratchpads), „nicht mehr da“ (kursiv, gedämpft) bei `exists: false`.
+4. Vorgabe beim ersten Öffnen: Knoten offen, eigene Gruppe und ihre Orte offen, Ordner und fremde Gruppen zu. Klappzustand bleibt je Vorhaben wie bei den Repositories (Store).
+5. Der Session-Filter der Leiste zeigt nur die Gruppe dieser Session; „Blickwinkel“ und „Geändert/Alle Dateien“ ändern den Knoten nicht. Die Liste lädt neu, wenn die Changes neu geladen werden (`stamp`).
+6. `errors` einer Gruppe erscheinen als rote Notizzeile unter dem betroffenen Ort; `truncated` als Notiz „Nur die ersten 2.000 Einträge“.
+7. Klick auf eine Datei: Zeile ausgewählt (Akzentlinie links), rechts der Inhalt als Text (`session_file_read`) mit Kopf „← Übersicht“ und Pfadkette „Session-Dateien / #<Nr> / <Ort> / <Name>“. Tastatur wie im übrigen Baum (Pfeile, Enter, links/rechts klappen).
+8. Dateilink im Chat: `sessionFile` → Reiter „Dateien“, Gruppe/Ort/Ordner aufgeklappt, Datei ausgewählt und sichtbar gescrollt; steht sie (noch) nicht in der Liste, einmal neu laden; fehlt sie dann noch, Fehlerleiste „Datei nicht gefunden: <Pfad>“. `artifact` → Reiter „Artefakte“, das Artefakt ausgewählt. Der Titel eines Links bleibt „In Dateien öffnen: …“ (HTML: „Im Standardprogramm öffnen: …“).
+9. `pnpm check` grün.
+
+## Checkliste
+
+- [ ] `src/lib/sessionFiles.ts`: `listSessionFiles(sessionId)`, `readSessionFile(sessionId, path)` (Wrapper um `invoke`, JSDoc mit `@throws` wie `src/lib/files.ts`); Typen aus `src/lib/bindings/`.
+- [ ] `src/features/files/useSessionFiles.ts`: `useSessionFiles(sessionId: string, stamp: string): { listing: SessionFilesListing | null; error: string | null; isLoading: boolean; reload: () => Promise<SessionFilesListing | null> }` nach dem Muster von `useFileContent` (Abbruch per Flag, Fehlertext über `commandErrorText`).
+- [ ] `src/stores/files.ts`: `OpenTarget` bekommt `source: 'repo' | 'session'` (alle bestehenden Erzeuger setzen `'repo'`); für `'session'` gilt `group = 'session-files'`, `entryKey = ''`, `path` = absoluter Pfad, `view = 'file'`, `step = 'all'`. `PendingLink` bekommt `{ kind: 'session'; path: string; line: number | null }`. `FilesSelection` bekommt `sessionExpanded: readonly string[] | null` (`null` = Vorgabe nach AK 4); Schlüssel: `sf` (Knoten), `sf|<Session-ID>`, `sf|<Session-ID>|<Ort>`, `sf|<Session-ID>|<Ort>|<folder>`.
+- [ ] `src/features/files/buildSessionRows.ts`: `export type SessionRow = { kind: 'sfHead'; … } | { kind: 'sfGroup'; … } | { kind: 'sfPlace'; … } | { kind: 'sfFolder'; … } | { kind: 'sfFile'; … } | { kind: 'sfNote'; … } | { kind: 'sfError'; … }` (je mit `key`, `depth`, `open` wo aufklappbar, `file`/`group` wo nötig) und `buildSessionRows({ listing, isLoading, filter, expanded, ownSessionId }): SessionRow[]` nach AK 1–6. Ordner der Scratchpad-Orte als Baum aus `folder` (Teile an `/`), Dateien je Ordner nach Name; „Weitere Orte“ flach je Elternordner.
+- [ ] `src/features/files/buildTreeRows.ts`: `TreeRow` um `{ kind: 'session'; key: string; row: SessionRow }` erweitern.
+- [ ] `src/features/files/SessionFilesNode.tsx` (+ `SessionFilesNode.css`, BEM `session-files__…`): `export function SessionFilesRow({ row, selected, onToggle, onOpen }): ReactElement` rendert eine `SessionRow`. Kopf mit denselben Klassen wie der Repository-Knoten in `RepoTree.tsx` (`repo-tree__group`, `repo-tree__group-name`, `repo-tree__group-sub`), Zeilen mit `repo-tree__row` und Einrückung über dieselbe CSS-Variable wie die Ordnerzeilen; eigene Regeln nur für `#<Nr>`, „diese Session“, die Pfadzeile (Monospace, `direction: rtl; text-align: left`, `text-overflow: ellipsis`) und die Marken „verlinkt“/„nicht mehr da“. Farben nur über Tokens (`docs/conventions/tailwind.md`).
+- [ ] `RepoTree.tsx`: Props `onToggleSession: (key: string) => void`, `onOpenSessionFile: (file: SessionFile, group: SessionFileGroup) => void`; `estimateHeight` (Kopf `GROUP_HEIGHT`, Gruppe 28, Notiz/Fehler `NOTE_HEIGHT`, sonst `ROW_HEIGHT`), `isExpandable`, `isOpenRow`, `isFocusable` und `renderRow` (`case 'session'` → `SessionFilesRow`) für die neuen Zeilen; Auswahl einer Session-Datei über `selected`: `SelectedPath` bekommt `source: 'repo' | 'session'` (bestehende Erzeuger `'repo'`); eine `sfFile`-Zeile ist ausgewählt, wenn `selected.source === 'session'` und `selected.path === row.file.path`.
+- [ ] `FilesView.tsx`: `useSessionFiles(dataSessionId, stamp)`; Zeilen `[...treeRows, ...buildSessionRows(...).map((row) => ({ kind: 'session', key: row.key, row }))]`; Klappen schreibt `sessionExpanded`; Öffnen setzt `open` mit `source: 'session'`; die Detailseite zeigt für `source === 'session'` vorerst `FileViewer` im Textmodus über `readSessionFile` (Phase 5 baut sie aus) — dazu in `FileViewer.tsx`/`useFileContent.ts` einen Zweig `source === 'session'`, der `readSessionFile(sessionId, path)` statt `readFile` ruft und Schritte/Varianten/„Änderung“ ausblendet.
+- [ ] `pendingLink` `{ kind: 'session' }` in `FilesView.tsx` auflösen nach AK 8: warten, bis `listing` da ist; Datei über Vergleich der Pfade (unter Windows ohne Groß-/Kleinschreibung, `/` = `\`) in den Gruppen suchen, bevorzugt in der Gruppe der klickenden Session; Schlüssel aufklappen, `open` setzen, `pendingLink` leeren; nicht gefunden → einmal `reload()`, dann Fehler über `useSessionErrorsStore.report`.
+- [ ] `openFromLink.ts`: `target.kind === 'sessionFile'` → `pendingLink = { kind: 'session', path: target.path, line: target.line }`; `target.kind === 'artifact'` → `useArtifactsStore.getState().select(<Vorhaben der Session>, target.file)` und `useSessionsStore.getState().showView('artifacts')` (Vorhaben-ID aus dem Sessions-Store wie in `App.tsx`). `FileLink.tsx`: den vorläufigen Zweig aus Phase 2 entfernen, alle Ziele außer `external` gehen an `openFromLink`.
+- [ ] Ansehen in `pnpm tauri dev` gegen den Entwurf: Knoten, Gruppen, Orte, „Weitere Orte“, Auswahl, Sprung aus dem Chat bei 1366 px und bei schmalem Fenster (Baum, dann Detail) — Abweichungen im Report-Back.
+- [ ] Doku: `docs/code-map.md` Zeile „Session-Dateien“ Oberfläche (`SessionFilesNode`, `buildSessionRows`, `useSessionFiles`, `src/lib/sessionFiles.ts`); Zeile „Dateiverweise im Chat“: Sprünge `sessionFile`/`artifact`; `docs/glossary.md`: „Session-Datei“, „Ort (Scratchpad, Scratchpad Kommandozeile, Weitere Orte)“, „verlinkt“.
+
+## Report-Back
