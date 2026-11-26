@@ -8,8 +8,8 @@ const ELEMENT_NODE = 1;
   let loaded;
   try {
     loaded = await fetchText();
-  } catch {
-    viewer.showNote('Die Datei lässt sich nicht laden.');
+  } catch (error) {
+    showLoadError(error, 'Die Datei lässt sich nicht laden.');
     return;
   }
 

@@ -1,7 +1,7 @@
 # STATE
 
 **Aktiver Plan:** `docs/planning/2026-11-25_mcp-dialog-verwalten/` (ADR 070, keine Migration) — MCP-Server im Dialog verwalten, 5 Phasen, alle pending; Umsetzung im Verwalter angelegt.
-**Aktiver Plan (Session-Dateien, parallel):** `docs/planning/2026-11-25_session-dateien/` (ADR 071, Migration 22) — Phase 2/5 complete (Erfassung; Liste, Lesen, Grenze, neue Klickziele, Sperre ausführbarer Dateien); nächster Schritt Phase 3 (Kern: Betrachter-Adresse für einzelne Dateien).
+**Aktiver Plan (Session-Dateien, parallel):** `docs/planning/2026-11-25_session-dateien/` (ADR 071, Migration 22) — Phase 3/5 complete (Erfassung; Liste, Lesen, Grenze, neue Klickziele, Sperre ausführbarer Dateien; Betrachter-Adresse mit `Range`); nächster Schritt Phase 4 (Knoten „Session-Dateien“ und Sprünge aus dem Chat).
 **Freigegeben, geparkt:** `docs/planning/2026-11-25_bibliothek-bearbeiten/` (ADR 072 reserviert, keine Migration) — Bibliothek im Verwalter ansehen, bearbeiten, anlegen, löschen; Suchdialog entfällt; 6 Phasen, alle pending; Umsetzung im Verwalter angelegt.
 **Folgepläne nach der Bibliothek** (je eigener Plan, erst im Detail planen, wenn er dran ist). Reihenfolge, je eigener Plan, erst im Detail planen, wenn er dran ist — Grundlage samt Skizzen: `docs/konzept-vault.md`: Zusammenarbeit der Stationen (Nachrichten, Suche in früheren Sessions, Migration 022) → semantische Suche mit lokalem ONNX-Modell (Modell-Probe zuerst) → Wissenskandidaten aus Retros.
 **Nächster Schritt:** Phase 1 von MCP-Dialog verwalten (Core: Konfiguration lesen). Danach: nächster Folgeplan nach `docs/konzept-vault.md` (Zusammenarbeit der Stationen), erst im Detail planen, wenn er dran ist.

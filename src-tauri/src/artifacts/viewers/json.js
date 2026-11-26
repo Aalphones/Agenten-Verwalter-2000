@@ -7,8 +7,8 @@ const VALUE_COLUMN = Symbol('value');
   let loaded;
   try {
     loaded = await fetchText();
-  } catch {
-    viewer.showNote('Die Datei lässt sich nicht laden.');
+  } catch (error) {
+    showLoadError(error, 'Die Datei lässt sich nicht laden.');
     return;
   }
   if (viewer.kind === 'json-lines') {

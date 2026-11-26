@@ -3,12 +3,14 @@ use std::path::PathBuf;
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
-use crate::artifacts::{self, model::ArtifactList, server::ArtifactServer};
+use crate::artifacts::{
+    self,
+    model::ArtifactList,
+    server::{ArtifactServer, SERVER_MISSING},
+};
 use crate::error::CommandError;
 use crate::file_links;
 use crate::sessions::registry::SessionRegistry;
-
-const SERVER_MISSING: &str = "Der Server für Artefakte ist nicht gestartet";
 
 /// Die Artefakte des Vorhabens, zu dem die Session gehört (ADR 026). `async`, damit Ordner und
 /// Datenbank nicht auf dem Haupt-Thread gelesen werden.

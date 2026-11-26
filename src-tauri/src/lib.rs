@@ -60,6 +60,7 @@ use db::Database;
 use environment::EnvironmentService;
 use filesystem::workspace::data_dir;
 use keep_awake::KeepAwake;
+use session_files::handles::ViewHandles;
 use sessions::registry::SessionRegistry;
 use terminal::TerminalService;
 use usage::UsageService;
@@ -118,7 +119,9 @@ pub fn run() {
             app.manage(TerminalService::new());
             app.manage(KeepAwake::start(app.handle()));
             SessionRegistry::start_reaper(app.handle().clone());
-            // Ohne Server fehlen nur die Artefakte; `artifacts_list` meldet das.
+            app.manage(ViewHandles::default());
+            // Ohne Server fehlen nur Artefakte und Betrachter; `artifacts_list` und `file_view_url`
+            // melden das.
             match artifacts::server::start(app.handle().clone()) {
                 Ok(server) => {
                     app.manage(server);
@@ -219,6 +222,7 @@ pub fn run() {
             commands::files::files_open_in_editor,
             commands::session_files::session_files_list,
             commands::session_files::session_file_read,
+            commands::session_files::file_view_url,
             commands::session_files::file_reveal,
             commands::session_files::file_open_default,
             commands::session_files::file_open_in_editor,

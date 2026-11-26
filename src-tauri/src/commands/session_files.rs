@@ -1,13 +1,17 @@
+use std::fs;
 use std::path::PathBuf;
 
+use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
+use crate::artifacts::server::{ArtifactServer, SERVER_MISSING};
 use crate::error::CommandError;
 use crate::file_links;
 use crate::files::model::FileContent;
 use crate::git;
 use crate::session_files::{
     access,
+    handles::ViewHandles,
     model::{FileRef, SessionFilesListing},
     scan,
 };
@@ -33,6 +37,29 @@ pub async fn session_file_read(
     path: String,
 ) -> Result<FileContent, CommandError> {
     access::read(&registry.session_files_input(&session_id)?, &path)
+}
+
+/// Die Adresse der Betrachter-Seite einer geprüften Datei; ohne `?view=1` liefert der Server
+/// darunter die Datei selbst.
+#[tauri::command]
+pub async fn file_view_url(
+    app: tauri::AppHandle,
+    registry: tauri::State<'_, SessionRegistry>,
+    handles: tauri::State<'_, ViewHandles>,
+    session_id: String,
+    file: FileRef,
+) -> Result<String, CommandError> {
+    let server = app
+        .try_state::<ArtifactServer>()
+        .ok_or_else(|| CommandError::Io(SERVER_MISSING.to_owned()))?;
+    // Der Handle hält den echten Ort, auch bei einem Eintrag mit Verknüpfung: der Server liefert
+    // nur, solange dort noch dieselbe Datei liegt.
+    let real: PathBuf = fs::canonicalize(access::resolve_ref(&registry, &session_id, &file)?)?;
+    let Some(name) = real.file_name() else {
+        return Err(CommandError::FileNotFound(real.display().to_string()));
+    };
+    let name: String = name.to_string_lossy().into_owned();
+    Ok(server.file_url(&handles.issue(real), &name))
 }
 
 /// Zeigt eine Datei im Explorer, markiert in ihrem Ordner.

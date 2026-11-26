@@ -25,11 +25,10 @@
 
   let blob;
   try {
-    const response = await fetch(viewer.url());
-    if (!response.ok) throw new Error(String(response.status));
+    const response = await fetchFile();
     blob = await response.blob();
-  } catch {
-    viewer.showNote('Das Bild lässt sich nicht laden.');
+  } catch (error) {
+    showLoadError(error, 'Das Bild lässt sich nicht laden.');
     return;
   }
 

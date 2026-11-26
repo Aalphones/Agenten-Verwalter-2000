@@ -8,7 +8,7 @@ Ziel: Im Reiter „Dateien“ steht unter den Repositories ein Knoten „Session
 |---|---|---|---|---|
 | 1 | Kern: Verweise im Chat erfassen, Scratchpad der Kommandozeile merken | [phase-1-kern-erfassen.md](phase-1-kern-erfassen.md) | standard | complete |
 | 2 | Kern: Liste der Session-Dateien, Lesen, Grenze, Dateilink-Ziele, Sperre | [phase-2-kern-liste.md](phase-2-kern-liste.md) | heikel | complete |
-| 3 | Kern: Betrachter-Adresse für einzelne Dateien | [phase-3-kern-betrachter.md](phase-3-kern-betrachter.md) | heikel | pending |
+| 3 | Kern: Betrachter-Adresse für einzelne Dateien | [phase-3-kern-betrachter.md](phase-3-kern-betrachter.md) | heikel | complete |
 | 4 | Knoten „Session-Dateien“ und Sprünge aus dem Chat | [phase-4-knoten-links.md](phase-4-knoten-links.md) | standard | pending |
 | 5 | Datei-Ansicht: Betrachter, vier Knöpfe, Sperre in „Artefakte“, Doku | [phase-5-datei-ansicht.md](phase-5-datei-ansicht.md) | standard | pending |
 
@@ -130,7 +130,7 @@ Vorab: ein Netzwerkpfad (Windows, `\\…`) → `fileNotAllowed` „Netzwerkpfade
 
 ### Betrachter-Adresse
 
-`http://127.0.0.1:<port>/<token>/~datei/<handle>/<Dateiname>`: `<handle>` ist eine zufällige UUID (simple), die `file_view_url` für einen geprüften absoluten Pfad ausgibt und im Speicher hält (höchstens 512, älteste fliegt). Ohne `?view=1` liefert der Server die Datei, mit `?view=1` die Betrachter-Seite (`viewers::render(kind_of(path), name)`). `<Dateiname>` muss dem Namen der Datei hinter dem Handle gleichen, sonst 404. CSP-Bereich dieser Antworten: `<origin>/<token>/~datei/<handle>/` — eine Artefakt-Seite (Bereich `<origin>/<token>/<session>/`) erreicht ihn nicht.
+`http://127.0.0.1:<port>/<token>/~datei/<handle>/<Dateiname>`: `<handle>` ist eine zufällige UUID (simple), die `file_view_url` für einen geprüften absoluten Pfad ausgibt und im Speicher hält (höchstens 512, älteste fliegt). Ohne `?view=1` liefert der Server die Datei, mit `?view=1` die Betrachter-Seite (`viewers::render(kind_of(path), name)`). `<Dateiname>` muss dem Namen der Datei hinter dem Handle gleichen, sonst 404. CSP-Bereich dieser Antworten: `<origin>/<token>/~datei/<handle>/` — eine Artefakt-Seite (Bereich `<origin>/<token>/<session>/`) erreicht ihn nicht direkt; nach einer Weiterleitung gilt der Pfad der CSP nicht, dann schützt allein der unbekannte Handle. Der Handle hält den kanonischen Pfad; ausgeliefert wird nur, solange dort noch dieselbe Datei liegt. Alle Antworten hinter dem richtigen Token, auch Fehler, tragen `Access-Control-Allow-Origin: *`, damit die Betrachter den Status lesen. Auch `file_view_url` für einen Typ ohne Betrachter liefert die Adresse mit `?view=1`; darunter antwortet der Server mit 404.
 
 ## Finale AK
 
@@ -157,7 +157,7 @@ Vorab: ein Netzwerkpfad (Windows, `\\…`) → `fileNotAllowed` „Netzwerkpfade
 
 - 🟡 Die Ansichts-Grenze fällt: jede im Chat genannte Datei ist per Klick lesbar (bewusst entschieden, ADR 071). Ausführen bleibt gesperrt; die Betrachter-Adresse ist nur über einen Handle erreichbar.
 - Geklärt in Phase 2: `fs::canonicalize` liefert unter Windows die echte Schreibweise (`Ördner Ähnlich\Groß.TXT` aus einem klein gespeicherten Pfad, `session-files-probe`).
-- 🟡 Der Artefakt-Server beantwortet heute keine `Range`-Anfragen; `<video>` spult damit in WebView2 meist nicht. Phase 3 baut `206 Partial Content` für Rohdateien ein (auch für Artefakte). Check: `curl -D - -H "Range: bytes=0-99"` gegen eine `~datei`-Adresse → 206; danach in Phase 5 ein 20-MB-Video im Betrachter ans Ende spulen.
+- 🟡 Spulen im Video ist in WebView2 noch nicht gesehen. Seit Phase 3 beantwortet der Artefakt-Server `Range` mit `206` (per `curl` an einer `~datei`-Adresse belegt) und liest dafür je Anfrage die ganze Datei. Check in Phase 5: ein 20-MB-Video im Betrachter ans Ende spulen.
 - 🟡 Große Scratchpads (1.401 Dateien) lesen bei jedem Laden der Liste den Ordner. `scratchpad::list` deckelt bei 2.000 Einträgen und 6 Ebenen; der Knoten zeigt dann „gekürzt“.
 - Fehlerklassen geprüft (Vault `sprachen/typescript`, `frameworks/react`, `systeme/sqlite`): einschlägig nur „`fetch` wirft nicht bei HTTP-Fehlerstatus“ → Phase 3, Prüfpunkt in den Betrachter-Skripten. Rust und Tauri haben keinen Vault-Eintrag.
 

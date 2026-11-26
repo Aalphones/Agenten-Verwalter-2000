@@ -1,8 +1,9 @@
 //! Session-Dateien (ADR 071): die Dateien einer Session außerhalb der Repositories — in ihren
 //! Scratchpads, von ihr geschrieben oder im Chat verlinkt. Hier entsteht die Eingabe aus Datenbank
 //! und Ordnern (von der Registry und vom Prüfprogramm), die Liste baut `scan`, die Grenze zum
-//! Ansehen und Öffnen zieht `access`.
+//! Ansehen und Öffnen zieht `access`; die Kennungen der Betrachter-Adresse hält `handles`.
 pub mod access;
+pub mod handles;
 pub mod links;
 pub mod model;
 pub mod scan;

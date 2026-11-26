@@ -8,8 +8,8 @@ const ENV_ASSIGNMENT = /^(\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_.-]*\s*=)(.*)$/;
   let loaded;
   try {
     loaded = await fetchText();
-  } catch {
-    viewer.showNote('Die Datei lässt sich nicht laden.');
+  } catch (error) {
+    showLoadError(error, 'Die Datei lässt sich nicht laden.');
     return;
   }
 

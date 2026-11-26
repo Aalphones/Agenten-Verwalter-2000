@@ -9,8 +9,8 @@
   let loaded;
   try {
     loaded = await fetchText();
-  } catch {
-    viewer.showNote('Die Datei lässt sich nicht laden.');
+  } catch (error) {
+    showLoadError(error, 'Die Datei lässt sich nicht laden.');
     return;
   }
   viewer.setMeta(`${viewer.formatSize(new Blob([loaded.text]).size)} · ${loaded.text.split(/\r?\n/).length} Zeilen`);

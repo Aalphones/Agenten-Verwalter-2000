@@ -19,7 +19,7 @@ Agenten verlinken im Chat Dateien, die in keinem Repository liegen: im Scratchpa
 - **Verweise** (absolute Pfade aus Inline-Code und Markdown-Link-Zielen, Erkennung wie `filePathOf`) landen beim Eintreffen der Antwort in `session_links` (Migration 22); Sessions von vorher werden beim ersten Laden der Liste nachgelesen. Der Scratchpad der Kommandozeile steht in `sessions.cli_scratchpad_dir`.
 - **Ansehen hat keine Ortsgrenze mehr** für Dateien, die eine Session des Vorhabens geschrieben, im Scratchpad liegen hat oder verlinkt hat; ein Dateilink trägt die Datei beim Klick als verlinkt ein. Was nur irgendwo existiert, aber nie genannt wurde, bleibt unerreichbar.
 - Dateilinks: `.artefakte` → Reiter „Artefakte“; HTML im Vorhaben → Standardprogramm; Repository → `View`; sonst → `SessionFile`. PDF öffnet in der App.
-- **Betrachter-Adresse** `/<token>/~datei/<handle>/<name>`: zufälliger Handle je geprüfter Datei, eigener CSP-Bereich, für Artefakt-Seiten nicht erreichbar. Rohdateien beantworten `Range`.
+- **Betrachter-Adresse** `/<token>/~datei/<handle>/<name>`: zufälliger Handle je geprüfter Datei, eigener CSP-Bereich; für Artefakt-Seiten nicht erreichbar, weil sie den Handle nicht kennen (die CSP sperrt nur den direkten Abruf, nach einer Weiterleitung gilt ihr Pfad nicht). Rohdateien beantworten `Range`.
 - **„Mit Standardprogramm öffnen“** ist für Typen aus `file_links::EXECUTABLE_EXTENSIONS` (und unter Unix für Dateien mit Ausführungsbit) gesperrt, in Oberfläche und Kern, auch für Artefakte.
 
 Löst ab: in ADR 023 die Sicherheitsgrenze „nur im Vorhaben“ für das Ansehen (für `file_link_open` bleibt sie); in ADR 067 „Dateilinks … HTML und PDF weiter ins Standardprogramm“ für PDF und die Bildvorschau per `data:`-Adresse mit 2-MB-Grenze.

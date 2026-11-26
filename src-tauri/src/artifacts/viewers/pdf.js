@@ -40,15 +40,15 @@
   let pdf;
   let byteCount = 0;
   try {
-    const response = await fetch(viewer.url());
-    if (!response.ok) throw new Error(String(response.status));
+    const response = await fetchFile();
     const bytes = new Uint8Array(await response.arrayBuffer());
     byteCount = bytes.length;
     // Kein Worker: in der Sandbox mit der CSP des Servers startet ein Worker nicht und meldet auch
     // keinen Fehler, `getDocument` bliebe hängen. Mit geladenem `pdfjsWorker` rechnet pdf.js im Hauptthread.
     pdf = await pdfjs.getDocument({ data: bytes }).promise;
   } catch (error) {
-    viewer.showNote(
+    showLoadError(
+      error,
       error?.name === 'PasswordException' ? 'Das PDF ist passwortgeschützt.' : 'Das PDF lässt sich nicht lesen.',
     );
     return;

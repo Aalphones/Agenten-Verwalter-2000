@@ -102,13 +102,31 @@ function capText(text, limit = MAX_TEXT_BYTES) {
   return { text: text.slice(0, cut > 0 ? cut : limit), truncated: true };
 }
 
+/** Der Server hat statt der Datei einen Fehlerstatus geschickt; die Meldung ist der Satz dazu. */
+class FileStatusError extends Error {
+  constructor(status) {
+    super(`Datei nicht lesbar (${status})`);
+  }
+}
+
+/** Die Antwort mit der Datei dieser Seite. Prüft den Status selbst: `fetch` wirft bei 404 nicht. */
+async function fetchFile() {
+  const response = await fetch(viewer.url());
+  if (!response.ok) throw new FileStatusError(response.status);
+  return response;
+}
+
+/** Fehleranzeige beim Laden: bei einem Fehlerstatus dessen Satz, sonst `fallback`. */
+function showLoadError(error, fallback) {
+  viewer.showNote(error instanceof FileStatusError ? error.message : fallback);
+}
+
 /**
  * Holt die Datei als Text, höchstens `MAX_TEXT_BYTES`: der Rest wird gar nicht erst übertragen.
  * Wirft, wenn der Server die Datei nicht liefert.
  */
 async function fetchText() {
-  const response = await fetch(viewer.url());
-  if (!response.ok) throw new Error(String(response.status));
+  const response = await fetchFile();
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let text = '';
