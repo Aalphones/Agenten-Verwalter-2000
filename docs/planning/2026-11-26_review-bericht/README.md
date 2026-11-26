@@ -6,7 +6,7 @@ Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Kern: Ablage, Werkzeuge `report_note`/`report_figure`/`report_screen`, Anweisung an Stationen | [phase-1-kern-ablage-werkzeuge.md](phase-1-kern-ablage-werkzeuge.md) | heikel | pending |
+| 1 | Kern: Ablage, Werkzeuge `report_note`/`report_figure`/`report_screen`, Anweisung an Stationen | [phase-1-kern-ablage-werkzeuge.md](phase-1-kern-ablage-werkzeuge.md) | heikel | complete |
 | 2 | Kern: Spur und Haiku-Ordnung am Phasenende | [phase-2-kern-haiku-ordnung.md](phase-2-kern-haiku-ordnung.md) | standard | pending |
 | 3 | Kern: Bericht zusammensetzen (Commit-Bereich, Code aus Git, Vorher-Zeilen, Anker), Befehle und Probe | [phase-3-kern-bericht-laden.md](phase-3-kern-bericht-laden.md) | heikel | pending |
 | 4 | Kern: Prüfwerte aus Läufen und Berichtsdateien | [phase-4-kern-pruefwerte.md](phase-4-kern-pruefwerte.md) | standard | pending |
@@ -91,7 +91,7 @@ CREATE TABLE report_phases (
 );
 ```
 
-Bilder liegen unter `<data_dir>\reports\<implementation_id>\` (`filesystem::workspace::data_dir`): `report_figure` als `<number>.<ext>`, `report_screen` als `<number>-<k>.<ext>` (Foto k ab 1), `<number>-<k>-entwurf.<ext>`, `<number>-s<k>-vorher.<ext>`, `<number>-s<k>-nachher.<ext>`; `delete_implementation` löscht den Ordner mit. `ScreenRow` (JSON in `screen`): `{ name, deviation?, shots: [{ label, file, width, height, design?: { file, width, height }, marks: [...] }], steps: [{ open, act, expect, before?: { file, width, height }, after?: {…} }] }`; der freie Kommentar steht in `text`.
+Bilder liegen unter `<data_dir>\reports\<implementation_id>\<phase_id>\` (`report::phase_dir`; je Phase ein Ordner, weil `number` je Phase bei 1 beginnt): `report_figure` als `<number>.<ext>`, `report_screen` als `<number>-<k>.<ext>` (Foto k ab 1), `<number>-<k>-entwurf.<ext>`, `<number>-s<k>-vorher.<ext>`, `<number>-s<k>-nachher.<ext>`; `delete_implementation` löscht den Ordner mit. `ScreenRow` (JSON in `screen`): `{ name, deviation?, shots: [{ label, file, width, height, design?: { file, width, height }, marks: [...] }], steps: [{ open, act, expect, before?: { file, width, height }, after?: {…} }] }`; der freie Kommentar steht in `text`.
 
 ### Werkzeuge (Satz `ReportTools`, Präfix `report_`)
 

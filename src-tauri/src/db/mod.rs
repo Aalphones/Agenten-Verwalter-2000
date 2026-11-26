@@ -8,6 +8,7 @@ pub mod chat_entries;
 pub mod implementations;
 pub mod migrations;
 pub mod projects;
+pub mod report;
 pub mod repositories;
 pub mod runs;
 pub mod session_commits;

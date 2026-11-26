@@ -94,6 +94,7 @@ mod commit_scan;
 mod implementation;
 mod mcp;
 mod overlaps;
+mod report;
 mod restore;
 mod retro;
 mod run_watch;

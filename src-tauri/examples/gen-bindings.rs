@@ -52,6 +52,7 @@ use verwalter_lib::{
     notices::model::{Denial, Notice},
     projects::model::{ProjectCreated, ProjectSummary},
     prompt_cache::model::PromptCache,
+    report::model::{ReportChangedEvent, ReportView},
     repositories::model::{KnownRepository, RepositoryKind},
     retro::model::{RetroExport, RetroProgress},
     review::model::{CommentTarget, ReviewComment},
@@ -136,6 +137,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     RunStatus::export_all(&cfg)?;
     AwaitedScript::export_all(&cfg)?;
     PromptCache::export_all(&cfg)?;
+    ReportView::export_all(&cfg)?;
+    ReportChangedEvent::export_all(&cfg)?;
     SessionSummary::export_all(&cfg)?;
     SessionOverlap::export_all(&cfg)?;
     ChatPage::export_all(&cfg)?;

@@ -225,6 +225,10 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
             opts.verwalter_mcp.is_some() && opts.codex_exe.is_none(),
         ));
     }
+    // `lean_tools` heißt: Claude-Station. Ohne Zugang gäbe es die Werkzeuge nicht.
+    if opts.lean_tools && opts.verwalter_mcp.is_some() {
+        prompts.push(report_prompt());
+    }
     command
         .arg("--append-system-prompt")
         .arg(prompts.join("\n\n"));
@@ -331,6 +335,23 @@ fn artifacts_prompt(dir: &Path, can_publish: bool, has_tools: bool) -> String {
         );
     }
     prompt
+}
+
+/// Ohne die Vorgabe bleibt der Review-Bericht leer, und die Station baut sich ihren eigenen
+/// HTML-Bericht (ADR 073).
+fn report_prompt() -> String {
+    "Review-Bericht dieser Umsetzung: Erkläre, was du änderst, dort, wo es steht. Nach einer Folge \
+     von Edits, die zusammen etwas bewirken, rufe mcp__verwalter__report_note mit dem Warum in \
+     zwei, drei Sätzen auf; ohne at gilt dein letzter Edit. Für den größeren Zusammenhang \
+     mcp__verwalter__report_figure mit Mermaid; „+ “, „- “ oder „~ “ vor einer Zeile markieren neu, \
+     entfällt, geändert. Bei Oberflächen je Bildschirm ein Aufruf mcp__verwalter__report_screen \
+     mit deinen Fotos je Breite und Thema, dem Entwurfsbild daneben, der Abweichung in einer Zeile \
+     und dem Klickpfad öffnen → tun → erwartet mit Vorher- und Nachher-Bild; einzelne Bilder mit \
+     Kommentar als report_figure mit image, marks und text. Im Review jeden Befund als \
+     report_note mit kind finding und at, Architektur-Zusammenhänge als report_figure. Im Fix \
+     report_note mit resolves auf den Befund. Schreibe keinen HTML-Bericht und kein \
+     Abnahme-Artefakt; Tests, Abdeckung und Mutation liest der Verwalter selbst."
+        .to_owned()
 }
 
 /// Die `.mcp.json` der Ordner, die eine hat. Ordner ohne Datei fallen still weg.

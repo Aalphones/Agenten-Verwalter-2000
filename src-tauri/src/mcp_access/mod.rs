@@ -23,6 +23,7 @@ use tauri::AppHandle;
 use crate::artifacts::tools::ArtifactTools;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::tools::ImplementationTools;
+use crate::report::tools::ReportTools;
 use crate::skins::tools::SkinTools;
 use crate::vault::tools::VaultTools;
 use http::{BodyError, Head, Reply};
@@ -41,6 +42,7 @@ pub fn tool_sets() -> Vec<Box<dyn ToolSet>> {
     vec![
         Box::new(ArtifactTools),
         Box::new(ImplementationTools),
+        Box::new(ReportTools),
         Box::new(SkinTools),
         Box::new(VaultTools),
     ]

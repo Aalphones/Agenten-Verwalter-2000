@@ -4,6 +4,8 @@
 //! Sperren: erst die Datenbank lesen, dann jede Station-Session einzeln und kurz sperren — nie zwei
 //! Session-Sperren zugleich, nie `Database::with` unter einer Session-Sperre.
 use std::collections::HashMap;
+use std::fs;
+use std::io::ErrorKind;
 use std::sync::{Arc, MutexGuard, PoisonError};
 
 use tauri::AppHandle;
@@ -29,6 +31,7 @@ use crate::implementation::model::{
 use crate::implementation::report::{self, Extras};
 use crate::implementation::{Countdowns, SessionLive, build_view, new_rows};
 use crate::limit_resume::LimitResumes;
+use crate::report::report_dir;
 use crate::sessions::model::SessionStatus;
 use crate::settings;
 
@@ -291,6 +294,10 @@ impl SessionRegistry {
         self.cancel_limit_resumes_of(&view);
         self.database
             .with(|connection| implementation_rows::delete(connection, id))?;
+        // Die Zeilen des Berichts gehen über die Datenbank mit, seine Bilder nicht.
+        if let Err(error) = remove_report_dir(app, id) {
+            eprintln!("Bericht-Ordner der Umsetzung {id} nicht gelöscht: {error}");
+        }
         for member in self.project_sessions(&view.project_id) {
             let is_linked: bool = {
                 let state = member.lock();
@@ -636,6 +643,14 @@ impl SessionRegistry {
             })
             .collect();
         build_view(stored, &live, &numbers, &countdowns)
+    }
+}
+
+/// Ohne Bilder gibt es keinen Ordner.
+fn remove_report_dir(app: &AppHandle, implementation_id: &str) -> Result<(), CommandError> {
+    match fs::remove_dir_all(report_dir(app, implementation_id)?) {
+        Err(error) if error.kind() != ErrorKind::NotFound => Err(error.into()),
+        _ => Ok(()),
     }
 }
 
