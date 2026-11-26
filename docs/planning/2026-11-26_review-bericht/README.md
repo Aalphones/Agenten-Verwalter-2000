@@ -7,7 +7,7 @@ Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Kern: Ablage, Werkzeuge `report_note`/`report_figure`/`report_screen`, Anweisung an Stationen | [phase-1-kern-ablage-werkzeuge.md](phase-1-kern-ablage-werkzeuge.md) | heikel | complete |
-| 2 | Kern: Spur und Haiku-Ordnung am Phasenende | [phase-2-kern-haiku-ordnung.md](phase-2-kern-haiku-ordnung.md) | standard | pending |
+| 2 | Kern: Spur und Haiku-Ordnung am Phasenende | [phase-2-kern-haiku-ordnung.md](phase-2-kern-haiku-ordnung.md) | standard | complete |
 | 3 | Kern: Bericht zusammensetzen (Commit-Bereich, Code aus Git, Vorher-Zeilen, Anker), Befehle und Probe | [phase-3-kern-bericht-laden.md](phase-3-kern-bericht-laden.md) | heikel | pending |
 | 4 | Kern: Prüfwerte aus Läufen und Berichtsdateien | [phase-4-kern-pruefwerte.md](phase-4-kern-pruefwerte.md) | standard | pending |
 | 5 | Oberfläche: Reiter „Review“, Inhalt, Überblick, Phasen-Seite, Code mit Randnotizen | [phase-5-oberflaeche-seiten.md](phase-5-oberflaeche-seiten.md) | standard | pending |
@@ -204,7 +204,7 @@ n1 n4 n5
 n7 n8
 ```
 
-Auslöser: Wird die letzte offene Station einer Phase fertig (alle Stationen der Phase `completed_at` gesetzt), startet ein Thread `report-tidy` die Ordnung und danach die Prüfwerte. Befehl `report_retidy(phase_id)` startet beides erneut.
+Auslöser: Wird die letzte offene Agenten-Station einer Phase fertig (alle Stationen der Phase ohne `by: "you"` haben `completed_at`), startet ein Thread `report-tidy` die Ordnung und danach die Prüfwerte. Stationen des Benutzers zählen nicht und lösen nichts aus: er liest den Bericht, bevor er abnimmt. Befehl `report_retidy(phase_id)` startet beides erneut.
 
 ### Anweisung an Stationen (`report_prompt()` in `process.rs`, nur bei `opts.lean_tools && opts.verwalter_mcp.is_some()`)
 

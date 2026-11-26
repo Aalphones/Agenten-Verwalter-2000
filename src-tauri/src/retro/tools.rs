@@ -813,11 +813,16 @@ fn call_line(call: &TraceCall) -> String {
 /// Dieselbe Spur wie `render_spur`; über `HAIKU_INPUT_MAX_CHARS` Zeichen bleiben die ersten und die
 /// letzten Zeilen bis zur halben Grenze, dazwischen eine Zeile `… Mitte gekürzt …`.
 pub fn haiku_input(trace: &SessionTrace) -> String {
-    let full = render_spur(trace);
-    if full.chars().count() <= HAIKU_INPUT_MAX_CHARS {
+    cut_middle(render_spur(trace), HAIKU_INPUT_MAX_CHARS)
+}
+
+/// Über `max_chars` Zeichen bleiben die ersten und die letzten ganzen Zeilen bis zur halben
+/// Grenze, dazwischen `MIDDLE_CUT_LINE`.
+pub(crate) fn cut_middle(full: String, max_chars: usize) -> String {
+    if full.chars().count() <= max_chars {
         return full;
     }
-    let budget = (HAIKU_INPUT_MAX_CHARS - MIDDLE_CUT_LINE.chars().count() - 2) / 2;
+    let budget = max_chars.saturating_sub(MIDDLE_CUT_LINE.chars().count() + 2) / 2;
     let lines: Vec<&str> = full.lines().collect();
     let head = lines_within(lines.iter().copied(), budget);
     let tail_source = lines[head.len()..].iter().rev().copied();

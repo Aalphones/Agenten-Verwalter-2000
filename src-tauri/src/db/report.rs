@@ -1,4 +1,5 @@
-//! Tabelle `report_entries`: eine Zeile je Eintrag eines Review-Berichts (ADR 073).
+//! Tabellen des Review-Berichts (ADR 073): `report_entries` mit einer Zeile je Eintrag,
+//! `report_phases` mit Ordnung und Prüfwerten je Phase.
 use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -163,6 +164,108 @@ pub fn is_finding(
         .optional()?;
     let finding: String = enum_to_text(&ReportNoteKind::Finding)?;
     Ok(kind.flatten().is_some_and(|kind: String| kind == finding))
+}
+
+/// Eine Zeile von `report_phases`: Ordnung und Prüfwerte einer Phase.
+#[derive(Debug, Clone)]
+pub struct PhaseRow {
+    pub phase_id: String,
+    pub implementation_id: String,
+    /// Geordnete Fassung als Markdown.
+    pub tidy: Option<String>,
+    /// Die geprüfte Antwort von Haiku.
+    pub tidy_json: Option<String>,
+    pub tidy_at: Option<f64>,
+    /// Höchste Nummer, die die Ordnung kennt.
+    pub tidy_entries: Option<u32>,
+    pub tidy_error: Option<String>,
+    pub checks: Option<String>,
+    pub checks_at: Option<f64>,
+}
+
+/// Speichert eine gültige Ordnung und räumt einen früheren Fehler weg.
+pub fn store_tidy(
+    connection: &Connection,
+    phase_id: &str,
+    implementation_id: &str,
+    tidy: &str,
+    tidy_json: &str,
+    tidy_entries: u32,
+    tidy_at: f64,
+) -> Result<(), CommandError> {
+    connection.execute(
+        "INSERT INTO report_phases (phase_id, implementation_id, tidy, tidy_json, tidy_at, \
+         tidy_entries) VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+         ON CONFLICT(phase_id) DO UPDATE SET tidy = excluded.tidy, \
+             tidy_json = excluded.tidy_json, tidy_at = excluded.tidy_at, \
+             tidy_entries = excluded.tidy_entries, tidy_error = NULL",
+        params![
+            phase_id,
+            implementation_id,
+            tidy,
+            tidy_json,
+            tidy_at,
+            tidy_entries
+        ],
+    )?;
+    Ok(())
+}
+
+/// Setzt nur den Fehlersatz der Ordnung bzw. räumt ihn mit `None` weg; eine frühere Ordnung bleibt.
+pub fn store_tidy_error(
+    connection: &Connection,
+    phase_id: &str,
+    implementation_id: &str,
+    error: Option<&str>,
+) -> Result<(), CommandError> {
+    connection.execute(
+        "INSERT INTO report_phases (phase_id, implementation_id, tidy_error) VALUES (?1, ?2, ?3) \
+         ON CONFLICT(phase_id) DO UPDATE SET tidy_error = excluded.tidy_error",
+        params![phase_id, implementation_id, error],
+    )?;
+    Ok(())
+}
+
+/// Die Zeilen der Phasen einer Umsetzung; eine Phase ohne Ordnung und Prüfwerte hat keine.
+pub fn load_phases(
+    connection: &Connection,
+    implementation_id: &str,
+) -> Result<Vec<PhaseRow>, CommandError> {
+    let mut statement = connection.prepare(
+        "SELECT phase_id, implementation_id, tidy, tidy_json, tidy_at, tidy_entries, tidy_error, \
+         checks, checks_at FROM report_phases WHERE implementation_id = ?1",
+    )?;
+    let phases = statement
+        .query_map(params![implementation_id], |row| {
+            Ok(PhaseRow {
+                phase_id: row.get(0)?,
+                implementation_id: row.get(1)?,
+                tidy: row.get(2)?,
+                tidy_json: row.get(3)?,
+                tidy_at: row.get(4)?,
+                tidy_entries: row.get(5)?,
+                tidy_error: row.get(6)?,
+                checks: row.get(7)?,
+                checks_at: row.get(8)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<PhaseRow>>>()?;
+    Ok(phases)
+}
+
+/// Die Umsetzung, zu der die Phase gehört; `None` für eine unbekannte Phase.
+pub fn implementation_of_phase(
+    connection: &Connection,
+    phase_id: &str,
+) -> Result<Option<String>, CommandError> {
+    let implementation_id = connection
+        .query_row(
+            "SELECT implementation_id FROM implementation_phases WHERE id = ?1",
+            params![phase_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    Ok(implementation_id)
 }
 
 fn entry_of(row: &Row<'_>) -> Result<EntryRow, CommandError> {

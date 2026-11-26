@@ -160,7 +160,19 @@ pub fn load_last_write(
     Ok((last.into_iter().collect(), details))
 }
 
-fn is_write(entry: &ChatEntry) -> bool {
+/// Die Datei eines Schreib-Aufrufs: `target`, bei gekürztem `target` `file_path` aus der Eingabe.
+pub(crate) fn written_path(target: &str, input: Option<&Value>) -> Option<PathBuf> {
+    if !target.ends_with(SHORTENED) {
+        return Some(native_path(target));
+    }
+    input
+        .and_then(|input: &Value| input.get("file_path"))
+        .and_then(Value::as_str)
+        .map(native_path)
+}
+
+/// Ob der Eintrag eine Datei geschrieben hat oder gerade schreibt.
+pub(crate) fn is_write(entry: &ChatEntry) -> bool {
     let ChatEntry::Tool { tool, state, .. } = entry else {
         return false;
     };
@@ -193,16 +205,7 @@ pub fn last_edit_anchor(
     let input: Option<Value> = details
         .get(tool_use_id)
         .and_then(|summary: &ToolSummary| serde_json::from_str(&summary.input).ok());
-    let path = if target.ends_with(SHORTENED) {
-        input
-            .as_ref()
-            .and_then(|input: &Value| input.get("file_path"))
-            .and_then(Value::as_str)
-            .ok_or_else(ambiguous)?
-    } else {
-        target.as_str()
-    };
-    let path = native_path(path);
+    let path = written_path(target, input.as_ref()).ok_or_else(ambiguous)?;
     let content = read(&path).ok_or_else(ambiguous)?;
     if tool == WRITE_TOOL {
         let count = u32::try_from(content.lines().count()).unwrap_or(u32::MAX);

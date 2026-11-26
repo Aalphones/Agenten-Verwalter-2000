@@ -2,6 +2,8 @@
 //! Registry. Aufruf:
 //! `cargo run --manifest-path src-tauri/Cargo.toml --example report-probe -- <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key>`
 //! (druckt die Rohfassung der Phase)
+//! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku]` (druckt die Eingabe
+//! an Haiku; mit `--haiku` zusätzlich Antwort und Prüfergebnis, ohne etwas zu speichern)
 //! bzw. `… -- <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID>` (druckt den Ort, den ein
 //! `report_note` ohne `at` jetzt bekäme, oder den Fehlersatz). Fehler als `FEHLER: <Satz>`.
 use std::collections::HashMap;
@@ -10,22 +12,29 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use verwalter_lib::agents::claude::locate::find_claude;
+use verwalter_lib::agents::claude::print::{PrintRequest, run_print};
+use verwalter_lib::agents::event::ModelId;
+use verwalter_lib::changes::ChangesInput;
 use verwalter_lib::changes::attribution::Ownership;
-use verwalter_lib::changes::{ChangesInput, sources};
+use verwalter_lib::changes::sources::{self, Source};
 use verwalter_lib::db::implementations::{self, StoredImplementation};
 use verwalter_lib::db::projects::{self, ProjectRow};
 use verwalter_lib::db::report::{self as report_rows, EntryRow};
 use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::db::{
-    Database, session_commits, session_files, session_repositories, session_ticket_worktrees,
+    Database, chat_entries, session_commits, session_files, session_repositories,
+    session_ticket_worktrees, tool_details,
 };
 use verwalter_lib::error::CommandError;
 use verwalter_lib::implementation::build_view;
-use verwalter_lib::implementation::model::PhaseView;
+use verwalter_lib::implementation::model::{ImplementationView, PhaseView};
+use verwalter_lib::report::tidy::{self, StationTrace, TidyAnswer};
 use verwalter_lib::report::{anchor, raw};
 use verwalter_lib::worktrees;
 
-const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID>";
+const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID>";
+const HAIKU_FLAG: &str = "--haiku";
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = env::args().skip(1).collect();
@@ -45,6 +54,12 @@ fn main() -> ExitCode {
     let outcome = match arguments.as_slice() {
         [_, implementation_id, "raw", phase_key] => {
             raw_of(&database_path, implementation_id, phase_key)
+        }
+        [_, implementation_id, "tidy", phase_key] => {
+            tidy_of(&database_path, implementation_id, phase_key, false)
+        }
+        [_, implementation_id, "tidy", phase_key, HAIKU_FLAG] => {
+            tidy_of(&database_path, implementation_id, phase_key, true)
         }
         [_, "anchor", session_id] | [_, _, "anchor", session_id] => {
             anchor_of(&database_path, session_id)
@@ -66,12 +81,25 @@ fn main() -> ExitCode {
     }
 }
 
-fn raw_of(
-    database_path: &Path,
+/// Eine Phase einer Umsetzung mit ihren Einträgen, nur aus der Datenbank.
+struct LoadedPhase {
+    view: ImplementationView,
+    index: usize,
+    entries: Vec<EntryRow>,
+    labels: HashMap<String, String>,
+}
+
+impl LoadedPhase {
+    fn phase(&self) -> &PhaseView {
+        &self.view.phases[self.index]
+    }
+}
+
+fn load_phase(
+    database: &Database,
     implementation_id: &str,
     phase_key: &str,
-) -> Result<String, String> {
-    let database = Database::open(database_path).map_err(text_of)?;
+) -> Result<LoadedPhase, String> {
     let (stored, entries, numbers) = database
         .with(|connection| {
             let stored: StoredImplementation =
@@ -88,21 +116,126 @@ fn raw_of(
         })
         .map_err(text_of)?;
     let view = build_view(&stored, &HashMap::new(), &numbers, &HashMap::new());
-    let phase_id = view
+    let index = view
         .phases
         .iter()
-        .find(|phase: &&PhaseView| phase.key == phase_key)
-        .map(|phase: &PhaseView| phase.id.clone())
+        .position(|phase: &PhaseView| phase.key == phase_key)
         .ok_or_else(|| format!("keine Phase „{phase_key}“ in der Umsetzung"))?;
-    let of_phase: Vec<EntryRow> = entries
+    let phase_id = view.phases[index].id.clone();
+    let entries: Vec<EntryRow> = entries
         .into_iter()
         .filter(|entry: &EntryRow| entry.phase_id == phase_id)
         .collect();
+    let labels = raw::session_labels(&view, &numbers);
+    Ok(LoadedPhase {
+        view,
+        index,
+        entries,
+        labels,
+    })
+}
+
+fn raw_of(
+    database_path: &Path,
+    implementation_id: &str,
+    phase_key: &str,
+) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(text_of)?;
+    let loaded = load_phase(&database, implementation_id, phase_key)?;
     Ok(raw::raw_markdown(
         phase_key,
-        &of_phase,
-        &raw::session_labels(&view, &numbers),
+        &loaded.entries,
+        &loaded.labels,
     ))
+}
+
+fn tidy_of(
+    database_path: &Path,
+    implementation_id: &str,
+    phase_key: &str,
+    asks_haiku: bool,
+) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(text_of)?;
+    let loaded = load_phase(&database, implementation_id, phase_key)?;
+    let to_order = tidy::to_order(&loaded.entries, &tidy::review_stations(loaded.phase()));
+    let (traces, sources) = traces_of(&database, &loaded)?;
+    let input = tidy::haiku_input(
+        &raw::raw_markdown(phase_key, &loaded.entries, &loaded.labels),
+        &to_order,
+        &tidy::spur(&traces, &sources),
+    );
+    if !asks_haiku {
+        return Ok(input);
+    }
+    if to_order.is_empty() {
+        return Ok(format!("{input}\nNichts zu ordnen: kein Aufruf von Haiku."));
+    }
+    println!("{input}");
+    // Nur die Claude-Kommandozeile; die übrigen Betriebsarten brauchen die Einstellungen der App.
+    let exe = find_claude().ok_or_else(|| "Claude-Kommandozeile nicht gefunden".to_owned())?;
+    let cwd = database_path
+        .parent()
+        .filter(|parent: &&Path| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let request = PrintRequest {
+        model: ModelId::Haiku,
+        system_prompt: tidy::TIDY_SYSTEM,
+        json_schema: tidy::TIDY_SCHEMA,
+        input: &input,
+        local: None,
+        leading_args: &[],
+        codex: None,
+    };
+    let value = run_print(&exe, cwd, &request, tidy::TIDY_TIMEOUT)?;
+    println!("## Antwort\n{value:#}\n");
+    let answer: TidyAnswer = serde_json::from_value(value)
+        .map_err(|error| format!("Antwort von Claude nicht lesbar: {error}"))?;
+    if let Err(reason) = tidy::check(&answer, &to_order) {
+        return Ok(format!("## Prüfung\nOrdnung verworfen: {reason}"));
+    }
+    let markdown = tidy::tidy_markdown(
+        phase_key,
+        &loaded.phase().title,
+        &answer,
+        &tidy::screen_numbers(&loaded.entries),
+    );
+    Ok(format!("## Prüfung\nbestanden\n\n{markdown}"))
+}
+
+/// Der Verlauf der Stationen der Spur und die Repository-Einträge der ersten noch aktiven davon.
+fn traces_of(
+    database: &Database,
+    loaded: &LoadedPhase,
+) -> Result<(Vec<StationTrace>, Vec<Source>), String> {
+    let mut traces: Vec<StationTrace> = Vec::new();
+    let mut found: Vec<Source> = Vec::new();
+    for station in tidy::spur_stations(loaded.phase()) {
+        let Some(session_id) = &station.session_id else {
+            continue;
+        };
+        if found.is_empty()
+            && let Ok(input) = database.with(|connection| project_input(connection, session_id))
+        {
+            found = sources::sources(&input);
+        }
+        let (entries, details) = database
+            .with(|connection| {
+                let entries = chat_entries::load_all(connection, session_id)?;
+                let details = tool_details::load_summaries(connection, session_id)?;
+                Ok((entries, details))
+            })
+            .map_err(text_of)?;
+        traces.push(StationTrace {
+            label: loaded
+                .labels
+                .get(session_id)
+                .cloned()
+                .unwrap_or_else(|| format!("#? {}", station.stage)),
+            entries,
+            details,
+        });
+    }
+    Ok((traces, found))
 }
 
 fn anchor_of(database_path: &Path, session_id: &str) -> Result<String, String> {

@@ -17,6 +17,7 @@ Wer eine Umsetzung ([ADR 048](048-umsetzung.md)) abnimmt, liest bisher ein HTML-
 - Stationen hängen über den Werkzeugsatz `report_` im MCP-Zugang ([ADR 046](046-mcp-zugang.md)) Einträge an: `report_note`, `report_figure`, `report_screen`. Der Präfix ist Pflicht je Satz, deshalb nicht `note`/`figure`. Das Feature heißt `report`, weil `review` die Review-Kommentare belegt.
 - Einträge liegen in `report_entries`, Ordnung und Prüfwerte in `report_phases` (Migration 023). Die Nummer `n<k>` zählt je Phase und entsteht in der Transaktion des Einfügens. Bilder werden nach `<Datenordner>\reports\<Umsetzung>\<Phase>\` kopiert.
 - Rohfassung und geordnete Fassung entstehen als Markdown; Haiku sieht nur Markdown, antwortet als JSON, und der Verwalter schreibt daraus die geordnete Fassung. Die ID-Prüfung ist so mechanisch.
+- Geordnet wird, sobald die Agenten-Stationen einer Phase fertig sind. Stationen `by: "you"` zählen nicht: sonst bliebe die letzte Phase ungeordnet, bis der Benutzer abgenommen hat — er liest den Bericht aber vorher.
 - Code steht in keinem Eintrag: ein Eintrag merkt Ort und Wortlaut der Zeilen, den Code liest der Verwalter aus Git.
 - Die Anweisung dazu bekommen nur Claude-Stationen mit Zugang, im gemeinsamen `--append-system-prompt` ([ADR 061](061-schlanke-werkzeuge-in-stationen.md)).
 - Die Sichtabnahme hat ein eigenes Werkzeug, ein Aufruf je Bildschirm, damit Ansichten, Entwurf, Abweichung und Klickpfad zusammenbleiben; Haiku ordnet sie nicht.

@@ -187,6 +187,7 @@ pub fn complete_station(
     let (followups, hint) =
         plan_completion(&view, station_id, fix_needed).map_err(CommandError::Implementation)?;
     registry.store_station_completion(station_id, result.trim(), &followups)?;
+    crate::report::on_station_completed(app, implementation_id, station_id);
     let mut outcome = after_completion(app, &registry, implementation_id)?;
     outcome.hint = hint;
     Ok(outcome)

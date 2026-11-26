@@ -19,6 +19,7 @@ pub mod implementation;
 pub mod mcp;
 pub mod notes;
 pub mod projects;
+pub mod report;
 pub mod repositories;
 pub mod retro;
 pub mod session_files;
