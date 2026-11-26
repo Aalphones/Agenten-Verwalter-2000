@@ -128,6 +128,46 @@ window.REPORT = {
       text: 'Jede Datei zeigt sich passend zu ihrem Typ, mit vier Knöpfen; Skripte sperren das Standardprogramm.',
       stops: ['s5-sperre', 's5-schmal'],
       checks: { by: '#12 Umsetzung', src: 'pnpm check', chain: true },
+      // Sichtabnahme: je Bildschirm ein Aufruf report_screen. Fotos aus der Prüfung von Phase 5 (echt), Entwurfsbilder aus dem freigegebenen Entwurf der Session-Dateien (echt).
+      screens: [
+        {
+          id: 'sc5-sperre', name: 'Gesperrtes Standardprogramm', by: ['#12', 'Umsetzung'],
+          text: 'Der Knopf bleibt sichtbar, ist aber gesperrt; den Grund nennt die Metazeile, damit niemand rätselt, warum nichts passiert.',
+          deviation: 'Hinweis steht rechts in der Metazeile statt in eigener Zeile darunter.',
+          shots: [
+            { label: '1366 · hell', src: '_review-bericht-entwurf/sperre-hell.png', w: 1366, h: 800,
+              design: { src: '_review-bericht-entwurf/e-sperre-hell.png', w: 1366, h: 800 },
+              marks: [{ n: 1, x: 1072, y: 50, w: 184, h: 30, text: 'Knopf gestrichelt, nicht klickbar' }, { n: 2, x: 1020, y: 92, w: 330, h: 24, text: 'Grund in der Metazeile' }] },
+            { label: '1366 · dunkel', src: '_review-bericht-entwurf/sperre-dunkel.png', w: 1366, h: 800,
+              design: { src: '_review-bericht-entwurf/e-sperre-dunkel.png', w: 1366, h: 800 },
+              marks: [{ n: 1, x: 1172, y: 44, w: 186, h: 30, text: 'Knopf gestrichelt, nicht klickbar' }, { n: 2, x: 1020, y: 110, w: 330, h: 24, text: 'Grund in der Metazeile' }] },
+          ],
+          steps: [
+            { open: 'nachweis-labor01.sh im Knoten „Session-Dateien“', act: 'Knopf „Mit Standardprogramm öffnen“ ansehen', expect: 'gestrichelt, Grund in der Metazeile', after: { src: '_review-bericht-entwurf/sperre-hell.png', w: 1366, h: 800 } },
+            { open: 'AGENTS.md aus admin-app-main', act: '„Mit Standardprogramm öffnen“ klicken', expect: 'Fehlerzeile „Öffnen fehlgeschlagen …“, kein Programm startet', before: { src: '_review-bericht-entwurf/sperre-dunkel.png', w: 1366, h: 800 }, after: { src: '_review-bericht-entwurf/oeffnen-fehler.png', w: 1366, h: 800 } },
+          ],
+        },
+        {
+          id: 'sc5-schmal', name: 'Detail unter 600 px', by: ['#12', 'Umsetzung'],
+          text: 'Unter 600 px stehen die vier Knöpfe in Kurzform; der Baum weicht einem Rücksprung.',
+          deviation: 'Rücksprung heißt „← Baum“ statt „← Dateien“; Kurzform „Öffnen“ wie im Entwurf.',
+          shots: [
+            { label: '430 · dunkel', src: '_review-bericht-entwurf/schmal.png', w: 430, h: 800, narrow: true,
+              design: { src: '_review-bericht-entwurf/e-schmal.png', w: 430, h: 736 },
+              marks: [{ n: 1, x: 20, y: 122, w: 66, h: 26, text: 'Rücksprung zum Baum' }, { n: 2, x: 20, y: 229, w: 280, h: 29, text: 'Knöpfe in Kurzform' }] },
+          ],
+        },
+        {
+          id: 'sc5-typen', name: 'Betrachter je Dateityp', by: ['#12', 'Umsetzung'],
+          text: 'Bild, PDF und Video öffnen im passenden Betrachter; der Entwurf hatte hier nur Platzhalter.',
+          deviation: null,
+          shots: [
+            { label: 'Bild', src: '_review-bericht-entwurf/bild.png', w: 1366, h: 800, marks: [] },
+            { label: 'PDF', src: '_review-bericht-entwurf/pdf.png', w: 1366, h: 800, marks: [] },
+            { label: 'Video', src: '_review-bericht-entwurf/video.png', w: 1366, h: 800, marks: [] },
+          ],
+        },
+      ],
       journey: [
         { t: 'Weiche nach Typ: Bild, Video, Ton und PDF im Betrachter-Rahmen, Textformate mit Schalter „Vorschau“.', files: ['ViewerFrame.css', 'SessionFileViewer.tsx'] },
         { t: 'Vier Knöpfe zum Öffnen; das Standardprogramm ist für Skripte gesperrt und sagt warum.', files: ['FileActions.tsx', 'ExecutableLockHint.tsx'], stop: 's5-sperre' },

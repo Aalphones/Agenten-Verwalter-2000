@@ -33,6 +33,8 @@
     seq: 0,
     current: null,
     dview: {},
+    sview: {},
+    scmp: {},
     mmdRaw: {},
     wide: null,
     draw: null,
@@ -75,6 +77,7 @@
     if (c.t === 'line') return `${c.file.split('/').pop()}:${c.line}`;
     if (c.t === 'area') return `${c.caption} · Bereich`;
     if (c.t === 'diagram') return `Schaubild „${c.caption}“`;
+    if (c.t === 'screen') return `Bildschirm „${c.name}“`;
     return `Stopp „${R.stops[c.stop].title}“`;
   }
   const cmHtml = (c) => `<div class="cm" data-cid="${c.id}"><span>${esc(c.text)}</span><span class="who">gesammelt</span><button type="button" class="quiet x" data-act="cdel" data-cid="${c.id}" aria-label="Kommentar entfernen">Entfernen</button></div>`;
@@ -245,6 +248,56 @@
     </div></section>`;
   }
 
+  // ---------- Sichtabnahme ----------
+  // Je Bildschirm ein Aufruf report_screen: Fotos je Ansicht (Breite, Thema), optional das Entwurfsbild daneben,
+  // Abweichung in einer Zeile, Klickpfad „öffnen → tun → erwartet“ mit Vorher/Nachher. Die Fotos liefert die Station.
+  const fileOf = (src) => src.split('/').pop();
+  function screenHtml(sc, gid) {
+    const i = Math.min(S.sview[sc.id] ?? 0, sc.shots.length - 1);
+    const shot = sc.shots[i];
+    const img = { ...shot, caption: `${sc.name} · ${shot.label}`, notes: shot.marks };
+    const sg = `${gid}-s`;
+    S.images[sg] = img;
+    const hasDesign = !!shot.design;
+    const compare = hasDesign && (S.scmp[sc.id] ?? true);
+    const closed = st().closed;
+    let h = `<section class="stop screen" id="screen-${sc.id}" data-screen="${sc.id}" data-name="${esc(sc.name)}"><h3 class="stop-h">${esc(sc.name)}</h3>`;
+    h += `<p class="meta"><span>${sc.by.join(' ')}</span><span>${sc.shots.length} ${sc.shots.length === 1 ? 'Ansicht' : 'Ansichten'}</span>${sc.steps?.length ? `<span>${sc.steps.length} Klickpfade</span>` : ''}${tag('report_screen — ein Aufruf je Bildschirm, Fotos von der Station')}<span class="sp"></span>${closed ? '' : `<button type="button" class="quiet" data-act="cscreen">${svg('msg')}Kommentar</button>`}</p>`;
+    if (sc.text) h += `<div class="prose"><p>${esc(sc.text)}</p></div>`;
+    const seg = sc.shots.length > 1
+      ? `<span class="dseg" role="group" aria-label="Ansicht">${sc.shots.map((s, k) => `<button type="button" data-act="sview" data-scr="${sc.id}" data-i="${k}" aria-pressed="${k === i}">${esc(s.label)}</button>`).join('')}</span>`
+      : `<span class="one">${esc(shot.label)}</span>`;
+    const sw = hasDesign
+      ? `<label class="cmp"><input type="checkbox" role="switch" data-act="scmp" data-scr="${sc.id}"${compare ? ' checked' : ''}>Entwurf daneben</label>`
+      : '<span class="nodesign">kein Entwurfsbild</span>';
+    h += `<section class="blk"><div class="blk-head">${svg('image')}${seg}<span class="sp"></span>${sw}${shotButtons(sg, img.caption)}</div><div class="blk-body">`;
+    h += `<div class="scr-view${compare ? ' compare' : ''}${shot.narrow ? ' narrow' : ''}"><figure><figcaption>Umsetzung</figcaption>${shotHtml(img, sg)}</figure>`;
+    if (compare) h += `<figure class="design"><figcaption>Entwurf</figcaption><div class="shot-frame${shot.narrow ? ' narrow' : ''}"><div class="shot-inner"><img src="${shot.design.src}" alt="Entwurf: ${esc(sc.name)}" width="${shot.design.w}" height="${shot.design.h}"></div></div></figure>`;
+    h += '</div>';
+    if (shot.marks.length) h += `<div class="legend">${shot.marks.map(noteHtml).join('')}</div>`;
+    h += areaComments(sg);
+    if (sc.deviation) h += `<p class="dev">${svg('flag')}<b>Abweichung vom Entwurf</b><span>${esc(sc.deviation)}</span></p>`;
+    else if (sc.shots.some((s) => s.design)) h += `<p class="dev ok">${svg('check')}<span>wie im Entwurf</span></p>`;
+    h += '</div></section>';
+    if (sc.steps?.length) {
+      const pic = (p, k, key, lbl) => {
+        if (!p[key]) return '';
+        const g = `${gid}-p${k}${key[0]}`;
+        S.images[g] = { ...p[key], caption: `${sc.name} · Schritt ${k + 1} · ${lbl}`, marks: [] };
+        return `<button type="button" class="thumb" data-act="zoom" data-img="${g}" title="${lbl} vergrößern"><img src="${p[key].src}" alt="" width="96" height="56"><small>${lbl}</small></button>`;
+      };
+      h += `<table class="steps"><caption>Klickpfad</caption><thead><tr><th>#</th><th>Öffnen</th><th>Tun</th><th>Erwartet</th><th>Bild</th></tr></thead><tbody>${sc.steps.map((p, k) => `<tr><td class="k">${k + 1}</td><td data-l="Öffnen">${esc(p.open)}</td><td data-l="Tun">${esc(p.act)}</td><td data-l="Erwartet">${esc(p.expect)}</td><td class="pics">${pic(p, k, 'before', 'vorher')}${pic(p, k, 'after', 'nachher')}</td></tr>`).join('')}</tbody></table>`;
+    }
+    const cms = S.comments.filter((x) => x.t === 'screen' && x.screen === sc.id);
+    if (cms.length) h += `<div class="stop-cms">${cms.map(cmHtml).join('')}</div>`;
+    return `${h}</section>`;
+  }
+  function screensHtml(c, pid) {
+    const n = c.screens.reduce((a, sc) => a + sc.shots.length, 0);
+    const dev = c.screens.filter((sc) => sc.deviation).length;
+    return `<section class="sa-sec"><h3>Sichtabnahme <span class="h3-sub">${c.screens.length} Bildschirme · ${n} Ansichten${dev ? ` · ${dev} ${dev === 1 ? 'Abweichung' : 'Abweichungen'}` : ''}</span></h3>${c.screens.map((sc) => screenHtml(sc, `${pid}-${sc.id}`)).join('')}</section>`;
+  }
+
   // ---------- Schaubild als Diff ----------
   // Der Agent schreibt ein Mermaid-Schaubild und setzt vor Zeilen „+ “ (neu), „- “ (entfällt) oder „~ “ (geändert).
   // Daraus entstehen drei Ansichten: Unterschied (gefärbt), Vorher (ohne „+“), Nachher (ohne „-“).
@@ -352,7 +405,8 @@
       const later = i >= s.chapters;
       const running = s.running === c.key;
       const by = later ? 'folgt' : running ? `${c.station} · läuft` : `${c.station} · ${c.time}<code>${c.commits.join(' · ')}</code>`;
-      const text = later ? esc(c.phase) : running ? `${c.stops.length} Stopp bisher · Ergebnis folgt` : `${esc(c.text)} ${tag('Haiku · gestrafft aus „Station fertig“')}`;
+      const sa = c.screens?.length ? ` <a class="sa-link" href="${hrefOf(`p${c.key}`)}">${svg('image')}Sichtabnahme: ${c.screens.length} Bildschirme${c.screens.some((x) => x.deviation) ? `, ${c.screens.filter((x) => x.deviation).length} mit Abweichung` : ''}</a>` : '';
+      const text = later ? esc(c.phase) : running ? `${c.stops.length} Stopp bisher · Ergebnis folgt` : `${esc(c.text)}${sa} ${tag('Haiku · gestrafft aus „Station fertig“')}`;
       return `<li class="${later ? 'later' : ''}"><span class="k">${c.key}</span>${later ? `<b>${esc(c.title)}</b>` : `<a href="${hrefOf(`p${c.key}`)}">${esc(c.title)}</a>`}<span class="by">${by}</span><p>${text}</p></li>`;
     }).join('')}</ol>`;
     return h;
@@ -430,6 +484,24 @@
       });
       groups.push({ s, ids });
     });
+    const screenIds = [];
+    (c.screens ?? []).forEach((sc) => {
+      const id = nid();
+      screenIds.push(id);
+      const shots = sc.shots.map((s) => `${s.label} (${fileOf(s.src)}${s.design ? `, Entwurf ${fileOf(s.design.src)}` : ''}${s.marks.length ? `, marks ${s.marks.map((m) => `${m.n}@${m.x},${m.y},${m.w},${m.h}`).join(' ')}` : ''})`).join(' · ');
+      const legend = [...new Map(sc.shots.flatMap((s) => s.marks).map((m) => [m.n, m.text])).entries()].map(([n, x]) => `- ${n}: ${x}`).join('\n');
+      const steps = (sc.steps ?? []).map((p, k) => `${k + 1}. ${p.open} → ${p.act} → ${p.expect}${p.before ? ` · vorher ${fileOf(p.before.src)}` : ''}${p.after ? ` · nachher ${fileOf(p.after.src)}` : ''}`).join('\n');
+      raw.push(`## ${id} · screen · ${sc.by.join(' ')}
+screen: ${sc.name}
+shots: ${shots}${sc.deviation ? `
+abweichung: ${sc.deviation}` : ''}${steps ? `
+schritte:
+${steps}` : ''}
+
+${sc.text}${legend ? `
+
+${legend}` : ''}`);
+    });
     const open = [];
     const done = [];
     (c.review?.items ?? []).forEach((x) => {
@@ -452,6 +524,8 @@
     }
     if (!c.journey) return { raw: raw.join('\n\n'), tidy: '<!-- folgt: Haiku ordnet bei „Station fertig“ -->' };
     const tidy = [`# Phase ${c.key} · ${c.title}`, `Ergebnis: ${c.text}`, `## Weg\n${c.journey.map((j, i) => `${i + 1}. ${j.detour ? '**Umweg:** ' : ''}${j.t}`).join('\n')}`];
+    if (screenIds.length) tidy.push(`## Sichtabnahme
+${screenIds.join(' ')}`);
     if (c.review) tidy.push(`## Review ${c.review.by}\noffen: ${open.join(' ') || '–'}\nbehoben: ${done.join(' ') || '–'}${diag ? `\nschaubild: ${diag}` : ''}`);
     groups.forEach(({ s, ids }) => tidy.push(`## ${s.title} {${s.kind}}${s.look ? `\nlook: ${s.look}` : ''}\n${ids.join(' ')}`));
     return { raw: raw.join('\n\n'), tidy: tidy.join('\n\n') };
@@ -500,6 +574,7 @@
       const det = c.journey.filter((j) => j.detour).length;
       h += `<details class="way"><summary>${svg('route')}<b>Weg</b><span>${c.journey.length} Etappen${det ? ` · ${det} Umweg` : ''}</span>${tag('Haiku · aus der Spur im Verlauf, ohne Tests')}</summary><ol>${c.journey.map((j) => `<li${j.detour ? ' class="detour"' : ''}><span class="txt">${j.detour ? '<b class="dt">Umweg</b>' : ''}${esc(j.t)}</span><span class="fl">${j.files.map((f) => `<code>${esc(f)}</code>`).join('')}${j.stop ? `<a href="#/s/${j.stop}">zum Stopp ↓</a>` : ''}</span></li>`).join('')}</ol></details>`;
     }
+    if (c.screens?.length) h += screensHtml(c, pid);
     if (c.review) {
       const open = c.review.items.filter((x) => x.status === 'offen');
       const done = c.review.items.filter((x) => x.status !== 'offen');
@@ -751,6 +826,15 @@
       openComposer(b, { t: 'line', blk: table.dataset.blk, file: table.dataset.file, line: Number(b.dataset.line), stop: b.closest('.stop')?.dataset.stop });
     } else if (act === 'cstop') {
       openComposer(b, { t: 'stop', stop: b.closest('.stop').dataset.stop });
+    } else if (act === 'cscreen') {
+      const sec = b.closest('.screen');
+      openComposer(b, { t: 'screen', screen: sec.dataset.screen, name: sec.dataset.name });
+    } else if (act === 'sview') {
+      S.sview[b.dataset.scr] = Number(b.dataset.i);
+      renderPage(true);
+    } else if (act === 'scmp') {
+      S.scmp[b.dataset.scr] = b.checked;
+      renderPage(true);
     } else if (act === 'cdiag') {
       openComposer(b, { t: 'diagram', blk: b.dataset.blk, caption: b.dataset.caption, stop: b.closest('.stop')?.dataset.stop });
     } else if (act === 'carea') {

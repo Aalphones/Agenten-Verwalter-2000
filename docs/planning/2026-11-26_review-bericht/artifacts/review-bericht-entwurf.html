@@ -40,7 +40,8 @@
       <h3>Neu in diesem Stand</h3>
       <ul>
         <li>Eine Seite je Phase, ohne Unterseiten: Ergebnis, Weg (eingeklappt), Review mit offenen Befunden und Schaubild, dann alle Stopps als Abschnitte. Links auf einen Stopp springen an seine Stelle.</li>
-        <li>Zwei schlanke Werkzeuge für alle Stationen: <code>note(text, at?, kind?, resolves?)</code> und <code>figure(caption, mermaid | image, marks?, at?)</code>. Phase und Rolle kennt der Verwalter; ohne <code>at</code> gilt der letzte Edit.</li>
+        <li>Sichtabnahme je Phase (Beispiel: Phase 5): je Bildschirm ein Aufruf <code>report_screen</code> mit Fotos je Ansicht (Breite, hell/dunkel), Entwurfsbild daneben, Abweichung in einer Zeile und Klickpfad „öffnen → tun → erwartet“ mit Vorher/Nachher. Die Fotos liefert die Station (Headless-Browser, Gerät); kommentiert wird wie bei jedem Bild, auch als Bereich.</li>
+        <li>Drei schlanke Werkzeuge für alle Stationen: <code>report_note(text, at?, kind?, resolves?)</code>, <code>report_figure(caption, mermaid | image, marks?, text?, at?)</code> und <code>report_screen(screen, shots, design?, deviation?, steps?, text?)</code>. Phase und Rolle kennt der Verwalter; ohne <code>at</code> gilt der letzte Edit.</li>
         <li>Ablage als Markdown je Phase: Jeder Aufruf hängt einen Eintrag an die Rohfassung. Haiku gibt die geordnete Fassung zurück: Ergebnis, Weg, Titel und Reihenfolge, die Einträge nur als IDs. „Werkzeuge zeigen“ blendet beide am Ende jeder Phase ein.</li>
         <li>Der Verwalter prüft, dass jede ID genau einmal vorkommt; sonst gilt die Reihenfolge der Rohfassung.</li>
         <li>Prüfung je Phase, ohne Tokens: Prüfkette, Tests, Abdeckung der neuen Zeilen und Mutation liest der Verwalter aus den Berichtsdateien der Läufe (JUnit-XML, LCOV, Mutations-JSON). Im Code markiert: neue Zeilen ohne Test (gelber Rand) und überlebte Mutanten als Anmerkung „M“ (Beispiel: Phase 2 · Sperre). Keine Ampel-Schwellen; rot nur bei fehlgeschlagenen Tests.</li>
@@ -54,7 +55,7 @@
       <h3>Woher eine Anmerkung kommt</h3>
       <ul>
         <li><b>Gratis:</b> Diff und Zeilen aus Git · Ergebnis aus Commit bzw. „Station fertig“ · Zweckzeile, die der Agent ohnehin vor einer Folge von Edits schreibt, am Code dieser Edits · Bilder, die die Station ohnehin anlegt.</li>
-        <li><b>note</b> (direkt nach dem Edit bzw. beim Prüfen): <code>{ text, at?, kind?, resolves? }</code> · <b>figure</b>: <code>{ caption, mermaid | image, marks?, at? }</code>. Jeder Aufruf hängt einen Markdown-Eintrag an die Rohfassung der Phase und gibt nur seine ID zurück.</li>
+        <li><b>note</b> (direkt nach dem Edit bzw. beim Prüfen): <code>{ text, at?, kind?, resolves? }</code> · <b>figure</b>: <code>{ caption, mermaid | image, marks?, text?, at? }</code> · <b>screen</b> (bei Oberflächen): <code>{ screen, shots[{ image, label, design?, marks? }], deviation?, steps[{ open, act, expect, before?, after? }]?, text? }</code>. Jeder Aufruf hängt einen Markdown-Eintrag an die Rohfassung der Phase und gibt nur seine ID zurück.</li>
         <li>Ohne <code>at</code> nimmt der Verwalter Datei und Zeilen aus dem letzten Edit der Session und hält sie beim Commit gegen Git nach; trifft er nicht, bekommt der Agent sofort einen Fehler.</li>
         <li>Kommentare von dir kommen als Review-Kommentare mit Datei und Zeile beim Agenten an. Abnehmen kann nur du.</li>
       </ul>

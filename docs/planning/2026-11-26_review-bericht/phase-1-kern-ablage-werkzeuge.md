@@ -1,4 +1,4 @@
-# Phase 1 — Kern: Ablage, Werkzeuge `report_note`/`report_figure`, Anweisung an Stationen
+# Phase 1 — Kern: Ablage, Werkzeuge `report_note`/`report_figure`/`report_screen`, Anweisung an Stationen
 
 Rating: heikel. Stationen können Einträge in den Review-Bericht schreiben; sie stehen in SQLite, Bilder im Bericht-Ordner, die Rohfassung lässt sich als Markdown drucken. Sichtbar in der App ändert sich noch nichts.
 
@@ -22,15 +22,16 @@ Rating: heikel. Stationen können Einträge in den Review-Bericht schreiben; sie
 ## AK
 
 1. Migration 023 nach dem Kontrakt; `PRAGMA user_version` steigt auf 23.
-2. `tools/list` einer Station enthält `report_note` und `report_figure` mit den Schemas des Kontrakts; ein Aufruf aus einer Session, die keine Station ist, endet mit „Diese Session ist keine Station.“
+2. `tools/list` einer Station enthält `report_note`, `report_figure` und `report_screen` mit den Schemas des Kontrakts; ein Aufruf aus einer Session, die keine Station ist, endet mit „Diese Session ist keine Station.“
 3. `report_note` mit `at` speichert Repository-Schlüssel, relativen Pfad, Zeilen und `anchor_text`; ohne `at` nimmt es den letzten Schreib-Aufruf nach der Regel des Kontrakts oder meldet „Stelle nicht eindeutig: gib at an.“
 4. `report_note` mit `resolves` auf eine Nummer, die in der Phase kein Befund ist, scheitert mit „Befund n<k> gibt es in dieser Phase nicht.“
-5. `report_figure` mit `image` kopiert die Datei nach `<data_dir>\reports\<implementation_id>\<number>.<ext>` und speichert Breite und Höhe; mit `mermaid` und `image` zugleich oder keinem von beiden scheitert es mit einem Satz.
+5. `report_figure` mit `image` kopiert die Datei nach `<data_dir>\reports\<implementation_id>\<number>.<ext>` und speichert Breite und Höhe; mit `mermaid` und `image` zugleich oder keinem von beiden scheitert es mit einem Satz; `text` wird gespeichert.
+5a. `report_screen` kopiert alle Bilder nach den Dateinamen des Kontrakts, speichert `ScreenRow` als JSON in `screen` samt Breite und Höhe jedes Bilds und `text`; ein fehlendes oder zu großes Bild lässt den ganzen Aufruf scheitern („Bild <Pfad>: <Grund>“), ohne Dateien zurückzulassen.
 6. Die Nummer `n<k>` ist je Phase fortlaufend ab 1, auch bei zwei gleichzeitigen Aufrufen (Vergabe in derselben Transaktion wie das Einfügen).
 7. Nach jedem Eintrag geht `report://changed` mit `{ implementationId }` hinaus.
 8. Stationen der Betriebsart Claude bekommen `report_prompt()` wörtlich nach dem Kontrakt im `--append-system-prompt`; Einzel-Sessions nicht.
 9. `delete_implementation` löscht den Bericht-Ordner der Umsetzung; die Zeilen fallen per `ON DELETE CASCADE`.
-10. `cargo run --example report-probe -- <DB-Kopie> <Umsetzungs-ID> raw <Phasen-Key>` druckt die Rohfassung; `… anchor <Session-ID>` druckt den Ort, den ein `report_note` ohne `at` jetzt bekäme, oder den Fehlersatz.
+10. `cargo run --example report-probe -- <DB-Kopie> <Umsetzungs-ID> raw <Phasen-Key>` druckt die Rohfassung (auch `screen`-Einträge nach Kontrakt); `… anchor <Session-ID>` druckt den Ort, den ein `report_note` ohne `at` jetzt bekäme, oder den Fehlersatz.
 11. ADR 073 liegt in `docs/decisions/073-review-bericht.md`; `pnpm check` grün.
 
 ## Checkliste
@@ -44,7 +45,8 @@ Rating: heikel. Stationen können Einträge in den Review-Bericht schreiben; sie
   - `pub fn last_edit_anchor(entries: &[ChatEntry], details: &HashMap<String, ToolSummary>, read: impl Fn(&Path) -> Option<String>) -> Result<(PathBuf, u32, u32), String>` — Regel „Ohne `at`“ des Kontrakts; `new_string` aus `ToolSummary.input` (JSON) lesen; Zeilenende beim Vergleich auf `\n` vereinheitlichen.
   - `pub fn lines_text(content: &str, from: u32, to: u32) -> Option<String>` für `anchor_text`.
 - [ ] `src-tauri/src/report/raw.rs`: `pub fn raw_markdown(phase_key: &str, entries: &[EntryRow], labels: &HashMap<String, String>) -> String` nach dem Format des Kontrakts (`labels`: Session-ID → `#<Nr> <Stage>`).
-- [ ] `src-tauri/src/report/tools.rs`: `pub struct ReportTools;` mit `prefix() = "report_"`, beiden `ToolSpec` (Beschreibungen: `report_note` „Hängt eine Erklärung, ein Risiko oder einen Befund an den Review-Bericht dieser Phase; ohne at gilt der letzte Edit.“, `report_figure` „Hängt ein Schaubild (Mermaid, Zeilen mit „+ “, „- “, „~ “ markieren neu, entfällt, geändert) oder ein Bild mit nummerierten Marken an den Review-Bericht dieser Phase.“), `call` prüft Station (`station_of_session`) und findet die Phase der Station über `implementation_view`. Bildgröße per `image::image_dimensions`, falls das Crate `image` im Core ist, sonst PNG/JPEG/GIF/WebP-Kopf selbst lesen (prüfen: `grep -n "^image" src-tauri/Cargo.toml`). Nach Erfolg `report://changed` senden.
+- [ ] `src-tauri/src/report/tools.rs`: `pub struct ReportTools;` mit `prefix() = "report_"`, drei `ToolSpec` (`report_screen`: „Hängt je Bildschirm deine Fotos für die Sichtabnahme an den Review-Bericht: Ansichten je Breite und Thema, Entwurfsbild daneben, Abweichung in einer Zeile, Klickpfad mit Vorher/Nachher.“), (Beschreibungen: `report_note` „Hängt eine Erklärung, ein Risiko oder einen Befund an den Review-Bericht dieser Phase; ohne at gilt der letzte Edit.“, `report_figure` „Hängt ein Schaubild (Mermaid, Zeilen mit „+ “, „- “, „~ “ markieren neu, entfällt, geändert) oder ein Bild mit nummerierten Marken an den Review-Bericht dieser Phase.“), `call` prüft Station (`station_of_session`) und findet die Phase der Station über `implementation_view`. Bildgröße per `image::image_dimensions`, falls das Crate `image` im Core ist, sonst PNG/JPEG/GIF/WebP-Kopf selbst lesen (prüfen: `grep -n "^image" src-tauri/Cargo.toml`). Nach Erfolg `report://changed` senden.
+- [ ] `src-tauri/src/report/images.rs`: `pub fn copy_image(src: &Path, dir: &Path, name: &str) -> Result<(String, u32, u32), String>` (Endung, Größe, Maße prüfen, kopieren) — gemeinsam für `report_figure` und `report_screen`; bei einem Fehler in `report_screen` die schon kopierten Dateien wieder löschen.
 - [ ] `src-tauri/src/report/mod.rs`: `pub const REPORT_CHANGED_EVENT: &str = "report://changed";`, `pub fn report_dir(app, implementation_id) -> PathBuf`, Module.
 - [ ] `ReportTools` in `mcp_access::tool_sets` aufnehmen.
 - [ ] `delete_implementation` (`sessions/registry/implementation.rs`): danach `std::fs::remove_dir_all(report_dir)`, Fehler „nicht gefunden“ ignorieren.

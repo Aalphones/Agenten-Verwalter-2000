@@ -465,3 +465,49 @@ pre.md { max-height: 420px; margin: 0; padding: 10px 12px; overflow: auto; borde
 .nmark.mut { width: auto; min-width: 18px; padding: 0 4px; border-radius: 9px; background: var(--ui-warn); color: var(--ui-surface); }
 .anno.mut .who { margin-right: 6px; color: var(--ui-warn); font-weight: 600; }
 .anno.mut.hot { border-left-color: var(--ui-warn); background: var(--ui-warn-tint); }
+
+/* ---------- Sichtabnahme: Bildschirme mit Ansichten, Entwurf daneben, Abweichung, Klickpfad ---------- */
+.sa-sec { margin-top: 8px; }
+.screen .blk-head .one { color: var(--ui-text-muted); font-size: 12px; }
+.blk-head .cmp { display: inline-flex; align-items: center; gap: 6px; color: var(--ui-text); font-size: 12px; white-space: nowrap; cursor: pointer; }
+.blk-head .nodesign { color: var(--ui-text-muted); font-size: 12px; white-space: nowrap; }
+.screen .blk-head { flex-wrap: wrap; row-gap: 6px; }
+.scr-view { display: grid; grid-template-columns: minmax(0, 1fr); }
+.scr-view.compare { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.scr-view figure { min-width: 0; margin: 0; }
+.scr-view figure + figure { border-left: 1px solid var(--ui-line); }
+.scr-view figcaption { padding: 5px 12px; border-bottom: 1px solid var(--ui-line); color: var(--ui-text-muted); font-size: 11.5px; line-height: 1.4; }
+.scr-view.compare .shot-frame { padding: 10px; }
+.scr-view.narrow .shot-frame.narrow > .shot-inner { width: min(100%, 280px); }
+@container rv (max-width: 760px) {
+  .scr-view.compare { grid-template-columns: minmax(0, 1fr); }
+  .scr-view figure + figure { border-top: 1px solid var(--ui-line); border-left: 0; }
+}
+.dev { max-width: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 7px 12px; border-top: 1px solid var(--ui-line); background: var(--ui-warn-tint); font-size: 12.5px; line-height: 1.45; }
+.dev svg { flex: none; width: 13px; height: 13px; align-self: center; color: var(--ui-warn); }
+.dev b { color: var(--ui-warn); font-weight: 600; white-space: nowrap; }
+.dev.ok { background: none; color: var(--ui-text-muted); }
+.dev.ok svg { color: var(--ui-ok); }
+table.steps { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 12.5px; line-height: 1.45; }
+table.steps caption { padding: 0 0 6px; color: var(--ui-text); font-size: 12.5px; font-weight: 600; text-align: left; }
+table.steps th { padding: 5px 8px; border-bottom: 1px solid var(--ui-line-strong); color: var(--ui-text-muted); font-size: 11.5px; font-weight: 600; text-align: left; }
+table.steps td { padding: 7px 8px; border-bottom: 1px solid var(--ui-line); vertical-align: top; }
+table.steps td.k { width: 20px; color: var(--ui-text-muted); }
+table.steps td.pics { width: 1%; white-space: nowrap; }
+.thumb { display: inline-grid; justify-items: center; gap: 2px; min-height: 0; margin: 0 6px 0 0; padding: 3px; border: 1px solid var(--ui-line); border-radius: 4px; background: var(--ui-surface); cursor: zoom-in; }
+.thumb:hover { border-color: var(--ui-line-strong); }
+.thumb img { display: block; width: 96px; height: 56px; object-fit: cover; object-position: top left; }
+.thumb small { color: var(--ui-text-muted); font-size: 11px; line-height: 1.2; }
+@container rv (max-width: 600px) {
+  table.steps thead { display: none; }
+  table.steps, table.steps tbody, table.steps tr, table.steps td { display: block; width: auto; }
+  table.steps tr { position: relative; padding: 8px 0 8px 26px; border-bottom: 1px solid var(--ui-line); }
+  table.steps td { padding: 2px 0; border: 0; }
+  table.steps td.k { position: absolute; top: 9px; left: 0; }
+  table.steps td[data-l]::before { content: attr(data-l) ": "; color: var(--ui-text-muted); }
+  table.steps td.pics { padding-top: 6px; white-space: normal; }
+}
+.ov .sa-link, .chapters .sa-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; white-space: nowrap; }
+.chapters .sa-link svg { width: 13px; height: 13px; }
+.scr-view:not(.compare):not(.narrow) > figure { max-width: 900px; }
+.scr-view:not(.compare):not(.narrow) > figure + figure { border-left: 0; }

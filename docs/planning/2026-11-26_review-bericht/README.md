@@ -1,17 +1,17 @@
 # Plan: Review-Bericht – ein Bericht je Umsetzung im Reiter „Review“
 
-Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst und das HTML-Abnahme-Artefakt sowie den Blick in die rohen Diffs ersetzt. Stationen hängen mit zwei schlanken Werkzeugen (`report_note`, `report_figure`) Erklärungen, Befunde und Schaubilder an; am Ende jeder Phase ordnet ein abgekapselter Haiku-Aufruf ohne Werkzeuge die Rohfassung zu Ergebnis, Weg und Stopps. Code, Vorher-Zeilen, Testergebnisse, Abdeckung und Mutation liest der Verwalter mechanisch aus Git und den Berichtsdateien der Läufe. Der Benutzer liest je Phase eine Seite, kommentiert Zeilen, Stopps und Schaubilder und nimmt ab. Entwurf (verbindlich): [artifacts/review-bericht-entwurf.html](artifacts/review-bericht-entwurf.html), Erläuterung in [artifacts/README.md](artifacts/README.md). Entscheidungen: ADR 073 (entsteht in Phase 1).
+Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst und das HTML-Abnahme-Artefakt sowie den Blick in die rohen Diffs ersetzt. Stationen hängen mit drei schlanken Werkzeugen (`report_note`, `report_figure`, `report_screen`) Erklärungen, Befunde, Schaubilder und Bildschirmfotos für die Sichtabnahme an; am Ende jeder Phase ordnet ein abgekapselter Haiku-Aufruf ohne Werkzeuge die Rohfassung zu Ergebnis, Weg und Stopps. Code, Vorher-Zeilen, Testergebnisse, Abdeckung und Mutation liest der Verwalter mechanisch aus Git und den Berichtsdateien der Läufe. Der Benutzer liest je Phase eine Seite, vergleicht Bildschirme mit dem Entwurf, kommentiert Zeilen, Stopps, Schaubilder und Bildbereiche und nimmt ab. Entwurf (verbindlich): [artifacts/review-bericht-entwurf.html](artifacts/review-bericht-entwurf.html), Erläuterung in [artifacts/README.md](artifacts/README.md). Entscheidungen: ADR 073 (entsteht in Phase 1).
 
 ## Phasen
 
 | # | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Kern: Ablage, Werkzeuge `report_note`/`report_figure`, Anweisung an Stationen | [phase-1-kern-ablage-werkzeuge.md](phase-1-kern-ablage-werkzeuge.md) | heikel | pending |
+| 1 | Kern: Ablage, Werkzeuge `report_note`/`report_figure`/`report_screen`, Anweisung an Stationen | [phase-1-kern-ablage-werkzeuge.md](phase-1-kern-ablage-werkzeuge.md) | heikel | pending |
 | 2 | Kern: Spur und Haiku-Ordnung am Phasenende | [phase-2-kern-haiku-ordnung.md](phase-2-kern-haiku-ordnung.md) | standard | pending |
 | 3 | Kern: Bericht zusammensetzen (Commit-Bereich, Code aus Git, Vorher-Zeilen, Anker), Befehle und Probe | [phase-3-kern-bericht-laden.md](phase-3-kern-bericht-laden.md) | heikel | pending |
 | 4 | Kern: Prüfwerte aus Läufen und Berichtsdateien | [phase-4-kern-pruefwerte.md](phase-4-kern-pruefwerte.md) | standard | pending |
 | 5 | Oberfläche: Reiter „Review“, Inhalt, Überblick, Phasen-Seite, Code mit Randnotizen | [phase-5-oberflaeche-seiten.md](phase-5-oberflaeche-seiten.md) | standard | pending |
-| 6 | Oberfläche: Schaubilder mit Unterschied/Vorher/Nachher, Bilder mit Marken | [phase-6-oberflaeche-schaubilder.md](phase-6-oberflaeche-schaubilder.md) | standard | pending |
+| 6 | Oberfläche: Schaubilder mit Unterschied/Vorher/Nachher, Bilder mit Marken, Sichtabnahme | [phase-6-oberflaeche-schaubilder.md](phase-6-oberflaeche-schaubilder.md) | standard | pending |
 | 7 | Kommentare und Abnahme | [phase-7-kommentare-abnahme.md](phase-7-kommentare-abnahme.md) | standard | pending |
 | 8 | Skills umstellen (User-Skills, facepass-Projekt-Skills), Plan fertig | [phase-8-skills-umstellen.md](phase-8-skills-umstellen.md) | standard | pending |
 
@@ -35,7 +35,7 @@ Reihenfolge fest 1 → 8; nach jeder Phase läuft die App. Profil: privat – ke
 
 ### Namensschema
 
-Neues Feature `report` (Review-Bericht): `src-tauri/src/report/` (`mod.rs`, `model.rs`, `tools.rs`, `anchor.rs`, `raw.rs`, `tidy.rs`, `range.rs`, `assemble.rs`, `checks.rs`), `src-tauri/src/db/report.rs`, `src-tauri/src/commands/report.rs`, `src/lib/report.ts`, `src/stores/report.ts`, `src/features/report/`. Prüfprogramm `src-tauri/examples/report-probe.rs`.
+Neues Feature `report` (Review-Bericht): `src-tauri/src/report/` (`mod.rs`, `model.rs`, `tools.rs`, `anchor.rs`, `raw.rs`, `images.rs`, `tidy.rs`, `range.rs`, `assemble.rs`, `checks.rs`), `src-tauri/src/db/report.rs`, `src-tauri/src/commands/report.rs`, `src/lib/report.ts`, `src/stores/report.ts`, `src/features/report/`. Prüfprogramm `src-tauri/examples/report-probe.rs`.
 
 ### Begriffe
 
@@ -43,6 +43,7 @@ Neues Feature `report` (Review-Bericht): `src-tauri/src/report/` (`mod.rs`, `mod
 - **Rohfassung:** alle Einträge einer Phase als Markdown in Nummernfolge (Format unten), erzeugt aus den Zeilen von `report_entries`.
 - **Geordnete Fassung:** die Antwort von Haiku (JSON nach Schema unten) als Markdown in `report_phases.tidy`; enthält Ergebnis, Weg und Stopps, die Einträge nur als IDs.
 - **Stopp:** ein Abschnitt der Phasen-Seite: Titel, Art (`data|sec|flow|ui`), „Worauf achten“, Warum-Text, Code-Blöcke mit Randnotizen, Schaubilder. Der erste Eintrag eines Stopps ist sein Warum-Text (Prosa über dem Code), alle weiteren Notizen mit Zeilen stehen am Rand.
+- **Sichtabnahme:** je Bildschirm ein Eintrag `report_screen`: Fotos je Ansicht (Beschriftung wie „1440 · hell“), optional je Foto das Entwurfsbild derselben Ansicht, eine Zeile Abweichung vom Entwurf, Klickpfad „öffnen → tun → erwartet“ mit Vorher-/Nachher-Bild, freier Kommentar. Die Fotos liefert die Station (Headless-Browser, Gerät); der Verwalter fotografiert nicht selbst.
 - **Befund:** `report_note` mit `kind: "finding"`. **Behoben:** ein späterer `report_note` mit `resolves: <Nummer des Befunds>`.
 - **Spur:** Zweckzeilen, Werkzeug-Beschreibungen und geschriebene Dateien der Stationen einer Phase außer Test- und Review-Stationen (Stage enthält „Test“ oder „Review“, ohne Groß-/Kleinschreibung).
 - **Prüfwerte:** Prüfkette, Tests, Abdeckung der neuen Zeilen, Mutation einer Phase; ohne Werkzeug-Aufruf ermittelt.
@@ -57,7 +58,7 @@ CREATE TABLE report_entries (
   station_id        TEXT NOT NULL,
   session_id        TEXT NOT NULL,
   number            INTEGER NOT NULL,
-  tool              TEXT NOT NULL,          -- 'note' | 'figure'
+  tool              TEXT NOT NULL,          -- 'note' | 'figure' | 'screen'
   note_kind         TEXT,                   -- 'why' | 'risk' | 'finding' (nur note)
   resolves          INTEGER,                -- Nummer des behobenen Befunds derselben Phase
   text              TEXT NOT NULL DEFAULT '',
@@ -66,7 +67,8 @@ CREATE TABLE report_entries (
   image_file        TEXT,                   -- Dateiname im Bericht-Ordner
   image_width       INTEGER,
   image_height      INTEGER,
-  marks             TEXT,                   -- JSON [{"n":1,"x":10,"y":20,"text":"…"}]
+  marks             TEXT,                   -- JSON [{"n":1,"x":10,"y":20,"w":120,"h":30,"text":"…"}], Rechtecke in Bildpixeln
+  screen            TEXT,                   -- JSON ScreenRow (nur screen): name, deviation, shots, steps
   repository_key    TEXT,
   path              TEXT,                   -- relativ zum Repository, mit /
   line_from         INTEGER,
@@ -89,9 +91,11 @@ CREATE TABLE report_phases (
 );
 ```
 
-Bilder liegen unter `<data_dir>\reports\<implementation_id>\<number>.<ext>` (`filesystem::workspace::data_dir`); `delete_implementation` löscht den Ordner mit.
+Bilder liegen unter `<data_dir>\reports\<implementation_id>\` (`filesystem::workspace::data_dir`): `report_figure` als `<number>.<ext>`, `report_screen` als `<number>-<k>.<ext>` (Foto k ab 1), `<number>-<k>-entwurf.<ext>`, `<number>-s<k>-vorher.<ext>`, `<number>-s<k>-nachher.<ext>`; `delete_implementation` löscht den Ordner mit. `ScreenRow` (JSON in `screen`): `{ name, deviation?, shots: [{ label, file, width, height, design?: { file, width, height }, marks: [...] }], steps: [{ open, act, expect, before?: { file, width, height }, after?: {…} }] }`; der freie Kommentar steht in `text`.
 
 ### Werkzeuge (Satz `ReportTools`, Präfix `report_`)
+
+Gemeinsam für alle Bilder: absoluter Pfad zu `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, höchstens 5 MB je Datei, wird kopiert. Marken (`marks`) sind Rechtecke `{n: 1–9, x, y, w, h, text?}` in Bildpixeln, `text` höchstens 300 Zeichen, höchstens 9 je Bild.
 
 `report_note` — Eingabe (JSON-Schema mit `additionalProperties: false`):
 
@@ -108,11 +112,23 @@ Bilder liegen unter `<data_dir>\reports\<implementation_id>\<number>.<ext>` (`fi
 |---|---|---|
 | `caption` | string | Pflicht, 1–120 Zeichen |
 | `mermaid` | string | genau eines von `mermaid` und `image`; höchstens 6000 Zeichen; Zeilen dürfen mit `+ `, `- `, `~ ` beginnen (neu, entfällt, geändert) |
-| `image` | string | absoluter Pfad zu `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, höchstens 5 MB; wird kopiert |
-| `marks` | array | optional, nur mit `image`, höchstens 9 × `{n: 1–9, x, y, text?}` in Bildpixeln, `text` höchstens 300 Zeichen |
+| `image` | string | Bild nach den gemeinsamen Regeln |
+| `marks` | array | optional, nur mit `image`, Marken nach den gemeinsamen Regeln |
+| `text` | string | optional, höchstens 1500 Zeichen, Kommentar unter dem Bild bzw. Schaubild |
 | `at` | string | optional, wie bei `report_note` |
 
-Antwort beider Werkzeuge bei Erfolg: Text `n<k> angehängt.`; Fehler als Satz (`ToolResult::Err`), u. a. „Diese Session ist keine Station.“, „Stelle nicht eindeutig: gib at an.“, „Datei liegt in keinem Repository dieser Session.“, „Befund n<k> gibt es in dieser Phase nicht.“
+`report_screen` — Eingabe (ein Aufruf je Bildschirm):
+
+| Feld | Typ | Regel |
+|---|---|---|
+| `screen` | string | Pflicht, 1–80 Zeichen, Name des Bildschirms |
+| `shots` | array | Pflicht, 1–8 × `{ image, label, design?, marks? }`; `label` 1–40 Zeichen (z. B. „1440 · hell“, „PDF“), `design` = Entwurfsbild derselben Ansicht |
+| `deviation` | string | optional, höchstens 300 Zeichen; Abweichung vom Entwurf in einer Zeile |
+| `steps` | array | optional, höchstens 8 × `{ open, act, expect, before?, after? }`; Texte je 1–160 Zeichen, `before`/`after` Bilder |
+| `text` | string | optional, höchstens 1500 Zeichen, Kommentar zum Bildschirm |
+| `at` | string | optional, wie bei `report_note` |
+
+Antwort aller Werkzeuge bei Erfolg: Text `n<k> angehängt.`; Fehler als Satz (`ToolResult::Err`), u. a. „Diese Session ist keine Station.“, „Stelle nicht eindeutig: gib at an.“, „Datei liegt in keinem Repository dieser Session.“, „Befund n<k> gibt es in dieser Phase nicht.“
 
 **Ohne `at` (nur `report_note`):** Ort ist der letzte Schreib-Aufruf der Session (`ChatEntry::Tool` mit `tool` in `Edit|MultiEdit|Write`, Pfad aus `target`). Zeilen: bei `Edit`/`MultiEdit` die Fundstelle von `new_string` (letzte Ersetzung) im aktuellen Dateiinhalt, nur wenn genau einmal vorhanden; bei `Write` die Zeilen 1 bis min(Zeilenzahl, 40). Kein Schreib-Aufruf oder keine eindeutige Fundstelle → Fehler „Stelle nicht eindeutig: gib at an.“ `report_figure` ohne `at` hat keinen Ort.
 
@@ -138,11 +154,23 @@ image: <datei> · marks: 1@<x%>,<y%> 2@…
 - 1: <mark-text>
 ```
 
-Zeilen `at:`, `kind:`, `resolves:`, `image:` nur, wenn belegt; `kind: why` entfällt. Code steht nie in der Rohfassung.
+## n<k> · screen · #<Session-Nr> <Stage>
+screen: <name>
+shots: <label> (<datei>, Entwurf <datei>, marks 1@x,y,w,h …) · …
+abweichung: <deviation>
+schritte:
+1. <open> → <act> → <expect> · vorher <datei> · nachher <datei>
+
+<text>
+
+- 1: <mark-text>
+```
+
+Zeilen `at:`, `kind:`, `resolves:`, `image:`, `abweichung:`, `schritte:` nur, wenn belegt; `kind: why` entfällt. Code steht nie in der Rohfassung.
 
 ### Haiku-Ordnung (`report/tidy.rs`)
 
-Zu ordnen sind alle Einträge der Phase außer Befunden, Einträgen mit `resolves` und Schaubildern von Review-Stationen (diese zeigt der Abschnitt „Review“). Eingabe an `ask_haiku`: Rohfassung, dann `## Zu ordnen` mit den IDs durch Leerzeichen getrennt, dann `## Spur` (höchstens 40 000 Zeichen, Mitte gekürzt wie `retro::tools::haiku_input`). Systemtext wörtlich:
+Zu ordnen sind alle Einträge der Phase außer Befunden, Einträgen mit `resolves`, Schaubildern von Review-Stationen (diese zeigt der Abschnitt „Review“) und `report_screen` (diese zeigt der Abschnitt „Sichtabnahme“ in Aufruf-Reihenfolge). Eingabe an `ask_haiku`: Rohfassung, dann `## Zu ordnen` mit den IDs durch Leerzeichen getrennt, dann `## Spur` (höchstens 40 000 Zeichen, Mitte gekürzt wie `retro::tools::haiku_input`). Systemtext wörtlich:
 
 > Du ordnest den Review-Bericht einer Phase. Eingabe: die Rohfassung (Einträge n1, n2 … mit Text, Ort und Schaubild) und die Spur der Umsetzung. Antworte nur nach Schema. result: was die Phase bewirkt, höchstens zwei Sätze, Klartext. way: höchstens acht Etappen in der Reihenfolge der Spur, je ein Satz; detour für einen Umweg, der wieder verworfen wurde; stop: Index des Stopps, zu dem die Etappe gehört. stops: fasse zusammengehörige Einträge zu Stopps; title höchstens sechs Wörter; kind data, sec, flow oder ui; look ein Satz, worauf der Prüfer achten soll. Jede ID aus „Zu ordnen“ steht in genau einem Stopp, keine andere. Schreibe keine Eintragstexte um.
 
@@ -172,6 +200,8 @@ Ergebnis: <result>
 ## <Stopp-Titel> {<kind>}
 look: <look>
 n1 n4 n5
+## Sichtabnahme
+n7 n8
 ```
 
 Auslöser: Wird die letzte offene Station einer Phase fertig (alle Stationen der Phase `completed_at` gesetzt), startet ein Thread `report-tidy` die Ordnung und danach die Prüfwerte. Befehl `report_retidy(phase_id)` startet beides erneut.
@@ -180,7 +210,7 @@ Auslöser: Wird die letzte offene Station einer Phase fertig (alle Stationen der
 
 Wörtlich:
 
-> Review-Bericht dieser Umsetzung: Erkläre, was du änderst, dort, wo es steht. Nach einer Folge von Edits, die zusammen etwas bewirken, rufe mcp__verwalter__report_note mit dem Warum in zwei, drei Sätzen auf; ohne at gilt dein letzter Edit. Für den größeren Zusammenhang mcp__verwalter__report_figure mit Mermaid; „+ “, „- “ oder „~ “ vor einer Zeile markieren neu, entfällt, geändert. Bildschirmfotos als report_figure mit image und marks. Im Review jeden Befund als report_note mit kind finding und at, Architektur-Zusammenhänge als report_figure. Im Fix report_note mit resolves auf den Befund. Schreibe keinen HTML-Bericht und kein Abnahme-Artefakt; Tests, Abdeckung und Mutation liest der Verwalter selbst.
+> Review-Bericht dieser Umsetzung: Erkläre, was du änderst, dort, wo es steht. Nach einer Folge von Edits, die zusammen etwas bewirken, rufe mcp__verwalter__report_note mit dem Warum in zwei, drei Sätzen auf; ohne at gilt dein letzter Edit. Für den größeren Zusammenhang mcp__verwalter__report_figure mit Mermaid; „+ “, „- “ oder „~ “ vor einer Zeile markieren neu, entfällt, geändert. Bei Oberflächen je Bildschirm ein Aufruf mcp__verwalter__report_screen mit deinen Fotos je Breite und Thema, dem Entwurfsbild daneben, der Abweichung in einer Zeile und dem Klickpfad öffnen → tun → erwartet mit Vorher- und Nachher-Bild; einzelne Bilder mit Kommentar als report_figure mit image, marks und text. Im Review jeden Befund als report_note mit kind finding und at, Architektur-Zusammenhänge als report_figure. Im Fix report_note mit resolves auf den Befund. Schreibe keinen HTML-Bericht und kein Abnahme-Artefakt; Tests, Abdeckung und Mutation liest der Verwalter selbst.
 
 ### Typen über die Tauri-Grenze (`report/model.rs`, `derive(TS)`, `camelCase`)
 
@@ -193,8 +223,12 @@ pub struct ReportPhase {
   station_label: String,                 // "#11 Umsetzung" der ersten Umsetzungs-Station
   finished_at: Option<f64>, files: u32, added: u32, removed: u32, commits: Vec<String>, // Kurz-Hashes
   result: Option<String>, way: Vec<ReportWayStep>, ordered: bool, tidy_error: Option<String>,
-  review: Option<ReportReview>, stops: Vec<ReportStop>, checks: Option<PhaseChecks>, entries: u32,
+  review: Option<ReportReview>, screens: Vec<ReportScreen>, stops: Vec<ReportStop>, checks: Option<PhaseChecks>, entries: u32,
 }
+pub struct ReportScreen { entry: u32, name: String, by: String, text: Option<String>, deviation: Option<String>, shots: Vec<ReportShot>, steps: Vec<ReportStep> }
+pub struct ReportImage { url: String, width: u32, height: u32 }
+pub struct ReportShot { label: String, image: ReportImage, narrow: bool, design: Option<ReportImage>, marks: Vec<ReportMark> }  // narrow = Breite ≤ 600 px
+pub struct ReportStep { open: String, act: String, expect: String, before: Option<ReportImage>, after: Option<ReportImage> }
 pub struct ReportWayStep { text: String, files: Vec<String>, detour: bool, stop: Option<u32> }
 pub struct ReportReview { by: String, open: Vec<ReportFinding>, resolved: Vec<ReportFinding>, figures: Vec<ReportFigure> }
 pub struct ReportFinding { entry: u32, text: String, location: Option<ReportLocation>, stop: Option<u32>, resolved_by: Option<u32> }
@@ -210,8 +244,8 @@ pub enum ReportRowKind { Add, Context, Removed }
 pub struct ReportRow { kind: ReportRowKind, old: Option<u32>, new: Option<u32>, text: String }
 pub enum ReportNoteKind { Why, Risk, Finding, Mutant }
 pub struct ReportNote { entry: Option<u32>, label: String, kind: ReportNoteKind, from: u32, to: u32, text: String, by: String, open: Option<bool>, moved: bool }
-pub struct ReportFigure { entry: u32, caption: String, by: String, mermaid: Option<String>, image_url: Option<String>, image_width: Option<u32>, image_height: Option<u32>, marks: Vec<ReportMark> }
-pub struct ReportMark { n: u32, x: u32, y: u32, text: Option<String> }
+pub struct ReportFigure { entry: u32, caption: String, by: String, text: Option<String>, mermaid: Option<String>, image: Option<ReportImage>, marks: Vec<ReportMark> }
+pub struct ReportMark { n: u32, x: u32, y: u32, w: u32, h: u32, text: Option<String> }
 pub struct PhaseChecks { by: String, sources: Vec<String>, chain: Option<CheckRun>, tests: Option<TestCounts>, coverage: Option<CoverageCounts>, mutation: Option<MutationCounts>, gaps: Vec<CheckGap> }
 pub struct CheckRun { command: String, ok: bool }
 pub struct TestCounts { passed: u32, failed: u32, skipped: u32 }
@@ -235,19 +269,20 @@ Ereignis `report://changed` mit `{ implementationId }` nach jedem Eintrag, jeder
 
 ### Kommentarziel (`review/model.rs`)
 
-Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: String, entry: Option<u32>, label: String }` (`label` = Stopp-Titel bzw. Bildunterschrift, höchstens 80 Zeichen). Kommentare an Codezeilen des Berichts nutzen die bestehende Variante `Diff` mit Repository, Pfad und Zeile. Text an den Agenten (`review::agent_text`): `Review-Bericht, Phase <key>, <label> (n<entry>): <Kommentar>`.
+Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: String, entry: Option<u32>, label: String }` (`label` = Stopp-Titel, Bildunterschrift bzw. Bildschirm-Name, höchstens 80 Zeichen). Kommentare an Codezeilen des Berichts nutzen die bestehende Variante `Diff` mit Repository, Pfad und Zeile. Text an den Agenten (`review::agent_text`): `Review-Bericht, Phase <key>, <label> (n<entry>): <Kommentar>`.
 
 ## Finale AK
 
-1. Eine Station der Betriebsart Claude sieht `report_note` und `report_figure` und die Anweisung oben; jeder Aufruf erscheint ohne Neuladen im Reiter „Review“.
+1. Eine Station der Betriebsart Claude sieht `report_note`, `report_figure` und `report_screen` und die Anweisung oben; jeder Aufruf erscheint ohne Neuladen im Reiter „Review“.
 2. Die Umsetzungs-Ansicht und jede Station-Session mit Bericht zeigen den Reiter „Review“; Inhaltsverzeichnis mit Überblick und genau einer Zeile je Phase, keine Unterkapitel.
-3. Je Phase eine Seite ohne weitere Navigation: Ergebnis, Prüfzeile, Weg (eingeklappt), Review mit offenen Befunden und Schaubild, „N behoben“ (eingeklappt), dann alle Stopps.
+3. Je Phase eine Seite ohne weitere Navigation: Ergebnis, Prüfzeile, Weg (eingeklappt), Sichtabnahme (falls vorhanden), Review mit offenen Befunden und Schaubild, „N behoben“ (eingeklappt), dann alle Stopps.
+3a. Sichtabnahme je Bildschirm: Umschalter der Ansichten, „Entwurf daneben“, Marken mit Legende, Zeile „Abweichung vom Entwurf“ bzw. „wie im Entwurf“, Klickpfad mit Vorher-/Nachher-Bildern.
 4. Code eines Stopps zeigt neue, unveränderte und entfernte Zeilen aus Git mit alten bzw. neuen Nummern, Läufe entfernter Zeilen über sechs Zeilen eingeklappt, Anmerkungen am Rand (ab 940 px Breite) bzw. zwischen den Zeilen.
 5. Schaubilder mit Markern zeigen Unterschied, Vorher und Nachher; ohne Marker nur das Schaubild.
 6. Am Ende jeder Phase ordnet Haiku die Phase; eine verworfene Ordnung fällt auf die Rohgruppierung zurück und nennt den Grund.
 7. Prüfwerte erscheinen je Phase und im Überblick, sobald Berichtsdateien existieren; rot nur bei fehlgeschlagenen Tests oder roter Prüfkette.
-8. Kommentare an Zeilen, Stopps und Schaubildern landen als Review-Kommentare in der Eingabeleiste der Ziel-Session; „Abnehmen“ schließt die Station `by: "you"`.
-9. User-Skills und facepass-Projekt-Skills verlangen in Stationen keinen HTML-Bericht mehr, sondern die Werkzeuge des Berichts.
+8. Kommentare an Zeilen, Stopps, Schaubildern, Bildschirmen und Bildbereichen landen als Review-Kommentare in der Eingabeleiste der Ziel-Session; „Abnehmen“ schließt die Station `by: "you"`.
+9. User-Skills und facepass-Projekt-Skills verlangen in Stationen keinen HTML-Bericht und keine Abnahme-Seite mehr, sondern die Werkzeuge des Berichts; das Abnahme-Paket der Sichtabnahme geht per `report_screen`.
 10. `pnpm check` grün.
 
 ## Von mir gesetzt
@@ -260,6 +295,9 @@ Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: Str
 - **Mermaid als Abhängigkeit `mermaid@10.9.1`**, dieselbe Version wie in den Betrachtern, per `import()` erst beim ersten Schaubild geladen, `securityLevel: 'strict'`.
 - **Anmerkungen bleiben am Stand ihrer Phase:** Code einer Phase kommt aus ihrem Commit-Bereich; eine Anmerkung wird über `anchor_text` im Endstand der Phase wiedergefunden, sonst steht sie als „Stelle geändert“ unter dem Block.
 - **Zweckzeilen gehen in die Spur für Haiku**, nicht automatisch an Hunks (offener Punkt des Entwurfs).
+- **Sichtabnahme mit eigenem Werkzeug `report_screen`** (Entscheidung des Benutzers): ein Aufruf je Bildschirm statt eines `report_figure` je Foto, damit Ansichten, Entwurf, Abweichung und Klickpfad zusammenbleiben; die Fotos liefert die Station.
+- **Sichtabnahme nicht von Haiku geordnet:** Bildschirme stehen in Aufruf-Reihenfolge im eigenen Abschnitt nach dem Weg.
+- **Marken sind Rechtecke** (`x, y, w, h`), wie im Entwurf.
 - **Bericht nur für Umsetzungen**, nicht für einzelne Sessions (offener Punkt des Entwurfs).
 - **Ort der Berichtsdateien:** der Verwalter sucht sie selbst in den Repository-Ordnern der Phase (Muster in Phase 4), ohne Einstellung.
 - **Keine Schwellen, keine Ampel:** Zahlen ohne Wertung; rot nur bei fehlgeschlagenen Tests oder roter Prüfkette.
