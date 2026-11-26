@@ -1,0 +1,176 @@
+/* UI-Baukasten tokens.css · Version 1.2.0 */
+/*
+  Design-Tokens des allgemeinen UI-Baukastens, Präfix --ui-.
+  Hell in :root, dunkel über prefers-color-scheme oder data-theme="dark" an <html>.
+  Dichte über data-density="compact" | "touch" an <html> oder einem Container; ohne Attribut gilt standard.
+  Kontrast gerechnet (WCAG): Text >= 4,5:1 gegen bg, surface, surface-2; line-strong und focus >= 3:1.
+  Verläufe nur innerhalb einer Farbfamilie und nur in Richtung mehr Kontrast zum Text darauf: Beide Enden halten die Werte oben.
+*/
+
+:root {
+  color-scheme: light;
+
+  /* Flächen */
+  --ui-bg: #f6f7f9;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f0f2f5;
+  --ui-surface-3: #e4e8ed;
+
+  /* Linien: line trennt Inhalte, line-strong umrandet Bedienelemente */
+  --ui-line: #dde2e8;
+  --ui-line-strong: #738397;
+
+  /* Text */
+  --ui-text: #1b1f24;
+  --ui-text-muted: #5a626d;
+  --ui-text-disabled: #98a0aa;
+  --ui-on-primary: #ffffff;
+
+  /* Primär */
+  --ui-primary: #2b59c3;
+  --ui-primary-hover: #244ba6;
+  --ui-primary-active: #1e3f8c;
+  --ui-primary-tint: color-mix(in srgb, var(--ui-primary) 12%, var(--ui-surface));
+  --ui-primary-text: #2b59c3;
+
+  /* Verläufe: oben hell, unten dunkler; in einer Farbfamilie */
+  --ui-grad-surface: linear-gradient(180deg, var(--ui-surface), var(--ui-surface-2));
+  --ui-grad-primary: linear-gradient(180deg, var(--ui-primary), var(--ui-primary-hover));
+  --ui-grad-primary-hover: linear-gradient(180deg, var(--ui-primary-hover), var(--ui-primary-active));
+  --ui-grad-tint: linear-gradient(180deg, var(--ui-primary-tint), color-mix(in srgb, var(--ui-primary) 18%, var(--ui-surface)));
+  --ui-grad-danger: linear-gradient(180deg, var(--ui-danger), color-mix(in srgb, var(--ui-danger) 90%, var(--ui-text)));
+
+  /* Zustände */
+  --ui-ok: #1d7a46;
+  --ui-warn: #8a5a00;
+  --ui-danger: #b42318;
+  --ui-info: var(--ui-primary);
+  --ui-ok-tint: color-mix(in srgb, var(--ui-ok) 12%, var(--ui-surface));
+  --ui-warn-tint: color-mix(in srgb, var(--ui-warn) 12%, var(--ui-surface));
+  --ui-danger-tint: color-mix(in srgb, var(--ui-danger) 12%, var(--ui-surface));
+  --ui-info-tint: color-mix(in srgb, var(--ui-info) 12%, var(--ui-surface));
+
+  /* Fokus: Ring 2 px mit 2 px Abstand */
+  --ui-focus: #2b59c3;
+
+  /* Form */
+  --ui-radius-s: 4px;
+  --ui-radius: 6px;
+  --ui-radius-l: 10px;
+  --ui-radius-full: 999px;
+
+  /* Abstand in 4-px-Stufen */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-7: 28px;
+  --ui-space-8: 32px;
+
+  /* Schrift (Dichte standard) */
+  --ui-font: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ui-font-mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  --ui-font-size: 14px;
+  --ui-font-size-s: 12px;
+  --ui-font-size-l: 16px;
+  --ui-font-size-xl: 20px;
+  --ui-line-height: 1.45;
+
+  /* Steuerhöhe (Dichte standard) */
+  --ui-control-h: 36px;
+
+  /* Schatten nur für schwebende Ebenen */
+  --ui-shadow-1: 0 4px 12px rgb(16 24 40 / 0.12), 0 1px 3px rgb(16 24 40 / 0.08);
+  --ui-shadow-2: 0 16px 40px rgb(16 24 40 / 0.18), 0 2px 6px rgb(16 24 40 / 0.10);
+
+  /* Bewegung */
+  --ui-dur-fast: 120ms;
+  --ui-dur: 200ms;
+  --ui-dur-slow: 280ms;
+  --ui-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ui-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ui-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* federt leicht über, für Knopf-Rückfedern, Haken, Schalter */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ui-bg: #0e1013;
+    --ui-surface: #16191e;
+    --ui-surface-2: #1d2127;
+    --ui-surface-3: #262b33;
+    --ui-line: #2a3038;
+    --ui-line-strong: #6a7788;
+    --ui-text: #e7e9ec;
+    --ui-text-muted: #a2a9b3;
+    --ui-text-disabled: #5f6670;
+    --ui-on-primary: #0e1013;
+    --ui-primary: #7fa2ff;
+    --ui-primary-hover: #9bb6ff;
+    --ui-primary-active: #b3c7ff;
+    --ui-primary-text: #7fa2ff;
+    --ui-ok: #63cf93;
+    --ui-warn: #f0c062;
+    --ui-danger: #ff8a80;
+    --ui-focus: #7fa2ff;
+    --ui-grad-surface: linear-gradient(180deg, var(--ui-surface-2), var(--ui-surface));
+    --ui-grad-primary: linear-gradient(180deg, var(--ui-primary-hover), var(--ui-primary));
+    --ui-grad-primary-hover: linear-gradient(180deg, var(--ui-primary-active), var(--ui-primary-hover));
+    --ui-shadow-1: 0 4px 12px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
+    --ui-shadow-2: 0 16px 40px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.40);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ui-bg: #0e1013;
+  --ui-surface: #16191e;
+  --ui-surface-2: #1d2127;
+  --ui-surface-3: #262b33;
+  --ui-line: #2a3038;
+  --ui-line-strong: #6a7788;
+  --ui-text: #e7e9ec;
+  --ui-text-muted: #a2a9b3;
+  --ui-text-disabled: #5f6670;
+  --ui-on-primary: #0e1013;
+  --ui-primary: #7fa2ff;
+  --ui-primary-hover: #9bb6ff;
+  --ui-primary-active: #b3c7ff;
+  --ui-primary-text: #7fa2ff;
+  --ui-ok: #63cf93;
+  --ui-warn: #f0c062;
+  --ui-danger: #ff8a80;
+  --ui-focus: #7fa2ff;
+  --ui-grad-surface: linear-gradient(180deg, var(--ui-surface-2), var(--ui-surface));
+  --ui-grad-primary: linear-gradient(180deg, var(--ui-primary-hover), var(--ui-primary));
+  --ui-grad-primary-hover: linear-gradient(180deg, var(--ui-primary-active), var(--ui-primary-hover));
+  --ui-shadow-1: 0 4px 12px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
+  --ui-shadow-2: 0 16px 40px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.40);
+}
+
+/* Dichten */
+[data-density="compact"] {
+  --ui-font-size: 13px;
+  --ui-font-size-s: 12px;
+  --ui-font-size-l: 15px;
+  --ui-font-size-xl: 18px;
+  --ui-control-h: 30px;
+}
+
+[data-density="touch"] {
+  --ui-font-size: 18px;
+  --ui-font-size-s: 15px;
+  --ui-font-size-l: 22px;
+  --ui-font-size-xl: 28px;
+  --ui-control-h: 56px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-dur-fast: 0ms;
+    --ui-dur: 0ms;
+    --ui-dur-slow: 0ms;
+  }
+}

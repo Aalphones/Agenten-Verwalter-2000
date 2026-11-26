@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- Entwurf „Review-Bericht im Agenten-Verwalter“ · aus UI-Baukasten vorlage.html 1.2.0 · Entwurfsleiste und Adress-Skript gehören zum Entwurf. Adresse: ?variante=a|b&zustand=bereit|waechst|abgenommen|fehler&thema=hell|dunkel&werkzeuge=1&demo=kommentare&blatt=inhalt|liste|bild|kommentar#/s/<stopp> -->
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review-Bericht · Entwurf</title>
+<link rel="stylesheet" href="_review-bericht-entwurf/tokens.css">
+<link rel="stylesheet" href="_review-bericht-entwurf/theme.css">
+<link rel="stylesheet" href="_review-bericht-entwurf/kit.css">
+<link rel="stylesheet" href="_review-bericht-entwurf/entwurf.css">
+<script src="_review-bericht-entwurf/kit.js" defer></script>
+</head>
+<body class="ui" data-density="compact">
+
+  <!-- Entwurfsleiste -->
+  <div class="draftbar">
+    <strong>Entwurf</strong><span>· Code, Commits, Bilder echt · Stationsnummern, Agententexte und Testzahlen Beispiel</span>
+    <fieldset class="segment" id="variant">
+      <legend class="hidden">Anmerkungen am Code</legend>
+      <label title="Notizen rechts neben dem Code, auf Höhe ihrer Zeilen"><input type="radio" name="variante" value="a" checked>A · Randnotizen</label>
+      <label title="Notizen als Karte direkt unter ihren Zeilen"><input type="radio" name="variante" value="b">B · Zwischen den Zeilen</label>
+    </fieldset>
+    <span class="grp"><label for="zustand">Zustand</label>
+      <select id="zustand">
+        <option value="bereit">Wartet auf Abnahme</option>
+        <option value="waechst">Wächst (Phase 4 läuft)</option>
+        <option value="abgenommen">Abgenommen</option>
+        <option value="fehler">Fehlerfall: Schaubild kaputt</option>
+      </select>
+    </span>
+    <label class="grp"><input type="checkbox" role="switch" id="tools"> Werkzeuge zeigen</label>
+    <fieldset class="segment" id="theme">
+      <legend class="hidden">Thema</legend>
+      <label><input type="radio" name="thema" value="light">Hell</label>
+      <label><input type="radio" name="thema" value="dark" checked>Dunkel</label>
+    </fieldset>
+    <button type="button" class="quiet" popovertarget="draftinfo">Info</button>
+    <div id="draftinfo" popover>
+      <h3>Neu in diesem Stand</h3>
+      <ul>
+        <li>Eine Seite je Phase, ohne Unterseiten: Ergebnis, Weg (eingeklappt), Review mit offenen Befunden und Schaubild, dann alle Stopps als Abschnitte. Links auf einen Stopp springen an seine Stelle.</li>
+        <li>Zwei schlanke Werkzeuge für alle Stationen: <code>note(text, at?, kind?, resolves?)</code> und <code>figure(caption, mermaid | image, marks?, at?)</code>. Phase und Rolle kennt der Verwalter; ohne <code>at</code> gilt der letzte Edit.</li>
+        <li>Ablage als Markdown je Phase: Jeder Aufruf hängt einen Eintrag an die Rohfassung. Haiku gibt die geordnete Fassung zurück: Ergebnis, Weg, Titel und Reihenfolge, die Einträge nur als IDs. „Werkzeuge zeigen“ blendet beide am Ende jeder Phase ein.</li>
+        <li>Der Verwalter prüft, dass jede ID genau einmal vorkommt; sonst gilt die Reihenfolge der Rohfassung.</li>
+        <li>Prüfung je Phase, ohne Tokens: Prüfkette, Tests, Abdeckung der neuen Zeilen und Mutation liest der Verwalter aus den Berichtsdateien der Läufe (JUnit-XML, LCOV, Mutations-JSON). Im Code markiert: neue Zeilen ohne Test (gelber Rand) und überlebte Mutanten als Anmerkung „M“ (Beispiel: Phase 2 · Sperre). Keine Ampel-Schwellen; rot nur bei fehlgeschlagenen Tests.</li>
+        <li>Vorher im Code: Entfernte Zeilen kommen aus Git und stehen rot zwischen den neuen, mit alter Zeilennummer; Läufe über sechs Zeilen sind eingeklappt (Beispiel: Phase 2 · Sperre).</li>
+        <li>Vorher im Schaubild: Der Agent setzt im Mermaid-Text „+ “, „- “ oder „~ “ vor Zeilen. Daraus zeigt der Bericht Unterschied, Vorher und Nachher — ein Schaubild, keine zwei (Phase 2 · Review, Phase 2 · Grenze, Phase 3 · Range).</li>
+      </ul>
+      <h3>Aufgabe</h3>
+      <ul>
+        <li>Prüfen, was eine Umsetzung geändert hat, und dabei am echten Code bleiben. Lesen ist kein Pflichtprogramm: keine Häkchen, kein Fortschritt.</li>
+      </ul>
+      <h3>Woher eine Anmerkung kommt</h3>
+      <ul>
+        <li><b>Gratis:</b> Diff und Zeilen aus Git · Ergebnis aus Commit bzw. „Station fertig“ · Zweckzeile, die der Agent ohnehin vor einer Folge von Edits schreibt, am Code dieser Edits · Bilder, die die Station ohnehin anlegt.</li>
+        <li><b>note</b> (direkt nach dem Edit bzw. beim Prüfen): <code>{ text, at?, kind?, resolves? }</code> · <b>figure</b>: <code>{ caption, mermaid | image, marks?, at? }</code>. Jeder Aufruf hängt einen Markdown-Eintrag an die Rohfassung der Phase und gibt nur seine ID zurück.</li>
+        <li>Ohne <code>at</code> nimmt der Verwalter Datei und Zeilen aus dem letzten Edit der Session und hält sie beim Commit gegen Git nach; trifft er nicht, bekommt der Agent sofort einen Fehler.</li>
+        <li>Kommentare von dir kommen als Review-Kommentare mit Datei und Zeile beim Agenten an. Abnehmen kann nur du.</li>
+      </ul>
+      <h3>Offene Punkte</h3>
+      <ul>
+        <li>Session ohne Umsetzung (privat direkt im Chat): Bericht je Session im selben Reiter?</li>
+        <li>Wandert eine Anmerkung mit, wenn eine spätere Phase dieselbe Zeile ändert, oder bleibt sie am alten Stand?</li>
+        <li>Zweckzeilen am Hunk: erkennt der Verwalter die Zuordnung Edit → Zeilen sicher genug, oder braucht es einen Probelauf an echten Sessions?</li>
+        <li>Mermaid ist noch keine Abhängigkeit der Oberfläche.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- Seitenleiste des Verwalters (Bestand, nachgebaut) -->
+    <nav class="vw-side" aria-label="Vorhaben">
+      <div class="vw-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="11" height="11" rx="2"/><rect x="10" y="10" width="11" height="11" rx="2"/></svg>Agenten Verwalter 2000</div>
+      <div class="vw-new"><span>+</span> Neues Vorhaben <kbd>Ctrl N</kbd></div>
+      <div class="vw-tree">
+        <div class="vw-item"><span class="vw-chev">⌄</span><i class="vw-st run"></i><b>Session-Dateien</b><span class="vw-dot"></span><span class="sub">7 Sessions · Umsetzung</span></div>
+        <div class="vw-item l2"><span class="vw-chev">⌄</span><i class="vw-st run"></i><span class="t">Umsetzung Session-Dateien</span><small id="sideCount">5/6</small></div>
+        <div class="vw-item l3" id="sideStation" aria-current="true"></div>
+        <div class="vw-item l2"><span></span><i class="vw-st done"></i><span class="t">#1 Plan Session-Dateien</span><span class="vw-dot"></span></div>
+        <div class="vw-item" style="margin-top:8px"><span class="vw-chev">›</span><i class="vw-st run"></i><b>Onboarding Vertrag: Daten und MCP-Tools</b><span class="vw-dot"></span><span class="sub">6 Sessions · #6 läuft</span></div>
+        <div class="vw-item"><span class="vw-chev">›</span><i class="vw-st wait"></i><b>PerfectGym Phase 2</b><span class="vw-dot"></span><span class="sub">4 Sessions · #4 wartet auf Skript</span></div>
+        <div class="vw-item"><span class="vw-chev">›</span><i class="vw-st idle"></i><b>GymChat Anbindung</b><span class="vw-dot"></span></div>
+        <div class="vw-item"><span class="vw-chev">›</span><i class="vw-st run"></i><b>Magicline Scopes und Use-Cases</b><span class="vw-dot"></span><span class="sub">8 Sessions · #8 läuft</span></div>
+        <div class="vw-item"><span class="vw-chev">›</span><i class="vw-st run"></i><b>Erfolge und Feedback</b><span></span><span class="sub">3 Sessions · #3 läuft</span></div>
+        <div class="vw-item"><span class="vw-chev">›</span><i class="vw-st idle"></i><b>Garage</b><span class="vw-dot"></span></div>
+      </div>
+      <div class="vw-foot">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8"/></svg>Bibliothek</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg>Archiv</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Einstellungen</span>
+      </div>
+      <div class="vw-quota"><span>Kontingent</span><meter min="0" max="100" value="53"></meter><b>53 %</b></div>
+    </nav>
+
+    <main class="vw-main">
+      <!-- Kopfzeile der Session: Bestand plus Reiter „Review“ -->
+      <header class="vw-head">
+        <div class="vw-title">
+          <button type="button" class="vw-crumb">Session-Dateien</button><span class="vw-sep">›</span>
+          <span class="vw-num" id="hdNum">#13</span><h1 id="hdName">Abnahme</h1>
+          <span class="vw-status" id="hdStatus"><i></i><span class="lbl">wartet auf dich</span></span>
+          <span class="vw-branch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg><span class="name">main</span></span>
+        </div>
+        <div class="vw-tabs" role="tablist" aria-label="Ansicht">
+          <button type="button" class="vw-tab" role="tab" id="tab-chat" data-view="chat" title="Gesammelte Kommentare warten im Chat">Chat<span class="cnt hot" hidden>0</span></button>
+          <button type="button" class="vw-tab" role="tab" id="tab-files" data-view="files">Dateien<span class="cnt">104</span></button>
+          <button type="button" class="vw-tab" role="tab" id="tab-art" data-view="artifacts">Artefakte<span class="cnt">3</span></button>
+          <button type="button" class="vw-tab" role="tab" id="tab-review" data-view="review" aria-selected="true">Review<span class="new" title="Neues Kapitel seit deinem letzten Blick" hidden></span><span class="tooltag">neu: nur mit Bericht</span></button>
+        </div>
+        <div class="vw-tools">
+          <button type="button" class="vw-tool" title="Terminal ein-/ausblenden"><span class="mono">&gt;_</span>1</button>
+          <button type="button" class="vw-tool" title="Hintergrund"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">Hintergrund</span></button>
+          <span class="vw-gauge"><span class="ring"></span><span class="cache">●<span class="cache-lbl"> 60 min</span></span><span class="runtime">0:42</span></span>
+          <button type="button" class="vw-icon" aria-label="Weitere Aktionen">⋯</button>
+        </div>
+      </header>
+      <div class="vw-back"><a href="#/ueberblick">← Umsetzung Session-Dateien</a><span id="backPhase">Phase 6 · Abnahme</span><span class="pg"><button type="button" aria-label="Vorige Station">‹</button><button type="button" aria-label="Nächste Station">›</button></span></div>
+
+      <!-- Reiter „Review“ -->
+      <section class="rv" id="rv" aria-label="Review-Bericht">
+        <div class="rv-bar">
+          <button type="button" id="btnToc">Inhalt</button>
+          <div class="ttl"><b>Review-Bericht</b><span class="state ready" id="rvState"><i></i><span>wartet auf Abnahme</span></span><small id="rvMeta"></small><span class="tooltag">Rohfassung + Haiku-Ordnung je Phase</span></div>
+          <div class="acts">
+            <button type="button" class="quiet ccount" id="ccount" popovertarget="clist" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>Kommentare <b>0</b></button>
+            <div id="clist" class="clist" popover><div id="clistBody"></div></div>
+            <button type="button" id="btnSend" class="push" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Kommentare senden<span class="tooltag">→ Review-Kommentare mit Adresse</span></button>
+            <button type="button" id="btnAccept" class="primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Abnehmen<span class="tooltag">nur du</span></button>
+          </div>
+        </div>
+        <nav class="rv-toc" id="rvToc" aria-label="Inhalt des Berichts"></nav>
+        <div class="rv-page" id="rvPage"><article class="rv-doc" id="rvDoc"></article></div>
+      </section>
+
+      <!-- Andere Reiter: unverändert -->
+      <section class="vw-other" id="other" hidden>
+        <p id="otherText"></p>
+        <div class="chips" id="otherChips"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Kommentar schreiben -->
+  <div id="cpop" class="cpop" popover="manual">
+    <h4></h4>
+    <textarea aria-label="Kommentar" placeholder="Was soll der Agent hier klären oder ändern?"></textarea>
+    <div class="row-a"><button type="button" class="quiet" id="cpopCancel">Abbrechen</button><button type="button" class="primary" id="cpopSave">Sammeln</button></div>
+    <p class="hint">Strg+Enter sammelt · geht mit der nächsten Nachricht an die Station</p>
+  </div>
+
+  <!-- Anmerkung schwebend (schmal) -->
+  <div id="npop" popover><div id="npopBody"></div></div>
+
+  <!-- Bild groß -->
+  <dialog id="lightbox" class="lightbox">
+    <form method="dialog">
+      <header><h2 id="lbTitle"></h2><button type="button" class="quiet" id="lbArea" data-act="carea">Bereich kommentieren</button><button class="quiet" value="close" aria-label="Schließen">✕</button></header>
+      <div class="lb-body" id="lbBody"></div>
+    </form>
+  </dialog>
+
+  <!-- Inhalt als Blatt (schmal) -->
+  <dialog id="tocSheet" class="sheet toc-sheet">
+    <form method="dialog">
+      <header><h2>Inhalt</h2><button class="quiet" value="close" aria-label="Schließen">✕</button></header>
+      <div class="toc-body" id="tocSheetBody"></div>
+    </form>
+  </dialog>
+
+  <div class="toast-box" id="toast" role="status" hidden><span id="toastText"></span><button type="button" id="toastUndo" hidden>Rückgängig</button></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script src="_review-bericht-entwurf/daten.js"></script>
+  <script src="_review-bericht-entwurf/review.js"></script>
+</body>
+</html>

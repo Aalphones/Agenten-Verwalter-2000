@@ -1,0 +1,150 @@
+/* Agenten-Verwalter-Fassung für den Entwurf „Review-Bericht“ — hell aus src/styles/theme.css, dunkel aus dem Skin im Screenshot (Grund #0a0c0d, Akzent #dfff00). Kontraste gerechnet mit kontrast.py. */
+
+:root {
+  --ui-font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --ui-font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  --ui-radius-s: 4px;
+  --ui-radius: 6px;
+  --ui-radius-l: 8px;
+
+  --ui-bg: #ffffff;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f8f8f8;
+  --ui-surface-3: #f0f0f0;
+  --ui-line: #e5e5e5;
+  --ui-line-strong: #8f8f8f;
+  --ui-text: #3c3c3c;
+  --ui-text-muted: #6e6e6e;
+  --ui-text-disabled: #b0b0b0;
+  --ui-on-primary: #ffffff;
+  --ui-primary: #a8461f;
+  --ui-primary-hover: #933c19;
+  --ui-primary-active: #7d3314;
+  --ui-primary-text: #a8461f;
+  --ui-ok: #16803c;
+  --ui-warn: #8a5a00;
+  --ui-danger: #d23b33;
+  --ui-info: #2563eb;
+  --ui-focus: #a8461f;
+
+  --vw-sidebar: #f8f8f8;
+  --vw-hover: #f0f0f0;
+  --vw-selected: #e4e6f1;
+  --vw-tab-active: #e5e5e5;
+  --vw-note: #2563eb;
+  --vw-note-tint: color-mix(in srgb, #2563eb 9%, transparent);
+  --vw-risk: #8a5a00;
+  --vw-risk-tint: color-mix(in srgb, #a86a00 10%, transparent);
+  --vw-add: #16803c;
+  --vw-del: #d23b33;
+  --vw-add-bg: #e8f6ee;
+  --vw-del-bg: #fdeceb;
+  --vw-hunk: #f3f3f6;
+  --vw-shot-bg: #1f1f1f;
+
+  --code-keyword: #0000ff;
+  --code-string: #a31515;
+  --code-comment: #008000;
+  --code-number: #098658;
+  --code-function: #795e26;
+  --code-type: #267f99;
+  --code-variable: #001080;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --ui-bg: #0a0c0d;
+    --ui-surface: #0f1213;
+    --ui-surface-2: #15191a;
+    --ui-surface-3: #1d2123;
+    --ui-line: #23272a;
+    --ui-line-strong: #5d6265;
+    --ui-text: #f2f2ee;
+    --ui-text-muted: #9a9d98;
+    --ui-text-disabled: #5d6265;
+    --ui-on-primary: #0a0c0d;
+    --ui-primary: #dfff00;
+    --ui-primary-hover: #e9ff4d;
+    --ui-primary-active: #f0ff80;
+    --ui-primary-text: #dfff00;
+    --ui-ok: #4cc38a;
+    --ui-warn: #f2b33d;
+    --ui-danger: #f47067;
+    --ui-info: #5b9dff;
+    --ui-focus: #dfff00;
+    --ui-grad-primary: linear-gradient(180deg, #e9ff4d, #dfff00);
+    --ui-grad-primary-hover: linear-gradient(180deg, #f0ff80, #e9ff4d);
+
+    --vw-sidebar: #0a0c0d;
+    --vw-hover: #1a1d1f;
+    --vw-selected: #2f3133;
+    --vw-tab-active: #404344;
+    --vw-note: #5b9dff;
+    --vw-note-tint: color-mix(in srgb, #5b9dff 13%, transparent);
+    --vw-risk: #f2b33d;
+    --vw-risk-tint: color-mix(in srgb, #f2b33d 12%, transparent);
+    --vw-add: #4cc38a;
+    --vw-del: #f47067;
+    --vw-add-bg: color-mix(in srgb, #4cc38a 11%, transparent);
+    --vw-del-bg: color-mix(in srgb, #f47067 11%, transparent);
+    --vw-hunk: #15191a;
+    --vw-shot-bg: #000000;
+
+    --code-keyword: #569cd6;
+    --code-string: #ce9178;
+    --code-comment: #6a9955;
+    --code-number: #b5cea8;
+    --code-function: #dcdcaa;
+    --code-type: #4ec9b0;
+    --code-variable: #9cdcfe;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ui-bg: #0a0c0d;
+  --ui-surface: #0f1213;
+  --ui-surface-2: #15191a;
+  --ui-surface-3: #1d2123;
+  --ui-line: #23272a;
+  --ui-line-strong: #5d6265;
+  --ui-text: #f2f2ee;
+  --ui-text-muted: #9a9d98;
+  --ui-text-disabled: #5d6265;
+  --ui-on-primary: #0a0c0d;
+  --ui-primary: #dfff00;
+  --ui-primary-hover: #e9ff4d;
+  --ui-primary-active: #f0ff80;
+  --ui-primary-text: #dfff00;
+  --ui-ok: #4cc38a;
+  --ui-warn: #f2b33d;
+  --ui-danger: #f47067;
+  --ui-info: #5b9dff;
+  --ui-focus: #dfff00;
+  --ui-grad-primary: linear-gradient(180deg, #e9ff4d, #dfff00);
+  --ui-grad-primary-hover: linear-gradient(180deg, #f0ff80, #e9ff4d);
+
+  --vw-sidebar: #0a0c0d;
+  --vw-hover: #1a1d1f;
+  --vw-selected: #2f3133;
+  --vw-tab-active: #404344;
+  --vw-note: #5b9dff;
+  --vw-note-tint: color-mix(in srgb, #5b9dff 13%, transparent);
+  --vw-risk: #f2b33d;
+  --vw-risk-tint: color-mix(in srgb, #f2b33d 12%, transparent);
+  --vw-add: #4cc38a;
+  --vw-del: #f47067;
+  --vw-add-bg: color-mix(in srgb, #4cc38a 11%, transparent);
+  --vw-del-bg: color-mix(in srgb, #f47067 11%, transparent);
+  --vw-hunk: #15191a;
+  --vw-shot-bg: #000000;
+
+  --code-keyword: #569cd6;
+  --code-string: #ce9178;
+  --code-comment: #6a9955;
+  --code-number: #b5cea8;
+  --code-function: #dcdcaa;
+  --code-type: #4ec9b0;
+  --code-variable: #9cdcfe;
+}

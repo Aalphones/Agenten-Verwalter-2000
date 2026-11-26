@@ -1,0 +1,1753 @@
+/* UI-Baukasten kit.css · Version 1.2.0 */
+/*
+  Grundstil und Bauteile des allgemeinen UI-Baukastens. Braucht tokens.css davor.
+  Jede Regel steht innerhalb :where(.ui …) und wiegt damit null: Entwurfs-CSS überschreibt ohne !important.
+  Die Seite trägt class="ui" am <body>. Varianten per kurzer Klasse ohne Präfix, Zustände über Attribute.
+  Reihenfolge innerhalb eines Bauteils: Grundform, Varianten, Überfahren/Drücken, Fokus, Fehler, nicht verfügbar.
+  Gruppen: Grundstil · Aktionen · Eingabe · Struktur · Daten · Navigation · Rückmeldung (Katalog: design/bauteile/).
+  Zustandsklassen ok | warn | danger | info setzen die privaten Variablen --_c (Farbe) und --_t (Tönung).
+*/
+
+/* ============================== Grundstil ============================== */
+
+:where(.ui) {
+  margin: 0;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-family: var(--ui-font);
+  font-size: var(--ui-font-size);
+  line-height: var(--ui-line-height);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:where(.ui [data-density]) {
+  font-size: var(--ui-font-size);
+}
+
+:where(.ui *, .ui *::before, .ui *::after) {
+  box-sizing: border-box;
+}
+
+:where(.ui h1, .ui h2, .ui h3, .ui h4) {
+  margin: 0 0 var(--ui-space-3);
+  line-height: 1.25;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+:where(.ui h1) { font-size: calc(var(--ui-font-size-xl) * 1.2); }
+:where(.ui h2) { font-size: var(--ui-font-size-xl); }
+:where(.ui h3) { font-size: var(--ui-font-size-l); }
+:where(.ui h4) { font-size: var(--ui-font-size); }
+
+:where(.ui p) {
+  margin: 0 0 var(--ui-space-3);
+  max-width: 72ch;
+  text-wrap: pretty;
+}
+
+:where(.ui small) {
+  font-size: var(--ui-font-size-s);
+}
+
+:where(.ui code, .ui kbd, .ui samp) {
+  font-family: var(--ui-font-mono);
+  font-size: 0.92em;
+}
+
+:where(.ui a) {
+  color: var(--ui-primary-text);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+:where(.ui a:hover) {
+  text-decoration-thickness: 2px;
+}
+
+:where(.ui :focus-visible) {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  animation: ui-ring-in var(--ui-dur) var(--ui-ease-out);
+}
+
+/* Fokusring zieht sich beim Erscheinen von breit und blass auf 2 px zusammen */
+@keyframes ui-ring-in {
+  from { outline-width: 6px; outline-color: transparent; }
+}
+
+/* Kurzes Einblenden für Fehlertexte */
+@keyframes ui-fade-in {
+  from { opacity: 0; translate: 0 -3px; }
+}
+
+:where(.ui) ::selection {
+  background: color-mix(in srgb, var(--ui-primary) 28%, transparent);
+  color: inherit;
+}
+
+:where(.ui svg) {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.ui *, .ui *::before, .ui *::after) {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================== Aktionen ============================== */
+
+/* --- Knopf: button, Rollen primary | (sekundär ohne Klasse) | quiet | danger; .icon = nur Symbol --- */
+
+:where(.ui button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  min-height: var(--ui-control-h);
+  padding: 0 calc(var(--ui-control-h) * 0.4);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface) var(--ui-grad-surface);
+  color: var(--ui-text);
+  font: inherit;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--ui-dur-fast) var(--ui-ease-out),
+    border-color var(--ui-dur-fast) var(--ui-ease-out),
+    color var(--ui-dur-fast) var(--ui-ease-out),
+    scale var(--ui-dur) var(--ui-ease-spring);
+}
+
+:where(.ui button > svg) {
+  width: max(16px, calc(var(--ui-font-size) * 1.1));
+  height: max(16px, calc(var(--ui-font-size) * 1.1));
+}
+
+:where(.ui button.primary) {
+  border-color: var(--ui-primary-hover);
+  background: var(--ui-primary) var(--ui-grad-primary);
+  color: var(--ui-on-primary);
+}
+
+:where(.ui button.quiet) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ui-primary-text);
+}
+
+:where(.ui button.danger) {
+  border-color: var(--ui-danger);
+  background: var(--ui-danger) var(--ui-grad-danger);
+  color: var(--ui-on-primary);
+}
+
+:where(.ui button.icon) {
+  width: var(--ui-control-h);
+  padding: 0;
+}
+
+:where(.ui button:hover) {
+  border-color: var(--ui-primary);
+  background: var(--ui-surface-2) linear-gradient(180deg, var(--ui-surface-2), var(--ui-surface-3));
+}
+
+:where(.ui button.primary:hover) {
+  border-color: var(--ui-primary-active);
+  background: var(--ui-primary-hover) var(--ui-grad-primary-hover);
+}
+
+:where(.ui button.quiet:hover) {
+  border-color: transparent;
+  background: var(--ui-primary-tint);
+}
+
+:where(.ui button.danger:hover) {
+  border-color: var(--ui-danger);
+  background: color-mix(in srgb, var(--ui-danger) 88%, var(--ui-text));
+}
+
+:where(.ui button:active) {
+  scale: 0.97;
+  background: var(--ui-surface-3);
+  transition-duration: 60ms;
+}
+
+:where(.ui button.primary:active) {
+  border-color: var(--ui-primary-active);
+  background: var(--ui-primary-active);
+}
+
+:where(.ui button.quiet:active) {
+  background: color-mix(in srgb, var(--ui-primary) 20%, var(--ui-surface));
+}
+
+:where(.ui button.danger:active) {
+  background: color-mix(in srgb, var(--ui-danger) 76%, var(--ui-text));
+}
+
+:where(.ui button:disabled, .ui button:disabled:hover, .ui button:disabled:active) {
+  border-color: var(--ui-line);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-disabled);
+  scale: none;
+  cursor: not-allowed;
+}
+
+:where(.ui button.quiet:disabled) {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* --- Knopfgruppe / Segment: fieldset.segment > legend + label > input[type=radio] --- */
+
+:where(.ui fieldset.segment) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+:where(.ui fieldset.segment > legend) {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--ui-space-1);
+  padding: 0;
+  color: var(--ui-text-muted);
+  font-size: var(--ui-font-size-s);
+}
+
+:where(.ui .hidden) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:where(.ui fieldset.segment > label) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: var(--ui-control-h);
+  padding: 0 calc(var(--ui-control-h) * 0.36);
+  border: 1px solid var(--ui-line-strong);
+  background: var(--ui-surface) var(--ui-grad-surface);
+  color: var(--ui-text);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--ui-dur-fast) var(--ui-ease-out), border-color var(--ui-dur-fast) var(--ui-ease-out), color var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+:where(.ui fieldset.segment > label + label) {
+  margin-left: -1px;
+}
+
+:where(.ui fieldset.segment > legend + label, .ui fieldset.segment > label:first-of-type) {
+  border-start-start-radius: var(--ui-radius);
+  border-end-start-radius: var(--ui-radius);
+}
+
+:where(.ui fieldset.segment > label:last-of-type) {
+  border-start-end-radius: var(--ui-radius);
+  border-end-end-radius: var(--ui-radius);
+}
+
+:where(.ui fieldset.segment > label > input[type="radio"]) {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+:where(.ui fieldset.segment > label > svg) {
+  width: 16px;
+  height: 16px;
+}
+
+:where(.ui fieldset.segment > label:hover) {
+  z-index: 1;
+  border-color: var(--ui-primary);
+}
+
+:where(.ui fieldset.segment > label:has(> input:checked)) {
+  z-index: 2;
+  border-color: var(--ui-primary);
+  background: var(--ui-primary-tint) var(--ui-grad-tint);
+  color: var(--ui-primary-text);
+}
+
+:where(.ui fieldset.segment > label:has(> input:focus-visible)) {
+  z-index: 3;
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  animation: ui-ring-in var(--ui-dur) var(--ui-ease-out);
+}
+
+:where(.ui fieldset.segment > label:has(> input:disabled), .ui fieldset.segment:disabled > label) {
+  z-index: 0;
+  border-color: var(--ui-line);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-disabled);
+  cursor: not-allowed;
+}
+
+:where(.ui fieldset.segment > label:has(> input:disabled:checked), .ui fieldset.segment:disabled > label:has(> input:checked)) {
+  z-index: 1;
+  border-color: var(--ui-line-strong);
+  background: var(--ui-surface-3);
+  color: var(--ui-text-muted);
+}
+
+/* Variante .fill: füllt die Spalte */
+:where(.ui fieldset.segment.fill) { display: flex; flex-wrap: nowrap; width: 100%; }
+:where(.ui fieldset.segment.fill > label) { flex: 1 1 auto; justify-content: center; }
+
+/* --- Menüknopf: button[popovertarget] + menu[popover] > li > button --- */
+
+:where(.ui button[popovertarget] > svg:last-child) {
+  transition: rotate var(--ui-dur) var(--ui-ease-spring);
+}
+
+/* Gemeinsam für Menü, Popover und Info-Tipp: schwebende Fläche, blendet beim Öffnen auf */
+:where(.ui [popover]:not(.toast)) {
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: var(--ui-shadow-1);
+  font-size: var(--ui-font-size);
+  opacity: 0;
+  scale: 0.96;
+  transform-origin: top left;
+  transition:
+    opacity var(--ui-dur-fast) var(--ui-ease-out),
+    scale var(--ui-dur-fast) var(--ui-ease-out),
+    overlay var(--ui-dur-fast) allow-discrete,
+    display var(--ui-dur-fast) allow-discrete;
+}
+
+:where(.ui [popover]:not(.toast):popover-open) {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Aufblenden beim Öffnen: Startwert für den ersten Rahmen */
+@starting-style {
+  :where(.ui [popover]:not(.toast):popover-open) {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+:where(.ui button[popovertarget]:has(+ menu:popover-open) > svg:last-child) {
+  rotate: 180deg;
+}
+
+@supports (position-area: bottom) {
+  :where(.ui [popover]:not(.toast)) {
+    inset: auto;
+    position-area: bottom span-right;
+    position-try-fallbacks: flip-block, flip-inline;
+    margin: var(--ui-space-1) 0;
+  }
+}
+
+:where(.ui menu[popover]) {
+  min-width: 12rem;
+  padding: var(--ui-space-1);
+  list-style: none;
+}
+
+:where(.ui menu[popover] > li) {
+  margin: 0;
+}
+
+:where(.ui menu[popover] > li > button) {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: calc(var(--ui-control-h) - 4px);
+  padding: 0 var(--ui-space-3);
+  border-color: transparent;
+  border-radius: var(--ui-radius-s);
+  background: transparent;
+  font-weight: 400;
+}
+
+:where(.ui menu[popover] > li > button:hover) {
+  border-color: transparent;
+  background: var(--ui-surface-2);
+}
+
+:where(.ui menu[popover] > li > button.danger) {
+  color: var(--ui-danger);
+}
+
+:where(.ui menu[popover] > li > button.danger:hover) {
+  background: var(--ui-danger-tint);
+}
+
+:where(.ui menu[popover] > li > button:focus-visible) {
+  outline-offset: -2px;
+}
+
+:where(.ui menu[popover] > li > button:disabled) {
+  border-color: transparent;
+  background: transparent;
+}
+
+:where(.ui menu[popover] > hr) {
+  margin: var(--ui-space-1) calc(var(--ui-space-1) * -1);
+  border: 0;
+  border-top: 1px solid var(--ui-line);
+}
+
+/* =============================== Eingabe =============================== */
+
+/* --- Beschriftung, Hinweis, Fehlertext --- */
+
+:where(.ui label) {
+  color: var(--ui-text);
+  font-weight: 500;
+}
+
+:where(.ui label[for]) {
+  display: block;
+  margin-bottom: var(--ui-space-1);
+}
+
+:where(.ui :is(input, textarea, select, small, output, .stepper, .drop, fieldset) + :is(label, fieldset, .drop)),
+:where(.ui .form-grid :is(input, textarea, select, small, output, .stepper, .drop, .row, fieldset) + :is(label, fieldset, .row, .drop)) {
+  margin-top: var(--ui-space-4);
+}
+
+:where(.ui label[for] > small) {
+  margin-left: var(--ui-space-1);
+  color: var(--ui-text-muted);
+  font-weight: 400;
+}
+
+:where(.ui label[for]:has(+ :is(input, textarea, select):required))::after {
+  content: " *";
+  color: var(--ui-danger);
+}
+
+:where(.ui :is(input, textarea, select, .stepper, .drop) + small) {
+  display: block;
+  margin-top: var(--ui-space-1);
+  color: var(--ui-text-muted);
+}
+
+:where(.ui small.error) {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ui-space-1);
+  margin-top: var(--ui-space-1);
+  color: var(--ui-danger);
+  font-weight: 500;
+  animation: ui-fade-in var(--ui-dur) var(--ui-ease-out);
+}
+
+:where(.ui small.error)::before {
+  content: "";
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  margin-top: 0.15em;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 8v4M12 16h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* --- Textfelder: Typ-Liste, nie nacktes input (Checkbox, Radio, Schalter bleiben unberührt) --- */
+
+:where(.ui :is(input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"], [type="password"], [type="number"], [type="date"], [type="time"], [type="datetime-local"]), input:not([type]), textarea, select)) {
+  display: block;
+  width: 100%;
+  min-height: var(--ui-control-h);
+  margin: 0;
+  padding: 0 calc(var(--ui-control-h) * 0.3);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  font: inherit;
+  line-height: 1.3;
+  transition: border-color var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+:where(.ui textarea) {
+  min-height: calc(var(--ui-control-h) * 2.6);
+  padding-block: calc(var(--ui-control-h) * 0.2);
+  line-height: var(--ui-line-height);
+  resize: vertical;
+  field-sizing: content;
+  max-height: 24em;
+}
+
+:where(.ui) :is(input, textarea)::placeholder {
+  color: var(--ui-text-muted);
+  opacity: 1;
+}
+
+:where(.ui :is(input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"], [type="password"], [type="number"], [type="date"], [type="time"], [type="datetime-local"]), input:not([type]), textarea, select):hover) {
+  border-color: var(--ui-primary);
+}
+
+:where(.ui :is(input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"], [type="password"], [type="number"], [type="date"], [type="time"], [type="datetime-local"]), input:not([type]), textarea, select):focus) {
+  border-color: var(--ui-primary);
+}
+
+:where(.ui :is(input, textarea, select)[aria-invalid="true"]) {
+  border-color: var(--ui-danger);
+}
+
+:where(.ui :is(input, textarea, select)[aria-invalid="true"]:focus-visible) {
+  outline-color: var(--ui-danger);
+}
+
+:where(.ui :is(input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"], [type="password"], [type="number"], [type="date"], [type="time"], [type="datetime-local"]), input:not([type]), textarea, select):disabled) {
+  border-color: var(--ui-line);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-disabled);
+  cursor: not-allowed;
+}
+
+:where(.ui :is(input:is([type="text"], [type="search"], [type="email"], [type="url"], [type="tel"], [type="password"], [type="number"], [type="date"], [type="time"], [type="datetime-local"]), input:not([type]), textarea)[readonly]:not(:disabled)) {
+  border-style: dashed;
+  background: var(--ui-surface-2);
+}
+
+:where(.ui) :is(input[type="date"], input[type="time"], input[type="datetime-local"])::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+:where(.ui input[type="search"]) {
+  appearance: none;
+}
+
+/* --- Auswahl: select; Pfeil in Rand-Grau, aufgeklappt per appearance: base-select, wo vorhanden --- */
+
+:where(.ui select) {
+  appearance: none;
+  padding-right: calc(var(--ui-control-h) * 0.3 + 22px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b8796' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right calc(var(--ui-control-h) * 0.3) center;
+  background-size: max(16px, calc(var(--ui-font-size) * 1.1)) auto;
+  cursor: pointer;
+}
+
+:where(.ui select[multiple], .ui select[size]) {
+  padding: var(--ui-space-1);
+  background-image: none;
+}
+
+:where(.ui select:disabled) {
+  cursor: not-allowed;
+}
+
+@supports (appearance: base-select) {
+  :where(.ui select:not([multiple], [size])) {
+    appearance: base-select;
+    display: flex;
+    align-items: center;
+    background-image: none;
+    padding-right: calc(var(--ui-control-h) * 0.3);
+  }
+
+  :where(.ui select:not([multiple], [size]))::picker-icon {
+    content: "";
+    width: 16px;
+    height: 16px;
+    margin-left: auto;
+    background: var(--ui-text-muted);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: rotate var(--ui-dur) var(--ui-ease-spring);
+  }
+
+  :where(.ui select:not([multiple], [size]):open)::picker-icon {
+    rotate: 180deg;
+  }
+
+  :where(.ui select:not([multiple], [size]))::picker(select) {
+    appearance: base-select;
+    margin: var(--ui-space-1) 0;
+    padding: var(--ui-space-1);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius);
+    background: var(--ui-surface);
+    color: var(--ui-text);
+    box-shadow: var(--ui-shadow-1);
+    opacity: 0;
+    translate: 0 -4px;
+    transition:
+      opacity var(--ui-dur-fast) var(--ui-ease-out),
+      translate var(--ui-dur-fast) var(--ui-ease-out),
+      overlay var(--ui-dur-fast) allow-discrete,
+      display var(--ui-dur-fast) allow-discrete;
+  }
+
+  :where(.ui select:not([multiple], [size]):open)::picker(select) {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    :where(.ui select:not([multiple], [size]):open)::picker(select) {
+      opacity: 0;
+      translate: 0 -4px;
+    }
+  }
+
+  :where(.ui select:not([multiple], [size]) option) {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    min-height: calc(var(--ui-control-h) - 4px);
+    padding: 0 var(--ui-space-3);
+    border-radius: var(--ui-radius-s);
+    cursor: pointer;
+  }
+
+  :where(.ui select:not([multiple], [size]) option:hover, .ui select:not([multiple], [size]) option:focus-visible) {
+    background: var(--ui-surface-2);
+  }
+  /* Tastaturfokus in der Liste: eigener Ring nach innen, surface-2 allein wäre kaum sichtbar */
+  :where(.ui select:not([multiple], [size]) option:focus-visible) {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: -2px;
+  }
+
+  :where(.ui select:not([multiple], [size]) option:checked) {
+    background: var(--ui-primary-tint);
+    color: var(--ui-primary-text);
+    font-weight: 500;
+  }
+
+  :where(.ui select:not([multiple], [size]) option)::checkmark {
+    order: 1;
+    margin-left: auto;
+    content: "✓";
+  }
+
+  :where(.ui select:not([multiple], [size]) option:disabled) {
+    color: var(--ui-text-disabled);
+    cursor: not-allowed;
+  }
+}
+
+/* --- Auswahl mit Suche: input[list] + datalist --- */
+
+:where(.ui input[list]) {
+  padding-right: calc(var(--ui-control-h) * 0.3 + 22px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b8796' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right calc(var(--ui-control-h) * 0.3) center;
+  background-size: max(16px, calc(var(--ui-font-size) * 1.1)) auto;
+}
+
+:where(.ui) input[list]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+
+/* --- Checkbox und Radio: eigenes Kästchen, Beschriftung umschließt das Feld --- */
+
+:where(.ui input:is([type="checkbox"], [type="radio"]):not([role="switch"], .segment *)) {
+  appearance: none;
+  position: relative;
+  display: inline-grid;
+  place-content: center;
+  flex: none;
+  width: calc(var(--ui-font-size) * 1.3);
+  height: calc(var(--ui-font-size) * 1.3);
+  margin: 0;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--ui-radius-s);
+  background: var(--ui-surface);
+  vertical-align: -0.28em;
+  cursor: pointer;
+  transition: background-color var(--ui-dur-fast) var(--ui-ease-out), border-color var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+:where(.ui input[type="radio"]:not(.segment *)) {
+  border-radius: var(--ui-radius-full);
+  /* Innenschatten in Flächenfarbe deckt die Füllung; beim Wählen schrumpft er und der Punkt wächst heraus */
+  box-shadow: inset 0 0 0 calc(var(--ui-font-size) * 0.65) var(--ui-surface);
+  transition: background-color var(--ui-dur-fast) var(--ui-ease-out), border-color var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur) var(--ui-ease-spring);
+}
+
+:where(.ui input[type="checkbox"]:not([role="switch"], .segment *))::before {
+  content: "";
+  width: 0.8em;
+  height: 0.8em;
+  background: var(--ui-on-primary);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  transform: scale(0);
+  transition: transform var(--ui-dur) var(--ui-ease-spring);
+}
+
+:where(.ui input[type="checkbox"]:not([role="switch"], .segment *):indeterminate)::before {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+:where(.ui input:is([type="checkbox"], [type="radio"]):not([role="switch"], .segment *):hover) {
+  border-color: var(--ui-primary);
+}
+
+:where(.ui input[type="checkbox"]:not([role="switch"], .segment *):is(:checked, :indeterminate)) {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary) var(--ui-grad-primary);
+}
+
+:where(.ui input[type="checkbox"]:not([role="switch"], .segment *):is(:checked, :indeterminate))::before {
+  transform: scale(1);
+}
+
+:where(.ui input[type="radio"]:not(.segment *):checked) {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary);
+  box-shadow: inset 0 0 0 calc(var(--ui-font-size) * 0.3) var(--ui-surface);
+}
+
+:where(.ui input:is([type="checkbox"], [type="radio"]):not(.segment *)[aria-invalid="true"]) {
+  border-color: var(--ui-danger);
+}
+
+:where(.ui input:is([type="checkbox"], [type="radio"]):not([role="switch"], .segment *):disabled) {
+  border-color: var(--ui-line);
+  background: var(--ui-surface-2);
+  cursor: not-allowed;
+}
+
+:where(.ui input[type="radio"]:not(.segment *):disabled:not(:checked)) {
+  box-shadow: inset 0 0 0 calc(var(--ui-font-size) * 0.65) var(--ui-surface-2);
+}
+
+:where(.ui input[type="checkbox"]:not([role="switch"], .segment *):disabled:is(:checked, :indeterminate))::before {
+  background: var(--ui-text-disabled);
+}
+
+:where(.ui input[type="radio"]:not(.segment *):disabled:checked) {
+  background: var(--ui-text-disabled);
+  box-shadow: inset 0 0 0 calc(var(--ui-font-size) * 0.3) var(--ui-surface-2);
+}
+
+/* Beschriftung, die Checkbox, Radio oder Schalter umschließt */
+:where(.ui label:has(> input:is([type="checkbox"], [type="radio"])):not(.segment > label)) {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ui-space-2);
+  min-height: calc(var(--ui-control-h) * 0.8);
+  padding-block: calc((var(--ui-control-h) * 0.8 - var(--ui-font-size) * var(--ui-line-height)) / 2);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+:where(.ui label:has(> input:is([type="checkbox"], [type="radio"])):not(.segment > label) > input) {
+  margin-top: calc((var(--ui-font-size) * var(--ui-line-height) - var(--ui-font-size) * 1.3) / 2);
+  vertical-align: 0;
+}
+
+:where(.ui label:has(> input:disabled):not(.segment > label)) {
+  color: var(--ui-text-disabled);
+  cursor: not-allowed;
+}
+
+/* --- Optionsgruppe: fieldset > legend + label > input[type=radio|checkbox] --- */
+
+:where(.ui fieldset.options) {
+  margin-inline: 0;
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+:where(.ui fieldset.options > legend) {
+  margin-bottom: var(--ui-space-1);
+  padding: 0;
+  font-weight: 500;
+}
+
+:where(.ui fieldset.options.inline) {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--ui-space-5);
+}
+
+:where(.ui fieldset.options.inline > legend) {
+  float: left;
+  width: 100%;
+}
+
+:where(.ui fieldset.options:has(input[aria-invalid="true"]) > legend) {
+  color: var(--ui-danger);
+}
+
+:where(.ui fieldset.options:disabled > legend) {
+  color: var(--ui-text-disabled);
+}
+
+/* --- Angebotskarte: label.offer > span.media + span(b + small) + input[type=checkbox|radio]
+   Bild in voller Höhe links, rechts bündig Titel und Beschreibung, Auswahl ganz rechts.
+   Marke (Partner): --brand (Fläche), --brand-text (Rand, auf dem Grund lesbar), --logo; Paket: --img (Teaser-Foto).
+   Klein (Tabellenzeile): span.brand > span.media + Name --- */
+
+:where(.ui .offers) { display: grid; gap: var(--ui-space-2); }
+:where(.ui label.offer) {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 var(--ui-space-3);
+  min-height: 76px;
+  padding: 0 var(--ui-space-3) 0 0;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface-2);
+  overflow: hidden;
+  cursor: pointer;
+}
+:where(.ui label.offer)::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, color-mix(in srgb, var(--brand, transparent) 24%, transparent), transparent 70%); }
+:where(.ui label.offer[style*="--img"])::before { background: linear-gradient(90deg, color-mix(in srgb, var(--ui-surface-2) 50%, transparent), var(--ui-surface-2) 55%), var(--img) center / cover; filter: blur(14px); transform: scale(1.15); opacity: 0.55; }
+:where(.ui label.offer:has(input:checked)) { border-color: var(--brand-text, var(--ui-primary-text)); }
+:where(.ui label.offer:has(input:disabled)) { cursor: default; }
+:where(.ui label.offer > .media) { align-self: stretch; display: grid; place-items: center; }
+:where(.ui label.offer > span:not(.media)) { display: grid; gap: 2px; min-width: 0; padding: var(--ui-space-2) 0; }
+:where(.ui label.offer small) { color: var(--ui-text-muted); }
+:where(.ui :is(label.offer, .brand) > .media) { background: var(--img, none) center / cover no-repeat, var(--ui-surface-3); color: #fff; font-weight: 800; }
+/* Logo ganz sichtbar auf der Markenfarbe; fehlt das Logo, steht ein gekennzeichnetes Kürzel in der Markenfarbe */
+:where(.ui :is(label.offer, .brand)[style*="--brand"] > .media) { background: var(--logo, none) center / contain no-repeat, var(--brand); }
+:where(.ui .brand) { display: inline-flex; align-items: center; gap: var(--ui-space-2); }
+:where(.ui .brand > .media) { width: 24px; height: 24px; flex: none; display: grid; place-items: center; font-size: 8px; }
+@media (max-width: 599.98px) { :where(.ui label.offer) { grid-template-columns: 60px minmax(0, 1fr) auto; gap: 0 var(--ui-space-2); } }
+
+/* --- Schalter: input[type=checkbox][role=switch] + zwei Zustandssätze .on/.off --- */
+
+:where(.ui input[role="switch"]) {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: calc(var(--ui-font-size) * 2.6);
+  height: calc(var(--ui-font-size) * 1.5);
+  margin: 0;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-surface-3);
+  cursor: pointer;
+  transition: background-color var(--ui-dur) var(--ui-ease-out), border-color var(--ui-dur) var(--ui-ease-out);
+}
+
+:where(.ui input[role="switch"])::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: calc(var(--ui-font-size) * 1.5 - 6px);
+  height: calc(var(--ui-font-size) * 1.5 - 6px);
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-text-muted);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.25);
+  transform: translateY(-50%);
+  transition: left var(--ui-dur-slow) var(--ui-ease-spring), width var(--ui-dur-fast) var(--ui-ease-out), background-color var(--ui-dur) var(--ui-ease-out);
+}
+
+/* Beim Drücken streckt sich der Knopf zur Laufrichtung */
+:where(.ui input[role="switch"]:active:not(:disabled))::before {
+  width: calc(var(--ui-font-size) * 1.75 - 6px);
+}
+
+:where(.ui input[role="switch"]:hover) {
+  border-color: var(--ui-primary);
+}
+
+:where(.ui input[role="switch"]:checked) {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary) var(--ui-grad-primary);
+}
+
+:where(.ui input[role="switch"]:checked)::before {
+  left: calc(100% - var(--ui-font-size) * 1.5 + 4px);
+  background: var(--ui-on-primary);
+}
+
+:where(.ui input[role="switch"]:checked:active:not(:disabled))::before {
+  left: calc(100% - var(--ui-font-size) * 1.75 + 4px);
+}
+
+:where(.ui input[role="switch"]:disabled) {
+  border-color: var(--ui-line);
+  background: var(--ui-surface-2);
+  cursor: not-allowed;
+}
+
+:where(.ui input[role="switch"]:disabled)::before {
+  background: var(--ui-text-disabled);
+  box-shadow: none;
+}
+
+:where(.ui label:has(> input[role="switch"]) > input) {
+  margin-top: calc((var(--ui-font-size) * var(--ui-line-height) - var(--ui-font-size) * 1.5) / 2);
+}
+
+:where(.ui input[role="switch"]:checked ~ .off, .ui input[role="switch"]:not(:checked) ~ .on) {
+  display: none;
+}
+
+:where(.ui input[role="switch"] ~ :is(.on, .off) > b) {
+  font-weight: 600;
+}
+
+/* --- Schieberegler: input[type=range] + output --- */
+
+:where(.ui input[type="range"]) {
+  appearance: none;
+  display: inline-block;
+  font: inherit;
+  width: 100%;
+  height: var(--ui-control-h);
+  margin: 0;
+  background: transparent;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+:where(.ui) input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-surface-3);
+  box-shadow: inset 0 0 0 1px var(--ui-line-strong);
+}
+
+:where(.ui) input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-surface-3);
+  box-shadow: inset 0 0 0 1px var(--ui-line-strong);
+}
+
+:where(.ui) input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-primary);
+}
+
+:where(.ui) input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: calc(var(--ui-font-size) * 1.3);
+  height: calc(var(--ui-font-size) * 1.3);
+  margin-top: calc(3px - var(--ui-font-size) * 0.65);
+  border: 2px solid var(--ui-primary);
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-surface);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.22);
+  transition: transform var(--ui-dur) var(--ui-ease-spring);
+}
+
+:where(.ui) input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+:where(.ui) input[type="range"]::-moz-range-thumb {
+  width: calc(var(--ui-font-size) * 1.3);
+  height: calc(var(--ui-font-size) * 1.3);
+  border: 2px solid var(--ui-primary);
+  border-radius: var(--ui-radius-full);
+  background: var(--ui-surface);
+}
+
+:where(.ui) input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.22);
+}
+
+:where(.ui input[type="range"]:focus-visible) {
+  outline-offset: 0;
+  border-radius: var(--ui-radius-s);
+}
+
+:where(.ui input[type="range"]:disabled) {
+  cursor: not-allowed;
+}
+
+:where(.ui) input[type="range"]:disabled::-webkit-slider-thumb {
+  border-color: var(--ui-line-strong);
+  background: var(--ui-surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+:where(.ui) input[type="range"]:disabled::-moz-range-thumb {
+  border-color: var(--ui-line-strong);
+  background: var(--ui-surface-2);
+}
+
+:where(.ui input[type="range"]:has(+ output)) {
+  width: calc(100% - 5.5em);
+}
+
+:where(.ui input[type="range"] + output) {
+  display: inline-block;
+  width: 4.5em;
+  margin-left: 0.5em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  vertical-align: middle;
+}
+
+/* --- Zahl mit +/−: div.stepper[role=group] > button + input[type=number] + button --- */
+
+:where(.ui .stepper) {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+}
+
+:where(.ui .stepper > input[type="number"]) {
+  width: 6em;
+  border-radius: 0;
+  margin: 0 -1px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+:where(.ui .stepper > input[type="number"]:is(:hover, :focus, [aria-invalid="true"])) {
+  position: relative;
+  z-index: 1;
+}
+
+:where(.ui) .stepper > input[type="number"]::-webkit-inner-spin-button,
+:where(.ui) .stepper > input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+:where(.ui .stepper > button) {
+  width: var(--ui-control-h);
+  padding: 0;
+}
+
+:where(.ui .stepper > button:first-child) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+:where(.ui .stepper > button:last-child) {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+:where(.ui .stepper > :focus-visible) {
+  position: relative;
+  z-index: 2;
+}
+
+/* Variante .fill: füllt die Spalte */
+:where(.ui .stepper.fill) { display: flex; width: 100%; }
+:where(.ui .stepper.fill > input[type="number"]) { flex: 1 1 auto; width: auto; min-width: 3.6em; }
+:where(.ui select.fill) { width: 100%; }
+
+/* --- Datei: label.drop > input[type=file] + Text; das Feld liegt unsichtbar über der Fläche --- */
+
+:where(.ui label.drop) {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--ui-space-1);
+  padding: var(--ui-space-6) var(--ui-space-4);
+  border: 1px dashed var(--ui-line-strong);
+  border-radius: var(--ui-radius-l);
+  background: var(--ui-surface);
+  color: var(--ui-text-muted);
+  font-weight: 400;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--ui-dur-fast) var(--ui-ease-out), background-color var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+:where(.ui label.drop > svg) {
+  width: 24px;
+  height: 24px;
+  color: var(--ui-primary-text);
+  transition: translate var(--ui-dur) var(--ui-ease-spring);
+}
+
+/* Pfeil im Symbol hebt sich beim Überfahren an; die Fläche selbst bleibt liegen */
+:where(.ui label.drop:hover:not(:has(> input:disabled)) > svg) {
+  translate: 0 -3px;
+}
+
+:where(.ui label.drop > strong) {
+  color: var(--ui-primary-text);
+  font-weight: 600;
+}
+
+:where(.ui label.drop > input[type="file"]) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+:where(.ui label.drop:hover, .ui label.drop:has(> input[type="file"]:active)) {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary-tint) var(--ui-grad-tint);
+}
+
+:where(.ui label.drop:has(> input[type="file"]:focus-visible)) {
+  border-color: var(--ui-primary);
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  animation: ui-ring-in var(--ui-dur) var(--ui-ease-out);
+}
+
+:where(.ui label.drop:has(> input[aria-invalid="true"])) {
+  border-color: var(--ui-danger);
+}
+
+:where(.ui label.drop:has(> input[type="file"]:disabled)) {
+  border-color: var(--ui-line);
+  background: var(--ui-surface-2);
+  color: var(--ui-text-disabled);
+  cursor: not-allowed;
+}
+
+:where(.ui label.drop:has(> input[type="file"]:disabled) > :is(strong, svg)) {
+  color: var(--ui-text-disabled);
+}
+
+:where(.ui label.drop > input[type="file"]:disabled) {
+  cursor: not-allowed;
+}
+
+/* --- Formular-Raster: form.form-grid > fieldset > legend + Felder; .row für Felder nebeneinander --- */
+
+:where(.ui form.form-grid) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(18rem, (100% - 2 * var(--ui-space-8)) / 3)), 1fr));
+  gap: var(--ui-space-6) var(--ui-space-8);
+  align-items: start;
+}
+
+:where(.ui form.form-grid > fieldset) {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+:where(.ui form.form-grid > fieldset.wide) {
+  grid-column: 1 / -1;
+}
+
+:where(.ui form.form-grid > fieldset > legend) {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  width: 100%;
+  margin-bottom: var(--ui-space-3);
+  padding: 0 0 var(--ui-space-2);
+  border-bottom: 1px solid var(--ui-line);
+  font-size: var(--ui-font-size-l);
+  font-weight: 600;
+}
+
+:where(.ui form.form-grid > fieldset > legend > svg) {
+  width: 18px;
+  height: 18px;
+  color: var(--ui-primary-text);
+}
+
+:where(.ui form.form-grid > footer) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+  grid-column: 1 / -1;
+  padding-top: var(--ui-space-4);
+  border-top: 1px solid var(--ui-line);
+}
+
+:where(.ui .row) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr));
+  gap: var(--ui-space-3);
+}
+
+:where(.ui .row.narrow-first) {
+  grid-template-columns: minmax(6rem, 1fr) minmax(min(100%, 10rem), 3fr);
+}
+
+:where(.ui .row > label:not(:has(> input:is([type="checkbox"], [type="radio"])))) {
+  display: grid;
+  gap: var(--ui-space-1);
+  align-content: start;
+}
+
+/* --- Einstellungszeile: .rows > .row > .lbl + .ctl (+ .u); .blk = Bedienelement breit --- */
+
+:where(.ui .rows) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 15rem) auto; column-gap: var(--ui-space-2); }
+:where(.ui .rows > .row) { grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; gap: 0 var(--ui-space-2); min-height: 44px; padding: 7px 0; border-top: 1px solid var(--ui-line); }
+:where(.ui .rows > .row:first-child) { border-top: 0; }
+:where(.ui .rows > .row.blk) { row-gap: 7px; }
+:where(.ui .row > .lbl) { grid-column: 1; min-width: 0; padding-right: var(--ui-space-2); }
+:where(.ui .row > .lbl > small) { display: block; color: var(--ui-text-muted); line-height: 1.35; }
+:where(.ui .row > .ctl) { grid-column: 2; display: flex; align-items: center; gap: var(--ui-space-2); min-width: 0; }
+:where(.ui .row > .ctl.span) { grid-column: 2 / -1; }
+:where(.ui .row.blk > .ctl) { grid-column: 1 / -1; flex-wrap: wrap; }
+:where(.ui .row > .u) { grid-column: 3; color: var(--ui-text-muted); white-space: nowrap; }
+:where(.ui .row:not(.blk) > .ctl > :is(input:not([type="checkbox"], [type="radio"], [type="range"]), select, .fill)) { flex: 1 1 auto; min-width: 0; }
+:where(.ui .row.blk > .ctl > :is(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea)) { width: 100%; }
+
+/* ===================== Gemeinsam für Struktur bis Rückmeldung ===================== */
+
+/* Symbole für Masken und Hintergründe; Zustandsklassen setzen Farbe (--_c) und Tönung (--_t) */
+:where(.ui) {
+  --ui-i-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --ui-i-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E");
+  --ui-i-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b8796' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  --_c: var(--ui-text-muted);
+  --_t: var(--ui-surface-2);
+}
+
+:where(.ui .ok) { --_c: var(--ui-ok); --_t: var(--ui-ok-tint); }
+:where(.ui .warn) { --_c: var(--ui-warn); --_t: var(--ui-warn-tint); }
+:where(.ui .danger) { --_c: var(--ui-danger); --_t: var(--ui-danger-tint); }
+:where(.ui .info) { --_c: var(--ui-primary-text); --_t: var(--ui-info-tint); }
+
+/* Aufklapp-Knopf (Tabellenzeile u. a.): Pfeil dreht mit */
+:where(.ui button[aria-expanded] > svg:last-child) { transition: rotate var(--ui-dur) var(--ui-ease-spring); }
+:where(.ui button[aria-expanded="true"] > svg:last-child) { rotate: 180deg; }
+
+@keyframes ui-pulse { to { opacity: 0.45; } }
+@keyframes ui-slide { from { background-position: -60% 0; } to { background-position: 160% 0; } }
+
+/* =============================== Struktur =============================== */
+
+/* --- Seitengerüst: .shell > nav.sidebar + header + main; nur main scrollt; unter 860 px Leiste oben --- */
+
+:where(.ui.shell, .ui .shell) {
+  display: grid;
+  grid-template: "nav head" auto "nav main" 1fr / 15rem minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+:where(:is(.ui.shell, .ui .shell) > nav) { grid-area: nav; overflow-y: auto; border-right: 1px solid var(--ui-line); background: var(--ui-surface); }
+
+:where(:is(.ui.shell, .ui .shell) > header) {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: calc(var(--ui-control-h) + var(--ui-space-6));
+  padding: var(--ui-space-2) var(--ui-space-6);
+  border-bottom: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+}
+
+:where(:is(.ui.shell, .ui .shell) > header > h1) { margin: 0 auto 0 0; font-size: var(--ui-font-size-xl); }
+:where(:is(.ui.shell, .ui .shell) > main) { grid-area: main; overflow: auto; padding: var(--ui-space-6); }
+
+/* --- Karte: article.card | section.card; Linie statt Schatten. Raster: .cards --- */
+
+:where(.ui .card) { min-width: 0; padding: var(--ui-space-4); border: 1px solid var(--ui-line); border-radius: var(--ui-radius-l); background: var(--ui-surface); overflow-wrap: anywhere; }
+:where(.ui .cards) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: var(--ui-space-4); }
+
+/* --- Kartenraster gleich hoch: .cards.even > .card (.wide, .full); Kartenfuß footer > button.more --- */
+
+:where(.ui .cards.even) { --cols: 1; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-auto-flow: row dense; }
+:where(.ui .cards.even > .card) { display: flex; flex-direction: column; padding: 0; }
+:where(.ui .cards.even > .card > header) { margin: 0; padding: var(--ui-space-3) var(--ui-space-4) var(--ui-space-2); }
+:where(.ui .cards.even > .card > :not(header, footer)) { margin-inline: var(--ui-space-4); }
+:where(.ui .cards.even > .card > :last-child:not(footer)) { margin-bottom: var(--ui-space-2); }
+:where(.ui .cards.even > .card > footer) { margin-top: auto; }
+:where(.ui .cards > .card.full) { grid-column: 1 / -1; }
+:where(.ui .card > footer > button.more) { display: flex; justify-content: flex-start; width: 100%; min-height: 34px; padding: 0 var(--ui-space-4); border: 0; border-top: 1px solid var(--ui-line); border-radius: 0 0 var(--ui-radius-l) var(--ui-radius-l); background: none; color: var(--ui-text-muted); font-size: var(--ui-font-size-s); scale: none; }
+:where(.ui .card > footer > button.more:hover) { background: var(--ui-surface-2); color: var(--ui-text); }
+:where(.ui .card > footer > button.more > span) { margin-left: auto; }
+@media (min-width: 1184px) { :where(.ui .cards.even) { --cols: 2; grid-auto-rows: 1fr; } :where(.ui .cards > .card.wide) { grid-column: span 2; } }
+@media (min-width: 1696px) { :where(.ui .cards.even) { --cols: 3; } }
+
+/* --- Abschnittskopf: header.head > h2 + Aktionen; Kartenkopf: .card > header (einzeilig) --- */
+
+:where(.ui header.head, .ui .card > header) { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2); margin-bottom: var(--ui-space-3); }
+:where(.ui .card > header) { flex-wrap: nowrap; }
+:where(.ui :is(header.head, .card > header) > :is(h2, h3, h4)) { flex: 1; min-width: 0; margin: 0; }
+:where(.ui .card > header > :is(h2, h3, h4)) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.ui :is(header.head, .card > header) > :is(h2, h3, h4) > small) { margin-left: var(--ui-space-2); color: var(--ui-text-muted); font-weight: 400; }
+
+/* --- Akkordeon: details[name] > summary (Titel, Kurzfassung als small, Zustand) + Inhalt --- */
+
+:where(.ui details) { border: 1px solid var(--ui-line); border-radius: var(--ui-radius); background: var(--ui-surface); }
+:where(.ui details + details) { margin-top: -1px; border-start-start-radius: 0; border-start-end-radius: 0; }
+:where(.ui details:has(+ details)) { border-end-start-radius: 0; border-end-end-radius: 0; }
+
+:where(.ui summary) {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  min-height: calc(var(--ui-control-h) + var(--ui-space-2));
+  padding: var(--ui-space-2) var(--ui-space-4);
+  border-radius: inherit;
+  list-style: none;
+  cursor: pointer;
+  transition: background-color var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+:where(.ui summary)::-webkit-details-marker { display: none; }
+
+:where(.ui summary)::after {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  background: var(--ui-text-muted);
+  mask: var(--ui-i-chevron) center / contain no-repeat;
+  transition: rotate var(--ui-dur) var(--ui-ease-spring);
+}
+
+:where(.ui summary:hover) { background: var(--ui-surface-2); }
+:where(.ui summary:focus-visible) { outline-offset: -2px; }
+:where(.ui summary > small) { flex: 1; min-width: 0; overflow: hidden; color: var(--ui-text-muted); text-overflow: ellipsis; white-space: nowrap; }
+:where(.ui details[open] > summary) { border-end-start-radius: 0; border-end-end-radius: 0; }
+:where(.ui details[open] > summary > small) { display: none; }
+:where(.ui details[open] > summary)::after { rotate: 180deg; }
+:where(.ui details > :not(summary)) { margin: var(--ui-space-2) var(--ui-space-4); max-width: calc(100% - 2 * var(--ui-space-4)); }
+:where(.ui details > :last-child:not(summary)) { margin-bottom: var(--ui-space-4); }
+
+/* --- Zurück-Zeile mit Zustand: header.detail > h1 > a (zurück) + Name; p = leise Zustandszeile --- */
+
+:where(.ui header.detail) { margin-bottom: var(--ui-space-4); }
+:where(.ui header.detail > h1) { display: flex; align-items: center; gap: var(--ui-space-1); margin: 0; font-size: var(--ui-font-size-xl); }
+
+:where(.ui header.detail > h1 > a) {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--ui-control-h);
+  height: var(--ui-control-h);
+  margin-left: calc(var(--ui-control-h) * -0.25);
+  border-radius: var(--ui-radius);
+  color: var(--ui-text-muted);
+}
+
+:where(.ui header.detail > h1 > a:hover) { background: var(--ui-surface-2); color: var(--ui-text); }
+:where(.ui header.detail > h1 > a > svg) { width: 20px; height: 20px; }
+:where(.ui header.detail > p) { display: flex; flex-wrap: wrap; gap: var(--ui-space-1) var(--ui-space-4); max-width: none; margin: var(--ui-space-1) 0 0; color: var(--ui-text-muted); font-size: var(--ui-font-size-s); }
+
+/* --- Trennlinie: hr --- */
+
+:where(.ui hr:not(menu > hr)) { margin: var(--ui-space-6) 0; border: 0; border-top: 1px solid var(--ui-line); }
+
+/* ================================ Daten ================================ */
+
+/* --- Tabelle: .scroll > table; th > button + aria-sort; Auswahl-Spalte; tr.more = aufklappbare Folgezeile --- */
+
+:where(.ui .scroll) { max-height: 70vh; overflow: auto; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-l); background: var(--ui-surface); }
+:where(.ui table) { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--ui-surface-2); font-variant-numeric: tabular-nums; }
+:where(.ui :is(th, td)) { padding: 7px 12px; border-bottom: 1px solid var(--ui-line); text-align: left; vertical-align: middle; }
+
+:where(.ui th) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ui-surface-3);
+  color: var(--ui-text-muted);
+  font-size: var(--ui-font-size-s);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+:where(.ui :is(th, td).num) { text-align: right; }
+:where(.ui :is(th, td):has(> :is(input[type="checkbox"], button.icon):only-child)) { width: 1%; padding-block: 0; }
+:where(.ui tbody > tr:last-child > td) { border-bottom: 0; }
+:where(.ui tbody > tr:nth-child(even of :not(.more)) > td) { background: color-mix(in srgb, var(--ui-text) 6%, var(--ui-surface-2)); }
+:where(.ui tbody > tr:hover > td) { background: var(--ui-surface-3); }
+:where(.ui tbody > tr:has(> td:first-child > input:checked) > td) { background: var(--ui-primary-tint); }
+:where(.ui tbody > tr:is(.ok, .warn, .danger, .info) > td:first-child) { box-shadow: inset 3px 0 var(--_c); }
+:where(.ui tbody > tr:has(+ tr.more:not([hidden])) > td) { border-bottom-color: transparent; }
+:where(.ui tr.more > td) { padding: var(--ui-space-3) var(--ui-space-4) var(--ui-space-4); background: var(--ui-surface-2); }
+
+:where(.ui th > button) { min-height: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; gap: var(--ui-space-1); }
+:where(.ui th > button:hover) { color: var(--ui-text); }
+:where(.ui th.num > button) { flex-direction: row-reverse; }
+:where(.ui th > button)::after { content: ""; width: 12px; height: 12px; background: currentColor; mask: var(--ui-i-arrow) center / contain no-repeat; opacity: 0; transition: rotate var(--ui-dur) var(--ui-ease-spring); }
+:where(.ui th > button:hover)::after { opacity: 0.5; }
+:where(.ui th[aria-sort] > button) { color: var(--ui-text); }
+:where(.ui th[aria-sort] > button)::after { opacity: 1; }
+:where(.ui th[aria-sort="descending"] > button)::after { rotate: 180deg; }
+
+/* Massenleiste: .bulk direkt vor dem Tabellen-Container; erscheint per CSS, sobald eine Zeile gewählt ist */
+:where(.ui .bulk) {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin-bottom: var(--ui-space-2);
+  padding: var(--ui-space-1) var(--ui-space-1) var(--ui-space-1) var(--ui-space-4);
+  border: 1px solid var(--ui-primary);
+  border-radius: var(--ui-radius);
+  background: var(--ui-primary-tint);
+}
+
+:where(.ui .bulk:has(~ * tbody td:first-child > input:checked)) { display: flex; animation: ui-fade-in var(--ui-dur) var(--ui-ease-out); }
+:where(.ui .bulk > output) { margin-right: auto; color: var(--ui-primary-text); font-weight: 600; }
+
+/* --- Liste: ul.list > li (Bezeichnung als Text, Zustand); .three = drei feste Spalten --- */
+
+:where(.ui ul.list) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--ui-space-4); margin: 0; padding: 0; list-style: none; }
+:where(.ui ul.list.three) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+:where(.ui ul.list > li) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; min-height: var(--ui-control-h); padding: var(--ui-space-1) 0; border-bottom: 1px solid var(--ui-line); }
+:where(.ui ul.list > li:last-child) { border-bottom: 0; }
+
+/* --- Kennzahlen-Leiste: dl.kpi > div > dt + dd (Wert) + dd (Zusatz); nur ein abweichender Wert farbig --- */
+
+:where(.ui dl.kpi) { display: flex; flex-wrap: wrap; margin: 0; overflow: hidden; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-l); background: var(--ui-surface); }
+:where(.ui dl.kpi > div) { display: flex; flex: 1 1 9rem; flex-direction: column; margin-left: -1px; padding: var(--ui-space-2) var(--ui-space-4); border-left: 1px solid var(--ui-line); }
+:where(.ui dl.kpi dt) { color: var(--ui-text-muted); font-size: var(--ui-font-size-s); }
+:where(.ui dl.kpi dd) { margin: 0; color: var(--ui-text-muted); font-size: var(--ui-font-size-s); }
+:where(.ui dl.kpi dd:first-of-type) { order: -1; color: var(--ui-text); font-size: var(--ui-font-size-xl); font-weight: 600; line-height: 1.2; }
+:where(.ui dl.kpi > :is(.ok, .warn, .danger, .info) dd) { color: var(--_c); }
+
+/* --- Status-Abzeichen: span.badge(.ok|.warn|.danger|.info) > svg + Wort; Punkt: span.dot --- */
+
+:where(.ui .badge) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-1);
+  min-height: calc(var(--ui-font-size-s) * 1.8);
+  padding: 0 var(--ui-space-2);
+  border-radius: 0; /* eckig: Abzeichen, Chips und Schilder nie als Pille */
+  background: var(--_t);
+  color: var(--_c);
+  font-size: var(--ui-font-size-s);
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+:where(.ui .badge > svg) { width: 1.1em; height: 1.1em; }
+:where(.ui .dot) { display: inline-flex; align-items: center; gap: 0.45em; white-space: nowrap; }
+:where(.ui .dot)::before { content: ""; width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--_c); }
+
+/* --- Chip: button.chip > Text + svg (Entfernen) --- */
+
+:where(.ui button.chip) {
+  min-height: calc(var(--ui-control-h) * 0.8);
+  padding: 0 var(--ui-space-2) 0 var(--ui-space-3);
+  gap: var(--ui-space-1);
+  border-color: transparent;
+  border-radius: 0;
+  background: var(--ui-primary-tint);
+  color: var(--ui-primary-text);
+  font-size: var(--ui-font-size-s);
+}
+
+:where(.ui button.chip:hover) { border-color: var(--ui-primary); }
+:where(.ui button.chip > svg) { width: 14px; height: 14px; }
+
+/* --- Avatar: img.avatar oder span.avatar (Initialen, aria-hidden) + Name als Text daneben --- */
+
+:where(.ui .avatar) {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.2em;
+  height: 2.2em;
+  margin-right: var(--ui-space-2);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--ui-primary-tint);
+  color: var(--ui-primary-text);
+  font-size: var(--ui-font-size-s);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* --- Zeitstrahl: ol.timeline > li(.ok|.warn|.danger) > time + Text --- */
+
+:where(.ui ol.timeline) { margin: 0; padding: 0 0 0 6px; list-style: none; }
+:where(.ui ol.timeline > li) { position: relative; padding: 0 0 var(--ui-space-4) var(--ui-space-5); border-left: 2px solid var(--ui-line); }
+:where(.ui ol.timeline > li:last-child) { border-left-color: transparent; }
+:where(.ui ol.timeline > li)::before { content: ""; position: absolute; top: 0.3em; left: -7px; width: 12px; height: 12px; border: 2px solid var(--ui-surface); border-radius: 50%; background: var(--ui-line-strong); }
+:where(.ui ol.timeline > li:is(.ok, .warn, .danger, .info))::before { background: var(--_c); }
+:where(.ui ol.timeline time) { display: block; color: var(--ui-text-muted); font-size: var(--ui-font-size-s); }
+
+/* --- Fortschritt: progress (ohne value = unbestimmt); Füllstand: meter mit low/high/optimum --- */
+
+:where(.ui :is(progress, meter)) { appearance: none; display: block; width: 100%; height: 8px; border: 0; border-radius: var(--ui-radius-full); background: var(--ui-surface-3); overflow: hidden; }
+:where(.ui) progress::-webkit-progress-bar { background: transparent; }
+:where(.ui) progress::-webkit-progress-value { border-radius: inherit; background: var(--ui-primary); transition: width var(--ui-dur) var(--ui-ease-out); }
+:where(.ui) progress::-moz-progress-bar { border-radius: inherit; background: var(--ui-primary); }
+:where(.ui progress:not([value])) { background: linear-gradient(var(--ui-primary) 0 0) no-repeat var(--ui-surface-3); background-size: 35% 100%; animation: ui-slide 1.4s var(--ui-ease-in) infinite alternate; }
+:where(.ui) progress:not([value])::-moz-progress-bar { background: transparent; }
+:where(.ui) meter::-webkit-meter-bar { height: 8px; border: 0; border-radius: inherit; background: var(--ui-surface-3); }
+:where(.ui) meter::-webkit-meter-optimum-value { background: var(--ui-ok); }
+:where(.ui) meter::-webkit-meter-suboptimum-value { background: var(--ui-warn); }
+:where(.ui) meter::-webkit-meter-even-less-good-value { background: var(--ui-danger); }
+:where(.ui) meter::-moz-meter-bar { background: var(--ui-ok); }
+:where(.ui) meter:-moz-meter-sub-optimum::-moz-meter-bar { background: var(--ui-warn); }
+:where(.ui) meter:-moz-meter-sub-sub-optimum::-moz-meter-bar { background: var(--ui-danger); }
+:where(.ui :is(progress, meter) + small) { display: block; margin-top: var(--ui-space-1); color: var(--ui-text-muted); }
+
+/* --- Leer-Zustand: section.empty > svg + h3 (Grund) + p (nächster Schritt) + button --- */
+
+:where(.ui .empty) { display: grid; justify-items: center; gap: var(--ui-space-2); padding: var(--ui-space-8) var(--ui-space-4); color: var(--ui-text-muted); text-align: center; }
+:where(.ui .empty > svg) { width: 32px; height: 32px; }
+:where(.ui .empty > :is(h2, h3)) { margin: 0; color: var(--ui-text); font-size: var(--ui-font-size-l); }
+:where(.ui .empty > p) { margin: 0 0 var(--ui-space-2); }
+
+/* --- Laden: [aria-busy="true"] macht Zellen und Zeilen zu Skelett-Balken; ohne Bewegung bei reduced motion --- */
+
+:where(.ui [aria-busy="true"] :is(td, dd, dt, p, h3, li)) {
+  color: transparent;
+  background: linear-gradient(var(--ui-surface-3) 0 0) no-repeat 0 50% / min(100%, 12em) 0.9em;
+  background-origin: content-box;
+  animation: ui-pulse 0.9s ease-in-out infinite alternate;
+}
+
+:where(.ui [aria-busy="true"] :is(td, dd, dt, p, h3, li) > *) { visibility: hidden; }
+
+/* --- Seitenwahl: nav.pages > button (aria-current="page") + span (Auslassung) --- */
+
+:where(.ui nav.pages) { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1); }
+:where(.ui nav.pages > button) { min-width: var(--ui-control-h); padding: 0 var(--ui-space-2); border-color: transparent; background: transparent; font-variant-numeric: tabular-nums; }
+:where(.ui nav.pages > button:hover) { border-color: var(--ui-line-strong); background: var(--ui-surface-2); }
+:where(.ui nav.pages > button[aria-current="page"]) { border-color: var(--ui-primary); background: var(--ui-primary-tint); color: var(--ui-primary-text); }
+:where(.ui nav.pages > span) { padding: 0 var(--ui-space-1); color: var(--ui-text-muted); }
+
+/* ============================== Navigation ============================== */
+
+/* --- Seitenleiste: nav.sidebar > h2 + ul > li > a (aria-current="page": eckig, Akzentlinie links) --- */
+
+:where(.ui nav.sidebar) { padding: var(--ui-space-2) 0; }
+:where(.ui nav.sidebar ul) { margin: 0 0 var(--ui-space-3); padding: 0; list-style: none; }
+:where(.ui nav.sidebar h2) { margin: var(--ui-space-3) var(--ui-space-4) var(--ui-space-1); color: var(--ui-text-muted); font-size: var(--ui-font-size-s); font-weight: 600; }
+
+:where(.ui nav.sidebar a) {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: var(--ui-control-h);
+  padding: 0 var(--ui-space-4) 0 calc(var(--ui-space-4) - 3px);
+  border-left: 3px solid transparent;
+  color: var(--ui-text);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+:where(.ui nav.sidebar a > svg) { width: 16px; height: 16px; color: var(--ui-text-muted); }
+:where(.ui nav.sidebar a > small) { margin-left: auto; color: var(--ui-text-muted); }
+:where(.ui nav.sidebar a:hover) { background: var(--ui-surface-2); }
+:where(.ui nav.sidebar a:focus-visible) { outline-offset: -2px; }
+:where(.ui nav.sidebar a[aria-current="page"]) { border-left-color: var(--ui-primary); background: var(--ui-primary-tint); color: var(--ui-primary-text); }
+:where(.ui nav.sidebar a[aria-current="page"] > svg) { color: inherit; }
+
+/* --- Reiter: [role=tablist] > button[role=tab][aria-selected]; section[role=tabpanel] (kit.js: Pfeiltasten) --- */
+
+:where(.ui [role="tablist"]) { display: flex; gap: var(--ui-space-1); margin-bottom: var(--ui-space-4); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 1px solid var(--ui-line); }
+/* Waagerecht scrollende Leisten wischen, zeigen aber keinen Rollbalken */
+:where(.ui [role="tablist"], .ui.shell > nav, .ui .shell > nav, .ui nav.sections ul)::-webkit-scrollbar { display: none; }
+
+:where(.ui [role="tab"]) {
+  margin-bottom: -1px;
+  padding: 0 var(--ui-space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--ui-text-muted);
+  scale: none;
+}
+
+:where(.ui [role="tab"]:hover) { border-color: var(--ui-line-strong); background: none; color: var(--ui-text); }
+:where(.ui [role="tab"][aria-selected="true"]) { border-color: var(--ui-primary); color: var(--ui-primary-text); }
+:where(.ui [role="tab"]:focus-visible) { outline-offset: -2px; }
+:where(.ui [role="tabpanel"]) { animation: ui-fade-in var(--ui-dur) var(--ui-ease-out); }
+
+/* --- Brotkrumen: nav.crumbs > ol > li > a; letzter Eintrag aria-current="page" --- */
+
+:where(.ui nav.crumbs ol) { display: flex; flex-wrap: wrap; align-items: center; margin: 0 0 var(--ui-space-2); padding: 0; list-style: none; color: var(--ui-text-muted); font-size: var(--ui-font-size-s); }
+:where(.ui nav.crumbs li + li)::before { content: "/" / ""; margin: 0 var(--ui-space-2); color: var(--ui-line-strong); }
+:where(.ui nav.crumbs a) { color: inherit; text-decoration: none; }
+:where(.ui nav.crumbs a:hover) { color: var(--ui-text); text-decoration: underline; }
+:where(.ui nav.crumbs [aria-current="page"]) { color: var(--ui-text); font-weight: 500; }
+
+/* --- Schrittanzeige: ol.steps > li; aktueller Schritt aria-current="step", alle davor gelten als erledigt --- */
+
+:where(.ui ol.steps) { display: flex; gap: var(--ui-space-2); margin: 0; padding: 0; list-style: none; counter-reset: step; }
+:where(.ui ol.steps > li) { display: flex; flex: 1; align-items: center; gap: var(--ui-space-2); min-width: 0; color: var(--ui-text-muted); counter-increment: step; white-space: nowrap; }
+:where(.ui ol.steps > li:last-child) { flex: none; }
+
+:where(.ui ol.steps > li)::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.9em;
+  height: 1.9em;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 50%;
+  font-size: var(--ui-font-size-s);
+  font-weight: 600;
+}
+
+:where(.ui ol.steps > li:not(:last-child))::after { content: ""; flex: 1; min-width: var(--ui-space-4); height: 1px; background: var(--ui-line-strong); }
+:where(.ui ol.steps > li[aria-current="step"]) { color: var(--ui-text); font-weight: 600; }
+:where(.ui ol.steps > li[aria-current="step"])::before { border-color: var(--ui-primary); background: var(--ui-primary); color: var(--ui-on-primary); }
+:where(.ui ol.steps > li:has(~ li[aria-current="step"]))::before { content: "✓" / "erledigt"; border-color: var(--ui-primary); background: var(--ui-primary-tint); color: var(--ui-primary-text); }
+:where(.ui ol.steps > li:has(~ li[aria-current="step"]))::after { background: var(--ui-primary); }
+
+/* --- Listen-Werkzeugleiste: header.toolbar (Suche, Filter, Anzeige, Ansicht) + .filters (Chips | Gruppierung, Sortierung) --- */
+
+:where(.ui header.toolbar) { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2); margin-bottom: var(--ui-space-2); }
+:where(.ui header.toolbar > input[type="search"]) { flex: 1 1 12rem; width: auto; max-width: 22rem; padding-left: calc(var(--ui-control-h) * 0.3 + 22px); background: var(--ui-i-search) no-repeat left calc(var(--ui-control-h) * 0.3) center / 16px auto, var(--ui-surface); }
+:where(.ui header.toolbar > .segment) { margin-left: auto; }
+:where(.ui .filters) { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2); min-height: calc(var(--ui-control-h) * 0.8 + var(--ui-space-2)); margin-bottom: var(--ui-space-3); color: var(--ui-text-muted); font-size: var(--ui-font-size-s); }
+:where(.ui .filters > .end) { margin-left: auto; }
+:where(.ui .filters > button.quiet) { min-height: calc(var(--ui-control-h) * 0.8); padding: 0 var(--ui-space-2); font-size: inherit; }
+
+/* --- Abschnittsliste: .split > nav.sections > ul > li > a > svg + span; schmal eine Symbolleiste --- */
+
+:where(.ui .split) { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--ui-space-6); align-items: start; }
+:where(.ui nav.sections) { position: sticky; top: 0; z-index: 2; }
+:where(.ui nav.sections ul) { margin: 0; padding: 0; list-style: none; }
+:where(.ui nav.sections a) { display: flex; align-items: center; gap: var(--ui-space-2); min-height: var(--ui-control-h); padding: 0 var(--ui-space-3); border-left: 2px solid var(--ui-line); color: var(--ui-text-muted); text-decoration: none; }
+:where(.ui nav.sections a > svg) { width: 16px; height: 16px; }
+:where(.ui nav.sections a:hover) { border-color: var(--ui-line-strong); color: var(--ui-text); }
+:where(.ui nav.sections a:focus-visible) { outline-offset: -2px; }
+:where(.ui nav.sections a[aria-current]) { border-color: var(--ui-primary); color: var(--ui-primary-text); }
+
+/* ============================== Rückmeldung ============================== */
+
+/* --- Dialog: dialog > form[method=dialog] > header (h2, Schließen) + Inhalt + footer (Aktionen rechts) --- */
+
+:where(.ui dialog) {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-l);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: var(--ui-shadow-2);
+  opacity: 0;
+  scale: 0.97;
+  transition: opacity var(--ui-dur) var(--ui-ease-out), scale var(--ui-dur) var(--ui-ease-out), translate var(--ui-dur-slow) var(--ui-ease-out), overlay var(--ui-dur) allow-discrete, display var(--ui-dur) allow-discrete;
+}
+
+:where(.ui dialog[open]) { opacity: 1; scale: 1; }
+@starting-style { :where(.ui dialog[open]) { opacity: 0; scale: 0.97; } }
+:where(.ui dialog)::backdrop { background: rgb(16 24 40 / 0.45); opacity: 0; transition: opacity var(--ui-dur) var(--ui-ease-out), overlay var(--ui-dur) allow-discrete, display var(--ui-dur) allow-discrete; }
+:where(.ui dialog[open])::backdrop { opacity: 1; }
+@starting-style { :where(.ui dialog[open])::backdrop { opacity: 0; } }
+:where(.ui dialog > form) { max-height: inherit; overflow: auto; }
+:where(.ui dialog > form > :not(header, footer)) { margin-inline: var(--ui-space-5); max-width: calc(100% - 2 * var(--ui-space-5)); }
+:where(.ui dialog > form > header) { position: sticky; top: 0; display: flex; align-items: center; gap: var(--ui-space-2); padding: var(--ui-space-4) var(--ui-space-3) var(--ui-space-2) var(--ui-space-5); background: var(--ui-surface); }
+:where(.ui dialog > form > header > h2) { flex: 1; margin: 0; font-size: var(--ui-font-size-l); }
+:where(.ui dialog > form > footer) { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ui-space-2); margin-top: var(--ui-space-4); padding: var(--ui-space-3) var(--ui-space-5) var(--ui-space-4); border-top: 1px solid var(--ui-line); background: var(--ui-surface); }
+
+/* --- Blatt von unten: dialog.sheet; auf dem Handy statt Dialog --- */
+
+:where(.ui dialog.sheet) { width: 100%; max-width: 40rem; margin: auto auto 0; border-bottom: 0; border-end-start-radius: 0; border-end-end-radius: 0; scale: none; translate: 0 100%; }
+:where(.ui dialog.sheet[open]) { translate: 0 0; }
+@starting-style { :where(.ui dialog.sheet[open]) { translate: 0 100%; } }
+:where(.ui dialog.sheet > form)::before { content: ""; display: block; width: 36px; height: 4px; margin: var(--ui-space-2) auto 0; border-radius: var(--ui-radius-full); background: var(--ui-line-strong); }
+
+/* --- Seitenblatt rechts: dialog.side, sonst wie Dialog; Inhalt oft .rows --- */
+
+:where(.ui dialog.side) { position: fixed; inset: 0 0 0 auto; width: min(36rem, 100vw); height: 100dvh; max-height: 100dvh; margin: 0; border-width: 0 0 0 1px; border-color: var(--ui-line-strong); border-radius: 0; opacity: 1; scale: none; translate: 100% 0; }
+:where(.ui dialog.side[open]) { translate: 0 0; }
+@starting-style { :where(.ui dialog.side[open]) { translate: 100% 0; } }
+
+/* --- Info-Tipp: button.tip (?-Symbol, aria-label) + [popover].tip --- */
+
+:where(.ui button.tip) { width: max(24px, 1.6em); min-height: max(24px, 1.6em); padding: 0; border-color: transparent; border-radius: 50%; background: none; color: var(--ui-text-muted); vertical-align: middle; }
+:where(.ui button.tip:hover) { border-color: transparent; background: var(--ui-primary-tint); color: var(--ui-primary-text); }
+:where(.ui button.tip > svg) { width: 1.1em; height: 1.1em; }
+:where(.ui [popover].tip) { max-width: 18rem; padding: var(--ui-space-2) var(--ui-space-3); font-size: var(--ui-font-size-s); }
+@supports (position-area: top) { :where(.ui [popover].tip) { position-area: top span-right; } }
+
+/* --- Meldung mit Rückgängig: div.toast[popover=manual] > output + button; ui.toast() in kit.js --- */
+
+:where(.ui .toast) { display: flex; align-items: center; gap: var(--ui-space-3); width: max-content; max-width: calc(100vw - 2rem); padding: var(--ui-space-1) var(--ui-space-1) var(--ui-space-1) var(--ui-space-4); border: 1px solid var(--ui-line-strong); border-radius: var(--ui-radius); background: var(--ui-surface); color: var(--ui-text); box-shadow: var(--ui-shadow-1); }
+:where(.ui .toast > output) { padding-block: var(--ui-space-2); }
+:where(.ui .toast[popover]) { position: fixed; inset: auto 0 var(--ui-space-6); margin: 0 auto; transition: translate var(--ui-dur) var(--ui-ease-spring), opacity var(--ui-dur) var(--ui-ease-out), overlay var(--ui-dur) allow-discrete, display var(--ui-dur) allow-discrete; }
+:where(.ui .toast[popover]:not(:popover-open)) { display: none; }
+@starting-style { :where(.ui .toast:popover-open) { opacity: 0; translate: 0 12px; } }
+
+/* --- Hinweisleiste: p.note(.ok|.warn|.danger|.info)[role=status|alert] > svg + span (strong Wort + Text) + optional button --- */
+
+:where(.ui .note) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--ui-space-2);
+  max-width: none;
+  margin: 0 0 var(--ui-space-4);
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border-radius: var(--ui-radius);
+  background: var(--_t);
+}
+
+:where(.ui .note > svg) { flex: none; width: 18px; height: 18px; margin-top: 0.1em; color: var(--_c); }
+:where(.ui .note > span) { flex: 1 1 14rem; min-width: 0; }
+:where(.ui .note strong) { color: var(--_c); }
+:where(.ui .note > button) { margin: calc(var(--ui-control-h) * -0.2) 0 calc(var(--ui-control-h) * -0.2) auto; }
+
+/* Karten-Warnung: .card > .note.warn nach dem Kopf, Knopf „Beheben“ rechts */
+:where(.ui .card > .note) { align-items: center; margin-block: 0 var(--ui-space-2); padding: 6px 10px; font-size: var(--ui-font-size-s); }
+:where(.ui .card > .note > svg) { margin-top: 0; }
+:where(.ui .card > .note > button) { min-height: 26px; margin-block: -4px; }
+
+/* ============================ Schmale Breiten ============================ */
+
+@media (max-width: 859.98px) {
+  :where(.ui.shell, .ui .shell) { grid-template: "nav" auto "head" auto "main" 1fr / minmax(0, 1fr); }
+  :where(:is(.ui.shell, .ui .shell) > nav) { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-right: 0; border-bottom: 1px solid var(--ui-line); }
+  :where(:is(.ui.shell, .ui .shell) > header) { padding-inline: var(--ui-space-4); }
+  :where(:is(.ui.shell, .ui .shell) > main) { padding: var(--ui-space-4); }
+  :where(:is(.ui.shell, .ui .shell) > nav.sidebar) { display: flex; padding: 0; }
+  :where(:is(.ui.shell, .ui .shell) > nav.sidebar :is(h2, a > small)) { display: none; }
+  :where(:is(.ui.shell, .ui .shell) > nav.sidebar ul) { display: flex; margin: 0; }
+  :where(:is(.ui.shell, .ui .shell) > nav.sidebar a) { padding: 0 var(--ui-space-3); border-left: 0; border-bottom: 3px solid transparent; }
+  :where(:is(.ui.shell, .ui .shell) > nav.sidebar a[aria-current="page"]) { border-bottom-color: var(--ui-primary); }
+  :where(.ui .split) { grid-template-columns: minmax(0, 1fr); gap: var(--ui-space-3); }
+  :where(.ui nav.sections) { background: var(--ui-bg); }
+  :where(.ui nav.sections ul) { display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 1px solid var(--ui-line); }
+  :where(.ui nav.sections a) { justify-content: center; min-width: 44px; min-height: 44px; border-left: 0; border-bottom: 2px solid transparent; }
+  :where(.ui nav.sections a > span) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+@media (max-width: 599.98px) {
+  :where(.ui ol.steps > li:not([aria-current])) { flex: 0 0 auto; font-size: 0; }
+  :where(.ui ol.steps > li:not([aria-current], :last-child))::after { min-width: var(--ui-space-3); }
+}
