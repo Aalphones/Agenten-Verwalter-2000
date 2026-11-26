@@ -2,6 +2,8 @@
 
 **Status:** angenommen · **Datum:** 2026-11-18
 
+Teilweise abgelöst durch ADR 071: PDF und Bilder öffnen im Betrachter-Rahmen statt im Standardprogramm bzw. per `data:`-Adresse mit 2-MB-Grenze.
+
 ## Kontext
 
 Die Changes-Ansicht zeigt je Checkout einen eigenen Block (Haupt-Checkout, jeder Ticket-Worktree, jedes innere Repository), darin nur die geänderten Dateien, rechts eine Tabelle je Checkout und den Git-Verlauf des ausgecheckten Branches. Wer nachvollziehen will, was ein Vorhaben geändert hat, sieht weder die Umgebung einer Änderung noch, welche Session sie wann gemacht hat, und liest Worktree-Ordnernamen statt eines Gesamtbilds. Gemessen am 2026-11-18 an einem Ordner mit acht inneren Repositories: 79 Vorhaben mit 1.088 gespeicherten Commits, davon 1.058 von einem Ref erreichbar; in 5 von 173 Paaren aus Vorhaben und Repository hat dieselbe Datei auf zwei offenen Linien unterschiedlichen Inhalt.

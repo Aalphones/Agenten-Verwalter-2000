@@ -5,7 +5,7 @@ Rating: heikel (Sicherheitsgrenze). Der Kern liefert die Liste „Session-Dateie
 ## Kontext (lesen)
 
 - [README.md](README.md) → Kontrakt (Typen, Befehle, Dateilink-Reihenfolge), „Von mir gesetzt“, Risiken
-- [ADR 071](../../decisions/071-session-dateien.md), [ADR 023](../../decisions/023-dateiverweise-im-chat.md), [ADR 067](../../decisions/067-dateien-ansicht.md), [ADR 047](../../decisions/047-artefakte-alle-dateitypen.md)
+- [ADR 071](../../../decisions/071-session-dateien.md), [ADR 023](../../../decisions/023-dateiverweise-im-chat.md), [ADR 067](../../../decisions/067-dateien-ansicht.md), [ADR 047](../../../decisions/047-artefakte-alle-dateitypen.md)
 - `src-tauri/src/sessions/registry/artifacts.rs` — `artifact_scope` (Muster: Mitglieder des Vorhabens, je Session ohne gleichzeitige Sperren, danach Datenbank)
 - `src-tauri/src/sessions/registry.rs` — `changes_input`, `project_members`, `scratchpad_dir`
 - `src-tauri/src/changes/sources.rs` — `sources` (Ordner aller Repository-Einträge)

@@ -1,6 +1,6 @@
 # Plan: Session-Dateien – jede Datei einer Session im Reiter „Dateien“ ansehen
 
-Ziel: Im Reiter „Dateien“ steht unter den Repositories ein Knoten „Session-Dateien“. Er zeigt je Session des Vorhabens (auch Stationen einer Umsetzung) die Dateien in ihren beiden Scratchpads, die Dateien außerhalb der Repositories, die sie geschrieben hat, und jede Datei, die sie im Chat verlinkt hat. Ein Klick auf einen Dateilink im Chat öffnet die Datei dort, auch außerhalb des Vorhabens. Bild, Video, Ton, PDF und große Bilder zeigt die Ansicht im abgeschotteten Betrachter der Artefakte, auch für Dateien in Repositories. Jede Datei hat die Knöpfe „In VS Code öffnen“, „Im Dateisystem anzeigen“, „Mit Standardprogramm öffnen“ und „Pfad kopieren“; „Mit Standardprogramm öffnen“ ist für ausführbare Typen gesperrt, auch im Reiter „Artefakte“. Grundsatz: [ADR 071](../../decisions/071-session-dateien.md). Entwurf (verbindlich): [artifacts/entwurf-session-dateien.html](artifacts/entwurf-session-dateien.html), Erläuterung in [artifacts/README.md](artifacts/README.md).
+Ziel: Im Reiter „Dateien“ steht unter den Repositories ein Knoten „Session-Dateien“. Er zeigt je Session des Vorhabens (auch Stationen einer Umsetzung) die Dateien in ihren beiden Scratchpads, die Dateien außerhalb der Repositories, die sie geschrieben hat, und jede Datei, die sie im Chat verlinkt hat. Ein Klick auf einen Dateilink im Chat öffnet die Datei dort, auch außerhalb des Vorhabens. Bild, Video, Ton, PDF und große Bilder zeigt die Ansicht im abgeschotteten Betrachter der Artefakte, auch für Dateien in Repositories. Jede Datei hat die Knöpfe „In VS Code öffnen“, „Im Dateisystem anzeigen“, „Mit Standardprogramm öffnen“ und „Pfad kopieren“; „Mit Standardprogramm öffnen“ ist für ausführbare Typen gesperrt, auch im Reiter „Artefakte“. Grundsatz: [ADR 071](../../../decisions/071-session-dateien.md). Entwurf (verbindlich): [artifacts/entwurf-session-dateien.html](artifacts/entwurf-session-dateien.html), Erläuterung in [artifacts/README.md](artifacts/README.md).
 
 ## Phasen
 
@@ -10,7 +10,7 @@ Ziel: Im Reiter „Dateien“ steht unter den Repositories ein Knoten „Session
 | 2 | Kern: Liste der Session-Dateien, Lesen, Grenze, Dateilink-Ziele, Sperre | [phase-2-kern-liste.md](phase-2-kern-liste.md) | heikel | complete |
 | 3 | Kern: Betrachter-Adresse für einzelne Dateien | [phase-3-kern-betrachter.md](phase-3-kern-betrachter.md) | heikel | complete |
 | 4 | Knoten „Session-Dateien“ und Sprünge aus dem Chat | [phase-4-knoten-links.md](phase-4-knoten-links.md) | standard | complete |
-| 5 | Datei-Ansicht: Betrachter, vier Knöpfe, Sperre in „Artefakte“, Doku | [phase-5-datei-ansicht.md](phase-5-datei-ansicht.md) | standard | pending |
+| 5 | Datei-Ansicht: Betrachter, vier Knöpfe, Sperre in „Artefakte“, Doku | [phase-5-datei-ansicht.md](phase-5-datei-ansicht.md) | standard | complete |
 
 Reihenfolge fest 1 → 5; nach jeder Phase läuft die App. Profil: privat – keine automatisierten Tests, keine Review-Stationen, keine Abnahmeliste. Nicht im Umfang: Suche (Strg P) über Session-Dateien, Bilder mit relativem Pfad in der Markdown-Vorschau einer Session-Datei, HTML-Vorschau in der App, Bearbeiten, Dateien, die ein Agent per Shell außerhalb der Scratchpads erzeugt und nie verlinkt.
 
@@ -164,10 +164,27 @@ Vorab: ein Netzwerkpfad (Windows, `\\…`) → `fileNotAllowed` „Netzwerkpfade
 
 ## Summary
 
+Alle 5 Phasen complete (Migration 22, ADR 071). Der Reiter „Dateien“ führt unter den Repositories den Knoten „Session-Dateien“ (Scratchpad, Scratchpad der Kommandozeile, Weitere Orte, je Session des Vorhabens); Dateilinks im Chat springen dorthin, auch außerhalb des Vorhabens. Die Datei-Ansicht zeigt Bild, Video, Ton und PDF im abgeschotteten Betrachter (Adresse `~datei/<handle>` des Artefakt-Servers, `Range`), Markdown & Co. mit „Vorschau“, HTML, Binäres und Fehlendes als Karte; jede Datei trägt die vier Knöpfe, „Mit Standardprogramm öffnen“ ist für ausführbare Typen gesperrt, im Reiter „Artefakte“ ebenso. Finale AK 1 bis 7 erfüllt (AK 5 bis 7 in Phase 5 am Code und in der Prüfseite belegt, AK 1 bis 4 nach dem Bericht der Phase 4 — die Kette Chat → Reiter lief nur in der Prüfseite); `pnpm bindings` und `pnpm check` grün.
+
 ## Files touched
+
+- Core: `session_files/` (Erfassung, Liste, Grenze, Handles), `db/session_links.rs`, `db/sessions.rs`, Migration 22, `commands/session_files.rs`, `file_links/mod.rs` (Sperre, Ziele), `artifacts/server.rs` (`~datei`, `Range`) samt `viewers/`, `files/read.rs`, `files/model.rs`, `commands/files.rs`.
+- Oberfläche: `src/features/files/` (Knoten `SessionFilesNode`, `SessionFileViewer`, `FileViewer`, `ViewerFrame`, `FileActions`, `FileMeta`, `FileCard`, `fileTypes`), `src/features/artifacts/` (Sperre), `src/components/ExecutableLockHint`, `src/lib/sessionFiles.ts`, `fileLinks.ts`, `src/stores/files.ts`.
+- Doku: `docs/decisions/071-session-dateien.md`, ADR 023 und 067 (Verweis), `docs/code-map.md`, `docs/glossary.md`, `AGENTS.md` (Prüfprogramme).
 
 ## Commits
 
+`10a353f`, `31309a2` (Phase 1) · `715a2a1`, `35ab05f` (Phase 2) · `a0116ae`, `0197ce8` (Phase 3) · `27297d5`, `71ee221` (Phase 4) · `d58b04a` und der Abschluss-Commit dieses Archivs (Phase 5).
+
 ## Deviations from plan
 
+Je Phase im Report-Back ihrer Phasen-Datei. Die größten: Phase 4 erweiterte den Kontrakt (`FileLinkTarget::SessionFile` trägt `real`); Phase 5 hält die Vorschau-Wahl je Datei in `FilesSelection.previewOf` statt als einen Wert und lässt HTML in Repositories Text bleiben (Karte „Im Browser öffnen“ nur für Session-Dateien). Statt `pnpm tauri dev` (würde Migration 22 an der echten Datenbank ausführen) lief die Oberfläche in Vite-Prüfseiten mit nachgestellten Antworten des Core, in Phase 5 mit dem echten Artefakt-Server dahinter.
+
 ## Follow-ups
+
+- Nicht in der echten App gelaufen: die Tauri-Befehle `file_view_url`, `file_reveal`, `file_open_default`, `file_open_in_editor`, die Kette Chat → `file_link_resolve` → Reiter, WebView2 (Spulen im Video, Vollbild), „Pfad kopiert“, das tatsächliche Öffnen in VS Code, Explorer und Standardprogramm. Check: eine Session mit verlinktem Video und Skript öffnen, Video ans Ende spulen, Skript ansehen (Öffnen gesperrt).
+- `FileLink.tsx`: Titel und ↗ für `.html` sagen „Im Standardprogramm öffnen“, auch wenn die Datei außerhalb des Vorhabens in „Dateien“ als Karte aufgeht.
+- Gelöschtes Repository-Bild zeigt nur den Fehlertext des Rahmens; `FileChange` kennt den Zustand „gelöscht“ nicht. Repository-Dateien haben in der Metazeile weder Größe noch Zeit (`FileContent` liefert sie nicht).
+- Der Artefakt-Server liest je `Range`-Anfrage die ganze Datei: bei sehr großen Videos (> 100 MB) messen.
+- Offen in `FINDINGS.md`: vier `→ Vault`-Einträge (Tauri-Beispiele und Manifest, `fetch` im abgeschotteten Rahmen, CSP nach Weiterleitung, `pnpm tauri dev` an der echten Datenbank) und der neue zu Headless-Edge.
+- Nicht im Umfang geblieben: Suche (Strg P) über Session-Dateien, Bilder mit relativem Pfad in der Markdown-Vorschau einer Session-Datei, HTML-Vorschau in der App, Bearbeiten.

@@ -5,7 +5,7 @@ Rating: heikel (Sicherheitsgrenze des Artefakt-Servers). Der Artefakt-Server lie
 ## Kontext (lesen)
 
 - [README.md](README.md) → Kontrakt („Betrachter-Adresse“, Befehle), Risiken (Video spulen)
-- [ADR 071](../../decisions/071-session-dateien.md), [ADR 047](../../decisions/047-artefakte-alle-dateitypen.md) (Betrachter, CSP), [ADR 026](../../decisions/026-artefakte.md)
+- [ADR 071](../../../decisions/071-session-dateien.md), [ADR 047](../../../decisions/047-artefakte-alle-dateitypen.md) (Betrachter, CSP), [ADR 026](../../../decisions/026-artefakte.md)
 - `src-tauri/src/artifacts/server.rs` — ganz: `ArtifactServer` (`token`, `origin`, `host`, `base_url`), `answer`, `artifact_csp`, `with_bridge`, `content_type`, `percent_encode`, `percent_decode`, `not_found`, `text_reply`, `Reply`
 - `src-tauri/src/artifacts/viewers/mod.rs` — `render`, `page`; `src-tauri/src/artifacts/viewers/common.js` und die Betrachter, die die Rohdatei per `fetch` holen (`image.js`, `video.js`, `audio.js`, `pdf.js`, `markdown.js`, `csv.js`, `json.js`, `yaml.js`, `xml.js`, `text.js`, `mermaid.js`)
 - `src-tauri/src/lib.rs` — Start des Artefakt-Servers und `app.manage(...)`
