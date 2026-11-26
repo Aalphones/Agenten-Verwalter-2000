@@ -112,13 +112,6 @@
         min-height: 0;
         overflow: auto;
       }
-      .viewer-raw {
-        margin: 0;
-        padding: 12px;
-        font: 12px/1.5 var(--font-mono);
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-      }
       .viewer-note {
         padding: 24px;
         color: var(--fg-muted);
@@ -245,19 +238,6 @@
           if (bytes < 1024) return `${bytes} B`;
           if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace('.', ',')} KB`;
           return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
-        },
-        /** Rückfall, wenn der Betrachter nicht kann: der Rohtext, sonst ein Hinweis. */
-        async showRaw(reason) {
-          viewer.stage.replaceChildren();
-          try {
-            const response = await fetch(viewer.url());
-            const pre = document.createElement('pre');
-            pre.className = 'viewer-raw';
-            pre.textContent = await response.text();
-            viewer.stage.append(pre);
-          } catch {
-            viewer.showNote(reason);
-          }
         },
         showNote(text) {
           const note = document.createElement('p');
