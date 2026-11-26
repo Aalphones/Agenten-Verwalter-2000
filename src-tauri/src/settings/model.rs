@@ -20,6 +20,14 @@ pub enum TerminalPlacement {
     Right,
 }
 
+/// Wo die Notiz des Vorhabens erscheint (ADR 074): im Terminal-Dock oder als Reiter oben.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum NotePlacement {
+    Dock,
+    Tab,
+}
+
 /// Eine der fünf seitlichen Leisten, deren Breite die Oberfläche verschieben lässt (ADR 053).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -89,6 +97,8 @@ pub struct Settings {
     /// (ADR 063).
     pub auto_continue_at_limit: bool,
     pub terminal_placement: TerminalPlacement,
+    /// Wo die Notiz des Vorhabens erscheint (ADR 074).
+    pub note_placement: NotePlacement,
     /// Gezogene Höhe des Terminal-Docks in Pixeln.
     pub terminal_height: u32,
     /// Gezogene Breite des Terminal-Docks in Pixeln.
@@ -173,6 +183,9 @@ pub enum SettingsChange {
     },
     TerminalPlacement {
         value: TerminalPlacement,
+    },
+    NotePlacement {
+        value: NotePlacement,
     },
     TerminalHeight {
         value: u32,

@@ -27,6 +27,7 @@ import { ensureVera } from '@/features/skins/unlockVera';
 import { useKonami } from '@/features/skins/useKonami';
 import { useSkinPacks } from '@/features/skins/useSkinPacks';
 import { ColorSchemeSegment } from '@/features/settings/ColorSchemeSegment';
+import { NotePlacementSegment } from '@/features/settings/NotePlacementSegment';
 import { TerminalPlacementSegment } from '@/features/settings/TerminalPlacementSegment';
 import { LocalModelMenu } from '@/features/settings/LocalModelMenu';
 import { OperatingModeSegment } from '@/features/settings/OperatingModeSegment';
@@ -341,6 +342,17 @@ export function SettingsView({
               value={current.terminalPlacement}
               onChange={(placement): void => {
                 save({ kind: 'terminalPlacement', value: placement }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+        );
+      case 'notePlacement':
+        return (
+          <SettingRow id={id}>
+            <NotePlacementSegment
+              value={current.notePlacement}
+              onChange={(placement): void => {
+                save({ kind: 'notePlacement', value: placement }).catch(() => undefined);
               }}
             />
           </SettingRow>

@@ -23,6 +23,7 @@ import { useProjectArtifacts } from '@/features/artifacts/useProjectArtifacts';
 import { ChatView } from '@/features/chat/ChatView';
 import { useGitStatus } from '@/features/git/useGitStatus';
 import { implementationArtifacts } from '@/features/implementation/implementationArtifacts';
+import { NoteView } from '@/features/notes/NoteView';
 import { ImplementationView as ImplementationMain } from '@/features/implementation/ImplementationView';
 import { StationTrail } from '@/features/implementation/StationTrail';
 import { useInquiry } from '@/features/implementation/useInquiry';
@@ -68,6 +69,7 @@ import type { ProjectRestored } from '@/lib/bindings/ProjectRestored';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import type { TerminalInfo } from '@/lib/bindings/TerminalInfo';
+import type { NotePlacement } from '@/lib/bindings/NotePlacement';
 import type { TerminalPlacement } from '@/lib/bindings/TerminalPlacement';
 import { onHandoffStarted } from '@/lib/sessions';
 import { usePanelWidth } from '@/lib/usePanelWidth';
@@ -314,6 +316,15 @@ export function App(): ReactElement {
   const isArtifactsView: boolean = isOverview
     ? !isImplementation && projectView === 'artifacts' && artifactCount > 0
     : !isMainReplaced && activeView === 'artifacts' && artifactCount > 0;
+  const notePlacement: NotePlacement = useSettingsStore(
+    (state) => state.settings?.notePlacement ?? 'dock',
+  );
+  // „Notiz“ oben gibt es nur mit der Einstellung „Als Reiter oben“; sonst fällt die Ansicht zurück.
+  const isNoteTab: boolean =
+    notePlacement === 'tab' &&
+    (isOverview
+      ? !isImplementation && projectView === 'note'
+      : !isMainReplaced && activeView === 'note');
   const changesReach: ChangesReach = isOverview ? 'project' : 'session';
   const {
     changes,
@@ -502,7 +513,9 @@ export function App(): ReactElement {
   // Strg+; öffnet die Nebenfrage der Session, deren Chat gerade vor der Eingabeleiste steht. Auf deutscher
   // Tastatur liegt das Semikolon auf Umschalt+Komma: `shiftKey` darf die Abfrage nicht ausschließen.
   const chatSessionId: string | null =
-    visibleSession !== null && !isFilesView && !isArtifactsView ? visibleSession.id : null;
+    visibleSession !== null && !isFilesView && !isArtifactsView && !isNoteTab
+      ? visibleSession.id
+      : null;
   useEffect(() => {
     if (chatSessionId === null) {
       return undefined;
@@ -658,6 +671,9 @@ export function App(): ReactElement {
   }
 
   function projectViewShown(): ProjectView {
+    if (isNoteTab) {
+      return 'note';
+    }
     if (isArtifactsView) {
       return 'artifacts';
     }
@@ -681,6 +697,9 @@ export function App(): ReactElement {
         />
       );
     }
+    if (isNoteTab) {
+      return <NoteView projectId={project.id} />;
+    }
     if (isFilesView) {
       return renderFiles(latestSession, null, false);
     }
@@ -697,6 +716,9 @@ export function App(): ReactElement {
   }
 
   function sessionViewShown(): SessionView {
+    if (isNoteTab) {
+      return 'note';
+    }
     if (isArtifactsView) {
       return 'artifacts';
     }
@@ -716,6 +738,9 @@ export function App(): ReactElement {
           list={artifacts}
         />
       );
+    }
+    if (isNoteTab) {
+      return <NoteView projectId={session.projectId} />;
     }
     if (isFilesView) {
       return renderFiles(session, gitStatus, true);

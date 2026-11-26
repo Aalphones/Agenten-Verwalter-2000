@@ -3,6 +3,7 @@ import type { ColorScheme } from "./ColorScheme";
 import type { Effort } from "./Effort";
 import type { Mode } from "./Mode";
 import type { ModelId } from "./ModelId";
+import type { NotePlacement } from "./NotePlacement";
 import type { OperatingMode } from "./OperatingMode";
 import type { PanelWidths } from "./PanelWidths";
 import type { TerminalPlacement } from "./TerminalPlacement";
@@ -46,6 +47,10 @@ autoCompactThreshold: number,
  * (ADR 063).
  */
 autoContinueAtLimit: boolean, terminalPlacement: TerminalPlacement, 
+/**
+ * Wo die Notiz des Vorhabens erscheint (ADR 074).
+ */
+notePlacement: NotePlacement, 
 /**
  * Gezogene Höhe des Terminal-Docks in Pixeln.
  */

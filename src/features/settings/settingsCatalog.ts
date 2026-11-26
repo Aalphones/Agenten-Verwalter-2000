@@ -77,6 +77,12 @@ const ENTRY_DATA = {
     label: 'Terminal',
     info: 'Wo das Terminal neben dem Chat erscheint: unten unter der Ansicht oder als Spalte rechts. Ein- und ausblenden mit dem Knopf >_ oder Strg+Ö.',
   },
+  notePlacement: {
+    category: 'general',
+    section: 'Darstellung',
+    label: 'Notiz',
+    info: 'Wo die Notiz des Vorhabens erscheint. Sie liegt außerhalb des Arbeitsordners, Agenten sehen sie nicht.',
+  },
   operatingMode: {
     category: 'agent',
     section: 'Agent',

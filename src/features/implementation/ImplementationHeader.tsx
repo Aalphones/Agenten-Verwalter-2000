@@ -8,8 +8,11 @@ import {
   VIEW_LABEL,
 } from '@/features/implementation/implementationTexts';
 import { stateIcon, stateLabel } from '@/features/implementation/stationState';
+import { PencilIcon } from '@/features/notes/PencilIcon';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
+import type { NotePlacement } from '@/lib/bindings/NotePlacement';
 import { IMPLEMENTATION_VIEWS, type ImplementationViewKind } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import '@/app/SessionHeader.css';
 import './ImplementationBar.css';
 
@@ -46,11 +49,15 @@ export function ImplementationHeader({
   isTerminalOpen,
   onToggleTerminal,
 }: ImplementationHeaderProps): ReactElement {
+  const notePlacement: NotePlacement = useSettingsStore(
+    (state) => state.settings?.notePlacement ?? 'dock',
+  );
   const views: readonly ImplementationViewKind[] = IMPLEMENTATION_VIEWS.filter(
     (view: ImplementationViewKind) =>
       view === 'flow' ||
       (view === 'files' && hasChanges) ||
-      (view === 'artifacts' && artifactCount > 0),
+      (view === 'artifacts' && artifactCount > 0) ||
+      (view === 'note' && notePlacement === 'tab'),
   );
   const activeLanes: number = activeLaneCount(implementation);
   return (
@@ -101,6 +108,7 @@ export function ImplementationHeader({
               onShowView(view);
             }}
           >
+            {view === 'note' && <PencilIcon />}
             {VIEW_LABEL[view]}
             {view === 'files' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>

@@ -9,7 +9,7 @@ Jedes Vorhaben bekommt genau eine bearbeitbare Textnotiz, um Befehle zusammenzub
 | Nr | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
 | 1 | Notiz im Dock: Core lesen/schreiben, Reiter mit Stift, Ausblenden, Selbstspeichern | [phase-1-notiz-im-dock.md](phase-1-notiz-im-dock.md) | standard | complete |
-| 2 | Einstellung „Notiz“ und Reiter oben | [phase-2-einstellung-und-reiter.md](phase-2-einstellung-und-reiter.md) | standard | pending |
+| 2 | Einstellung „Notiz“ und Reiter oben | [phase-2-einstellung-und-reiter.md](phase-2-einstellung-und-reiter.md) | standard | complete |
 | 3 | Ins Terminal | [phase-3-ins-terminal.md](phase-3-ins-terminal.md) | standard | pending |
 
 Rein sequenziell: Phase 2 und 3 bauen beide auf der Notiz-Fläche aus Phase 1 auf (dieselbe Datei `NotePane.tsx`), Phase 3 braucht beide Anzeigeorte aus Phase 2. Schätzung: 3 Umsetzungs-Sessions, je Phase etwa 40–80 Werkzeugaufrufe.

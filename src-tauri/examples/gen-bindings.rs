@@ -64,7 +64,7 @@ use verwalter_lib::{
         SessionStatus, SessionSummary,
     },
     settings::model::{
-        ColorScheme, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange,
+        ColorScheme, NotePlacement, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange,
         SettingsOverview, TerminalPlacement,
     },
     side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage},
@@ -210,6 +210,7 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ColorScheme::export_all(&cfg)?;
     OperatingMode::export_all(&cfg)?;
     TerminalPlacement::export_all(&cfg)?;
+    NotePlacement::export_all(&cfg)?;
     PanelId::export_all(&cfg)?;
     PanelWidths::export_all(&cfg)?;
     LocalModelKind::export_all(&cfg)?;

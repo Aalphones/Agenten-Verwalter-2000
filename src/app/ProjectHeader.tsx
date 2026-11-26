@@ -4,10 +4,13 @@ import { formatRuntime } from '@/app/SessionHeader';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import { useNow } from '@/features/background/useNow';
+import { PencilIcon } from '@/features/notes/PencilIcon';
 import { mostUrgent } from '@/features/projects/projectStatus';
 import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
+import type { NotePlacement } from '@/lib/bindings/NotePlacement';
 import type { ProjectSummary } from '@/lib/bindings/ProjectSummary';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
+import { useSettingsStore } from '@/stores/settings';
 import { PROJECT_VIEWS, type ProjectView } from '@/stores/sessions';
 import './SessionHeader.css';
 
@@ -17,6 +20,7 @@ const VIEW_LABEL: Record<ProjectView, string> = {
   overview: 'Übersicht',
   files: 'Dateien',
   artifacts: 'Artefakte',
+  note: 'Notiz',
 };
 
 interface ProjectHeaderProps {
@@ -75,12 +79,17 @@ export function ProjectHeader({
       (session.runningSince === null ? 0 : Math.max(0, now - session.runningSince)),
     0,
   );
-  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
+  const notePlacement: NotePlacement = useSettingsStore(
+    (state) => state.settings?.notePlacement ?? 'dock',
+  );
+  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt,
+  // „Notiz“ nur mit der Einstellung „Als Reiter oben“.
   const views: readonly ProjectView[] = PROJECT_VIEWS.filter(
     (view: ProjectView) =>
       view === 'overview' ||
       (view === 'files' && project.repositoryNames.length > 0) ||
-      (view === 'artifacts' && artifactCount > 0),
+      (view === 'artifacts' && artifactCount > 0) ||
+      (view === 'note' && notePlacement === 'tab'),
   );
   const sessionCountLabel: string =
     sessions.length === 1 ? '1 Session' : `${String(sessions.length)} Sessions`;
@@ -111,6 +120,7 @@ export function ProjectHeader({
               onShowView(view);
             }}
           >
+            {view === 'note' && <PencilIcon />}
             {VIEW_LABEL[view]}
             {view === 'files' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>

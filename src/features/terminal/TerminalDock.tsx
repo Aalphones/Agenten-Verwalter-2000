@@ -60,6 +60,9 @@ export function TerminalDock({
   const closeDock = useTerminalStore((state) => state.close);
   const setDragSize = useTerminalStore((state) => state.setDragSize);
   const select = useTerminalStore((state) => state.select);
+  const isNoteInDock: boolean = useSettingsStore(
+    (state) => (state.settings?.notePlacement ?? 'dock') === 'dock',
+  );
   const isNoteHidden: boolean = useTerminalStore((state) => state.noteHidden[projectId] === true);
   const hideNote = useTerminalStore((state) => state.hideNote);
   const showNote = useTerminalStore((state) => state.showNote);
@@ -74,7 +77,7 @@ export function TerminalDock({
   const isBottom: boolean = placement === 'bottom';
   const isFilling: boolean = isBottom && isMaximized;
   const size: number = clampSize(placement, dragSize ?? savedSize, space);
-  const isNoteShown: boolean = selectedId === NOTE_TAB_ID && !isNoteHidden;
+  const isNoteShown: boolean = isNoteInDock && selectedId === NOTE_TAB_ID && !isNoteHidden;
   const shown: TerminalInfo | undefined = isNoteShown
     ? undefined
     : (terminals.find((terminal: TerminalInfo) => terminal.id === selectedId) ??
@@ -163,7 +166,7 @@ export function TerminalDock({
     return (
       <div className="terminal-dock__bar">
         <div className="terminal-dock__tabs">
-          {!isNoteHidden && (
+          {isNoteInDock && !isNoteHidden && (
             <div
               className={`terminal-dock__tab terminal-dock__tab--note${isNoteShown ? ' terminal-dock__tab--active' : ''}`}
             >
@@ -229,7 +232,7 @@ export function TerminalDock({
           >
             +
           </button>
-          {isNoteHidden && (
+          {isNoteInDock && isNoteHidden && (
             <button
               type="button"
               className="terminal-dock__button terminal-dock__button--icon terminal-dock__button--note"

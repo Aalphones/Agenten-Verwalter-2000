@@ -15,6 +15,7 @@ export const VIEW_LABEL: Record<ImplementationViewKind, string> = {
   flow: 'Ablauf',
   files: 'Dateien',
   artifacts: 'Artefakte',
+  note: 'Notiz',
 };
 
 export const REPORT_LABEL = 'Lagebericht';

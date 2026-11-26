@@ -21,16 +21,18 @@
 
 ## Checkliste
 
-- [ ] Rust: `NotePlacement { Dock, Tab }` in `settings/model.rs` (Derive wie `TerminalPlacement`), Feld `note_placement` in den Einstellungen, `SettingsChange::NotePlacement { value }`; in `settings/mod.rs` `KEY_NOTE_PLACEMENT = "note_placement"`, Standard `Dock`, Laden per `stored_or`, Schreiben im Änderungs-Arm wie bei `TerminalPlacement`. `pnpm bindings`.
-- [ ] `src/features/settings/NotePlacementSegment.tsx` als Kopie von `TerminalPlacementSegment.tsx` mit `dock`/`tab` und den Beschriftungen aus AK 1; Eintrag `notePlacement` in `settingsCatalog.ts` direkt hinter `terminalPlacement`; `case 'notePlacement'` in `SettingsView.tsx`.
-- [ ] `src/stores/sessions.ts`: `'note'` als letzter Eintrag in `SESSION_VIEWS`, `PROJECT_VIEWS`, `IMPLEMENTATION_VIEWS`.
-- [ ] Die drei Kopfzeilen: Filter lässt `'note'` nur zu, wenn `notePlacement === 'tab'` (aus `useSettingsStore`, Standard `'dock'`); Beschriftung „Notiz“ mit `PencilIcon` davor.
-- [ ] `App.tsx`: `sessionViewShown()` und `projectViewShown()` liefern bei `'note'` und `notePlacement !== 'tab'` `'chat'` bzw. `'overview'`; bei `'note'` und `'tab'` rendert die Hauptfläche `<NotePane projectId={…} />` für das Vorhaben der Session bzw. der Übersicht. `ImplementationView.tsx`: `activeViewShown()` analog mit Rückfall `'flow'`, Notiz-Fläche für das Vorhaben der Umsetzung.
-- [ ] `TerminalDock.tsx`: Notiz-Reiter, Stift-Knopf und `NOTE_TAB_ID`-Auswahl nur bei `notePlacement === 'dock'`; sonst ignoriert `shown` die Auswahl `NOTE_TAB_ID`.
-- [ ] `docs/code-map.md` Zeile „Notiz im Vorhaben“ und „Einstellungen“ (`note_placement`, `NotePlacementSegment`) nachziehen.
+- [x] Rust: `NotePlacement { Dock, Tab }` in `settings/model.rs` (Derive wie `TerminalPlacement`), Feld `note_placement` in den Einstellungen, `SettingsChange::NotePlacement { value }`; in `settings/mod.rs` `KEY_NOTE_PLACEMENT = "note_placement"`, Standard `Dock`, Laden per `stored_or`, Schreiben im Änderungs-Arm wie bei `TerminalPlacement`. `pnpm bindings`.
+- [x] `src/features/settings/NotePlacementSegment.tsx` als Kopie von `TerminalPlacementSegment.tsx` mit `dock`/`tab` und den Beschriftungen aus AK 1; Eintrag `notePlacement` in `settingsCatalog.ts` direkt hinter `terminalPlacement`; `case 'notePlacement'` in `SettingsView.tsx`.
+- [x] `src/stores/sessions.ts`: `'note'` als letzter Eintrag in `SESSION_VIEWS`, `PROJECT_VIEWS`, `IMPLEMENTATION_VIEWS`.
+- [x] Die drei Kopfzeilen: Filter lässt `'note'` nur zu, wenn `notePlacement === 'tab'` (aus `useSettingsStore`, Standard `'dock'`); Beschriftung „Notiz“ mit `PencilIcon` davor.
+- [x] `App.tsx`: `sessionViewShown()` und `projectViewShown()` liefern bei `'note'` und `notePlacement !== 'tab'` `'chat'` bzw. `'overview'`; bei `'note'` und `'tab'` rendert die Hauptfläche `<NotePane projectId={…} />` für das Vorhaben der Session bzw. der Übersicht. `ImplementationView.tsx`: `activeViewShown()` analog mit Rückfall `'flow'`, Notiz-Fläche für das Vorhaben der Umsetzung.
+- [x] `TerminalDock.tsx`: Notiz-Reiter, Stift-Knopf und `NOTE_TAB_ID`-Auswahl nur bei `notePlacement === 'dock'`; sonst ignoriert `shown` die Auswahl `NOTE_TAB_ID`.
+- [x] `docs/code-map.md` Zeile „Notiz im Vorhaben“ und „Einstellungen“ (`note_placement`, `NotePlacementSegment`) nachziehen.
 
 ## Prüfung
 
 - `pnpm check` grün (Summenzeile ins Report-Back). Keine automatisierten Tests (privates Profil).
 
 ## Report-Back
+
+Phase 2 fertig. Einstellung `note_placement` (Rust, Bindings, Segment, Katalog „Notiz“ unter Darstellung). Reiter `'note'` in den drei Kopfzeilen nur bei „Als Reiter oben“; neue Hauptfläche `NoteView` (NotePane mit Fehlerzeile) in `App.tsx` und `ImplementationView.tsx`; Rückfall auf Chat/Übersicht/Ablauf automatisch, weil die Ansicht bei `dock` nicht als Notiz gilt. Dock blendet Notiz-Reiter und Stift-Knopf bei `tab` aus. `pnpm check` grün. Nicht in der echten App gelaufen. Abweichung: Katalog-Eintrag steht in der Kategorie „Allgemein/Darstellung“ hinter „Terminal“ (wie geplant); ein Reiter „Notiz“ bleibt in der Kopfzeile auch bei Wechsel der Einstellung nur im Store als `'note'` gemerkt, wird aber ohne `tab` nicht gezeigt.

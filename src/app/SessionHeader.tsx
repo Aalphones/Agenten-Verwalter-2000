@@ -5,15 +5,18 @@ import { Popover } from '@/components/Popover';
 import { StatusIcon } from '@/components/StatusIcon';
 import { formatCount } from '@/features/changes/changesScope';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
+import { PencilIcon } from '@/features/notes/PencilIcon';
 import { useNow } from '@/features/background/useNow';
 import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
+import type { NotePlacement } from '@/lib/bindings/NotePlacement';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
 import { cancelSession, pauseSession, resumeSession } from '@/lib/sessions';
 import { useReviewStore } from '@/stores/review';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
+import { useSettingsStore } from '@/stores/settings';
 import { SESSION_VIEWS, type SessionView } from '@/stores/sessions';
 import './SessionHeader.css';
 
@@ -31,6 +34,7 @@ const VIEW_LABEL: Record<SessionView, string> = {
   chat: 'Chat',
   files: 'Dateien',
   artifacts: 'Artefakte',
+  note: 'Notiz',
 };
 
 interface SessionHeaderProps {
@@ -104,12 +108,17 @@ export function SessionHeader({
     session.runningSince === null
       ? session.runningMs
       : session.runningMs + Math.max(0, now - session.runningSince);
-  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt.
+  const notePlacement: NotePlacement = useSettingsStore(
+    (state) => state.settings?.notePlacement ?? 'dock',
+  );
+  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt,
+  // „Notiz“ nur mit der Einstellung „Als Reiter oben“.
   const views: readonly SessionView[] = SESSION_VIEWS.filter(
     (view: SessionView) =>
       view === 'chat' ||
       (view === 'files' && session.repositoryCount > 0) ||
-      (view === 'artifacts' && artifactCount > 0),
+      (view === 'artifacts' && artifactCount > 0) ||
+      (view === 'note' && notePlacement === 'tab'),
   );
 
   const reviewTitle: string | undefined =
@@ -284,6 +293,7 @@ export function SessionHeader({
               onShowView(view);
             }}
           >
+            {view === 'note' && <PencilIcon />}
             {VIEW_LABEL[view]}
             {view === 'chat' && reviewCount > 0 && (
               <span className="session-header__tab-count session-header__tab-count--review">

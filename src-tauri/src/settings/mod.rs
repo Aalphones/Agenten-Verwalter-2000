@@ -17,8 +17,8 @@ use crate::filesystem::workspace::{WORKSPACES_DIR, data_dir, home_dir};
 use crate::skills::{self, model::SkillKind, model::SkillOrigin};
 use crate::skins::model::SkinKind;
 use model::{
-    ColorScheme, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange, SettingsOverview,
-    TerminalPlacement,
+    ColorScheme, NotePlacement, OperatingMode, PanelId, PanelWidths, Settings, SettingsChange,
+    SettingsOverview, TerminalPlacement,
 };
 
 const KEY_COLOR_SCHEME: &str = "color_scheme";
@@ -38,6 +38,7 @@ const KEY_AUTO_COMPACT_STATIONS: &str = "auto_compact_stations";
 const KEY_AUTO_COMPACT_THRESHOLD: &str = "auto_compact_threshold";
 const KEY_AUTO_CONTINUE_AT_LIMIT: &str = "auto_continue_at_limit";
 const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
+const KEY_NOTE_PLACEMENT: &str = "note_placement";
 const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
 const KEY_TERMINAL_WIDTH: &str = "terminal_width";
 const KEY_SKIN_FIGURES: &str = "skin_figures";
@@ -99,6 +100,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     auto_compact_threshold: 250_000,
     auto_continue_at_limit: false,
     terminal_placement: TerminalPlacement::Bottom,
+    note_placement: NotePlacement::Dock,
     terminal_height: 260,
     terminal_width: 460,
     panel_widths: PanelWidths {
@@ -162,6 +164,7 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             KEY_TERMINAL_PLACEMENT,
             DEFAULT_SETTINGS.terminal_placement,
         ),
+        note_placement: stored_or(&stored, KEY_NOTE_PLACEMENT, DEFAULT_SETTINGS.note_placement),
         terminal_height: stored
             .get(KEY_TERMINAL_HEIGHT)
             .and_then(|text: &String| text.parse::<u32>().ok())
@@ -332,6 +335,9 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             }
             SettingsChange::TerminalPlacement { value } => {
                 setting_rows::write(&transaction, KEY_TERMINAL_PLACEMENT, &enum_to_text(&value)?)?;
+            }
+            SettingsChange::NotePlacement { value } => {
+                setting_rows::write(&transaction, KEY_NOTE_PLACEMENT, &enum_to_text(&value)?)?;
             }
             SettingsChange::TerminalHeight { value } => {
                 setting_rows::write(&transaction, KEY_TERMINAL_HEIGHT, &value.to_string())?;

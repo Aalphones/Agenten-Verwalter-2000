@@ -14,11 +14,13 @@ import {
   openingPhase,
   type StationRef,
 } from '@/features/implementation/implementationOrder';
+import { NoteView } from '@/features/notes/NoteView';
 import { ReportPanel } from '@/features/implementation/ReportPanel';
 import { Timeline } from '@/features/implementation/Timeline';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { ImplementationView as Implementation } from '@/lib/bindings/ImplementationView';
 import type { ModelId } from '@/lib/bindings/ModelId';
+import type { NotePlacement } from '@/lib/bindings/NotePlacement';
 import type { PhaseView } from '@/lib/bindings/PhaseView';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import {
@@ -39,6 +41,7 @@ import { setSessionEffort, setSessionModel } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
 import { useImplementationStore } from '@/stores/implementation';
 import { useSessionsStore, type ImplementationViewKind } from '@/stores/sessions';
+import { useSettingsStore } from '@/stores/settings';
 import './ImplementationView.css';
 
 interface ImplementationViewProps {
@@ -109,7 +112,11 @@ export function ImplementationView({
   // Ohne Repository bzw. ohne Artefakt fällt der Reiter auf den Ablauf zurück.
   const isFilesShown: boolean = activeView === 'files' && hasChanges;
   const isArtifactsShown: boolean = activeView === 'artifacts' && artifactCount > 0;
-  const isFlow: boolean = !isFilesShown && !isArtifactsShown;
+  const notePlacement: NotePlacement = useSettingsStore(
+    (state) => state.settings?.notePlacement ?? 'dock',
+  );
+  const isNoteShown: boolean = activeView === 'note' && notePlacement === 'tab';
+  const isFlow: boolean = !isFilesShown && !isArtifactsShown && !isNoteShown;
   const isTicking: boolean = stations.some((ref: StationRef) =>
     ['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'].includes(
       ref.station.state,
@@ -318,10 +325,16 @@ export function ImplementationView({
     if (isFilesShown) {
       return 'files';
     }
+    if (isNoteShown) {
+      return 'note';
+    }
     return isArtifactsShown ? 'artifacts' : 'flow';
   }
 
   function renderBody(): ReactNode {
+    if (isNoteShown) {
+      return <NoteView projectId={implementation.projectId} />;
+    }
     if (isFilesShown) {
       return files;
     }
