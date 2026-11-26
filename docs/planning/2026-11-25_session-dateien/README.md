@@ -9,7 +9,7 @@ Ziel: Im Reiter „Dateien“ steht unter den Repositories ein Knoten „Session
 | 1 | Kern: Verweise im Chat erfassen, Scratchpad der Kommandozeile merken | [phase-1-kern-erfassen.md](phase-1-kern-erfassen.md) | standard | complete |
 | 2 | Kern: Liste der Session-Dateien, Lesen, Grenze, Dateilink-Ziele, Sperre | [phase-2-kern-liste.md](phase-2-kern-liste.md) | heikel | complete |
 | 3 | Kern: Betrachter-Adresse für einzelne Dateien | [phase-3-kern-betrachter.md](phase-3-kern-betrachter.md) | heikel | complete |
-| 4 | Knoten „Session-Dateien“ und Sprünge aus dem Chat | [phase-4-knoten-links.md](phase-4-knoten-links.md) | standard | pending |
+| 4 | Knoten „Session-Dateien“ und Sprünge aus dem Chat | [phase-4-knoten-links.md](phase-4-knoten-links.md) | standard | complete |
 | 5 | Datei-Ansicht: Betrachter, vier Knöpfe, Sperre in „Artefakte“, Doku | [phase-5-datei-ansicht.md](phase-5-datei-ansicht.md) | standard | pending |
 
 Reihenfolge fest 1 → 5; nach jeder Phase läuft die App. Profil: privat – keine automatisierten Tests, keine Review-Stationen, keine Abnahmeliste. Nicht im Umfang: Suche (Strg P) über Session-Dateien, Bilder mit relativem Pfad in der Markdown-Vorschau einer Session-Datei, HTML-Vorschau in der App, Bearbeiten, Dateien, die ein Agent per Shell außerhalb der Scratchpads erzeugt und nie verlinkt.
@@ -98,7 +98,7 @@ pub enum FileRef {
 }
 
 // src-tauri/src/file_links/mod.rs — FileLinkTarget, neue Varianten
-SessionFile { path: String, line: Option<u32> },   // absolut, nativ
+SessionFile { path: String, real: String, line: Option<u32> },   // path: absolut, nativ, wie gefunden; real: kanonisch ohne `\\?\` (wie SessionFile.path der Liste)
 Artifact { file: String },                         // Name direkt in .artefakte (artifacts::artifact_file_of)
 ```
 
@@ -124,7 +124,7 @@ Vorab: ein Netzwerkpfad (Windows, `\\…`) → `fileNotAllowed` „Netzwerkpfade
 3. Kanonisch in `.artefakte` des Vorhabens → `Artifact { file }`.
 4. `html`/`htm` innerhalb der erlaubten Wurzeln (`LinkRoots.allowed`) → `External` (Standardprogramm wie heute).
 5. In einem Eintrag → `View` (unverändert, jetzt auch für PDF).
-6. Sonst → `SessionFile { path, line }`; der Befehl `file_link_resolve` trägt den Pfad dabei in `session_links` der klickenden Session ein.
+6. Sonst → `SessionFile { path, real, line }` (`real` ist der kanonische Pfad; die Oberfläche sucht die Datei in der Liste erst danach, dann nach `path`); der Befehl `file_link_resolve` trägt den Pfad dabei in `session_links` der klickenden Session ein.
 
 `EXTERNAL_EXTENSIONS` wird `["html", "htm"]`; PDF öffnet in der App.
 
@@ -151,6 +151,7 @@ Vorab: ein Netzwerkpfad (Windows, `\\…`) → `fileNotAllowed` „Netzwerkpfade
 - HTML-Dateien als Session-Datei zeigen die Rest-Karte mit „Im Browser öffnen“ (= `file_open_default`), keine Vorschau: relative Bilder und Skripte der Seite lägen außerhalb der Betrachter-Adresse.
 - Bild-Vorschau über `data:`-Adresse (`FileContent::Image`) entfällt; jedes Bild geht über den Betrachter, dadurch fällt die 2-MB-Grenze.
 - Die Sperre ist eine Ausschlussliste ausführbarer Typen (Wunsch: Knopf an jeder Datei), nicht die bisherige Erlaubnisliste.
+- Phase 4: Der Sprung aus dem Chat in den Reiter „Artefakte“ nimmt das Vorhaben aus dem Chat der klickenden Session (`LinkSession` im Kontext der Dateilinks), nicht aus dem Sessions-Store.
 - Migration 022: `STATE.md` nennt für den späteren Plan „Zusammenarbeit der Stationen“ ebenfalls 022 — wer später kommt, nimmt die nächste freie Nummer.
 
 ## Risiken und Konfidenz
