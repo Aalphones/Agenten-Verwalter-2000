@@ -271,6 +271,8 @@ Ereignis `report://changed` mit `{ implementationId }` nach jedem Eintrag, jeder
 
 Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: String, entry: Option<u32>, label: String }` (`label` = Stopp-Titel, Bildunterschrift bzw. Bildschirm-Name, höchstens 80 Zeichen). Kommentare an Codezeilen des Berichts nutzen die bestehende Variante `Diff` mit Repository, Pfad und Zeile. Text an den Agenten (`review::agent_text`): `Review-Bericht, Phase <key>, <label> (n<entry>): <Kommentar>`.
 
+**Empfänger:** Kommentare aus dem Bericht gehen nie an eine Station, sondern an die Rückfrage der Umsetzung (ADR 048: frische Session mit Lagebericht, darf umplanen): die neueste nicht archivierte Session mit `inquiry_of` = Umsetzung, sonst eine neu angelegte. Sie bespricht die Kommentare und ergänzt nach Okay des Benutzers Stationen per `implementation_set_phases`. Bis zum Senden liegen die Kommentare im Store unter `report:<implementationId>`. Einzelheiten Phase 7.
+
 ## Finale AK
 
 1. Eine Station der Betriebsart Claude sieht `report_note`, `report_figure` und `report_screen` und die Anweisung oben; jeder Aufruf erscheint ohne Neuladen im Reiter „Review“.
@@ -281,7 +283,7 @@ Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: Str
 5. Schaubilder mit Markern zeigen Unterschied, Vorher und Nachher; ohne Marker nur das Schaubild.
 6. Am Ende jeder Phase ordnet Haiku die Phase; eine verworfene Ordnung fällt auf die Rohgruppierung zurück und nennt den Grund.
 7. Prüfwerte erscheinen je Phase und im Überblick, sobald Berichtsdateien existieren; rot nur bei fehlgeschlagenen Tests oder roter Prüfkette.
-8. Kommentare an Zeilen, Stopps, Schaubildern, Bildschirmen und Bildbereichen landen als Review-Kommentare in der Eingabeleiste der Ziel-Session; „Abnehmen“ schließt die Station `by: "you"`.
+8. Kommentare an Zeilen, Stopps, Schaubildern, Bildschirmen und Bildbereichen gehen mit „Kommentare senden“ samt Lagebericht an die Rückfrage der Umsetzung (bestehende oder neu angelegte), die Stationen ergänzen kann; „Abnehmen“ ist gesperrt, solange Kommentare ungesendet sind, und schließt sonst die Station `by: "you"`.
 9. User-Skills und facepass-Projekt-Skills verlangen in Stationen keinen HTML-Bericht und keine Abnahme-Seite mehr, sondern die Werkzeuge des Berichts; das Abnahme-Paket der Sichtabnahme geht per `report_screen`.
 10. `pnpm check` grün.
 
@@ -299,6 +301,9 @@ Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: Str
 - **Sichtabnahme nicht von Haiku geordnet:** Bildschirme stehen in Aufruf-Reihenfolge im eigenen Abschnitt nach dem Weg.
 - **Marken sind Rechtecke** (`x, y, w, h`), wie im Entwurf.
 - **Bericht nur für Umsetzungen**, nicht für einzelne Sessions (offener Punkt des Entwurfs).
+- **Kommentare an die Rückfrage statt an eine Station** (Entscheidung des Benutzers): Stationen haben beim Lesen oft einen kalten Cache oder sind fertig; die Rückfrage startet frisch mit Lagebericht und kann Stationen ergänzen. Zweite Runde geht an dieselbe Rückfrage, „Kommentare senden“ schickt sofort, „Abnehmen“ ist bei ungesendeten Kommentaren gesperrt (nach der Abnahme lehnt `implementation_set_phases` ab).
+- **„Dieselbe Rückfrage“ ohne eigene Spalte:** die neueste nicht archivierte Session mit `inquiry_of` = Umsetzung; eine von Hand angelegte Rückfrage zählt mit, weil dort dasselbe Gespräch läuft.
+- **Rückfrage ergänzt Stationen erst nach Okay im Chat** (Satz in der Sende-Nachricht): ADR 064 übernimmt Plan-Änderungen sofort, der Benutzer will die Kommentare aber erst besprechen.
 - **Ort der Berichtsdateien:** der Verwalter sucht sie selbst in den Repository-Ordnern der Phase (Muster in Phase 4), ohne Einstellung.
 - **Keine Schwellen, keine Ampel:** Zahlen ohne Wertung; rot nur bei fehlgeschlagenen Tests oder roter Prüfkette.
 - **„Werkzeuge zeigen“ und Roh-/Geordnet-Ansicht des Entwurfs entfallen in der App**; beide Fassungen druckt `report-probe`.
@@ -310,6 +315,7 @@ Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: Str
 - 🟡 **Anker ohne `at`:** `new_string` kann mehrfach in der Datei stehen; dann bekommt der Agent einen Fehler und muss `at` nachreichen. Check in Phase 1: `report-probe … anchor <Session-ID>` gegen eine echte Session mit Edits.
 - 🟡 **Commit-Bereich einer Phase:** `session_commits` kennt kein Repository; Bereich und Reihenfolge entstehen aus `git::existing_commits` und `git::is_ancestor`. Check in Phase 3: `report-probe <DB-Kopie> <Umsetzungs-ID> view` gegen die archivierte Umsetzung „Session-Dateien“ (Kopfzahlen gegen `git show --numstat 35ab05f`).
 - 🟡 **Format von cargo-mutants (`mutants.out/outcomes.json`):** nicht im Repo belegt. Check in Phase 4: Beispiel aus der Doku von cargo-mutants lesen; passt es nicht, nur Stryker auswerten und das in FINDINGS vermerken.
+- 🟡 **Rückfrage findet ihre Umsetzung über das Vorhaben:** `implementation_of_session` nimmt für Sessions ohne Station bisher die neueste Umsetzung des Vorhabens, nicht `inquiry_of` (`sessions/registry/implementation.rs:81`). Phase 7 dreht die Reihenfolge; Check: `implementation-probe` bzw. ein `implementation_get` aus einer Rückfrage in einem Vorhaben mit zwei Umsetzungen.
 - 🟡 **Skills außerhalb des Repos (Phase 8):** die Station schreibt in `~/.claude` und in `C:\Users\smick\develop\easyfitness\facepass`; fehlen Schreibrechte, fragt sie nach. facepass ist ein Team-Repo mit eigener Commit-Regel (`project-committing`).
 - Fehlerklassen geprüft (Vault `frameworks/react`, `frameworks/css-architecture`, `sprachen/typescript`, `systeme/sqlite`, `werkzeuge/git`, `werkzeuge/claude-code`): einschlägig sind Zeilenende CRLF bei Ersetzungsskripten (`werkzeuge/git`), Listen, die aus ihrem Feld quellen (`frameworks/css-architecture`), und Textsuche in Punkt-Ordnern (`werkzeuge/claude-code`); sie stehen in den Phasen 3, 5 und 8.
 
