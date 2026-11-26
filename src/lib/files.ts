@@ -22,7 +22,7 @@ export function loadIgnoredChildren(
   return invoke<DirEntry[]>('files_ignored_children', { sessionId, key, path });
 }
 
-/** Die Fassung einer Datei im Arbeitsverzeichnis des Eintrags: Text, Bild oder nur ihr Zustand.
+/** Die Fassung einer Datei im Arbeitsverzeichnis des Eintrags: Text oder nur ihr Zustand.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` (ungültiger Pfad, Schlüssel oder Ordner), `fileNotAllowed` (außerhalb des Repositorys), `io`, `git` */
 export function readFile(sessionId: string, key: string, path: string): Promise<FileContent> {
   return invoke<FileContent>('files_read', { sessionId, key, path });
@@ -43,15 +43,4 @@ export function loadCommitDiff(
   path: string,
 ): Promise<FileDiff> {
   return invoke<FileDiff>('files_commit_diff', { sessionId, key, commit, path });
-}
-
-/** Öffnet die Datei im Eintrag in VS Code, mit Zeile an dieser Stelle.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal`, `fileNotAllowed` (außerhalb des Repositorys), `git` (VS Code nicht gefunden) */
-export async function openInEditor(
-  sessionId: string,
-  key: string,
-  path: string,
-  line: number | null,
-): Promise<void> {
-  await invoke('files_open_in_editor', { sessionId, key, path, line });
 }

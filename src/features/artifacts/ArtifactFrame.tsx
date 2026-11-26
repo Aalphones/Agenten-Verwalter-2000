@@ -19,8 +19,9 @@ interface ArtifactFrameProps {
 
 // Ohne `allow-same-origin`, `allow-popups` und `allow-top-navigation`: die Seite läuft als eigene, leere
 // Herkunft und erreicht weder den Verwalter noch andere Fenster. Kein `srcdoc` — das erbte die App-CSP.
-// Betrachter-Seiten (ADR 047) laufen im selben Rahmen wie HTML.
-const FRAME_SANDBOX = 'allow-scripts allow-forms allow-modals';
+// Betrachter-Seiten (ADR 047) laufen im selben Rahmen wie HTML, auch die Datei-Ansicht der Session-Dateien
+// (ADR 071, `ViewerFrame`).
+export const FRAME_SANDBOX = 'allow-scripts allow-forms allow-modals';
 
 // Die Seite kann die Nachricht auch ohne Klick schicken; mehr als ein Browser-Tab je Sekunde wäre Spam.
 const OPEN_INTERVAL_MS = 1000;

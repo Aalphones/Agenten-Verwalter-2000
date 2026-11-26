@@ -62,6 +62,24 @@
     background: var(--color-bg-selected);
     font-weight: 600;
   }
+
+  &--primary {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-fg-on-accent);
+    font-weight: 600;
+  }
+
+  /* Gesperrt oder nicht möglich: gestrichelter Rand, keine Hover-Hervorhebung. */
+  &:disabled {
+    border-style: dashed;
+    color: var(--color-fg-muted);
+    cursor: not-allowed;
+
+    &:hover {
+      border-color: var(--color-border);
+    }
+  }
 }
 
 @media (pointer: coarse) {

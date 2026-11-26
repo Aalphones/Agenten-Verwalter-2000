@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
+import { ExecutableLockHint } from '@/components/ExecutableLockHint';
 import { ResizeHandle } from '@/components/ResizeHandle';
 import { ArtifactFrame } from '@/features/artifacts/ArtifactFrame';
 import { ArtifactFullscreen } from '@/features/artifacts/ArtifactFullscreen';
@@ -53,6 +54,7 @@ export function ArtifactsView({
   heading = ARTIFACTS_HEADING,
 }: ArtifactsViewProps): ReactElement | null {
   const listWidth = usePanelWidth('artifactsList');
+  const lockId: string = useId();
   const [reloadToken, setReloadToken] = useState<number>(0);
   const [isJustUpdated, setIsJustUpdated] = useState<boolean>(false);
   const [isCommenting, setIsCommenting] = useState<boolean>(false);
@@ -373,6 +375,8 @@ export function ArtifactsView({
             <button
               type="button"
               className="artifacts__button"
+              disabled={selected.executable}
+              aria-describedby={selected.executable ? lockId : undefined}
               onClick={(): void => {
                 runOnFile(openArtifactDefault, selected);
               }}
@@ -394,6 +398,11 @@ export function ArtifactsView({
             </button>
           </div>
         </header>
+        {selected.executable ? (
+          <div className="artifacts__lock">
+            <ExecutableLockHint id={lockId} />
+          </div>
+        ) : null}
         {isCommenting ? (
           <div className="artifacts__hint">
             <span>Element anklicken, um es zu kommentieren · Esc beendet</span>
@@ -418,6 +427,7 @@ export function ArtifactsView({
           ) : (
             <ArtifactOtherCard
               item={selected}
+              lockId={lockId}
               onOpen={(): void => {
                 runOnFile(openArtifactDefault, selected);
               }}

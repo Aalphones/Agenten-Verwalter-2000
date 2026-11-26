@@ -225,6 +225,14 @@
       background: var(--color-bg-hover);
     }
 
+    /* Gesperrt (ausführbare Datei): gestrichelter Rand, keine Hover-Fläche. */
+    &:disabled {
+      border-style: dashed;
+      background: transparent;
+      color: var(--color-fg-muted);
+      cursor: not-allowed;
+    }
+
     &--icon {
       justify-content: center;
       width: 28px;
@@ -236,6 +244,13 @@
       background: var(--color-accent);
       color: var(--color-fg-on-accent);
     }
+  }
+
+  /* Zeile unter dem Kopf: warum „Öffnen“ gesperrt ist. */
+  &__lock {
+    padding: var(--space-sm) var(--space-3xl);
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--font-size-xs);
   }
 
   &__hint {

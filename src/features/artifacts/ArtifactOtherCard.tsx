@@ -6,6 +6,8 @@ import './ArtifactOtherCard.css';
 
 interface ArtifactOtherCardProps {
   item: Artifact;
+  /** Zeile, die den gesperrten Knopf „Öffnen“ einer ausführbaren Datei erklärt (`ExecutableLockHint`). */
+  lockId: string;
   onOpen: () => void;
   onReveal: () => void;
 }
@@ -14,6 +16,7 @@ interface ArtifactOtherCardProps {
  *  der Datei — der läuft ausschließlich im abgeschotteten Rahmen. */
 export function ArtifactOtherCard({
   item,
+  lockId,
   onOpen,
   onReveal,
 }: ArtifactOtherCardProps): ReactElement {
@@ -29,7 +32,13 @@ export function ArtifactOtherCard({
         <p className="artifact-other-card__facts">{facts.join(' · ')}</p>
         <p className="artifact-other-card__hint">Für diesen Typ gibt es hier noch keine Ansicht.</p>
         <div className="artifact-other-card__actions">
-          <button type="button" className="artifact-other-card__button" onClick={onOpen}>
+          <button
+            type="button"
+            className="artifact-other-card__button"
+            disabled={item.executable}
+            aria-describedby={item.executable ? lockId : undefined}
+            onClick={onOpen}
+          >
             {openLabel(item.kind)}
           </button>
           <button type="button" className="artifact-other-card__button" onClick={onReveal}>

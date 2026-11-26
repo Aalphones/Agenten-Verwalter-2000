@@ -50,6 +50,14 @@
       background: var(--color-bg-hover);
     }
 
+    /* Gesperrt (ausführbare Datei): gestrichelter Rand, keine Hover-Fläche. */
+    &:disabled {
+      border-style: dashed;
+      background: var(--color-bg-surface);
+      color: var(--color-fg-muted);
+      cursor: not-allowed;
+    }
+
     &:focus-visible {
       outline: 2px solid var(--color-accent);
       outline-offset: 2px;

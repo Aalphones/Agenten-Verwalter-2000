@@ -1,0 +1,20 @@
+/* Kurzformen der Knöpfe: gilt in einem Detailbereich (`.file-viewer`) unter 600 px. */
+.file-actions__short {
+  display: none;
+}
+
+@container file-detail (max-width: 600px) {
+  .file-actions__long {
+    display: none;
+  }
+
+  .file-actions__short {
+    display: inline;
+  }
+}
+
+.file-actions__status {
+  min-width: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}

@@ -219,7 +219,6 @@ pub fn run() {
             commands::files::files_read,
             commands::files::files_history,
             commands::files::files_commit_diff,
-            commands::files::files_open_in_editor,
             commands::session_files::session_files_list,
             commands::session_files::session_file_read,
             commands::session_files::file_view_url,

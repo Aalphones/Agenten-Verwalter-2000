@@ -4,6 +4,8 @@
   flex-grow: 1;
   min-width: 0;
   min-height: 0;
+  /* Unter 600 px Breite zeigen die vier Knöpfe ihre Kurzform (FileActions.css). */
+  container: file-detail / inline-size;
 
   &__head,
   &__steps {
@@ -35,8 +37,18 @@
     flex: 1 1 0;
   }
 
+  /* Die vier Knöpfe der Datei (FileActions) bleiben beisammen. */
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  /* Der Pfad wächst und schiebt Schalter und Knöpfe nach rechts; ist es eng, bricht er um, nicht die Knöpfe. */
   &__crumbs {
     display: inline-flex;
+    flex: 1 1 260px;
     flex-wrap: wrap;
     align-items: center;
     min-width: 0;
@@ -93,12 +105,6 @@
     font-size: var(--font-size-xs);
   }
 
-  &__status {
-    min-width: 0;
-    color: var(--color-fg-muted);
-    font-size: var(--font-size-xs);
-  }
-
   &__error,
   &__notice,
   &__note {
@@ -134,40 +140,6 @@
       font-size: 14px;
       color: var(--color-fg-primary);
     }
-  }
-
-  &__image {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-md);
-    min-height: 0;
-    padding: var(--space-xl);
-    overflow: auto;
-  }
-
-  /* Schachbrett-Grund, damit Transparenz sichtbar bleibt. */
-  &__image-ground {
-    padding: var(--space-md);
-    border: 1px solid var(--color-border-subtle);
-    background: conic-gradient(
-        var(--color-bg-hover) 25%,
-        transparent 0 50%,
-        var(--color-bg-hover) 0 75%,
-        transparent 0
-      )
-      0 0 / 16px 16px;
-
-    img {
-      display: block;
-      max-width: 100%;
-      max-height: 60vh;
-    }
-  }
-
-  &__image-size {
-    color: var(--color-fg-muted);
-    font-size: var(--font-size-xs);
   }
 
   .files-button[data-on='true'] {

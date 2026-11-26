@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactElement, Ref } from 'react';
 import { formatCount, statOf, statStamp } from '@/features/changes/changesScope';
 import { DiffView } from '@/features/changes/DiffView';
@@ -8,35 +8,47 @@ import { useFileDiff } from '@/features/changes/useFileDiff';
 import { changedLines } from '@/features/files/changedLines';
 import type { ChangedLines } from '@/features/files/changedLines';
 import { ChangeMarks } from '@/features/files/ChangeMarks';
+import { FileActions } from '@/features/files/FileActions';
+import { FileCard } from '@/features/files/FileCard';
+import { folderOf, nameOf, sizeText } from '@/features/files/fileFacts';
+import { FileMeta } from '@/features/files/FileMeta';
 import { fileSteps } from '@/features/files/fileSteps';
 import type { FileStep } from '@/features/files/fileSteps';
+import { kindOfPath, typeWordOf, viewModeFor } from '@/features/files/fileTypes';
+import type { ViewMode } from '@/features/files/fileTypes';
 import { FilesSegment } from '@/features/files/FilesSegment';
 import type { SegmentOption } from '@/features/files/FilesSegment';
 import { variantEntry } from '@/features/files/mergeGroups';
 import type { FileVariant, MergedFile, RepoGroup } from '@/features/files/mergeGroups';
 import { useCommitDiff } from '@/features/files/useCommitDiff';
 import { useFileContent } from '@/features/files/useFileContent';
+import { ViewerFrame } from '@/features/files/ViewerFrame';
 import { WholeFile } from '@/features/files/WholeFile';
+import type { ArtifactKind } from '@/lib/bindings/ArtifactKind';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { ChangesReach } from '@/lib/bindings/ChangesReach';
 import type { FileChange } from '@/lib/bindings/FileChange';
 import type { FileContent } from '@/lib/bindings/FileContent';
 import type { FileDiff } from '@/lib/bindings/FileDiff';
+import type { FileRef } from '@/lib/bindings/FileRef';
 import type { ProjectHistory } from '@/lib/bindings/ProjectHistory';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
-import { openInEditor } from '@/lib/files';
+import { isExecutablePath } from '@/lib/fileLinks';
+import { openFileDefault } from '@/lib/sessionFiles';
 import { useActionError } from '@/lib/useActionError';
 import type { FileSource, OpenTarget } from '@/stores/files';
 import './FileViewer.css';
 
 type FileView = 'diff' | 'file';
+type TextOrPreview = 'text' | 'preview';
 
 const PERMISSIONS_ONLY_TEXT = 'Nur Dateirechte geändert – kein Textvergleich.';
-const COPIED_TEXT = 'Pfad kopiert';
-const COPIED_DURATION_MS = 2000;
 const SHORT_ID_LENGTH = 7;
-const BYTES_PER_KB = 1024;
-const BYTES_PER_MB = 1024 * 1024;
+
+const PREVIEW_OPTIONS: readonly SegmentOption<TextOrPreview>[] = [
+  { value: 'text', label: 'Text', title: 'Den Text der Datei zeigen' },
+  { value: 'preview', label: 'Vorschau', title: 'Die Datei im Betrachter zeigen' },
+];
 
 interface FileViewerProps {
   /** Session, über die der Core Schlüssel, Inhalt und Diff des gezeigten Stands liest. */
@@ -54,14 +66,9 @@ interface FileViewerProps {
   /** Klappt den Ordner im Baum auf; `''` ist der Knoten des Repositorys. */
   onRevealFolder: (group: string, folder: string) => void;
   onOverview: () => void;
-}
-
-/** Kilobyte oder Megabyte, je nach Größe. */
-function sizeText(bytes: number): string {
-  if (bytes >= BYTES_PER_MB) {
-    return `${(bytes / BYTES_PER_MB).toFixed(1).replace('.', ',')} MB`;
-  }
-  return `${formatCount(Math.max(1, Math.round(bytes / BYTES_PER_KB)))} KB`;
+  /** Schalter „Vorschau“ dieser Datei (flüchtig, im Store der Ansicht). */
+  preview: boolean;
+  onPreview: (preview: boolean) => void;
 }
 
 function stepLabel(step: FileStep): string {
@@ -85,10 +92,13 @@ export function FileViewer({
   onOpen,
   onRevealFolder,
   onOverview,
+  preview,
+  onPreview,
 }: FileViewerProps): ReactElement {
   const handleRef = useRef<StopHandle>(null);
+  const lockId: string = useId();
   const [stop, setStop] = useState<StopPosition>({ position: 0, count: 0 });
-  const [copiedPath, setCopiedPath] = useState<string | null>(null);
+  const [isMissing, setIsMissing] = useState(false);
   const { error: actionError, run } = useActionError(`${group.group}|${open.path}`);
   const handlePosition = useCallback((next: StopPosition): void => {
     setStop(next);
@@ -102,34 +112,30 @@ export function FileViewer({
     variant === undefined ? undefined : variantEntry(group, variant);
   const entryKey: string = variant?.entryKey ?? open.entryKey;
   const isChanged: boolean = merged !== undefined && variant !== undefined && entry !== undefined;
-  const view: FileView = isChanged ? (open.view ?? 'diff') : 'file';
+  const kind: ArtifactKind = kindOfPath(open.path);
+  const mode = viewModeFor('repo', kind);
+  // Bild, Video, Ton und PDF zeigt der Betrachter; ein Diff dazu wäre nur „Binärdatei“.
+  const defaultView: FileView = mode === 'viewer' ? 'file' : 'diff';
+  const view: FileView = isChanged ? (open.view ?? defaultView) : 'file';
   const steps: FileStep[] = fileSteps(history, group.group, open.path);
   const activeStep: FileStep | undefined =
     open.step === 'all'
       ? undefined
       : steps.find((candidate: FileStep) => candidate.commit.id === open.step);
+  const fileRef: FileRef = { kind: 'entry', key: entryKey, path: open.path };
+  const executable: boolean = isExecutablePath(open.path);
 
   function show(change: Partial<OpenTarget>): void {
     onOpen({ ...open, ...change, line: null });
   }
 
-  function copyPath(): void {
-    navigator.clipboard
-      .writeText(open.path)
-      .then(() => {
-        setCopiedPath(open.path);
-        window.setTimeout(() => {
-          setCopiedPath((current: string | null) => (current === open.path ? null : current));
-        }, COPIED_DURATION_MS);
-      })
-      .catch((reason: unknown) => {
-        console.error('Pfad kopieren fehlgeschlagen', reason);
-      });
+  function topLine(): number | null {
+    return view === 'file' ? (handleRef.current?.topLine() ?? null) : null;
   }
 
-  function openEditor(): void {
-    const line: number | null = view === 'file' ? (handleRef.current?.topLine() ?? null) : null;
-    run(() => openInEditor(sessionId, entryKey, open.path, line), 'VS Code öffnen fehlgeschlagen');
+  function repoFolder(): string {
+    const slash: number = open.path.lastIndexOf('/');
+    return slash < 0 ? group.name : `${group.name}/${open.path.slice(0, slash)}`;
   }
 
   function renderCrumbs(): ReactElement {
@@ -219,15 +225,27 @@ export function FileViewer({
             }}
           />
         )}
-        <span className="file-viewer__spacer" />
-        <button type="button" className="files-button files-button--small" onClick={openEditor}>
-          In VS Code öffnen
-        </button>
-        <button type="button" className="files-button files-button--small" onClick={copyPath}>
-          Pfad kopieren
-        </button>
-        <span className="file-viewer__status" role="status">
-          {copiedPath === open.path ? COPIED_TEXT : ''}
+        {mode === 'preview' && view === 'file' && (
+          <FilesSegment
+            label="Text oder Vorschau"
+            options={PREVIEW_OPTIONS}
+            value={preview ? 'preview' : 'text'}
+            onChange={(next: TextOrPreview): void => {
+              onPreview(next === 'preview');
+            }}
+          />
+        )}
+        <span className="file-viewer__actions">
+          <FileActions
+            sessionId={sessionId}
+            file={fileRef}
+            copyText={open.path}
+            executable={executable}
+            lockId={lockId}
+            isGone={isMissing}
+            topLine={topLine}
+            run={run}
+          />
         </span>
       </div>
     );
@@ -369,8 +387,11 @@ export function FileViewer({
         source="repo"
         sessionId={sessionId}
         reach={reach}
-        entryKey={entryKey}
-        path={open.path}
+        file={fileRef}
+        kind={kind}
+        preview={preview}
+        bytes={null}
+        modifiedAt={null}
         entry={isChanged ? entry : undefined}
         change={variant?.change}
         changedAt={variant?.change.changedAt ?? 0}
@@ -378,6 +399,10 @@ export function FileViewer({
         highlightLine={open.line}
         handle={handleRef}
         onPosition={handlePosition}
+        onMissing={setIsMissing}
+        onOpenDefault={(): void => {
+          run(() => openFileDefault(sessionId, fileRef), 'Öffnen fehlgeschlagen');
+        }}
       />
     );
   }
@@ -385,6 +410,14 @@ export function FileViewer({
   return (
     <div className="file-viewer">
       {renderHead()}
+      <FileMeta
+        folder={repoFolder()}
+        bytes={null}
+        modifiedAt={null}
+        origin={null}
+        executable={executable}
+        lockId={lockId}
+      />
       {renderSteps()}
       {actionError !== null && <p className="file-viewer__error">{actionError}</p>}
       {renderBody()}
@@ -447,11 +480,18 @@ function StepDiff({
 
 interface FileContentViewProps {
   source: FileSource;
+  /** „Im Browser öffnen“ der HTML-Karte: öffnet die Datei mit dem Standardprogramm. */
+  onOpenDefault: () => void;
   sessionId: string;
   reach: ChangesReach;
-  /** Bei einer Session-Datei leer; `path` ist dann absolut. */
-  entryKey: string;
-  path: string;
+  /** Verweis auf die Datei: ein Eintrag im Repository, bei einer Session-Datei der absolute Pfad. */
+  file: FileRef;
+  kind: ArtifactKind;
+  /** Schalter „Vorschau“ (nur Typen mit Vorschau). */
+  preview: boolean;
+  /** Größe und Änderung laut Liste der Session-Dateien; im Repository `null`. */
+  bytes: number | null;
+  modifiedAt: number | null;
   /** Eintrag und Datei der Changes, wenn die Datei geändert ist: dann trägt die ganze Datei Markierungen. */
   entry: RepositoryChanges | undefined;
   change: FileChange | undefined;
@@ -461,6 +501,8 @@ interface FileContentViewProps {
   highlightLine: number | null;
   handle: Ref<StopHandle>;
   onPosition: (stop: StopPosition) => void;
+  /** Meldet, ob die Datei beim Lesen fehlte; der Kopf sperrt dann seine Knöpfe. */
+  onMissing: (isMissing: boolean) => void;
 }
 
 function stateNotice(title: string, text: string): ReactElement {
@@ -472,13 +514,40 @@ function stateNotice(title: string, text: string): ReactElement {
   );
 }
 
-/** Der Inhalt einer Datei auf der Platte: Text, Bild oder ein Hinweis zu ihrem Zustand. */
-export function FileContentView({
+/** Der Inhalt einer Datei auf der Platte je Typ: der Betrachter-Rahmen für Bild, Video, Ton, PDF und die Vorschau,
+ *  die Karte „Im Browser öffnen“ für eine HTML-Seite, sonst der gelesene Text. */
+export function FileContentView(props: FileContentViewProps): ReactElement {
+  const { source, sessionId, file, kind, preview, bytes, modifiedAt, changedAt, onOpenDefault } =
+    props;
+  const mode: ViewMode = viewModeFor(source, kind);
+  if (mode === 'viewer' || (mode === 'preview' && preview)) {
+    return (
+      <ViewerFrame sessionId={sessionId} file={file} kind={kind} bytes={bytes} stamp={changedAt} />
+    );
+  }
+  if (mode === 'page') {
+    return (
+      <FileCard
+        name={nameOf(file.path)}
+        typeText={typeWordOf(kind, file.path)}
+        bytes={bytes}
+        modifiedAt={modifiedAt}
+        text="HTML-Seiten öffnen im Browser."
+        action={{ label: 'Im Browser öffnen', onClick: onOpenDefault }}
+      />
+    );
+  }
+  return <TextContent {...props} />;
+}
+
+/** Text der Datei, gelesen vom Core; Binärdateien und Typen ohne Ansicht bekommen eine Karte. */
+function TextContent({
   source,
   sessionId,
   reach,
-  entryKey,
-  path,
+  file,
+  kind,
+  modifiedAt,
   entry,
   change,
   changedAt,
@@ -486,7 +555,10 @@ export function FileContentView({
   highlightLine,
   handle,
   onPosition,
+  onMissing,
 }: FileContentViewProps): ReactElement {
+  const path: string = file.path;
+  const entryKey: string = file.kind === 'entry' ? file.key : '';
   const { content, error, isLoading } = useFileContent(
     source,
     sessionId,
@@ -494,6 +566,13 @@ export function FileContentView({
     path,
     changedAt,
   );
+  const isMissing: boolean = content?.kind === 'missing';
+  useEffect(() => {
+    onMissing(isMissing);
+    return (): void => {
+      onMissing(false);
+    };
+  }, [isMissing, onMissing]);
   if (isLoading) {
     return <p className="file-viewer__notice">Datei wird gelesen …</p>;
   }
@@ -526,29 +605,28 @@ export function FileContentView({
             />
           </>
         );
-      case 'image':
-        return (
-          <div className="file-viewer__image">
-            <div className="file-viewer__image-ground">
-              <img src={value.dataUrl} alt={path} />
-            </div>
-            <span className="file-viewer__image-size">{sizeText(value.bytes)}</span>
-          </div>
-        );
       case 'binary':
-        return stateNotice('Binärdatei – keine Vorschau', sizeText(value.bytes));
+        return (
+          <FileCard
+            name={nameOf(path)}
+            typeText={typeWordOf(kind, path)}
+            bytes={value.bytes}
+            modifiedAt={modifiedAt}
+            text="Für diesen Typ gibt es keine Ansicht."
+            action={null}
+          />
+        );
       case 'tooLarge':
         return stateNotice(
           `Zu groß zum Anzeigen (${sizeText(value.bytes)})`,
-          // Eine Session-Datei hat hier noch keinen Knopf für VS Code.
-          source === 'session'
-            ? 'Hier lässt sie sich nicht zeigen.'
-            : 'Öffne die Datei in VS Code.',
+          'Öffne die Datei in VS Code.',
         );
       case 'missing':
         return stateNotice(
           'Datei gibt es nicht mehr',
-          'Sie wurde gelöscht; in „Änderung“ steht, was entfernt wurde.',
+          source === 'session'
+            ? `Sie lag in ${folderOf(path)}; dort ist sie nicht mehr.`
+            : 'Sie wurde gelöscht; in „Änderung“ steht, was entfernt wurde.',
         );
     }
   }

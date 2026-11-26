@@ -55,12 +55,7 @@ pub enum FileContent {
         line_count: u32,
         truncated: bool,
     },
-    /// `data_url`: `data:<MIME>;base64,…`.
-    #[serde(rename_all = "camelCase")]
-    Image {
-        data_url: String,
-        bytes: f64,
-    },
+    /// Kein Text (auch Bilder, Video, Ton, PDF; die zeigt der Betrachter über seine Adresse).
     #[serde(rename_all = "camelCase")]
     Binary {
         bytes: f64,

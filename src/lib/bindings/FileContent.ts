@@ -3,4 +3,4 @@
 /**
  * Der Inhalt einer Datei im Arbeitsverzeichnis, so wie die Ansicht ihn zeigen kann.
  */
-export type FileContent = { "kind": "text", text: string, lineCount: number, truncated: boolean, } | { "kind": "image", dataUrl: string, bytes: number, } | { "kind": "binary", bytes: number, } | { "kind": "tooLarge", bytes: number, } | { "kind": "missing" };
+export type FileContent = { "kind": "text", text: string, lineCount: number, truncated: boolean, } | { "kind": "binary", bytes: number, } | { "kind": "tooLarge", bytes: number, } | { "kind": "missing" };

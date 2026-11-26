@@ -7,7 +7,6 @@ use crate::files::{
     self,
     model::{DirEntry, FileContent, ProjectHistory, RepoTree},
 };
-use crate::git;
 use crate::sessions::registry::SessionRegistry;
 
 // Die Commands sind `async`, damit Git und das Dateisystem nicht auf dem Haupt-Thread laufen. `key`
@@ -71,18 +70,4 @@ pub async fn files_commit_diff(
     let input = registry.changes_input(&session_id, ChangesReach::Project)?;
     let source = changes::sources::find(&input, &key)?;
     files::history::commit_diff(&source, &input.own, &commit, &path)
-}
-
-/// Öffnet eine Datei des Eintrags in VS Code, mit Zeile an dieser Stelle.
-#[tauri::command]
-pub async fn files_open_in_editor(
-    registry: tauri::State<'_, SessionRegistry>,
-    session_id: String,
-    key: String,
-    path: String,
-    line: Option<u32>,
-) -> Result<(), CommandError> {
-    let dir = files::entry_dir(&registry, &session_id, &key)?;
-    let file = files::checked_path(&dir, &path)?;
-    git::actions::open_file_in_vs_code(&file, line)
 }

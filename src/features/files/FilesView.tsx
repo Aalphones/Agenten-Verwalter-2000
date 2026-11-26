@@ -51,7 +51,12 @@ import type { SessionFile } from '@/lib/bindings/SessionFile';
 import type { SessionFileGroup } from '@/lib/bindings/SessionFileGroup';
 import type { SessionFilesListing } from '@/lib/bindings/SessionFilesListing';
 import { usePanelWidth } from '@/lib/usePanelWidth';
-import { DEFAULT_FILES_SELECTION, SESSION_FILES_GROUP, useFilesStore } from '@/stores/files';
+import {
+  DEFAULT_FILES_SELECTION,
+  previewKeyOf,
+  SESSION_FILES_GROUP,
+  useFilesStore,
+} from '@/stores/files';
 import type { FilesMode, FilesPage, FilesSelection, OpenTarget, PendingLink } from '@/stores/files';
 import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import { useSessionsStore } from '@/stores/sessions';
@@ -728,6 +733,10 @@ export function FilesView({
   }
 
   function renderViewer(open: OpenTarget): ReactElement {
+    const isPreview: boolean = selection.previewOf === previewKeyOf(open);
+    function setPreview(on: boolean): void {
+      update({ previewOf: on ? previewKeyOf(open) : null });
+    }
     if (open.source === 'session') {
       const owner: SessionFileGroup | undefined = sessionListing?.groups.find(
         (candidate: SessionFileGroup) => candidate.sessionId === open.ownerId,
@@ -741,6 +750,8 @@ export function FilesView({
           group={owner}
           file={owner?.files.find((candidate: SessionFile) => candidate.path === open.path)}
           onOverview={showOverview}
+          preview={isPreview}
+          onPreview={setPreview}
         />
       );
     }
@@ -769,6 +780,8 @@ export function FilesView({
         onOpen={openTarget}
         onRevealFolder={revealFolder}
         onOverview={showOverview}
+        preview={isPreview}
+        onPreview={setPreview}
       />
     );
   }

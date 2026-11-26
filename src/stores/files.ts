@@ -33,6 +33,11 @@ export interface OpenTarget {
   ownerId: string | null;
 }
 
+/** Schlüssel einer Datei für den Schalter „Vorschau“ (`FilesSelection.previewOf`). */
+export function previewKeyOf(open: OpenTarget): string {
+  return `${open.source}|${open.group}|${open.path}`;
+}
+
 /** Ein Dateilink aus dem Chat, den `FilesView` auflöst, sobald Changes und Bäume (bei `session` die
  *  Session-Dateien) geladen sind. `real` ist der echte Pfad, so wie die Liste ihn führt. */
 export type PendingLink =
@@ -54,6 +59,9 @@ export interface FilesSelection {
   /** ID der gefilterten Session; `null`: das ganze Vorhaben. */
   sessionFilter: string | null;
   open: OpenTarget | null;
+  /** Datei (`previewKeyOf`), bei der der Schalter „Vorschau“ gewählt ist; sonst `null`. Gilt für eine Datei, nicht
+   *  für alle: wer eine andere öffnet, sieht wieder den Text. */
+  previewOf: string | null;
   page: FilesPage;
   pane: FilesPane;
   expanded: FilesExpanded;
@@ -79,6 +87,7 @@ export const DEFAULT_FILES_SELECTION: FilesSelection = {
   scope: 'all',
   sessionFilter: null,
   open: null,
+  previewOf: null,
   page: 'overview',
   pane: 'tree',
   expanded: { changed: null, all: null },

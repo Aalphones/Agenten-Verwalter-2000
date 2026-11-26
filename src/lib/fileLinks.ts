@@ -81,6 +81,49 @@ const LINKED_EXTENSIONS: readonly string[] = [
  *  liegen. */
 const EXTERNAL_EXTENSIONS: readonly string[] = ['html', 'htm'];
 
+/** Gespiegelt aus `file_links::EXECUTABLE_EXTENSIONS` (Rust ist maßgeblich): Typen, deren Standardprogramm sie
+ *  ausführt oder installiert. „Mit Standardprogramm öffnen“ ist für sie gesperrt; der Core lehnt den Aufruf ab,
+ *  hier entscheidet die Liste nur, ob der Knopf gesperrt aussieht. */
+export const EXECUTABLE_EXTENSIONS: readonly string[] = [
+  'exe',
+  'com',
+  'bat',
+  'cmd',
+  'ps1',
+  'psm1',
+  'psd1',
+  'vbs',
+  'vbe',
+  'js',
+  'jse',
+  'wsf',
+  'wsh',
+  'msi',
+  'msp',
+  'msc',
+  'scr',
+  'lnk',
+  'url',
+  'hta',
+  'cpl',
+  'jar',
+  'sh',
+  'bash',
+  'zsh',
+  'py',
+  'pyw',
+  'pyz',
+  'reg',
+  'chm',
+  'inf',
+  'scf',
+  'pif',
+  'application',
+  'gadget',
+  'appref-ms',
+  'settingcontent-ms',
+];
+
 const FILE_URL_PREFIX = 'file:///';
 const MAX_PATH_LENGTH = 400;
 const LINE_NUMBER_SUFFIX = /(:\d+){1,2}$/;
@@ -131,6 +174,19 @@ export function filePathOf(text: string): string | null {
 export function isExternalLink(path: string): boolean {
   const extension: string | null = extensionOf(path.trim());
   return extension !== null && EXTERNAL_EXTENSIONS.includes(extension);
+}
+
+/** Ob die Endung des Namens in `EXECUTABLE_EXTENSIONS` steht. Wie im Core zählt, was nach dem letzten Punkt steht
+ *  (auch bei einem Namen, der mit dem Punkt beginnt); Punkte und Leerzeichen am Ende streicht Windows beim
+ *  Öffnen. Das Ausführungsbit unter Unix kennt nur der Core (`SessionFile.executable`). */
+export function isExecutablePath(path: string): boolean {
+  const name: string = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
+  const effective: string = name.replace(/[. ]+$/, '');
+  const dot: number = effective.lastIndexOf('.');
+  if (dot < 0) {
+    return false;
+  }
+  return EXECUTABLE_EXTENSIONS.includes(effective.slice(dot + 1).toLowerCase());
 }
 
 const WINDOWS_ABSOLUTE = /^[a-z]:[\\/]/i;

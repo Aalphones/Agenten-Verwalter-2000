@@ -1,0 +1,7 @@
+.executable-lock-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-status-waiting);
+  font-size: var(--font-size-xs);
+}
