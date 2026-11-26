@@ -1,6 +1,6 @@
 # Phase 1 — Notiz im Dock
 
-**Rating:** standard · **Wave:** 1 · **Sichtabnahme:** keine (das Dock bekommt in Phase 3 noch den Knopf „Ins Terminal“)
+**Rating:** standard
 
 ## Kontext (vor dem ersten Edit lesen)
 
@@ -28,7 +28,6 @@
 - [ ] `src-tauri/src/notes/mod.rs` + `model.rs` anlegen, in `lib.rs` als `pub mod notes;` eintragen. `model.rs`: `NoteText`, `NoteSaved` laut Kontrakt, Derive wie `settings/model.rs`, `#[serde(rename_all = "camelCase")]`.
 - [ ] `mod.rs`: `const MAX_NOTE_BYTES: usize = 1024 * 1024;`, `const NOTES_FOLDER: &str = "notizen";`, `fn valid_id(id: &str) -> bool` (nicht leer, nur ASCII-Alphanumerik und `-`), `pub fn path_of(data_dir: &Path, project_id: &str) -> Result<PathBuf, CommandError>`, `pub fn read(path: &Path) -> Result<NoteText, CommandError>` (fehlende Datei → leer; größer als Grenze → Fehler), `pub fn write(path: &Path, text: &str) -> Result<NoteSaved, CommandError>` (Grenze prüfen, `create_dir_all`, `.tmp` schreiben, `fs::rename`).
 - [ ] `src-tauri/src/commands/notes.rs`: `note_read(app, registry, project_id)` und `note_write(app, registry, project_id, text)`; beide rufen zuerst `registry.project_workspace(&project_id)?` (Ergebnis verwerfen, nur Existenzprüfung), dann `crate::filesystem::workspace::data_dir(&app)?` und `notes::path_of`. In `commands/mod.rs` und `invoke_handler` eintragen.
-- [ ] Rust-Tests in `notes/mod.rs` (`#[cfg(test)]`, temporärer Ordner unter `std::env::temp_dir()` mit eindeutigem Namen): ungültige IDs (`..`, `a/b`, `""`), fehlende Datei, Schreiben/Lesen rund, Grenze überschritten lässt alte Datei stehen.
 - [ ] `pnpm bindings`.
 
 **Oberfläche**
@@ -41,12 +40,8 @@
 - [ ] `docs/code-map.md`: neue Zeile „Notiz im Vorhaben“ (Core `src-tauri/src/notes/`, `commands/notes.rs`; Oberfläche `src/features/notes/`, `src/lib/notes.ts`, Anschluss `TerminalDock.tsx`), Stand-Satz oben ergänzen. `docs/glossary.md`: Begriff „Notiz“ (eine je Vorhaben, außerhalb des Workspace, Agenten sehen sie nicht).
 - [ ] `docs/decisions/074-notiz-im-vorhaben.md` (10 Zeilen): Kontext Token in Befehlen; Optionen Scratchpad im Workspace + Sperren vs. Datenordner; Entscheidung Datenordner, Gründe aus README „Risiken“; Konsequenz Klartext auf der Platte.
 
-## Tests / DoD
+## Prüfung
 
-- AK 1–3 durch die Rust-Tests belegt; `cargo test --manifest-path src-tauri/Cargo.toml notes` grün (Ausgabezeile ins Report-Back).
-- AK 4–8: `pnpm tauri dev`, Notiz tippen, Terminal-Reiter wechseln, App schließen, neu starten, Text da; `×` und Stift-Knopf. Bildschirmfoto des Docks mit Notiz-Reiter nach `artifacts/phase-1-dock.png`; `dir %USERPROFILE%\.verwalter\notizen` und `dir <Workspace>\.scratchpad` (keine Notiz) ins Report-Back.
-- `pnpm check` grün (Summenzeile ins Report-Back).
-- **User-visible outcome:** Im Dock steht links „✎ Notiz“; Tippen speichert sich selbst und überlebt den Neustart.
-- Seven-Goals-Check (`knowledge/topics/goals-rubric.md`) je ein Satz.
+- `pnpm check` grün (Summenzeile ins Report-Back). Keine automatisierten Tests (privates Profil).
 
 ## Report-Back

@@ -1,6 +1,6 @@
 # Phase 3 — Ins Terminal
 
-**Rating:** standard · **Wave:** 3 · **Sichtabnahme:** Terminal-Dock mit Notiz-Reiter; Reiter „Notiz“ oben (beide jetzt vollständig)
+**Rating:** standard
 
 ## Kontext (vor dem ersten Edit lesen)
 
@@ -28,12 +28,8 @@
 - [ ] Fokus: Wird das Ziel-Terminal durch `select` angezeigt, ruft `terminalInstances.show` bereits `focus()`. War es schon sichtbar (Reiter-oben-Modus, Dock offen), in `terminalInstances.ts` `export function focusTerminal(terminalId: string): void` ergänzen (holt die vorhandene Instanz, ruft `term.focus()`, tut nichts ohne Instanz) und nach dem Senden aufrufen.
 - [ ] `docs/code-map.md` Zeile „Notiz im Vorhaben“ um „Ins Terminal“ (`lineToSend`, `useSendTarget`) ergänzen; `docs/glossary.md` Begriff „Ins Terminal“.
 
-## Tests / DoD
+## Prüfung
 
-- `pnpm tauri dev`: in beiden Einstellungen je einmal Zeile ohne Auswahl, markiertes Teilstück, Mehrzeilen-Auswahl (gesperrt), kein Terminal (gesperrt) — Ergebnis je Fall ins Report-Back. Fokus-Check aus README-Risiken: senden, sofort tippen, Zeichen erscheinen im Terminal.
-- Bildschirmfotos für die Sichtabnahme: `artifacts/phase-3-dock.png` (Dock mit „✎ Notiz“ und Knopf „Ins Terminal“), `artifacts/phase-3-reiter.png` (Reiter oben mit Notiz und Dock darunter nach dem Senden).
-- `pnpm check` grün (Summenzeile ins Report-Back).
-- **User-visible outcome:** Befehl in der Notiz zusammenbauen, `Strg+Enter`, er steht im Terminal und wartet auf Enter.
-- Seven-Goals-Check je ein Satz.
+- `pnpm check` grün (Summenzeile ins Report-Back). Keine automatisierten Tests (privates Profil).
 
 ## Report-Back

@@ -1,6 +1,6 @@
 # Phase 2 — Einstellung „Notiz“ und Reiter oben
 
-**Rating:** standard · **Wave:** 2 · **Sichtabnahme:** keine (die Notiz-Leiste bekommt in Phase 3 den Knopf „Ins Terminal“)
+**Rating:** standard
 
 ## Kontext (vor dem ersten Edit lesen)
 
@@ -29,12 +29,8 @@
 - [ ] `TerminalDock.tsx`: Notiz-Reiter, Stift-Knopf und `NOTE_TAB_ID`-Auswahl nur bei `notePlacement === 'dock'`; sonst ignoriert `shown` die Auswahl `NOTE_TAB_ID`.
 - [ ] `docs/code-map.md` Zeile „Notiz im Vorhaben“ und „Einstellungen“ (`note_placement`, `NotePlacementSegment`) nachziehen.
 
-## Tests / DoD
+## Prüfung
 
-- AK 1–6 in `pnpm tauri dev` durchgehen; Bildschirmfotos `artifacts/phase-2-einstellung.png` (Zeile mit ⓘ) und `artifacts/phase-2-reiter.png` (Kopfzeile mit Reiter „Notiz“ und offener Notiz).
-- AK 2: App neu starten, Segment zeigt weiter „Als Reiter oben“.
-- `pnpm check` grün (Summenzeile ins Report-Back).
-- **User-visible outcome:** In den Einstellungen umgestellt, steht „✎ Notiz“ oben neben Chat/Dateien/Artefakte statt im Dock.
-- Seven-Goals-Check je ein Satz.
+- `pnpm check` grün (Summenzeile ins Report-Back). Keine automatisierten Tests (privates Profil).
 
 ## Report-Back

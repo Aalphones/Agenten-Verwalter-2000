@@ -6,13 +6,13 @@ Jedes Vorhaben bekommt genau eine bearbeitbare Textnotiz, um Befehle zusammenzub
 
 ## Phasen
 
-| Nr | Phase | Datei | Rating | Wave | Sichtabnahme | Status |
-|---|---|---|---|---|---|---|
-| 1 | Notiz im Dock: Core lesen/schreiben, Reiter mit Stift, Ausblenden, Selbstspeichern | [phase-1-notiz-im-dock.md](phase-1-notiz-im-dock.md) | standard | 1 | keine (Dock wird in Phase 3 um den Knopf ergänzt) | pending |
-| 2 | Einstellung „Notiz“ und Reiter oben | [phase-2-einstellung-und-reiter.md](phase-2-einstellung-und-reiter.md) | standard | 2 | keine (Notiz-Leiste wird in Phase 3 ergänzt) | pending |
-| 3 | Ins Terminal | [phase-3-ins-terminal.md](phase-3-ins-terminal.md) | standard | 3 | Terminal-Dock mit Notiz-Reiter; Reiter „Notiz“ oben | pending |
+| Nr | Phase | Datei | Rating | Status |
+|---|---|---|---|---|
+| 1 | Notiz im Dock: Core lesen/schreiben, Reiter mit Stift, Ausblenden, Selbstspeichern | [phase-1-notiz-im-dock.md](phase-1-notiz-im-dock.md) | standard | pending |
+| 2 | Einstellung „Notiz“ und Reiter oben | [phase-2-einstellung-und-reiter.md](phase-2-einstellung-und-reiter.md) | standard | pending |
+| 3 | Ins Terminal | [phase-3-ins-terminal.md](phase-3-ins-terminal.md) | standard | pending |
 
-Rein sequenziell: Phase 2 und 3 bauen beide auf der Notiz-Fläche aus Phase 1 auf (dieselbe Datei `NotePane.tsx`), Phase 3 braucht beide Anzeigeorte aus Phase 2. Schätzung: 3 Phasen × 3 Rollen-Sessions, je Phase etwa 40–80 Werkzeugaufrufe.
+Rein sequenziell: Phase 2 und 3 bauen beide auf der Notiz-Fläche aus Phase 1 auf (dieselbe Datei `NotePane.tsx`), Phase 3 braucht beide Anzeigeorte aus Phase 2. Schätzung: 3 Umsetzungs-Sessions, je Phase etwa 40–80 Werkzeugaufrufe.
 
 ## Kontrakt (Tauri-Grenze)
 
@@ -40,7 +40,7 @@ Oberfläche: Reiter-Schlüssel `'note'` in `SESSION_VIEWS`, `PROJECT_VIEWS`, `IM
 4. `×` am Notiz-Reiter blendet ihn aus, die Datei bleibt; ein Stift-Knopf neben `+` blendet ihn wieder ein.
 5. Mit der Einstellung „Als Reiter oben“ erscheint „Notiz“ als Reiter in der Kopfzeile von Session, Vorhaben-Übersicht und Umsetzung, und das Dock zeigt keinen Notiz-Reiter.
 6. „Ins Terminal“ und `Strg+Enter` schreiben die markierte bzw. die Zeile unter dem Cursor ohne Zeilenende ins gewählte laufende Terminal und zeigen dieses Terminal mit Fokus.
-7. `pnpm check` grün.
+7. `pnpm check` grün nach jeder Phase.
 
 ## Von mir gesetzt
 
@@ -66,9 +66,9 @@ Oberfläche: Reiter-Schlüssel `'note'` in `SESSION_VIEWS`, `PROJECT_VIEWS`, `IM
 - Ob das App-Ende den Unmount noch erlebt (Speichern beim Verlassen). Check in Phase 1: Text tippen, sofort App schließen, neu starten.
 - Fehlerklassen geprüft: `sprachen/typescript` und `frameworks/react` — keine einschlägig (HTTP-Lebendprüfung, Testwerkzeuge); für Rust und Tauri gibt es keinen Eintrag.
 
-## Teststrategie
+## Prüfung
 
-Rust-Tests in `src-tauri/src/notes/mod.rs` (`#[cfg(test)]`, Muster wie `src-tauri/src/implementation/mod.rs`): ID-Prüfung, Größengrenze, Lesen einer fehlenden Datei, Schreiben atomar. Oberfläche: kein Test-Werkzeug im Projekt; Beleg je Phase per `pnpm tauri dev` und Bildschirmfoto. Bestands-Prüfkette `pnpm check` vor jeder Phase grün.
+Privates Profil: keine automatisierten Tests, keine Test- und Review-Sessions. Jede Phase endet mit grünem `pnpm check`; getestet wird im laufenden Betrieb.
 
 ## Summary
 
