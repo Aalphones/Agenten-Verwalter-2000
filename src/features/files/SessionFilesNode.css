@@ -1,0 +1,58 @@
+/* Eigene Regeln des Knotens „Session-Dateien“; Kopf, Zeilen, Einzug und Zählerpille kommen aus RepoTree.css. */
+.repo-tree__row.session-files__group {
+  height: 28px;
+}
+
+.session-files {
+  &__number {
+    flex-shrink: 0;
+    font: 700 var(--font-size-xs) var(--font-mono);
+  }
+
+  &__own {
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    color: var(--color-accent-text);
+  }
+
+  &__tag {
+    flex-shrink: 0;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+}
+
+.repo-tree__name {
+  &.session-files__group-name {
+    font-weight: 600;
+  }
+
+  &.session-files__place-name {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-fg-secondary);
+  }
+
+  &.session-files__folder-name {
+    color: var(--color-fg-secondary);
+  }
+
+  &.session-files__far-name {
+    direction: rtl;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-secondary);
+  }
+}
+
+.session-files__file--gone .repo-tree__name {
+  font-style: italic;
+  color: var(--color-fg-muted);
+}
+
+@media (pointer: coarse) {
+  .repo-tree__row.session-files__group {
+    height: 44px;
+  }
+}

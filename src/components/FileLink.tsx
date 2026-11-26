@@ -1,5 +1,6 @@
 import type { MouseEvent, ReactElement, ReactNode } from 'react';
 import { openFromLink } from '@/features/files/openFromLink';
+import type { LinkSession } from '@/features/files/openFromLink';
 import type { FileLinkTarget } from '@/lib/bindings/FileLinkTarget';
 import { commandErrorText } from '@/lib/errors';
 import { fileHrefOf, isExternalLink, openFileLink, resolveFileLink } from '@/lib/fileLinks';
@@ -7,25 +8,25 @@ import { useSessionErrorsStore } from '@/stores/sessionErrors';
 import './FileLink.css';
 
 interface FileLinkProps {
-  sessionId: string;
+  session: LinkSession;
   path: string;
   children: ReactNode;
 }
 
-/** Dateiverweis im Chat: Dateien eines Repositorys öffnen in „Dateien“, HTML des Vorhabens im
- *  Standardprogramm. Wohin der Link führt und ob die Datei geöffnet werden darf, entscheidet erst der Core beim
- *  Klick. */
-export function FileLink({ sessionId, path, children }: FileLinkProps): ReactElement {
+/** Dateiverweis im Chat: Dateien eines Repositorys und Session-Dateien öffnen in „Dateien“, Artefakte in
+ *  „Artefakte“, HTML des Vorhabens im Standardprogramm. Wohin der Link führt und ob die Datei geöffnet werden darf,
+ *  entscheidet erst der Core beim Klick. */
+export function FileLink({ session, path, children }: FileLinkProps): ReactElement {
   const reportSessionError = useSessionErrorsStore((state) => state.report);
   const clearSessionError = useSessionErrorsStore((state) => state.clear);
+  const { sessionId } = session;
 
   async function follow(): Promise<void> {
     const target: FileLinkTarget = await resolveFileLink(sessionId, path);
-    // Session-Dateien und Artefakte haben noch keine eigene Ansicht und gehen ans Standardprogramm.
-    if (target.kind === 'view' || target.kind === 'name') {
-      openFromLink(sessionId, target);
-    } else {
+    if (target.kind === 'external') {
       await openFileLink(sessionId, path);
+    } else {
+      openFromLink(session, target);
     }
   }
 

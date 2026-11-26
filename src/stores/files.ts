@@ -10,22 +10,35 @@ export type FilesPage = 'overview' | { git: string };
 /** Schmale Breite: welche Seite gerade die ganze Breite hat. */
 export type FilesPane = 'tree' | 'detail';
 
+/** `group` einer offenen Datei aus dem Knoten „Session-Dateien“. */
+export const SESSION_FILES_GROUP = 'session-files';
+
+/** Woher eine Datei im Baum stammt: aus einem Repository-Knoten oder aus „Session-Dateien“. */
+export type FileSource = 'repo' | 'session';
+
 export interface OpenTarget {
-  /** `group` des Repository-Knotens. */
+  source: FileSource;
+  /** `group` des Repository-Knotens; bei `session` `SESSION_FILES_GROUP`. */
   group: string;
-  /** Eintrag, aus dem die Datei geöffnet wurde (Fassung oder Commit). */
+  /** Eintrag, aus dem die Datei geöffnet wurde (Fassung oder Commit); bei `session` leer. */
   entryKey: string;
+  /** Relativ zum Ordner des Eintrags; bei `session` absolut. */
   path: string;
   /** `null`: die Ansicht wählt selbst (geändert → Änderung, sonst ganze Datei). */
   view: 'diff' | 'file' | null;
   /** ID eines Schritts oder `'all'` für das ganze Vorhaben. */
   step: string;
   line: number | null;
+  /** Bei `session` die Session, unter deren Gruppe die Datei gewählt wurde; sonst `null`. */
+  ownerId: string | null;
 }
 
-/** Ein Dateilink aus dem Chat, den `FilesView` auflöst, sobald Changes und Bäume geladen sind. */
+/** Ein Dateilink aus dem Chat, den `FilesView` auflöst, sobald Changes und Bäume (bei `session` die
+ *  Session-Dateien) geladen sind. `real` ist der echte Pfad, so wie die Liste ihn führt. */
 export type PendingLink =
-  { kind: 'view'; key: string; path: string; line: number | null } | { kind: 'name'; name: string };
+  | { kind: 'view'; key: string; path: string; line: number | null }
+  | { kind: 'name'; name: string }
+  | { kind: 'session'; path: string; real: string; line: number | null };
 
 /** Aufgeklappte Ordner je Modus als `<Gruppe>:<Ordnerpfad>`, der Knoten selbst als `<Gruppe>:`; `null`: noch
  *  nichts angefasst, es gilt die Vorgabe (in „Geändert“ die ersten zwei Ordnerebenen, in „Alle Dateien“ nur die
@@ -44,6 +57,9 @@ export interface FilesSelection {
   page: FilesPage;
   pane: FilesPane;
   expanded: FilesExpanded;
+  /** Aufgeklapptes im Knoten „Session-Dateien“: `sf` (Knoten), `sf|<Session-ID>`, `sf|<Session-ID>|<Ort>`,
+   *  `sf|<Session-ID>|<Ort>|<Ordner>`; `null`: noch nichts angefasst, es gilt die Vorgabe. */
+  sessionExpanded: readonly string[] | null;
   /** Aufgeklappte Commits im Verlauf als `<Eintrag>|<Commit-ID>`. */
   openCommits: readonly string[];
   /** Bildlaufposition der Übersicht in Pixeln. */
@@ -66,6 +82,7 @@ export const DEFAULT_FILES_SELECTION: FilesSelection = {
   page: 'overview',
   pane: 'tree',
   expanded: { changed: null, all: null },
+  sessionExpanded: null,
   openCommits: [],
   overviewTop: 0,
   query: '',

@@ -133,9 +133,14 @@ pub enum FileLinkTarget {
     #[serde(rename_all = "camelCase")]
     Name { name: String },
     /// Eine Datei außerhalb aller Einträge: in „Dateien“ unter den Session-Dateien ansehen (ADR 071).
-    /// `path` ist absolut und nativ, in der gefundenen Schreibweise.
+    /// `path` ist absolut und nativ, in der gefundenen Schreibweise; `real` ist der echte Pfad, so
+    /// wie `SessionFile.path` der Liste ihn nennt (Verknüpfungen, `..` und Kurznamen aufgelöst).
     #[serde(rename_all = "camelCase")]
-    SessionFile { path: String, line: Option<u32> },
+    SessionFile {
+        path: String,
+        real: String,
+        line: Option<u32>,
+    },
     /// Eine Datei in `.artefakte`: im Reiter „Artefakte“ zeigen. `file` ist der Name direkt darin.
     #[serde(rename_all = "camelCase")]
     Artifact { file: String },
@@ -198,6 +203,9 @@ pub fn target(
     }
     Ok(FileLinkTarget::SessionFile {
         path: found.to_string_lossy().into_owned(),
+        real: filesystem::without_verbatim_prefix(&canonical)
+            .to_string_lossy()
+            .into_owned(),
         line: line_of(raw),
     })
 }

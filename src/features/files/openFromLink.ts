@@ -2,9 +2,25 @@ import type { LoadState } from '@/features/files/buildTreeRows';
 import type { RepoGroup } from '@/features/files/mergeGroups';
 import type { FileLinkTarget } from '@/lib/bindings/FileLinkTarget';
 import type { RepoTree } from '@/lib/bindings/RepoTree';
+import type { SessionFile } from '@/lib/bindings/SessionFile';
+import type { SessionFileGroup } from '@/lib/bindings/SessionFileGroup';
+import type { SessionFilesListing } from '@/lib/bindings/SessionFilesListing';
+import { useArtifactsStore } from '@/stores/artifacts';
 import { useFilesStore } from '@/stores/files';
 import type { PendingLink } from '@/stores/files';
 import { useSessionsStore } from '@/stores/sessions';
+
+/** Ein Linkziel, das die App selbst zeigt; `external` öffnet der Aufrufer im Standardprogramm. */
+export type ShownLinkTarget = Exclude<FileLinkTarget, { kind: 'external' }>;
+
+/** Ein Link, den der Reiter „Dateien“ in den Bäumen der Repositories auflöst. */
+export type RepoPendingLink = Exclude<PendingLink, { kind: 'session' }>;
+
+/** Die Session, in deren Chat geklickt wurde. */
+export interface LinkSession {
+  sessionId: string;
+  projectId: string;
+}
 
 /** Was „Dateien“ mit einem Dateilink aus dem Chat jetzt tun kann. */
 export type LinkOutcome =
@@ -13,26 +29,68 @@ export type LinkOutcome =
   | { kind: 'search'; name: string }
   | { kind: 'missing'; message: string };
 
+/** Eine Datei der Liste samt der Gruppe, unter der sie steht. */
+export interface SessionFileMatch {
+  group: SessionFileGroup;
+  file: SessionFile;
+}
+
+const WINDOWS_PATH = /^(?:[a-z]:[\\/]|\\\\)/i;
+
 /** Schlüssel der Auswahl, die zum Chat der Session gehört. */
 export function filesViewKeyOfSession(sessionId: string): string {
   return `session:${sessionId}`;
 }
 
-/** Merkt das Ziel eines Dateilinks und schaltet den Reiter „Dateien“ ein; `FilesView` öffnet es, sobald die
- *  Changes (und für einen Namen die Bäume aller Repositories) geladen sind. Alle anderen Ziele öffnet der
- *  Aufrufer. */
-export function openFromLink(
-  sessionId: string,
-  target: Extract<FileLinkTarget, { kind: 'view' | 'name' }>,
-): void {
-  let pending: PendingLink;
-  if (target.kind === 'view') {
-    pending = { kind: 'view', key: target.key, path: target.path, line: target.line };
-  } else {
-    pending = { kind: 'name', name: target.name };
+function pendingLinkOf(target: Exclude<ShownLinkTarget, { kind: 'artifact' }>): PendingLink {
+  switch (target.kind) {
+    case 'view':
+      return { kind: 'view', key: target.key, path: target.path, line: target.line };
+    case 'name':
+      return { kind: 'name', name: target.name };
+    case 'sessionFile':
+      return { kind: 'session', path: target.path, real: target.real, line: target.line };
   }
-  useFilesStore.getState().update(filesViewKeyOfSession(sessionId), { pendingLink: pending });
+}
+
+/** Führt zum Ziel eines Dateilinks: ein Artefakt wählt der Reiter „Artefakte“ aus; alles andere merkt sich der
+ *  Reiter „Dateien“, und `FilesView` öffnet es, sobald Changes (für einen Namen auch die Bäume aller
+ *  Repositories) bzw. die Session-Dateien geladen sind. */
+export function openFromLink(session: LinkSession, target: ShownLinkTarget): void {
+  if (target.kind === 'artifact') {
+    useArtifactsStore.getState().select(session.projectId, target.file);
+    useSessionsStore.getState().showView('artifacts');
+    return;
+  }
+  useFilesStore
+    .getState()
+    .update(filesViewKeyOfSession(session.sessionId), { pendingLink: pendingLinkOf(target) });
   useSessionsStore.getState().showView('files');
+}
+
+/** Unter Windows zählen weder Groß-/Kleinschreibung noch die Richtung der Trennzeichen. */
+function comparablePath(path: string): string {
+  return WINDOWS_PATH.test(path) ? path.replace(/\//g, '\\').toLowerCase() : path;
+}
+
+/** Die Datei in der Liste, zuerst nach dem echten, dann nach dem genannten Pfad. Führen mehrere Sessions sie,
+ *  gewinnt die klickende: der Core stellt ihre Gruppe nach vorn. */
+export function findSessionFile(
+  listing: SessionFilesListing,
+  real: string,
+  path: string,
+): SessionFileMatch | null {
+  for (const wanted of [comparablePath(real), comparablePath(path)]) {
+    for (const group of listing.groups) {
+      const file: SessionFile | undefined = group.files.find(
+        (candidate: SessionFile) => comparablePath(candidate.path) === wanted,
+      );
+      if (file !== undefined) {
+        return { group, file };
+      }
+    }
+  }
+  return null;
 }
 
 function baseName(path: string): string {
@@ -96,7 +154,7 @@ function isSettled(group: RepoGroup, trees: ReadonlyMap<string, LoadState<RepoTr
 
 /** Entscheidet für einen gemerkten Dateilink; bei `wait` später mit neuem Stand erneut aufrufen. */
 export function resolvePendingLink(
-  pending: PendingLink,
+  pending: RepoPendingLink,
   groups: readonly RepoGroup[],
   trees: ReadonlyMap<string, LoadState<RepoTree>>,
 ): LinkOutcome {

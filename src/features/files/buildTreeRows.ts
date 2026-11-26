@@ -1,4 +1,5 @@
 import { EMPTY_SCOPE_TEXT, formatCount } from '@/features/changes/changesScope';
+import type { SessionRow } from '@/features/files/buildSessionRows';
 import type { MergedFile, RepoGroup } from '@/features/files/mergeGroups';
 import type { ChangeScope } from '@/lib/bindings/ChangeScope';
 import type { DirEntry } from '@/lib/bindings/DirEntry';
@@ -51,7 +52,9 @@ export type TreeRow =
       open: boolean;
     }
   | { kind: 'note'; key: string; text: string; depth: number }
-  | { kind: 'error'; key: string; text: string; depth: number };
+  | { kind: 'error'; key: string; text: string; depth: number }
+  /** Eine Zeile des Knotens „Session-Dateien“ unter den Repositories. */
+  | { kind: 'session'; key: string; row: SessionRow };
 
 export interface TreeRowsInput {
   groups: readonly RepoGroup[];

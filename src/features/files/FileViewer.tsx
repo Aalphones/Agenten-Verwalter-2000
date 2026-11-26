@@ -26,7 +26,7 @@ import type { ProjectHistory } from '@/lib/bindings/ProjectHistory';
 import type { RepositoryChanges } from '@/lib/bindings/RepositoryChanges';
 import { openInEditor } from '@/lib/files';
 import { useActionError } from '@/lib/useActionError';
-import type { OpenTarget } from '@/stores/files';
+import type { FileSource, OpenTarget } from '@/stores/files';
 import './FileViewer.css';
 
 type FileView = 'diff' | 'file';
@@ -366,12 +366,14 @@ export function FileViewer({
     return (
       <FileContentView
         key={`${entryKey}:${open.path}`}
+        source="repo"
         sessionId={sessionId}
         reach={reach}
         entryKey={entryKey}
         path={open.path}
         entry={isChanged ? entry : undefined}
         change={variant?.change}
+        changedAt={variant?.change.changedAt ?? 0}
         scope={scope}
         highlightLine={open.line}
         handle={handleRef}
@@ -444,13 +446,17 @@ function StepDiff({
 }
 
 interface FileContentViewProps {
+  source: FileSource;
   sessionId: string;
   reach: ChangesReach;
+  /** Bei einer Session-Datei leer; `path` ist dann absolut. */
   entryKey: string;
   path: string;
   /** Eintrag und Datei der Changes, wenn die Datei geändert ist: dann trägt die ganze Datei Markierungen. */
   entry: RepositoryChanges | undefined;
   change: FileChange | undefined;
+  /** Letzte Änderung; ändert sie sich, lädt der Inhalt neu. */
+  changedAt: number;
   scope: ChangeScope;
   highlightLine: number | null;
   handle: Ref<StopHandle>;
@@ -466,24 +472,27 @@ function stateNotice(title: string, text: string): ReactElement {
   );
 }
 
-/** Der Inhalt der Datei im Arbeitsverzeichnis: Text, Bild oder ein Hinweis zu ihrem Zustand. */
-function FileContentView({
+/** Der Inhalt einer Datei auf der Platte: Text, Bild oder ein Hinweis zu ihrem Zustand. */
+export function FileContentView({
+  source,
   sessionId,
   reach,
   entryKey,
   path,
   entry,
   change,
+  changedAt,
   scope,
   highlightLine,
   handle,
   onPosition,
 }: FileContentViewProps): ReactElement {
   const { content, error, isLoading } = useFileContent(
+    source,
     sessionId,
     entryKey,
     path,
-    change?.changedAt ?? 0,
+    changedAt,
   );
   if (isLoading) {
     return <p className="file-viewer__notice">Datei wird gelesen …</p>;
@@ -531,7 +540,10 @@ function FileContentView({
       case 'tooLarge':
         return stateNotice(
           `Zu groß zum Anzeigen (${sizeText(value.bytes)})`,
-          'Öffne die Datei in VS Code.',
+          // Eine Session-Datei hat hier noch keinen Knopf für VS Code.
+          source === 'session'
+            ? 'Hier lässt sie sich nicht zeigen.'
+            : 'Öffne die Datei in VS Code.',
         );
       case 'missing':
         return stateNotice(

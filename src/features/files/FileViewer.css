@@ -69,6 +69,12 @@
     }
   }
 
+  /* Teil der Pfadkette ohne eigenes Ziel (Session-Datei). */
+  &__crumb-text {
+    padding: 0 2px;
+    color: var(--color-fg-secondary);
+  }
+
   &__slash {
     margin: 0 1px;
     color: var(--color-fg-muted);

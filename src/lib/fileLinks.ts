@@ -67,6 +67,16 @@ export const VIEWABLE_EXTENSIONS: readonly string[] = [
   'lock',
 ];
 
+/** Gespiegelt aus den Video- und Ton-Endungen in `artifacts::kind_of` (`src-tauri/src/artifacts/mod.rs`): als
+ *  Session-Datei erfasst der Core sie, also erscheinen auch sie als Link im Chat. */
+const MEDIA_EXTENSIONS: readonly string[] = ['mp4', 'webm', 'mp3', 'wav', 'ogg', 'm4a'];
+
+const LINKED_EXTENSIONS: readonly string[] = [
+  ...OPENABLE_EXTENSIONS,
+  ...VIEWABLE_EXTENSIONS,
+  ...MEDIA_EXTENSIONS,
+];
+
 /** Gespiegelt aus `file_links::EXTERNAL_EXTENSIONS`: öffnen im Standardprogramm, wenn sie im Vorhaben
  *  liegen. */
 const EXTERNAL_EXTENSIONS: readonly string[] = ['html', 'htm'];
@@ -111,7 +121,7 @@ export function filePathOf(text: string): string | null {
   if (extension === null) {
     return null;
   }
-  if (!OPENABLE_EXTENSIONS.includes(extension) && !VIEWABLE_EXTENSIONS.includes(extension)) {
+  if (!LINKED_EXTENSIONS.includes(extension)) {
     return null;
   }
   return trimmed;

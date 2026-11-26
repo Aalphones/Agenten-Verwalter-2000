@@ -75,7 +75,7 @@ fn main() -> ExitCode {
         }
         Ok(FileLinkTarget::External) => println!("ZIEL external"),
         Ok(FileLinkTarget::Name { name }) => println!("ZIEL name {name}"),
-        Ok(FileLinkTarget::SessionFile { path, line }) => {
+        Ok(FileLinkTarget::SessionFile { path, line, .. }) => {
             println!("ZIEL session {path} {}", line_text(line))
         }
         Ok(FileLinkTarget::Artifact { file }) => println!("ZIEL artifact {file}"),

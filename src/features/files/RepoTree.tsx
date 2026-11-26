@@ -1,23 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent, ReactElement } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import { sessionFileKey } from '@/features/files/buildSessionRows';
+import type { SessionRow } from '@/features/files/buildSessionRows';
 import type { TreeRow } from '@/features/files/buildTreeRows';
 import { ChangeMarks } from '@/features/files/ChangeMarks';
 import { FileTypeIcon } from '@/features/files/FileTypeIcon';
+import { FolderIcon } from '@/features/files/FolderIcon';
+import { SessionFilesRow } from '@/features/files/SessionFilesNode';
+import type { TreeItemProps } from '@/features/files/SessionFilesNode';
+import { treeIndent } from '@/features/files/treeIndent';
+import { TreeToggle } from '@/features/files/TreeToggle';
 import { BranchIcon } from '@/features/git/GitIcons';
-import type { FilesMode } from '@/stores/files';
+import type { SessionFile } from '@/lib/bindings/SessionFile';
+import type { SessionFileGroup } from '@/lib/bindings/SessionFileGroup';
+import type { FileSource, FilesMode } from '@/stores/files';
 import './RepoTree.css';
 
 const OVERSCAN = 16;
 const ROW_HEIGHT = 24;
 const GROUP_HEIGHT = 44;
+const SESSION_GROUP_HEIGHT = 28;
 const NOTE_HEIGHT = 30;
 
 type RowOf<Kind extends TreeRow['kind']> = Extract<TreeRow, { kind: Kind }>;
 
 export interface SelectedPath {
+  source: FileSource;
   group: string;
   path: string;
+  /** Bei `session` die Session, unter deren Gruppe die Datei gewählt wurde; sonst `null`. */
+  ownerId: string | null;
 }
 
 interface RepoTreeProps {
@@ -29,13 +42,33 @@ interface RepoTreeProps {
   /** Klappt einen ignorierten Ordner auf oder zu und liest beim ersten Mal seine Kinder. */
   onToggleIgnored: (row: RowOf<'ignored'>) => void;
   onOpenFile: (row: RowOf<'file'>) => void;
+  /** Klappt eine Zeile des Knotens „Session-Dateien“ auf oder zu (`key` der Zeile). */
+  onToggleSession: (key: string) => void;
+  onOpenSessionFile: (file: SessionFile, group: SessionFileGroup) => void;
   /** Öffnet die Git-Seite des Knotens (`group`); `null`, wo keine Session sichtbar ist. */
   onOpenGit: ((group: string) => void) | null;
+}
+
+function sessionRowHeight(row: SessionRow): number {
+  switch (row.kind) {
+    case 'sfHead':
+      return GROUP_HEIGHT;
+    case 'sfGroup':
+      return SESSION_GROUP_HEIGHT;
+    case 'sfNote':
+    case 'sfError':
+      return NOTE_HEIGHT;
+    default:
+      return ROW_HEIGHT;
+  }
 }
 
 function estimateHeight(row: TreeRow | undefined): number {
   if (row === undefined) {
     return ROW_HEIGHT;
+  }
+  if (row.kind === 'session') {
+    return sessionRowHeight(row.row);
   }
   if (row.kind === 'group') {
     return GROUP_HEIGHT;
@@ -44,10 +77,16 @@ function estimateHeight(row: TreeRow | undefined): number {
 }
 
 function isExpandable(row: TreeRow): boolean {
+  if (row.kind === 'session') {
+    return 'open' in row.row;
+  }
   return row.kind === 'group' || row.kind === 'dir' || (row.kind === 'ignored' && row.dir);
 }
 
 function isOpenRow(row: TreeRow): boolean {
+  if (row.kind === 'session') {
+    return 'open' in row.row && row.row.open;
+  }
   if (row.kind === 'group' || row.kind === 'dir' || row.kind === 'ignored') {
     return row.open;
   }
@@ -55,46 +94,28 @@ function isOpenRow(row: TreeRow): boolean {
 }
 
 function isFocusable(row: TreeRow | undefined): boolean {
-  return row !== undefined && row.kind !== 'note' && row.kind !== 'error';
+  if (row === undefined) {
+    return false;
+  }
+  if (row.kind === 'session') {
+    return row.row.kind !== 'sfNote' && row.row.kind !== 'sfError';
+  }
+  return row.kind !== 'note' && row.kind !== 'error';
 }
 
-function Chevron(): ReactElement {
-  return (
-    <svg className="repo-tree__chevron" viewBox="0 0 12 12" aria-hidden="true">
-      <path
-        d="M4.5 2.5 8 6l-3.5 3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+/** Kopfzeile eines Knotens: ein Repository oder „Session-Dateien“. */
+function isHeadRow(row: TreeRow): boolean {
+  return row.kind === 'group' || (row.kind === 'session' && row.row.kind === 'sfHead');
 }
 
-function FolderIcon({ open }: { open: boolean }): ReactElement {
-  return (
-    <svg
-      className="repo-tree__folder"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-    >
-      <path
-        d={
-          open
-            ? 'M1.5 12V4.2c0-.7.5-1.2 1.2-1.2h3l1.4 1.5h5.2c.7 0 1.2.5 1.2 1.2V7M1.6 12.2 3.4 7.6c.1-.4.5-.6.9-.6h9.9c.5 0 .8.5.6.9l-1.6 4.4c-.1.4-.5.7-.9.7H2.2c-.4 0-.7-.4-.6-.8z'
-            : 'M1.5 4.2c0-.7.5-1.2 1.2-1.2h3l1.4 1.5h6.2c.7 0 1.2.5 1.2 1.2v6.1c0 .7-.5 1.2-1.2 1.2H2.7c-.7 0-1.2-.5-1.2-1.2z'
-        }
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+/** Schlüssel der Baumzeile, die zur gewählten Datei gehört. */
+function rowKeyOf(selected: SelectedPath | null): string | null {
+  if (selected === null) {
+    return null;
+  }
+  return selected.source === 'session'
+    ? sessionFileKey(selected.ownerId ?? '', selected.path)
+    : `${selected.group}|f|${selected.path}`;
 }
 
 function RepositoryIcon(): ReactElement {
@@ -121,6 +142,8 @@ export function RepoTree({
   onToggle,
   onToggleIgnored,
   onOpenFile,
+  onToggleSession,
+  onOpenSessionFile,
   onOpenGit,
 }: RepoTreeProps): ReactElement {
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -136,15 +159,17 @@ export function RepoTree({
     estimateSize: (index: number): number => estimateHeight(rows[index]),
     getItemKey: (index: number): string => rows[index]?.key ?? String(index),
     overscan: OVERSCAN,
+    // Eine angesprungene Zeile landet nicht unter der angehefteten Kopfzeile.
+    scrollPaddingStart: GROUP_HEIGHT,
   });
 
   const foundIndex: number =
     activeKey === null ? -1 : rows.findIndex((row: TreeRow) => row.key === activeKey);
   const activeIndex: number = foundIndex >= 0 ? foundIndex : rows.findIndex(isFocusable);
 
-  // Eine von außen gewählte Datei (Suche, Chat-Link) scrollt in den sichtbaren Bereich, sobald ihre Zeile im Baum steht.
-  const selectedKey: string | null =
-    selected === null ? null : `${selected.group}|f|${selected.path}`;
+  // Eine von außen gewählte Datei (Suche, Chat-Link) scrollt in den sichtbaren Bereich, sobald ihre Zeile im Baum
+  // steht. Ohne Abhängigkeiten: in schmaler Breite ist der Baum ausgeblendet und kann erst beim Anzeigen scrollen.
+  const selectedKey: string | null = rowKeyOf(selected);
   const selectedIndex: number =
     selectedKey === null ? -1 : rows.findIndex((row: TreeRow) => row.key === selectedKey);
   useEffect(() => {
@@ -152,11 +177,12 @@ export function RepoTree({
       revealedKeyRef.current = null;
       return;
     }
-    if (selectedIndex >= 0 && revealedKeyRef.current !== selectedKey) {
+    const isShown: boolean = (scrollRef.current?.clientHeight ?? 0) > 0;
+    if (isShown && selectedIndex >= 0 && revealedKeyRef.current !== selectedKey) {
       revealedKeyRef.current = selectedKey;
       virtualizer.scrollToIndex(selectedIndex, { align: 'auto' });
     }
-  }, [selectedKey, selectedIndex, virtualizer]);
+  });
 
   useEffect(() => {
     if (!focusPendingRef.current || activeIndex < 0) {
@@ -187,8 +213,28 @@ export function RepoTree({
           onToggleIgnored(row);
         }
         return;
+      case 'session':
+        activateSession(row.row);
+        return;
       case 'note':
       case 'error':
+        return;
+    }
+  }
+
+  function activateSession(row: SessionRow): void {
+    switch (row.kind) {
+      case 'sfHead':
+      case 'sfGroup':
+      case 'sfPlace':
+      case 'sfFolder':
+        onToggleSession(row.key);
+        return;
+      case 'sfFile':
+        onOpenSessionFile(row.file, row.group);
+        return;
+      case 'sfNote':
+      case 'sfError':
         return;
     }
   }
@@ -292,9 +338,7 @@ export function RepoTree({
         title={`${group.name} — ${sub}`}
         {...props}
       >
-        <span className={`repo-tree__toggle${row.open ? ' repo-tree__toggle--open' : ''}`}>
-          <Chevron />
-        </span>
+        <TreeToggle open={row.open} />
         <RepositoryIcon />
         <span className="repo-tree__group-text">
           <span className="repo-tree__group-name">{group.name}</span>
@@ -327,28 +371,17 @@ export function RepoTree({
     );
   }
 
-  // Einzug und Hilfslinien je Ebene ergeben sich zur Laufzeit.
-  function indent(depth: number): CSSProperties {
-    const style: CSSProperties & Record<'--depth', number> = {
-      paddingLeft: `calc(var(--space-md) + ${String(depth)} * 14px)`,
-      '--depth': depth,
-    };
-    return style;
-  }
-
   function renderDir(row: RowOf<'dir'>, index: number): ReactElement {
     const showCount: boolean = row.count > 0 && (mode === 'all' || !row.open);
     return (
       <div
         className={`repo-tree__row${row.count > 0 ? ' repo-tree__row--changed' : ''}`}
-        style={indent(row.depth)}
+        style={treeIndent(row.depth)}
         title={row.path}
         aria-expanded={row.open}
         {...rowProps(row, index, row.depth + 1)}
       >
-        <span className={`repo-tree__toggle${row.open ? ' repo-tree__toggle--open' : ''}`}>
-          <Chevron />
-        </span>
+        <TreeToggle open={row.open} />
         <FolderIcon open={row.open} />
         <span className="repo-tree__name">{row.label}</span>
         {showCount && (
@@ -372,12 +405,12 @@ export function RepoTree({
         className={`repo-tree__row repo-tree__row--file${changed ? ' repo-tree__row--changed' : ''}${
           isSelected ? ' repo-tree__row--selected' : ''
         }`}
-        style={indent(row.depth)}
+        style={treeIndent(row.depth)}
         title={row.link ? `${row.path} — symbolischer Link` : row.path}
         aria-selected={isSelected}
         {...rowProps(row, index, row.depth + 1)}
       >
-        <span className="repo-tree__toggle repo-tree__toggle--none" />
+        <TreeToggle open={null} />
         <FileTypeIcon path={row.path} />
         <span className="repo-tree__name">
           {row.name}
@@ -400,24 +433,45 @@ export function RepoTree({
     return (
       <div
         className="repo-tree__row repo-tree__row--ignored"
-        style={indent(row.depth)}
+        style={treeIndent(row.depth)}
         title={
           row.dir ? 'Von Git ignoriert – wird erst beim Aufklappen gelesen' : 'Von Git ignoriert'
         }
         {...expanded}
         {...rowProps(row, index, row.depth + 1)}
       >
-        <span
-          className={`repo-tree__toggle${row.dir ? '' : ' repo-tree__toggle--none'}${
-            row.open ? ' repo-tree__toggle--open' : ''
-          }`}
-        >
-          <Chevron />
-        </span>
+        <TreeToggle open={row.dir ? row.open : null} />
         {row.dir ? <FolderIcon open={row.open} /> : <FileTypeIcon path={row.path} />}
         <span className="repo-tree__name">{row.name}</span>
         <span className="repo-tree__ignored">ignoriert</span>
       </div>
+    );
+  }
+
+  function renderSession(row: RowOf<'session'>, index: number, isPinned: boolean): ReactElement {
+    const entry: SessionRow = row.row;
+    let itemProps: TreeItemProps = {};
+    if (isPinned) {
+      itemProps = {
+        role: 'presentation',
+        onClick: (): void => {
+          activate(row);
+        },
+      };
+    } else if (isFocusable(row)) {
+      itemProps = rowProps(row, index, entry.kind === 'sfHead' ? 1 : entry.depth + 2);
+    }
+    const isSelected: boolean =
+      entry.kind === 'sfFile' &&
+      selected?.source === 'session' &&
+      selected.path === entry.file.path;
+    return (
+      <SessionFilesRow
+        row={entry}
+        isSelected={isSelected}
+        isPinned={isPinned}
+        itemProps={itemProps}
+      />
     );
   }
 
@@ -434,15 +488,17 @@ export function RepoTree({
         return renderFile(row, index);
       case 'ignored':
         return renderIgnored(row, index);
+      case 'session':
+        return renderSession(row, index, false);
       case 'note':
         return (
-          <p className="repo-tree__note" style={indent(row.depth)}>
+          <p className="repo-tree__note" style={treeIndent(row.depth)}>
             {row.text}
           </p>
         );
       case 'error':
         return (
-          <p className="repo-tree__error" style={indent(row.depth)} role="alert">
+          <p className="repo-tree__error" style={treeIndent(row.depth)} role="alert">
             {row.text}
           </p>
         );
@@ -450,22 +506,28 @@ export function RepoTree({
   }
 
   // Die Kopfzeile des Knotens, in dem die Ansicht gerade steht, bleibt oben stehen.
-  function pinnedGroup(): ReactElement | null {
+  function pinnedHead(): ReactElement | null {
     const offset: number = virtualizer.scrollOffset ?? 0;
-    let pinned: { row: RowOf<'group'>; index: number } | null = null;
+    let pinned: { row: TreeRow; index: number } | null = null;
     for (const item of virtualizer.measurementsCache) {
       if (item.start > offset) {
         break;
       }
       const row: TreeRow | undefined = rows[item.index];
-      if (row?.kind === 'group') {
+      if (row !== undefined && isHeadRow(row)) {
         pinned = item.start < offset ? { row, index: item.index } : null;
       }
     }
     if (pinned === null) {
       return null;
     }
-    return <div className="repo-tree__pin">{renderGroup(pinned.row, pinned.index, true)}</div>;
+    let content: ReactElement | null = null;
+    if (pinned.row.kind === 'group') {
+      content = renderGroup(pinned.row, pinned.index, true);
+    } else if (pinned.row.kind === 'session') {
+      content = renderSession(pinned.row, pinned.index, true);
+    }
+    return <div className="repo-tree__pin">{content}</div>;
   }
 
   return (
@@ -475,7 +537,7 @@ export function RepoTree({
       role="tree"
       aria-label="Dateien des Vorhabens"
     >
-      {pinnedGroup()}
+      {pinnedHead()}
       <div
         className="repo-tree__surface"
         style={{ height: `${String(virtualizer.getTotalSize())}px` }}

@@ -161,6 +161,11 @@ export function ChatTimeline({
   // Wenig Inhalt klebt unten: alle Blöcke rücken um den freien Platz nach unten.
   const bottomOffset: number = Math.max(0, containerHeight - totalSize);
 
+  // Stabil, damit nicht jeder neue Eintrag alle Dateiverweise im Verlauf neu rendert.
+  const linkSession = useMemo(
+    () => ({ sessionId: session.id, projectId: session.projectId }),
+    [session.id, session.projectId],
+  );
   const lastErrorSeq: number | null = useMemo(() => findLastErrorSeq(entries), [entries]);
   const activeTodo: string | null = useMemo(() => findActiveTodoLabel(entries), [entries]);
   const customSlots = useMemo(() => customMatchers(activeFigures), [activeFigures]);
@@ -513,7 +518,7 @@ export function ChatTimeline({
             {olderError}
           </p>
         )}
-        <FileLinkSessionContext.Provider value={session.id}>
+        <FileLinkSessionContext.Provider value={linkSession}>
           <div
             className="chat-timeline__surface"
             style={{ height: `${String(Math.max(totalSize, containerHeight))}px` }}

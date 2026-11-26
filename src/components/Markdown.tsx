@@ -11,6 +11,7 @@ import { ExternalLink } from '@/components/ExternalLink';
 import { FileLink } from '@/components/FileLink';
 import { FileLinkSessionContext } from '@/components/FileLinkSessionContext';
 import { remarkBreakTags } from '@/components/remarkBreakTags';
+import type { LinkSession } from '@/features/files/openFromLink';
 import { rehypeUnsourced } from '@/features/sourcing/rehypeUnsourced';
 import { filePathOf } from '@/lib/fileLinks';
 import '@/features/sourcing/Unsourced.css';
@@ -77,10 +78,10 @@ function plainTextOf(node: ReactNode): string | null {
 // Läuft auch für das `code` in Codeblöcken: deren Text endet immer auf `\n` (oder ist nach der
 // Färbung kein einzelner String mehr) und wird so nie zum Dateiverweis.
 function InlineCode({ className, children }: InlineCodeProps): ReactElement {
-  const sessionId: string | null = useContext(FileLinkSessionContext);
+  const session: LinkSession | null = useContext(FileLinkSessionContext);
   const code: ReactElement = <code className={className}>{children}</code>;
   const text: string | null = plainTextOf(children);
-  if (sessionId === null || text === null || text.endsWith('\n')) {
+  if (session === null || text === null || text.endsWith('\n')) {
     return code;
   }
   const path: string | null = filePathOf(text);
@@ -88,21 +89,21 @@ function InlineCode({ className, children }: InlineCodeProps): ReactElement {
     return code;
   }
   return (
-    <FileLink sessionId={sessionId} path={path}>
+    <FileLink session={session} path={path}>
       {code}
     </FileLink>
   );
 }
 
 function MarkdownLink({ href, children }: MarkdownLinkProps): ReactElement {
-  const sessionId: string | null = useContext(FileLinkSessionContext);
+  const session: LinkSession | null = useContext(FileLinkSessionContext);
   const path: string | null =
-    sessionId === null || href === undefined ? null : filePathOf(decodeHref(href));
-  if (sessionId === null || path === null) {
+    session === null || href === undefined ? null : filePathOf(decodeHref(href));
+  if (session === null || path === null) {
     return <ExternalLink href={href}>{children}</ExternalLink>;
   }
   return (
-    <FileLink sessionId={sessionId} path={path}>
+    <FileLink session={session} path={path}>
       {children}
     </FileLink>
   );
