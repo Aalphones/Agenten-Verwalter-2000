@@ -1,6 +1,6 @@
 # Plan: Notiz im Vorhaben
 
-**Stand:** 2026-11-26 · **ADR:** 074 (neu, Phase 1) · **Migration:** keine · **Entwurf:** keiner (freihändig nach den Festlegungen unten; die Dock-Leiste und die Kopfzeilen-Reiter bestehen schon und geben Maße und Stil vor)
+**Stand:** 2026-11-26 · **Status:** complete · **ADR:** 074 (neu, Phase 1) · **Migration:** keine · **Entwurf:** keiner (freihändig nach den Festlegungen unten; die Dock-Leiste und die Kopfzeilen-Reiter bestehen schon und geben Maße und Stil vor)
 
 Jedes Vorhaben bekommt genau eine bearbeitbare Textnotiz, um Befehle zusammenzubauen, die der Agent liefert, und dort Token oder Passwörter von Hand zu ergänzen. Die Notiz steht je nach Einstellung als Reiter „Notiz“ im Terminal-Dock (Standard) oder als Reiter oben neben Chat/Dateien/Artefakte. Sie speichert sich selbst und liegt **außerhalb des Arbeitsordners** unter `%USERPROFILE%\.verwalter\notizen\<Vorhaben-ID>.txt`, damit kein Agent sie beim Suchen oder Auflisten mitliest. Ein Knopf „Ins Terminal“ (und `Strg+Enter`) schreibt die markierte Zeile ins gewählte Terminal, ohne Enter.
 
@@ -72,10 +72,20 @@ Privates Profil: keine automatisierten Tests, keine Test- und Review-Sessions. J
 
 ## Summary
 
+Je Vorhaben eine Notiz außerhalb des Arbeitsordners, als Reiter im Terminal-Dock oder oben, mit Selbstspeichern; „Ins Terminal“ und Strg+Enter schreiben die Zeile ohne Enter ins gewählte laufende Terminal und geben ihm den Fokus. Nur per `pnpm check` belegt, nicht in der echten App gelaufen.
+
 ## Files touched
+
+`src-tauri/src/notes/`, `src-tauri/src/commands/notes.rs`, `src/features/notes/`, `src/features/terminal/` (`TerminalDock.tsx`, `terminalInstances.ts`), `src/stores/terminal.ts`, `src/stores/sessions.ts`, Kopfzeilen, Einstellungen, `docs/`.
 
 ## Commits
 
+236aa9e, 82c4f93, af5c393.
+
 ## Deviations from plan
 
+Keine.
+
 ## Follow-ups
+
+- Offen in der echten App: Fokus nach „Ins Terminal“ (Dock offen und zu), Strg+Enter ohne Zeilenumbruch in der Notiz, Speichern beim App-Ende.
