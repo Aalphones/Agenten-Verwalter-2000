@@ -263,6 +263,8 @@ pub fn run() {
             commands::tldr::tldr_project_create,
             commands::tldr::tldr_set_carry,
             commands::retro::retro_run,
+            commands::report::report_load,
+            commands::report::report_of_session,
             commands::report::report_retidy,
             commands::implementation::implementation_list,
             commands::implementation::implementation_report,

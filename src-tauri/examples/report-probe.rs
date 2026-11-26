@@ -5,12 +5,15 @@
 //! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku]` (druckt die Eingabe
 //! an Haiku; mit `--haiku` zusätzlich Antwort und Prüfergebnis, ohne etwas zu speichern)
 //! bzw. `… -- <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID>` (druckt den Ort, den ein
-//! `report_note` ohne `at` jetzt bekäme, oder den Fehlersatz). Fehler als `FEHLER: <Satz>`.
+//! `report_note` ohne `at` jetzt bekäme, oder den Fehlersatz)
+//! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> view` (druckt den Bericht, wie ihn `report_load`
+//! zusammensetzt; die Dauer geht nach stderr). Fehler als `FEHLER: <Satz>`.
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::Instant;
 
 use verwalter_lib::agents::claude::locate::find_claude;
 use verwalter_lib::agents::claude::print::{PrintRequest, run_print};
@@ -28,12 +31,17 @@ use verwalter_lib::db::{
 };
 use verwalter_lib::error::CommandError;
 use verwalter_lib::implementation::build_view;
-use verwalter_lib::implementation::model::{ImplementationView, PhaseView};
+use verwalter_lib::implementation::model::{ImplementationView, PhaseView, StationView};
+use verwalter_lib::report::assemble::{self, AssembleContext};
+use verwalter_lib::report::model::{
+    ReportBlock, ReportCode, ReportNote, ReportPhase, ReportRow, ReportRowKind, ReportScreen,
+    ReportShot, ReportStop, ReportView,
+};
 use verwalter_lib::report::tidy::{self, StationTrace, TidyAnswer};
-use verwalter_lib::report::{anchor, raw};
+use verwalter_lib::report::{anchor, range, raw};
 use verwalter_lib::worktrees;
 
-const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID>";
+const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID> | <Datenbank-Kopie> <Umsetzungs-ID> view";
 const HAIKU_FLAG: &str = "--haiku";
 
 fn main() -> ExitCode {
@@ -64,6 +72,7 @@ fn main() -> ExitCode {
         [_, "anchor", session_id] | [_, _, "anchor", session_id] => {
             anchor_of(&database_path, session_id)
         }
+        [_, implementation_id, "view"] => view_of(&database_path, implementation_id),
         _ => {
             eprintln!("{USAGE}");
             return ExitCode::from(2);
@@ -214,7 +223,7 @@ fn traces_of(
             continue;
         };
         if found.is_empty()
-            && let Ok(input) = database.with(|connection| project_input(connection, session_id))
+            && let Ok(input) = database.with(|connection| active_input(connection, session_id))
         {
             found = sources::sources(&input);
         }
@@ -241,7 +250,7 @@ fn traces_of(
 fn anchor_of(database_path: &Path, session_id: &str) -> Result<String, String> {
     let database = Database::open(database_path).map_err(text_of)?;
     let input = database
-        .with(|connection| project_input(connection, session_id))
+        .with(|connection| active_input(connection, session_id))
         .map_err(text_of)?;
     let (entries, details) = database
         .with(|connection| anchor::load_last_write(connection, session_id))
@@ -256,12 +265,22 @@ fn anchor_of(database_path: &Path, session_id: &str) -> Result<String, String> {
     ))
 }
 
-/// Wie `SessionRegistry::changes_input` mit der Reichweite „Vorhaben“, nur aus der Datenbank.
-fn project_input(
+/// Die Changes-Eingabe, wie die Werkzeuge einer laufenden Station sie sehen.
+fn active_input(
     connection: &mut rusqlite::Connection,
     session_id: &str,
 ) -> Result<ChangesInput, CommandError> {
     let rows = sessions::load_active(connection)?;
+    project_input(connection, &rows, session_id)
+}
+
+/// Wie `SessionRegistry::changes_input` mit der Reichweite „Vorhaben“, nur aus der Datenbank;
+/// `rows` sind die Sessions, die als geladen gelten.
+fn project_input(
+    connection: &mut rusqlite::Connection,
+    rows: &[SessionRow],
+    session_id: &str,
+) -> Result<ChangesInput, CommandError> {
     let Some(row) = rows.iter().find(|row: &&SessionRow| row.id == session_id) else {
         return Err(CommandError::Internal(format!(
             "Session {session_id} ist nicht aktiv oder unbekannt"
@@ -307,6 +326,200 @@ fn project_input(
         since_ms,
         own,
     })
+}
+
+/// Der Bericht wie `report_load`, auch für eine archivierte Umsetzung: alle Sessions des Vorhabens
+/// gelten als geladen. Bild-Adressen sind hier `<Phasen-ID>/<Datei>`.
+fn view_of(database_path: &Path, implementation_id: &str) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(text_of)?;
+    let started = Instant::now();
+    let (stored, entries, phases, rows) = database
+        .with(|connection| {
+            let stored: StoredImplementation =
+                implementations::load(connection, implementation_id)?.ok_or_else(|| {
+                    CommandError::Internal(format!("Umsetzung nicht gefunden: {implementation_id}"))
+                })?;
+            let entries = report_rows::load_entries(connection, implementation_id)?;
+            let phases = report_rows::load_phases(connection, implementation_id)?;
+            let rows = sessions::load_for_project(connection, &stored.row.project_id)?;
+            Ok((stored, entries, phases, rows))
+        })
+        .map_err(text_of)?;
+    let numbers: HashMap<String, u32> = rows
+        .iter()
+        .map(|row: &SessionRow| (row.id.clone(), row.number))
+        .collect();
+    let view = build_view(&stored, &HashMap::new(), &numbers, &HashMap::new());
+    let stations: Vec<String> = view
+        .phases
+        .iter()
+        .flat_map(|phase: &PhaseView| &phase.stations)
+        .filter_map(|station: &StationView| station.session_id.clone())
+        .collect();
+    let commits = database
+        .with(|connection| session_commits::load_by_session(connection, &stations))
+        .map_err(text_of)?;
+    let input = stations.iter().rev().find_map(|session_id: &String| {
+        database
+            .with(|connection| project_input(connection, &rows, session_id))
+            .ok()
+    });
+    let (checkouts, touched) = input.map_or_else(Default::default, |input: ChangesInput| {
+        (
+            range::checkouts(&sources::sources(&input)),
+            input.own.touched,
+        )
+    });
+    let image_url = |phase_id: &str, file: &str| format!("{phase_id}/{file}");
+    let report = assemble::assemble(
+        &view,
+        &entries,
+        &phases,
+        &AssembleContext {
+            checkouts,
+            commits,
+            touched,
+            labels: raw::session_labels(&view, &numbers),
+            image_url: &image_url,
+        },
+    );
+    eprintln!("Dauer: {} ms", started.elapsed().as_millis());
+    Ok(printed(&report))
+}
+
+fn printed(report: &ReportView) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    for phase in &report.phases {
+        print_phase(phase, &mut lines);
+    }
+    lines.push(match &report.acceptance {
+        Some(acceptance) => format!("Abnahme: {:?}", acceptance.state),
+        None => "Abnahme: keine".to_owned(),
+    });
+    lines.join("\n")
+}
+
+fn print_phase(phase: &ReportPhase, lines: &mut Vec<String>) {
+    lines.push(format!(
+        "== Phase {} · {} [{:?}] · {}",
+        phase.key, phase.title, phase.state, phase.station_label
+    ));
+    lines.push(format!(
+        "{} Dateien, +{}/−{}, Commits: {} · Einträge: {} · {}",
+        phase.files,
+        phase.added,
+        phase.removed,
+        phase.commits.join(" "),
+        phase.entries,
+        if phase.ordered { "geordnet" } else { "roh" }
+    ));
+    if let Some(error) = &phase.tidy_error {
+        lines.push(format!("Ordnung: {error}"));
+    }
+    if let Some(result) = &phase.result {
+        lines.push(format!("Ergebnis: {result}"));
+    }
+    for step in &phase.way {
+        lines.push(format!("Weg (Stopp {:?}): {}", step.stop, step.text));
+    }
+    for screen in &phase.screens {
+        print_screen(screen, lines);
+    }
+    for stop in &phase.stops {
+        print_stop(stop, lines);
+    }
+    if let Some(review) = &phase.review {
+        lines.push(format!(
+            "Review {}: {} offen, {} behoben, {} Schaubilder",
+            review.by,
+            review.open.len(),
+            review.resolved.len(),
+            review.figures.len()
+        ));
+        for finding in review.open.iter().chain(&review.resolved) {
+            let place = finding
+                .location
+                .as_ref()
+                .map(|at| format!("{} {}:{}", at.repository_key, at.path, at.line));
+            lines.push(format!(
+                "  n{} Stopp {:?}, behoben durch {:?}, Ort {place:?}: {}",
+                finding.entry, finding.stop, finding.resolved_by, finding.text
+            ));
+        }
+    }
+}
+
+fn print_screen(screen: &ReportScreen, lines: &mut Vec<String>) {
+    let shots: Vec<String> = screen
+        .shots
+        .iter()
+        .map(|shot: &ReportShot| {
+            format!(
+                "{} {}×{} schmal={} Entwurf={}",
+                shot.label,
+                shot.image.width,
+                shot.image.height,
+                shot.narrow,
+                shot.design.is_some()
+            )
+        })
+        .collect();
+    lines.push(format!(
+        "Sichtabnahme n{} {} ({}) · {} · Abweichung: {} · {} Schritte",
+        screen.entry,
+        screen.name,
+        screen.by,
+        shots.join(", "),
+        screen.deviation.as_deref().unwrap_or("keine"),
+        screen.steps.len()
+    ));
+}
+
+fn print_stop(stop: &ReportStop, lines: &mut Vec<String>) {
+    lines.push(format!(
+        "Stopp {} „{}“ ({}) · {}",
+        stop.index, stop.title, stop.kind, stop.by
+    ));
+    if let Some(lead) = &stop.lead {
+        lines.push(format!("  Warum n{}: {}", lead.entry, lead.text));
+    }
+    for block in &stop.blocks {
+        match block {
+            ReportBlock::Figure(figure) => {
+                lines.push(format!("  Schaubild n{}: {}", figure.entry, figure.caption));
+            }
+            ReportBlock::Code(code) => print_code(code, lines),
+        }
+    }
+}
+
+fn print_code(code: &ReportCode, lines: &mut Vec<String>) {
+    let count_of = |kind: ReportRowKind| {
+        code.rows
+            .iter()
+            .filter(|row: &&ReportRow| row.kind == kind)
+            .count()
+    };
+    lines.push(format!(
+        "  Block {}:{} +{}/−{} · Zeilen: {} neu, {} unverändert, {} entfernt",
+        code.repository_key,
+        code.path,
+        code.added,
+        code.removed,
+        count_of(ReportRowKind::Add),
+        count_of(ReportRowKind::Context),
+        count_of(ReportRowKind::Removed)
+    ));
+    for note in &code.notes {
+        print_note(note, lines);
+    }
+}
+
+fn print_note(note: &ReportNote, lines: &mut Vec<String>) {
+    lines.push(format!(
+        "    ({}) {:?} Z. {}–{} offen={:?} verschoben={} · {}: {}",
+        note.label, note.kind, note.from, note.to, note.open, note.moved, note.by, note.text
+    ));
 }
 
 fn text_of(error: CommandError) -> String {

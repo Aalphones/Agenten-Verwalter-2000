@@ -61,8 +61,13 @@ impl ArtifactServer {
     /// Adresse der Betrachter-Seite einer einzelnen Datei hinter ihrem Handle; ohne `?view=1`
     /// liefert der Server die Datei selbst. `name` ist ihr Dateiname.
     pub fn file_url(&self, handle: &str, name: &str) -> String {
+        format!("{}?view=1", self.raw_file_url(handle, name))
+    }
+
+    /// Wie `file_url`, aber die Datei selbst, etwa als Quelle eines Bildes.
+    pub fn raw_file_url(&self, handle: &str, name: &str) -> String {
         format!(
-            "{}/{}/{FILE_SEGMENT}/{handle}/{}?view=1",
+            "{}/{}/{FILE_SEGMENT}/{handle}/{}",
             self.origin,
             self.token,
             percent_encode(name)

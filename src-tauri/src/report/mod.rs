@@ -2,28 +2,34 @@
 //! Einträge an; die Zeilen liegen in `db::report`, die Bilder im Bericht-Ordner. Sind die
 //! Agenten-Stationen einer Phase fertig, ordnet Haiku sie im Thread `report-tidy`.
 pub mod anchor;
+pub mod assemble;
 pub mod images;
 pub mod model;
+pub mod range;
 pub mod raw;
 pub mod tidy;
 pub mod tools;
 
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread;
 
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::agents::claude::print::{HaikuRequest, ask_haiku, print_program};
+use crate::artifacts::server::ArtifactServer;
+use crate::changes::ChangesInput;
 use crate::changes::model::ChangesReach;
 use crate::changes::sources::{self, Source};
-use crate::db::report::EntryRow;
+use crate::db::report::{EntryRow, PhaseRow};
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
+use crate::session_files::handles::ViewHandles;
 use crate::sessions::registry::SessionRegistry;
-use model::ReportChangedEvent;
+use assemble::AssembleContext;
+use model::{ReportChangedEvent, ReportPhaseState, ReportView};
 use tidy::{StationTrace, TidyAnswer};
 
 pub const REPORT_CHANGED_EVENT: &str = "report://changed";
@@ -48,6 +54,70 @@ pub fn phase_dir(
     phase_id: &str,
 ) -> Result<PathBuf, CommandError> {
     Ok(report_dir(app, implementation_id)?.join(phase_id))
+}
+
+/// Der Bericht der Umsetzung. Liest Datenbank und Git; nicht auf dem Haupt-Thread aufrufen.
+pub fn load(app: &AppHandle, implementation_id: &str) -> Result<ReportView, CommandError> {
+    let registry = app.state::<SessionRegistry>();
+    let view = registry.implementation_view(implementation_id)?;
+    let entries = registry.report_entries(implementation_id)?;
+    let phases: Vec<PhaseRow> = registry.report_phases(implementation_id)?;
+    let sessions = registry.report_sessions(&view)?;
+    let (checkouts, touched) =
+        sessions
+            .changes
+            .map_or_else(Default::default, |input: ChangesInput| {
+                (
+                    range::checkouts(&sources::sources(&input)),
+                    input.own.touched,
+                )
+            });
+    let image_url = |phase_id: &str, file: &str| {
+        phase_dir(app, implementation_id, phase_id)
+            .ok()
+            .and_then(|dir: PathBuf| url_of_image(app, &dir.join(file)))
+            .unwrap_or_default()
+    };
+    Ok(assemble::assemble(
+        &view,
+        &entries,
+        &phases,
+        &AssembleContext {
+            checkouts,
+            commits: sessions.commits,
+            touched,
+            labels: raw::session_labels(&view, &sessions.numbers),
+            image_url: &image_url,
+        },
+    ))
+}
+
+/// Die Adresse hinter einem frischen Handle des Datei-Servers (ADR 071); `None`, wenn es die Datei
+/// oder den Server nicht gibt.
+fn url_of_image(app: &AppHandle, file: &Path) -> Option<String> {
+    let path = file.canonicalize().ok()?;
+    let name = path.file_name()?.to_string_lossy().into_owned();
+    let server = app.try_state::<ArtifactServer>()?;
+    let handle = app.try_state::<ViewHandles>()?.issue(path);
+    Some(server.raw_file_url(&handle, &name))
+}
+
+/// Die Umsetzung, zu der die Session als Station gehört, wenn deren Bericht etwas zu zeigen hat:
+/// mindestens einen Eintrag oder eine fertige Phase.
+pub fn of_session(app: &AppHandle, session_id: &str) -> Result<Option<String>, CommandError> {
+    let registry = app.state::<SessionRegistry>();
+    let Some((implementation_id, _)) = registry.station_of_session(session_id)? else {
+        return Ok(None);
+    };
+    if !registry.report_entries(&implementation_id)?.is_empty() {
+        return Ok(Some(implementation_id));
+    }
+    let has_done_phase = registry
+        .implementation_view(&implementation_id)?
+        .phases
+        .iter()
+        .any(|phase: &PhaseView| assemble::phase_state(phase) == ReportPhaseState::Done);
+    Ok(has_done_phase.then_some(implementation_id))
 }
 
 /// Die Phasen, deren Ordnung gerade läuft; je Phase läuft höchstens ein Thread.

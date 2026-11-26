@@ -407,6 +407,70 @@ pub fn show_file(worktree: &Path, rev: &str, path: &str, max_bytes: u64) -> Opti
     run_raw(worktree, &args(&["show", &object])).ok()
 }
 
+/// Wie `show_file` für viele Objekte `<rev>:<pfad>` in einem Aufruf (`git cat-file --batch`).
+/// Schlüssel sind die Einträge aus `objects`; fehlende und größere als `max_bytes` fehlen.
+pub fn show_files(
+    dir: &Path,
+    objects: &[String],
+    max_bytes: u64,
+) -> Result<HashMap<String, Vec<u8>>, CommandError> {
+    if objects.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let mut input = objects.join("\n");
+    input.push('\n');
+    let output = bytes_with_input(git_command(dir, &args(&["cat-file", "--batch"])), input)?;
+    let mut found: HashMap<String, Vec<u8>> = HashMap::new();
+    let mut rest: &[u8] = &output;
+    // Je Objekt in der Reihenfolge der Eingabe: `<oid> <art> <größe>\n<inhalt>\n`, fehlt es, nur
+    // `<eingabe> missing\n`.
+    for object in objects {
+        let Some(end) = rest.iter().position(|byte: &u8| *byte == b'\n') else {
+            break;
+        };
+        let header = String::from_utf8_lossy(&rest[..end]).into_owned();
+        rest = &rest[end + 1..];
+        if header.ends_with(" missing") || header.ends_with(" ambiguous") {
+            continue;
+        }
+        let Some(size) = header
+            .rsplit(' ')
+            .next()
+            .and_then(|size: &str| size.parse::<usize>().ok())
+        else {
+            break;
+        };
+        let Some(content) = rest.get(..size) else {
+            break;
+        };
+        if size as u64 <= max_bytes {
+            found.insert(object.clone(), content.to_vec());
+        }
+        rest = rest.get(size + 1..).unwrap_or_default();
+    }
+    Ok(found)
+}
+
+/// `git diff-tree -r -p --no-renames -U3 <from> <to> -- <paths>`, mit `to == None` `diff-index`
+/// gegen das Arbeitsverzeichnis. Pfade mit Umlauten stehen unverändert in den Kopfzeilen.
+pub fn diff_patches(
+    worktree: &Path,
+    from: &str,
+    to: Option<&str>,
+    paths: &[&str],
+) -> Result<String, CommandError> {
+    let mut arguments: Vec<&str> = vec!["-c", "core.quotepath=false"];
+    match to {
+        Some(_) => arguments.extend(["diff-tree", "-r"]),
+        None => arguments.push("diff-index"),
+    }
+    arguments.extend(["-p", "--no-renames", "-U3", from]);
+    arguments.extend(to);
+    arguments.push("--");
+    arguments.extend(paths);
+    run_raw(worktree, &args(&arguments))
+}
+
 /// `git diff-tree -r -p --no-renames -U3 <from> <to> -- <path>`
 pub fn diff_tree_patch(
     worktree: &Path,
@@ -590,6 +654,54 @@ pub fn subjects(dir: &Path, ids: &[String]) -> Result<HashMap<String, String>, C
 /// Ob `commit` in `of` enthalten ist.
 pub fn is_ancestor(dir: &Path, commit: &str, of: &str) -> Result<bool, CommandError> {
     exit_means_yes_or_no(dir, &args(&["merge-base", "--is-ancestor", commit, of]))
+}
+
+/// Die IDs aus `ids`, die in `rev` nicht enthalten sind, in einem Aufruf: `git rev-list --stdin`
+/// mit den IDs und `^<rev>`. Alle IDs müssen im Objektspeicher liegen (`existing_commits`).
+pub fn commits_outside(
+    dir: &Path,
+    ids: &[String],
+    rev: &str,
+) -> Result<HashSet<String>, CommandError> {
+    if ids.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let input = format!("{}\n^{rev}\n", ids.join("\n"));
+    let output = run_raw_with_input(dir, &args(&["rev-list", "--stdin"]), input)?;
+    let wanted: HashSet<&str> = ids.iter().map(String::as_str).collect();
+    Ok(output
+        .lines()
+        .map(str::trim)
+        .filter(|id: &&str| wanted.contains(id))
+        .map(str::to_owned)
+        .collect())
+}
+
+/// Die Spitzen von `ids`: die Commits, die in keinem anderen davon enthalten sind
+/// (`git merge-base --independent`).
+pub fn independent_commits(dir: &Path, ids: &[String]) -> Result<HashSet<String>, CommandError> {
+    let mut arguments = args(&["merge-base", "--independent"]);
+    arguments.extend(ids.iter().map(OsStr::new));
+    let output = run(dir, &arguments)?;
+    Ok(output
+        .lines()
+        .map(|id: &str| id.trim().to_owned())
+        .collect())
+}
+
+/// Ob irgendein Branch, Remote-Branch oder Tag den Commit enthält.
+pub fn is_on_any_ref(dir: &Path, commit: &str) -> Result<bool, CommandError> {
+    let contains = format!("--contains={commit}");
+    let output = run(
+        dir,
+        &args(&[
+            "for-each-ref",
+            "--count=1",
+            "--format=%(refname)",
+            &contains,
+        ]),
+    )?;
+    Ok(!output.is_empty())
 }
 
 /// Je Branch `<refname>\0<*|Leerzeichen>\0<Worktree-Pfad>` in einer Zeile, lokale und remote.
@@ -859,7 +971,12 @@ fn is_index_lock(error: &CommandError) -> bool {
     matches!(error, CommandError::Git(message) if message.contains(INDEX_LOCK_MARKER))
 }
 
-fn output_with_input(mut command: Command, input: String) -> Result<String, CommandError> {
+fn output_with_input(command: Command, input: String) -> Result<String, CommandError> {
+    let output = bytes_with_input(command, input)?;
+    Ok(String::from_utf8_lossy(&output).into_owned())
+}
+
+fn bytes_with_input(mut command: Command, input: String) -> Result<Vec<u8>, CommandError> {
     command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -881,7 +998,7 @@ fn output_with_input(mut command: Command, input: String) -> Result<String, Comm
         return Err(git_error(&output));
     }
     written?;
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    Ok(output.stdout)
 }
 
 fn run_allowing_failure(dir: &Path, arguments: &[&OsStr]) -> Result<Output, CommandError> {

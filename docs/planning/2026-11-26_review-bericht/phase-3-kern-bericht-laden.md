@@ -31,12 +31,28 @@ Rating: heikel. `report_load` liefert den ganzen Bericht einer Umsetzung als `Re
 
 ## Checkliste
 
-- [ ] `src-tauri/src/report/range.rs`: `pub struct RepoRange { repository_key, folder: PathBuf, from: String, to: Option<String> }`; `pub fn phase_ranges(...) -> Vec<RepoRange>`; `pub fn file_patch(range, path) -> Result<String, CommandError>`; `pub fn end_text(range, path) -> Option<String>`; `pub fn numstat(range) -> …`.
-- [ ] `src-tauri/src/report/assemble.rs`: `pub fn assemble(view: &ImplementationView, entries: &[EntryRow], phases: &[PhaseRow], ctx: &AssembleContext) -> ReportView` mit Hilfsfunktionen `stops_of_phase`, `code_block`, `relocate`, `review_of_phase`; Git-Zugriffe nur über `range.rs`.
-- [ ] `src-tauri/src/commands/report.rs`: `report_load`, `report_of_session`; in `lib.rs` registrieren.
-- [ ] `src/lib/report.ts`: Wrapper samt Abo.
-- [ ] `report-probe`: Unterbefehl `view`; `AGENTS.md` nachziehen.
-- [ ] Doc: `docs/code-map.md` Zeile „Review-Bericht“ um `range.rs`, `assemble.rs`, Befehle und Wrapper ergänzen; `docs/glossary.md`: „Commit-Bereich (Phase)“, „Anker (Bericht)“.
-- [ ] `pnpm check`.
+- [x] `src-tauri/src/report/range.rs`: `pub struct RepoRange { repository_key, folder: PathBuf, from: String, to: Option<String> }`; `pub fn phase_ranges(...) -> Vec<RepoRange>`; `pub fn file_patch(range, path) -> Result<String, CommandError>`; `pub fn end_text(range, path) -> Option<String>`; `pub fn numstat(range) -> …`.
+- [x] `src-tauri/src/report/assemble.rs`: `pub fn assemble(view: &ImplementationView, entries: &[EntryRow], phases: &[PhaseRow], ctx: &AssembleContext) -> ReportView` mit Hilfsfunktionen `stops_of_phase`, `code_block`, `relocate`, `review_of_phase`; Git-Zugriffe nur über `range.rs`.
+- [x] `src-tauri/src/commands/report.rs`: `report_load`, `report_of_session`; in `lib.rs` registrieren.
+- [x] `src/lib/report.ts`: Wrapper samt Abo.
+- [x] `report-probe`: Unterbefehl `view`; `AGENTS.md` nachziehen.
+- [x] Doc: `docs/code-map.md` Zeile „Review-Bericht“ um `range.rs`, `assemble.rs`, Befehle und Wrapper ergänzen; `docs/glossary.md`: „Commit-Bereich (Phase)“, „Anker (Bericht)“.
+- [x] `pnpm check`.
 
 ## Report-Back
+
+Status: complete.
+
+**Abweichungen von AK und Checkliste:**
+
+- `range.rs` bietet statt `file_patch`/`end_text` die gebündelten `file_patches`/`end_texts`; mit je einem Git-Aufruf pro Datei riss AK 11 (2,4 s, gebündelt rund 0,7 s).
+- AK 1: Alle Arbeitsbäume eines Repositorys teilen den Objektspeicher, `existing_commits` je Eintrag filtert deshalb nichts. Je Repository gehört ein Commit zu genau einem Eintrag: dem ersten, dessen `HEAD` ihn enthält (zuerst die von Notizen genannten, dann der Checkout selbst). Mehrere Spitzen ergeben mehrere Bereiche; durch amend oder rebase ersetzte Commits zählen nur, wenn das Repository sonst nichts hätte.
+- AK 1: Eine fertige Phase ohne Commit zeigt nur das Uncommittete und nur, solange keine spätere begonnen hat. Eine Phase ohne Agenten-Station zeigt nie das Arbeitsverzeichnis.
+- AK 7: Stationen `by_user` zählen beim Phasenzustand nicht, wenn die Phase Agenten-Stationen hat.
+- Ein Code-Block, für dessen Notizen keine Stelle mehr zu finden ist, zeigt alle Hunks der Datei.
+- AK 8: Bild-Adresse über das neue `ArtifactServer::raw_file_url` (ohne `?view=1`).
+- Commits und geschriebene Dateien archivierter Stations-Sessions kommen aus der Datenbank.
+
+**Belegt** (Kopie der Datenbank, nachgestellte Einträge): 34 Block-Kopfzahlen gegen `git diff --numstat` und `git show --numstat` ohne Abweichung; Zeilen von 25 Blöcken gegen die Dateiinhalte in Git; Anker nachgeführt und als verschoben erkannt; offener Befund, Ordnung mit weggefallenem Stopp und Rohgruppierung dahinter, Sichtabnahme; eine als laufend nachgestellte Phase bis zum Arbeitsverzeichnis samt neuer Datei (206 Dateien, +13075/−1335, wie Git); 40 Einträge in unter 1 s; `pnpm check` grün.
+
+**Nicht gelaufen:** die Verteilung auf mehrere Arbeitsbäume und Spitzen (die Testdaten haben ein Repository ohne Arbeitsbaum) und der Weg in der App (`report::load`, `report_sessions`, Bild-Adressen, Befehle, TS-Wrapper) — nur kompiliert.
