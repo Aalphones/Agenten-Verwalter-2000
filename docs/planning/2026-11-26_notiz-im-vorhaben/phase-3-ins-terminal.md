@@ -1,6 +1,7 @@
 # Phase 3 — Ins Terminal
 
 **Rating:** standard
+**Status:** complete
 
 ## Kontext (vor dem ersten Edit lesen)
 
@@ -22,14 +23,16 @@
 
 ## Checkliste
 
-- [ ] `src/features/notes/lineToSend.ts`: reine Funktion `lineToSend(text: string, selectionStart: number, selectionEnd: number): { kind: 'ok'; line: string } | { kind: 'multiline' } | { kind: 'empty' }` nach AK 3, 4, 8.
-- [ ] `src/features/notes/useSendTarget.ts`: liefert für `projectId` das Ziel-`TerminalInfo | null` nach AK 2 (nutzt `useProjectTerminals` und `useTerminalStore`).
-- [ ] `NotePane.tsx`: Auswahl per `onSelect`/`onKeyUp`/`onClick` des `<textarea>` in einem State halten; Knopf nach AK 1, 4, 5, 8; `onKeyDown` fängt `Strg+Enter` ab (`preventDefault`, `stopPropagation`); Senden ruft `flush()` aus `useProjectNote`, dann `writeTerminal(target.id, line)`, dann `select(projectId, target.id)` und, wenn das Dock zu ist, `toggle()`. Fehler aus `writeTerminal` → Fehlersatz per `commandErrorText` in der Notiz-Leiste.
+- [x] `src/features/notes/lineToSend.ts`: reine Funktion `lineToSend(text: string, selectionStart: number, selectionEnd: number): { kind: 'ok'; line: string } | { kind: 'multiline' } | { kind: 'empty' }` nach AK 3, 4, 8.
+- [x] `src/features/notes/useSendTarget.ts`: liefert für `projectId` das Ziel-`TerminalInfo | null` nach AK 2 (nutzt `useProjectTerminals` und `useTerminalStore`).
+- [x] `NotePane.tsx`: Auswahl per `onSelect`/`onKeyUp`/`onClick` des `<textarea>` in einem State halten; Knopf nach AK 1, 4, 5, 8; `onKeyDown` fängt `Strg+Enter` ab (`preventDefault`, `stopPropagation`); Senden ruft `flush()` aus `useProjectNote`, dann `writeTerminal(target.id, line)`, dann `select(projectId, target.id)` und, wenn das Dock zu ist, `toggle()`. Fehler aus `writeTerminal` → Fehlersatz per `commandErrorText` in der Notiz-Leiste.
 - [ ] Fokus: Wird das Ziel-Terminal durch `select` angezeigt, ruft `terminalInstances.show` bereits `focus()`. War es schon sichtbar (Reiter-oben-Modus, Dock offen), in `terminalInstances.ts` `export function focusTerminal(terminalId: string): void` ergänzen (holt die vorhandene Instanz, ruft `term.focus()`, tut nichts ohne Instanz) und nach dem Senden aufrufen.
-- [ ] `docs/code-map.md` Zeile „Notiz im Vorhaben“ um „Ins Terminal“ (`lineToSend`, `useSendTarget`) ergänzen; `docs/glossary.md` Begriff „Ins Terminal“.
+- [x] `docs/code-map.md` Zeile „Notiz im Vorhaben“ um „Ins Terminal“ (`lineToSend`, `useSendTarget`) ergänzen; `docs/glossary.md` Begriff „Ins Terminal“.
 
 ## Prüfung
 
 - `pnpm check` grün (Summenzeile ins Report-Back). Keine automatisierten Tests (privates Profil).
 
 ## Report-Back
+
+Phase 3 fertig: `lineToSend`, `useSendTarget`, Knopf und Strg+Enter in `NotePane`, `focusTerminal`; `pnpm check` grün (eslint, tsc, prettier, build, cargo fmt, clippy). Nicht in der echten App gelaufen; Wackelstelle: Fokus nach dem Senden (`NotePane.tsx`, `requestAnimationFrame` + `focusTerminal`).

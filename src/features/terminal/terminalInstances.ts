@@ -142,6 +142,15 @@ export function show(terminalId: string, instance: TerminalInstance, host: HTMLE
   instance.term.focus();
 }
 
+/** Gibt einem schon sichtbaren Terminal den Fokus; ohne geöffnete Instanz übernimmt `show` das beim Einhängen. */
+export function focusTerminal(terminalId: string): void {
+  const instance: TerminalInstance | undefined = instances.get(terminalId);
+  if (instance === undefined || !instance.isOpened) {
+    return;
+  }
+  instance.term.focus();
+}
+
 export function hide(instance: TerminalInstance): void {
   instance.element.remove();
 }
