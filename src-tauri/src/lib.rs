@@ -24,6 +24,7 @@ pub mod limit_resume;
 pub mod lmstudio;
 pub mod mcp;
 pub mod mcp_access;
+pub mod notes;
 pub mod notices;
 pub mod processes;
 pub mod projects;
@@ -274,6 +275,8 @@ pub fn run() {
             commands::implementation::implementation_apply_cancel,
             commands::implementation::implementation_discard_cancel,
             commands::implementation::implementation_complete_station,
+            commands::notes::note_read,
+            commands::notes::note_write,
             commands::terminal::terminal_list,
             commands::terminal::terminal_open,
             commands::terminal::terminal_attach,

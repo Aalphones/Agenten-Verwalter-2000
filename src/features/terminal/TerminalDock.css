@@ -75,6 +75,17 @@
     }
   }
 
+  &__tab--note {
+    color: var(--color-accent-text);
+    margin-right: var(--space-md);
+
+    &.terminal-dock__tab--active,
+    &.terminal-dock__tab--active:hover {
+      background: var(--color-accent-subtle);
+      color: var(--color-accent-text);
+    }
+  }
+
   &__select,
   &__remove,
   &__button {
@@ -131,6 +142,12 @@
     &--icon {
       padding: 0 var(--space-md);
       font-size: var(--font-size-md);
+    }
+
+    &--note {
+      display: flex;
+      align-items: center;
+      color: var(--color-accent-text);
     }
   }
 

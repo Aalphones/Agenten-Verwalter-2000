@@ -48,6 +48,7 @@ use verwalter_lib::{
         McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer, McpServerStatus,
         SessionMcp,
     },
+    notes::model::{NoteSaved, NoteText},
     notices::model::{Denial, Notice},
     projects::model::{ProjectCreated, ProjectSummary},
     prompt_cache::model::PromptCache,
@@ -269,6 +270,8 @@ fn main() -> Result<(), ts_rs::ExportError> {
     ImplementationRemovedEvent::export_all(&cfg)?;
     InquiryCreated::export_all(&cfg)?;
     TerminalInfo::export_all(&cfg)?;
+    NoteText::export_all(&cfg)?;
+    NoteSaved::export_all(&cfg)?;
     TerminalOutput::export_all(&cfg)?;
     TerminalChanged::export_all(&cfg)?;
     BrokenLink::export_all(&cfg)?;

@@ -1,6 +1,6 @@
 # Phase 1 — Notiz im Dock
 
-**Rating:** standard
+**Rating:** standard · **Status:** complete
 
 ## Kontext (vor dem ersten Edit lesen)
 
@@ -25,23 +25,25 @@
 ## Checkliste
 
 **Core**
-- [ ] `src-tauri/src/notes/mod.rs` + `model.rs` anlegen, in `lib.rs` als `pub mod notes;` eintragen. `model.rs`: `NoteText`, `NoteSaved` laut Kontrakt, Derive wie `settings/model.rs`, `#[serde(rename_all = "camelCase")]`.
-- [ ] `mod.rs`: `const MAX_NOTE_BYTES: usize = 1024 * 1024;`, `const NOTES_FOLDER: &str = "notizen";`, `fn valid_id(id: &str) -> bool` (nicht leer, nur ASCII-Alphanumerik und `-`), `pub fn path_of(data_dir: &Path, project_id: &str) -> Result<PathBuf, CommandError>`, `pub fn read(path: &Path) -> Result<NoteText, CommandError>` (fehlende Datei → leer; größer als Grenze → Fehler), `pub fn write(path: &Path, text: &str) -> Result<NoteSaved, CommandError>` (Grenze prüfen, `create_dir_all`, `.tmp` schreiben, `fs::rename`).
-- [ ] `src-tauri/src/commands/notes.rs`: `note_read(app, registry, project_id)` und `note_write(app, registry, project_id, text)`; beide rufen zuerst `registry.project_workspace(&project_id)?` (Ergebnis verwerfen, nur Existenzprüfung), dann `crate::filesystem::workspace::data_dir(&app)?` und `notes::path_of`. In `commands/mod.rs` und `invoke_handler` eintragen.
-- [ ] `pnpm bindings`.
+- [x] `src-tauri/src/notes/mod.rs` + `model.rs` anlegen, in `lib.rs` als `pub mod notes;` eintragen. `model.rs`: `NoteText`, `NoteSaved` laut Kontrakt, Derive wie `settings/model.rs`, `#[serde(rename_all = "camelCase")]`.
+- [x] `mod.rs`: `const MAX_NOTE_BYTES: usize = 1024 * 1024;`, `const NOTES_FOLDER: &str = "notizen";`, `fn valid_id(id: &str) -> bool` (nicht leer, nur ASCII-Alphanumerik und `-`), `pub fn path_of(data_dir: &Path, project_id: &str) -> Result<PathBuf, CommandError>`, `pub fn read(path: &Path) -> Result<NoteText, CommandError>` (fehlende Datei → leer; größer als Grenze → Fehler), `pub fn write(path: &Path, text: &str) -> Result<NoteSaved, CommandError>` (Grenze prüfen, `create_dir_all`, `.tmp` schreiben, `fs::rename`).
+- [x] `src-tauri/src/commands/notes.rs`: `note_read(app, registry, project_id)` und `note_write(app, registry, project_id, text)`; beide rufen zuerst `registry.project_workspace(&project_id)?` (Ergebnis verwerfen, nur Existenzprüfung), dann `crate::filesystem::workspace::data_dir(&app)?` und `notes::path_of`. In `commands/mod.rs` und `invoke_handler` eintragen.
+- [x] `pnpm bindings`.
 
 **Oberfläche**
-- [ ] `src/lib/notes.ts`: `readNote(projectId)`, `writeNote(projectId, text)` nach dem Muster von `src/lib/terminal.ts`.
-- [ ] `src/stores/terminal.ts`: `export const NOTE_TAB_ID = 'note';`, Feld `noteHidden: Record<string, boolean>`, Aktionen `hideNote(projectId)` (setzt `noteHidden`, und ist die Notiz gewählt, wird `selected[projectId]` gelöscht) und `showNote(projectId)` (hebt auf, setzt `selected[projectId] = NOTE_TAB_ID`).
-- [ ] `src/features/notes/useProjectNote.ts`: lädt beim Wechsel der `projectId`, hält `text`, `state: 'loading' | 'saved' | 'saving' | 'error'`, `error: string | null`, `setText` (startet 500-ms-Timer), `flush()` (speichert sofort, wenn ungespeichert); ruft `flush` im Cleanup bei `projectId`-Wechsel und Unmount.
-- [ ] `src/features/notes/NotePane.tsx` + `NotePane.css` (BEM `note-pane`): Leiste mit Statustext rechts, darunter `<textarea>` laut AK 5. Prop `projectId`. Die Leiste bekommt einen leeren Bereich links für Phase 3.
-- [ ] `src/features/notes/PencilIcon.tsx`: Inline-SVG-Stift, `aria-hidden`.
-- [ ] `TerminalDock.tsx`: Notiz-Reiter vor den Terminal-Reitern rendern, wenn `!noteHidden[projectId]`; `shown` berücksichtigt `selected[projectId] === NOTE_TAB_ID` → `<NotePane>` statt `<TerminalPane>`; Stift-Knopf neben `+`, wenn ausgeblendet. Modifikator `terminal-dock__tab--note` in `TerminalDock.css` laut AK 4.
-- [ ] `docs/code-map.md`: neue Zeile „Notiz im Vorhaben“ (Core `src-tauri/src/notes/`, `commands/notes.rs`; Oberfläche `src/features/notes/`, `src/lib/notes.ts`, Anschluss `TerminalDock.tsx`), Stand-Satz oben ergänzen. `docs/glossary.md`: Begriff „Notiz“ (eine je Vorhaben, außerhalb des Workspace, Agenten sehen sie nicht).
-- [ ] `docs/decisions/074-notiz-im-vorhaben.md` (10 Zeilen): Kontext Token in Befehlen; Optionen Scratchpad im Workspace + Sperren vs. Datenordner; Entscheidung Datenordner, Gründe aus README „Risiken“; Konsequenz Klartext auf der Platte.
+- [x] `src/lib/notes.ts`: `readNote(projectId)`, `writeNote(projectId, text)` nach dem Muster von `src/lib/terminal.ts`.
+- [x] `src/stores/terminal.ts`: `export const NOTE_TAB_ID = 'note';`, Feld `noteHidden: Record<string, boolean>`, Aktionen `hideNote(projectId)` (setzt `noteHidden`, und ist die Notiz gewählt, wird `selected[projectId]` gelöscht) und `showNote(projectId)` (hebt auf, setzt `selected[projectId] = NOTE_TAB_ID`).
+- [x] `src/features/notes/useProjectNote.ts`: lädt beim Wechsel der `projectId`, hält `text`, `state: 'loading' | 'saved' | 'saving' | 'error'`, `error: string | null`, `setText` (startet 500-ms-Timer), `flush()` (speichert sofort, wenn ungespeichert); ruft `flush` im Cleanup bei `projectId`-Wechsel und Unmount.
+- [x] `src/features/notes/NotePane.tsx` + `NotePane.css` (BEM `note-pane`): Leiste mit Statustext rechts, darunter `<textarea>` laut AK 5. Prop `projectId`. Die Leiste bekommt einen leeren Bereich links für Phase 3.
+- [x] `src/features/notes/PencilIcon.tsx`: Inline-SVG-Stift, `aria-hidden`.
+- [x] `TerminalDock.tsx`: Notiz-Reiter vor den Terminal-Reitern rendern, wenn `!noteHidden[projectId]`; `shown` berücksichtigt `selected[projectId] === NOTE_TAB_ID` → `<NotePane>` statt `<TerminalPane>`; Stift-Knopf neben `+`, wenn ausgeblendet. Modifikator `terminal-dock__tab--note` in `TerminalDock.css` laut AK 4.
+- [x] `docs/code-map.md`: neue Zeile „Notiz im Vorhaben“ (Core `src-tauri/src/notes/`, `commands/notes.rs`; Oberfläche `src/features/notes/`, `src/lib/notes.ts`, Anschluss `TerminalDock.tsx`), Stand-Satz oben ergänzen. `docs/glossary.md`: Begriff „Notiz“ (eine je Vorhaben, außerhalb des Workspace, Agenten sehen sie nicht).
+- [x] `docs/decisions/074-notiz-im-vorhaben.md` (10 Zeilen): Kontext Token in Befehlen; Optionen Scratchpad im Workspace + Sperren vs. Datenordner; Entscheidung Datenordner, Gründe aus README „Risiken“; Konsequenz Klartext auf der Platte.
 
 ## Prüfung
 
 - `pnpm check` grün (Summenzeile ins Report-Back). Keine automatisierten Tests (privates Profil).
 
 ## Report-Back
+
+`pnpm check` grün (Lint, Typecheck, Build, rustfmt, Clippy). Oberfläche nicht in der echten App gelaufen. Abweichung: `NotePane` bekommt `key={projectId}` im Dock, statt dass der Hook den Vorhabenwechsel selbst behandelt (ESLint `react-hooks` verbietet Ref-Schreiben im Render und setState im Effekt); `NotePane` hat zusätzlich die Prop `onError` für die Fehlerzeile des Docks.

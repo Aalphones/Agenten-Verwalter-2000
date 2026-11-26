@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, ReactElement } from 'react';
+import { NotePane } from '@/features/notes/NotePane';
+import { PencilIcon } from '@/features/notes/PencilIcon';
 import { TerminalPane } from '@/features/terminal/TerminalPane';
 import { useDockSpace } from '@/features/terminal/useDockSpace';
 import { useSettingsUpdate } from '@/features/settings/useSettingsUpdate';
@@ -8,7 +10,7 @@ import type { TerminalPlacement } from '@/lib/bindings/TerminalPlacement';
 import { commandErrorText } from '@/lib/errors';
 import { closeTerminal, openTerminal } from '@/lib/terminal';
 import { useSettingsStore } from '@/stores/settings';
-import { useTerminalStore } from '@/stores/terminal';
+import { NOTE_TAB_ID, useTerminalStore } from '@/stores/terminal';
 import './TerminalDock.css';
 
 const DEFAULT_HEIGHT = 260;
@@ -50,6 +52,7 @@ export function TerminalDock({
   const dragSizeRef = useRef<number | null>(null);
   const hasAutoOpenedRef = useRef<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
   const isMaximized: boolean = useTerminalStore((state) => state.isMaximized);
   const dragSize: number | null = useTerminalStore((state) => state.dragSize);
   const selectedId: string | undefined = useTerminalStore((state) => state.selected[projectId]);
@@ -57,6 +60,9 @@ export function TerminalDock({
   const closeDock = useTerminalStore((state) => state.close);
   const setDragSize = useTerminalStore((state) => state.setDragSize);
   const select = useTerminalStore((state) => state.select);
+  const isNoteHidden: boolean = useTerminalStore((state) => state.noteHidden[projectId] === true);
+  const hideNote = useTerminalStore((state) => state.hideNote);
+  const showNote = useTerminalStore((state) => state.showNote);
   const savedSize: number = useSettingsStore((state) =>
     placement === 'bottom'
       ? (state.settings?.terminalHeight ?? DEFAULT_HEIGHT)
@@ -68,9 +74,11 @@ export function TerminalDock({
   const isBottom: boolean = placement === 'bottom';
   const isFilling: boolean = isBottom && isMaximized;
   const size: number = clampSize(placement, dragSize ?? savedSize, space);
-  const shown: TerminalInfo | undefined =
-    terminals.find((terminal: TerminalInfo) => terminal.id === selectedId) ??
-    terminals[terminals.length - 1];
+  const isNoteShown: boolean = selectedId === NOTE_TAB_ID && !isNoteHidden;
+  const shown: TerminalInfo | undefined = isNoteShown
+    ? undefined
+    : (terminals.find((terminal: TerminalInfo) => terminal.id === selectedId) ??
+      terminals[terminals.length - 1]);
 
   const openNew = useCallback((): void => {
     openTerminal(projectId, START_COLS, START_ROWS)
@@ -155,6 +163,34 @@ export function TerminalDock({
     return (
       <div className="terminal-dock__bar">
         <div className="terminal-dock__tabs">
+          {!isNoteHidden && (
+            <div
+              className={`terminal-dock__tab terminal-dock__tab--note${isNoteShown ? ' terminal-dock__tab--active' : ''}`}
+            >
+              <button
+                type="button"
+                className="terminal-dock__select"
+                title="Notiz zu diesem Vorhaben — Agenten sehen sie nicht"
+                onClick={(): void => {
+                  select(projectId, NOTE_TAB_ID);
+                }}
+              >
+                <PencilIcon />
+                Notiz
+              </button>
+              <button
+                type="button"
+                className="terminal-dock__remove"
+                aria-label="Notiz ausblenden"
+                title="Notiz ausblenden — die Datei bleibt erhalten"
+                onClick={(): void => {
+                  hideNote(projectId);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
           {terminals.map((terminal: TerminalInfo) => (
             <div
               key={terminal.id}
@@ -193,6 +229,19 @@ export function TerminalDock({
           >
             +
           </button>
+          {isNoteHidden && (
+            <button
+              type="button"
+              className="terminal-dock__button terminal-dock__button--icon terminal-dock__button--note"
+              title="Notiz einblenden"
+              aria-label="Notiz einblenden"
+              onClick={(): void => {
+                showNote(projectId);
+              }}
+            >
+              <PencilIcon />
+            </button>
+          )}
         </div>
         <div className="terminal-dock__actions">
           {isBottom && (
@@ -218,7 +267,7 @@ export function TerminalDock({
     );
   }
 
-  const errorText: string | null = actionError ?? listError;
+  const errorText: string | null = actionError ?? noteError ?? listError;
 
   function sizeStyle(): CSSProperties | undefined {
     if (isFilling) {
@@ -248,9 +297,11 @@ export function TerminalDock({
       )}
       {errorText !== null && <p className="terminal-dock__error">{errorText}</p>}
       {renderBar()}
-      {shown === undefined ? (
+      {isNoteShown && <NotePane key={projectId} projectId={projectId} onError={setNoteError} />}
+      {!isNoteShown && shown === undefined && (
         <p className="terminal-dock__empty">Kein Terminal — mit + eines starten.</p>
-      ) : (
+      )}
+      {shown !== undefined && (
         <TerminalPane key={shown.id} terminalId={shown.id} projectId={projectId} />
       )}
     </section>

@@ -17,6 +17,7 @@ pub mod files;
 pub mod git;
 pub mod implementation;
 pub mod mcp;
+pub mod notes;
 pub mod projects;
 pub mod repositories;
 pub mod retro;

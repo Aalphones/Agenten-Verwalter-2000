@@ -8,7 +8,7 @@ Jedes Vorhaben bekommt genau eine bearbeitbare Textnotiz, um Befehle zusammenzub
 
 | Nr | Phase | Datei | Rating | Status |
 |---|---|---|---|---|
-| 1 | Notiz im Dock: Core lesen/schreiben, Reiter mit Stift, Ausblenden, Selbstspeichern | [phase-1-notiz-im-dock.md](phase-1-notiz-im-dock.md) | standard | pending |
+| 1 | Notiz im Dock: Core lesen/schreiben, Reiter mit Stift, Ausblenden, Selbstspeichern | [phase-1-notiz-im-dock.md](phase-1-notiz-im-dock.md) | standard | complete |
 | 2 | Einstellung „Notiz“ und Reiter oben | [phase-2-einstellung-und-reiter.md](phase-2-einstellung-und-reiter.md) | standard | pending |
 | 3 | Ins Terminal | [phase-3-ins-terminal.md](phase-3-ins-terminal.md) | standard | pending |
 
