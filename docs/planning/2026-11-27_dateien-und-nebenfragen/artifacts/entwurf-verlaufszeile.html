@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verlaufszeile im Chat</title>
+<style>
+:root{
+  --bg-base:#fff;--bg-outer:#f8f8f8;--bg-surface:#fff;--bg-hover:#f0f0f0;
+  --border-subtle:#e5e5e5;--border:#cecece;
+  --fg:#3c3c3c;--fg2:#555;--fg-muted:#6e6e6e;
+  --accent:#c4572f;--accent-text:#a8461f;--accent-subtle:color-mix(in srgb,#c4572f 10%,transparent);
+  --run:#2563eb;--ok:#16803c;--err:#d23b33;--err-subtle:#fdeceb;--paused:#6e6e6e;
+  --bar-bg:#ececec;--font:'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;--mono:'Cascadia Code',Consolas,ui-monospace,monospace;
+  color-scheme:light;
+}
+:root.dark{
+  --bg-base:#1f1f1f;--bg-outer:#181818;--bg-surface:#252526;--bg-hover:#2e2e30;
+  --border-subtle:#2b2b2b;--border:#3c3c3c;
+  --fg:#d4d4d4;--fg2:#b0b0b0;--fg-muted:#8f8f8f;
+  --accent:#e0825c;--accent-text:#eea283;--accent-subtle:color-mix(in srgb,#e0825c 16%,transparent);
+  --run:#5b9dff;--ok:#4cc38a;--err:#f47067;--err-subtle:color-mix(in srgb,#f47067 11%,transparent);--paused:#8f8f8f;
+  --bar-bg:#2e2e30;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-outer);color:var(--fg);font:13px/1.5 var(--font)}
+button{font:inherit;color:inherit}
+/* Entwurfsleiste: gehört nicht zur App */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 16px;background:var(--bar-bg);border-bottom:1px dashed var(--border);font-size:12px}
+.bar__title{font-weight:600}
+.grp{display:flex;align-items:center;gap:6px}
+.lbl{color:var(--fg2)}
+.bar__stage{color:var(--fg-muted)}
+.seg{display:inline-flex;margin:0;padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--bg-surface)}
+.seg label{display:block;cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:flex;align-items:center;min-height:28px;padding:0 10px;color:var(--fg2);border-left:1px solid var(--border)}
+.seg label:first-child span{border-left:0}
+.seg label:hover span{background:var(--bg-hover)}
+.seg input:checked+span{background:var(--accent-subtle);color:var(--accent-text);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-2px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-surface);cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--bg-hover);border-color:var(--fg-muted)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.bl:focus-visible,.tg__toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn--danger{color:var(--err);border-color:color-mix(in srgb,var(--err) 45%,var(--border))}
+.btn--danger:hover{background:var(--err-subtle);border-color:var(--err)}
+.btn:disabled{opacity:.55;cursor:default;transform:none}
+.btn svg{flex:none}
+.info{padding:10px 16px 12px;border-bottom:1px dashed var(--border);background:var(--bar-bg);font-size:12.5px}
+.info h3{margin:0 0 4px;font-size:12.5px}.info ul{margin:0 0 8px;padding-left:18px}.info[hidden]{display:none}
+/* App */
+.stage{display:flex;justify-content:center;padding:16px}
+.app{width:var(--w,100%);max-width:100%;height:760px;display:flex;flex-direction:column;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;overflow:hidden;container:main/inline-size}
+.app__head{display:flex;align-items:center;gap:12px;min-height:40px;padding:0 16px;border-bottom:1px solid var(--border-subtle)}
+.app__name{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbtn{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-surface);color:var(--fg2);font-size:12.5px}
+.timeline{flex:1;min-height:0;overflow-y:auto;padding-top:20px}
+.composer{margin:8px 16px 14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-surface);color:var(--fg-muted)}
+.block{padding:0 32px 12px}
+.ubox{padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-surface);font-size:13.5px;line-height:1.6}
+.atext{margin:0;font-size:13.5px;line-height:1.6}
+.atext code{padding:0 5px;border-radius:4px;background:var(--bg-hover);font:12.5px var(--mono)}
+.think{display:flex;align-items:center;gap:8px;color:var(--fg-muted);font-style:italic}
+.tg__row{display:flex;align-items:flex-start;gap:8px}
+.tg__dot{flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--ok)}
+.tg__toggle{display:flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:var(--fg2);cursor:pointer;font-size:12.5px;min-height:22px}
+.chev{flex:none;width:10px;height:10px;transition:transform 120ms}
+[aria-expanded=true] .chev{transform:rotate(90deg)}
+/* Verlaufszeile: zugeklappt wie heute */
+.bl{display:flex;align-items:center;gap:8px;max-width:100%;min-height:22px;padding:0;border:0;background:transparent;color:var(--fg2);text-align:left;cursor:pointer}
+.bl:hover .bl__title,.bl:hover .bl__cmd{color:var(--fg)}
+.bl__dot{flex:none;width:8px;height:8px;border-radius:50%}
+.d-running{background:var(--run)}.d-completed{background:var(--ok)}.d-error{background:var(--err)}.d-paused{background:var(--paused)}
+.bl__name{flex:none;color:var(--fg);font-weight:600}
+.bl__type{flex:none;padding:0 6px;border-radius:4px;background:var(--bg-hover);font:12px var(--mono)}
+.bl__note,.bl__meta{flex:none;color:var(--fg-muted);white-space:nowrap}
+.bl__title,.bl__cmd{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.bl__cmd{font:12px var(--mono)}
+.bl__url{flex:none;color:var(--accent-text)}
+/* Aufgeklappt: Linie verbindet Kopf und Inhalt */
+.bd{margin:4px 0 2px 3.5px;padding:2px 0 2px 16px;border-left:1px solid var(--border)}
+.bd__state{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-bottom:6px;color:var(--fg2);font-size:12px}
+.bd__state b{font-weight:600}
+.s-running{color:var(--run)}.s-completed{color:var(--ok)}.s-error{color:var(--err)}.s-paused{color:var(--fg-muted)}
+.bd__live{display:inline-flex;align-items:center;gap:5px;color:var(--fg-muted)}
+.bd__live i{width:6px;height:6px;border-radius:50%;background:var(--run);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+.out{max-height:240px;overflow-y:auto;padding:8px 12px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--bg-surface);font:12px/19px var(--mono);color:var(--fg2);white-space:pre-wrap;overflow-wrap:anywhere}
+.out__notice{color:var(--fg-muted);font-family:var(--font)}
+.out__err{display:block;margin-top:6px;color:var(--err);font-family:var(--font)}
+.out__trunc{display:block;margin-bottom:4px;color:var(--fg-muted);font-family:var(--font);font-size:11.5px}
+.st{display:block}
+.stx{display:block;margin:6px 0 4px;color:var(--fg);font:13px/1.5 var(--font);white-space:normal}
+.stx:first-child{margin-top:0}
+.out__h{display:block;margin-top:8px;color:var(--fg);font-weight:600;font-family:var(--font)}
+.bd__acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.toast{margin-left:4px;color:var(--ok);font-size:12px;align-self:center}
+@container main (max-width:559px){
+  .block{padding:0 16px 12px}
+  .bl{flex-wrap:wrap;row-gap:0}
+  .bl__cmd,.bl__title{white-space:normal;overflow-wrap:anywhere}
+  .bd{padding-left:10px}
+  .bd__acts .btn{min-height:44px;flex:1 1 auto;justify-content:center}
+  .hbtn span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar" role="toolbar" aria-label="Entwurfsleiste">
+  <strong class="bar__title">Entwurf · Verlaufszeile im Chat</strong>
+  <div class="grp"><span class="lbl">Dev-Server</span><fieldset class="seg" data-k="srv"><label><input type="radio" name="b-srv" value="running"><span>läuft</span></label><label><input type="radio" name="b-srv" value="completed"><span>beendet</span></label><label><input type="radio" name="b-srv" value="error"><span>Fehler</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Subagent</span><fieldset class="seg" data-k="sub"><label><input type="radio" name="b-sub" value="running"><span>läuft</span></label><label><input type="radio" name="b-sub" value="completed"><span>beendet</span></label><label><input type="radio" name="b-sub" value="error"><span>Fehler</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Ausgabe</span><fieldset class="seg" data-k="out"><label><input type="radio" name="b-out" value="normal"><span>normal</span></label><label><input type="radio" name="b-out" value="long"><span>sehr lang</span></label><label><input type="radio" name="b-out" value="empty"><span>leer</span></label><label><input type="radio" name="b-out" value="fail"><span>Ladefehler</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Breite</span><fieldset class="seg" data-k="w"><label><input type="radio" name="b-w" value="390"><span>390</span></label><label><input type="radio" name="b-w" value="860"><span>860</span></label><label><input type="radio" name="b-w" value="1366"><span>1366</span></label><label><input type="radio" name="b-w" value="full"><span>Voll</span></label></fieldset></div>
+  <div class="grp"><span class="lbl">Thema</span><fieldset class="seg" data-k="theme"><label><input type="radio" name="b-theme" value="light"><span>Hell</span></label><label><input type="radio" name="b-theme" value="dark"><span>Dunkel</span></label></fieldset></div>
+  <span class="bar__stage" id="stage"></span>
+  <button class="btn" id="infoBtn" aria-expanded="false" aria-controls="info">ⓘ Aufgabe</button>
+</header>
+<section class="info" id="info" hidden>
+  <h3>Wofür</h3>
+  <ul><li>Sehen, was ein Prozess oder Subagent tut, und ihn bei Bedarf beenden, direkt im Chat.</li></ul>
+  <h3>Vorschlag</h3>
+  <ul>
+    <li>Zugeklappt sieht die Zeile aus wie heute. Ein Klick klappt sie auf, statt die Seitenleiste zu öffnen.</li>
+    <li>Aufgeklappt: Zustandszeile, Ausgabe bzw. Schritte, darunter die Knöpfe.</li>
+    <li>Die Ausgabe eines laufenden Prozesses lädt alle 2 s nach und folgt dem Ende. Beim Zuklappen hört das Nachladen auf.</li>
+    <li>Ein Subagent zeigt Text und Werkzeugaufrufe in ihrer Reihenfolge, wie ein kleiner Chat. Das Ergebnis steht unten. Dafür muss der Kern den Text mitschneiden; heute behält er nur den letzten.</li>
+    <li>„Beenden“ gibt es nur, solange etwas läuft. Es fragt nicht nach, wie heute in der Seitenleiste.</li>
+    <li>Kopfzeile: „Nebenfragen“ mit Fragezeichen (Phase 3).</li>
+  </ul>
+  <h3>Beispiel</h3>
+  <ul><li>Texte, Befehle und Ausgaben sind erfunden. Werkzeug-Symbole ersetzen die Figuren des Skins.</li></ul>
+</section>
+<main class="stage"><div class="app" id="app">
+  <div class="app__head"><span class="app__name">#1 Accordion-Designelement für den Va…</span>
+    <span class="hbtn" title="Nebenfragen dieser Session — Strg+; stellt eine neue"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><path d="M5.3 5.4a1.8 1.8 0 1 1 2.5 1.6c-.5.3-.8.6-.8 1.2v.3" stroke-linecap="round"/><circle cx="7" cy="10.3" r=".7" fill="currentColor" stroke="none"/></svg><span>Nebenfragen</span> 2</span>
+  </div>
+  <div class="timeline" id="tl"></div>
+  <div class="composer">Nachricht an Claude … (/ für Skills)</div>
+</div></main>
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var state={srv:'running',sub:'running',out:'normal',w:'full',theme:null};
+var hp=new URLSearchParams(location.hash.slice(1));['srv','sub','out','w','theme'].forEach(function(k){if(hp.get(k))state[k]=hp.get(k)});
+if(!state.theme)state.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+var open={srv:true,sub:true},copied={},stopping={},live=[],subLive=3,t0=Date.now()-252000;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var CH='<svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 1.5L6.5 5 3 8.5"/></svg>';
+var I={
+ stop:'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.2" fill="currentColor"/></svg>',
+ web:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M8 2h4v4M12 2 6.5 7.5M10.5 8.5V12h-8.5V3.5H5.5"/></svg>',
+ copy:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="4.5" y="4.5" width="7.5" height="7.5" rx="1.2"/><path d="M9.5 4.5V2.5a.8.8 0 0 0-.8-.8H2.5a.8.8 0 0 0-.8.8v6.2c0 .4.4.8.8.8h2"/></svg>'
+};
+var BOOT=['> verwalter@0.74.0 tauri dev','> vite','','  VITE v6.0.3  ready in 812 ms','','  ➜  Local:   http://localhost:1420/','  ➜  Network: use --host to expose','     Running BeforeDevCommand (`pnpm dev`)','   Compiling verwalter v0.74.0 (C:\\Users\\smick\\develop\\Agenten-Verwalter-2000\\src-tauri)','    Finished `dev` profile [unoptimized + debuginfo] target(s) in 41.27s','     Running `target\\debug\\verwalter.exe`'];
+var HMR=['[vite] hmr update /src/features/chat/BackgroundLine.tsx','[vite] hmr update /src/features/chat/BackgroundDetail.tsx, /src/features/chat/BackgroundDetail.css','[vite] page reload src/app/App.tsx','[vite] hmr update /src/features/chat/ChatTimeline.tsx'];
+function dur(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60);return m+':'+String(s%60).padStart(2,'0')}
+function srvItem(){
+  var st=stopping.srv?'completed':state.srv;
+  return {key:'srv',kind:'process',state:st,title:'pnpm tauri dev',desc:'Dev-Server starten',url:st==='running'?'http://localhost:1420':null,exit:st==='error'?1:(st==='completed'?null:null)};
+}
+function srvText(it){
+  if(state.out==='empty')return {notice:'Noch keine Ausgabe.'};
+  if(state.out==='fail')return {text:BOOT.slice(0,6).join('\n'),err:'Ausgabe nicht ladbar: Die Datei der Ausgabe ist gesperrt. Neuer Versuch in 2 s.'};
+  var lines=BOOT.concat(live);
+  if(state.out==='long'){var L=[];for(var i=0;i<380;i++)L.push(HMR[i%HMR.length]);lines=BOOT.concat(L).concat(live)}
+  if(it.state==='error')lines=lines.concat(['','error[E0425]: cannot find value `stepLines` in this scope','  --> src\\features\\chat\\BackgroundDetail.tsx:41:18','ELIFECYCLE  Command failed with exit code 1.']);
+  if(it.state==='completed')lines=lines.concat(['','Beendet auf Wunsch.']);
+  return {text:lines.join('\n'),trunc:state.out==='long'?'Ältere Zeilen gekürzt, die letzten 200 KB sind zu sehen.':null};
+}
+function stateLine(it){
+  var lbl={running:'läuft',completed:'beendet',error:'fehlgeschlagen',paused:'pausiert'}[it.state];
+  var t=it.state==='running'?'seit '+dur(Date.now()-t0):'nach '+dur(252000);
+  var x='<b class="s-'+it.state+'">'+lbl+'</b><span>'+t+'</span>';
+  if(it.exit!=null)x+='<span>Exit-Code '+it.exit+'</span>';
+  if(it.state==='running')x+='<span class="bd__live"><i aria-hidden="true"></i>'+(it.kind==='subagent'?'Schritte live':'Ausgabe live')+'</span>';
+  return '<div class="bd__state">'+x+'</div>';
+}
+function acts(it){
+  var a='';
+  if(it.state==='running'&&it.kind!=='command')a+='<button class="btn btn--danger" data-stop="'+it.key+'" title="Hält den Prozess an. Der Agent erfährt davon.">'+I.stop+'Beenden</button>';
+  if(it.url)a+='<button class="btn" title="Öffnet die Adresse im Standardbrowser.">'+I.web+'Im Browser öffnen</button>';
+  a+='<button class="btn" data-copy="'+it.key+'" title="Kopiert die Ausgabe in die Zwischenablage.">'+I.copy+(copied[it.key]?'Kopiert':'Ausgabe kopieren')+'</button>';
+  return '<div class="bd__acts">'+a+'</div>';
+}
+function procLine(it,o){
+  var ex=!!open[it.key];
+  var h='<button class="bl" data-tog="'+it.key+'" aria-expanded="'+ex+'" title="'+(ex?'Details verbergen':'Details zeigen')+'"><i class="bl__dot d-'+it.state+'" aria-hidden="true"></i><span class="bl__name">Bash</span><span class="bl__note">im Hintergrund</span><span class="bl__title">'+esc(it.desc)+'</span><span class="bl__cmd">'+esc(it.title)+'</span>'+(it.url?'<span class="bl__url">→ '+esc(it.url)+'</span>':'')+CH+'</button>';
+  if(ex){
+    var out='<div class="out" data-out="'+it.key+'">'+(o.trunc?'<span class="out__trunc">'+o.trunc+'</span>':'')+(o.notice?'<span class="out__notice">'+o.notice+'</span>':esc(o.text))+(o.err?'<span class="out__err">'+esc(o.err)+'</span>':'')+'</div>';
+    h+='<div class="bd">'+stateLine(it)+out+acts(it)+'</div>';
+  }
+  return '<div class="block">'+h+'</div>';
+}
+var STEPS=['T:Ich lese zuerst die Code-Map, um den Hintergrund-Bereich einzugrenzen.','Read docs/code-map.md','Grep BackgroundPanel','T:Das Panel hängt an vier Reitern. Ich prüfe, wer die drei wegfallenden importiert.','Read src/features/background/BackgroundPanel.tsx','Read src/stores/background.ts','Grep openItem','Read src/features/chat/BackgroundLine.tsx','Grep stopBackgroundItem','T:Wichtig: stopBackgroundItem wird nur in ProcessesTab und SubagentsTab aufgerufen. Ohne Ersatz gäbe es kein Beenden mehr.','Read src/features/background/ProcessesTab.tsx','Read src/features/background/SubagentsTab.tsx','Grep scratchpad_list','Read src-tauri/src/lib.rs','Read src-tauri/src/commands/background.rs'];
+function subItem(){
+  var st=stopping.sub?'completed':state.sub,n=st==='running'?Math.min(subLive,STEPS.length):STEPS.length,steps=STEPS.slice(0,n);
+  return {key:'sub',kind:'subagent',state:st,type:'Explore',model:'Sonnet 5.5',title:'Hintergrund-Panel Anhängsel inventarisieren',uses:steps.filter(function(s){return s.slice(0,2)!=='T:'}).length,steps:steps,
+   result:stopping.sub?null:st==='completed'?'Inventar fertig: 14 Dateien dienen nur den drei Reitern. „Beenden“ gibt es heute nur in Prozesse und Subagenten.':null,
+   error:st==='error'?'Der Subagent brach ab: Zeitlimit des Werkzeugs erreicht.':null,stopped:!!stopping.sub};
+}
+function subLine(it){
+  var ex=!!open[it.key],lbl={running:'läuft',completed:'beendet',error:'fehlgeschlagen'}[it.state];
+  var h='<button class="bl" data-tog="sub" aria-expanded="'+ex+'" title="'+(ex?'Details verbergen':'Details zeigen')+'"><i class="bl__dot d-'+it.state+'" aria-hidden="true"></i><span class="bl__name">Agent</span><span class="bl__type">'+it.type+'</span><span class="bl__title">'+esc(it.title)+'</span><span class="bl__meta">· '+lbl+' · '+it.uses+' Aufrufe</span>'+CH+'</button>';
+  if(ex){
+    var txt=it.steps.map(function(s){if(s.slice(0,2)==='T:')return '<span class="stx">'+esc(s.slice(2))+'</span>';var p=s.split(' ');return '<span class="st">⎿ '+esc(p[0])+'  '+esc(p.slice(1).join(' '))+'</span>'}).join('');
+    var tail='';
+    if(it.result)tail='<span class="out__h">Ergebnis</span>'+esc(it.result);
+    else if(it.error)tail='<span class="out__err">'+esc(it.error)+'</span>';
+    else if(it.stopped)tail='<span class="out__notice"><br>Beendet auf Wunsch. Der Agent erfährt davon.</span>';
+    else tail='<span class="out__notice"><br>Ergebnis folgt, sobald der Subagent fertig ist.</span>';
+    h+='<div class="bd">'+stateLine({state:it.state,kind:'subagent'}).replace('</div>','<span>'+it.model+'</span></div>')+'<div class="out" data-out="sub">'+txt+tail+'</div>'+acts(it)+'</div>';
+  }
+  return '<div class="block">'+h+'</div>';
+}
+function tools(){return '<div class="block"><div class="tg__row"><i class="tg__dot"></i><button class="tg__toggle" aria-expanded="false">2 Befehle · 1 Datei gelesen'+CH+'</button></div></div>'}
+function render(){
+  var tl=$('#tl'),st=tl.scrollTop,outEl=document.querySelector('[data-out="srv"]'),follow=!outEl||outEl.scrollTop+outEl.clientHeight>=outEl.scrollHeight-8;
+  var it=srvItem();
+  tl.innerHTML=
+   '<div class="block"><div class="ubox">Starte den Dev-Server und schau, ob die neue Verlaufszeile läuft.</div></div>'+
+   '<div class="block"><div class="think">Gedankengang · 4 s</div></div>'+tools()+
+   procLine(it,srvText(it))+
+   '<div class="block"><p class="atext">Der Server läuft unter <code>localhost:1420</code>. Ich lasse parallel das Inventar ziehen.</p></div>'+
+   subLine(subItem())+
+   '<div class="block"><p class="atext">Inventar ist da. Nächster Schritt: <code>BackgroundDetail.tsx</code> verdrahten.</p></div>';
+  tl.scrollTop=st;
+  var o2=document.querySelector('[data-out="srv"]');if(o2&&follow)o2.scrollTop=o2.scrollHeight;
+  sync();
+}
+function sync(){
+  document.documentElement.classList.toggle('dark',state.theme==='dark');
+  document.querySelectorAll('[data-k] input').forEach(function(i){i.checked=state[i.closest('[data-k]').dataset.k]===i.value});
+  $('#app').style.setProperty('--w',state.w==='full'?'100%':state.w+'px');
+  try{history.replaceState(null,'','#'+new URLSearchParams({srv:state.srv,out:state.out,w:state.w,theme:state.theme}).toString())}catch(e){}
+  stage();
+}
+function stage(){var w=$('#app').clientWidth,n=w<560?'Handy':w<900?'Tablet':w<1200?'Laptop':'Desktop';$('#stage').textContent='Stufe: '+n+' · '+w+' px'}
+document.addEventListener('change',function(ev){var g=ev.target.closest('[data-k]');if(!g)return;state[g.dataset.k]=ev.target.value;if(g.dataset.k==='srv')stopping.srv=false;if(g.dataset.k==='sub'){stopping.sub=false;subLive=3}render()});
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest('[data-tog]');if(t){open[t.dataset.tog]=!open[t.dataset.tog];render();return}
+  var s=ev.target.closest('[data-stop]');if(s){var sk=s.dataset.stop;s.disabled=true;s.lastChild.textContent='Wird beendet …';setTimeout(function(){stopping[sk]=true;render()},700);return}
+  var c=ev.target.closest('[data-copy]');if(c){var k=c.dataset.copy;copied[k]=true;render();setTimeout(function(){copied[k]=false;render()},1500)}
+});
+$('#infoBtn').addEventListener('click',function(){var p=$('#info'),o=p.hidden;p.hidden=!o;this.setAttribute('aria-expanded',String(o))});
+new ResizeObserver(stage).observe($('#app'));
+var n=0;setInterval(function(){
+  if(document.querySelector('[data-stop]:disabled'))return;
+  var it=srvItem(),sub=subItem(),dirty=false;
+  if(it.state==='running'){dirty=true;if(open.srv&&state.out!=='empty'&&state.out!=='fail')live.push(HMR[n++%HMR.length])}
+  if(sub.state==='running'){dirty=true;if(subLive<STEPS.length)subLive++}
+  if(dirty)render();
+},2000);
+render();
+})();
+</script>
+</body>
+</html>

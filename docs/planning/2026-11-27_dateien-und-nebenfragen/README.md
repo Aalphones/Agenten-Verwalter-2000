@@ -7,10 +7,12 @@ Zwei Wünsche aus dem Alltag: (1) Sessions ohne Repository haben keinen Reiter �
 | Phase | Titel | Rating | Modell | Status |
 |---|---|---|---|---|
 | 1 | Reiter „Dateien“ ohne Repository | standard | sonnet | pending |
-| 2 | Verlaufszeile im Chat: aufklappbar mit Ausgabe, Beenden, Kopieren | standard | sonnet | pending |
+| 2 | Verlaufszeile im Chat: aufklappbar mit Ausgabe, Subagent-Text, Beenden, Kopieren | standard | sonnet | pending |
 | 3 | Seitenleiste nur Nebenfragen, Fragezeichen, Aufräumen | standard | sonnet | pending |
 
-Reihenfolge ist zwingend: Phase 2 übernimmt Bausteine (`useItemOutput`, `OutputPane`, `stopBackgroundItem`, `stepLines`), die Phase 3 sonst mit den Reitern löschen würde.
+Reihenfolge ist zwingend: Phase 2 übernimmt Bausteine (`useItemOutput`, `OutputPane`, `stopBackgroundItem`), die Phase 3 sonst mit den Reitern löschen würde.
+
+Entwurf der Verlaufszeile (verbindlich für Phase 2): [artifacts/entwurf-verlaufszeile.html](artifacts/entwurf-verlaufszeile.html) — im Browser öffnen, Entwurfsleiste oben schaltet Zustände, Breite und Thema; Werte aus `src/styles/theme.css`, Texte und Ausgaben erfunden.
 
 ## Entscheidungen des Users
 
@@ -19,6 +21,7 @@ Reihenfolge ist zwingend: Phase 2 übernimmt Bausteine (`useItemOutput`, `Output
 - Die Übersicht eines Vorhabens ohne Repository bekommt dieselbe Regel.
 - Seitenleiste nur noch Nebenfragen, Kopfzeilen-Symbol Fragezeichen.
 - Die Verlaufszeile im Chat für Subagenten und Prozesse wird aufklappbar: Ausgabe sehen, beenden.
+- Der Kern schneidet den Text von Subagenten in Reihenfolge mit den Werkzeugaufrufen mit (heute bleibt nur der letzte).
 
 ## Von mir gesetzt
 
