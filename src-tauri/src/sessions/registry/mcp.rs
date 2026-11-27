@@ -1,16 +1,22 @@
 //! MCP-Server der Session über Steueranfragen an ihren Agenten. Die Liste gibt es nur im Speicher
-//! und wird mit dem Prozess verworfen (ADR 013); jede Änderung meldet `mcp://changed`.
+//! und wird mit dem Prozess verworfen (ADR 013); jede Änderung meldet `mcp://changed`. Die
+//! Konfiguration liest der Core selbst aus den Dateien, auch ohne Agent (ADR 070).
+use std::path::PathBuf;
+
 use serde_json::Value;
 use tauri::AppHandle;
 
-use super::{Outbox, SessionRegistry, SessionState, now_ms, update};
+use super::{Outbox, Session, SessionRegistry, SessionState, now_ms, update};
 use crate::agents::claude::protocol::{
     control_request, mcp_authenticate, mcp_reconnect, mcp_status, mcp_toggle,
 };
 use crate::error::CommandError;
+use crate::mcp::config_files::{self, LoadedConfig};
 use crate::mcp::model::{
-    McpAction, McpActionError, McpAuthWait, McpServer, McpServerStatus, SessionMcp,
+    McpAction, McpActionError, McpAuthWait, McpConfigView, McpServer, McpServerStatus, SessionMcp,
 };
+use crate::standalone::home_dir;
+use crate::worktrees::SessionRepository;
 
 pub(super) const MCP_CHANGED_EVENT: &str = "mcp://changed";
 
@@ -36,6 +42,27 @@ impl SessionRegistry {
             auth: state.mcp_auth.clone(),
             fetched_at: state.mcp_fetched_at,
             is_agent_running: state.is_listening(),
+        })
+    }
+
+    /// Die Server aus den Konfigurationsdateien, auch ohne Agent. Liest nur; fehlende
+    /// Arbeitsordner entstehen hier nicht.
+    pub fn mcp_config(&self, session_id: &str) -> Result<McpConfigView, CommandError> {
+        let session = self.get(session_id)?;
+        let config = load_config(&session, &session.repositories())
+            .ok_or_else(|| CommandError::Io("Benutzerordner unbekannt".to_owned()))?;
+        let fingerprint = config.fingerprint();
+        // Erst nach dem Lesen sperren: die Dateien liegen nicht unter der Session-Sperre.
+        let state = session.lock();
+        let config_changed = state.process.is_some()
+            && state
+                .process_mcp_fingerprint
+                .is_some_and(|started_with: u64| started_with != fingerprint);
+        drop(state);
+        Ok(McpConfigView {
+            sources: config.sources(),
+            config_changed,
+            disabled_everywhere: Vec::new(),
         })
     }
 
@@ -117,6 +144,31 @@ impl SessionRegistry {
             },
         )
     }
+}
+
+/// Der Stand der Konfiguration, mit dem ein Prozess gestartet wird; `None` ohne Benutzerordner.
+pub(super) fn mcp_fingerprint(
+    session: &Session,
+    repositories: &[SessionRepository],
+) -> Option<u64> {
+    load_config(session, repositories).map(|config: LoadedConfig| config.fingerprint())
+}
+
+fn load_config(session: &Session, repositories: &[SessionRepository]) -> Option<LoadedConfig> {
+    let folders: Vec<(String, PathBuf)> = repositories
+        .iter()
+        .map(|repository: &SessionRepository| {
+            (
+                repository.name.clone(),
+                repository.working_dir(&session.workspace),
+            )
+        })
+        .collect();
+    Some(config_files::load(
+        &home_dir()?,
+        &session.workspace,
+        &folders,
+    ))
 }
 
 impl SessionState {

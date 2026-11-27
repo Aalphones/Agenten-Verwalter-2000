@@ -95,3 +95,114 @@ pub struct SessionMcp {
 pub struct McpChangedEvent {
     pub session_id: String,
 }
+
+/// Ablageort eines Servers (ADR 070).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum McpSourceKind {
+    User,
+    Local,
+    Repository,
+    Workspace,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpSource {
+    /// `user`, `local`, `repo:<Repository-Name>` oder `workspace`.
+    pub id: String,
+    pub kind: McpSourceKind,
+    /// Repository-Name; bei den anderen Quellen leer.
+    pub label: String,
+    /// Anzeigepfad mit `/`, der Benutzerordner als `~`.
+    pub file: String,
+    pub servers: Vec<McpConfigEntry>,
+    /// Datei nicht lesbar oder kein JSON: ein Satz ohne Dateiinhalt.
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum McpTransport {
+    Stdio,
+    Http,
+    Sse,
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpConfigEntry {
+    pub name: String,
+    pub transport: McpTransport,
+    /// URL oder Befehl mit Argumenten, durch Leerzeichen getrennt.
+    pub target: String,
+    /// Nur Stdio.
+    pub command: Option<String>,
+    /// Nur Stdio.
+    pub args: Vec<String>,
+    /// Nur Http und Sse.
+    pub url: Option<String>,
+    /// Header (Http, Sse) bzw. Umgebung (Stdio).
+    pub pairs: Vec<McpPair>,
+    pub enabled: bool,
+    /// ID der Quelle, deren gleichnamiger Server gewinnt.
+    pub shadowed_by: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpPair {
+    pub key: String,
+    /// `None`: verborgen, weil der Wert kein reiner `${VAR}`-Verweis ist.
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpConfigView {
+    pub sources: Vec<McpSource>,
+    /// Der laufende Agent wurde mit einer anderen Konfiguration gestartet.
+    pub config_changed: bool,
+    /// Namen, die der Verwalter in allen Vorhaben ausgeschaltet hält.
+    pub disabled_everywhere: Vec<String>,
+}
+
+/// Eingabe des Formulars. Kein `Debug`: die Werte sind Zugangsdaten.
+#[derive(Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpDraft {
+    pub source_id: String,
+    /// Gesetzt beim Bearbeiten.
+    pub original_name: Option<String>,
+    pub name: String,
+    pub transport: McpTransport,
+    pub url: Option<String>,
+    pub command: Option<String>,
+    pub args: Vec<String>,
+    pub pairs: Vec<McpPairDraft>,
+}
+
+/// Kein `Debug`: `value` ist ein Zugangsdatum.
+#[derive(Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpPairDraft {
+    pub key: String,
+    /// `None`: den bisherigen Wert behalten.
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpToolInfo {
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct McpProbeResult {
+    pub tools: Vec<McpToolInfo>,
+    pub instructions: Option<String>,
+    pub error: Option<String>,
+}

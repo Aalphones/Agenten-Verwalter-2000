@@ -23,13 +23,15 @@
 
 ## Checkliste
 
-- [ ] `src-tauri/src/mcp/config_files.rs` anlegen (in `mcp/mod.rs` einhängen): `pub fn load_sources(home: &Path, workspace: &Path, repositories: &[(String, PathBuf)]) -> Vec<McpSource>` und `pub fn fingerprint(sources_raw) -> u64`. `folder_key` und `read_json` aus `standalone/mcp/config.rs` auf `pub(crate)` stellen und wiederverwenden, nicht kopieren.
-- [ ] Rohdaten intern als `serde_json::Map` halten (Phase 2 schreibt darauf); die Umwandlung in `McpConfigEntry` maskiert.
-- [ ] Typen aus dem Kontrakt in `mcp/model.rs` mit `#[derive(TS)]` wie die bestehenden.
-- [ ] `SessionRegistry::mcp_config(&self, session_id) -> Result<McpConfigView, CommandError>` in `src-tauri/src/sessions/registry/mcp.rs`; Repositories über `session.repositories()` + `working_dir(&session.workspace)`, Name = Repository-Name.
-- [ ] Fingerabdruck in `start_process` setzen (neben `process_repository_count`).
-- [ ] Command `mcp_config_load` in `commands/mcp.rs`, in `lib.rs` registrieren; Wrapper `loadMcpConfig` in `src/lib/mcp.ts`.
-- [ ] `pnpm check` und `cargo clippy` grün; Bindings neu erzeugt und mit committet.
-- [ ] Doc: Code-Map-Zeile „MCP-Server“ um `mcp/config_files.rs` und den Command ergänzen.
+- [x] `src-tauri/src/mcp/config_files.rs` anlegen (in `mcp/mod.rs` einhängen): `pub fn load_sources(home: &Path, workspace: &Path, repositories: &[(String, PathBuf)]) -> Vec<McpSource>` und `pub fn fingerprint(sources_raw) -> u64`. `folder_key` und `read_json` aus `standalone/mcp/config.rs` auf `pub(crate)` stellen und wiederverwenden, nicht kopieren.
+- [x] Rohdaten intern als `serde_json::Map` halten (Phase 2 schreibt darauf); die Umwandlung in `McpConfigEntry` maskiert.
+- [x] Typen aus dem Kontrakt in `mcp/model.rs` mit `#[derive(TS)]` wie die bestehenden.
+- [x] `SessionRegistry::mcp_config(&self, session_id) -> Result<McpConfigView, CommandError>` in `src-tauri/src/sessions/registry/mcp.rs`; Repositories über `session.repositories()` + `working_dir(&session.workspace)`, Name = Repository-Name.
+- [x] Fingerabdruck in `start_process` setzen (neben `process_repository_count`).
+- [x] Command `mcp_config_load` in `commands/mcp.rs`, in `lib.rs` registrieren; Wrapper `loadMcpConfig` in `src/lib/mcp.ts`.
+- [x] `pnpm check` und `cargo clippy` grün; Bindings neu erzeugt und mit committet.
+- [x] Doc: Code-Map-Zeile „MCP-Server“ um `mcp/config_files.rs` und den Command ergänzen.
 
 ## Report-Back
+
+Status: complete. `LoadedConfig` (rohe Objekte, ohne `Debug`) in `mcp/config_files.rs` mit `load`, `sources()` (maskiert) und `fingerprint()` (Reihenfolge der Schlüssel zählt nicht). `folder_key` war schon `pub`; neu `try_read_json`, `is_variable_reference`, `project_entries` als `pub(crate)`. `disabled_everywhere` bleibt bis Phase 2 leer. Abweichung: `load_sources`/`fingerprint` sind Methoden eines `LoadedConfig`, damit Phase 2 auf denselben Rohdaten schreiben kann. Codex-Prozesse setzen keinen Fingerabdruck. Nicht in der laufenden App gelaufen, nur `pnpm check` und Clippy.

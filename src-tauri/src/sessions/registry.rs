@@ -252,6 +252,9 @@ struct SessionState {
     /// Anzahl Repositories, mit denen der laufende Prozess gestartet wurde — `--add-dir` gibt es
     /// nur beim Start, ein angehängtes Repository braucht einen neuen Prozess.
     process_repository_count: usize,
+    /// Stand der MCP-Konfigurationsdateien beim Start des laufenden Prozesses (ADR 070); `None`
+    /// bei Codex, das diese Dateien nicht liest.
+    process_mcp_fingerprint: Option<u64>,
     /// `system/init` wurde mindestens einmal gesehen. Erst dann kennt Claude die Session und
     /// erlaubt `--resume`; davor bricht es mit „No conversation found“ ab.
     has_agent_history: bool,
@@ -2421,6 +2424,7 @@ impl SessionState {
             process_backend: None,
             process_mode: OperatingMode::Claude,
             process_repository_count: 0,
+            process_mcp_fingerprint: None,
             has_agent_history: false,
             mode,
             created_at: now,
@@ -4385,6 +4389,12 @@ fn start_process(
     let generation = state.generation;
     let callback_app = app.clone();
     let callback_session = Arc::clone(session);
+    // Vor dem Start gelesen: eine Änderung während des Starts zählt damit als Abweichung.
+    let process_mcp_fingerprint = if codex_exe.is_some() {
+        None
+    } else {
+        mcp::mcp_fingerprint(session, &repositories)
+    };
     let process = spawn(
         SpawnOptions {
             exe,
@@ -4428,6 +4438,7 @@ fn start_process(
     state.process_backend = backend.cloned();
     state.process_mode = operating_mode;
     state.process_repository_count = repositories.len();
+    state.process_mcp_fingerprint = process_mcp_fingerprint;
     state.translator = Translator::default();
     // Die erste Zeile des neuen Prozesses setzt den Anker neu, auch bei gleicher `message.id`.
     state.cache_message_id = None;

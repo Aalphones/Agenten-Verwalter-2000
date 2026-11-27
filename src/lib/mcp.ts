@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { McpChangedEvent } from '@/lib/bindings/McpChangedEvent';
+import type { McpConfigView } from '@/lib/bindings/McpConfigView';
 import type { SessionMcp } from '@/lib/bindings/SessionMcp';
 
 const MCP_CHANGED_EVENT = 'mcp://changed';
@@ -41,6 +42,12 @@ export function toggleMcpServer(
   enabled: boolean,
 ): Promise<boolean> {
   return invoke<boolean>('mcp_toggle', { sessionId, server, enabled });
+}
+
+/** Die Server aus den Konfigurationsdateien der Session, auch ohne laufenden Agenten; Zugangsdaten sind verborgen.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `io` ohne Benutzerordner */
+export function loadMcpConfig(sessionId: string): Promise<McpConfigView> {
+  return invoke<McpConfigView>('mcp_config_load', { sessionId });
 }
 
 /** Meldet jede Änderung am MCP-Stand einer Session; danach `loadMcp` neu laden. */

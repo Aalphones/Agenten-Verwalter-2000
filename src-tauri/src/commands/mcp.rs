@@ -1,5 +1,5 @@
 use crate::error::CommandError;
-use crate::mcp::model::SessionMcp;
+use crate::mcp::model::{McpConfigView, SessionMcp};
 use crate::sessions::registry::SessionRegistry;
 
 // `async`, damit der Zugriff auf den Session-Zustand nicht auf dem Haupt-Thread läuft.
@@ -54,4 +54,13 @@ pub async fn mcp_toggle(
     enabled: bool,
 ) -> Result<bool, CommandError> {
     registry.toggle_mcp(&app, &session_id, &server, enabled)
+}
+
+/// Die Server aus den Konfigurationsdateien; braucht keinen Agenten.
+#[tauri::command]
+pub async fn mcp_config_load(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+) -> Result<McpConfigView, CommandError> {
+    registry.mcp_config(&session_id)
 }

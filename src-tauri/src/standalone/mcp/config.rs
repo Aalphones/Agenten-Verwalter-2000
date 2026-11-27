@@ -125,7 +125,7 @@ pub fn load(
 
 /// Die Einträge in `projects`, deren Schlüssel der Arbeitsordner ist. Claude Code schreibt
 /// denselben Ordner in mehreren Schreibweisen (`C:\…`, `c:/…`), deshalb alle passenden.
-fn project_entries<'a>(config: &'a Value, cwd: &Path) -> Vec<&'a Map<String, Value>> {
+pub(crate) fn project_entries<'a>(config: &'a Value, cwd: &Path) -> Vec<&'a Map<String, Value>> {
     let wanted = folder_key(cwd);
     let Some(projects) = config.get(PROJECTS_KEY).and_then(Value::as_object) else {
         return Vec::new();
@@ -256,32 +256,50 @@ fn expanded(text: &str) -> String {
         .into_owned()
 }
 
-/// Eine fehlende Datei bleibt still; eine unlesbare oder kaputte kommt ins Protokoll — nur mit
-/// Pfad und Zeile, nie mit dem Fehlertext des JSON-Lesers, der Inhalt zitieren kann.
-fn read_json(path: &Path) -> Option<Value> {
+/// Warum eine vorhandene Konfigurationsdatei nicht zu lesen ist — ohne Inhalt der Datei.
+pub(crate) enum ReadFailure {
+    Unreadable,
+    InvalidJson,
+}
+
+/// `Ok(None)`: die Datei fehlt. Eine unlesbare oder kaputte kommt ins Protokoll — nur mit Pfad
+/// und Zeile, nie mit dem Fehlertext des JSON-Lesers, der Inhalt zitieren kann.
+pub(crate) fn try_read_json(path: &Path) -> Result<Option<Value>, ReadFailure> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
-        Err(error) if error.kind() == ErrorKind::NotFound => return None,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
         Err(error) => {
             eprintln!(
                 "MCP-Konfiguration {} nicht lesbar: {}",
                 path.display(),
                 error.kind()
             );
-            return None;
+            return Err(ReadFailure::Unreadable);
         }
     };
     match serde_json::from_str::<Value>(text.trim_start_matches(BYTE_ORDER_MARK)) {
-        Ok(value) => Some(value),
+        Ok(value) => Ok(Some(value)),
         Err(error) => {
             eprintln!(
                 "MCP-Konfiguration {} ist kein gültiges JSON (Zeile {})",
                 path.display(),
                 error.line()
             );
-            None
+            Err(ReadFailure::InvalidJson)
         }
     }
+}
+
+/// Wie `try_read_json`, für Leser, denen eine kaputte Datei wie eine fehlende gilt.
+fn read_json(path: &Path) -> Option<Value> {
+    try_read_json(path).ok().flatten()
+}
+
+/// Besteht der ganze Text aus einem `${VAR}`- oder `${VAR:-vorgabe}`-Verweis?
+pub(crate) fn is_variable_reference(text: &str) -> bool {
+    VARIABLE_PATTERN
+        .find(text)
+        .is_some_and(|found: regex::Match<'_>| found.start() == 0 && found.end() == text.len())
 }
 
 /// Server, die der Benutzer in diesem Arbeitsordner ausgeschaltet hat. Der eigene Agent speichert

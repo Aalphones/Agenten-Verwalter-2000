@@ -6,7 +6,7 @@ Der Dialog „MCP-Server“ zeigt Server auch ohne laufenden Agenten, gruppiert 
 
 | Phase | Titel | Rating | Modell | Status |
 |---|---|---|---|---|
-| 1 | Core: Konfiguration lesen | heikel | opusplan | pending |
+| 1 | Core: Konfiguration lesen | heikel | opusplan | complete |
 | 2 | Core: Konfiguration schreiben, Neustart bei Änderung | heikel | opusplan | pending |
 | 3 | Core: Verbindung testen, Werkzeuge und Anweisungen lesen | standard | sonnet | pending |
 | 4 | Oberfläche: Liste nach Ablageort | standard | sonnet | pending |

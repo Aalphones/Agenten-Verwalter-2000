@@ -45,8 +45,9 @@ use verwalter_lib::{
     },
     lmstudio::model::{LocalModel, LocalModelKind, LocalModels},
     mcp::model::{
-        McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpServer, McpServerStatus,
-        SessionMcp,
+        McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpConfigEntry, McpConfigView,
+        McpDraft, McpPair, McpPairDraft, McpProbeResult, McpServer, McpServerStatus, McpSource,
+        McpSourceKind, McpToolInfo, McpTransport, SessionMcp,
     },
     notes::model::{NoteSaved, NoteText},
     notices::model::{Denial, Notice},
@@ -184,6 +185,16 @@ fn main() -> Result<(), ts_rs::ExportError> {
     McpAuthWait::export_all(&cfg)?;
     SessionMcp::export_all(&cfg)?;
     McpChangedEvent::export_all(&cfg)?;
+    McpSourceKind::export_all(&cfg)?;
+    McpSource::export_all(&cfg)?;
+    McpTransport::export_all(&cfg)?;
+    McpConfigEntry::export_all(&cfg)?;
+    McpPair::export_all(&cfg)?;
+    McpConfigView::export_all(&cfg)?;
+    McpDraft::export_all(&cfg)?;
+    McpPairDraft::export_all(&cfg)?;
+    McpToolInfo::export_all(&cfg)?;
+    McpProbeResult::export_all(&cfg)?;
     UsageAlert::export_all(&cfg)?;
     UsageLimit::export_all(&cfg)?;
     UsageShare::export_all(&cfg)?;
