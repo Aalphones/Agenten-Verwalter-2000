@@ -1,11 +1,11 @@
 # Review-Bericht abschaltbar
 
-Ein Schalter in den Einstellungen schaltet den Review-Bericht ([ADR 073](../decisions/073-review-bericht.md)) als Ganzes ab: keine `report_*`-Werkzeuge, keine Anweisung an die Stationen, keine Ordnung durch Haiku am Phasenende, kein Reiter „Review“. Die Skills fallen dann auf den HTML-Bericht zurück, weil sie an der Frage „sind die `report_*`-Werkzeuge da?“ hängen; wo sie das noch nicht tun, werden sie nachgezogen.
+Ein Schalter in den Einstellungen schaltet den Review-Bericht ([ADR 073](../../decisions/073-review-bericht.md)) als Ganzes ab: keine `report_*`-Werkzeuge, keine Anweisung an die Stationen, keine Ordnung durch Haiku am Phasenende, kein Reiter „Review“. Die Skills fallen dann auf den HTML-Bericht zurück, weil sie an der Frage „sind die `report_*`-Werkzeuge da?“ hängen; wo sie das noch nicht tun, werden sie nachgezogen.
 
 | Phase | Titel | Rating | Status |
 |---|---|---|---|
 | 1 | Schalter im Verwalter | standard | complete |
-| 2 | Skills auf den Schalter einstellen, Plan fertig | mechanisch | pending |
+| 2 | Skills auf den Schalter einstellen, Plan fertig | mechanisch | complete |
 
 ## Entscheidungen
 
@@ -91,22 +91,40 @@ Ein Schalter in den Einstellungen schaltet den Review-Bericht ([ADR 073](../deci
 
 ### Checkliste
 
-- [ ] `regeldateien.md`, `skill-evolution.md` lesen.
-- [ ] facepass: Status prüfen, `git show 1f54e41` lesen, 12 Zeilen ändern, `Grep` mit `path` auf `.claude\skills` nach `report_` — jeder Treffer steht in einem Satz mit der Werkzeug-Bedingung.
-- [ ] facepass: Commit auf `master`, Push.
-- [ ] User-Ebene: `WORK.md`, Decision-Log, Spiegeln.
-- [ ] „Plan fertig“: Archiv, Version, Tag, Push.
+- [x] `regeldateien.md`, `skill-evolution.md` lesen.
+- [x] facepass: Status prüfen, `git show 1f54e41` lesen, 12 Zeilen ändern, `Grep` mit `path` auf `.claude\skills` nach `report_` — jeder Treffer steht in einem Satz mit der Werkzeug-Bedingung.
+- [x] facepass: Commit auf `master`, Push.
+- [x] User-Ebene: `WORK.md`, Decision-Log, Spiegeln.
+- [x] „Plan fertig“: Archiv, Version, Tag, Push.
 
 ### Report-Back
+
+- facepass: die 12 Zeilen aus `1f54e41` in 7 Dateien nennen jetzt „sind die Werkzeuge `mcp__verwalter__report_*` da: neu, sonst: alt“; Commit `a4cdf58` direkt auf `master`, gepusht. Nur diese 7 Dateien gestaged.
+- User-Ebene: `WORK.md` Zeile „Verifikation = Selbst-Smoke“ auf die Werkzeug-Bedingung, Decision-Log-Eintrag, lokale Kopie gespiegelt; `CLAUDE.md`, `mode-implementing/SKILL.md`, `mode-reviewing/SKILL.md` hingen schon an den Werkzeugen.
+- 🟡 Der facepass-Haupt-Checkout war beim Commit nicht sauber (fremde Änderungen einer parallelen Session an `session-start.md`, `tools/README.md`, `tools/state.py`, `tools/tests/test_state.py`); auf Wunsch des Benutzers trotzdem committet, die fremden Änderungen blieben unberührt im Arbeitsbaum.
 
 ---
 
 ## Summary
 
+Der Review-Bericht lässt sich in den Einstellungen (Agent → Umsetzungen) als Ganzes abschalten: Standard an; aus = keine `report_*`-Werkzeuge, keine Anweisung an die Stationen, keine Ordnung am Phasenende, kein Reiter „Review“; gespeicherte Berichte bleiben. Die facepass-Skills und `WORK.md` hängen an der Frage „sind die `report_*`-Werkzeuge da?“ und fallen bei aus auf den HTML-Bericht zurück. Nachtrag in ADR 073, keine Migration.
+
 ## Files touched
+
+- Verwalter: `src-tauri/src/settings/{mod,model}.rs`, `src-tauri/src/report/{mod,tools}.rs`, `src-tauri/src/agents/claude/process.rs`, `src-tauri/src/sessions/registry.rs`, `src-tauri/src/sessions/registry/side.rs`, `src-tauri/examples/side-probe.rs`, Bindings, `settingsCatalog.ts`, `SettingsView.tsx`, `ImplementationView.tsx`, `App.tsx`, ADR 073, `docs/glossary.md`.
+- facepass: 7 Skill-Dateien unter `.claude/skills/` (siehe `git show a4cdf58`).
+- User-Ebene: `skills/mode-implementing/WORK.md`, `skill-evolution-log.md`.
 
 ## Commits
 
+- Verwalter: `733c944` (Plan), `8490b5f` (Schalter), Archiv-/Release-Commits dieses Abschlusses.
+- facepass: `a4cdf58` auf `master`.
+
 ## Deviations from plan
 
+- Der facepass-Tree war nicht sauber (Plan: dann 🔴); der Benutzer entschied, trotzdem nur die 7 eigenen Dateien zu committen.
+
 ## Follow-ups
+
+- Probe in der laufenden App steht aus: Station mit Schalter aus, `mcp-probe … list` darf die drei `report_*` nicht zeigen, `call report_note {}` muss den Satz aus `unavailable_message` liefern; dazu der Reiter „Review“ bei aus.
+- Der HTML-Rückweg der facepass-Skills ist nicht in einer echten Station mit Schalter aus gelaufen.
