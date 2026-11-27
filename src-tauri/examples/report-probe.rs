@@ -7,7 +7,10 @@
 //! bzw. `… -- <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID>` (druckt den Ort, den ein
 //! `report_note` ohne `at` jetzt bekäme, oder den Fehlersatz)
 //! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> view` (druckt den Bericht, wie ihn `report_load`
-//! zusammensetzt; die Dauer geht nach stderr). Fehler als `FEHLER: <Satz>`.
+//! zusammensetzt; die Dauer geht nach stderr)
+//! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> checks <Phasen-Key>` (druckt die Ordner der
+//! Suche, die gefundenen Berichtsdateien, die Prüfwerte und die Lücken, ohne zu speichern).
+//! Fehler als `FEHLER: <Satz>`.
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -23,7 +26,7 @@ use verwalter_lib::changes::attribution::Ownership;
 use verwalter_lib::changes::sources::{self, Source};
 use verwalter_lib::db::implementations::{self, StoredImplementation};
 use verwalter_lib::db::projects::{self, ProjectRow};
-use verwalter_lib::db::report::{self as report_rows, EntryRow};
+use verwalter_lib::db::report::{self as report_rows, EntryRow, PhaseRow};
 use verwalter_lib::db::sessions::{self, SessionRow};
 use verwalter_lib::db::{
     Database, chat_entries, session_commits, session_files, session_repositories,
@@ -33,15 +36,16 @@ use verwalter_lib::error::CommandError;
 use verwalter_lib::implementation::build_view;
 use verwalter_lib::implementation::model::{ImplementationView, PhaseView, StationView};
 use verwalter_lib::report::assemble::{self, AssembleContext};
+use verwalter_lib::report::checks::{self, PhaseEvidence, SessionLog};
 use verwalter_lib::report::model::{
-    ReportBlock, ReportCode, ReportNote, ReportPhase, ReportRow, ReportRowKind, ReportScreen,
-    ReportShot, ReportStop, ReportView,
+    PhaseChecks, ReportBlock, ReportCode, ReportNote, ReportPhase, ReportRow, ReportRowKind,
+    ReportScreen, ReportShot, ReportStop, ReportView,
 };
 use verwalter_lib::report::tidy::{self, StationTrace, TidyAnswer};
 use verwalter_lib::report::{anchor, range, raw};
 use verwalter_lib::worktrees;
 
-const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID> | <Datenbank-Kopie> <Umsetzungs-ID> view";
+const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID> | <Datenbank-Kopie> <Umsetzungs-ID> view | <Datenbank-Kopie> <Umsetzungs-ID> checks <Phasen-Key>";
 const HAIKU_FLAG: &str = "--haiku";
 
 fn main() -> ExitCode {
@@ -73,6 +77,9 @@ fn main() -> ExitCode {
             anchor_of(&database_path, session_id)
         }
         [_, implementation_id, "view"] => view_of(&database_path, implementation_id),
+        [_, implementation_id, "checks", phase_key] => {
+            checks_of(&database_path, implementation_id, phase_key)
+        }
         _ => {
             eprintln!("{USAGE}");
             return ExitCode::from(2);
@@ -328,11 +335,16 @@ fn project_input(
     })
 }
 
-/// Der Bericht wie `report_load`, auch für eine archivierte Umsetzung: alle Sessions des Vorhabens
-/// gelten als geladen. Bild-Adressen sind hier `<Phasen-ID>/<Datei>`.
-fn view_of(database_path: &Path, implementation_id: &str) -> Result<String, String> {
-    let database = Database::open(database_path).map_err(text_of)?;
-    let started = Instant::now();
+/// Alles, woraus `report_load` den Bericht setzt, auch für eine archivierte Umsetzung: alle
+/// Sessions des Vorhabens gelten als geladen. Bild-Adressen sind hier `<Phasen-ID>/<Datei>`.
+struct LoadedReport {
+    view: ImplementationView,
+    entries: Vec<EntryRow>,
+    phases: Vec<PhaseRow>,
+    context: AssembleContext<'static>,
+}
+
+fn load_report(database: &Database, implementation_id: &str) -> Result<LoadedReport, String> {
     let (stored, entries, phases, rows) = database
         .with(|connection| {
             let stored: StoredImplementation =
@@ -370,21 +382,145 @@ fn view_of(database_path: &Path, implementation_id: &str) -> Result<String, Stri
             input.own.touched,
         )
     });
-    let image_url = |phase_id: &str, file: &str| format!("{phase_id}/{file}");
-    let report = assemble::assemble(
-        &view,
-        &entries,
-        &phases,
-        &AssembleContext {
+    let labels = raw::session_labels(&view, &numbers);
+    Ok(LoadedReport {
+        view,
+        entries,
+        phases,
+        context: AssembleContext {
             checkouts,
             commits,
             touched,
-            labels: raw::session_labels(&view, &numbers),
-            image_url: &image_url,
+            labels,
+            image_url: &image_path,
         },
+    })
+}
+
+fn image_path(phase_id: &str, file: &str) -> String {
+    format!("{phase_id}/{file}")
+}
+
+fn view_of(database_path: &Path, implementation_id: &str) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(text_of)?;
+    let started = Instant::now();
+    let loaded = load_report(&database, implementation_id)?;
+    let report = assemble::assemble(
+        &loaded.view,
+        &loaded.entries,
+        &loaded.phases,
+        &loaded.context,
     );
     eprintln!("Dauer: {} ms", started.elapsed().as_millis());
     Ok(printed(&report))
+}
+
+/// Die Prüfwerte einer Phase, wie das Phasenende sie ermittelt, ohne sie zu speichern.
+fn checks_of(
+    database_path: &Path,
+    implementation_id: &str,
+    phase_key: &str,
+) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(text_of)?;
+    let loaded = load_report(&database, implementation_id)?;
+    let (index, phase) = loaded
+        .view
+        .phases
+        .iter()
+        .enumerate()
+        .find(|(_, phase): &(usize, &PhaseView)| phase.key == phase_key)
+        .ok_or_else(|| format!("keine Phase „{phase_key}“ in der Umsetzung"))?;
+    let started = Instant::now();
+    let entries: Vec<&EntryRow> = loaded
+        .entries
+        .iter()
+        .filter(|entry: &&EntryRow| entry.phase_id == phase.id)
+        .collect();
+    let catalog = assemble::catalog_of(&loaded.context);
+    let ranges =
+        assemble::ranges_of_phase(&loaded.view, index, &entries, &loaded.context, &catalog);
+    let mut histories: Vec<SessionLog> = Vec::new();
+    for session_id in phase
+        .stations
+        .iter()
+        .filter_map(|station: &StationView| station.session_id.as_ref())
+    {
+        let (entries, details) = database
+            .with(|connection| {
+                Ok((
+                    chat_entries::load_all(connection, session_id)?,
+                    tool_details::load_summaries(connection, session_id)?,
+                ))
+            })
+            .map_err(text_of)?;
+        histories.push(SessionLog {
+            session_id: session_id.clone(),
+            entries,
+            details,
+        });
+    }
+    let folders = checks::folders(&ranges);
+    let files = checks::time_window(phase).map_or_else(Vec::new, |(since, until)| {
+        checks::find_files(&folders, since, until)
+    });
+    let found = checks::phase_checks(&PhaseEvidence {
+        sessions: &histories,
+        ranges: &ranges,
+        files: &files,
+        labels: &loaded.context.labels,
+    });
+    eprintln!("Dauer: {} ms", started.elapsed().as_millis());
+
+    let mut lines: Vec<String> = folders
+        .iter()
+        .map(|folder: &PathBuf| format!("Ordner: {}", folder.display()))
+        .collect();
+    lines.extend(
+        files
+            .iter()
+            .map(|file: &PathBuf| format!("Datei: {}", file.display())),
+    );
+    print_checks(&found, &mut lines);
+    Ok(lines.join("\n"))
+}
+
+fn print_checks(found: &PhaseChecks, lines: &mut Vec<String>) {
+    lines.push(format!(
+        "Prüfwerte von {} · Quellen: {}",
+        found.by,
+        found.sources.join(" · ")
+    ));
+    lines.push(match &found.chain {
+        Some(run) => format!("Prüfkette: {} ok={}", run.command, run.ok),
+        None => "Prüfkette: kein Lauf".to_owned(),
+    });
+    lines.push(match &found.tests {
+        Some(tests) => format!(
+            "Tests: {} bestanden, {} fehlgeschlagen, {} übersprungen",
+            tests.passed, tests.failed, tests.skipped
+        ),
+        None => "Tests: kein Bericht".to_owned(),
+    });
+    lines.push(match &found.coverage {
+        Some(coverage) => format!(
+            "Abdeckung neuer Zeilen: {} von {}",
+            coverage.covered, coverage.total
+        ),
+        None => "Abdeckung: keine Zahlen".to_owned(),
+    });
+    lines.push(match &found.mutation {
+        Some(mutation) => format!(
+            "Mutation: {} erkannt, {} überlebt",
+            mutation.killed, mutation.survived
+        ),
+        None => "Mutation: keine Zahlen".to_owned(),
+    });
+    for gap in &found.gaps {
+        lines.push(format!(
+            "Lücke {:?} {} {}:{}-{} {}",
+            gap.kind, gap.repository_key, gap.path, gap.from, gap.to, gap.text
+        ));
+    }
 }
 
 fn printed(report: &ReportView) -> String {
@@ -427,6 +563,9 @@ fn print_phase(phase: &ReportPhase, lines: &mut Vec<String>) {
     }
     for stop in &phase.stops {
         print_stop(stop, lines);
+    }
+    if let Some(found) = &phase.checks {
+        print_checks(found, lines);
     }
     if let Some(review) = &phase.review {
         lines.push(format!(
@@ -512,6 +651,9 @@ fn print_code(code: &ReportCode, lines: &mut Vec<String>) {
     ));
     for note in &code.notes {
         print_note(note, lines);
+    }
+    if !code.uncovered.is_empty() {
+        lines.push(format!("    ohne Test: {:?}", code.uncovered));
     }
 }
 

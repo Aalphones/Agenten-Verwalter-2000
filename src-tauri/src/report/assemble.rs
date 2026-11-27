@@ -8,10 +8,11 @@ use crate::changes::parse;
 use crate::db::report::{EntryRow, EntryTool, PhaseRow};
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
 use crate::report::model::{
-    ImageRow, PhaseChecks, ReportAcceptance, ReportBlock, ReportCode, ReportFigure, ReportFinding,
-    ReportImage, ReportLead, ReportLocation, ReportNote, ReportNoteKind, ReportPhase,
-    ReportPhaseState, ReportReview, ReportRow, ReportRowKind, ReportScreen, ReportShot, ReportStep,
-    ReportStop, ReportView, ReportWayStep, ScreenRow, ShotRow, StepRow,
+    CheckGap, CheckGapKind, ImageRow, PhaseChecks, ReportAcceptance, ReportBlock, ReportCode,
+    ReportFigure, ReportFinding, ReportImage, ReportLead, ReportLocation, ReportNote,
+    ReportNoteKind, ReportPhase, ReportPhaseState, ReportReview, ReportRow, ReportRowKind,
+    ReportScreen, ReportShot, ReportStep, ReportStop, ReportView, ReportWayStep, ScreenRow,
+    ShotRow, StepRow,
 };
 use crate::report::range::{self, Checkout, CommitCatalog, FileStat, PhaseSpan, RepoRange};
 use crate::report::tidy::{self, StopKind, TidyAnswer, TidyStop, TidyWay};
@@ -46,14 +47,7 @@ pub fn assemble(
     phases: &[PhaseRow],
     ctx: &AssembleContext<'_>,
 ) -> ReportView {
-    let mut commit_ids: Vec<String> = ctx
-        .commits
-        .iter()
-        .map(|(_, commit): &(String, String)| commit.clone())
-        .collect();
-    commit_ids.sort_unstable();
-    commit_ids.dedup();
-    let catalog = range::commit_catalog(&ctx.checkouts, &commit_ids);
+    let catalog = catalog_of(ctx);
     let assembled: Vec<ReportPhase> = thread::scope(|scope| {
         let handles: Vec<(&PhaseView, ScopedJoinHandle<'_, ReportPhase>)> = view
             .phases
@@ -62,9 +56,6 @@ pub fn assemble(
             .map(|(index, phase): (usize, &PhaseView)| {
                 let catalog = &catalog;
                 let handle = scope.spawn(move || {
-                    let is_latest = view.phases[index + 1..]
-                        .iter()
-                        .all(|later: &PhaseView| !has_started(later));
                     let mut own: Vec<&EntryRow> = entries
                         .iter()
                         .filter(|entry: &&EntryRow| entry.phase_id == phase.id)
@@ -73,7 +64,8 @@ pub fn assemble(
                     let row = phases
                         .iter()
                         .find(|row: &&PhaseRow| row.phase_id == phase.id);
-                    phase_of(phase, &own, row, is_latest, ctx, catalog)
+                    let ranges = ranges_of_phase(view, index, &own, ctx, catalog);
+                    phase_of(phase, &own, row, &ranges, ctx)
                 });
                 (phase, handle)
             })
@@ -93,6 +85,40 @@ pub fn assemble(
         phases: assembled,
         acceptance: acceptance_of(view),
     }
+}
+
+/// Die Commits aller Stationen, je Repository einmal gelesen.
+pub fn catalog_of(ctx: &AssembleContext<'_>) -> CommitCatalog {
+    let mut commit_ids: Vec<String> = ctx
+        .commits
+        .iter()
+        .map(|(_, commit): &(String, String)| commit.clone())
+        .collect();
+    commit_ids.sort_unstable();
+    commit_ids.dedup();
+    range::commit_catalog(&ctx.checkouts, &commit_ids)
+}
+
+/// Die Commit-Bereiche der Phase an Position `index`; `entries` sind die dieser Phase.
+pub fn ranges_of_phase(
+    view: &ImplementationView,
+    index: usize,
+    entries: &[&EntryRow],
+    ctx: &AssembleContext<'_>,
+    catalog: &CommitCatalog,
+) -> Vec<RepoRange> {
+    let Some(phase) = view.phases.get(index) else {
+        return Vec::new();
+    };
+    let is_latest = view.phases[index + 1..]
+        .iter()
+        .all(|later: &PhaseView| !has_started(later));
+    range::phase_ranges(
+        &ctx.checkouts,
+        catalog,
+        &span_of(phase, entries, phase_state(phase), is_latest, ctx),
+        &ctx.touched,
+    )
 }
 
 /// Stationen des Benutzers zählen nicht, solange die Phase andere hat: er liest den Bericht, bevor
@@ -190,21 +216,14 @@ fn phase_of(
     phase: &PhaseView,
     entries: &[&EntryRow],
     row: Option<&PhaseRow>,
-    is_latest: bool,
+    ranges: &[RepoRange],
     ctx: &AssembleContext<'_>,
-    catalog: &CommitCatalog,
 ) -> ReportPhase {
     let mut report = empty_phase(phase, ctx);
-    let ranges = range::phase_ranges(
-        &ctx.checkouts,
-        catalog,
-        &span_of(phase, entries, report.state, is_latest, ctx),
-        &ctx.touched,
-    );
-    count_changes(&mut report, &ranges);
+    count_changes(&mut report, ranges);
 
     let mut files = Files {
-        ranges: &ranges,
+        ranges,
         checkouts: &ctx.checkouts,
         loaded: HashMap::new(),
     };
@@ -237,6 +256,9 @@ fn phase_of(
     report.checks = row
         .and_then(|row: &PhaseRow| row.checks.as_deref())
         .and_then(|json: &str| serde_json::from_str::<PhaseChecks>(json).ok());
+    if let Some(checks) = &report.checks {
+        mark_gaps(&mut report.stops, checks);
+    }
     report.entries = count(entries.len());
     report
 }
@@ -949,6 +971,72 @@ fn label_notes(stops: &mut [ReportStop]) {
         for (index, note) in code.notes.iter_mut().enumerate() {
             note.label = (index + 1).to_string();
         }
+    }
+}
+
+/// Hängt die Lücken der Prüfwerte an den Code: an jeden Block die neuen Zeilen ohne Test, die er
+/// zeigt, und jeden überlebten Mutanten als Notiz „M…“ an den ersten Block, der seine Zeile zeigt.
+fn mark_gaps(stops: &mut [ReportStop], checks: &PhaseChecks) {
+    for block in stops
+        .iter_mut()
+        .flat_map(|stop: &mut ReportStop| stop.blocks.iter_mut())
+    {
+        let ReportBlock::Code(code) = block else {
+            continue;
+        };
+        let gaps: Vec<&CheckGap> = checks
+            .gaps
+            .iter()
+            .filter(|gap: &&CheckGap| {
+                gap.kind == CheckGapKind::Uncovered
+                    && gap.repository_key == code.repository_key
+                    && gap.path == code.path
+            })
+            .collect();
+        code.uncovered = code
+            .rows
+            .iter()
+            .filter_map(|row: &ReportRow| row.new)
+            .filter(|line: &u32| {
+                gaps.iter()
+                    .any(|gap: &&CheckGap| (gap.from..=gap.to).contains(line))
+            })
+            .collect();
+    }
+    // `gaps` ist je Datei nach Zeilen sortiert; so zählen die Marken in Zeilenfolge.
+    for gap in checks
+        .gaps
+        .iter()
+        .filter(|gap: &&CheckGap| gap.kind == CheckGapKind::Mutant)
+    {
+        let target = Target {
+            key: gap.repository_key.clone(),
+            path: gap.path.clone(),
+            range: None,
+        };
+        let Some((_, code)) = block_at(stops, &target, gap.from) else {
+            continue;
+        };
+        let number = code
+            .notes
+            .iter()
+            .filter(|note: &&ReportNote| note.kind == ReportNoteKind::Mutant)
+            .count()
+            + 1;
+        code.notes.push(ReportNote {
+            entry: None,
+            label: format!("M{number}"),
+            kind: ReportNoteKind::Mutant,
+            from: gap.from,
+            to: gap.to,
+            text: gap.text.clone(),
+            by: checks.by.clone(),
+            open: None,
+            moved: false,
+        });
+        // Die Sortierung ist stabil: die Notizen der Stationen behalten ihre Reihenfolge.
+        code.notes
+            .sort_by_key(|note: &ReportNote| (note.from, note.to));
     }
 }
 

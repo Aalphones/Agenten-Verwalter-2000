@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::{enum_from_text, enum_to_text};
 use crate::error::CommandError;
+use crate::implementation::now_ms;
 use crate::report::model::{ReportMark, ReportNoteKind, ScreenRow};
 
 /// Das Werkzeug, das den Eintrag angelegt hat.
@@ -222,6 +223,22 @@ pub fn store_tidy_error(
         "INSERT INTO report_phases (phase_id, implementation_id, tidy_error) VALUES (?1, ?2, ?3) \
          ON CONFLICT(phase_id) DO UPDATE SET tidy_error = excluded.tidy_error",
         params![phase_id, implementation_id, error],
+    )?;
+    Ok(())
+}
+
+/// Speichert die Prüfwerte einer Phase (JSON `PhaseChecks`) samt dem Zeitpunkt.
+pub fn store_checks(
+    connection: &Connection,
+    phase_id: &str,
+    implementation_id: &str,
+    checks_json: &str,
+) -> Result<(), CommandError> {
+    connection.execute(
+        "INSERT INTO report_phases (phase_id, implementation_id, checks, checks_at) \
+         VALUES (?1, ?2, ?3, ?4) ON CONFLICT(phase_id) DO UPDATE SET \
+             checks = excluded.checks, checks_at = excluded.checks_at",
+        params![phase_id, implementation_id, checks_json, now_ms()],
     )?;
     Ok(())
 }

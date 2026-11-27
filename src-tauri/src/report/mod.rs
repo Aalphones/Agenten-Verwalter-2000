@@ -1,8 +1,10 @@
 //! Review-Bericht einer Umsetzung (ADR 073): Stationen hängen über die Werkzeuge `report_*`
 //! Einträge an; die Zeilen liegen in `db::report`, die Bilder im Bericht-Ordner. Sind die
-//! Agenten-Stationen einer Phase fertig, ordnet Haiku sie im Thread `report-tidy`.
+//! Agenten-Stationen einer Phase fertig, ordnet Haiku sie im Thread `report-tidy`; danach liest
+//! derselbe Thread die Prüfwerte.
 pub mod anchor;
 pub mod assemble;
+pub mod checks;
 pub mod images;
 pub mod model;
 pub mod range;
@@ -29,6 +31,7 @@ use crate::implementation::model::{ImplementationView, PhaseView, StationView};
 use crate::session_files::handles::ViewHandles;
 use crate::sessions::registry::SessionRegistry;
 use assemble::AssembleContext;
+use checks::{PhaseEvidence, SessionLog};
 use model::{ReportChangedEvent, ReportPhaseState, ReportView};
 use tidy::{StationTrace, TidyAnswer};
 
@@ -62,7 +65,23 @@ pub fn load(app: &AppHandle, implementation_id: &str) -> Result<ReportView, Comm
     let view = registry.implementation_view(implementation_id)?;
     let entries = registry.report_entries(implementation_id)?;
     let phases: Vec<PhaseRow> = registry.report_phases(implementation_id)?;
-    let sessions = registry.report_sessions(&view)?;
+    let image_url = |phase_id: &str, file: &str| {
+        phase_dir(app, implementation_id, phase_id)
+            .ok()
+            .and_then(|dir: PathBuf| url_of_image(app, &dir.join(file)))
+            .unwrap_or_default()
+    };
+    let context = context_of(&registry, &view, &image_url)?;
+    Ok(assemble::assemble(&view, &entries, &phases, &context))
+}
+
+/// Was Bericht und Prüfwerte neben den Zeilen der Datenbank aus den Sessions brauchen.
+fn context_of<'a>(
+    registry: &SessionRegistry,
+    view: &ImplementationView,
+    image_url: &'a (dyn Fn(&str, &str) -> String + Sync),
+) -> Result<AssembleContext<'a>, CommandError> {
+    let sessions = registry.report_sessions(view)?;
     let (checkouts, touched) =
         sessions
             .changes
@@ -72,24 +91,13 @@ pub fn load(app: &AppHandle, implementation_id: &str) -> Result<ReportView, Comm
                     input.own.touched,
                 )
             });
-    let image_url = |phase_id: &str, file: &str| {
-        phase_dir(app, implementation_id, phase_id)
-            .ok()
-            .and_then(|dir: PathBuf| url_of_image(app, &dir.join(file)))
-            .unwrap_or_default()
-    };
-    Ok(assemble::assemble(
-        &view,
-        &entries,
-        &phases,
-        &AssembleContext {
-            checkouts,
-            commits: sessions.commits,
-            touched,
-            labels: raw::session_labels(&view, &sessions.numbers),
-            image_url: &image_url,
-        },
-    ))
+    Ok(AssembleContext {
+        checkouts,
+        commits: sessions.commits,
+        touched,
+        labels: raw::session_labels(view, &sessions.numbers),
+        image_url,
+    })
 }
 
 /// Die Adresse hinter einem frischen Handle des Datei-Servers (ADR 071); `None`, wenn es die Datei
@@ -220,7 +228,8 @@ fn start_phase_end(
     Ok(())
 }
 
-/// Liest Datenbank, Git und das Modell, ohne dabei eine Sperre zu halten.
+/// Ordnet die Phase und ermittelt danach ihre Prüfwerte; scheitert eines, läuft das andere
+/// trotzdem. Liest Datenbank, Git, Dateien und das Modell, ohne dabei eine Sperre zu halten.
 fn run_phase_end(
     app: &AppHandle,
     implementation_id: &str,
@@ -228,17 +237,28 @@ fn run_phase_end(
 ) -> Result<(), CommandError> {
     let registry = app.state::<SessionRegistry>();
     let view = registry.implementation_view(implementation_id)?;
-    let phase = view
+    let (index, phase) = view
         .phases
         .iter()
-        .find(|phase: &&PhaseView| phase.id == phase_id)
+        .enumerate()
+        .find(|(_, phase): &(usize, &PhaseView)| phase.id == phase_id)
         .ok_or_else(|| CommandError::Implementation(format!("{UNKNOWN_PHASE} {phase_id}")))?;
     let entries: Vec<EntryRow> = registry
         .report_entries(implementation_id)?
         .into_iter()
         .filter(|entry: &EntryRow| entry.phase_id == phase_id)
         .collect();
-    tidy_phase(app, &view, phase, &entries)?;
+    let tidied = tidy_phase(app, &view, phase, &entries);
+    emit_changed(app, implementation_id);
+    let checked = check_phase(&registry, &view, index, &entries);
+    emit_changed(app, implementation_id);
+    if let (Err(_), Err(also)) = (&tidied, &checked) {
+        eprintln!("Bericht der Phase {phase_id}: Prüfwerte nicht ermittelt: {also}");
+    }
+    tidied.and(checked)
+}
+
+fn emit_changed(app: &AppHandle, implementation_id: &str) {
     // Ohne Fenster geht nichts verloren: die Oberfläche lädt beim Öffnen.
     let _ = app.emit(
         REPORT_CHANGED_EVENT,
@@ -246,7 +266,47 @@ fn run_phase_end(
             implementation_id: implementation_id.to_owned(),
         },
     );
-    Ok(())
+}
+
+/// Ermittelt und speichert die Prüfwerte der Phase an Position `index`; `entries` sind ihre
+/// Einträge.
+fn check_phase(
+    registry: &SessionRegistry,
+    view: &ImplementationView,
+    index: usize,
+    entries: &[EntryRow],
+) -> Result<(), CommandError> {
+    let phase = &view.phases[index];
+    let no_images = |_: &str, _: &str| String::new();
+    let context = context_of(registry, view, &no_images)?;
+    let entries: Vec<&EntryRow> = entries.iter().collect();
+    let catalog = assemble::catalog_of(&context);
+    let ranges = assemble::ranges_of_phase(view, index, &entries, &context, &catalog);
+    let mut sessions: Vec<SessionLog> = Vec::new();
+    for session_id in phase
+        .stations
+        .iter()
+        .filter_map(|station: &StationView| station.session_id.as_ref())
+    {
+        let (entries, details) = registry.history_of(session_id)?;
+        sessions.push(SessionLog {
+            session_id: session_id.clone(),
+            entries,
+            details,
+        });
+    }
+    let files = checks::time_window(phase).map_or_else(Vec::new, |(since, until)| {
+        checks::find_files(&checks::folders(&ranges), since, until)
+    });
+    let found = checks::phase_checks(&PhaseEvidence {
+        sessions: &sessions,
+        ranges: &ranges,
+        files: &files,
+        labels: &context.labels,
+    });
+    let json =
+        serde_json::to_string(&found).map_err(|error| CommandError::Internal(error.to_string()))?;
+    registry.store_report_checks(&view.id, &phase.id, &json)
 }
 
 /// Speichert die geordnete Fassung oder den Grund, warum es keine neue gibt. Ohne etwas zu ordnen

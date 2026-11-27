@@ -152,6 +152,18 @@ impl SessionRegistry {
         })
     }
 
+    /// Speichert die Prüfwerte einer Phase als JSON.
+    pub fn store_report_checks(
+        &self,
+        implementation_id: &str,
+        phase_id: &str,
+        checks_json: &str,
+    ) -> Result<(), CommandError> {
+        self.database.with(|connection| {
+            report_rows::store_checks(connection, phase_id, implementation_id, checks_json)
+        })
+    }
+
     pub fn implementation_of_phase(&self, phase_id: &str) -> Result<Option<String>, CommandError> {
         self.database
             .with(|connection| report_rows::implementation_of_phase(connection, phase_id))
