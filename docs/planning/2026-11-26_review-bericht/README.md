@@ -10,7 +10,7 @@ Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst
 | 2 | Kern: Spur und Haiku-Ordnung am Phasenende | [phase-2-kern-haiku-ordnung.md](phase-2-kern-haiku-ordnung.md) | standard | complete |
 | 3 | Kern: Bericht zusammensetzen (Commit-Bereich, Code aus Git, Vorher-Zeilen, Anker), Befehle und Probe | [phase-3-kern-bericht-laden.md](phase-3-kern-bericht-laden.md) | heikel | complete |
 | 4 | Kern: Prüfwerte aus Läufen und Berichtsdateien | [phase-4-kern-pruefwerte.md](phase-4-kern-pruefwerte.md) | standard | complete |
-| 5 | Oberfläche: Reiter „Review“, Inhalt, Überblick, Phasen-Seite, Code mit Randnotizen | [phase-5-oberflaeche-seiten.md](phase-5-oberflaeche-seiten.md) | standard | pending |
+| 5 | Oberfläche: Reiter „Review“, Inhalt, Überblick, Phasen-Seite, Code mit Randnotizen | [phase-5-oberflaeche-seiten.md](phase-5-oberflaeche-seiten.md) | standard | complete |
 | 6 | Oberfläche: Schaubilder mit Unterschied/Vorher/Nachher, Bilder mit Marken, Sichtabnahme | [phase-6-oberflaeche-schaubilder.md](phase-6-oberflaeche-schaubilder.md) | standard | pending |
 | 7 | Kommentare und Abnahme | [phase-7-kommentare-abnahme.md](phase-7-kommentare-abnahme.md) | standard | pending |
 | 8 | Skills umstellen (User-Skills, facepass-Projekt-Skills), Plan fertig | [phase-8-skills-umstellen.md](phase-8-skills-umstellen.md) | standard | pending |

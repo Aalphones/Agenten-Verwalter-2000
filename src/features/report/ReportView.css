@@ -1,0 +1,82 @@
+/* Höhen- und Überlaufkette: Host (Spalte, min-height 0) → .report-view (eine Spur minmax(0, 1fr)) →
+   __grid (Zeilen auto + minmax(0, 1fr), Spalten 256px + minmax(0, 1fr)) → __toc und __page rollen je für sich. */
+.report-view {
+  container: report / inline-size;
+  display: grid;
+  flex-grow: 1;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+
+  &--note {
+    align-content: start;
+    padding: var(--space-4xl);
+  }
+
+  &__note {
+    max-width: 72ch;
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-md);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    min-width: 0;
+  }
+
+  &__toc {
+    min-height: 0;
+    padding: var(--space-xl) var(--space-md) var(--space-3xl);
+    overflow: auto;
+    border-right: 1px solid var(--color-border-subtle);
+  }
+
+  &__page {
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    scroll-behavior: smooth;
+  }
+
+  &__doc {
+    box-sizing: border-box;
+    max-width: 1120px;
+    padding: 26px var(--space-5xl) 80px;
+  }
+
+  &__sheet {
+    width: min(360px, 92vw);
+    padding: var(--space-lg) var(--space-md) var(--space-xl);
+    overflow: auto;
+  }
+
+  &__sheet-title {
+    margin: 0;
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--font-size-md);
+  }
+}
+
+@container report (max-width: 820px) {
+  .report-view__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-view__toc {
+    display: none;
+  }
+
+  .report-view__doc {
+    padding: var(--space-3xl) var(--space-2xl) 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-view__page {
+    scroll-behavior: auto;
+  }
+}

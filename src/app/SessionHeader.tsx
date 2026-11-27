@@ -7,6 +7,7 @@ import { formatCount } from '@/features/changes/changesScope';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { PencilIcon } from '@/features/notes/PencilIcon';
 import { useNow } from '@/features/background/useNow';
+import { FRESH_TITLE } from '@/features/report/reportTexts';
 import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { NotePlacement } from '@/lib/bindings/NotePlacement';
@@ -31,6 +32,7 @@ const BACKGROUND_TITLE =
 const MORE_MENU_WIDTH = 200;
 
 const VIEW_LABEL: Record<SessionView, string> = {
+  review: 'Review',
   chat: 'Chat',
   files: 'Dateien',
   artifacts: 'Artefakte',
@@ -49,6 +51,10 @@ interface SessionHeaderProps {
   gitStatus: GitSessionStatus | null;
   /** Artefakte des Vorhabens; „Artefakte“ erscheint erst ab dem ersten. */
   artifactCount: number;
+  /** Der Bericht der Umsetzung hat Inhalt: „Review“ erscheint (nur bei Stations-Sessions). */
+  hasReport: boolean;
+  /** Eine Phase ist fertig, seit der Bericht zuletzt offen war: Punkt am Reiter. */
+  hasFreshReport: boolean;
   /** Laufende Prozesse und Subagenten der Session. */
   runningBackgroundCount: number;
   isBackgroundOpen: boolean;
@@ -69,6 +75,8 @@ export function SessionHeader({
   changes,
   gitStatus,
   artifactCount,
+  hasReport,
+  hasFreshReport,
   runningBackgroundCount,
   isBackgroundOpen,
   onToggleBackground,
@@ -116,6 +124,7 @@ export function SessionHeader({
   const views: readonly SessionView[] = SESSION_VIEWS.filter(
     (view: SessionView) =>
       view === 'chat' ||
+      (view === 'review' && hasReport) ||
       (view === 'files' && session.repositoryCount > 0) ||
       (view === 'artifacts' && artifactCount > 0) ||
       (view === 'note' && notePlacement === 'tab'),
@@ -299,6 +308,9 @@ export function SessionHeader({
               <span className="session-header__tab-count session-header__tab-count--review">
                 {formatCount(reviewCount)}
               </span>
+            )}
+            {view === 'review' && hasFreshReport && view !== activeView && (
+              <span className="session-header__tab-dot" title={FRESH_TITLE} />
             )}
             {view === 'files' && filesCount !== null && filesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(filesCount)}</span>

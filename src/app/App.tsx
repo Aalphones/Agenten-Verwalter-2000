@@ -24,6 +24,9 @@ import { ChatView } from '@/features/chat/ChatView';
 import { useGitStatus } from '@/features/git/useGitStatus';
 import { implementationArtifacts } from '@/features/implementation/implementationArtifacts';
 import { NoteView } from '@/features/notes/NoteView';
+import { freshPhaseIds } from '@/features/report/reportDigest';
+import { ReportView } from '@/features/report/ReportView';
+import { useReportOfSession } from '@/features/report/useReportOfSession';
 import { ImplementationView as ImplementationMain } from '@/features/implementation/ImplementationView';
 import { StationTrail } from '@/features/implementation/StationTrail';
 import { useInquiry } from '@/features/implementation/useInquiry';
@@ -76,6 +79,7 @@ import { usePanelWidth } from '@/lib/usePanelWidth';
 import { useArtifactsStore } from '@/stores/artifacts';
 import { useBackgroundStore } from '@/stores/background';
 import { useImplementationStore } from '@/stores/implementation';
+import { useReportStore } from '@/stores/report';
 import {
   useSessionsStore,
   type ImplementationViewKind,
@@ -85,6 +89,9 @@ import {
 import { useSettingsStore } from '@/stores/settings';
 import { useTerminalStore } from '@/stores/terminal';
 import './App.css';
+
+/** Gemeinsames leeres Feld, damit der Store-Selektor nicht bei jedem Aufruf ein neues liefert. */
+const NOTHING_VISITED: readonly string[] = [];
 
 export function App(): ReactElement {
   const { sessions, upsertSession, removeSession, error: sessionsError } = useSessionSummaries();
@@ -282,6 +289,33 @@ export function App(): ReactElement {
     : (sessions.find((session: SessionSummary) => session.id === activeSessionId) ?? sessions[0]);
   const shownSessionId: string | null =
     isMainReplaced || isOverview ? null : (currentSession?.id ?? null);
+  // „Review“ in einer Station-Session zeigt den Bericht ihrer Umsetzung; der Reiter erscheint erst, wenn dieser
+  // etwas enthält. Die Umsetzung selbst steuert ihren Reiter in `ImplementationView`.
+  const isStationShown: boolean =
+    !isMainReplaced &&
+    !isOverview &&
+    currentSession !== undefined &&
+    currentSession.stationOf !== null;
+  const reportImplementationId: string | null = useReportOfSession(
+    isStationShown ? (currentSession?.id ?? null) : null,
+    isStationShown,
+  );
+  const reportImplementation: ImplementationView | undefined =
+    reportImplementationId === null
+      ? undefined
+      : implementations.find(
+          (candidate: ImplementationView) => candidate.id === reportImplementationId,
+        );
+  const reportVisited: readonly string[] = useReportStore((state) =>
+    reportImplementationId === null
+      ? NOTHING_VISITED
+      : (state.visitedByImplementation[reportImplementationId] ?? NOTHING_VISITED),
+  );
+  const hasFreshReport: boolean =
+    reportImplementation !== undefined &&
+    freshPhaseIds(reportImplementation, reportVisited).length > 0;
+  const isReportView: boolean =
+    isStationShown && activeView === 'review' && reportImplementation !== undefined;
   // Bei offener Umsetzung zählt die Station im Fokus als die gezeigte.
   const shownStationId: string | null = useImplementationStore((state) =>
     shownImplementation === undefined ? null : (state.focused[shownImplementation.id] ?? null),
@@ -513,7 +547,7 @@ export function App(): ReactElement {
   // Strg+; öffnet die Nebenfrage der Session, deren Chat gerade vor der Eingabeleiste steht. Auf deutscher
   // Tastatur liegt das Semikolon auf Umschalt+Komma: `shiftKey` darf die Abfrage nicht ausschließen.
   const chatSessionId: string | null =
-    visibleSession !== null && !isFilesView && !isArtifactsView && !isNoteTab
+    visibleSession !== null && !isFilesView && !isArtifactsView && !isNoteTab && !isReportView
       ? visibleSession.id
       : null;
   useEffect(() => {
@@ -644,6 +678,7 @@ export function App(): ReactElement {
           hasChanges={hasProjectRepositories}
           changesCount={changes === null ? null : countChangedFiles(changes)}
           artifactCount={implementationArtifactList?.items.length ?? 0}
+          filesViewKey={filesViewKey}
           artifacts={
             implementationArtifactList === null ? null : (
               <ArtifactsView
@@ -719,6 +754,9 @@ export function App(): ReactElement {
     if (isNoteTab) {
       return 'note';
     }
+    if (isReportView) {
+      return 'review';
+    }
     if (isArtifactsView) {
       return 'artifacts';
     }
@@ -741,6 +779,17 @@ export function App(): ReactElement {
     }
     if (isNoteTab) {
       return <NoteView projectId={session.projectId} />;
+    }
+    if (isReportView && reportImplementation !== undefined) {
+      return (
+        <ReportView
+          implementation={reportImplementation}
+          filesViewKey={filesViewKey}
+          onOpenFiles={(): void => {
+            showView('files');
+          }}
+        />
+      );
     }
     if (isFilesView) {
       return renderFiles(session, gitStatus, true);
@@ -806,6 +855,8 @@ export function App(): ReactElement {
             changes={changes}
             gitStatus={gitStatus}
             artifactCount={artifactCount}
+            hasReport={reportImplementation !== undefined}
+            hasFreshReport={hasFreshReport}
             runningBackgroundCount={countRunning(backgroundItems)}
             isBackgroundOpen={isBackgroundOpen}
             onToggleBackground={handleToggleBackground}

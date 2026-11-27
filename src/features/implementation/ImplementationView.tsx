@@ -16,6 +16,8 @@ import {
 } from '@/features/implementation/implementationOrder';
 import { NoteView } from '@/features/notes/NoteView';
 import { ReportPanel } from '@/features/implementation/ReportPanel';
+import { freshPhaseIds, hasBegunPhase } from '@/features/report/reportDigest';
+import { ReportView } from '@/features/report/ReportView';
 import { Timeline } from '@/features/implementation/Timeline';
 import type { Effort } from '@/lib/bindings/Effort';
 import type { ImplementationView as Implementation } from '@/lib/bindings/ImplementationView';
@@ -40,9 +42,13 @@ import { isTextTarget } from '@/lib/keyTargets';
 import { setSessionEffort, setSessionModel } from '@/lib/sessions';
 import { useActionError } from '@/lib/useActionError';
 import { useImplementationStore } from '@/stores/implementation';
+import { useReportStore } from '@/stores/report';
 import { useSessionsStore, type ImplementationViewKind } from '@/stores/sessions';
 import { useSettingsStore } from '@/stores/settings';
 import './ImplementationView.css';
+
+/** Gemeinsames leeres Feld, damit der Store-Selektor nicht bei jedem Aufruf ein neues liefert. */
+const NOTHING_VISITED: readonly string[] = [];
 
 interface ImplementationViewProps {
   implementation: Implementation;
@@ -58,6 +64,8 @@ interface ImplementationViewProps {
   artifactCount: number;
   /** Inhalt des Reiters „Artefakte“; gezeigt, wenn er aktiv ist und es Artefakte gibt. */
   artifacts: ReactNode;
+  /** Schlüssel der Ansicht „Dateien“ dieser Umsetzung; dorthin springt der Bericht mit „Im Reiter Dateien“. */
+  filesViewKey: string;
   /** Legt eine Rückfrage zur Umsetzung an und öffnet sie (`useInquiry`). */
   onNewInquiry: (implementationId: string) => Promise<void>;
   onShowView: (view: ImplementationViewKind) => void;
@@ -87,6 +95,7 @@ export function ImplementationView({
   files,
   artifactCount,
   artifacts,
+  filesViewKey,
   onNewInquiry,
   onShowView,
   onOpenProject,
@@ -116,7 +125,14 @@ export function ImplementationView({
     (state) => state.settings?.notePlacement ?? 'dock',
   );
   const isNoteShown: boolean = activeView === 'note' && notePlacement === 'tab';
-  const isFlow: boolean = !isFilesShown && !isArtifactsShown && !isNoteShown;
+  // Der Reiter „Review“ gibt es, sobald eine Phase begonnen hat; vorher fällt er auf den Ablauf zurück.
+  const hasReport: boolean = hasBegunPhase(implementation);
+  const isReviewShown: boolean = activeView === 'review' && hasReport;
+  const isFlow: boolean = !isFilesShown && !isArtifactsShown && !isNoteShown && !isReviewShown;
+  const visitedPhases: readonly string[] = useReportStore(
+    (state) => state.visitedByImplementation[implementation.id] ?? NOTHING_VISITED,
+  );
+  const hasFreshReport: boolean = freshPhaseIds(implementation, visitedPhases).length > 0;
   const isTicking: boolean = stations.some((ref: StationRef) =>
     ['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'].includes(
       ref.station.state,
@@ -328,6 +344,9 @@ export function ImplementationView({
     if (isNoteShown) {
       return 'note';
     }
+    if (isReviewShown) {
+      return 'review';
+    }
     return isArtifactsShown ? 'artifacts' : 'flow';
   }
 
@@ -337,6 +356,17 @@ export function ImplementationView({
     }
     if (isFilesShown) {
       return files;
+    }
+    if (isReviewShown) {
+      return (
+        <ReportView
+          implementation={implementation}
+          filesViewKey={filesViewKey}
+          onOpenFiles={(): void => {
+            onShowView('files');
+          }}
+        />
+      );
     }
     if (isArtifactsShown) {
       return artifacts;
@@ -368,6 +398,8 @@ export function ImplementationView({
         hasChanges={hasChanges}
         changesCount={changesCount}
         artifactCount={artifactCount}
+        hasReport={hasReport}
+        hasFreshReport={hasFreshReport}
         onShowView={onShowView}
         onOpenProject={onOpenProject}
         terminalCount={terminalCount}

@@ -166,6 +166,14 @@
     }
   }
 
+  /* Punkt am Reiter „Review“: eine Phase wurde fertig, seit der Bericht zuletzt offen war. */
+  &__tab-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+  }
+
   &__tools {
     display: flex;
     align-items: center;

@@ -29,12 +29,29 @@ Rating: standard. Der Bericht ist in der App lesbar: Reiter „Review“ in der 
 
 ## Checkliste
 
-- [ ] `src/stores/report.ts`: Seite je Umsetzung (`'overview' | phaseKey`), Sprungziel, gesehene Phasen je Umsetzung, Klappzustände nur flüchtig.
-- [ ] `src/features/report/`: `ReportView.tsx` (Rahmen), `ReportBar.tsx`, `ReportToc.tsx`, `ReportOverview.tsx`, `ReportPhasePage.tsx`, `ReportChecks.tsx`, `ReportWay.tsx`, `ReportReviewSection.tsx`, `ReportStop.tsx`, `ReportCode.tsx` (Zeilen, Faltung, Randnotizen), `layoutNotes.ts` (reine Funktion: Zeilenpositionen + Notizhöhen → Top-Werte), `useReport.ts`, `useReportOfSession.ts`, `reportTexts.ts`, je Komponente eine BEM-CSS-Datei (`report-…`).
-- [ ] Reiter in `SessionHeader.tsx`/`sessions.ts` und `ImplementationHeader.tsx`/`ImplementationView.tsx`; Weiche in `App.tsx` für die Session-Ansicht `review`.
-- [ ] Sprung „Im Reiter Dateien“ über die bestehende Navigation der Dateien-Ansicht (wie `DiffView` bzw. Dateiverweise im Chat; Fundstelle: `grep -n "showSessionView('files')" src/features/implementation/ImplementationView.tsx`).
-- [ ] Platzhalter für `ReportBlock::Figure` und Review-Schaubilder: Rahmen mit Unterschrift (wird in Phase 6 ersetzt).
-- [ ] Doc: `docs/code-map.md` Zeile „Review-Bericht“ Oberflächen-Teil; `docs/glossary.md`: „Reiter Review“.
-- [ ] `pnpm check`.
+- [x] `src/stores/report.ts`: Seite je Umsetzung (`'overview' | phaseKey`), Sprungziel, gesehene Phasen je Umsetzung, Klappzustände nur flüchtig.
+- [x] `src/features/report/`: `ReportView.tsx` (Rahmen), `ReportBar.tsx`, `ReportToc.tsx`, `ReportOverview.tsx`, `ReportPhasePage.tsx`, `ReportChecks.tsx`, `ReportWay.tsx`, `ReportReviewSection.tsx`, `ReportStop.tsx`, `ReportCode.tsx` (Zeilen, Faltung, Randnotizen), `layoutNotes.ts` (reine Funktion: Zeilenpositionen + Notizhöhen → Top-Werte), `useReport.ts`, `useReportOfSession.ts`, `reportTexts.ts`, je Komponente eine BEM-CSS-Datei (`report-…`).
+- [x] Reiter in `SessionHeader.tsx`/`sessions.ts` und `ImplementationHeader.tsx`/`ImplementationView.tsx`; Weiche in `App.tsx` für die Session-Ansicht `review`.
+- [x] Sprung „Im Reiter Dateien“ über die bestehende Navigation der Dateien-Ansicht (wie `DiffView` bzw. Dateiverweise im Chat; Fundstelle: `grep -n "showSessionView('files')" src/features/implementation/ImplementationView.tsx`).
+- [x] Platzhalter für `ReportBlock::Figure` und Review-Schaubilder: Rahmen mit Unterschrift (wird in Phase 6 ersetzt).
+- [x] Doc: `docs/code-map.md` Zeile „Review-Bericht“ Oberflächen-Teil; `docs/glossary.md`: „Reiter Review“.
+- [x] `pnpm check`.
 
 ## Report-Back
+
+Status: complete.
+
+**Abweichungen von AK und Checkliste:**
+
+- AK 2: Das Inhaltsverzeichnis weicht dem Knopf „Inhalt“ (Blatt als Dialog) ab 820 px Breite des Berichts (Container-Abfrage auf `report`), nicht 760 px; der Wert folgt der Breite, ab der die Seite neben dem Verzeichnis unter ~560 px fiele.
+- AK 5: Der Überblick hat keine Zeile „Ziel“ und keine Landkarte — dafür liefert der Core keine Daten (Landkarte ist Beispiel im Entwurf). Prüfwerte-Zeile zählt nur fertige Phasen; eine laufende Phase zeigt die Prüfkette nie rot, nur das Banner.
+- AK 8: Klappzustände („n entfernte Zeilen“, Weg, Lücken, behoben) leben im nativen `<details>` bzw. lokalen Zustand, nicht im Store; sie gehen beim Seitenwechsel verloren. Der Store hält Seite, Sprungziel und gesehene Phasen je Umsetzung.
+- AK 1: Der Punkt am Reiter und die Sichtbarkeit in der Umsetzung kommen aus der `ImplementationView` (Phase begonnen / fertig, gespiegelt aus `assemble::phase_state`), nicht aus einem geladenen Bericht; der Bericht wird erst beim Zeigen des Reiters geladen. In der Station-Session steuert `reportOfSession` die Sichtbarkeit.
+- „Neu ordnen“ fragt vor dem Überschreiben nach, sobald die Phase Prüfwerte hat (FINDINGS-Hinweis zu `report_retidy`).
+- Schaubilder, Bilder und Sichtabnahme sind Platzhalter mit Unterschrift bzw. Bildschirm-Namen (Phase 6), keine Kommentarknöpfe (Phase 7).
+
+**Belegt:** `scripts/check.ps1` (Formate, tsc, ESLint, Vite-Build, cargo fmt/clippy) grün. Die Höhen- und Überlaufkette wurde vor dem Schreiben des Layouts gegen `App.css` (`__content`: Spalte, `min-height: 0`) und `ImplementationView.css` gelesen.
+
+**Nicht gelaufen:** Die Oberfläche wurde nicht gerendert — weder in der App noch in einer Vite-Prüfseite; Layout (1440/900 px, hell/dunkel, 600 px Höhe, Randnotizen ab 940 px) und Design-Abgleich mit dem Entwurf sind ungesehen. Der Weg mit echten Berichtsdaten (Laden, `report://changed`, Sprung in „Dateien“) ist nicht in der App gelaufen.
+
+**Unsicherste Stelle:** `src/features/report/ReportCode.tsx:135` — die Höhen der Randnotizen werden im Layout-Effekt gemessen und per `layoutNotes` verteilt; wie das bei später umbrechendem Text, Fensterwechsel und Syntaxfarben-Nachladen im WebView2 aussieht, ist ungesehen.

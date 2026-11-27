@@ -1,0 +1,49 @@
+.report-way {
+  margin: 0;
+  padding: var(--space-xs) var(--space-xl) var(--space-lg) 34px;
+
+  &__step {
+    padding: var(--space-sm) 0;
+
+    &--detour::marker {
+      color: var(--color-status-waiting);
+    }
+  }
+
+  &__text {
+    display: block;
+  }
+
+  &__detour {
+    margin-right: var(--space-sm);
+    color: var(--color-status-waiting);
+  }
+
+  &__files {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-2xs);
+
+    code {
+      color: var(--color-fg-muted);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-2xs);
+    }
+  }
+
+  &__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-accent-text);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

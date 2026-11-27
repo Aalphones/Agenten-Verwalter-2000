@@ -9,6 +9,7 @@ import {
 } from '@/features/implementation/implementationTexts';
 import { stateIcon, stateLabel } from '@/features/implementation/stationState';
 import { PencilIcon } from '@/features/notes/PencilIcon';
+import { FRESH_TITLE } from '@/features/report/reportTexts';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { NotePlacement } from '@/lib/bindings/NotePlacement';
 import { IMPLEMENTATION_VIEWS, type ImplementationViewKind } from '@/stores/sessions';
@@ -26,6 +27,10 @@ interface ImplementationHeaderProps {
   changesCount: number | null;
   /** Artefakte aus Sessions der Umsetzung; „Artefakte“ erscheint erst ab dem ersten. */
   artifactCount: number;
+  /** „Review“ erscheint, sobald eine Phase begonnen hat. */
+  hasReport: boolean;
+  /** Eine Phase ist fertig, seit der Bericht zuletzt offen war: Punkt am Reiter. */
+  hasFreshReport: boolean;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
   /** Laufende Terminals des Vorhabens. */
@@ -43,6 +48,8 @@ export function ImplementationHeader({
   hasChanges,
   changesCount,
   artifactCount,
+  hasReport,
+  hasFreshReport,
   onShowView,
   onOpenProject,
   terminalCount,
@@ -56,6 +63,7 @@ export function ImplementationHeader({
     (view: ImplementationViewKind) =>
       view === 'flow' ||
       (view === 'files' && hasChanges) ||
+      (view === 'review' && hasReport) ||
       (view === 'artifacts' && artifactCount > 0) ||
       (view === 'note' && notePlacement === 'tab'),
   );
@@ -112,6 +120,9 @@ export function ImplementationHeader({
             {VIEW_LABEL[view]}
             {view === 'files' && changesCount !== null && changesCount > 0 && (
               <span className="session-header__tab-count">{formatCount(changesCount)}</span>
+            )}
+            {view === 'review' && hasFreshReport && view !== activeView && (
+              <span className="session-header__tab-dot" title={FRESH_TITLE} />
             )}
             {view === 'artifacts' && (
               <span className="session-header__tab-count">{formatCount(artifactCount)}</span>

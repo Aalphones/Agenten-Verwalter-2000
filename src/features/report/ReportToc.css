@@ -1,0 +1,89 @@
+.report-toc {
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__link {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-md);
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--space-sm) var(--space-md);
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    color: var(--color-fg-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+    }
+
+    &--current,
+    &--current:hover {
+      border-left-color: var(--color-accent);
+      background: var(--color-bg-selected);
+    }
+
+    &--off,
+    &--off:hover {
+      background: none;
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    .report-icon {
+      margin-top: 1px;
+      color: var(--color-fg-muted);
+    }
+  }
+
+  &__key {
+    color: var(--color-fg-muted);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    text-align: center;
+  }
+
+  &__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    margin-top: var(--space-sm);
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+
+    &--running {
+      animation: report-toc-pulse 1.6s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes report-toc-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-toc__dot--running {
+    animation: none;
+  }
+}

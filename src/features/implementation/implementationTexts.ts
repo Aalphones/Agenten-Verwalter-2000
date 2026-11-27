@@ -12,6 +12,7 @@ import { effortLabel, modelName } from '@/lib/labels';
 import type { ImplementationViewKind } from '@/stores/sessions';
 
 export const VIEW_LABEL: Record<ImplementationViewKind, string> = {
+  review: 'Review',
   flow: 'Ablauf',
   files: 'Dateien',
   artifacts: 'Artefakte',
