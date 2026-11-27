@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review-Bericht ohne Einträge</title>
+<link rel="stylesheet" href="_bericht-ohne-eintraege/entwurf.css">
+</head>
+<body>
+
+<div class="dbar" role="region" aria-label="Entwurfsleiste">
+  <span class="dbar__title">Entwurf · Bericht ohne Einträge · Vorschlag C</span>
+  <div class="dbar__group">
+    <span class="dbar__label">Phase läuft</span>
+    <div class="seg" id="seg-live">
+      <button data-v="work">Station arbeitet</button>
+      <button data-v="zwischen">Zwischenstand geordnet</button>
+    </div>
+  </div>
+  <div class="dbar__group">
+    <span class="dbar__label">Phase fertig</span>
+    <div class="seg" id="seg-done">
+      <button data-v="running">Haiku ordnet</button>
+      <button data-v="empty">Nichts berichtet</button>
+      <button data-v="done">Geordnet</button>
+      <button data-v="failed">Fehlgeschlagen</button>
+    </div>
+  </div>
+  <span class="dbar__spacer"></span>
+  <span class="dbar__bp" id="bp"></span>
+  <button class="dbar__btn" id="btn-theme">Hell/Dunkel</button>
+  <button class="dbar__btn" id="btn-info">ⓘ Aufgabe</button>
+</div>
+
+<nav class="tabs" aria-label="Reiter der Session (Rahmen)">
+  <span>Chat</span><span>Dateien</span><span>Änderungen</span>
+  <span class="is-on">Review<i class="tabs__dot" id="tab-dot" title="Haiku ordnet Phase 2"></i></span>
+  <span>Artefakte</span>
+</nav>
+
+<div class="report-view">
+  <div class="report-view__grid">
+    <aside class="report-view__toc" aria-label="Inhalt des Berichts">
+      <p class="toc__head">Inhalt</p>
+      <ul class="toc" id="toc"></ul>
+    </aside>
+    <main class="report-view__page" id="page">
+      <div class="report-view__doc" id="doc"></div>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden role="status">
+  <span id="toast-text">Phase 2 geordnet.</span>
+  <button class="btn" id="toast-show">Ansehen</button>
+  <button class="btn btn--quiet" id="toast-close" aria-label="Schließen">✕</button>
+</div>
+
+<dialog id="dlg-info">
+  <div class="dlg__head"><h2>Aufgabe</h2><button class="btn btn--quiet" data-close>✕</button></div>
+  <div class="dlg__body">
+    <h3>Aufgabe</h3>
+    <ul>
+      <li>Sehen, was in einer Phase passiert, auch wenn die Station nichts erklärt.</li>
+      <li>Jederzeit wissen, ob geordnet ist, gerade geordnet wird oder nichts zu ordnen war.</li>
+      <li>Vor dem Phasenende den Zwischenstand von Hand ordnen lassen.</li>
+      <li>Erkennen, wer einen Text geschrieben hat: Station, Haiku oder Verwalter.</li>
+    </ul>
+    <h3>Zustände</h3>
+    <ul>
+      <li>Station arbeitet: Hinweis „noch nicht geordnet“ mit „Zwischenstand ordnen“.</li>
+      <li>Zwischenstand geordnet: Uhrzeit der Ordnung, Zahl neuer Änderungen, „Neu ordnen“; neue Stellen tragen „neu seit …“.</li>
+      <li>Haiku ordnet: Laufzeit, Punkt im Inhalt und am Reiter, danach kurzer Hinweis.</li>
+      <li>Nichts berichtet: Grund plus „Aus Verlauf ordnen“ oder „Station nachfragen“.</li>
+      <li>Fehlgeschlagen: Grund plus „Neu ordnen“; die Meldung der Station bleibt.</li>
+    </ul>
+    <h3>Seite (Vorschlag C)</h3>
+    <ul>
+      <li>Diff je Ort als Stopp, Erklärungen am Rand; ohne Erklärung „Haiku erklären lassen“.</li>
+      <li>Weg aus den Aufrufen darüber, ohne Modell: neue Etappe bei Ortswechsel oder Commit.</li>
+      <li>Kopfzeile zählt auch Repos außerhalb des Vorhabens.</li>
+    </ul>
+    <h3>Knöpfe</h3>
+    <ul><li>Erstes Ordnen primär, erneutes Ordnen und Abbrechen sekundär.</li></ul>
+    <h3>Daten</h3>
+    <ul><li>Echt: Aufrufe, Edits, Commits, Meldung und Uhrzeiten der Station #14. Beispiel: Haiku-Texte, Zeitpunkt des Ordnens.</li></ul>
+  </div>
+</dialog>
+
+<dialog id="dlg-toc" class="sheet">
+  <div class="dlg__head"><h2>Inhalt des Berichts</h2><button class="btn btn--quiet" data-close>✕</button></div>
+  <div class="dlg__body"><ul class="toc" id="toc-sheet"></ul></div>
+</dialog>
+
+<script src="_bericht-ohne-eintraege/daten.js"></script>
+<script>
+(() => {
+  const D = window.STATION14;
+  const params = new URLSearchParams(location.search);
+  const LIVE_STATES = ['work', 'zwischen'];
+  const WORK_CUTOFF = 3.4;   // Minute nach Start: facepass umgestellt und gepusht
+  const LATER_CUTOFF = 4.6;  // Minute nach Start: Regelwerk und Plan angefasst
+  const S = { state: 'empty', live: false, cutoff: 99, orderedAt: null, secs: 14 };
+  if (params.get('thema')) document.documentElement.dataset.theme = params.get('thema');
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const icon = {
+    ok: '<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5l3 3 7-7"/></svg>',
+    chev: '<svg class="icon chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg>',
+    route: '<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="12" r="2"/><path d="M6 4h4a2 2 0 010 4H6a2 2 0 000 4h4"/></svg>',
+    station: '<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3" width="11" height="8" rx="1.5"/><path d="M5 14h6"/></svg>',
+    spark: '<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v4M8 10v4M2 8h4M10 8h4"/></svg>',
+  };
+
+  // Start der Station #14 laut Datenbank: 09:45:11 (Fertigmeldung 09:53:23).
+  const START_S = 9 * 3600 + 45 * 60 + 11;
+  const clock = (min) => { const t = START_S + Math.round(min * 60); return `${String(Math.floor(t / 3600)).padStart(2, '0')}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}`; };
+  const mmss = (m) => { const s = Math.round(m * 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const fileName = (p) => p.split('/').pop();
+  const dirName = (p) => p.split('/').slice(0, -1).join('/');
+  const idOf = (repo, path) => 'f-' + (repo + path).replace(/[^a-z0-9]/gi, '');
+
+  const VERWALTER = 'Agenten-Verwalter-2000';
+  const ORDER = ['facepass', 'Regelwerk (U104_Agents)', VERWALTER];
+  const REPO_INFO = {
+    facepass: { outside: true, commits: [{ id: 'a4cdf58', min: 3.3 }] },
+    'Regelwerk (U104_Agents)': { outside: true, commits: [] },
+    [VERWALTER]: { outside: false, commits: [{ id: 'ee64529', min: 4.7 }, { id: 'ece4403', min: 8.1 }] },
+  };
+  // Endstand des Verwalter-Repos aus git show --stat der beiden Commits (Versionsdateien per Befehl, nicht per Edit).
+  const VERWALTER_FINAL = [
+    { path: 'docs/archive/2026-11/2026-11-27_review-bericht-schalter.md', add: 26, del: 8, match: 'review-bericht', note: 'verschoben aus docs/planning' },
+    { path: 'STATE.md', add: 1, del: 1, match: 'STATE.md' },
+    { path: 'package.json', add: 1, del: 1 },
+    { path: 'src-tauri/Cargo.toml', add: 1, del: 1 },
+    { path: 'src-tauri/Cargo.lock', add: 1, del: 1 },
+    { path: 'src-tauri/tauri.conf.json', add: 1, del: 1 },
+  ];
+  const STAGES = [
+    { from: 0, to: 2.35, title: 'Lage lesen', where: 'Verwalter · facepass' },
+    { from: 2.35, to: 3.05, title: 'facepass: 12 Zeilen umstellen', where: 'facepass', repo: 'facepass' },
+    { from: 3.05, to: 3.35, title: 'facepass committen und pushen', where: 'facepass', commit: 'a4cdf58' },
+    { from: 3.35, to: 3.95, title: 'WORK.md und Decision-Log', where: 'Regelwerk', repo: 'Regelwerk (U104_Agents)' },
+    { from: 3.95, to: 4.75, title: 'Plan archivieren', where: 'Verwalter', commit: 'ee64529', repo: VERWALTER },
+    { from: 4.75, to: 99, title: 'Version 0.74.0, Prüfkette, Release', where: 'Verwalter', commit: 'ece4403' },
+  ];
+  const HAIKU_NOTES = {
+    facepass: 'Alle zwölf Stellen bekommen dieselbe Bedingung: mit den Bericht-Werkzeugen gilt der Review-Reiter, sonst die Changes-Ansicht wie vorher. Der Wortlaut ist je Datei gleich.',
+    'Regelwerk (U104_Agents)': 'WORK.md knüpft die Selbst-Smoke-Prüfung an dieselbe Bedingung; der Decision-Log hält die Entscheidung fest.',
+    [VERWALTER]: 'Plan auf erledigt gesetzt und ins Archiv verschoben; STATE.md nennt den Abschluss. Die Versionsdateien tragen 0.74.0.',
+  };
+
+  // ---------- Stand zum Zeitpunkt S.cutoff ----------
+  const editsUntil = (min) => D.edits.filter((e) => e.min < min);
+  function buildRepos() {
+    const repos = {};
+    for (const name of ORDER) repos[name] = {};
+    for (const e of editsUntil(S.cutoff)) {
+      if (e.repo === VERWALTER && !S.live) continue;
+      const f = (repos[e.repo][e.path] ||= { path: e.path, add: 0, del: 0, edits: [] });
+      f.add += e.new.length; f.del += e.old.length; f.edits.push(e);
+    }
+    if (!S.live) {
+      const vEdits = D.edits.filter((e) => e.repo === VERWALTER);
+      for (const f of VERWALTER_FINAL) {
+        repos[VERWALTER][f.path] = { ...f, edits: f.match ? vEdits.filter((e) => e.path.includes(f.match)) : [] };
+      }
+    }
+    return repos;
+  }
+  const totals = (r) => Object.values(r).reduce((t, f) => ({ files: t.files + 1, add: t.add + f.add, del: t.del + f.del }), { files: 0, add: 0, del: 0 });
+  const commitsOf = (name) => REPO_INFO[name].commits.filter((c) => c.min < S.cutoff).map((c) => c.id);
+  const callsUntil = (min) => D.steps.filter((s) => s.min < min && !s.tool.startsWith('mcp__'));
+  const newSinceOrdered = () => (S.orderedAt === null ? 0 : D.edits.filter((e) => e.min >= S.orderedAt && e.min < S.cutoff).length);
+  const isNewSinceOrdered = (f) => S.live && S.orderedAt !== null && f.edits.some((e) => e.min >= S.orderedAt);
+
+  // ---------- Bausteine ----------
+  function stateBar() {
+    const n = editsUntil(S.cutoff).length;
+    if (S.state === 'work') {
+      return `<div class="state state--running" role="status">
+        <p class="state__text"><b>Läuft · noch nicht geordnet.</b>
+          <span class="state__sub">Station #14 arbeitet seit ${Math.floor(S.cutoff)} min · bisher ${n} Änderungen, keine Erklärung · Haiku ordnet automatisch am Phasenende</span></p>
+        <div class="state__actions"><button class="btn btn--primary" data-act="order">Zwischenstand ordnen</button></div>
+      </div>`;
+    }
+    if (S.state === 'zwischen') {
+      const fresh = newSinceOrdered();
+      return `<div class="state state--running" role="status">
+        <p class="state__text"><b>Läuft · Zwischenstand von ${clock(S.orderedAt)}.</b>
+          <span class="state__sub">Station arbeitet weiter · ${fresh ? `seitdem ${fresh} neue Änderungen, im Diff mit „neu“ markiert` : 'seitdem nichts Neues'} · am Phasenende ordnet Haiku erneut</span></p>
+        ${fresh ? '<div class="state__actions"><button class="btn" data-act="order">Neu ordnen</button></div>' : ''}
+      </div>`;
+    }
+    if (S.state === 'running') {
+      const sub = S.live
+        ? `liest ${n} Änderungen und ${callsUntil(S.cutoff).length} Aufrufe bis ${clock(S.cutoff)} · die Station arbeitet weiter`
+        : 'liest 60 Aufrufe und den Diff · zuletzt nach 17 s fertig, Abbruch nach 2 min · du kannst weiterlesen';
+      return `<div class="state state--running" role="status" aria-live="polite">
+        <span class="spin" aria-hidden="true"></span>
+        <p class="state__text"><b>${S.live ? 'Haiku ordnet den Zwischenstand.' : 'Haiku ordnet.'}</b>seit <span id="secs">${S.secs}</span> s
+          <span class="state__sub">${sub}</span></p>
+        <div class="state__actions"><button class="btn" data-act="stop">Abbrechen</button></div>
+        <div class="state__bar" aria-hidden="true"><i></i></div>
+      </div>`;
+    }
+    if (S.state === 'empty') {
+      return `<div class="state state--empty" role="status">
+        <p class="state__text"><b>Keine Erklärung der Station.</b>
+          <span class="state__sub">Station #14 hat 0 Einträge in den Bericht geschrieben · Haiku hatte nichts zu ordnen und lief nicht</span></p>
+        <div class="state__actions">
+          <button class="btn" data-act="ask">Station nachfragen</button>
+          <button class="btn btn--primary" data-act="order">Aus Verlauf ordnen</button>
+        </div>
+      </div>`;
+    }
+    if (S.state === 'failed') {
+      return `<div class="state state--failed" role="status">
+        <p class="state__text"><b>Ordnen fehlgeschlagen.</b>
+          <span class="state__sub">Haiku hat nach 2 min nicht geantwortet · die Meldung der Station bleibt stehen</span></p>
+        <div class="state__actions"><button class="btn" data-act="order">Neu ordnen</button></div>
+      </div>`;
+    }
+    return '';
+  }
+
+  function lead() {
+    if (S.live) {
+      if (S.orderedAt === null) return '';
+      return `<p class="origin">${icon.spark}<b>Haiku</b> Zwischenstand von ${clock(S.orderedAt)} · <span class="tag tag--muted">Beispieltext</span></p>
+        <p class="phase__lead">Bisher hängen die zwölf Stellen in den facepass-Skills an der Bedingung, ob die Bericht-Werkzeuge da sind; der Commit a4cdf58 ist gepusht.</p>`;
+    }
+    if (S.state === 'done') {
+      return `<p class="origin">${icon.spark}<b>Haiku</b> aus Verlauf und Diff · <span class="tag tag--muted">Beispieltext</span></p>
+        <p class="phase__lead">Die facepass-Skills und die WORK.md-Zeile hängen jetzt daran, ob die Bericht-Werkzeuge da sind: mit ihnen gilt der Review-Reiter, ohne sie der alte Weg. Danach ist der Plan archiviert und v0.74.0 veröffentlicht.</p>
+        <p class="origin" style="margin-top:var(--space-md);flex-wrap:nowrap;align-items:flex-start">${icon.station}<span>Meldung der Station: ${esc(D.station.result)}</span></p>`;
+    }
+    return `<p class="origin">${icon.station}<b>Meldung der Station</b> · beim Fertigmelden, ungeordnet</p>
+      <p class="phase__lead phase__lead--quiet">${esc(D.station.result)}</p>`;
+  }
+
+  function checks() {
+    if (S.live) return '';
+    return `<div class="checks">
+      <span class="chip chip--ok">${icon.ok} Prüfkette grün <small>check.ps1</small></span>
+      <span class="chip chip--none">keine Tests für diese Phase</span>
+    </div>`;
+  }
+
+  function meta(repos) {
+    const parts = ORDER.filter((name) => Object.keys(repos[name]).length).map((name) => {
+      const t = totals(repos[name]);
+      const out = REPO_INFO[name].outside;
+      return `<span${out ? ' class="is-outside" title="außerhalb des Vorhabens"' : ''}>${esc(name.replace(' (U104_Agents)', ''))} · ${t.files} ${t.files === 1 ? 'Datei' : 'Dateien'} <span class="add">+${t.add}</span> <span class="del">−${t.del}</span></span>`;
+    }).join('');
+    const commits = ORDER.flatMap(commitsOf).join(' · ');
+    return `<p class="phase__meta">${parts}${commits ? `<code>${commits}</code>` : ''}</p>`;
+  }
+
+  function way() {
+    // Eine Etappe erscheint erst mit ihrem ersten Aufruf.
+    const stages = STAGES.filter((st) => [...D.steps, ...D.edits].some((x) => x.min >= st.from && x.min < Math.min(st.to, S.cutoff)));
+    const items = stages.map((st) => {
+      const until = Math.min(st.to, S.cutoff);
+      const calls = callsUntil(until).filter((s) => s.min >= st.from);
+      const eds = D.edits.filter((e) => e.min >= st.from && e.min < until);
+      const named = calls.filter((c) => c.tool === 'Bash' || c.tool === 'PowerShell');
+      const reads = calls.length - named.length;
+      const files = [...new Set(eds.map((e) => fileName(e.path)))];
+      const running = S.live && S.cutoff < st.to;
+      return `<li>
+        <span class="way__text"><span>${esc(st.title)}</span><span class="way__time">${clock(st.from)}</span>
+          <span class="tag tag--muted">${esc(st.where)}</span>${st.commit && st.to <= S.cutoff ? `<code>${st.commit}</code>` : ''}
+          ${running ? '<span class="tag tag--station">läuft</span>' : ''}</span>
+        <ul class="way__calls">${named.map((c) => `<li>${esc(c.text)}</li>`).join('')}
+          ${reads ? `<li>+ ${reads} × gelesen oder gesucht</li>` : ''}
+          ${eds.length ? `<li>${eds.length} × geändert</li>` : ''}</ul>
+        ${files.length ? `<span class="way__files">${files.map((f) => `<code>${esc(f)}</code>`).join('')}
+          ${st.repo ? `<button class="btn btn--link" data-jump="${esc(st.repo)}">zum Diff ↓</button>` : ''}</span>` : ''}
+      </li>`;
+    }).join('');
+    const total = callsUntil(S.cutoff).length + editsUntil(S.cutoff).length;
+    const summary = S.live
+      ? `bisher ${stages.length} Etappen · ${total} Aufrufe in ${Math.floor(S.cutoff)} min`
+      : `${stages.length} Etappen · aus ${total} Aufrufen in ${D.station.minutes} min`;
+    return `<details class="disc"${S.live ? ' open' : ''}><summary>${icon.route}<b>Weg</b><small>${summary}</small>${icon.chev}</summary>
+      <ol class="way">${items}</ol></details>`;
+  }
+
+  function hasHaikuNote(name, f) {
+    if (S.state === 'done') return true;
+    if (S.live && S.orderedAt !== null) return f.edits.every((e) => e.min < S.orderedAt);
+    if (S.live && S.state === 'running') return false;
+    return false;
+  }
+
+  function marginNote(name, f, first) {
+    if (!f.edits.length) return '';
+    if (hasHaikuNote(name, f)) {
+      return first ? `<div class="note note--haiku"><span class="note__who">Haiku · aus dem Diff</span><span>${esc(HAIKU_NOTES[name])}</span><span class="tag tag--muted" style="align-self:flex-start">Beispieltext</span></div>` : '';
+    }
+    return `<div class="note note--none"><span>Keine Erklärung der Station.</span>
+      ${S.state === 'running' ? '' : '<button class="btn btn--link" data-act="order" style="align-self:flex-start">Haiku erklären lassen</button>'}</div>`;
+  }
+
+  function codeRows(e) {
+    const n = e.line;
+    return e.old.map((l, i) => `<tr class="row--del"><td class="code__num">${n ? n + i : ''}</td><td class="code__sign">−</td><td class="code__src">${esc(l)}</td></tr>`).join('')
+      + e.new.map((l, i) => `<tr class="row--add"><td class="code__num">${n ? n + i : ''}</td><td class="code__sign">+</td><td class="code__src">${esc(l)}</td></tr>`).join('');
+  }
+
+  function stops(repos) {
+    return ORDER.filter((name) => Object.keys(repos[name]).length).map((name) => {
+      const all = Object.values(repos[name]);
+      const files = all.filter((f) => f.edits.length);
+      const rest = all.filter((f) => !f.edits.length);
+      const t = totals(repos[name]);
+      const info = REPO_INFO[name];
+      const commits = commitsOf(name);
+      let firstWithNote = true;
+      const blocks = files.map((f) => {
+        const note = marginNote(name, f, firstWithNote);
+        if (hasHaikuNote(name, f)) firstWithNote = false;
+        return `
+        <div class="code" id="${idOf(name, f.path)}">
+          <div class="code__head"><span class="code__path">${esc(dirName(f.path))}/<b>${esc(fileName(f.path))}</b></span>
+            <span class="add">+${f.add}</span><span class="del">−${f.del}</span>${f.note ? `<span>${esc(f.note)}</span>` : ''}
+            ${isNewSinceOrdered(f) ? `<span class="tag tag--station">neu seit ${clock(S.orderedAt)}</span>` : ''}<span class="code__spacer"></span>
+            <button class="btn btn--quiet">Im Reiter Dateien</button></div>
+          <div class="code__body"><div class="code__grid">
+            <div class="code__scroll"><table class="code__lines">${f.edits.map((e, i) => (i ? '<tr class="row--gap"><td colspan="3">⋯</td></tr>' : '') + codeRows(e)).join('')}</table></div>
+            <div class="code__aside">${note}</div>
+          </div></div>
+        </div>`;
+      }).join('');
+      return `<section class="stop" id="stop-${idOf(name, '')}">
+        <h3 class="stop__title">${esc(name)}</h3>
+        <p class="stop__meta"><span>${t.files} ${t.files === 1 ? 'Datei' : 'Dateien'} · <span class="add">+${t.add}</span> <span class="del">−${t.del}</span></span>
+          ${commits.map((c) => `<code>${c}</code>`).join(' ')}
+          ${info.outside ? '<span class="tag tag--warn">außerhalb des Vorhabens</span>' : ''}
+          <span class="tag tag--muted">Stopp aus dem Diff, nicht von der Station</span></p>
+        ${blocks}
+        ${rest.length ? `<p class="stop__meta" style="margin-top:var(--space-xl)">Ohne Edit geändert (per Befehl): ${rest.map((f) => `<code>${esc(fileName(f.path))}</code>`).join(' ')}</p>` : ''}
+      </section>`;
+    }).join('');
+  }
+
+  function foot() {
+    return `<footer class="foot"><button><small>← zurück</small><span>1 · Schalter im Verwalter</span></button>
+      <button class="next"><small>weiter →</small><span>3 · Abschluss</span></button></footer>`;
+  }
+
+  function tocItems() {
+    const p2 = {
+      work: ['toc__dot--live', '<small>läuft · nicht geordnet</small>'],
+      zwischen: ['toc__dot--live', `<small>läuft · geordnet ${S.orderedAt !== null ? clock(S.orderedAt) : ''}</small>`],
+      running: ['toc__dot--running', '<small class="is-running">Haiku ordnet …</small>'],
+      empty: ['toc__dot--empty', '<small class="is-empty">ohne Erklärung</small>'],
+      failed: ['toc__dot--failed', '<small class="is-failed">Ordnen fehlgeschlagen</small>'],
+      done: ['toc__dot--none', ''],
+    }[S.state];
+    return `
+      <li><button class="toc__link"><span class="toc__key">≡</span><span class="toc__name"><b>Überblick</b></span><span class="toc__dot toc__dot--none"></span></button></li>
+      <li><button class="toc__link"><span class="toc__key">1</span><span class="toc__name"><b>Schalter im Verwalter</b></span><span class="toc__dot toc__dot--none"></span></button></li>
+      <li><button class="toc__link toc__link--current" aria-current="page"><span class="toc__key">2</span><span class="toc__name"><b>Skills nachziehen, Plan fertig</b>${p2[1]}</span><span class="toc__dot ${p2[0]}" aria-hidden="true"></span></button></li>
+      <li><button class="toc__link toc__link--off" disabled><span class="toc__key">3</span><span class="toc__name"><b>Abschluss</b><small>${S.live ? 'noch nicht begonnen' : 'wartet auf dich'}</small></span><span class="toc__dot toc__dot--none"></span></button></li>`;
+  }
+
+  function render() {
+    document.querySelectorAll('#seg-live button').forEach((b) => b.setAttribute('aria-pressed', String(S.live && b.dataset.v === S.state)));
+    document.querySelectorAll('#seg-done button').forEach((b) => b.setAttribute('aria-pressed', String(!S.live && b.dataset.v === S.state)));
+    document.getElementById('tab-dot').hidden = S.state !== 'running';
+    document.getElementById('toc').innerHTML = tocItems();
+    document.getElementById('toc-sheet').innerHTML = tocItems();
+    const repos = buildRepos();
+    document.getElementById('doc').innerHTML = `
+      <button class="btn report-view__tocbtn" data-act="toc" style="margin-bottom:var(--space-xl)">☰ Inhalt</button>
+      <p class="phase__kicker">Phase 2 · #14 Umsetzung · ${S.live ? 'läuft' : '27.11. 09:53'}</p>
+      <h2 class="phase__title">Skills nachziehen, Plan fertig</h2>
+      ${meta(repos)}
+      ${stateBar()}
+      ${lead()}
+      ${checks()}
+      ${way()}
+      ${stops(repos)}
+      ${foot()}`;
+  }
+
+  // ---------- Zustandswechsel ----------
+  let timer = null;
+  let pending = null;
+  function setState(state) {
+    S.state = state;
+    clearInterval(timer);
+    if (state === 'running') {
+      S.secs = S.live ? 3 : 14;
+      timer = setInterval(() => { S.secs += 1; const el = document.getElementById('secs'); if (el) el.textContent = S.secs; }, 1000);
+    }
+    render();
+  }
+  function pick(state) {
+    clearTimeout(pending);
+    S.live = LIVE_STATES.includes(state);
+    S.cutoff = state === 'work' ? WORK_CUTOFF : state === 'zwischen' ? LATER_CUTOFF : 99;
+    S.orderedAt = state === 'zwischen' ? WORK_CUTOFF : null;
+    setState(state);
+  }
+  let before = null;
+  function order() {
+    before = { state: S.state, orderedAt: S.orderedAt };
+    setState('running');
+    pending = setTimeout(() => {
+      if (S.live) { S.orderedAt = S.cutoff; setState('zwischen'); S.cutoff = Math.max(S.cutoff, LATER_CUTOFF); render(); }
+      else setState('done');
+      document.getElementById('toast-text').textContent = S.live ? 'Zwischenstand geordnet.' : 'Phase 2 geordnet.';
+      document.getElementById('toast').hidden = false;
+    }, 3000);
+  }
+
+  document.getElementById('seg-live').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) pick(b.dataset.v); });
+  document.getElementById('seg-done').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) pick(b.dataset.v); });
+  document.getElementById('btn-theme').addEventListener('click', () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+  document.getElementById('btn-info').addEventListener('click', () => document.getElementById('dlg-info').showModal());
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+  document.getElementById('toast-close').addEventListener('click', () => { document.getElementById('toast').hidden = true; });
+  document.getElementById('toast-show').addEventListener('click', () => { document.getElementById('toast').hidden = true; document.getElementById('page').scrollTop = 0; });
+
+  document.getElementById('doc').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-act],[data-jump]'); if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'toc') document.getElementById('dlg-toc').showModal();
+    if (act === 'order') order();
+    if (act === 'stop') { clearTimeout(pending); S.orderedAt = before.orderedAt; setState(before.state); }
+    if (act === 'ask') alert('Öffnet eine Rückfrage an die Station mit dem Auftrag, ihre Änderungen nachträglich im Bericht zu erklären.');
+    if (b.dataset.jump) document.getElementById('stop-' + idOf(b.dataset.jump, ''))?.scrollIntoView({ block: 'start' });
+  });
+
+  function showBp() {
+    const w = document.querySelector('.report-view').clientWidth;
+    document.getElementById('bp').textContent = `${w}px · ${w <= 820 ? 'schmal (ohne Inhalt-Spalte)' : 'breit'}`;
+  }
+  addEventListener('resize', showBp);
+
+  pick(params.get('zustand') || 'work');
+  showBp();
+  if (params.get('dialog') === 'info') document.getElementById('dlg-info').showModal();
+})();
+</script>
+</body>
+</html>
