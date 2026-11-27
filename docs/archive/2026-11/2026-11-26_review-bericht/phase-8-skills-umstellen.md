@@ -34,11 +34,19 @@ Rating: standard. Die Anweisungen außerhalb des Verwalters verlangen in Station
 
 ## Checkliste
 
-- [ ] `regeldateien.md` und `skill-evolution.md` lesen.
-- [ ] User-Ebene: `CLAUDE.md`, `mode-implementing/SKILL.md`, `mode-implementing/WORK.md`, `mode-reviewing/SKILL.md` ändern; Decision-Log-Eintrag; Spiegeln.
-- [ ] facepass: `git -C C:\Users\smick\develop\easyfitness\facepass status`; Branch anlegen; die sieben Fundstellen oben ändern; vor dem Commit erneut `Grep` nach `HTML-Seite`, `Artefakt im Vorhaben`, `Sichtabnahme-Seite` mit `path` auf `.claude\skills` — verbleibende Treffer einzeln begründen oder ändern.
-- [ ] facepass: Commit und Push des Branches nach `project-committing`.
-- [ ] Verwalter-Repo: `docs/PROJECT.md` (Meilenstein/Scope um „Review-Bericht“), `docs/code-map.md` Stand-Satz am Kopf, `docs/glossary.md` geprüft.
-- [ ] „Plan fertig“: Plan nach `docs/archive/2026-11/` (bzw. aktuellem Monat), Release nach `docs/conventions/releases.md`.
+- [x] `regeldateien.md` und `skill-evolution.md` lesen.
+- [x] User-Ebene: `CLAUDE.md`, `mode-implementing/SKILL.md`, `mode-implementing/WORK.md`, `mode-reviewing/SKILL.md` ändern; Decision-Log-Eintrag; Spiegeln.
+- [x] facepass: `git -C C:\Users\smick\develop\easyfitness\facepass status`; Branch anlegen; die sieben Fundstellen oben ändern; vor dem Commit erneut `Grep` nach `HTML-Seite`, `Artefakt im Vorhaben`, `Sichtabnahme-Seite` mit `path` auf `.claude\skills` — verbleibende Treffer einzeln begründen oder ändern.
+- [x] facepass: Commit und Push des Branches nach `project-committing`.
+- [x] Verwalter-Repo: `docs/PROJECT.md` (Meilenstein/Scope um „Review-Bericht“), `docs/code-map.md` Stand-Satz am Kopf, `docs/glossary.md` geprüft.
+- [x] „Plan fertig“: Plan nach `docs/archive/2026-11/` (bzw. aktuellem Monat), Release nach `docs/conventions/releases.md`.
 
 ## Report-Back
+
+Status: complete.
+
+- **User-Ebene (Master `G:\Meine Ablage\U104_Agents`, lokal gespiegelt):** `CLAUDE.md` (Ausnahme in der Zeile „HTML-Berichte landen …“), `skills/mode-implementing/SKILL.md` (Punkt „Review-Bericht“ im Abschnitt Agenten-Verwalter), `WORK.md` (Punkt in „Stationen“, Zeile „Verifikation“), `skills/mode-reviewing/SKILL.md` (Abschnitt Verwalter nach „Persist the Review Result“), Decision-Log-Eintrag `report-statt-html` unter 2026-11-27.
+- **facepass (Branch `docs/review-bericht-skills`, Commit `1f54e41`, gepusht, Arbeitsbaum `facepass/facepass-wt-review-bericht`):** sieben Dateien unter `.claude/skills/` — `bildschirm-abnahme.md` (Abnahme-Paket und Fotos per `report_screen`), `phasen-review.md` (Sichtabnahme im Reiter „Review“), `abschluss.md`, `modi.md` (Abnahme-Weg, Selbst-Smoke, absoluter Pfad im Arbeitsbaum), `merge-gate.md`, `merge-mechanik.md`, `merge.md`. Der Hauptbaum war sauber auf `master`; kein Merge, der wartet auf den Benutzer. 🟡 Der Strang GYMID-3126 (Root-Repo, Skill-Doku) liegt parallel in einem eigenen Arbeitsbaum; Dateien nicht abgeglichen, ein Konflikt wäre erst beim Merge sichtbar.
+- **Restsuche:** `Grep` mit `path` auf `.claude/skills` nach `HTML-Seite`, `Artefakt im Vorhaben`, `Sichtabnahme-Seite`, `Abnahme-Seite`, `Artefakt-Seite`: verbleibend nur die Verneinung in `bildschirm-abnahme.md` („nicht als HTML-Seite“), `lehrgeld.md` (Historie) und `audit.yaml` (vorhandene Verweise, nicht berührt).
+- **Verwalter-Repo:** `docs/PROJECT.md` (Scope: Punkt „Review-Bericht“), `docs/code-map.md` (Stand-Satz); `docs/glossary.md` führte die Begriffe schon.
+- **Prüfkette:** `pnpm check` grün (Exit 0).

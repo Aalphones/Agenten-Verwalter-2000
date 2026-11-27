@@ -13,7 +13,7 @@ Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst
 | 5 | Oberfläche: Reiter „Review“, Inhalt, Überblick, Phasen-Seite, Code mit Randnotizen | [phase-5-oberflaeche-seiten.md](phase-5-oberflaeche-seiten.md) | standard | complete |
 | 6 | Oberfläche: Schaubilder mit Unterschied/Vorher/Nachher, Bilder mit Marken, Sichtabnahme | [phase-6-oberflaeche-schaubilder.md](phase-6-oberflaeche-schaubilder.md) | standard | complete |
 | 7 | Kommentare und Abnahme | [phase-7-kommentare-abnahme.md](phase-7-kommentare-abnahme.md) | standard | complete |
-| 8 | Skills umstellen (User-Skills, facepass-Projekt-Skills), Plan fertig | [phase-8-skills-umstellen.md](phase-8-skills-umstellen.md) | standard | pending |
+| 8 | Skills umstellen (User-Skills, facepass-Projekt-Skills), Plan fertig | [phase-8-skills-umstellen.md](phase-8-skills-umstellen.md) | standard | complete |
 
 Reihenfolge fest 1 → 8; nach jeder Phase läuft die App. Profil: privat – keine automatisierten Tests, keine Review-Stationen, keine Abnahmeliste. Nicht im Umfang: Bericht für Sessions ohne Umsetzung, Ampel-Schwellen für Abdeckung oder Mutation, Zweckzeilen automatisch an Hunks heften, Betriebsarten Codex/LM Studio/Autark (dort fehlen die Werkzeuge, der Bericht zeigt dann nur Code und Prüfwerte).
 
@@ -321,10 +321,28 @@ Neue Variante `CommentTarget::Report { implementation_id: String, phase_key: Str
 
 ## Summary
 
+Jede Umsetzung hat einen Review-Bericht im Reiter „Review“ ([ADR 073](../../../decisions/073-review-bericht.md), Migration 023): Stationen der Betriebsart Claude hängen mit `report_note`, `report_figure` und `report_screen` Erklärungen, Befunde, Schaubilder und Bildschirmfotos an; am Phasenende ordnet Haiku die Phase (verworfene Ordnung fällt auf die Rohgruppierung zurück) und der Verwalter liest Code, Vorher-Zeilen und Prüfwerte (Prüfkette, Tests, Abdeckung, Mutation) mechanisch aus Git und den Berichtsdateien. Die Oberfläche zeigt Überblick und Phasen-Seiten mit Stopps, Code mit Randnotizen, Schaubilder mit Unterschied/Vorher/Nachher, Sichtabnahme je Bildschirm; Kommentare gehen als „Kommentare senden“ an die Rückfrage der Umsetzung, „Abnehmen“ (mit 8 s „Rückgängig“) schließt die Abnahme-Station. Phase 8 stellte die User-Skills und die facepass-Projekt-Skills um: kein HTML-Bericht und keine Abnahme-Seite mehr in Stationen.
+
 ## Files touched
+
+- Core: `src-tauri/src/report/` (neu), `src-tauri/src/db/report.rs`, `src-tauri/src/db/migrations/023_report.sql`, `src-tauri/src/commands/report.rs`, `src-tauri/src/agents/claude/process.rs` (Anweisung), `src-tauri/src/mcp_access/` (Satz `ReportTools`), `src-tauri/src/review/` (Kommentarziel), `src-tauri/examples/report-probe.rs`.
+- Oberfläche: `src/features/report/` (neu), `src/stores/report.ts`, `src/lib/report.ts`, erzeugte Typen in `src/lib/bindings/`, Reiter in `src/features/implementation/` und `src/features/review/`, kleinere Anpassungen in `src-tauri/src/sessions/registry/`, `retro/`, `tldr/` und `git/`.
+- Docs: ADR 073, `docs/glossary.md`, `docs/code-map.md`, `docs/PROJECT.md`, `AGENTS.md` (Prüfprogramm).
+- Außerhalb des Repos: User-Skills (`CLAUDE.md`, `mode-implementing`, `mode-reviewing`, Decision-Log) und sieben facepass-Skill-Dateien (Branch `docs/review-bericht-skills`).
 
 ## Commits
 
+`575009f` Ablage und Werkzeuge · `3a8d0f4` Haiku-Ordnung · `0649e27` Bericht aus Git zusammensetzen · `bb201ff` Prüfwerte · `0e9d35b` Reiter Review · `3395adc` Schaubilder, Bilder mit Marken, Sichtabnahme · `0c58518` Kommentare und Abnehmen; Phase 8 und Archiv: Abschluss-Commit dieses Plans. facepass: `1f54e41` auf `docs/review-bericht-skills` (nicht gemergt).
+
 ## Deviations from plan
 
+- Kommentare gehen an die Rückfrage der Umsetzung statt an eine Station (Entscheidung des Benutzers während der Planung, in Kontrakt und Phase 7 nachgezogen).
+- Profil privat: keine automatisierten Tests; Belege sind `pnpm check`, `report-probe` und Headless-Zeichnungen der Schaubilder in Edge.
+- Phase 8 legte in facepass einen Arbeitsbaum an (`facepass/facepass-wt-review-bericht`), obwohl der Plan nur einen Branch nennt: die Projektregel verlangt für jede Umsetzung einen eigenen Arbeitsbaum.
+
 ## Follow-ups
+
+- Laufzeit-Belege in der echten App stehen aus: Auslöser der Haiku-Ordnung am Phasenende, Werkzeuge `report_*` in einer echten Station, Reiter „Review“ samt Kommentaren, „Kommentare senden“ an die Rückfrage und „Abnehmen“, Bilder des Berichts (Finding aus Phase 6 zur Content-Security-Policy), mehrere Arbeitsbäume derselben Datei bei `at`.
+- Prüfwerte nur gegen Berichtsdateien aus Projekten, die sie erzeugen; Format von cargo-mutants am Quelltext geprüft, nicht an einer echten Ausgabe.
+- facepass: Branch `docs/review-bericht-skills` wartet auf den Merge des Benutzers; Strang GYMID-3126 ändert Skill-Doku im Root-Repo parallel.
+- Betriebsarten Codex, LM Studio und Autark haben keine `report_*`-Werkzeuge (nicht im Umfang); `skill-evolution`-Vault-Tags aus diesem Plan: keine offenen.
