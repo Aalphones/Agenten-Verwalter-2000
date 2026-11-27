@@ -4,7 +4,7 @@ Ein Schalter in den Einstellungen schaltet den Review-Bericht ([ADR 073](../deci
 
 | Phase | Titel | Rating | Status |
 |---|---|---|---|
-| 1 | Schalter im Verwalter | standard | pending |
+| 1 | Schalter im Verwalter | standard | complete |
 | 2 | Skills auf den Schalter einstellen, Plan fertig | mechanisch | pending |
 
 ## Entscheidungen
@@ -56,16 +56,20 @@ Ein Schalter in den Einstellungen schaltet den Review-Bericht ([ADR 073](../deci
 
 ### Checkliste
 
-- [ ] Rust: `settings/model.rs`, `settings/mod.rs` (Konstante, Standard, `load`, `update`).
-- [ ] Rust: `report/tools.rs` (`offered`, `unavailable_message`), `report/mod.rs` (`on_station_completed`).
-- [ ] Rust: `agents/claude/process.rs` (Feld, Bedingung, Test-Baustein), `sessions/registry.rs`, `sessions/registry/side.rs`, `examples/side-probe.rs`.
-- [ ] `pnpm bindings`.
-- [ ] TS: `settingsCatalog.ts`, `SettingsView.tsx`, `ImplementationView.tsx`, `App.tsx`.
-- [ ] Doku: ADR 073 Nachtrag, Glossar.
-- [ ] Probe (Konfidenz-Check oben): in `pnpm tauri dev` eine Station starten, Schalter aus, `mcp-probe` `list` und `call report_note {}` gegen deren Konfigurationsdatei; Ergebnis in den Report-Back.
-- [ ] `scripts/check.ps1` grün, Commit nach `docs/conventions/commits.md`.
+- [x] Rust: `settings/model.rs`, `settings/mod.rs` (Konstante, Standard, `load`, `update`).
+- [x] Rust: `report/tools.rs` (`offered`, `unavailable_message`), `report/mod.rs` (`on_station_completed`).
+- [x] Rust: `agents/claude/process.rs` (Feld, Bedingung, Test-Baustein), `sessions/registry.rs`, `sessions/registry/side.rs`, `examples/side-probe.rs`.
+- [x] `pnpm bindings`.
+- [x] TS: `settingsCatalog.ts`, `SettingsView.tsx`, `ImplementationView.tsx`, `App.tsx`.
+- [x] Doku: ADR 073 Nachtrag, Glossar.
+- [ ] Probe (Konfidenz-Check oben): **nicht gelaufen** — private Profil: keine Live-Läufe; steht aus (Station in `pnpm tauri dev`, Schalter aus, `mcp-probe` `list` und `call report_note {}`).
+- [x] `scripts/check.ps1` grün, Commit nach `docs/conventions/commits.md`.
 
 ### Report-Back
+
+- Schalter `report_enabled` (Standard an) in Core, Einstellungsseite, Werkzeugsatz, Prompt-Zusatz (`SpawnOptions.report`), Phasenende (`is_switched_off` in `report/mod.rs`) und beiden Reitern; `check.ps1` endet mit `exit 0`.
+- 🟡 Nicht in der laufenden App belegt: die Werkzeug-Liste der Kommandozeile bei ausgeschaltetem Schalter (`mcp-probe … list`, `call report_note {}`) und der Reiter „Review“ bei aus.
+- `code-map.md` unverändert: dort stehen keine Einstellungen des Berichts.
 
 ---
 

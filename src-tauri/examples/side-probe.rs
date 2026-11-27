@@ -95,6 +95,7 @@ fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         auto_compact_window: None,
         station_style: false,
         lean_tools: false,
+        report: false,
     };
     let request = SideRequest {
         options,

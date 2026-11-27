@@ -63,6 +63,9 @@ pub struct SpawnOptions {
     /// Nur Stationen in der Betriebsart Claude (ADR 061): selten genutzte Werkzeuge sperren, damit
     /// ihre Beschreibungen nicht in jeder Anfrage mitgehen.
     pub lean_tools: bool,
+    /// Nur Stationen in der Betriebsart Claude, nur bei eingeschaltetem Review-Bericht (ADR 073):
+    /// die Anweisung zu den `report_*`-Werkzeugen geht mit.
+    pub report: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -226,7 +229,7 @@ pub(super) fn common_args(command: &mut Command, opts: &SpawnOptions, permission
         ));
     }
     // `lean_tools` heißt: Claude-Station. Ohne Zugang gäbe es die Werkzeuge nicht.
-    if opts.lean_tools && opts.verwalter_mcp.is_some() {
+    if opts.lean_tools && opts.report && opts.verwalter_mcp.is_some() {
         prompts.push(report_prompt());
     }
     command
@@ -452,6 +455,7 @@ mod tests {
             auto_compact_window: None,
             station_style,
             lean_tools: false,
+            report: false,
         }
     }
 

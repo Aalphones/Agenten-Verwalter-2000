@@ -296,9 +296,12 @@ export function App(): ReactElement {
     !isOverview &&
     currentSession !== undefined &&
     currentSession.stationOf !== null;
+  const isReportEnabled: boolean = useSettingsStore(
+    (state) => state.settings?.reportEnabled ?? true,
+  );
   const reportImplementationId: string | null = useReportOfSession(
-    isStationShown ? (currentSession?.id ?? null) : null,
-    isStationShown,
+    isStationShown && isReportEnabled ? (currentSession?.id ?? null) : null,
+    isStationShown && isReportEnabled,
   );
   const reportImplementation: ImplementationView | undefined =
     reportImplementationId === null

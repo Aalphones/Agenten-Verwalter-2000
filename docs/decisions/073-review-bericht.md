@@ -29,3 +29,9 @@ Wer eine Umsetzung ([ADR 048](048-umsetzung.md)) abnimmt, liest bisher ein HTML-
 - Codex, LM Studio und der autarke Agent haben die Anweisung nicht; ihr Bericht zeigt nur Code und Prüfwerte.
 - Bildmaße liest der Core selbst aus dem Dateikopf (PNG, JPEG, GIF, WebP), ohne Bild-Bibliothek.
 - Ohne `at` rät der Verwalter nur, wenn die Stelle des letzten Edits genau einmal vorkommt; sonst muss der Agent `at` nennen.
+
+## Nachtrag: Schalter (2026-11-27)
+
+- Die Einstellung „Review-Bericht“ (Agent → Umsetzungen, `report_enabled`) stellt den Bericht als Ganzes ab: keine `report_*`-Werkzeuge im MCP-Zugang, keine Anweisung an die Stationen, keine Ordnung am Phasenende, kein Reiter „Review“ in Umsetzung und Station; die Skills schreiben den Bericht dann wieder nach ihren Vorgaben ohne Werkzeuge.
+- Standard an. Die Änderung wirkt ab dem nächsten Start einer Station; läuft eine Station weiter, scheitert ein Aufruf mit einem Satz, der sie auf den Bericht nach ihren Skills verweist. Nebenfragen lesen den Schalter beim Stellen der Frage.
+- Gespeicherte Berichte bleiben in der Datenbank und erscheinen nach dem Einschalten wieder; „Neu ordnen“ holt Ordnung und Prüfwerte einer Phase nach.

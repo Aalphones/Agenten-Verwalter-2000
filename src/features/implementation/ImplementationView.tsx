@@ -128,8 +128,12 @@ export function ImplementationView({
     (state) => state.settings?.notePlacement ?? 'dock',
   );
   const isNoteShown: boolean = activeView === 'note' && notePlacement === 'tab';
-  // Der Reiter „Review“ gibt es, sobald eine Phase begonnen hat; vorher fällt er auf den Ablauf zurück.
-  const hasReport: boolean = hasBegunPhase(implementation);
+  // Der Reiter „Review“ gibt es, sobald eine Phase begonnen hat und der Review-Bericht eingeschaltet
+  // ist; sonst fällt er auf den Ablauf zurück.
+  const isReportEnabled: boolean = useSettingsStore(
+    (state) => state.settings?.reportEnabled ?? true,
+  );
+  const hasReport: boolean = hasBegunPhase(implementation) && isReportEnabled;
   const isReviewShown: boolean = activeView === 'review' && hasReport;
   const isFlow: boolean = !isFilesShown && !isArtifactsShown && !isNoteShown && !isReviewShown;
   const visitedPhases: readonly string[] = useReportStore(

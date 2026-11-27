@@ -4379,6 +4379,8 @@ fn start_process(
         && locate::station_style_installed();
     // Nur Stationen sperren selten genutzte Werkzeuge (ADR 061).
     let lean_tools = state.station_of.is_some() && backend.is_none() && codex_exe.is_none();
+    let report = lean_tools
+        && settings::load(&session.database).is_ok_and(|loaded: Settings| loaded.report_enabled);
     state.generation += 1;
     let generation = state.generation;
     let callback_app = app.clone();
@@ -4405,6 +4407,7 @@ fn start_process(
             auto_compact_window,
             station_style,
             lean_tools,
+            report,
         },
         move |output: ProcessOutput| {
             handle_output(&callback_app, &callback_session, generation, output);

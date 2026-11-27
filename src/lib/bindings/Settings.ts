@@ -46,7 +46,12 @@ autoCompactThreshold: number,
  * Ob eine Station nach dem Kontingent-Limit selbst weitermacht und Windows dafür wach bleibt
  * (ADR 063).
  */
-autoContinueAtLimit: boolean, terminalPlacement: TerminalPlacement, 
+autoContinueAtLimit: boolean, 
+/**
+ * Ob der Review-Bericht geführt wird: `report_*`-Werkzeuge, Anweisung an die Stationen,
+ * Ordnung am Phasenende und Reiter „Review“ (ADR 073); Standard an.
+ */
+reportEnabled: boolean, terminalPlacement: TerminalPlacement, 
 /**
  * Wo die Notiz des Vorhabens erscheint (ADR 074).
  */

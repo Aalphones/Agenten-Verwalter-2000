@@ -489,6 +489,18 @@ export function SettingsView({
             />
           </SettingRow>
         );
+      case 'reportEnabled':
+        return (
+          <SettingRow id={id}>
+            <Switch
+              checked={current.reportEnabled}
+              label="Review-Bericht führen"
+              onChange={(checked: boolean): void => {
+                save({ kind: 'reportEnabled', value: checked }).catch(() => undefined);
+              }}
+            />
+          </SettingRow>
+        );
       case 'autoCompactThreshold':
         return (
           <SettingRow id={id}>

@@ -136,6 +136,12 @@ const ENTRY_DATA = {
     info: 'Stoppt das Kontingent-Limit eine Station oder eine einzelne Session, wartet der Verwalter, bis es sich zurücksetzt, und schickt sie dann selbst weiter — so läuft eine Umsetzung über Nacht durch. Solange eine Station läuft oder eine Session aufs Kontingent wartet, geht der Rechner nicht in den Ruhezustand; der Bildschirm darf ausgehen. Zuklappen schickt ihn trotzdem schlafen, das regelt Windows unter „Beim Zuklappen“. Eine eigene Nachricht an die wartende Session ersetzt das automatische Weiter.',
     isShown: isClaudeMode,
   },
+  reportEnabled: {
+    category: 'agent',
+    section: 'Umsetzungen',
+    label: 'Review-Bericht',
+    info: 'Stationen einer Umsetzung erklären ihre Änderungen, Befunde und Bildschirmfotos im Reiter „Review“; am Ende einer Phase ordnet Haiku die Einträge. Aus: Stationen bekommen weder die Werkzeuge noch die Anweisung dazu und schreiben ihren Bericht wieder nach ihren Skills, der Reiter „Review“ verschwindet. Gespeicherte Berichte bleiben erhalten und erscheinen nach dem Einschalten wieder. Wirkt ab dem nächsten Start einer Station.',
+  },
   cliVersion: {
     category: 'agent',
     section: 'Claude Code',

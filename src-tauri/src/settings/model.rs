@@ -96,6 +96,9 @@ pub struct Settings {
     /// Ob eine Station nach dem Kontingent-Limit selbst weitermacht und Windows dafür wach bleibt
     /// (ADR 063).
     pub auto_continue_at_limit: bool,
+    /// Ob der Review-Bericht geführt wird: `report_*`-Werkzeuge, Anweisung an die Stationen,
+    /// Ordnung am Phasenende und Reiter „Review“ (ADR 073); Standard an.
+    pub report_enabled: bool,
     pub terminal_placement: TerminalPlacement,
     /// Wo die Notiz des Vorhabens erscheint (ADR 074).
     pub note_placement: NotePlacement,
@@ -179,6 +182,9 @@ pub enum SettingsChange {
         value: u32,
     },
     AutoContinueAtLimit {
+        value: bool,
+    },
+    ReportEnabled {
         value: bool,
     },
     TerminalPlacement {

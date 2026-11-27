@@ -14,7 +14,7 @@ pub mod tools;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 
 use tauri::{AppHandle, Emitter, Manager};
@@ -24,12 +24,14 @@ use crate::artifacts::server::ArtifactServer;
 use crate::changes::ChangesInput;
 use crate::changes::model::ChangesReach;
 use crate::changes::sources::{self, Source};
+use crate::db::Database;
 use crate::db::report::{EntryRow, PhaseRow};
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
 use crate::session_files::handles::ViewHandles;
 use crate::sessions::registry::SessionRegistry;
+use crate::settings::{self, model::Settings};
 use assemble::AssembleContext;
 use checks::{PhaseEvidence, SessionLog};
 use model::{ReportChangedEvent, ReportPhaseState, ReportView};
@@ -162,6 +164,9 @@ impl Drop for TidyClaim {
 /// Benutzers zählen nicht: er liest den Bericht, bevor er abnimmt. Ein Fehler geht nur ins
 /// Protokoll — die Fertigmeldung ist schon gespeichert.
 pub fn on_station_completed(app: &AppHandle, implementation_id: &str, station_id: &str) {
+    if is_switched_off(app) {
+        return;
+    }
     let outcome = app
         .state::<SessionRegistry>()
         .implementation_view(implementation_id)
@@ -174,6 +179,14 @@ pub fn on_station_completed(app: &AppHandle, implementation_id: &str, station_id
     if let Err(error) = outcome {
         eprintln!("Bericht nach Station {station_id} nicht geordnet: {error}");
     }
+}
+
+/// Ob der Schalter „Review-Bericht“ aus ist; ohne Datenbank gilt er nicht als aus.
+fn is_switched_off(app: &AppHandle) -> bool {
+    let Some(database) = app.try_state::<Arc<Database>>() else {
+        return false;
+    };
+    settings::load(&database).is_ok_and(|loaded: Settings| !loaded.report_enabled)
 }
 
 fn phase_finished_by<'a>(view: &'a ImplementationView, station_id: &str) -> Option<&'a PhaseView> {

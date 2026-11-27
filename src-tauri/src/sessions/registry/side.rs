@@ -13,7 +13,8 @@ use crate::agents::claude::side::{SideAnswer, SideRequest, run_side};
 use crate::background::scratchpad;
 use crate::error::CommandError;
 use crate::mcp_access::McpAccess;
-use crate::settings::model::OperatingMode;
+use crate::settings::model::{OperatingMode, Settings};
+use crate::settings::{self};
 use crate::side::model::{SideChangedEvent, SideQuestion, SideState, SideUsage};
 use crate::side::{MAX_QUESTIONS, MAX_RUNNING, TIMEOUT_CLAUDE, TIMEOUT_LOCAL, clip_quote, prompt};
 use crate::worktrees::{self, SessionRepository};
@@ -90,6 +91,10 @@ impl SessionRegistry {
                 && backend.is_none()
                 && locate::station_style_installed();
             let lean_tools = state.station_of.is_some() && backend.is_none();
+            // Der Schalter gilt beim Stellen der Frage (Nachtrag ADR 073).
+            let report = lean_tools
+                && settings::load(&session.database)
+                    .is_ok_and(|loaded: Settings| loaded.report_enabled);
             let timeout = if backend.is_some() {
                 TIMEOUT_LOCAL
             } else {
@@ -135,6 +140,8 @@ impl SessionRegistry {
                     station_style,
                     // Gleiche Werkzeuge wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).
                     lean_tools,
+                    // Gleiche Anweisung wie die Station, sonst verfehlt die Frage deren Cache (ADR 044).
+                    report,
                 },
                 prompt: prompt(question, quote.as_deref()),
                 timeout,

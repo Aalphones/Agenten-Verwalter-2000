@@ -37,6 +37,7 @@ const KEY_MARK_UNSOURCED: &str = "mark_unsourced";
 const KEY_AUTO_COMPACT_STATIONS: &str = "auto_compact_stations";
 const KEY_AUTO_COMPACT_THRESHOLD: &str = "auto_compact_threshold";
 const KEY_AUTO_CONTINUE_AT_LIMIT: &str = "auto_continue_at_limit";
+const KEY_REPORT_ENABLED: &str = "report_enabled";
 const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
 const KEY_NOTE_PLACEMENT: &str = "note_placement";
 const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
@@ -99,6 +100,7 @@ const DEFAULT_SETTINGS: Settings = Settings {
     auto_compact_stations: true,
     auto_compact_threshold: 250_000,
     auto_continue_at_limit: false,
+    report_enabled: true,
     terminal_placement: TerminalPlacement::Bottom,
     note_placement: NotePlacement::Dock,
     terminal_height: 260,
@@ -159,6 +161,10 @@ pub fn load(database: &Database) -> Result<Settings, CommandError> {
             .get(KEY_AUTO_CONTINUE_AT_LIMIT)
             .and_then(|text: &String| text.parse::<bool>().ok())
             .unwrap_or(DEFAULT_SETTINGS.auto_continue_at_limit),
+        report_enabled: stored
+            .get(KEY_REPORT_ENABLED)
+            .and_then(|text: &String| text.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_SETTINGS.report_enabled),
         terminal_placement: stored_or(
             &stored,
             KEY_TERMINAL_PLACEMENT,
@@ -332,6 +338,9 @@ pub fn update(database: &Database, change: SettingsChange) -> Result<Settings, C
             }
             SettingsChange::AutoContinueAtLimit { value } => {
                 setting_rows::write(&transaction, KEY_AUTO_CONTINUE_AT_LIMIT, &value.to_string())?;
+            }
+            SettingsChange::ReportEnabled { value } => {
+                setting_rows::write(&transaction, KEY_REPORT_ENABLED, &value.to_string())?;
             }
             SettingsChange::TerminalPlacement { value } => {
                 setting_rows::write(&transaction, KEY_TERMINAL_PLACEMENT, &enum_to_text(&value)?)?;

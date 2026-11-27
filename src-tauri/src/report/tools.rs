@@ -1,10 +1,11 @@
 //! Werkzeuge des Review-Berichts im MCP-Zugang (ADR 073): eine Station hängt Erklärungen,
 //! Befunde, Schaubilder und die Fotos der Sichtabnahme an den Bericht ihrer Phase.
 use std::path::Path;
+use std::sync::Arc;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tauri::{Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::anchor::{self, ResolvedPath};
 use super::images::{StagedImage, StagedImages};
@@ -14,16 +15,19 @@ use super::model::{
 use super::{REPORT_CHANGED_EVENT, phase_dir};
 use crate::changes::model::ChangesReach;
 use crate::changes::sources;
+use crate::db::Database;
 use crate::db::report::{EntryTool, NewEntry};
 use crate::error::CommandError;
 use crate::implementation::model::{PhaseView, StationView, check_length};
 use crate::implementation::now_ms;
 use crate::mcp_access::tools::{ToolCall, ToolResult, ToolSet, ToolSpec};
 use crate::sessions::registry::SessionRegistry;
+use crate::settings::{self, model::Settings};
 
 const NOTE: &str = "report_note";
 const FIGURE: &str = "report_figure";
 const SCREEN: &str = "report_screen";
+const OFF_MESSAGE: &str = "Der Review-Bericht ist in den Einstellungen ausgeschaltet. Schreib deinen Bericht so, wie es deine Anweisungen ohne diese Werkzeuge verlangen.";
 const NO_REGISTRY: &str = "Der Verwalter startet noch";
 const NOT_A_STATION: &str = "Diese Session ist keine Station.";
 const ONE_PICTURE: &str = "Gib genau eines von mermaid und image an.";
@@ -67,6 +71,17 @@ impl ToolSet for ReportTools {
             },
             Err(message) => ToolResult::Err(message),
         }
+    }
+
+    fn offered(&self, app: &AppHandle) -> bool {
+        let Some(database) = app.try_state::<Arc<Database>>() else {
+            return false;
+        };
+        settings::load(&database).is_ok_and(|loaded: Settings| loaded.report_enabled)
+    }
+
+    fn unavailable_message(&self) -> &'static str {
+        OFF_MESSAGE
     }
 }
 
