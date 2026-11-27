@@ -11,6 +11,8 @@ export type ReportIconName =
   | 'check'
   | 'flag'
   | 'hist'
+  | 'diagram'
+  | 'max'
   | 'data'
   | 'sec'
   | 'flow'
@@ -71,6 +73,23 @@ const SHAPES: Record<ReportIconName, ReactElement> = {
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
       <path d="M12 7v5l4 2" />
+    </>
+  ),
+  diagram: (
+    <>
+      <rect x="16" y="16" width="6" height="6" rx="1" />
+      <rect x="2" y="16" width="6" height="6" rx="1" />
+      <rect x="9" y="2" width="6" height="6" rx="1" />
+      <path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" />
+      <path d="M12 12V8" />
+    </>
+  ),
+  max: (
+    <>
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <path d="M21 3l-7 7" />
+      <path d="M3 21l7-7" />
     </>
   ),
   data: (

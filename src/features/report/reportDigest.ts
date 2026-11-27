@@ -287,3 +287,13 @@ export function stopOfFile(
     ),
   );
 }
+
+/** Bereich einer Phase für flüchtigen Zustand: `<Umsetzung>:<Phase>`. */
+export function scopeOf(implementationId: string, phaseId: string): string {
+  return `${implementationId}:${phaseId}`;
+}
+
+/** Schlüssel eines Eintrags im flüchtigen Store: `<Bereich>:n<Nummer>`. */
+export function entryKey(scope: string, entry: number): string {
+  return `${scope}:n${String(entry)}`;
+}

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ReportChecks } from '@/features/report/ReportChecks';
+import { FIGURE_DRAWN_EVENT } from '@/features/report/ReportDiagram';
 import { ReportReviewSection } from '@/features/report/ReportReviewSection';
 import { ReportScreens } from '@/features/report/ReportScreens';
 import { ReportStop } from '@/features/report/ReportStop';
 import { ReportTidyHint } from '@/features/report/ReportTidyHint';
 import { ReportWay } from '@/features/report/ReportWay';
-import { stopByIndex } from '@/features/report/reportDigest';
+import { scopeOf, stopByIndex } from '@/features/report/reportDigest';
 import {
   NEXT_LABEL,
   NO_RESULT_TEXT,
@@ -53,6 +54,9 @@ export function ReportPhasePage({
   const [flashIndex, setFlashIndex] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const flashTimer = useRef<number | null>(null);
+  /** Der angesprungene Stopp, solange der Sprung gilt: ein fertig gezeichnetes Schaubild darüber schiebt ihn weg. */
+  const settlingTarget = useRef<HTMLElement | null>(null);
+  const scope: string = scopeOf(implementationId, phase.phaseId);
   const focus: ReportFocus | null = useReportStore((state) => state.focus);
   const jumpToStop = useReportStore((state) => state.jumpToStop);
   const clearFocus = useReportStore((state) => state.clearFocus);
@@ -87,16 +91,33 @@ export function ReportPhasePage({
     window.requestAnimationFrame(() => {
       target.scrollIntoView({ block: 'start' });
     });
+    settlingTarget.current = target;
     if (flashTimer.current !== null) {
       window.clearTimeout(flashTimer.current);
     }
     flashTimer.current = window.setTimeout(() => {
       setFlashIndex(null);
+      settlingTarget.current = null;
     }, FLASH_MS);
     // Der Sprung ist erledigt; die Aufräumfunktion dieses Effekts darf den Timer nicht mitnehmen.
     clearFocus();
     return undefined;
   }, [focus, implementationId, phase.key, clearFocus]);
+
+  // Ein Schaubild, das beim Scrollen zum Stopp erst gezeichnet wird, verschiebt die Seite: erneut zum Stopp.
+  useEffect(() => {
+    const root: HTMLDivElement | null = rootRef.current;
+    if (root === null) {
+      return undefined;
+    }
+    function scrollToSettlingTarget(): void {
+      settlingTarget.current?.scrollIntoView({ block: 'start' });
+    }
+    root.addEventListener(FIGURE_DRAWN_EVENT, scrollToSettlingTarget);
+    return (): void => {
+      root.removeEventListener(FIGURE_DRAWN_EVENT, scrollToSettlingTarget);
+    };
+  }, []);
 
   useEffect(
     () => (): void => {
@@ -194,9 +215,10 @@ export function ReportPhasePage({
         />
       )}
       {renderResult()}
-      {phase.screens.length > 0 && <ReportScreens screens={phase.screens} />}
+      {phase.screens.length > 0 && <ReportScreens scope={scope} screens={phase.screens} />}
       {phase.review !== null && (
         <ReportReviewSection
+          scope={scope}
           review={phase.review}
           hasStop={hasStop}
           onJumpToStop={jumpTo}
@@ -206,6 +228,7 @@ export function ReportPhasePage({
       {phase.stops.map((stop: ReportStopData) => (
         <ReportStop
           key={stop.index}
+          scope={scope}
           stop={stop}
           isFlashing={flashIndex === stop.index}
           hasMargin={hasMargin}

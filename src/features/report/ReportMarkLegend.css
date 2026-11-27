@@ -1,0 +1,36 @@
+.report-legend {
+  display: grid;
+  gap: var(--space-2xs);
+  margin: 0;
+  padding: var(--space-md) var(--space-sm);
+  border-top: 1px solid var(--color-border);
+  list-style: none;
+
+  &__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+
+    &--hot {
+      background: color-mix(in srgb, var(--color-status-running) 12%, transparent);
+    }
+  }
+
+  &__number {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--color-status-running);
+    color: var(--color-bg-surface);
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    line-height: 1;
+  }
+}

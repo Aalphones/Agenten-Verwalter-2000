@@ -24,11 +24,42 @@ Rating: standard. Mermaid-Schaubilder im Bericht zeigen, was neu ist, was entfä
 
 ## Checkliste
 
-- [ ] `pnpm add mermaid@10.9.1`; `pnpm-lock.yaml` mit committen.
-- [ ] `src/features/report/mermaidDiff.ts`, `useMermaid.ts` (Laden, Initialisieren, Zeichnen mit eindeutiger ID, Fehler), `ReportFigure.tsx` (Schaubild und Bild), `ReportLightbox.tsx`, CSS je Komponente.
-- [ ] `ReportScreen.tsx`, `ReportSteps.tsx` und CSS je Komponente für die Sichtabnahme.
-- [ ] Platzhalter aus Phase 5 ersetzen.
-- [ ] Doc: `docs/code-map.md` Zeile „Review-Bericht“ um `mermaidDiff.ts` und `ReportFigure`; `docs/glossary.md`: „Unterschied/Vorher/Nachher (Schaubild)“, „Sichtabnahme“.
-- [ ] `pnpm check`.
+- [x] `pnpm add mermaid@10.9.1`; `pnpm-lock.yaml` mit committen.
+- [x] `src/features/report/mermaidDiff.ts`, `useMermaid.ts` (Laden, Initialisieren, Zeichnen mit eindeutiger ID, Fehler), `ReportFigure.tsx` (Schaubild und Bild), `ReportLightbox.tsx`, CSS je Komponente.
+- [x] `ReportScreen.tsx`, `ReportSteps.tsx` und CSS je Komponente für die Sichtabnahme.
+- [x] Platzhalter aus Phase 5 ersetzen.
+- [x] Doc: `docs/code-map.md` Zeile „Review-Bericht“ um `mermaidDiff.ts` und `ReportFigure`; `docs/glossary.md`: „Unterschied/Vorher/Nachher (Schaubild)“, „Sichtabnahme“.
+- [x] `pnpm check`.
 
 ## Report-Back
+
+Status: complete.
+
+**Geänderte Files:** neu `src/features/report/` `mermaidDiff.ts`, `useMermaid.ts`, `useVisibleOnce.ts`, `ReportDiagram`, `ReportFigure`, `ReportPicture`, `ReportMarkLegend`, `ReportLightbox`, `ReportScreen`, `ReportSteps` (je `.tsx` und `.css`), `src/lib/useColorSchemeVersion.ts`; umgebaut `ReportFigureFrame`, `ReportScreens`; angepasst `ReportStop`, `ReportReviewSection`, `ReportPhasePage`, `ReportIcon`, `reportDigest.ts`, `reportTexts.ts`, `src/stores/report.ts`, `src-tauri/tauri.conf.json`, `package.json`, `pnpm-lock.yaml`; Doku `docs/code-map.md`, `docs/glossary.md`.
+
+**Entscheidungen:**
+
+- Der Block heißt `ReportFigureBlock` (der Typname `ReportFigure` ist durch das Binding belegt); `ReportFigureFrame` bleibt als gemeinsamer Rahmen für Schaubild und Bild.
+- Die Klassen der Knoten heißen `add`, `del`, `chg`; `mermaidView` hat einen dritten, optionalen Parameter `colors` (Vorgabe: aus den Tokens gelesen), damit sich die Ansichten ohne DOM prüfen lassen.
+- Die Farben kommen aus den Tokens `--color-status-completed|error|waiting`; Füllung per `#rrggbbaa` (`classDef`) bzw. `rgba(…)` (`rect`).
+- Hell/Dunkel: `useColorSchemeVersion` zählt Wechsel von `<html class>` und `prefers-color-scheme`; das Schaubild zeichnet dann neu.
+- Mermaid lädt erst beim ersten sichtbaren Schaubild (`import('mermaid')`, eigener Chunk `mermaid.core-*.js`).
+- Lichtkasten über das vorhandene `Dialog`.
+
+**Abweichungen von AK und Checkliste:**
+
+- CSP: `img-src` um `http://127.0.0.1:*` erweitert (FINDINGS-Hinweis); die Bild-Adressen des Artefakt-Servers wären sonst blockiert.
+- Kein Platzhalter-Rest: `SCREENS_PLACEHOLDER`, `FIGURE_PLACEHOLDER`, `REVIEW_DIAGRAM_PLACEHOLDER` sind entfernt.
+- Marken-Knöpfe und der Kommentar zu einem Bildbereich fehlen bewusst (Phase 7); Marken sind nur Hervorhebung mit Legende.
+
+**Tests/Prüfkette:** `scripts/check.ps1` grün (Formate, tsc, ESLint, Vite-Build, cargo fmt/clippy); im gebauten CSS kein Selektor mit `__` oder `--` am Anfang. Zu AK 7: die drei Beispiele mit Markern aus `daten.js` (Weg eines Pfads, Grenze, Range) wurden mit dem echten `mermaidView` (TS nach JS übersetzt) und Mermaid 10.9.1 in Edge headless gezeichnet — alle 18 Zeichnungen (3 Beispiele × Unterschied/Vorher/Nachher × hell/dunkel) ohne Mermaid-Fehler. Das lief auf einer Prüfseite außerhalb der App, nicht in einer Datenbank-Kopie.
+
+**Findings:** keine neuen für spätere Phasen außer → Phase 7 (siehe FINDINGS).
+
+**Vorschlag Commits:** ein Commit `feat(report): Schaubilder, Bilder mit Marken und Sichtabnahme` (mit `package.json` und `pnpm-lock.yaml`).
+
+**Friktion:** `pnpm check` bricht in Git Bash an `cargo` (nicht im PATH); `scripts/check.ps1` ist der Weg. Mermaids `mermaid.esm.min.mjs` ist nur ein Stub, eine Prüfseite braucht das ganze `dist`-Verzeichnis.
+
+**Unsicherste Stelle:** `src/features/report/ReportPhasePage.tsx` (`settlingTarget` plus Ereignis `report-figure-drawn`) — der erneute Sprung nach dem Zeichnen eines Schaubilds ist nur gebaut, nicht in einer gerenderten Seite beobachtet. Ebenso nicht gesehen: Layout (Entwurf daneben unter 760 px, Klickpfad unter 600 px), Bild-Laden über `http://127.0.0.1` unter der CSP in WebView2 und die Farbklassen im gezeichneten Flowchart (nur: Zeichnen ohne Fehler).
+
+**Offene Punkte:** Oberfläche nicht in der laufenden App gerendert; Diff-Färbung nur indirekt (SVG akzeptiert, Farben nicht angesehen).

@@ -1,29 +1,38 @@
-import type { ReactElement } from 'react';
-import { ReportIcon } from '@/features/report/ReportIcon';
-import { FIGURE_PLACEHOLDER } from '@/features/report/reportTexts';
-import type { ReportFigure } from '@/lib/bindings/ReportFigure';
+import type { ReactElement, ReactNode } from 'react';
+import { ReportIcon, type ReportIconName } from '@/features/report/ReportIcon';
 import './ReportFigureFrame.css';
 
 interface ReportFigureFrameProps {
-  figure: ReportFigure;
-  /** Ersetzt den Standardtext des Platzhalters, etwa für das Schaubild der Review. */
-  placeholder?: string;
+  icon: ReportIconName;
+  caption: string;
+  by: string;
+  /** Kleine Marke hinter der Unterschrift, etwa „Mermaid“. */
+  tag?: string;
+  /** Schalter und Knöpfe rechts in der Kopfzeile. */
+  actions?: ReactNode;
+  children: ReactNode;
 }
 
-/** Rahmen mit Unterschrift für ein Bild oder Schaubild des Berichts; Bild und Schaubild selbst zeichnet die
- *  spätere Phase in diesen Rahmen. */
-export function ReportFigureFrame({ figure, placeholder }: ReportFigureFrameProps): ReactElement {
+/** Rahmen mit Unterschrift für ein Bild oder Schaubild des Berichts; den Inhalt liefern `ReportDiagram` und
+ *  `ReportFigureBlock`. */
+export function ReportFigureFrame({
+  icon,
+  caption,
+  by,
+  tag,
+  actions,
+  children,
+}: ReportFigureFrameProps): ReactElement {
   return (
     <figure className="report-figure">
       <figcaption className="report-figure__head">
-        <ReportIcon name="image" />
-        <span>{figure.caption}</span>
-        <span className="report-figure__by">{figure.by}</span>
+        <ReportIcon name={icon} />
+        <span className="report-figure__caption">{caption}</span>
+        {tag !== undefined && <span className="report-figure__tag">{tag}</span>}
+        <span className="report-figure__by">{by}</span>
+        <span className="report-figure__actions">{actions}</span>
       </figcaption>
-      <div className="report-figure__body">
-        {figure.text !== null && <p className="report-figure__text">{figure.text}</p>}
-        <p className="report-figure__placeholder">{placeholder ?? FIGURE_PLACEHOLDER}</p>
-      </div>
+      {children}
     </figure>
   );
 }

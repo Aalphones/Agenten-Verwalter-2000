@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
-import { ReportFigureFrame } from '@/features/report/ReportFigureFrame';
+import { ReportFigureBlock } from '@/features/report/ReportFigure';
 import { ReportIcon } from '@/features/report/ReportIcon';
-import { REVIEW_DIAGRAM_PLACEHOLDER, REVIEW_TITLE } from '@/features/report/reportTexts';
+import { REVIEW_TITLE } from '@/features/report/reportTexts';
 import type { ReportFigure } from '@/lib/bindings/ReportFigure';
 import type { ReportFinding } from '@/lib/bindings/ReportFinding';
 import type { ReportReview } from '@/lib/bindings/ReportReview';
@@ -10,6 +10,8 @@ import './ReportReviewSection.css';
 const NO_FINDINGS_TEXT = 'keine Befunde';
 
 interface ReportReviewSectionProps {
+  /** Bereich der Phase (`scopeOf`). */
+  scope: string;
   review: ReportReview;
   hasStop: (index: number) => boolean;
   onJumpToStop: (index: number) => void;
@@ -18,6 +20,7 @@ interface ReportReviewSectionProps {
 
 /** Befunde der Review-Station einer Phase: offene zuerst, behobene eingeklappt, dazu der Platz für ihr Schaubild. */
 export function ReportReviewSection({
+  scope,
   review,
   hasStop,
   onJumpToStop,
@@ -86,11 +89,7 @@ export function ReportReviewSection({
         </ul>
       )}
       {review.figures.map((figure: ReportFigure) => (
-        <ReportFigureFrame
-          key={`figure-${String(figure.entry)}`}
-          figure={figure}
-          placeholder={REVIEW_DIAGRAM_PLACEHOLDER}
-        />
+        <ReportFigureBlock key={`figure-${String(figure.entry)}`} scope={scope} figure={figure} />
       ))}
       {review.resolved.length > 0 && (
         <details className="report-review__done">

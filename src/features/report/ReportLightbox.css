@@ -1,0 +1,43 @@
+.report-lightbox {
+  width: min(1280px, 100%);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-md) var(--space-md) var(--space-2xl);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__close {
+    min-height: 26px;
+    padding: 0 var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-fg-primary);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+  }
+
+  &__body {
+    min-height: 0;
+    overflow: auto;
+  }
+}

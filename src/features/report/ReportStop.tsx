@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { ReportCodeBlock } from '@/features/report/ReportCode';
-import { ReportFigureFrame } from '@/features/report/ReportFigureFrame';
+import { ReportFigureBlock } from '@/features/report/ReportFigure';
 import { ReportIcon, type ReportIconName } from '@/features/report/ReportIcon';
 import { stopKindLabel } from '@/features/report/reportTexts';
 import type { ReportBlock } from '@/lib/bindings/ReportBlock';
@@ -12,6 +12,8 @@ const SECURITY_KIND = 'sec';
 const LOOK_LABEL = 'Worauf achten';
 
 interface ReportStopProps {
+  /** Bereich der Phase (`scopeOf`). */
+  scope: string;
   stop: ReportStopData;
   isFlashing: boolean;
   hasMargin: boolean;
@@ -24,6 +26,7 @@ function kindIcon(kind: string): ReportIconName | null {
 
 /** Ein Stopp als Abschnitt der Phasen-Seite: Titel, Art und Urheber, Worauf achten, Lead, dann die Blöcke. */
 export function ReportStop({
+  scope,
   stop,
   isFlashing,
   hasMargin,
@@ -64,7 +67,9 @@ export function ReportStop({
             />
           );
         }
-        return <ReportFigureFrame key={`figure-${String(block.entry)}`} figure={block} />;
+        return (
+          <ReportFigureBlock key={`figure-${String(block.entry)}`} scope={scope} figure={block} />
+        );
       })}
     </section>
   );

@@ -1,5 +1,6 @@
 import type { ReportNoteKind } from '@/lib/bindings/ReportNoteKind';
 import type { ReportPhase } from '@/lib/bindings/ReportPhase';
+import type { DiagramMode } from '@/stores/report';
 
 export const REPORT_TITLE = 'Review-Bericht';
 export const OVERVIEW_TITLE = 'Überblick';
@@ -28,9 +29,23 @@ export const WAY_TITLE = 'Weg';
 export const GAPS_TITLE = 'Lücken';
 export const REVIEW_TITLE = 'Review';
 export const SCREENS_TITLE = 'Sichtabnahme';
-export const SCREENS_PLACEHOLDER = 'Die Bildschirme dieser Phase zeigt die Sichtabnahme (folgt).';
-export const FIGURE_PLACEHOLDER = 'Das Bild zu diesem Stopp folgt.';
-export const REVIEW_DIAGRAM_PLACEHOLDER = 'Das Schaubild der Review folgt.';
+export const DIAGRAM_TAG = 'Mermaid';
+export const DIAGRAM_LOADING_TEXT = 'Schaubild wird gezeichnet …';
+export const DIAGRAM_FAILED_TITLE = 'Schaubild nicht lesbar:';
+export const SOURCE_LABEL = 'Quelltext';
+export const ZOOM_LABEL = 'Vergrößern';
+export const CLOSE_LABEL = 'Schließen';
+export const IMAGE_MISSING_TEXT = 'Bild nicht verfügbar';
+export const SHOT_CAPTION = 'Umsetzung';
+export const DESIGN_CAPTION = 'Entwurf';
+export const COMPARE_LABEL = 'Entwurf daneben';
+export const NO_DESIGN_TEXT = 'kein Entwurfsbild';
+export const DEVIATION_LABEL = 'Abweichung vom Entwurf';
+export const AS_DESIGNED_TEXT = 'wie im Entwurf';
+export const STEPS_TITLE = 'Klickpfad';
+export const STEP_COLUMNS = ['#', 'Öffnen', 'Tun', 'Erwartet', 'Bild'] as const;
+export const BEFORE_LABEL = 'vorher';
+export const AFTER_LABEL = 'nachher';
 export const LOOK_TITLE = 'Genau hinsehen';
 export const RISKS_TITLE = 'Risiken';
 export const PHASES_TITLE = 'Phasen';
@@ -55,6 +70,16 @@ const NOTE_KIND_LABEL: Record<ReportNoteKind, string> = {
   finding: 'Review',
   mutant: 'Mutant überlebt',
 };
+
+const DIAGRAM_MODE_LABEL: Readonly<Record<DiagramMode, string>> = {
+  diff: 'Unterschied',
+  before: 'Vorher',
+  after: 'Nachher',
+};
+
+export function diagramModeLabel(mode: DiagramMode): string {
+  return DIAGRAM_MODE_LABEL[mode];
+}
 
 export function stopKindLabel(kind: string): string {
   return KIND_LABEL[kind] ?? kind;
