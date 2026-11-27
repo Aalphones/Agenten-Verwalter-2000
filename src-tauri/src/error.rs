@@ -65,6 +65,9 @@ pub enum CommandError {
     /// Ein Satz über ein Skin-Paket (ADR 065), so wie Benutzer und Agent ihn lesen.
     #[error("{0}")]
     Skin(String),
+    /// Ein Satz über eine abgelehnte Eingabe, ohne Zugangsdaten (ADR 070).
+    #[error("{0}")]
+    Invalid(String),
 }
 
 impl From<rusqlite::Error> for CommandError {

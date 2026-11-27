@@ -61,7 +61,7 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
 
   function setEnabled(name: string, enabled: boolean): void {
     setActionFailure(null);
-    toggleMcpServer(session.id, name, enabled).catch((reason: unknown) => {
+    toggleMcpServer(session.id, name, enabled, false).catch((reason: unknown) => {
       setActionFailure(commandErrorText(reason));
     });
   }

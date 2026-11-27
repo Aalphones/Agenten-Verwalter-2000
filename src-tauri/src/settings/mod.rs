@@ -38,6 +38,7 @@ const KEY_AUTO_COMPACT_STATIONS: &str = "auto_compact_stations";
 const KEY_AUTO_COMPACT_THRESHOLD: &str = "auto_compact_threshold";
 const KEY_AUTO_CONTINUE_AT_LIMIT: &str = "auto_continue_at_limit";
 const KEY_REPORT_ENABLED: &str = "report_enabled";
+const KEY_MCP_DISABLED_EVERYWHERE: &str = "mcp_disabled_everywhere";
 const KEY_TERMINAL_PLACEMENT: &str = "terminal_placement";
 const KEY_NOTE_PLACEMENT: &str = "note_placement";
 const KEY_TERMINAL_HEIGHT: &str = "terminal_height";
@@ -60,6 +61,26 @@ pub fn auto_compact_window(settings: &Settings) -> Option<u32> {
     settings
         .auto_compact_stations
         .then(|| settings.auto_compact_threshold + AUTO_COMPACT_BUFFER)
+}
+
+/// Namen der MCP-Server, die der Verwalter in allen Vorhaben ausgeschaltet hält (ADR 070).
+/// Ein fehlender oder ungültiger Eintrag ist eine leere Liste.
+pub fn mcp_disabled_everywhere(database: &Database) -> Result<Vec<String>, CommandError> {
+    let stored: HashMap<String, String> =
+        database.with(|connection| setting_rows::read_all(connection))?;
+    Ok(stored
+        .get(KEY_MCP_DISABLED_EVERYWHERE)
+        .and_then(|text: &String| serde_json::from_str::<Vec<String>>(text).ok())
+        .unwrap_or_default())
+}
+
+pub fn set_mcp_disabled_everywhere(
+    database: &Database,
+    names: &[String],
+) -> Result<(), CommandError> {
+    let text = serde_json::to_string(names)
+        .map_err(|error: serde_json::Error| CommandError::Internal(error.to_string()))?;
+    database.with(|connection| setting_rows::write(connection, KEY_MCP_DISABLED_EVERYWHERE, &text))
 }
 
 /// Grenzen für die gemerkte Größe des Terminal-Docks in Pixeln.

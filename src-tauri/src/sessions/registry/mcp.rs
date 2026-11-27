@@ -2,9 +2,10 @@
 //! und wird mit dem Prozess verworfen (ADR 013); jede Änderung meldet `mcp://changed`. Die
 //! Konfiguration liest der Core selbst aus den Dateien, auch ohne Agent (ADR 070).
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use serde_json::Value;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 use super::{Outbox, Session, SessionRegistry, SessionState, now_ms, update};
 use crate::agents::claude::protocol::{
@@ -13,8 +14,10 @@ use crate::agents::claude::protocol::{
 use crate::error::CommandError;
 use crate::mcp::config_files::{self, LoadedConfig};
 use crate::mcp::model::{
-    McpAction, McpActionError, McpAuthWait, McpConfigView, McpServer, McpServerStatus, SessionMcp,
+    McpAction, McpActionError, McpAuthWait, McpChangedEvent, McpConfigView, McpDraft, McpServer,
+    McpServerStatus, SessionMcp,
 };
+use crate::settings;
 use crate::standalone::home_dir;
 use crate::worktrees::SessionRepository;
 
@@ -62,8 +65,60 @@ impl SessionRegistry {
         Ok(McpConfigView {
             sources: config.sources(),
             config_changed,
-            disabled_everywhere: Vec::new(),
+            disabled_everywhere: settings::mcp_disabled_everywhere(&self.database)?,
         })
+    }
+
+    /// Legt einen Server an oder ersetzt einen, in der Datei der gewählten Quelle (ADR 070).
+    /// Ein laufender Agent bemerkt es erst mit seinem nächsten Start.
+    pub fn save_mcp_server(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        draft: &McpDraft,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        config_files::save(
+            &home_or_error()?,
+            &session.workspace,
+            &repository_folders(&session, &session.repositories()),
+            draft,
+        )?;
+        self.emit_mcp_changed(app);
+        Ok(())
+    }
+
+    /// Entfernt einen Server aus der Datei der Quelle; fehlt er dort, passiert nichts.
+    pub fn remove_mcp_server(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        source_id: &str,
+        name: &str,
+    ) -> Result<(), CommandError> {
+        let session = self.get(session_id)?;
+        config_files::remove(
+            &home_or_error()?,
+            &session.workspace,
+            &repository_folders(&session, &session.repositories()),
+            source_id,
+            name,
+        )?;
+        self.emit_mcp_changed(app);
+        Ok(())
+    }
+
+    /// Meldet allen Sessions eine Änderung: Benutzer-Server und „überall aus“ betreffen jede.
+    fn emit_mcp_changed(&self, app: &AppHandle) {
+        let sessions: Vec<Arc<Session>> = self.lock_sessions().values().cloned().collect();
+        for session in sessions {
+            let event = McpChangedEvent {
+                session_id: session.id.clone(),
+            };
+            if let Err(error) = app.emit(MCP_CHANGED_EVENT, event) {
+                session.log_line(format!("MCP-Ereignis nicht gesendet: {error}"));
+            }
+        }
     }
 
     /// Fragt den Agenten nach einer frischen Liste; `false`, wenn er nicht zuhört.
@@ -122,27 +177,110 @@ impl SessionRegistry {
         )
     }
 
-    /// Schaltet einen Server aus oder ein; `false`, wenn der Agent nicht zuhört.
+    /// Schaltet einen Server aus oder ein. Zuhört der Agent, geht eine Steueranfrage hinaus;
+    /// sonst schreibt der Core `disabledMcpServers` des Workspace. `everywhere` beim Ausschalten
+    /// nimmt den Namen in die Liste „überall aus“, Einschalten nimmt ihn heraus und wieder ein
+    /// in allen Vorhaben des Verwalters. Immer `true`, sobald der Wechsel angewendet ist.
     pub fn toggle_mcp(
         &self,
         app: &AppHandle,
         session_id: &str,
         server: &str,
         enabled: bool,
+        everywhere: bool,
     ) -> Result<bool, CommandError> {
         let session = self.get(session_id)?;
+        let is_listening = session.lock().is_listening();
+        self.update_disabled_everywhere(&session, server, enabled, everywhere, is_listening)?;
         let action = if enabled {
             McpAction::Enable
         } else {
             McpAction::Disable
         };
-        update(
-            app,
-            &session,
-            |state: &mut SessionState, outbox: &mut Outbox| {
-                state.start_mcp_action(outbox, server, action, mcp_toggle(server, enabled))
-            },
+        let is_sent = is_listening
+            && update(
+                app,
+                &session,
+                |state: &mut SessionState, outbox: &mut Outbox| {
+                    state.start_mcp_action(outbox, server, action, mcp_toggle(server, enabled))
+                },
+            )?;
+        if !is_sent {
+            config_files::set_disabled_for_workspace(
+                &home_or_error()?,
+                &session.workspace,
+                &[server.to_owned()],
+                !enabled,
+            )?;
+        }
+        // Auch bei der Steueranfrage: andere Sessions sehen die geänderte Liste „überall aus“.
+        self.emit_mcp_changed(app);
+        Ok(true)
+    }
+
+    /// Führt die Liste „überall aus“ nach und schaltet die anderen Vorhaben des Verwalters
+    /// wieder ein, wenn der Name sie verlässt. Der eigene Workspace bleibt aus, wenn er aus
+    /// bleiben soll oder der zuhörende Agent ihn selbst schaltet.
+    fn update_disabled_everywhere(
+        &self,
+        session: &Session,
+        server: &str,
+        enabled: bool,
+        everywhere: bool,
+        is_listening: bool,
+    ) -> Result<(), CommandError> {
+        let mut names = settings::mcp_disabled_everywhere(&self.database)?;
+        let was_listed = names.iter().any(|name: &String| name == server);
+        let is_listed = !enabled && everywhere;
+        if was_listed == is_listed {
+            return Ok(());
+        }
+        names.retain(|name: &String| name != server);
+        if is_listed {
+            names.push(server.to_owned());
+        }
+        settings::set_mcp_disabled_everywhere(&self.database, &names)?;
+        if !was_listed {
+            return Ok(());
+        }
+        let workspace_root = session
+            .workspace
+            .parent()
+            .ok_or_else(|| CommandError::Io("Workspace-Ordner unbekannt".to_owned()))?;
+        let keep_own = !enabled || is_listening;
+        config_files::clear_disabled_under(
+            &home_or_error()?,
+            workspace_root,
+            &[server.to_owned()],
+            keep_own.then_some(session.workspace.as_path()),
         )
+    }
+}
+
+fn home_or_error() -> Result<PathBuf, CommandError> {
+    home_dir().ok_or_else(|| CommandError::Io("Benutzerordner unbekannt".to_owned()))
+}
+
+/// Trägt vor dem Start alle „überall aus“-Server in `disabledMcpServers` des Workspace ein,
+/// damit auch ein neues Vorhaben sie ausgeschaltet startet. Ein Fehler hält den Start nicht auf.
+pub(super) fn apply_disabled_everywhere(session: &Session) {
+    let names = match settings::mcp_disabled_everywhere(&session.database) {
+        Ok(names) if !names.is_empty() => names,
+        Ok(_) => return,
+        Err(error) => {
+            session.log_line(format!("Liste „überall aus“ nicht gelesen: {error}"));
+            return;
+        }
+    };
+    let Some(home) = home_dir() else {
+        return;
+    };
+    if let Err(error) =
+        config_files::set_disabled_for_workspace(&home, &session.workspace, &names, true)
+    {
+        session.log_line(format!(
+            "MCP-Server „überall aus“ nicht eingetragen: {error}"
+        ));
     }
 }
 
@@ -155,7 +293,19 @@ pub(super) fn mcp_fingerprint(
 }
 
 fn load_config(session: &Session, repositories: &[SessionRepository]) -> Option<LoadedConfig> {
-    let folders: Vec<(String, PathBuf)> = repositories
+    Some(config_files::load(
+        &home_dir()?,
+        &session.workspace,
+        &repository_folders(session, repositories),
+    ))
+}
+
+/// Name und Arbeitsordner je Repository in der Reihenfolge der Session.
+fn repository_folders(
+    session: &Session,
+    repositories: &[SessionRepository],
+) -> Vec<(String, PathBuf)> {
+    repositories
         .iter()
         .map(|repository: &SessionRepository| {
             (
@@ -163,12 +313,7 @@ fn load_config(session: &Session, repositories: &[SessionRepository]) -> Option<
                 repository.working_dir(&session.workspace),
             )
         })
-        .collect();
-    Some(config_files::load(
-        &home_dir()?,
-        &session.workspace,
-        &folders,
-    ))
+        .collect()
 }
 
 impl SessionState {

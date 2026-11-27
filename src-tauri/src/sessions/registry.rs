@@ -1252,6 +1252,9 @@ impl SessionRegistry {
         // Vor `update`: liest Dateien und Git. Auf eine offene Rückfrage des Agenten antwortet nur
         // Text, dort hätte ein Anhang keinen Platz.
         let is_answering: bool = !session.lock().pending.is_empty();
+        // Vor `update`: liest `~/.claude.json` und die `.mcp.json`-Dateien, nie unter der Sperre.
+        let current_mcp_fingerprint: Option<u64> =
+            mcp::mcp_fingerprint(&session, &session.repositories());
         let report_update: Option<ReportUpdate> = if is_answering {
             None
         } else {
@@ -1300,17 +1303,25 @@ impl SessionRegistry {
                     .clone()
                     .map_err(CommandError::LocalModelUnavailable)?;
                 // Ohne Prozess (wiederhergestellte oder neue Session) startet der Agent hier, mit dem
-                // bisherigen Verlauf. Ein angehängtes Repository, ein Wechsel der Betriebsart oder
-                // ein umgelegter Browser-Zugriff startet ihn nur neu, wenn er ruht — ein arbeitender
-                // Agent wird nie unterbrochen.
+                // bisherigen Verlauf. Ein angehängtes Repository, ein Wechsel der Betriebsart, ein
+                // umgelegter Browser-Zugriff oder geänderte MCP-Konfigurationsdateien starten ihn
+                // nur neu, wenn er ruht — ein arbeitender Agent wird nie unterbrochen.
                 let has_new_repository =
                     session.repositories().len() != state.process_repository_count;
                 let has_new_backend =
                     state.process_backend != backend || state.process_mode != operating_mode;
                 let has_new_chrome = state.chrome != state.process_chrome;
+                // Ohne Fingerabdruck (Codex, kein Benutzerordner) gibt es nichts zu vergleichen.
+                let has_new_mcp_config = state
+                    .process_mcp_fingerprint
+                    .zip(current_mcp_fingerprint)
+                    .is_some_and(|(started_with, current): (u64, u64)| started_with != current);
                 if state.process.is_none()
                     || state.effort != state.process_effort
-                    || ((has_new_repository || has_new_backend || has_new_chrome)
+                    || ((has_new_repository
+                        || has_new_backend
+                        || has_new_chrome
+                        || has_new_mcp_config)
                         && state.is_resting())
                 {
                     start_process(
@@ -4393,6 +4404,7 @@ fn start_process(
     let process_mcp_fingerprint = if codex_exe.is_some() {
         None
     } else {
+        mcp::apply_disabled_everywhere(session);
         mcp::mcp_fingerprint(session, &repositories)
     };
     let process = spawn(

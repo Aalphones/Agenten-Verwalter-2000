@@ -26,14 +26,24 @@
 
 ## Checkliste
 
-- [ ] `Cargo.toml`: `serde_json = { version = "1", features = ["preserve_order"] }`; `cargo build` prüfen, Compilerfehler durch geänderten `Map`-Typ beheben.
-- [ ] In `config_files.rs`: `save(...)`, `remove(...)`, `set_disabled_for_workspace(...)` mit gemeinsamer Funktion `rewrite(path, |root: &mut Value| …)`.
-- [ ] Registry-Methoden + Commands `mcp_config_save`, `mcp_config_remove`; Wrapper `saveMcpServer`, `removeMcpServer` in `src/lib/mcp.ts`.
-- [ ] `toggle_mcp` um den Zweig ohne Agent erweitern; Doc-Kommentar in `src/lib/mcp.ts` (`toggleMcpServer`) anpassen („ohne Agent: Datei“).
-- [ ] Einstellung `mcp_disabled_everywhere` in `settings/model.rs` + `settings/mod.rs` (laden: ungültiges JSON = leere Liste), `toggle_mcp` um `everywhere`, Eintragen vor `start_process`; Wrapper `toggleMcpServer(sessionId, server, enabled, everywhere)` in `src/lib/mcp.ts`.
-- [ ] Neustart-Bedingung im Sende-Pfad ergänzen; Kommentar dort nachziehen.
-- [ ] Konfidenz-Check aus der README (gleichzeitige Kommandozeile) einmal fahren; Ergebnis in Report-Back und, falls Verlust, als 🟡-Follow-up.
-- [ ] `docs/knowledge/claude-stream-json.md` Abschnitt „MCP-Server steuern“: Ablage `projects[<Arbeitsordner>].disabledMcpServers` und Existenz von `mcp_set_servers` (ungemessen) mit Datum 2026-11-25 ergänzen.
-- [ ] `pnpm check`, `cargo clippy` grün.
+- [x] `Cargo.toml`: `serde_json = { version = "1", features = ["preserve_order"] }`; `cargo build` prüfen, Compilerfehler durch geänderten `Map`-Typ beheben.
+- [x] In `config_files.rs`: `save(...)`, `remove(...)`, `set_disabled_for_workspace(...)` mit gemeinsamer Funktion `rewrite(path, |root: &mut Value| …)`.
+- [x] Registry-Methoden + Commands `mcp_config_save`, `mcp_config_remove`; Wrapper `saveMcpServer`, `removeMcpServer` in `src/lib/mcp.ts`.
+- [x] `toggle_mcp` um den Zweig ohne Agent erweitern; Doc-Kommentar in `src/lib/mcp.ts` (`toggleMcpServer`) anpassen („ohne Agent: Datei“).
+- [x] Einstellung `mcp_disabled_everywhere` (nicht in `Settings`/`model.rs`, sondern eigene Funktionen in `settings/mod.rs`; ungültiges JSON = leere Liste), `toggle_mcp` um `everywhere`, Eintragen vor `start_process`; Wrapper `toggleMcpServer(sessionId, server, enabled, everywhere)` in `src/lib/mcp.ts`.
+- [x] Neustart-Bedingung im Sende-Pfad ergänzen; Kommentar dort nachziehen.
+- [ ] Konfidenz-Check aus der README (gleichzeitige Kommandozeile) einmal fahren — **nicht gefahren**: braucht zwei echte laufende Sessions in der App; als 🟡 offen.
+- [x] `docs/knowledge/claude-stream-json.md` Abschnitt „MCP-Server steuern“: Ablage `projects[<Arbeitsordner>].disabledMcpServers` und Existenz von `mcp_set_servers` (ungemessen) mit Datum 2026-11-25 ergänzen.
+- [x] `pnpm check`, `cargo clippy` grün.
 
 ## Report-Back
+
+Status: complete (Konfidenz-Check offen).
+
+- `config_files.rs`: `save`, `remove`, `set_disabled_for_workspace`, `clear_disabled_under`, gemeinsames `rewrite` (frisch lesen, Zwischendatei + `rename`, Prozess-Sperre, Rechte der alten Datei übernommen).
+- Neuer Fehler `CommandError::Invalid` (Binding von Hand in `CommandError.ts` ergänzt, nicht per ts-rs erzeugt).
+- Abweichung: Neues in die Workspace-`.mcp.json` wird abgelehnt (README „Von mir gesetzt“); Entfernen eines Local-Servers entfernt ihn aus allen gleichwertigen Schlüsseln des Ordners.
+- 🟡 „Überall aus“ greift in anderen Vorhaben erst beim nächsten Prozessstart; ein bereits laufender Agent dort bleibt unberührt.
+- 🟡 Ein neu angelegter `projects[…]`-Eintrag enthält nur `disabledMcpServers`; ob Claude Code das ohne weitere Felder akzeptiert, ist nicht gemessen.
+- 🟡 Konfidenz-Check zum gleichzeitigen Schreiben von `~/.claude.json` nicht gefahren.
+- Nicht in der echten App gelaufen; belegt per `pnpm check` (inkl. Clippy).
