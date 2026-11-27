@@ -30,6 +30,12 @@ Rückgabe: Zahl der vollständig gelöschten Vorhaben; eine Zeile je Vorhaben na
 
 `run_once` (aus Phase 2) ruft nach dem Ausdünnen, wenn `archive_purge` an ist, `purge_due(app, database, settings.archive_purge_days)`. `preview(database, days)` zählt dieselben Kandidaten und deren Sessions, ohne etwas zu ändern.
 
+## Nebenbefund: Löschen der letzten Session lässt den Workspace liegen
+
+Verstanden, was heute passiert: `SessionRegistry::delete_session` (`src-tauri/src/sessions/registry.rs`) löscht die Zeile der Session, bei der letzten Session auch das Vorhaben, und räumt nur alte App-Worktrees ab (`schedule_worktree_cleanup`). Der Workspace-Ordner, die Notiz, Berichtsbilder, Transkripte und das Temp-Scratchpad bleiben für immer liegen — und sind danach über keine Zeile mehr auffindbar.
+
+Änderung: Ist die gelöschte Session die letzte des Vorhabens (`is_last`), ruft `delete_session` nach dem Entfernen aus dem Speicher `retention::purge::purge_files` für dieses Vorhaben — mit denselben Prüfungen wie in Schritt 4 (Workspace direkt in `<Datenordner>\workspaces`, kein Unterordner mit `.git`). Die dafür nötigen Angaben (Sessions mit `workspace_dir` und `cli_scratchpad_dir`, IDs der Umsetzungen) werden **vor** dem Löschen der Zeilen gelesen. Der Aufruf läuft in einem eigenen Thread `retention-delete`, der wie `schedule_worktree_cleanup` zuerst `KILL_GRACE + CLEANUP_MARGIN` wartet, damit der Agent beendet ist. Scheitert das Löschen eines Ordners, geht eine Zeile nach `eprintln!`; die Datenbankzeilen bleiben gelöscht. Unabhängig von beiden Schaltern — der Benutzer hat das Löschen selbst ausgelöst. Wird eine Session gelöscht, die **nicht** die letzte ist, ändert sich nichts.
+
 ## Verdichten
 
 `compact_if_worthwhile(database)`: liest `PRAGMA freelist_count`, `PRAGMA page_count`, `PRAGMA page_size`. Ist `archive_purge` an **und** `freelist_count × 5 ≥ page_count` **und** `freelist_count × page_size ≥ 50 × 1024 × 1024`, führt es `VACUUM` aus. Aufruf in `lib.rs` → `setup` direkt nach `Database::open`, vor `SessionRegistry::restore`. Ein Fehler geht nach `eprintln!`, die App startet weiter.
@@ -42,6 +48,7 @@ Rückgabe: Zahl der vollständig gelöschten Vorhaben; eine Zeile je Vorhaben na
 - `restore_project` hält `archive_gate`; ein Lauf, der währenddessen dasselbe Vorhaben erreicht, überspringt es nach Schritt 2.
 - Ein Workspace außerhalb von `<Datenordner>\workspaces` oder mit einem `.git`-Unterordner wird nicht gelöscht, die Zeilen bleiben.
 - `compact_if_worthwhile` führt bei abgeschaltetem `archive_purge` nie `VACUUM` aus.
+- Nach dem Löschen der letzten Session eines Vorhabens über die Oberfläche sind dessen Workspace-Ordner, Notiz, MCP-Datei und Transkript verschwunden — auch bei beiden Schaltern auf aus. Das Löschen einer Session, die nicht die letzte ist, lässt den Workspace unberührt.
 
 ## Checkliste
 
@@ -49,6 +56,7 @@ Rückgabe: Zahl der vollständig gelöschten Vorhaben; eine Zeile je Vorhaben na
 - [ ] `src-tauri/src/agents/claude/locate.rs`: `config_dir` → `pub(crate)`, neue Funktion `remove_transcript`.
 - [ ] `src-tauri/src/retention/purge.rs`: `purge_due`, `purge_files`, `preview` nach dem Ablauf oben; `model.rs`: `RetentionPreview` mit TS-Binding.
 - [ ] `src-tauri/src/retention/mod.rs`: `run_once` um den Aufruf erweitern; `compact_if_worthwhile`; Zeitquelle `now_ms()` des Moduls berücksichtigt `VERWALTER_RETENTION_NOW_OFFSET_DAYS` nur bei `cfg!(debug_assertions)`.
+- [ ] `src-tauri/src/sessions/registry.rs` → `delete_session`: bei `is_last` die Datei-Schritte nach dem Abschnitt „Nebenbefund“ anschließen; den Doc-Kommentar der Funktion nachziehen.
 - [ ] `src-tauri/src/lib.rs`: Aufruf von `compact_if_worthwhile` nach `Database::open`.
 - [ ] `src-tauri/src/commands/retention.rs`: `retention_preview(days)`; in `lib.rs` im `invoke_handler` registrieren; `pnpm bindings`; Wrapper `src/lib/retention.ts`.
 - [ ] `src-tauri/examples/retention-probe.rs`: Unterbefehl `purge`.

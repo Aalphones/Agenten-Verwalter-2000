@@ -68,7 +68,7 @@ Migration `024_retention.sql`: `ALTER TABLE projects ADD COLUMN trimmed_at REAL;
 1. Beide Schalter aus (Auslieferungszustand): kein Ordner und keine Zeile wird gelöscht, kein `VACUUM` läuft.
 2. Schalter „Beim Archivieren ausdünnen“ an: nach dem Archivieren eines Vorhabens sind im Scratchpad seines Workspace die Bau-Ordner und schweren Dateien nach Phase 2 weg; Bilder, HTML, Markdown, PDF, Logs und Skripte unter 50 MB sind da; `.artefakte`, `.anhaenge`, `.retro` sind unberührt.
 3. Schalter „Löschen nach Frist“ an, Frist N Tage: ein Vorhaben, das länger als N Tage archiviert ist, ist nach dem nächsten Lauf aus Archiv, Datenbank und Dateisystem verschwunden — samt Notiz, Berichtsbildern, MCP-Konfigurationen, Codex-Thread-Dateien, Transkripten der Kommandozeile und Temp-Scratchpads. Ein jüngeres und jedes aktive Vorhaben ist vollständig da.
-4. Ein Vorhaben, das während eines Laufs wiederhergestellt wird, wird nicht gelöscht.
+4. Ein Vorhaben, das während eines Laufs wiederhergestellt wird, wird nicht gelöscht. Wer die letzte Session eines Vorhabens von Hand löscht, hinterlässt keinen Workspace-Ordner mehr (unabhängig von den Schaltern).
 5. Die Einstellungsseite zeigt unter „App → Aufräumen“ beide Schalter und, wenn „Löschen nach Frist“ an ist, den Regler 7–365 Tage mit der Zeile, wie viele Vorhaben der nächste Lauf trifft; jede Zeile hat ihren ⓘ-Text.
 6. Die Archiv-Karte eines Vorhabens zeigt bei eingeschaltetem Löschen das Löschdatum.
 7. `pnpm check` ist grün; Code-Map, Glossar und ADR 076 sind nachgezogen.
