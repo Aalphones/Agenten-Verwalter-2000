@@ -7,6 +7,7 @@ import { ReportScreens } from '@/features/report/ReportScreens';
 import { ReportStop } from '@/features/report/ReportStop';
 import { ReportTidyHint } from '@/features/report/ReportTidyHint';
 import { ReportWay } from '@/features/report/ReportWay';
+import { ReportPhaseKeyContext } from '@/features/report/reportCommentsContext';
 import { scopeOf, stopByIndex } from '@/features/report/reportDigest';
 import {
   NEXT_LABEL,
@@ -197,45 +198,47 @@ export function ReportPhasePage({
   }
 
   return (
-    <div ref={rootRef} className="report-phase">
-      <p className="report-phase__kicker">{phaseHeading(phase)}</p>
-      <h2 className="report-phase__title">{phase.title}</h2>
-      <p className="report-phase__meta">
-        <span>{formatCount(phase.files)} Dateien</span>
-        <span>
-          +{formatCount(phase.added)} −{formatCount(phase.removed)}
-        </span>
-        {phase.commits.length > 0 && <code>{phase.commits.join(' · ')}</code>}
-      </p>
-      {phase.tidyError !== null && (
-        <ReportTidyHint
-          phaseId={phase.phaseId}
-          message={phase.tidyError}
-          needsConfirm={phase.checks !== null}
-        />
-      )}
-      {renderResult()}
-      {phase.screens.length > 0 && <ReportScreens scope={scope} screens={phase.screens} />}
-      {phase.review !== null && (
-        <ReportReviewSection
-          scope={scope}
-          review={phase.review}
-          hasStop={hasStop}
-          onJumpToStop={jumpTo}
-          onOpenFile={onOpenFile}
-        />
-      )}
-      {phase.stops.map((stop: ReportStopData) => (
-        <ReportStop
-          key={stop.index}
-          scope={scope}
-          stop={stop}
-          isFlashing={flashIndex === stop.index}
-          hasMargin={hasMargin}
-          onOpenFile={onOpenFile}
-        />
-      ))}
-      {renderFooter()}
-    </div>
+    <ReportPhaseKeyContext.Provider value={phase.key}>
+      <div ref={rootRef} className="report-phase">
+        <p className="report-phase__kicker">{phaseHeading(phase)}</p>
+        <h2 className="report-phase__title">{phase.title}</h2>
+        <p className="report-phase__meta">
+          <span>{formatCount(phase.files)} Dateien</span>
+          <span>
+            +{formatCount(phase.added)} −{formatCount(phase.removed)}
+          </span>
+          {phase.commits.length > 0 && <code>{phase.commits.join(' · ')}</code>}
+        </p>
+        {phase.tidyError !== null && (
+          <ReportTidyHint
+            phaseId={phase.phaseId}
+            message={phase.tidyError}
+            needsConfirm={phase.checks !== null}
+          />
+        )}
+        {renderResult()}
+        {phase.screens.length > 0 && <ReportScreens scope={scope} screens={phase.screens} />}
+        {phase.review !== null && (
+          <ReportReviewSection
+            scope={scope}
+            review={phase.review}
+            hasStop={hasStop}
+            onJumpToStop={jumpTo}
+            onOpenFile={onOpenFile}
+          />
+        )}
+        {phase.stops.map((stop: ReportStopData) => (
+          <ReportStop
+            key={stop.index}
+            scope={scope}
+            stop={stop}
+            isFlashing={flashIndex === stop.index}
+            hasMargin={hasMargin}
+            onOpenFile={onOpenFile}
+          />
+        ))}
+        {renderFooter()}
+      </div>
+    </ReportPhaseKeyContext.Provider>
   );
 }

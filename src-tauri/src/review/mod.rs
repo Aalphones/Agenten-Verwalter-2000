@@ -12,6 +12,8 @@ use crate::review::model::{CommentTarget, ReviewComment};
 const MIN_FENCE_LENGTH: usize = 3;
 const FENCE_CHARACTER: char = '`';
 const MAX_SELECTOR_CHARS: usize = 300;
+const MAX_REPORT_PHASE_KEY_CHARS: usize = 12;
+const MAX_REPORT_LABEL_CHARS: usize = 80;
 
 /// Ein Kommentar auf einem Abschnittskopf oder ohne Text kann die Oberfläche nicht erzeugen —
 /// kommt er an, ist etwas kaputt, und es wird nichts gesendet.
@@ -49,6 +51,20 @@ pub fn validate(comments: &[ReviewComment]) -> Result<(), CommandError> {
             {
                 return Err(CommandError::Internal(
                     "UngÃ¼ltiger Bildbereich im Review-Kommentar".to_owned(),
+                ));
+            }
+            CommentTarget::Report {
+                implementation_id,
+                phase_key,
+                label,
+                ..
+            } if implementation_id.trim().is_empty()
+                || phase_key.trim().is_empty()
+                || phase_key.chars().count() > MAX_REPORT_PHASE_KEY_CHARS
+                || label.chars().count() > MAX_REPORT_LABEL_CHARS =>
+            {
+                return Err(CommandError::Internal(
+                    "Ungültiges Ziel für Bericht-Kommentar".to_owned(),
                 ));
             }
             _ => {}
@@ -111,6 +127,22 @@ pub fn agent_text(text: &str, comments: &[ReviewComment], folders: &[Option<Path
                     index + 1,
                     comment.text,
                 ),
+                CommentTarget::Report {
+                    phase_key,
+                    entry,
+                    label,
+                    ..
+                } => {
+                    let entry_suffix: String = match entry {
+                        Some(number) => format!(" (n{number})"),
+                        None => String::new(),
+                    };
+                    format!(
+                        "{}. Review-Bericht, Phase {phase_key}, {label}{entry_suffix}: {}",
+                        index + 1,
+                        comment.text,
+                    )
+                }
             }
         })
         .collect();

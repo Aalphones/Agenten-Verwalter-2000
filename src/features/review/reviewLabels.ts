@@ -24,6 +24,11 @@ export function whereLabel(comment: ReviewComment): string {
       return `${comment.target.file} · ${selectorTail(comment.target.selector)} „${comment.target.label}“`;
     case 'image':
       return `${comment.target.name} · Bereich ${String(comment.target.width)} × ${String(comment.target.height)} bei ${String(comment.target.x)}, ${String(comment.target.y)}`;
+    case 'report': {
+      const entry: string =
+        comment.target.entry === null ? '' : ` (n${String(comment.target.entry)})`;
+      return `Phase ${comment.target.phaseKey} · ${comment.target.label}${entry}`;
+    }
   }
 }
 
@@ -35,6 +40,8 @@ export function kindLabel(target: CommentTarget): string {
       return 'Artefakt';
     case 'image':
       return 'Bild';
+    case 'report':
+      return 'Bericht';
   }
 }
 

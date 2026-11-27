@@ -16,6 +16,10 @@
     font-size: var(--font-size-xs);
   }
 
+  &__comment {
+    margin-left: auto;
+  }
+
   &__text {
     margin: var(--space-md) 0 0;
     max-width: 78ch;

@@ -12,7 +12,7 @@ Ziel: Jede Umsetzung bekommt einen Review-Bericht, der mit den Stationen wächst
 | 4 | Kern: Prüfwerte aus Läufen und Berichtsdateien | [phase-4-kern-pruefwerte.md](phase-4-kern-pruefwerte.md) | standard | complete |
 | 5 | Oberfläche: Reiter „Review“, Inhalt, Überblick, Phasen-Seite, Code mit Randnotizen | [phase-5-oberflaeche-seiten.md](phase-5-oberflaeche-seiten.md) | standard | complete |
 | 6 | Oberfläche: Schaubilder mit Unterschied/Vorher/Nachher, Bilder mit Marken, Sichtabnahme | [phase-6-oberflaeche-schaubilder.md](phase-6-oberflaeche-schaubilder.md) | standard | complete |
-| 7 | Kommentare und Abnahme | [phase-7-kommentare-abnahme.md](phase-7-kommentare-abnahme.md) | standard | pending |
+| 7 | Kommentare und Abnahme | [phase-7-kommentare-abnahme.md](phase-7-kommentare-abnahme.md) | standard | complete |
 | 8 | Skills umstellen (User-Skills, facepass-Projekt-Skills), Plan fertig | [phase-8-skills-umstellen.md](phase-8-skills-umstellen.md) | standard | pending |
 
 Reihenfolge fest 1 → 8; nach jeder Phase läuft die App. Profil: privat – keine automatisierten Tests, keine Review-Stationen, keine Abnahmeliste. Nicht im Umfang: Bericht für Sessions ohne Umsetzung, Ampel-Schwellen für Abdeckung oder Mutation, Zweckzeilen automatisch an Hunks heften, Betriebsarten Codex/LM Studio/Autark (dort fehlen die Werkzeuge, der Bericht zeigt dann nur Code und Prüfwerte).

@@ -20,6 +20,7 @@ Wer eine Umsetzung ([ADR 048](048-umsetzung.md)) abnimmt, liest bisher ein HTML-
 - Geordnet wird, sobald die Agenten-Stationen einer Phase fertig sind. Stationen `by: "you"` zählen nicht: sonst bliebe die letzte Phase ungeordnet, bis der Benutzer abgenommen hat — er liest den Bericht aber vorher.
 - Code steht in keinem Eintrag: ein Eintrag merkt Ort und Wortlaut der Zeilen, den Code liest der Verwalter aus Git.
 - Die Anweisung dazu bekommen nur Claude-Stationen mit Zugang, im gemeinsamen `--append-system-prompt` ([ADR 061](061-schlanke-werkzeuge-in-stationen.md)).
+- Kommentare an die Rückfrage: Stellen im Bericht (Codezeilen, Stopps, Schaubilder, Bildschirme, Bildbereiche) werden als Review-Kommentare (`CommentTarget::Report`) gesammelt und mit „Kommentare senden“ an die Rückfrage der Umsetzung geschickt, die neueste nicht archivierte Session mit `inquiryOf` = Umsetzung; gibt es keine, legt das Senden eine an. Damit landen sie bei der Session, die Stationen ergänzen darf, nicht in einer Station. „Abnehmen“ ist gesperrt, solange Kommentare gesammelt sind, weil nach der Abnahme keine Stationen mehr ergänzt werden können; der Zustand der Abnahme kommt aus dem Live-Stand der Umsetzung, weil der Bericht nur bei `report://changed` neu geladen wird.
 - Die Sichtabnahme hat ein eigenes Werkzeug, ein Aufruf je Bildschirm, damit Ansichten, Entwurf, Abweichung und Klickpfad zusammenbleiben; Haiku ordnet sie nicht.
 
 ## Konsequenzen

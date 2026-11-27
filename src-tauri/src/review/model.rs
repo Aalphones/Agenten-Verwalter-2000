@@ -37,6 +37,16 @@ pub enum CommentTarget {
         image_width: u32,
         image_height: u32,
     },
+    /// Stopp, Schaubild, Bildschirm oder Bildbereich im Review-Bericht einer Umsetzung (ADR 073).
+    Report {
+        implementation_id: String,
+        /// Schlüssel der Phase, z. B. `"3"`, höchstens 12 Zeichen.
+        phase_key: String,
+        /// Nummer des Eintrags in der Phase (`n<k>`); ohne Eintrag fehlt sie.
+        entry: Option<u32>,
+        /// Stopp-Titel, Bildunterschrift bzw. Bildschirm-Name, höchstens 80 Zeichen.
+        label: String,
+    },
 }
 
 /// Ein Review-Kommentar an einer Diff-Zeile, einem Artefakt-Element oder einem Bildbereich.

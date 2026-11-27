@@ -1856,7 +1856,7 @@ impl SessionRegistry {
             .iter()
             .map(|comment: &ReviewComment| match &comment.target {
                 CommentTarget::Artifact { .. } => self.artifacts_dir(session_id).ok(),
-                CommentTarget::Image { .. } => None,
+                CommentTarget::Image { .. } | CommentTarget::Report { .. } => None,
                 CommentTarget::Diff => entries
                     .iter()
                     .find(|entry: &&sources::Source| {

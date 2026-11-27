@@ -22,6 +22,28 @@ export const NO_COMMENTS: readonly CollectedComment[] = [];
 export type ArtifactTarget = Extract<CommentTarget, { kind: 'artifact' }>;
 export type ImageTarget = Extract<CommentTarget, { kind: 'image' }>;
 
+export type ReportTarget = Extract<CommentTarget, { kind: 'report' }>;
+
+/** Schlüssel der gesammelten Kommentare eines Review-Berichts: sie gehören der Umsetzung, nicht einer Session. */
+export function reportCommentKey(implementationId: string): string {
+  return `report:${implementationId}`;
+}
+
+/**
+ * Kennung eines Kommentars im Bericht außerhalb des Codes: Phase, Eintrag (`null` bei einem Stopp ohne Eintrag),
+ * Beschriftung und für einen Bildbereich `area` (Bild und Rechteck).
+ */
+export function reportLineId(
+  phaseKey: string,
+  entry: number | null,
+  label: string,
+  area?: string,
+): string {
+  const entryPart: string = entry === null ? '-' : String(entry);
+  const areaPart: string = area === undefined ? '' : `|${area}`;
+  return `report|${phaseKey}|${entryPart}|${label}${areaPart}`;
+}
+
 export function artifactLineId(file: string, selector: string): string {
   return `artifact|${file}|${selector}`;
 }

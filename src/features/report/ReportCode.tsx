@@ -1,7 +1,12 @@
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import type { MouseEvent, ReactElement } from 'react';
+import { ReportCommentCards } from '@/features/report/ReportCommentCards';
 import { ReportIcon } from '@/features/report/ReportIcon';
 import { layoutNotes, type NoteBox, type NoteLayout } from '@/features/report/layoutNotes';
+import {
+  useReportCommenting,
+  type ReportCommenting,
+} from '@/features/report/reportCommentsContext';
 import {
   FILES_BUTTON_LABEL,
   MOVED_HINT,
@@ -122,6 +127,7 @@ export function ReportCodeBlock({
   const [layout, setLayout] = useState<NoteLayout | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const asideRef = useRef<HTMLElement>(null);
+  const commenting: ReportCommenting = useReportCommenting();
 
   const lines: SyntaxLine[] = useMemo(
     () =>
@@ -157,6 +163,8 @@ export function ReportCodeBlock({
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(aside);
+    // Eine Kommentarzeile unter dem Code schiebt die folgenden Zeilen und damit die Anker der Randnotizen.
+    observer.observe(table);
     return (): void => {
       observer.disconnect();
     };
@@ -222,7 +230,21 @@ export function ReportCodeBlock({
         data-line={row.new ?? undefined}
         title={isMissed ? UNCOVERED_TITLE : undefined}
       >
-        <td className="report-code__num">{lineNumber}</td>
+        <td className="report-code__num">
+          {commenting.isEnabled && row.new !== null && row.kind !== 'removed' && (
+            <button
+              type="button"
+              className="report-code__plus"
+              aria-label={`Kommentar zu Zeile ${String(row.new)}`}
+              onClick={(event: MouseEvent<HTMLButtonElement>): void => {
+                commenting.commentOnLine(event.currentTarget, code, row);
+              }}
+            >
+              +
+            </button>
+          )}
+          {lineNumber}
+        </td>
         <td className="report-code__marks">
           {marks.map((entry: PlacedNote) => (
             <span key={entry.note.label} className={`report-code__mark ${noteTone(entry.note)}`}>
@@ -256,6 +278,16 @@ export function ReportCodeBlock({
         </tr>
       ) : null;
     const inlineRows: ReactElement[] = [];
+    const lineComments = commenting.commentsOfLine(code, row);
+    if (lineComments.length > 0 && !isFolded) {
+      inlineRows.push(
+        <tr key={`comments-${String(index)}`} className="report-code__comments">
+          <td colSpan={4}>
+            <ReportCommentCards comments={lineComments} />
+          </td>
+        </tr>,
+      );
+    }
     if (!hasMargin && row.new !== null) {
       for (const entry of notesEndingAt(row.new)) {
         inlineRows.push(

@@ -16,7 +16,9 @@ export type ReportIconName =
   | 'data'
   | 'sec'
   | 'flow'
-  | 'ui';
+  | 'ui'
+  | 'msg'
+  | 'send';
 
 const SHAPES: Record<ReportIconName, ReactElement> = {
   map: (
@@ -114,6 +116,13 @@ const SHAPES: Record<ReportIconName, ReactElement> = {
       <rect width="18" height="18" x="3" y="3" rx="2" />
       <path d="M3 9h18" />
       <path d="M9 21V9" />
+    </>
+  ),
+  msg: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
+  send: (
+    <>
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
     </>
   ),
 };

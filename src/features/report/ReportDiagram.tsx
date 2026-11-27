@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
+import { ReportCommentButton } from '@/features/report/ReportCommentButton';
+import { ReportCommentCards } from '@/features/report/ReportCommentCards';
 import { ReportFigureFrame } from '@/features/report/ReportFigureFrame';
+import {
+  useReportCommenting,
+  type EntryTarget,
+  type ReportCommenting,
+} from '@/features/report/reportCommentsContext';
 import { entryKey } from '@/features/report/reportDigest';
 import { hasDiff, mermaidView } from '@/features/report/mermaidDiff';
 import {
@@ -42,6 +49,8 @@ export function ReportDiagram({ scope, figure, mermaid }: ReportDiagramProps): R
   const isDiff: boolean = hasDiff(mermaid);
   const view: string = isDiff ? mermaidView(mermaid, mode) : mermaid;
   const drawing: MermaidDrawing = useMermaid(view, isVisible);
+  const commenting: ReportCommenting = useReportCommenting();
+  const target: EntryTarget = { entry: figure.entry, label: figure.caption };
 
   useEffect(() => {
     if (drawing.kind === 'ready') {
@@ -79,6 +88,14 @@ export function ReportDiagram({ scope, figure, mermaid }: ReportDiagramProps): R
         >
           {SOURCE_LABEL}
         </button>
+        {commenting.isEnabled && (
+          <ReportCommentButton
+            ariaLabel={`Kommentar zum Schaubild ${figure.caption}`}
+            onComment={(anchor: Element): void => {
+              commenting.commentOnEntry(anchor, target);
+            }}
+          />
+        )}
       </>
     );
   }
@@ -121,6 +138,7 @@ export function ReportDiagram({ scope, figure, mermaid }: ReportDiagramProps): R
         <pre className="report-diagram__source">{mermaid}</pre>
       )}
       {figure.text !== null && <p className="report-figure__text">{figure.text}</p>}
+      <ReportCommentCards comments={commenting.commentsOfEntry(target)} />
     </ReportFigureFrame>
   );
 }

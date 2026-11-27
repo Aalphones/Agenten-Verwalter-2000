@@ -70,6 +70,12 @@ pub(crate) fn entry_block(entry: &ChatEntry) -> Option<Block> {
                     CommentTarget::Image { name, .. } => {
                         block.push_str(&format!("\n  Kommentar zu Bild {name}: {}", comment.text))
                     }
+                    CommentTarget::Report {
+                        phase_key, label, ..
+                    } => block.push_str(&format!(
+                        "\n  Kommentar zum Bericht, Phase {phase_key}, {label}: {}",
+                        comment.text
+                    )),
                 }
             }
             block

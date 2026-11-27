@@ -3,10 +3,18 @@ import type { ReactElement } from 'react';
 import { Dialog } from '@/components/Dialog';
 import { implementationTitle } from '@/features/implementation/implementationTexts';
 import { ReportBar } from '@/features/report/ReportBar';
+import { ReportCommentsProvider } from '@/features/report/ReportCommentsProvider';
 import { ReportOverview } from '@/features/report/ReportOverview';
 import { ReportPhasePage, type ReportPageLink } from '@/features/report/ReportPhasePage';
 import { ReportToc } from '@/features/report/ReportToc';
-import { barMeta, barState, pageOrder, phasesBegun } from '@/features/report/reportDigest';
+import {
+  acceptableStationId,
+  barMeta,
+  barState,
+  isAccepted,
+  pageOrder,
+  phasesBegun,
+} from '@/features/report/reportDigest';
 import {
   EMPTY_TEXT,
   LOADING_TEXT,
@@ -14,12 +22,16 @@ import {
   TOC_SHEET_TITLE,
 } from '@/features/report/reportTexts';
 import { useReport, type ReportState } from '@/features/report/useReport';
+import { useReportAccept } from '@/features/report/useReportAccept';
+import { useReportSend } from '@/features/report/useReportSend';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { ReportPhase } from '@/lib/bindings/ReportPhase';
 import type { ReportView as ReportData } from '@/lib/bindings/ReportView';
+import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { isTextTarget } from '@/lib/keyTargets';
 import { useFilesStore } from '@/stores/files';
 import { useReportStore } from '@/stores/report';
+import { reportCommentKey } from '@/stores/review';
 import './ReportView.css';
 
 /** Ab dieser Breite der Seite stehen die Notizen im Rand neben dem Code, darunter zwischen den Zeilen. */
@@ -34,6 +46,10 @@ interface ReportViewProps {
   filesViewKey: string;
   /** Schaltet den Host auf den Reiter „Dateien“. */
   onOpenFiles: () => void;
+  /** Alle Sessions: die Rückfrage der Umsetzung, die die Kommentare bekommt, ist eine davon. */
+  sessions: readonly SessionSummary[];
+  /** Eine Rückfrage, die „Kommentare senden“ angelegt hat. */
+  onSessionCreated: (created: SessionSummary) => void;
 }
 
 /** Der Reiter „Review“: Leiste, Inhaltsverzeichnis und die offene Seite (Überblick oder Phase). */
@@ -41,6 +57,8 @@ export function ReportView({
   implementation,
   filesViewKey,
   onOpenFiles,
+  sessions,
+  onSessionCreated,
 }: ReportViewProps): ReactElement {
   const implementationId: string = implementation.id;
   const [isTocOpen, setIsTocOpen] = useState<boolean>(false);
@@ -53,6 +71,10 @@ export function ReportView({
   const showPageInStore = useReportStore((state) => state.showPage);
   const jumpToStop = useReportStore((state) => state.jumpToStop);
   const updateFiles = useFilesStore((state) => state.update);
+  const send = useReportSend(implementationId, sessions, onSessionCreated);
+  const acceptStationId: string | null =
+    report === null ? null : acceptableStationId(report, implementation);
+  const accept = useReportAccept(implementationId, acceptStationId);
 
   // Eine Phase, die es nicht (mehr) gibt oder noch nicht begonnen hat, fällt auf den Überblick zurück.
   const phase: ReportPhase | undefined =
@@ -173,47 +195,63 @@ export function ReportView({
     );
   }
 
+  const isClosed: boolean = isAccepted(report, implementation);
+
   return (
-    <div className="report-view">
-      <div className="report-view__grid">
-        <ReportBar
-          state={barState(report, implementation)}
-          meta={barMeta(report, implementationTitle(implementation), implementation.phases.length)}
-          onOpenToc={(): void => {
-            setIsTocOpen(true);
-          }}
-        />
-        <div className="report-view__toc">
-          <ReportToc
-            report={report}
-            implementationId={implementationId}
-            currentPage={page}
-            onShowPage={showPage}
+    <ReportCommentsProvider
+      key={implementationId}
+      implementationId={implementationId}
+      isEnabled={!isClosed}
+    >
+      <div className="report-view">
+        <div className="report-view__grid">
+          <ReportBar
+            state={barState(report, implementation)}
+            meta={barMeta(
+              report,
+              implementationTitle(implementation),
+              implementation.phases.length,
+            )}
+            onOpenToc={(): void => {
+              setIsTocOpen(true);
+            }}
+            commentKey={reportCommentKey(implementationId)}
+            isClosed={isClosed}
+            send={send}
+            accept={acceptStationId === null ? null : accept}
           />
+          <div className="report-view__toc">
+            <ReportToc
+              report={report}
+              implementationId={implementationId}
+              currentPage={page}
+              onShowPage={showPage}
+            />
+          </div>
+          <div ref={setPageElement} className="report-view__page">
+            <div className="report-view__doc">{renderPage(report)}</div>
+          </div>
         </div>
-        <div ref={setPageElement} className="report-view__page">
-          <div className="report-view__doc">{renderPage(report)}</div>
-        </div>
+        {isTocOpen && (
+          <Dialog
+            labelledBy={TOC_TITLE_ID}
+            className="report-view__sheet"
+            onClose={(): void => {
+              setIsTocOpen(false);
+            }}
+          >
+            <h2 id={TOC_TITLE_ID} className="report-view__sheet-title">
+              {TOC_SHEET_TITLE}
+            </h2>
+            <ReportToc
+              report={report}
+              implementationId={implementationId}
+              currentPage={page}
+              onShowPage={showPage}
+            />
+          </Dialog>
+        )}
       </div>
-      {isTocOpen && (
-        <Dialog
-          labelledBy={TOC_TITLE_ID}
-          className="report-view__sheet"
-          onClose={(): void => {
-            setIsTocOpen(false);
-          }}
-        >
-          <h2 id={TOC_TITLE_ID} className="report-view__sheet-title">
-            {TOC_SHEET_TITLE}
-          </h2>
-          <ReportToc
-            report={report}
-            implementationId={implementationId}
-            currentPage={page}
-            onShowPage={showPage}
-          />
-        </Dialog>
-      )}
-    </div>
+    </ReportCommentsProvider>
   );
 }

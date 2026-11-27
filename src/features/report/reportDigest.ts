@@ -21,6 +21,9 @@ const ACCEPTANCE_WAITING: readonly StationState[] = [
   'waitsForYou',
 ];
 
+/** Zustände, in denen die Abnahme-Station auf den Benutzer wartet und „Abnehmen“ sie schließen darf. */
+const ACCEPTABLE_STATES: readonly StationState[] = ['ready', 'waitsForYou'];
+
 export type BarTone = 'work' | 'grow' | 'ready' | 'done';
 
 export interface BarState {
@@ -95,10 +98,43 @@ function stationById(
   return undefined;
 }
 
+/**
+ * Zustand der Abnahme-Station. Der Stand der Umsetzung ist neuer als der Bericht: der wird nur bei Berichts-Ereignissen
+ * neu gelesen, ein Abschluss der Station löst keines aus.
+ */
+function acceptanceState(
+  report: ReportView,
+  implementation: ImplementationView,
+): StationState | null {
+  const acceptance = report.acceptance;
+  if (acceptance === null) {
+    return null;
+  }
+  return stationById(implementation, acceptance.stationId)?.state ?? acceptance.state;
+}
+
+/** Die Abnahme-Station, die „Abnehmen“ schließen darf: sie ist bereit oder wartet auf den Benutzer; sonst `null`. */
+export function acceptableStationId(
+  report: ReportView,
+  implementation: ImplementationView,
+): string | null {
+  const state: StationState | null = acceptanceState(report, implementation);
+  if (report.acceptance === null || state === null || !ACCEPTABLE_STATES.includes(state)) {
+    return null;
+  }
+  return report.acceptance.stationId;
+}
+
+/** Nach der Abnahme gibt es keine neuen Kommentare mehr: Stationen lassen sich dann nicht mehr ergänzen. */
+export function isAccepted(report: ReportView, implementation: ImplementationView): boolean {
+  return acceptanceState(report, implementation) === 'done';
+}
+
 /** Zustand in der Leiste: wächst, wartet auf Abnahme, abgenommen oder in Arbeit. */
 export function barState(report: ReportView, implementation: ImplementationView): BarState {
   const acceptance = report.acceptance;
-  if (acceptance !== null && acceptance.state === 'done') {
+  const acceptanceNow: StationState | null = acceptanceState(report, implementation);
+  if (acceptance !== null && acceptanceNow === 'done') {
     const station: StationView | undefined = stationById(implementation, acceptance.stationId);
     const completedAt: number | null = station?.completedAt ?? null;
     const stamp: string = completedAt === null ? '' : ` · ${formatStamp(completedAt)}`;
@@ -108,7 +144,7 @@ export function barState(report: ReportView, implementation: ImplementationView)
   if (running !== undefined) {
     return { tone: 'grow', label: `wächst · Phase ${running.key} läuft` };
   }
-  if (acceptance !== null && ACCEPTANCE_WAITING.includes(acceptance.state)) {
+  if (acceptanceNow !== null && ACCEPTANCE_WAITING.includes(acceptanceNow)) {
     return { tone: 'ready', label: 'wartet auf Abnahme' };
   }
   return { tone: 'work', label: 'in Arbeit' };

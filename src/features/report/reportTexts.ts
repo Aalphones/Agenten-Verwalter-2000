@@ -56,6 +56,41 @@ export const NO_CODE_TEXT = 'Der Code zu diesem Stopp liegt nicht vor (Vorhaben 
 export const UNCOVERED_TITLE = 'Von keinem Test ausgeführt';
 export const FALLBACK_STATION_LABEL = 'Umsetzung';
 export const REMOVED_FOLD_MIN = 6;
+export const COMMENT_LABEL = 'Kommentar';
+export const AREA_COMMENT_LABEL = 'Bereich kommentieren';
+export const AREA_DRAW_LABEL =
+  'Bereich auf dem Bild wählen: Rahmen aufziehen oder Enter für die Bildmitte';
+export const AREA_DRAW_HINT = 'Rahmen auf dem Bild aufziehen';
+export const COMMENT_SUBMIT_LABEL = 'Sammeln';
+export const COMMENT_COLLECTED_LABEL = 'gesammelt';
+export const COMMENT_REMOVE_LABEL = 'Entfernen';
+export const COMMENT_COMPOSER_HINT =
+  'Strg+Enter sammelt · geht mit „Kommentare senden“ an die Rückfrage zur Umsetzung';
+export const COMMENT_LIST_DESTINATION =
+  'gehen mit „Kommentare senden“ an die Rückfrage zur Umsetzung';
+export const COMMENTS_LABEL = 'Kommentare';
+export const COMMENTS_LIST_LABEL = 'Gesammelte Kommentare';
+export const SEND_LABEL = 'Kommentare senden';
+export const SEND_TEXT =
+  'Kommentare aus dem Review-Bericht dieser Umsetzung. Ordne sie mit mir ein. Braucht es Nacharbeit, schlag die Stationen vor und ergänze sie nach meinem Okay mit implementation_set_phases.';
+export const ACCEPT_LABEL = 'Abnehmen';
+export const ACCEPT_TITLE = 'Schließt die Abnahme-Station dieser Umsetzung';
+export const ACCEPT_BLOCKED_TITLE =
+  'Erst Kommentare senden oder entfernen — nach der Abnahme lassen sich keine Stationen mehr ergänzen.';
+export const ACCEPT_RESULT = 'Abgenommen im Review-Bericht';
+export const ACCEPT_TOAST_TEXT = 'Abgenommen.';
+export const ACCEPT_UNDO_LABEL = 'Rückgängig';
+/** Wie lange der Hinweis „Abgenommen“ das Rückgängig anbietet, bevor die Abnahme wirklich läuft, in ms. */
+export const ACCEPT_UNDO_MS = 8000;
+export const SEND_TITLE_NEW = 'geht an eine neue Rückfrage';
+
+/** Titel des Knopfs „Kommentare senden“: nennt, wohin die Kommentare gehen. */
+export function sendTitle(inquiryNumber: number | null): string {
+  if (inquiryNumber === null) {
+    return SEND_TITLE_NEW;
+  }
+  return `geht an Rückfrage #${String(inquiryNumber)}`;
+}
 
 const KIND_LABEL: Readonly<Record<string, string>> = {
   data: 'Datenmodell',

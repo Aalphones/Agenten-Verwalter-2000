@@ -693,6 +693,7 @@ export function App(): ReactElement {
           sessions={sessions}
           files={renderFiles(latestSession, null, false)}
           onNewInquiry={startInquiry}
+          onSessionCreated={handleSessionCreated}
           terminalCount={runningTerminalCount}
           isTerminalOpen={isTerminalOpen}
           onToggleTerminal={handleToggleTerminal}
@@ -788,6 +789,8 @@ export function App(): ReactElement {
           onOpenFiles={(): void => {
             showView('files');
           }}
+          sessions={sessions}
+          onSessionCreated={handleSessionCreated}
         />
       );
     }

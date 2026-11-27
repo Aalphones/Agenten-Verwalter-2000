@@ -6,9 +6,13 @@ import { ReportIcon } from '@/features/report/ReportIcon';
 import { ReportLightbox } from '@/features/report/ReportLightbox';
 import { ReportMarkLegend } from '@/features/report/ReportMarkLegend';
 import { ReportPicture } from '@/features/report/ReportPicture';
+import type { ImageTarget } from '@/features/report/reportCommentsContext';
 import { ZOOM_LABEL } from '@/features/report/reportTexts';
 import type { ReportFigure } from '@/lib/bindings/ReportFigure';
 import type { ReportImage } from '@/lib/bindings/ReportImage';
+
+/** Ein Bild-Eintrag hat genau ein Bild. */
+const FIGURE_IMAGE_KEY = 'bild';
 
 interface ReportFigureBlockProps {
   /** Bereich der Phase (`scopeOf`) für die gewählte Ansicht eines Schaubilds. */
@@ -25,6 +29,11 @@ interface ReportFigureImageProps {
 function ReportFigureImage({ figure, image }: ReportFigureImageProps): ReactElement {
   const [hotMark, setHotMark] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const areaTarget: ImageTarget = {
+    entry: figure.entry,
+    label: figure.caption,
+    imageKey: FIGURE_IMAGE_KEY,
+  };
 
   function open(): void {
     setIsOpen(true);
@@ -50,12 +59,13 @@ function ReportFigureImage({ figure, image }: ReportFigureImageProps): ReactElem
         hotMark={hotMark}
         onHotMark={setHotMark}
         onOpen={open}
+        areaTarget={areaTarget}
       />
       <ReportMarkLegend marks={figure.marks} hotMark={hotMark} onHotMark={setHotMark} />
       {figure.text !== null && <p className="report-figure__text">{figure.text}</p>}
       {isOpen && (
         <ReportLightbox
-          zoom={{ title: figure.caption, image, marks: figure.marks }}
+          zoom={{ title: figure.caption, image, marks: figure.marks, areaTarget }}
           onClose={(): void => {
             setIsOpen(false);
           }}

@@ -1,0 +1,15 @@
+.report-composer {
+  position: fixed;
+  z-index: var(--z-toast);
+  width: min(400px, 92vw);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+
+  .comment-box {
+    margin: 0;
+  }
+
+  .comment-box__footer {
+    flex-wrap: wrap;
+  }
+}

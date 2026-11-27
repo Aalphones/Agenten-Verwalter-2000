@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { Switch } from '@/components/Switch';
+import { ReportCommentButton } from '@/features/report/ReportCommentButton';
+import { ReportCommentCards } from '@/features/report/ReportCommentCards';
 import { ReportIcon } from '@/features/report/ReportIcon';
 import { ReportLightbox, type ReportZoom } from '@/features/report/ReportLightbox';
 import { ReportMarkLegend } from '@/features/report/ReportMarkLegend';
 import { ReportPicture } from '@/features/report/ReportPicture';
 import { ReportSteps } from '@/features/report/ReportSteps';
+import {
+  useReportCommenting,
+  type EntryTarget,
+  type ImageTarget,
+  type ReportCommenting,
+} from '@/features/report/reportCommentsContext';
 import { entryKey } from '@/features/report/reportDigest';
 import {
   AS_DESIGNED_TEXT,
@@ -22,6 +30,10 @@ import type { ReportShot } from '@/lib/bindings/ReportShot';
 import { useReportStore } from '@/stores/report';
 import './ReportScreen.css';
 
+/** Schlüssel der beiden Bilder einer Ansicht. */
+const SHOT_IMAGE_KEY = 'foto';
+const DESIGN_IMAGE_KEY = 'entwurf';
+
 interface ReportScreenProps {
   /** Bereich der Phase (`scopeOf`) für gewählte Ansicht und Schalter. */
   scope: string;
@@ -33,6 +45,8 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
   const [hotMark, setHotMark] = useState<number | null>(null);
   const [zoom, setZoom] = useState<ReportZoom | null>(null);
   const key: string = entryKey(scope, screen.entry);
+  const commenting: ReportCommenting = useReportCommenting();
+  const screenTarget: EntryTarget = { entry: screen.entry, label: screen.name };
   const storedView: number = useReportStore((state) => state.screenViewByEntry[key] ?? 0);
   const storedCompare: boolean = useReportStore((state) => state.screenCompareByEntry[key] ?? true);
   const setScreenView = useReportStore((state) => state.setScreenView);
@@ -46,6 +60,12 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
   const isComparing: boolean = design !== null && storedCompare;
   const hasAnyDesign: boolean = screen.shots.some((other: ReportShot) => other.design !== null);
   const shotTitle = `${screen.name} · ${shot.label}`;
+  const shotArea: ImageTarget = { entry: screen.entry, label: shotTitle, imageKey: SHOT_IMAGE_KEY };
+  const designArea: ImageTarget = {
+    entry: screen.entry,
+    label: shotTitle,
+    imageKey: DESIGN_IMAGE_KEY,
+  };
 
   function selectView(index: number): void {
     setHotMark(null);
@@ -129,8 +149,14 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
           hotMark={null}
           onHotMark={setHotMark}
           onOpen={(): void => {
-            setZoom({ title: `${DESIGN_CAPTION}: ${shotTitle}`, image: design, marks: [] });
+            setZoom({
+              title: `${DESIGN_CAPTION}: ${shotTitle}`,
+              image: design,
+              marks: [],
+              areaTarget: designArea,
+            });
           }}
+          areaTarget={designArea}
         />
       </figure>
     );
@@ -145,6 +171,16 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
         {screen.steps.length > 0 && (
           <span>{pluralize(screen.steps.length, 'Klickpfad', 'Klickpfade')}</span>
         )}
+        {commenting.isEnabled && (
+          <span className="report-screen__comment">
+            <ReportCommentButton
+              ariaLabel={`Kommentar zum Bildschirm ${screen.name}`}
+              onComment={(anchor: Element): void => {
+                commenting.commentOnEntry(anchor, screenTarget);
+              }}
+            />
+          </span>
+        )}
       </p>
       {screen.text !== null && <p className="report-screen__text">{screen.text}</p>}
       <div className="report-screen__block">
@@ -157,7 +193,12 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
             type="button"
             className="report-figure__action"
             onClick={(): void => {
-              setZoom({ title: shotTitle, image: shot.image, marks: shot.marks });
+              setZoom({
+                title: shotTitle,
+                image: shot.image,
+                marks: shot.marks,
+                areaTarget: shotArea,
+              });
             }}
           >
             <ReportIcon name="max" />
@@ -177,8 +218,14 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
               hotMark={hotMark}
               onHotMark={setHotMark}
               onOpen={(): void => {
-                setZoom({ title: shotTitle, image: shot.image, marks: shot.marks });
+                setZoom({
+                  title: shotTitle,
+                  image: shot.image,
+                  marks: shot.marks,
+                  areaTarget: shotArea,
+                });
               }}
+              areaTarget={shotArea}
             />
           </figure>
           {renderDesign()}
@@ -195,6 +242,7 @@ export function ReportScreen({ scope, screen }: ReportScreenProps): ReactElement
           }}
         />
       )}
+      <ReportCommentCards comments={commenting.commentsOfEntry(screenTarget)} />
       {zoom !== null && (
         <ReportLightbox
           zoom={zoom}

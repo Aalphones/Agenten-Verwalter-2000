@@ -1,5 +1,7 @@
 # Phase 7 — Kommentare und Abnahme
 
+Status: complete
+
 Rating: standard. Aus dem Bericht kommentiert der Benutzer Codezeilen, Stopps, Schaubilder und Bildbereiche; die Kommentare sammeln sich im Bericht und gehen mit „Kommentare senden“ an eine Rückfrage zur Umsetzung (frische Session mit Lagebericht, ADR 048) — nicht an eine Station, deren Cache kalt oder die schon fertig ist. Die Rückfrage bespricht die Kommentare und ergänzt bei Bedarf Stationen. „Abnehmen“ schließt die Abnahme-Station.
 
 ## Kontext (lesen)
@@ -28,10 +30,23 @@ Rating: standard. Aus dem Bericht kommentiert der Benutzer Codezeilen, Stopps, S
 
 ## Checkliste
 
-- [ ] Core: `review/model.rs` Variante, `review/mod.rs` `validate`/`agent_text`, `tldr/transcript.rs`; `implementation_of_session` mit `inquiry_of` vor `latest_of_project` (AK 2a); `pnpm bindings`.
-- [ ] `src/stores/review.ts`: `reportLineId(phaseKey, entry)`, Schlüssel `reportCommentKey(implementationId)` = `report:<id>`; `src/features/review/reviewLabels.ts` Variante.
-- [ ] `src/features/report/`: `ReportCommentPopover.tsx`, Kommentarknöpfe in `ReportCode.tsx`, `ReportStop.tsx`, `ReportFigure.tsx`, `ReportLightbox.tsx`; Leiste `ReportBar.tsx` mit Zahl, Liste, „Kommentare senden“, „Abnehmen“ (gesperrt bei Kommentaren); `useReportTarget.ts` (Rückfrage aus den Session-Zusammenfassungen), `useReportSend.ts` (AK 5).
-- [ ] Doc: `docs/code-map.md` Zeilen „Review-Bericht“ und „Review-Kommentare“ (Variante `Report`); `docs/glossary.md`: „Abnehmen (Bericht)“, Eintrag „Rückfrage (Umsetzung)“ um „bekommt die Kommentare aus dem Review-Bericht“ ergänzen; ADR 073 um den Absatz „Kommentare an die Rückfrage“ ergänzen.
-- [ ] `pnpm check`.
+- [x] Core: `review/model.rs` Variante, `review/mod.rs` `validate`/`agent_text`, `tldr/transcript.rs`; `implementation_of_session` mit `inquiry_of` vor `latest_of_project` (AK 2a); `pnpm bindings`.
+- [x] `src/stores/review.ts`: `reportLineId(phaseKey, entry)`, Schlüssel `reportCommentKey(implementationId)` = `report:<id>`; `src/features/review/reviewLabels.ts` Variante.
+- [x] `src/features/report/`: `ReportCommentPopover.tsx`, Kommentarknöpfe in `ReportCode.tsx`, `ReportStop.tsx`, `ReportFigure.tsx`, `ReportLightbox.tsx`; Leiste `ReportBar.tsx` mit Zahl, Liste, „Kommentare senden“, „Abnehmen“ (gesperrt bei Kommentaren); `useReportTarget.ts` (Rückfrage aus den Session-Zusammenfassungen), `useReportSend.ts` (AK 5).
+- [x] Doc: `docs/code-map.md` Zeilen „Review-Bericht“ und „Review-Kommentare“ (Variante `Report`); `docs/glossary.md`: „Abnehmen (Bericht)“, Eintrag „Rückfrage (Umsetzung)“ um „bekommt die Kommentare aus dem Review-Bericht“ ergänzen; ADR 073 um den Absatz „Kommentare an die Rückfrage“ ergänzen.
+- [x] `pnpm check`.
 
 ## Report-Back
+
+Ergebnis: Kommentare an Codezeilen („+“), Stopps, Schaubildern, Bildschirmen und Bildbereichen (Zeichen-Ebene auf dem Foto, auch in der Lightbox) werden unter `report:<Umsetzung>` gesammelt und mit „Kommentare senden“ an die Rückfrage der Umsetzung geschickt (sonst neu angelegt); „Abnehmen“ schließt die Abnahme-Station nach 8 s Rückgängig. `pnpm check` grün; Oberfläche nicht in der echten App gelaufen.
+
+Abweichungen vom Plan:
+- `reportLineId(phaseKey, entry, label, area?)` statt `(phaseKey, entry)`: Stopps ohne Eintrag und mehrere Bildbereiche je Bild brauchen eine eigene ID.
+- `useReportSend` leert mit `clearIds` nur die gesendeten Kommentare, nicht den ganzen Schlüssel: was während des Sendens dazukam, bleibt gesammelt.
+- `EntryTarget.slot`: gleichnamige Stopps ohne Lead kollidierten in der ID.
+- Abnahme-Zustand (sichtbar, gesperrt, „abgenommen“) kommt aus dem Live-Stand der Umsetzung, nicht aus `report.acceptance.state`: der Bericht lädt nur bei `report://changed` neu, ein Station-Abschluss löst das nicht aus.
+- „Bereich kommentieren“ ist ein Knopf in der Werkzeugzeile des Fotos mit Zeichen-Ebene (Rahmen aufziehen, Enter = Bildmitte), nicht im Kopf.
+- Bild-Einträge in Schritten und Klickpfad haben keinen Bereichskommentar; Marken tragen keinen eigenen Kommentarknopf.
+- Kommentarfeld, Hinweis „Abgenommen“ und Liste hängen per Portal am `body` (der Bericht-Container hat `container-type`, das verschiebt `position: fixed`).
+
+Wackelstellen: Zeichen-Ebene in `ReportPicture.tsx` (Pointer-Capture plus `click`) und Kommentarfeld in der Lightbox (Escape schließt zuerst das Feld) sind nur per Typecheck belegt.

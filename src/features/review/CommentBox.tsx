@@ -8,7 +8,12 @@ const HINT =
 
 interface CommentBoxProps {
   fileLabel: string;
+  /** Leer: die Kopfzeile nennt nur `fileLabel`. */
   lineLabel: string;
+  /** Ersetzt den Hinweis unter dem Feld. */
+  hint?: string;
+  /** Beschriftung des Knopfs beim Anlegen; beim Bearbeiten steht „Speichern“. */
+  submitLabel?: string;
   text: string;
   isEditing: boolean;
   /**
@@ -25,6 +30,8 @@ interface CommentBoxProps {
 export function CommentBox({
   fileLabel,
   lineLabel,
+  hint = HINT,
+  submitLabel = 'Zum Chat hinzufügen',
   text,
   isEditing,
   shouldReveal,
@@ -65,7 +72,7 @@ export function CommentBox({
       <span className="comment-box__head">
         Kommentar zu{' '}
         <span className="comment-box__where">
-          {fileLabel} · {lineLabel}
+          {lineLabel === '' ? fileLabel : `${fileLabel} · ${lineLabel}`}
         </span>
       </span>
       <textarea
@@ -80,12 +87,12 @@ export function CommentBox({
         onKeyDown={handleKeyDown}
       />
       <div className="comment-box__footer">
-        <span className="comment-box__hint">{HINT}</span>
+        <span className="comment-box__hint">{hint}</span>
         <button type="button" className="comment-box__cancel" onClick={onCancel}>
           Abbrechen
         </button>
         <button type="button" className="comment-box__submit" disabled={isEmpty} onClick={onSubmit}>
-          {isEditing ? 'Speichern' : 'Zum Chat hinzufügen'}
+          {isEditing ? 'Speichern' : submitLabel}
         </button>
       </div>
     </div>

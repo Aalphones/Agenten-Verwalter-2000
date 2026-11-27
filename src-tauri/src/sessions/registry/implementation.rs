@@ -80,14 +80,19 @@ impl SessionRegistry {
         Ok(self.view_of(&stored))
     }
 
-    /// Für eine Station ihre Umsetzung, sonst die neueste des Vorhabens der Session.
+    /// Für eine Station ihre Umsetzung, für eine Rückfrage deren Umsetzung, sonst die neueste des
+    /// Vorhabens der Session.
     pub fn implementation_of_session(
         &self,
         session_id: &str,
     ) -> Result<Option<ImplementationView>, CommandError> {
         let session = self.get(session_id)?;
-        let station_of: Option<String> = session.lock().station_of.clone();
-        let id = match station_of {
+        // Eine Rückfrage gehört zu ihrer Umsetzung, auch wenn das Vorhaben eine neuere hat.
+        let (station_of, inquiry_of): (Option<String>, Option<String>) = {
+            let state = session.lock();
+            (state.station_of.clone(), state.inquiry_of.clone())
+        };
+        let id = match station_of.or(inquiry_of) {
             Some(id) => Some(id),
             None => self.database.with(|connection| {
                 implementation_rows::latest_of_project(connection, &session.project_id)

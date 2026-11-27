@@ -20,6 +20,70 @@
     height: auto;
   }
 
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    justify-self: end;
+    margin-bottom: var(--space-md);
+    line-height: 1.4;
+  }
+
+  &__hint {
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  /* Liegt beim Auswählen eines Bereichs über dem Bild und fängt die Zeigerbewegung ab. */
+  &__draw {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    min-height: 0;
+    padding: 0;
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  /* Bereich, der einen Kommentar trägt (durchgezogen) oder gerade einen bekommt (gestrichelt). */
+  &__area {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    box-sizing: border-box;
+    border: 2px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    pointer-events: none;
+
+    &--pending {
+      border-style: dashed;
+    }
+
+    .report-icon {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      box-sizing: border-box;
+      width: 20px;
+      height: 20px;
+      padding: 4px;
+      border-radius: var(--radius-full);
+      background: var(--color-accent);
+      color: var(--color-fg-on-accent);
+    }
+  }
+
+  .report-comments {
+    justify-self: stretch;
+    margin: var(--space-md) 0 0;
+    line-height: 1.4;
+  }
+
   &__open {
     display: block;
     width: 100%;

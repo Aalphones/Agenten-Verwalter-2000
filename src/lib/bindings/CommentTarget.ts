@@ -23,4 +23,16 @@ attachmentId: string,
 /**
  * Absoluter Pfad des Bilds zum Zeitpunkt des Kommentars.
  */
-path: string, name: string, x: number, y: number, width: number, height: number, imageWidth: number, imageHeight: number, };
+path: string, name: string, x: number, y: number, width: number, height: number, imageWidth: number, imageHeight: number, } | { "kind": "report", implementationId: string, 
+/**
+ * Schlüssel der Phase, z. B. `"3"`, höchstens 12 Zeichen.
+ */
+phaseKey: string, 
+/**
+ * Nummer des Eintrags in der Phase (`n<k>`); ohne Eintrag fehlt sie.
+ */
+entry: number | null, 
+/**
+ * Stopp-Titel, Bildunterschrift bzw. Bildschirm-Name, höchstens 80 Zeichen.
+ */
+label: string, };

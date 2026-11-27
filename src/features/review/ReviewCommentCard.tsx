@@ -98,7 +98,10 @@ export function ReviewCommentCard({
     );
   }
 
-  function renderBody(target: CommentTarget): ReactElement {
+  function renderBody(target: CommentTarget): ReactElement | null {
+    if (target.kind === 'report') {
+      return null;
+    }
     if (target.kind === 'artifact') {
       return (
         <div className="review-card__code review-card__code--element" title={comment.code}>

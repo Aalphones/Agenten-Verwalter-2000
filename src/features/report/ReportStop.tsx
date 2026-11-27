@@ -1,7 +1,14 @@
 import type { ReactElement } from 'react';
 import { ReportCodeBlock } from '@/features/report/ReportCode';
+import { ReportCommentButton } from '@/features/report/ReportCommentButton';
+import { ReportCommentCards } from '@/features/report/ReportCommentCards';
 import { ReportFigureBlock } from '@/features/report/ReportFigure';
 import { ReportIcon, type ReportIconName } from '@/features/report/ReportIcon';
+import {
+  useReportCommenting,
+  type EntryTarget,
+  type ReportCommenting,
+} from '@/features/report/reportCommentsContext';
 import { stopKindLabel } from '@/features/report/reportTexts';
 import type { ReportBlock } from '@/lib/bindings/ReportBlock';
 import type { ReportStop as ReportStopData } from '@/lib/bindings/ReportStop';
@@ -33,6 +40,12 @@ export function ReportStop({
   onOpenFile,
 }: ReportStopProps): ReactElement {
   const icon: ReportIconName | null = kindIcon(stop.kind);
+  const commenting: ReportCommenting = useReportCommenting();
+  const target: EntryTarget = {
+    entry: stop.lead?.entry ?? null,
+    label: stop.title,
+    slot: `s${String(stop.index)}`,
+  };
   return (
     <section
       className={`report-stop${isFlashing ? ' report-stop--flash' : ''}`}
@@ -47,6 +60,16 @@ export function ReportStop({
           {stopKindLabel(stop.kind)}
         </span>
         <span>{stop.by}</span>
+        {commenting.isEnabled && (
+          <span className="report-stop__comment">
+            <ReportCommentButton
+              ariaLabel={`Kommentar zum Stopp ${stop.title}`}
+              onComment={(anchor: Element): void => {
+                commenting.commentOnEntry(anchor, target);
+              }}
+            />
+          </span>
+        )}
       </p>
       {stop.look !== null && (
         <p className="report-stop__look">
@@ -71,6 +94,7 @@ export function ReportStop({
           <ReportFigureBlock key={`figure-${String(block.entry)}`} scope={scope} figure={block} />
         );
       })}
+      <ReportCommentCards comments={commenting.commentsOfEntry(target)} />
     </section>
   );
 }

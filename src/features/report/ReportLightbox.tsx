@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Dialog } from '@/components/Dialog';
 import { ReportMarkLegend } from '@/features/report/ReportMarkLegend';
 import { ReportPicture } from '@/features/report/ReportPicture';
+import {
+  useReportCommenting,
+  type ImageTarget,
+  type ReportCommenting,
+} from '@/features/report/reportCommentsContext';
 import { CLOSE_LABEL } from '@/features/report/reportTexts';
 import type { ReportImage } from '@/lib/bindings/ReportImage';
 import type { ReportMark } from '@/lib/bindings/ReportMark';
@@ -15,6 +20,8 @@ export interface ReportZoom {
   title: string;
   image: ReportImage;
   marks: readonly ReportMark[];
+  /** Ziel für Bereichs-Kommentare auf diesem Bild. */
+  areaTarget?: ImageTarget;
 }
 
 interface ReportLightboxProps {
@@ -25,8 +32,23 @@ interface ReportLightboxProps {
 /** Bild in groß, Marken an ihrer Stelle, Legende darunter. Schließt mit dem Knopf, Escape oder Klick daneben. */
 export function ReportLightbox({ zoom, onClose }: ReportLightboxProps): ReactElement {
   const [hotMark, setHotMark] = useState<number | null>(null);
+  const commenting: ReportCommenting = useReportCommenting();
+  const { closeComposer, isComposerOpen } = commenting;
+
+  // Das Kommentarfeld hängt am Bild; ohne das Bild bliebe es ohne Stelle stehen.
+  useEffect(() => closeComposer, [closeComposer]);
+
+  // Escape (und ein Klick daneben) schließt zuerst das Kommentarfeld, erst dann das Bild.
+  function handleDialogClose(): void {
+    if (isComposerOpen) {
+      closeComposer();
+      return;
+    }
+    onClose();
+  }
+
   return (
-    <Dialog labelledBy={TITLE_ID} className="report-lightbox" onClose={onClose}>
+    <Dialog labelledBy={TITLE_ID} className="report-lightbox" onClose={handleDialogClose}>
       <header className="report-lightbox__head">
         <h2 id={TITLE_ID} className="report-lightbox__title">
           {zoom.title}
@@ -43,6 +65,7 @@ export function ReportLightbox({ zoom, onClose }: ReportLightboxProps): ReactEle
           isNarrow={false}
           hotMark={hotMark}
           onHotMark={setHotMark}
+          areaTarget={zoom.areaTarget}
         />
         <ReportMarkLegend marks={zoom.marks} hotMark={hotMark} onHotMark={setHotMark} />
       </div>

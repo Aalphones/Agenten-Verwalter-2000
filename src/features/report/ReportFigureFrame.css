@@ -62,6 +62,12 @@
     }
   }
 
+  & > .report-comments {
+    margin: 0;
+    padding: var(--space-md) var(--space-xl);
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
   &__text {
     margin: 0;
     padding: var(--space-md) var(--space-xl);

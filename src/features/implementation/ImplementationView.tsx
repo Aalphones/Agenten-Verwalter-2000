@@ -68,6 +68,8 @@ interface ImplementationViewProps {
   filesViewKey: string;
   /** Legt eine Rückfrage zur Umsetzung an und öffnet sie (`useInquiry`). */
   onNewInquiry: (implementationId: string) => Promise<void>;
+  /** Eine Rückfrage, die der Bericht angelegt hat (Kommentare senden): in die Liste und öffnen. */
+  onSessionCreated: (created: SessionSummary) => void;
   onShowView: (view: ImplementationViewKind) => void;
   onOpenProject: () => void;
   /** Laufende Terminals des Vorhabens. */
@@ -97,6 +99,7 @@ export function ImplementationView({
   artifacts,
   filesViewKey,
   onNewInquiry,
+  onSessionCreated,
   onShowView,
   onOpenProject,
   terminalCount,
@@ -365,6 +368,8 @@ export function ImplementationView({
           onOpenFiles={(): void => {
             onShowView('files');
           }}
+          sessions={sessions}
+          onSessionCreated={onSessionCreated}
         />
       );
     }
