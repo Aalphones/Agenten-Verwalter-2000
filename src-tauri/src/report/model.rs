@@ -54,6 +54,20 @@ pub struct ReportPhase {
     pub stops: Vec<ReportStop>,
     pub checks: Option<PhaseChecks>,
     pub entries: u32,
+    /// Seit wann Haiku die Phase gerade ordnet, ms seit der Epoche.
+    #[ts(type = "number | null")]
+    pub tidying_since: Option<f64>,
+    /// Der Stand der gültigen Ordnung, ms seit der Epoche.
+    #[ts(type = "number | null")]
+    pub tidied_at: Option<f64>,
+    /// Dateien der Phase, geschrieben nach `tidied_at`; ohne Ordnung 0.
+    pub files_since: u32,
+    /// Einträge, die die Ordnung noch nicht kennt; ohne Ordnung 0.
+    pub entries_since: u32,
+    /// Die Ergebnisse der Fertigmeldungen der Spur-Stationen, je Zeile eines.
+    pub station_result: Option<String>,
+    /// Die Session der ersten Spur-Station: Ziel von „Station nachfragen“.
+    pub station_session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -301,6 +315,8 @@ pub struct CheckGap {
 #[serde(rename_all = "camelCase")]
 pub struct ReportChangedEvent {
     pub implementation_id: String,
+    /// Die Phasen der Umsetzung, die Haiku gerade ordnet.
+    pub tidying_phase_ids: Vec<String>,
 }
 
 /// Ein Bildschirm der Sichtabnahme, als JSON in `report_entries.screen`; der freie Kommentar steht

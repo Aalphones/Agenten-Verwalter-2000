@@ -198,6 +198,7 @@ impl SessionRegistry {
                     json_schema: TITLE_SCHEMA,
                     input: &input,
                     timeout: TLDR_TIMEOUT,
+                    cancel: None,
                 };
                 let Ok(answer) = ask_haiku::<TitleAnswer>(&thread_app, &program, &request) else {
                     return;
@@ -454,6 +455,7 @@ fn ask_tldr<T: DeserializeOwned>(
         json_schema,
         input,
         timeout: TLDR_TIMEOUT,
+        cancel: None,
     };
     ask_haiku(app, program, &request)
 }

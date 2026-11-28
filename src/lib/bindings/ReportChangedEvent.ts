@@ -3,4 +3,8 @@
 /**
  * Gesendet als `report://changed`.
  */
-export type ReportChangedEvent = { implementationId: string, };
+export type ReportChangedEvent = { implementationId: string, 
+/**
+ * Die Phasen der Umsetzung, die Haiku gerade ordnet.
+ */
+tidyingPhaseIds: Array<string>, };

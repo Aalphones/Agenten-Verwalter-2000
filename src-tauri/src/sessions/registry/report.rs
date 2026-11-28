@@ -6,12 +6,12 @@ use crate::agents::event::ChatEntry;
 use crate::changes::ChangesInput;
 use crate::changes::model::ChangesReach;
 use crate::db::report::{self as report_rows, EntryRow, NewEntry, PhaseRow};
+use crate::db::session_files::SessionFileRow;
 use crate::db::sessions::{self as session_rows, SessionRow};
 use crate::db::tool_details::{self, ToolSummary};
 use crate::db::{chat_entries, session_commits, session_files};
 use crate::error::CommandError;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
-use crate::implementation::now_ms;
 use crate::report::anchor;
 use crate::worktrees;
 
@@ -27,6 +27,8 @@ pub struct ReportSessions {
     pub numbers: HashMap<String, u32>,
     /// Die Paare `(Session, Commit)` der Stationen.
     pub commits: Vec<(String, String)>,
+    /// Die geschriebenen Dateien je Station-Session.
+    pub files: Vec<SessionFileRow>,
 }
 
 impl SessionRegistry {
@@ -42,11 +44,12 @@ impl SessionRegistry {
             .flat_map(|phase: &PhaseView| &phase.stations)
             .filter_map(|station: &StationView| station.session_id.clone())
             .collect();
-        let (rows, commits, touched) = self.database.with(|connection| {
+        let (rows, commits, touched, files) = self.database.with(|connection| {
             Ok((
                 session_rows::load_for_project(connection, &view.project_id)?,
                 session_commits::load_by_session(connection, &stations)?,
                 session_files::load_for(connection, &stations)?,
+                session_files::load_rows_for(connection, &stations)?,
             ))
         })?;
         // Die jüngste Station zuerst, danach die übrigen Sessions des Vorhabens.
@@ -71,6 +74,7 @@ impl SessionRegistry {
                 .map(|row: SessionRow| (row.id, row.number))
                 .collect(),
             commits,
+            files,
         })
     }
 
@@ -118,7 +122,7 @@ impl SessionRegistry {
             .with(|connection| report_rows::load_entries(connection, implementation_id))
     }
 
-    /// Speichert die geordnete Fassung einer Phase.
+    /// Speichert die geordnete Fassung einer Phase; `tidy_at` ist der Stand, den sie kennt.
     pub fn store_report_tidy(
         &self,
         implementation_id: &str,
@@ -126,6 +130,7 @@ impl SessionRegistry {
         tidy: &str,
         tidy_json: &str,
         tidy_entries: u32,
+        tidy_at: f64,
     ) -> Result<(), CommandError> {
         self.database.with(|connection| {
             report_rows::store_tidy(
@@ -135,9 +140,18 @@ impl SessionRegistry {
                 tidy,
                 tidy_json,
                 tidy_entries,
-                now_ms(),
+                tidy_at,
             )
         })
+    }
+
+    /// Je Session und geschriebener Datei eine Zeile.
+    pub fn report_files(
+        &self,
+        session_ids: &[String],
+    ) -> Result<Vec<SessionFileRow>, CommandError> {
+        self.database
+            .with(|connection| session_files::load_rows_for(connection, session_ids))
     }
 
     /// Setzt bzw. räumt den Fehlersatz der Ordnung einer Phase.

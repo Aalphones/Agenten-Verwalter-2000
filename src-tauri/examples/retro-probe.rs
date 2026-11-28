@@ -245,6 +245,7 @@ fn ask_haiku_for_all(
             local: None,
             leading_args: &[],
             codex: None,
+            cancel: None,
         };
         let outcome = run_print(&exe, folder, &request, RETRO_TIMEOUT).and_then(|answer| {
             serde_json::from_value::<ToolFindings>(answer)

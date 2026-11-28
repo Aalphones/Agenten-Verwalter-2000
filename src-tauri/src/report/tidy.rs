@@ -15,7 +15,7 @@ use crate::db::tool_details::ToolSummary;
 use crate::implementation::model::{PhaseView, StationView};
 use crate::retro::tools::cut_middle;
 
-pub const TIDY_SYSTEM: &str = "Du ordnest den Review-Bericht einer Phase. Eingabe: die Rohfassung (Einträge n1, n2 … mit Text, Ort und Schaubild) und die Spur der Umsetzung. Antworte nur nach Schema. result: was die Phase bewirkt, höchstens zwei Sätze, Klartext. way: höchstens acht Etappen in der Reihenfolge der Spur, je ein Satz; detour für einen Umweg, der wieder verworfen wurde; stop: Index des Stopps, zu dem die Etappe gehört. stops: fasse zusammengehörige Einträge zu Stopps; title höchstens sechs Wörter; kind data, sec, flow oder ui; look ein Satz, worauf der Prüfer achten soll. Jede ID aus „Zu ordnen“ steht in genau einem Stopp, keine andere. Schreibe keine Eintragstexte um.";
+pub const TIDY_SYSTEM: &str = "Du ordnest den Review-Bericht einer Phase. Eingabe: die Rohfassung (Einträge n1, n2 … mit Text, Ort und Schaubild) und die Spur der Umsetzung. Antworte nur nach Schema. result: was die Phase bewirkt, höchstens zwei Sätze, Klartext. way: höchstens acht Etappen in der Reihenfolge der Spur, je ein Satz; detour für einen Umweg, der wieder verworfen wurde; stop: Index des Stopps, zu dem die Etappe gehört. stops: fasse zusammengehörige Einträge zu Stopps; title höchstens sechs Wörter; kind data, sec, flow oder ui; look ein Satz, worauf der Prüfer achten soll. Jede ID aus „Zu ordnen“ steht in genau einem Stopp, keine andere. Schreibe keine Eintragstexte um. Ist „Zu ordnen“ leer, bleibt stops leer; result und way stützt du dann allein auf die Spur.";
 
 /// Ohne Zeilenumbrüche: der Text geht als ein Argument an die Kommandozeile.
 pub const TIDY_SCHEMA: &str = concat!(
@@ -155,12 +155,17 @@ pub fn screen_numbers(entries: &[EntryRow]) -> Vec<u32> {
 }
 
 /// Je Station ein Abschnitt mit Zweckzeilen, darunter die Beschreibungen der Werkzeug-Aufrufe und
-/// die geschriebenen Dateien; über der Grenze in der Mitte gekürzt.
+/// die geschriebenen Dateien; über der Grenze in der Mitte gekürzt. Eine Station ohne solche Zeile
+/// fehlt, die Spur ohne jede ist leer.
 pub fn spur(stations: &[StationTrace], sources: &[Source]) -> String {
     let mut lines: Vec<String> = Vec::new();
     for station in stations {
+        let found = station_lines(station, sources);
+        if found.is_empty() {
+            continue;
+        }
         lines.push(format!("### {}", station.label));
-        lines.extend(station_lines(station, sources));
+        lines.extend(found);
     }
     cut_middle(lines.join("\n"), SPUR_MAX_CHARS)
 }

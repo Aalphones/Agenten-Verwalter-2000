@@ -319,6 +319,7 @@ pub async fn git_suggest_message(
             json_schema: actions::SUGGEST_SCHEMA,
             input: &diff,
             timeout: actions::SUGGEST_TIMEOUT,
+            cancel: None,
         };
         let suggested: SuggestedMessage =
             ask_haiku(&app, &program, &request).map_err(CommandError::Internal)?;

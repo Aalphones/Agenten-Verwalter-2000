@@ -186,6 +186,10 @@ pub fn complete_station(
     let view = registry.implementation_view(implementation_id)?;
     let (followups, hint) =
         plan_completion(&view, station_id, fix_needed).map_err(CommandError::Implementation)?;
+    // Der Agent liest den Satz als Fehler seines Werkzeug-Aufrufs; gespeichert ist noch nichts.
+    if let Some(hint) = crate::report::completion_gap(app, &view, station_id) {
+        return Err(CommandError::Implementation(hint.to_owned()));
+    }
     registry.store_station_completion(station_id, result.trim(), &followups)?;
     crate::report::on_station_completed(app, implementation_id, station_id);
     let mut outcome = after_completion(app, &registry, implementation_id)?;

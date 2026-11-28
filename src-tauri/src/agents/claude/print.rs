@@ -3,9 +3,10 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -23,6 +24,11 @@ use crate::processes::hide_console;
 use crate::settings;
 use crate::settings::model::OperatingMode;
 
+/// Der Fehlertext eines Aufrufs, den sein Abbruch-Flag beendet hat.
+pub const CANCELLED: &str = "abgebrochen";
+/// So oft sieht das Warten auf die Antwort nach dem Abbruch-Flag.
+const CANCEL_CHECK_STEP: Duration = Duration::from_millis(250);
+
 pub struct PrintRequest<'a> {
     pub model: ModelId,
     pub system_prompt: &'a str,
@@ -34,6 +40,8 @@ pub struct PrintRequest<'a> {
     pub leading_args: &'a [String],
     /// `Some` in der Betriebsart Codex.
     pub codex: Option<&'a CodexTarget>,
+    /// Wird das Flag gesetzt, endet der Aufruf mit `CANCELLED`.
+    pub cancel: Option<&'a AtomicBool>,
 }
 
 /// Wohin der Übersetzer der Betriebsart Codex den Einmal-Aufruf schickt.
@@ -118,6 +126,7 @@ pub fn ask_model<T: DeserializeOwned>(
         local: program.backend.as_ref(),
         leading_args: &program.leading_args,
         codex: program.codex.as_ref(),
+        cancel: request.cancel,
     };
     let answer = run_print(&program.exe, &cwd, &print_request, request.timeout)?;
     serde_json::from_value::<T>(answer)
@@ -129,10 +138,12 @@ pub struct HaikuRequest<'a> {
     pub json_schema: &'a str,
     pub input: &'a str,
     pub timeout: Duration,
+    /// Wie `PrintRequest.cancel`.
+    pub cancel: Option<&'a AtomicBool>,
 }
 
 /// Startet `claude.exe`, schickt `input` über die Standardeingabe und liefert `structured_output`.
-/// Der Prozess wird in jedem Fall beendet, auch nach Zeitlimit oder Fehler.
+/// Der Prozess wird in jedem Fall beendet, auch nach Zeitlimit, Abbruch oder Fehler.
 pub fn run_print(
     exe: &Path,
     cwd: &Path,
@@ -142,7 +153,7 @@ pub fn run_print(
     let mut child = print_command(exe, cwd, request)
         .spawn()
         .map_err(|error| format!("Claude-Kommandozeile startet nicht: {error}"))?;
-    let output = exchange(&mut child, request.input, timeout);
+    let output = exchange(&mut child, request.input, timeout, request.cancel);
     // Ohne `wait` bliebe ein Prozess-Handle offen; Lese- und Schreib-Thread enden nach `kill` mit
     // dem Schließen der Pipes.
     let _ = child.kill();
@@ -202,19 +213,42 @@ pub(super) fn exchange(
     child: &mut Child,
     input: &str,
     timeout: Duration,
+    cancel: Option<&AtomicBool>,
 ) -> Result<String, String> {
     let (Some(stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
         return Err("Ein-/Ausgabe von Claude nicht verfügbar".to_owned());
     };
     let receiver = start_reader(stdout)?;
     start_writer(stdin, input.to_owned())?;
-    match receiver.recv_timeout(timeout) {
-        Ok(output) => output,
-        Err(RecvTimeoutError::Timeout) => Err(format!(
-            "Claude antwortete nicht innerhalb von {} s",
-            timeout.as_secs()
-        )),
-        Err(RecvTimeoutError::Disconnected) => Err("Claude beendete sich ohne Antwort".to_owned()),
+    wait_for_answer(&receiver, timeout, cancel)
+}
+
+/// Wartet in kurzen Schritten, damit ein Abbruch nicht bis zum Zeitlimit liegen bleibt; den Prozess
+/// beendet der Aufrufer.
+fn wait_for_answer(
+    receiver: &Receiver<Result<String, String>>,
+    timeout: Duration,
+    cancel: Option<&AtomicBool>,
+) -> Result<String, String> {
+    let started = Instant::now();
+    loop {
+        if cancel.is_some_and(|flag: &AtomicBool| flag.load(Ordering::Relaxed)) {
+            return Err(CANCELLED.to_owned());
+        }
+        let left = timeout.saturating_sub(started.elapsed());
+        match receiver.recv_timeout(left.min(CANCEL_CHECK_STEP)) {
+            Ok(output) => return output,
+            Err(RecvTimeoutError::Timeout) if started.elapsed() < timeout => {}
+            Err(RecvTimeoutError::Timeout) => {
+                return Err(format!(
+                    "Claude antwortete nicht innerhalb von {} s",
+                    timeout.as_secs()
+                ));
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                return Err("Claude beendete sich ohne Antwort".to_owned());
+            }
+        }
     }
 }
 

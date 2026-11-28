@@ -35,7 +35,7 @@ pub fn run_side(request: &SideRequest) -> Result<SideAnswer, String> {
     let mut child = side_command(&request.options)
         .spawn()
         .map_err(|error| format!("Claude-Kommandozeile startet nicht: {error}"))?;
-    let output = exchange(&mut child, &request.prompt, request.timeout);
+    let output = exchange(&mut child, &request.prompt, request.timeout, None);
     let _ = child.kill();
     let _ = child.wait();
     side_answer(&output?)

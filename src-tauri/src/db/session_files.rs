@@ -52,6 +52,32 @@ pub fn load_for(
     Ok(files)
 }
 
+/// `(Session, Pfad, letzte Uhrzeit in ms)`.
+pub type SessionFileRow = (String, String, f64);
+
+/// Die Zeilen aller genannten Sessions, ohne gleiche Pfade zusammenzuführen.
+pub fn load_rows_for(
+    connection: &Connection,
+    session_ids: &[String],
+) -> Result<Vec<SessionFileRow>, CommandError> {
+    let mut statement =
+        connection.prepare("SELECT path, touched_at FROM session_files WHERE session_id = ?1")?;
+    let mut files: Vec<SessionFileRow> = Vec::new();
+    for session_id in session_ids {
+        let rows = statement.query_map(params![session_id], |row| {
+            Ok((
+                session_id.clone(),
+                row.get::<_, String>(0)?,
+                row.get::<_, f64>(1)?,
+            ))
+        })?;
+        for row in rows {
+            files.push(row?);
+        }
+    }
+    Ok(files)
+}
+
 /// Pfad → (letzte, erste Uhrzeit) einer Session; die erste fehlt bei Einträgen vor Migration 16.
 pub fn load_with_first(
     connection: &Connection,

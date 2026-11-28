@@ -346,6 +346,7 @@ fn ask_all(
                                     json_schema: SESSION_SCHEMA,
                                     input: &texts.transcript,
                                     timeout: RETRO_TIMEOUT,
+                                    cancel: None,
                                 },
                             );
                             let finished = done.fetch_add(1, Ordering::SeqCst) + 1;
@@ -359,6 +360,7 @@ fn ask_all(
                                         json_schema: TOOLS_SCHEMA,
                                         input: &tools::haiku_input(trace),
                                         timeout: RETRO_TIMEOUT,
+                                        cancel: None,
                                     },
                                 );
                                 let finished = done.fetch_add(1, Ordering::SeqCst) + 1;

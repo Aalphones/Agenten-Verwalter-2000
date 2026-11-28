@@ -1,7 +1,8 @@
 //! Review-Bericht einer Umsetzung (ADR 073): Stationen hängen über die Werkzeuge `report_*`
 //! Einträge an; die Zeilen liegen in `db::report`, die Bilder im Bericht-Ordner. Sind die
 //! Agenten-Stationen einer Phase fertig, ordnet Haiku sie im Thread `report-tidy`; danach liest
-//! derselbe Thread die Prüfwerte.
+//! derselbe Thread die Prüfwerte. Auf Wunsch ordnet Haiku auch eine laufende Phase, dann ohne
+//! Prüfwerte (ADR 075).
 pub mod anchor;
 pub mod assemble;
 pub mod checks;
@@ -12,23 +13,26 @@ pub mod raw;
 pub mod tidy;
 pub mod tools;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::agents::claude::print::{HaikuRequest, ask_haiku, print_program};
+use crate::agents::claude::print::{CANCELLED, HaikuRequest, ask_haiku, print_program};
 use crate::artifacts::server::ArtifactServer;
 use crate::changes::ChangesInput;
 use crate::changes::model::ChangesReach;
 use crate::changes::sources::{self, Source};
 use crate::db::Database;
 use crate::db::report::{EntryRow, PhaseRow};
+use crate::db::session_files::SessionFileRow;
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
+use crate::implementation::now_ms;
 use crate::session_files::handles::ViewHandles;
 use crate::sessions::registry::SessionRegistry;
 use crate::settings::{self, model::Settings};
@@ -43,6 +47,8 @@ const TIDY_THREAD: &str = "report-tidy";
 const UNKNOWN_PHASE: &str = "Phase nicht gefunden:";
 const TIDY_REJECTED: &str = "Ordnung verworfen:";
 const HAIKU_FAILED: &str = "Haiku nicht erreichbar:";
+/// Der Fehlertext, mit dem die erste Fertigmeldung ohne Bericht zurückgeht (`completion_gap`).
+pub const NO_REPORT_HINT: &str = "Du hast Dateien geändert, aber nichts im Review-Bericht erklärt. Erkläre deine Änderungen jetzt mit mcp__verwalter__report_note (das Warum in zwei, drei Sätzen, at auf die Stelle) und melde dann erneut fertig. Eine zweite Meldung ohne Erklärung geht durch.";
 
 /// `<data_dir>\reports\<implementation_id>`; die Bilder liegen je Phase in einem Unterordner mit
 /// deren ID (`phase_dir`), weil die Nummern der Einträge je Phase von vorn zählen.
@@ -73,7 +79,13 @@ pub fn load(app: &AppHandle, implementation_id: &str) -> Result<ReportView, Comm
             .and_then(|dir: PathBuf| url_of_image(app, &dir.join(file)))
             .unwrap_or_default()
     };
-    let context = context_of(&registry, &view, &image_url)?;
+    let mut context = context_of(&registry, &view, &image_url)?;
+    let runs = app.state::<TidyRuns>();
+    context.tidying = view
+        .phases
+        .iter()
+        .filter_map(|phase: &PhaseView| Some((phase.id.clone(), runs.since(&phase.id)?)))
+        .collect();
     Ok(assemble::assemble(&view, &entries, &phases, &context))
 }
 
@@ -98,6 +110,8 @@ fn context_of<'a>(
         commits: sessions.commits,
         touched,
         labels: raw::session_labels(view, &sessions.numbers),
+        files: sessions.files,
+        tidying: HashMap::new(),
         image_url,
     })
 }
@@ -132,18 +146,88 @@ pub fn of_session(app: &AppHandle, session_id: &str) -> Result<Option<String>, C
 
 /// Die Phasen, deren Ordnung gerade läuft; je Phase läuft höchstens ein Thread.
 #[derive(Default)]
-pub struct TidyRuns(Mutex<HashSet<String>>);
+pub struct TidyRuns(Mutex<HashMap<String, TidyRun>>);
+
+/// Eine laufende Ordnung.
+struct TidyRun {
+    implementation_id: String,
+    /// ms seit der Epoche.
+    started_at: f64,
+    cancel: Arc<AtomicBool>,
+    /// Die Phase endete, während diese Ordnung lief: danach läuft sie noch einmal.
+    is_end_pending: bool,
+}
+
+/// Wer eine Ordnung anstößt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TidyTrigger {
+    PhaseEnd,
+    User,
+}
 
 impl TidyRuns {
-    fn claim(&self, phase_id: &str) -> bool {
-        self.lock().insert(phase_id.to_owned())
+    /// Das Abbruch-Flag der neuen Ordnung; `None`, wenn die Phase schon läuft. Ein Phasenende
+    /// wird dann vorgemerkt: die laufende Ordnung kennt den Endstand nicht. Unter einer Sperre,
+    /// damit sie nicht zwischen Prüfen und Vormerken endet.
+    fn claim(
+        &self,
+        phase_id: &str,
+        implementation_id: &str,
+        trigger: TidyTrigger,
+    ) -> Option<Arc<AtomicBool>> {
+        let mut runs = self.lock();
+        if let Some(running) = runs.get_mut(phase_id) {
+            running.is_end_pending |= trigger == TidyTrigger::PhaseEnd;
+            return None;
+        }
+        let cancel = Arc::new(AtomicBool::new(false));
+        runs.insert(
+            phase_id.to_owned(),
+            TidyRun {
+                implementation_id: implementation_id.to_owned(),
+                started_at: now_ms(),
+                cancel: Arc::clone(&cancel),
+                is_end_pending: false,
+            },
+        );
+        Some(cancel)
     }
 
-    fn release(&self, phase_id: &str) {
-        self.lock().remove(phase_id);
+    /// `true`, wenn für die Phase ein Phasenende vorgemerkt ist.
+    fn release(&self, phase_id: &str) -> bool {
+        self.lock()
+            .remove(phase_id)
+            .is_some_and(|run: TidyRun| run.is_end_pending)
     }
 
-    fn lock(&self) -> MutexGuard<'_, HashSet<String>> {
+    /// Seit wann die Phase geordnet wird, ms seit der Epoche.
+    pub fn since(&self, phase_id: &str) -> Option<f64> {
+        self.lock()
+            .get(phase_id)
+            .map(|run: &TidyRun| run.started_at)
+    }
+
+    /// Die Phasen der Umsetzung, die gerade geordnet werden.
+    pub fn tidying_of(&self, implementation_id: &str) -> Vec<String> {
+        let mut phase_ids: Vec<String> = self
+            .lock()
+            .iter()
+            .filter(|(_, run): &(&String, &TidyRun)| run.implementation_id == implementation_id)
+            .map(|(phase_id, _): (&String, &TidyRun)| phase_id.clone())
+            .collect();
+        phase_ids.sort_unstable();
+        phase_ids
+    }
+
+    /// Setzt das Abbruch-Flag; `true`, wenn die Phase lief.
+    pub fn cancel(&self, phase_id: &str) -> bool {
+        self.lock().get(phase_id).is_some_and(|run: &TidyRun| {
+            run.cancel.store(true, Ordering::Relaxed);
+            true
+        })
+    }
+
+    fn lock(&self) -> MutexGuard<'_, HashMap<String, TidyRun>> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
@@ -151,12 +235,28 @@ impl TidyRuns {
 /// Gibt die Phase auch dann frei, wenn der Thread abstürzt.
 struct TidyClaim {
     app: AppHandle,
+    implementation_id: String,
     phase_id: String,
+    cancel: Arc<AtomicBool>,
 }
 
 impl Drop for TidyClaim {
     fn drop(&mut self) {
-        self.app.state::<TidyRuns>().release(&self.phase_id);
+        let is_end_pending = self.app.state::<TidyRuns>().release(&self.phase_id);
+        emit_changed(&self.app, &self.implementation_id);
+        if is_end_pending
+            && let Err(error) = start_phase_end(
+                &self.app,
+                &self.implementation_id,
+                &self.phase_id,
+                TidyTrigger::User,
+            )
+        {
+            eprintln!(
+                "Bericht der Phase {} nicht geordnet: {error}",
+                self.phase_id
+            );
+        }
     }
 }
 
@@ -172,7 +272,9 @@ pub fn on_station_completed(app: &AppHandle, implementation_id: &str, station_id
         .implementation_view(implementation_id)
         .and_then(
             |view: ImplementationView| match phase_finished_by(&view, station_id) {
-                Some(phase) => start_phase_end(app, implementation_id, &phase.id),
+                Some(phase) => {
+                    start_phase_end(app, implementation_id, &phase.id, TidyTrigger::PhaseEnd)
+                }
                 None => Ok(()),
             },
         );
@@ -187,6 +289,83 @@ fn is_switched_off(app: &AppHandle) -> bool {
         return false;
     };
     settings::load(&database).is_ok_and(|loaded: Settings| !loaded.report_enabled)
+}
+
+/// Die Station einer Umsetzung samt ihrer Phase.
+fn station_of<'a>(
+    view: &'a ImplementationView,
+    station_id: &str,
+) -> Option<(&'a PhaseView, &'a StationView)> {
+    view.phases.iter().find_map(|phase: &PhaseView| {
+        phase
+            .stations
+            .iter()
+            .find(|station: &&StationView| station.id == station_id)
+            .map(|station: &StationView| (phase, station))
+    })
+}
+
+/// Die Stationen, die den Hinweis zur Fertigmeldung ohne Bericht schon bekommen haben.
+#[derive(Default)]
+pub struct ReportNudges(Mutex<HashSet<String>>);
+
+impl ReportNudges {
+    /// `true` nur beim ersten Mal je Station.
+    fn is_first(&self, station_id: &str) -> bool {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(station_id.to_owned())
+    }
+}
+
+/// Ob eine Station der Spur Dateien geschrieben, aber keinen Eintrag im Bericht hat. `files` sind
+/// die Zeilen mindestens ihrer Session, `entries` die der Umsetzung.
+pub fn is_unreported(
+    view: &ImplementationView,
+    station_id: &str,
+    files: &[SessionFileRow],
+    entries: &[EntryRow],
+) -> bool {
+    let Some((phase, station)) = station_of(view, station_id) else {
+        return false;
+    };
+    let is_in_spur = !station.by_user
+        && tidy::spur_stations(phase)
+            .iter()
+            .any(|candidate: &&StationView| candidate.id == station_id);
+    let (Some(session_id), Some(started_at)) = (&station.session_id, station.started_at) else {
+        return false;
+    };
+    let has_written = files
+        .iter()
+        .any(|(session, _, touched_at): &SessionFileRow| {
+            session == session_id && *touched_at >= started_at
+        });
+    let has_entry = entries
+        .iter()
+        .any(|entry: &EntryRow| entry.station_id == station_id);
+    is_in_spur && has_written && !has_entry
+}
+
+/// Der Satz, mit dem die erste Fertigmeldung einer Station ohne Bericht zurückgeht (ADR 075). Ein
+/// Lesefehler ergibt `None`: an ihm darf keine Fertigmeldung hängen.
+pub fn completion_gap(
+    app: &AppHandle,
+    view: &ImplementationView,
+    station_id: &str,
+) -> Option<&'static str> {
+    if is_switched_off(app) {
+        return None;
+    }
+    let (_, station) = station_of(view, station_id)?;
+    let session_id = station.session_id.clone()?;
+    let registry = app.state::<SessionRegistry>();
+    let files = registry.report_files(&[session_id]).ok()?;
+    let entries = registry.report_entries(&view.id).ok()?;
+    let is_first_hint = is_unreported(view, station_id, &files, &entries)
+        && app.try_state::<ReportNudges>()?.is_first(station_id);
+    is_first_hint.then_some(NO_REPORT_HINT)
 }
 
 fn phase_finished_by<'a>(view: &'a ImplementationView, station_id: &str) -> Option<&'a PhaseView> {
@@ -204,34 +383,41 @@ fn phase_finished_by<'a>(view: &'a ImplementationView, station_id: &str) -> Opti
     })
 }
 
-/// „Neu ordnen“: auch für eine Phase, die schon geordnet ist.
+/// „Neu ordnen“ bzw. „Zwischenstand ordnen“: für jede Phase, auch eine laufende oder schon
+/// geordnete.
 pub fn retidy(app: &AppHandle, phase_id: &str) -> Result<(), CommandError> {
     let implementation_id = app
         .state::<SessionRegistry>()
         .implementation_of_phase(phase_id)?
         .ok_or_else(|| CommandError::Implementation(format!("{UNKNOWN_PHASE} {phase_id}")))?;
-    start_phase_end(app, &implementation_id, phase_id)
+    start_phase_end(app, &implementation_id, phase_id, TidyTrigger::User)
 }
 
-/// Läuft die Phase schon, passiert nichts.
+/// Läuft die Phase schon, startet nichts (`TidyRuns::claim`).
 fn start_phase_end(
     app: &AppHandle,
     implementation_id: &str,
     phase_id: &str,
+    trigger: TidyTrigger,
 ) -> Result<(), CommandError> {
-    if !app.state::<TidyRuns>().claim(phase_id) {
+    let Some(cancel) = app
+        .state::<TidyRuns>()
+        .claim(phase_id, implementation_id, trigger)
+    else {
         return Ok(());
-    }
+    };
     // Scheitert der Start, fällt der Anspruch mit der verworfenen Closure.
     let claim = TidyClaim {
         app: app.clone(),
+        implementation_id: implementation_id.to_owned(),
         phase_id: phase_id.to_owned(),
+        cancel,
     };
-    let implementation_id = implementation_id.to_owned();
+    emit_changed(app, implementation_id);
     thread::Builder::new()
         .name(TIDY_THREAD.to_owned())
         .spawn(move || {
-            if let Err(error) = run_phase_end(&claim.app, &implementation_id, &claim.phase_id) {
+            if let Err(error) = run_phase_end(&claim) {
                 eprintln!(
                     "Bericht der Phase {} nicht geordnet: {error}",
                     claim.phase_id
@@ -241,28 +427,37 @@ fn start_phase_end(
     Ok(())
 }
 
-/// Ordnet die Phase und ermittelt danach ihre Prüfwerte; scheitert eines, läuft das andere
-/// trotzdem. Liest Datenbank, Git, Dateien und das Modell, ohne dabei eine Sperre zu halten.
-fn run_phase_end(
-    app: &AppHandle,
-    implementation_id: &str,
-    phase_id: &str,
-) -> Result<(), CommandError> {
+/// Ordnet die Phase und ermittelt danach ihre Prüfwerte, bei einer laufenden Phase nur die
+/// Ordnung; scheitert eines, läuft das andere trotzdem. Liest Datenbank, Git, Dateien und das
+/// Modell, ohne dabei eine Sperre zu halten.
+fn run_phase_end(claim: &TidyClaim) -> Result<(), CommandError> {
+    let TidyClaim {
+        app,
+        implementation_id,
+        phase_id,
+        cancel,
+    } = claim;
     let registry = app.state::<SessionRegistry>();
     let view = registry.implementation_view(implementation_id)?;
     let (index, phase) = view
         .phases
         .iter()
         .enumerate()
-        .find(|(_, phase): &(usize, &PhaseView)| phase.id == phase_id)
+        .find(|(_, phase): &(usize, &PhaseView)| phase.id == *phase_id)
         .ok_or_else(|| CommandError::Implementation(format!("{UNKNOWN_PHASE} {phase_id}")))?;
+    // Vor dem Lesen: was danach geschrieben wird, kennt die Ordnung nicht.
+    let read_at = now_ms();
     let entries: Vec<EntryRow> = registry
         .report_entries(implementation_id)?
         .into_iter()
-        .filter(|entry: &EntryRow| entry.phase_id == phase_id)
+        .filter(|entry: &EntryRow| entry.phase_id == *phase_id)
         .collect();
-    let tidied = tidy_phase(app, &view, phase, &entries);
+    let tidied = tidy_phase(app, &view, phase, &entries, read_at, cancel);
     emit_changed(app, implementation_id);
+    // Prüfwerte gelten für den Endstand.
+    if assemble::phase_state(phase) == ReportPhaseState::Running {
+        return tidied;
+    }
     let checked = check_phase(&registry, &view, index, &entries);
     emit_changed(app, implementation_id);
     if let (Err(_), Err(also)) = (&tidied, &checked) {
@@ -272,11 +467,13 @@ fn run_phase_end(
 }
 
 fn emit_changed(app: &AppHandle, implementation_id: &str) {
+    let tidying_phase_ids = app.state::<TidyRuns>().tidying_of(implementation_id);
     // Ohne Fenster geht nichts verloren: die Oberfläche lädt beim Öffnen.
     let _ = app.emit(
         REPORT_CHANGED_EVENT,
         ReportChangedEvent {
             implementation_id: implementation_id.to_owned(),
+            tidying_phase_ids,
         },
     );
 }
@@ -322,20 +519,23 @@ fn check_phase(
     registry.store_report_checks(&view.id, &phase.id, &json)
 }
 
-/// Speichert die geordnete Fassung oder den Grund, warum es keine neue gibt. Ohne etwas zu ordnen
-/// entfällt der Aufruf von Haiku.
+/// Speichert die geordnete Fassung mit dem Stand `read_at` oder den Grund, warum es keine neue
+/// gibt; nach einem Abbruch bleibt das Gespeicherte, wie es ist. Ohne einen Eintrag zu ordnen und
+/// ohne Spur entfällt der Aufruf von Haiku.
 fn tidy_phase(
     app: &AppHandle,
     view: &ImplementationView,
     phase: &PhaseView,
     entries: &[EntryRow],
+    read_at: f64,
+    cancel: &AtomicBool,
 ) -> Result<(), CommandError> {
     let registry = app.state::<SessionRegistry>();
     let to_order = tidy::to_order(entries, &tidy::review_stations(phase));
-    if to_order.is_empty() {
+    let (input, is_spur_empty) = haiku_input_of(&registry, view, phase, entries, &to_order)?;
+    if to_order.is_empty() && is_spur_empty {
         return registry.store_report_tidy_error(&view.id, &phase.id, None);
     }
-    let input = haiku_input_of(&registry, view, phase, entries, &to_order)?;
     let answer = print_program(app)
         .map_err(|error: CommandError| error.to_string())
         .and_then(|program| {
@@ -347,9 +547,16 @@ fn tidy_phase(
                     json_schema: tidy::TIDY_SCHEMA,
                     input: &input,
                     timeout: tidy::TIDY_TIMEOUT,
+                    cancel: Some(cancel),
                 },
             )
         });
+    if answer
+        .as_ref()
+        .is_err_and(|failure: &String| failure == CANCELLED)
+    {
+        return Ok(());
+    }
     let checked = match answer {
         Ok(answer) => tidy::check(&answer, &to_order)
             .map(|()| answer)
@@ -371,19 +578,20 @@ fn tidy_phase(
                 .map(|entry: &EntryRow| entry.number)
                 .max()
                 .unwrap_or_default();
-            registry.store_report_tidy(&view.id, &phase.id, &markdown, &json, highest)
+            registry.store_report_tidy(&view.id, &phase.id, &markdown, &json, highest, read_at)
         }
         Err(message) => registry.store_report_tidy_error(&view.id, &phase.id, Some(&message)),
     }
 }
 
+/// Die Eingabe an Haiku und ob ihre Spur leer ist.
 fn haiku_input_of(
     registry: &SessionRegistry,
     view: &ImplementationView,
     phase: &PhaseView,
     entries: &[EntryRow],
     to_order: &[u32],
-) -> Result<String, CommandError> {
+) -> Result<(String, bool), CommandError> {
     // Die Ansicht nennt nur die Nummern geladener Sessions; die übrigen stehen als „#?“ da.
     let labels = raw::session_labels(view, &Default::default());
     let mut traces: Vec<StationTrace> = Vec::new();
@@ -409,9 +617,11 @@ fn haiku_input_of(
             details,
         });
     }
-    Ok(tidy::haiku_input(
+    let spur = tidy::spur(&traces, &sources.unwrap_or_default());
+    let input = tidy::haiku_input(
         &raw::raw_markdown(&phase.key, entries, &labels),
         to_order,
-        &tidy::spur(&traces, &sources.unwrap_or_default()),
-    ))
+        &spur,
+    );
+    Ok((input, spur.is_empty()))
 }

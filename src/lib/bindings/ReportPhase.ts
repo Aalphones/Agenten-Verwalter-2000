@@ -14,4 +14,28 @@ stationLabel: string, finishedAt: number | null, files: number, added: number, r
 /**
  * Kurz-Hashes.
  */
-commits: Array<string>, result: string | null, way: Array<ReportWayStep>, ordered: boolean, tidyError: string | null, review: ReportReview | null, screens: Array<ReportScreen>, stops: Array<ReportStop>, checks: PhaseChecks | null, entries: number, };
+commits: Array<string>, result: string | null, way: Array<ReportWayStep>, ordered: boolean, tidyError: string | null, review: ReportReview | null, screens: Array<ReportScreen>, stops: Array<ReportStop>, checks: PhaseChecks | null, entries: number, 
+/**
+ * Seit wann Haiku die Phase gerade ordnet, ms seit der Epoche.
+ */
+tidyingSince: number | null, 
+/**
+ * Der Stand der gültigen Ordnung, ms seit der Epoche.
+ */
+tidiedAt: number | null, 
+/**
+ * Dateien der Phase, geschrieben nach `tidied_at`; ohne Ordnung 0.
+ */
+filesSince: number, 
+/**
+ * Einträge, die die Ordnung noch nicht kennt; ohne Ordnung 0.
+ */
+entriesSince: number, 
+/**
+ * Die Ergebnisse der Fertigmeldungen der Spur-Stationen, je Zeile eines.
+ */
+stationResult: string | null, 
+/**
+ * Die Session der ersten Spur-Station: Ziel von „Station nachfragen“.
+ */
+stationSessionId: string | null, };

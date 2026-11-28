@@ -43,6 +43,7 @@ pub async fn tldr_handoff_brief(
                     json_schema: HANDOFF_SCHEMA,
                     input: &input.transcript,
                     timeout: TLDR_TIMEOUT,
+                    cancel: None,
                 };
                 ask_haiku(&app, &program, &request)
             });

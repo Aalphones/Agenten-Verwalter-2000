@@ -6,6 +6,7 @@ use std::thread::{self, ScopedJoinHandle};
 use crate::changes::model::{DiffLine, DiffLineKind};
 use crate::changes::parse;
 use crate::db::report::{EntryRow, EntryTool, PhaseRow};
+use crate::db::session_files::SessionFileRow;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
 use crate::report::model::{
     CheckGap, CheckGapKind, ImageRow, PhaseChecks, ReportAcceptance, ReportBlock, ReportCode,
@@ -35,6 +36,10 @@ pub struct AssembleContext<'a> {
     pub touched: HashMap<String, f64>,
     /// Je Session `#<Nr> <Stage>` (`raw::session_labels`).
     pub labels: HashMap<String, String>,
+    /// Die geschriebenen Dateien je Station-Session.
+    pub files: Vec<SessionFileRow>,
+    /// Phase → Beginn ihrer laufenden Ordnung, ms seit der Epoche.
+    pub tidying: HashMap<String, f64>,
     /// Die Adresse eines Bildes aus Phasen-ID und Dateiname.
     pub image_url: &'a (dyn Fn(&str, &str) -> String + Sync),
 }
@@ -188,6 +193,12 @@ fn empty_phase(phase: &PhaseView, ctx: &AssembleContext<'_>) -> ReportPhase {
                 .reduce(f64::max)
         })
         .flatten();
+    let spur_stations = tidy::spur_stations(phase);
+    let results: Vec<&str> = spur_stations
+        .iter()
+        .filter_map(|station: &&StationView| station.result.as_deref())
+        .filter(|result: &&str| !result.trim().is_empty())
+        .collect();
     ReportPhase {
         phase_id: phase.id.clone(),
         key: phase.key.clone(),
@@ -208,7 +219,57 @@ fn empty_phase(phase: &PhaseView, ctx: &AssembleContext<'_>) -> ReportPhase {
         stops: Vec::new(),
         checks: None,
         entries: 0,
+        tidying_since: ctx.tidying.get(&phase.id).copied(),
+        tidied_at: None,
+        files_since: 0,
+        entries_since: 0,
+        station_result: (!results.is_empty()).then(|| results.join("\n")),
+        station_session_id: spur_stations
+            .first()
+            .and_then(|station: &&StationView| station.session_id.clone()),
     }
+}
+
+/// Stand der gültigen Ordnung und was seitdem an Einträgen und Dateien dazukam.
+fn count_since_tidy(
+    report: &mut ReportPhase,
+    phase: &PhaseView,
+    entries: &[&EntryRow],
+    row: Option<&PhaseRow>,
+    ctx: &AssembleContext<'_>,
+) {
+    let Some(row) = row.filter(|row: &&PhaseRow| row.tidy_json.is_some()) else {
+        return;
+    };
+    let Some(tidied_at) = row.tidy_at else {
+        return;
+    };
+    let ordered_up_to = row.tidy_entries.unwrap_or_default();
+    report.tidied_at = Some(tidied_at);
+    report.entries_since = count(
+        entries
+            .iter()
+            .filter(|entry: &&&EntryRow| entry.number > ordered_up_to)
+            .count(),
+    );
+    let sessions = sessions_of(phase);
+    let paths: HashSet<&str> = ctx
+        .files
+        .iter()
+        .filter(|(session, _, touched_at): &&SessionFileRow| {
+            *touched_at > tidied_at && sessions.contains(session.as_str())
+        })
+        .map(|(_, path, _): &SessionFileRow| path.as_str())
+        .collect();
+    report.files_since = count(paths.len());
+}
+
+fn sessions_of(phase: &PhaseView) -> HashSet<&str> {
+    phase
+        .stations
+        .iter()
+        .filter_map(|station: &StationView| station.session_id.as_deref())
+        .collect()
 }
 
 /// `entries` sind die der Phase in Nummernfolge.
@@ -221,6 +282,7 @@ fn phase_of(
 ) -> ReportPhase {
     let mut report = empty_phase(phase, ctx);
     count_changes(&mut report, ranges);
+    count_since_tidy(&mut report, phase, entries, row, ctx);
 
     let mut files = Files {
         ranges,
@@ -270,11 +332,7 @@ fn span_of<'a>(
     is_latest: bool,
     ctx: &AssembleContext<'_>,
 ) -> PhaseSpan<'a> {
-    let sessions: HashSet<&str> = phase
-        .stations
-        .iter()
-        .filter_map(|station: &StationView| station.session_id.as_deref())
-        .collect();
+    let sessions = sessions_of(phase);
     PhaseSpan {
         commits: ctx
             .commits

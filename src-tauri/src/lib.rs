@@ -123,6 +123,7 @@ pub fn run() {
             SessionRegistry::start_reaper(app.handle().clone());
             app.manage(ViewHandles::default());
             app.manage(report::TidyRuns::default());
+            app.manage(report::ReportNudges::default());
             // Ohne Server fehlen nur Artefakte und Betrachter; `artifacts_list` und `file_view_url`
             // melden das.
             match artifacts::server::start(app.handle().clone()) {
@@ -271,6 +272,8 @@ pub fn run() {
             commands::report::report_load,
             commands::report::report_of_session,
             commands::report::report_retidy,
+            commands::report::report_cancel_tidy,
+            commands::report::report_tidying,
             commands::implementation::implementation_list,
             commands::implementation::implementation_report,
             commands::implementation::implementation_new_inquiry,

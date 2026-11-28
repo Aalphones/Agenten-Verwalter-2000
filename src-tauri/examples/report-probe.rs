@@ -9,7 +9,9 @@
 //! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> view` (druckt den Bericht, wie ihn `report_load`
 //! zusammensetzt; die Dauer geht nach stderr)
 //! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> checks <Phasen-Key>` (druckt die Ordner der
-//! Suche, die gefundenen Berichtsdateien, die Prüfwerte und die Lücken, ohne zu speichern).
+//! Suche, die gefundenen Berichtsdateien, die Prüfwerte und die Lücken, ohne zu speichern)
+//! bzw. `… -- <Datenbank-Kopie> <Umsetzungs-ID> gap <Station-ID>` (druckt den Satz, mit dem die
+//! erste Fertigmeldung der Station abgelehnt würde, oder `keine Lücke`).
 //! Fehler als `FEHLER: <Satz>`.
 use std::collections::HashMap;
 use std::env;
@@ -42,10 +44,12 @@ use verwalter_lib::report::model::{
     ReportScreen, ReportShot, ReportStop, ReportView,
 };
 use verwalter_lib::report::tidy::{self, StationTrace, TidyAnswer};
-use verwalter_lib::report::{anchor, range, raw};
+use verwalter_lib::report::{NO_REPORT_HINT, anchor, is_unreported, range, raw};
+use verwalter_lib::settings::{self, model::Settings};
 use verwalter_lib::worktrees;
 
-const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID> | <Datenbank-Kopie> <Umsetzungs-ID> view | <Datenbank-Kopie> <Umsetzungs-ID> checks <Phasen-Key>";
+const USAGE: &str = "Aufruf: report-probe <Datenbank-Kopie> <Umsetzungs-ID> raw <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> tidy <Phasen-Key> [--haiku] | <Datenbank-Kopie> [<Umsetzungs-ID>] anchor <Session-ID> | <Datenbank-Kopie> <Umsetzungs-ID> view | <Datenbank-Kopie> <Umsetzungs-ID> checks <Phasen-Key> | <Datenbank-Kopie> <Umsetzungs-ID> gap <Station-ID>";
+const NO_GAP: &str = "keine Lücke";
 const HAIKU_FLAG: &str = "--haiku";
 
 fn main() -> ExitCode {
@@ -77,6 +81,9 @@ fn main() -> ExitCode {
             anchor_of(&database_path, session_id)
         }
         [_, implementation_id, "view"] => view_of(&database_path, implementation_id),
+        [_, implementation_id, "gap", station_id] => {
+            gap_of(&database_path, implementation_id, station_id)
+        }
         [_, implementation_id, "checks", phase_key] => {
             checks_of(&database_path, implementation_id, phase_key)
         }
@@ -175,16 +182,19 @@ fn tidy_of(
     let loaded = load_phase(&database, implementation_id, phase_key)?;
     let to_order = tidy::to_order(&loaded.entries, &tidy::review_stations(loaded.phase()));
     let (traces, sources) = traces_of(&database, &loaded)?;
+    let spur = tidy::spur(&traces, &sources);
     let input = tidy::haiku_input(
         &raw::raw_markdown(phase_key, &loaded.entries, &loaded.labels),
         &to_order,
-        &tidy::spur(&traces, &sources),
+        &spur,
     );
     if !asks_haiku {
         return Ok(input);
     }
-    if to_order.is_empty() {
-        return Ok(format!("{input}\nNichts zu ordnen: kein Aufruf von Haiku."));
+    if to_order.is_empty() && spur.is_empty() {
+        return Ok(format!(
+            "{input}\nNichts zu ordnen und keine Spur: kein Aufruf von Haiku."
+        ));
     }
     println!("{input}");
     // Nur die Claude-Kommandozeile; die übrigen Betriebsarten brauchen die Einstellungen der App.
@@ -201,6 +211,7 @@ fn tidy_of(
         local: None,
         leading_args: &[],
         codex: None,
+        cancel: None,
     };
     let value = run_print(&exe, cwd, &request, tidy::TIDY_TIMEOUT)?;
     println!("## Antwort\n{value:#}\n");
@@ -368,8 +379,13 @@ fn load_report(database: &Database, implementation_id: &str) -> Result<LoadedRep
         .flat_map(|phase: &PhaseView| &phase.stations)
         .filter_map(|station: &StationView| station.session_id.clone())
         .collect();
-    let commits = database
-        .with(|connection| session_commits::load_by_session(connection, &stations))
+    let (commits, files) = database
+        .with(|connection| {
+            Ok((
+                session_commits::load_by_session(connection, &stations)?,
+                session_files::load_rows_for(connection, &stations)?,
+            ))
+        })
         .map_err(text_of)?;
     let input = stations.iter().rev().find_map(|session_id: &String| {
         database
@@ -392,6 +408,9 @@ fn load_report(database: &Database, implementation_id: &str) -> Result<LoadedRep
             commits,
             touched,
             labels,
+            files,
+            // Die Probe läuft ohne App: nichts wird gerade geordnet.
+            tidying: HashMap::new(),
             image_url: &image_path,
         },
     })
@@ -413,6 +432,35 @@ fn view_of(database_path: &Path, implementation_id: &str) -> Result<String, Stri
     );
     eprintln!("Dauer: {} ms", started.elapsed().as_millis());
     Ok(printed(&report))
+}
+
+/// Wie `report::completion_gap` ohne dessen Merkliste: Schalter und Lücke im Bericht.
+fn gap_of(
+    database_path: &Path,
+    implementation_id: &str,
+    station_id: &str,
+) -> Result<String, String> {
+    let database = Database::open(database_path).map_err(text_of)?;
+    let loaded = load_report(&database, implementation_id)?;
+    let is_known = loaded
+        .view
+        .phases
+        .iter()
+        .flat_map(|phase: &PhaseView| &phase.stations)
+        .any(|station: &StationView| station.id == station_id);
+    if !is_known {
+        return Err(format!("keine Station „{station_id}“ in der Umsetzung"));
+    }
+    let is_switched_off =
+        settings::load(&database).is_ok_and(|loaded: Settings| !loaded.report_enabled);
+    let has_gap = !is_switched_off
+        && is_unreported(
+            &loaded.view,
+            station_id,
+            &loaded.context.files,
+            &loaded.entries,
+        );
+    Ok(if has_gap { NO_REPORT_HINT } else { NO_GAP }.to_owned())
 }
 
 /// Die Prüfwerte einer Phase, wie das Phasenende sie ermittelt, ohne sie zu speichern.
@@ -549,6 +597,14 @@ fn print_phase(phase: &ReportPhase, lines: &mut Vec<String>) {
         phase.entries,
         if phase.ordered { "geordnet" } else { "roh" }
     ));
+    lines.push(format!(
+        "ordnet seit {} / geordnet um {} / seitdem Dateien {} / seitdem Einträge {} / Meldung {}",
+        time_text(phase.tidying_since),
+        time_text(phase.tidied_at),
+        phase.files_since,
+        phase.entries_since,
+        phase.station_result.as_deref().unwrap_or("keine")
+    ));
     if let Some(error) = &phase.tidy_error {
         lines.push(format!("Ordnung: {error}"));
     }
@@ -586,6 +642,11 @@ fn print_phase(phase: &ReportPhase, lines: &mut Vec<String>) {
             ));
         }
     }
+}
+
+/// ms seit der Epoche ohne Nachkommastellen, ohne Zeitpunkt „–“.
+fn time_text(ms: Option<f64>) -> String {
+    ms.map_or_else(|| "–".to_owned(), |ms: f64| format!("{ms:.0}"))
 }
 
 fn print_screen(screen: &ReportScreen, lines: &mut Vec<String>) {

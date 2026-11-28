@@ -5,14 +5,12 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 
 use super::anchor::{self, ResolvedPath};
 use super::images::{StagedImage, StagedImages};
-use super::model::{
-    ImageRow, ReportChangedEvent, ReportMark, ReportNoteKind, ScreenRow, ShotRow, StepRow,
-};
-use super::{REPORT_CHANGED_EVENT, phase_dir};
+use super::model::{ImageRow, ReportMark, ReportNoteKind, ScreenRow, ShotRow, StepRow};
+use super::{emit_changed, phase_dir};
 use crate::changes::model::ChangesReach;
 use crate::changes::sources;
 use crate::db::Database;
@@ -690,13 +688,7 @@ fn store(
             name_files(number, entry).map_err(CommandError::Io)
         })
         .map_err(text_of)?;
-    // Ohne Fenster geht nichts verloren: die Oberfläche lädt beim Öffnen.
-    let _ = station.call.app.emit(
-        REPORT_CHANGED_EVENT,
-        ReportChangedEvent {
-            implementation_id: station.implementation_id.clone(),
-        },
-    );
+    emit_changed(station.call.app, &station.implementation_id);
     Ok(number)
 }
 
