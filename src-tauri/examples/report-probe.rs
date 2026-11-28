@@ -43,7 +43,7 @@ use verwalter_lib::report::model::{
     PhaseChecks, ReportBlock, ReportCode, ReportNote, ReportPhase, ReportRow, ReportRowKind,
     ReportScreen, ReportShot, ReportStop, ReportView,
 };
-use verwalter_lib::report::tidy::{self, StationTrace, TidyAnswer};
+use verwalter_lib::report::tidy::{self, ExplainStop, StationTrace, TidyAnswer, Unexplained};
 use verwalter_lib::report::{
     NO_REPORT_HINT, add_repositories, anchor, is_unreported, raw, unordered_traces,
 };
@@ -185,17 +185,19 @@ fn tidy_of(
     let to_order = tidy::to_order(&loaded.entries, &tidy::review_stations(loaded.phase()));
     let (traces, sources) = traces_of(&database, &loaded)?;
     let spur = tidy::spur(&traces, &sources);
+    let unexplained = unexplained_of(&database, implementation_id, &loaded, &to_order)?;
     let input = tidy::haiku_input(
         &raw::raw_markdown(phase_key, &loaded.entries, &loaded.labels),
         &to_order,
         &spur,
+        &tidy::unexplained_section(&unexplained),
     );
     if !asks_haiku {
         return Ok(input);
     }
-    if to_order.is_empty() && spur.is_empty() {
+    if to_order.is_empty() && spur.is_empty() && unexplained.is_empty() {
         return Ok(format!(
-            "{input}\nNichts zu ordnen und keine Spur: kein Aufruf von Haiku."
+            "{input}\nNichts zu ordnen, keine Spur, kein Stopp aus dem Diff: kein Aufruf von Haiku."
         ));
     }
     println!("{input}");
@@ -219,16 +221,50 @@ fn tidy_of(
     println!("## Antwort\n{value:#}\n");
     let answer: TidyAnswer = serde_json::from_value(value)
         .map_err(|error| format!("Antwort von Claude nicht lesbar: {error}"))?;
-    if let Err(reason) = tidy::check(&answer, &to_order) {
+    let explain_stops = tidy::explain_stops(&unexplained);
+    let explain_ids: Vec<String> = explain_stops
+        .iter()
+        .map(|stop: &ExplainStop| stop.id.clone())
+        .collect();
+    if let Err(reason) = tidy::check(&answer, &to_order, &explain_ids) {
         return Ok(format!("## Prüfung\nOrdnung verworfen: {reason}"));
     }
+    let stored = TidyAnswer {
+        explain_stops,
+        ..answer.clone()
+    };
+    println!(
+        "## tidy_json\n{}\n",
+        serde_json::to_string(&stored).map_err(|error| error.to_string())?
+    );
     let markdown = tidy::tidy_markdown(
         phase_key,
         &loaded.phase().title,
         &answer,
         &tidy::screen_numbers(&loaded.entries),
+        &unexplained,
     );
     Ok(format!("## Prüfung\nbestanden\n\n{markdown}"))
+}
+
+/// Wie `report` sie vor dem Aufruf von Haiku ermittelt.
+fn unexplained_of(
+    database: &Database,
+    implementation_id: &str,
+    loaded: &LoadedPhase,
+    to_order: &[u32],
+) -> Result<Vec<Unexplained>, String> {
+    let report = load_report(database, implementation_id)?;
+    let catalog = assemble::catalog_of(&report.context);
+    let own: Vec<&EntryRow> = loaded.entries.iter().collect();
+    let ranges =
+        assemble::ranges_of_phase(&report.view, loaded.index, &own, &report.context, &catalog);
+    Ok(assemble::unexplained_of_phase(
+        &ranges,
+        &loaded.entries,
+        to_order,
+        &report.context,
+    ))
 }
 
 /// Der Verlauf der Stationen der Spur und die Repository-Einträge der ersten noch aktiven davon.

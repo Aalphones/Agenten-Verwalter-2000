@@ -18,13 +18,18 @@ use crate::report::model::{
     ScreenRow, ShotRow, StepRow,
 };
 use crate::report::range::{self, Checkout, CommitCatalog, FileStat, PhaseSpan, RepoRange};
-use crate::report::tidy::{self, StationTrace, StopKind, TidyAnswer, TidyStop, TidyWay};
+use crate::report::tidy::{
+    self, StationTrace, StopKind, TidyAnswer, TidyStop, TidyWay, Unexplained, UnexplainedFile,
+};
 use crate::report::way::{self, HistoryStep};
 
 /// So viele Zeilen Umgebung zeigt ein Code-Block vor und nach den Zeilen seiner Notizen.
 const BLOCK_CONTEXT: u32 = 3;
 /// Längere Blöcke eines Stopps aus dem Diff zeigen nur ihre Zeilenzahl.
 const DERIVED_MAX_ROWS: usize = 300;
+/// Marke und Herkunft von Haikus Erklärung am Rand eines Stopps aus dem Diff.
+const HAIKU_NOTE_LABEL: &str = "H";
+const HAIKU_NOTE_AUTHOR: &str = "Haiku · aus dem Diff";
 /// So viele Dateien liest ein Git-Aufruf; Windows begrenzt die Länge der Befehlszeile.
 const FILES_PER_LOAD: usize = 100;
 /// Bildschirme bis zu dieser Breite in Pixeln gelten als schmal.
@@ -385,7 +390,7 @@ fn phase_of(
                 .as_ref()
                 .map_or(0, |answer: &TidyAnswer| count(answer.stops.len())),
         );
-    let derived = derived_stops(&writer, &stops, next_index, &mut files);
+    let derived = derived_stops(&writer, &stops, answer.as_ref(), next_index, &mut files);
     stops.extend(derived);
     report.repositories = repositories_of(ranges, &stops, ctx);
 
@@ -533,90 +538,234 @@ fn code_blocks(stop: &ReportStop) -> impl Iterator<Item = &ReportCode> {
         })
 }
 
-/// Jede geänderte Datei, die kein Stopp zeigt, in einem Stopp je Repository (ADR 075). Eine neue
-/// Datei ohne lesbaren Text fehlt: es gäbe nichts zu zeigen.
-fn derived_stops(
-    writer: &Writer<'_>,
-    stops: &[ReportStop],
-    first_index: u32,
-    files: &mut Files<'_>,
-) -> Vec<ReportStop> {
-    let ctx = writer.ctx;
-    let group_of = |key: &str| {
-        ctx.checkout(key).map_or_else(
-            || key.to_owned(),
-            |checkout: &Checkout| checkout.group.clone(),
-        )
-    };
-    let mut shown: HashSet<(String, String)> = stops
+/// Das Repository, zu dem der Schlüssel eines Code-Blocks gehört.
+fn group_of(ctx: &AssembleContext<'_>, key: &str) -> String {
+    ctx.checkout(key).map_or_else(
+        || key.to_owned(),
+        |checkout: &Checkout| checkout.group.clone(),
+    )
+}
+
+/// Der Checkout, der ein Repository benennt: der erste seiner Gruppe.
+fn checkout_of_group<'a>(ctx: &'a AssembleContext<'_>, group: &str) -> Option<&'a Checkout> {
+    ctx.checkouts
         .iter()
-        .flat_map(code_blocks)
-        .map(|code: &ReportCode| (group_of(&code.repository_key), code.path.clone()))
-        .collect();
-    // Je Repository seine Dateien, die Repositorys in Reihenfolge ihrer Bereiche.
-    let mut groups: Vec<(String, Vec<Target>)> = Vec::new();
-    for (index, range) in files.ranges.iter().enumerate() {
-        let targets: Vec<Target> = range
+        .find(|checkout: &&Checkout| checkout.group == group)
+}
+
+fn label_of_group(ctx: &AssembleContext<'_>, group: &str) -> String {
+    checkout_of_group(ctx, group).map_or_else(
+        || group.to_owned(),
+        |checkout: &Checkout| checkout.label.clone(),
+    )
+}
+
+/// Die Dateien eines Repositorys, die kein Stopp zeigt, je mit dem Index ihres Bereichs.
+struct UnshownGroup<'a> {
+    group: String,
+    files: Vec<(usize, &'a FileStat)>,
+}
+
+/// Jede geänderte Datei außer `shown` (`(Gruppe, Pfad)`) je Repository, diese in Reihenfolge
+/// ihrer Bereiche. Eine neue Datei ohne lesbaren Text fehlt: es gäbe nichts zu zeigen.
+fn unshown_files(
+    ranges: &[RepoRange],
+    mut shown: HashSet<(String, String)>,
+) -> Vec<UnshownGroup<'_>> {
+    let mut groups: Vec<UnshownGroup<'_>> = Vec::new();
+    for (index, range) in ranges.iter().enumerate() {
+        let found: Vec<(usize, &FileStat)> = range
             .files
             .iter()
             .filter(|file: &&FileStat| !(file.untracked && file.added == 0))
             .filter(|file: &&FileStat| shown.insert((range.group.clone(), file.path.clone())))
-            .map(|file: &FileStat| Target {
-                key: range.repository_key.clone(),
-                path: file.path.clone(),
-                range: Some(index),
-            })
+            .map(|file: &FileStat| (index, file))
             .collect();
-        if targets.is_empty() {
+        if found.is_empty() {
             continue;
         }
-        files.load(Some(index), &targets);
         match groups
             .iter_mut()
-            .find(|(group, _): &&mut (String, Vec<Target>)| *group == range.group)
+            .find(|known: &&mut UnshownGroup<'_>| known.group == range.group)
         {
-            Some((_, known)) => known.extend(targets),
-            None => groups.push((range.group.clone(), targets)),
+            Some(known) => known.files.extend(found),
+            None => groups.push(UnshownGroup {
+                group: range.group.clone(),
+                files: found,
+            }),
         }
     }
     groups
+}
+
+/// Was nach einer jetzt entstehenden Ordnung in Stopps aus dem Diff stünde, samt den Patchs für
+/// Haiku. `ranges` und `entries` sind die der Phase, `to_order` die Nummern, die die Ordnung auf
+/// Stopps verteilt: deren Orte zeigt der Bericht, wie auch immer Haiku sie gruppiert.
+pub fn unexplained_of_phase(
+    ranges: &[RepoRange],
+    entries: &[EntryRow],
+    to_order: &[u32],
+    ctx: &AssembleContext<'_>,
+) -> Vec<Unexplained> {
+    let files = Files {
+        ranges,
+        checkouts: &ctx.checkouts,
+        loaded: HashMap::new(),
+    };
+    let shown: HashSet<(String, String)> = entries
+        .iter()
+        .filter(|entry: &&EntryRow| {
+            entry.tool != EntryTool::Figure && to_order.contains(&entry.number)
+        })
+        .filter_map(location_of)
+        .map(|(key, path): (&str, &str)| {
+            let target = files.target(key, path);
+            (group_of(ctx, &target.key), target.path)
+        })
+        .collect();
+    unshown_files(ranges, shown)
+        .into_iter()
+        .map(|unshown: UnshownGroup<'_>| Unexplained {
+            label: label_of_group(ctx, &unshown.group),
+            group: unshown.group,
+            files: unexplained_files(ranges, &unshown.files),
+        })
+        .collect()
+}
+
+/// Liest die Patchs je Bereich zusammen.
+fn unexplained_files(ranges: &[RepoRange], found: &[(usize, &FileStat)]) -> Vec<UnexplainedFile> {
+    let mut result: Vec<UnexplainedFile> = Vec::new();
+    for same_range in found.chunk_by(|left, right| left.0 == right.0) {
+        for chunk in same_range.chunks(FILES_PER_LOAD) {
+            let paths: Vec<&str> = chunk
+                .iter()
+                .map(|(_, file): &(usize, &FileStat)| file.path.as_str())
+                .collect();
+            let mut patches = range::file_patches(&ranges[chunk[0].0], &paths);
+            result.extend(chunk.iter().map(|(_, file): &(usize, &FileStat)| {
+                let patch = patches
+                    .remove(&file.path)
+                    .filter(|patch: &String| !is_omitted(patch));
+                UnexplainedFile {
+                    path: file.path.clone(),
+                    added: file.added,
+                    removed: file.removed,
+                    patch,
+                }
+            }));
+        }
+    }
+    result
+}
+
+/// Ob der Block eines Stopps aus dem Diff statt dieses Patchs nur seine Zeilenzahl zeigt.
+fn is_omitted(patch: &str) -> bool {
+    let rows = parse::unified(patch)
+        .lines
+        .iter()
+        .filter_map(row_of)
+        .count();
+    rows > DERIVED_MAX_ROWS
+}
+
+/// Jede geänderte Datei, die kein Stopp zeigt, in einem Stopp je Repository (ADR 075), mit
+/// Haikus Erklärung aus `answer` am ersten Block.
+fn derived_stops(
+    writer: &Writer<'_>,
+    stops: &[ReportStop],
+    answer: Option<&TidyAnswer>,
+    first_index: u32,
+    files: &mut Files<'_>,
+) -> Vec<ReportStop> {
+    let ctx = writer.ctx;
+    let shown: HashSet<(String, String)> = stops
+        .iter()
+        .flat_map(code_blocks)
+        .map(|code: &ReportCode| (group_of(ctx, &code.repository_key), code.path.clone()))
+        .collect();
+    let ranges = files.ranges;
+    unshown_files(ranges, shown)
         .into_iter()
         .enumerate()
-        .map(
-            |(offset, (group, targets)): (usize, (String, Vec<Target>))| {
-                let checkout = ctx
-                    .checkouts
-                    .iter()
-                    .find(|checkout: &&Checkout| checkout.group == group);
-                ReportStop {
-                    index: first_index.saturating_add(count(offset)),
-                    title: checkout.map_or(group, |checkout: &Checkout| checkout.label.clone()),
-                    kind: StopKind::Flow.as_str().to_owned(),
-                    look: None,
-                    by: String::new(),
-                    lead: None,
-                    blocks: targets
-                        .iter()
-                        .map(|target: &Target| {
-                            ReportBlock::Code(derived_block(target, writer, files))
-                        })
-                        .collect(),
-                    derived: true,
-                    outside: checkout.is_some_and(|checkout: &Checkout| checkout.outside),
-                }
-            },
-        )
+        .map(|(offset, unshown): (usize, UnshownGroup<'_>)| {
+            let targets: Vec<Target> = unshown
+                .files
+                .iter()
+                .map(|(index, file): &(usize, &FileStat)| Target {
+                    key: ranges[*index].repository_key.clone(),
+                    path: file.path.clone(),
+                    range: Some(*index),
+                })
+                .collect();
+            for same_range in
+                targets.chunk_by(|left: &Target, right: &Target| left.range == right.range)
+            {
+                files.load(same_range[0].range, same_range);
+            }
+            let mut explanation: Option<&str> =
+                answer.and_then(|answer: &TidyAnswer| answer.explanation_of(&unshown.group));
+            let blocks: Vec<ReportBlock> = targets
+                .iter()
+                .map(|target: &Target| {
+                    ReportBlock::Code(derived_block(target, explanation.take(), writer, files))
+                })
+                .collect();
+            ReportStop {
+                index: first_index.saturating_add(count(offset)),
+                title: label_of_group(ctx, &unshown.group),
+                kind: StopKind::Flow.as_str().to_owned(),
+                look: None,
+                by: String::new(),
+                lead: None,
+                blocks,
+                derived: true,
+                outside: checkout_of_group(ctx, &unshown.group)
+                    .is_some_and(|checkout: &Checkout| checkout.outside),
+            }
+        })
         .collect()
 }
 
 /// Alle Abschnitte des Patchs; ein zu langer nennt nur seine Zeilenzahl.
-fn derived_block(target: &Target, writer: &Writer<'_>, files: &mut Files<'_>) -> ReportCode {
+fn derived_block(
+    target: &Target,
+    explanation: Option<&str>,
+    writer: &Writer<'_>,
+    files: &mut Files<'_>,
+) -> ReportCode {
     let mut code = code_block(target, &[], writer, files);
+    if let Some(text) = explanation {
+        let note = haiku_note(text, &code.rows);
+        code.notes.push(note);
+    }
     if code.rows.len() > DERIVED_MAX_ROWS {
         code.omitted_rows = count(code.rows.len());
         code.rows = Vec::new();
     }
     code
+}
+
+/// Die Notiz spannt von der ersten bis zur letzten hinzugefügten Zeile; ohne eine solche steht
+/// sie an Zeile 1.
+fn haiku_note(text: &str, rows: &[ReportRow]) -> ReportNote {
+    let mut added = rows
+        .iter()
+        .filter(|row: &&ReportRow| row.kind == ReportRowKind::Add)
+        .filter_map(|row: &ReportRow| row.new);
+    let first = added.next();
+    let last = added.next_back().or(first);
+    ReportNote {
+        entry: None,
+        label: HAIKU_NOTE_LABEL.to_owned(),
+        kind: ReportNoteKind::Why,
+        from: first.unwrap_or(1),
+        to: last.unwrap_or(1),
+        text: text.to_owned(),
+        by: HAIKU_NOTE_AUTHOR.to_owned(),
+        open: None,
+        moved: false,
+    }
 }
 
 /// Ob eine Station der Phase die Datei nach der gültigen Ordnung geschrieben hat.

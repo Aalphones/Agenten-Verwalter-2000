@@ -43,7 +43,7 @@ use crate::settings::{self, model::Settings};
 use assemble::AssembleContext;
 use checks::{PhaseEvidence, SessionLog};
 use model::{ReportChangedEvent, ReportPhaseState, ReportView};
-use tidy::{StationTrace, TidyAnswer};
+use tidy::{ExplainStop, StationTrace, TidyAnswer, Unexplained};
 
 pub const REPORT_CHANGED_EVENT: &str = "report://changed";
 const REPORTS_DIR_NAME: &str = "reports";
@@ -527,7 +527,7 @@ fn run_phase_end(claim: &TidyClaim) -> Result<(), CommandError> {
         .into_iter()
         .filter(|entry: &EntryRow| entry.phase_id == *phase_id)
         .collect();
-    let tidied = tidy_phase(app, &view, phase, &entries, read_at, cancel);
+    let tidied = tidy_phase(app, &view, index, &entries, read_at, cancel);
     emit_changed(app, implementation_id);
     // Prüfwerte gelten für den Endstand.
     if assemble::phase_state(phase) == ReportPhaseState::Running {
@@ -595,20 +595,23 @@ fn check_phase(
 }
 
 /// Speichert die geordnete Fassung mit dem Stand `read_at` oder den Grund, warum es keine neue
-/// gibt; nach einem Abbruch bleibt das Gespeicherte, wie es ist. Ohne einen Eintrag zu ordnen und
-/// ohne Spur entfällt der Aufruf von Haiku.
+/// gibt; nach einem Abbruch bleibt das Gespeicherte, wie es ist. Ohne einen Eintrag zu ordnen,
+/// ohne Spur und ohne Stopp aus dem Diff entfällt der Aufruf von Haiku.
 fn tidy_phase(
     app: &AppHandle,
     view: &ImplementationView,
-    phase: &PhaseView,
+    index: usize,
     entries: &[EntryRow],
     read_at: f64,
     cancel: &AtomicBool,
 ) -> Result<(), CommandError> {
     let registry = app.state::<SessionRegistry>();
+    let phase = &view.phases[index];
     let to_order = tidy::to_order(entries, &tidy::review_stations(phase));
-    let (input, is_spur_empty) = haiku_input_of(&registry, view, phase, entries, &to_order)?;
-    if to_order.is_empty() && is_spur_empty {
+    let unexplained = unexplained_of(&registry, view, index, entries, &to_order)?;
+    let (input, is_spur_empty) =
+        haiku_input_of(&registry, view, phase, entries, &to_order, &unexplained)?;
+    if to_order.is_empty() && is_spur_empty && unexplained.is_empty() {
         return registry.store_report_tidy_error(&view.id, &phase.id, None);
     }
     let answer = print_program(app)
@@ -632,9 +635,17 @@ fn tidy_phase(
     {
         return Ok(());
     }
+    let explain_stops = tidy::explain_stops(&unexplained);
+    let explain_ids: Vec<String> = explain_stops
+        .iter()
+        .map(|stop: &ExplainStop| stop.id.clone())
+        .collect();
     let checked = match answer {
-        Ok(answer) => tidy::check(&answer, &to_order)
-            .map(|()| answer)
+        Ok(answer) => tidy::check(&answer, &to_order, &explain_ids)
+            .map(|()| TidyAnswer {
+                explain_stops,
+                ..answer
+            })
             .map_err(|reason: String| format!("{TIDY_REJECTED} {reason}")),
         Err(failure) => Err(format!("{HAIKU_FAILED} {failure}")),
     };
@@ -645,6 +656,7 @@ fn tidy_phase(
                 &phase.title,
                 &answer,
                 &tidy::screen_numbers(entries),
+                &unexplained,
             );
             let json = serde_json::to_string(&answer)
                 .map_err(|error| CommandError::Internal(error.to_string()))?;
@@ -659,6 +671,24 @@ fn tidy_phase(
     }
 }
 
+/// Was der Bericht der Phase an Position `index` nach der Ordnung nur aus dem Diff zeigen wird.
+fn unexplained_of(
+    registry: &SessionRegistry,
+    view: &ImplementationView,
+    index: usize,
+    entries: &[EntryRow],
+    to_order: &[u32],
+) -> Result<Vec<Unexplained>, CommandError> {
+    let no_images = |_: &str, _: &str| String::new();
+    let context = context_of(registry, view, &no_images)?;
+    let catalog = assemble::catalog_of(&context);
+    let own: Vec<&EntryRow> = entries.iter().collect();
+    let ranges = assemble::ranges_of_phase(view, index, &own, &context, &catalog);
+    Ok(assemble::unexplained_of_phase(
+        &ranges, entries, to_order, &context,
+    ))
+}
+
 /// Die Eingabe an Haiku und ob ihre Spur leer ist.
 fn haiku_input_of(
     registry: &SessionRegistry,
@@ -666,6 +696,7 @@ fn haiku_input_of(
     phase: &PhaseView,
     entries: &[EntryRow],
     to_order: &[u32],
+    unexplained: &[Unexplained],
 ) -> Result<(String, bool), CommandError> {
     // Die Ansicht nennt nur die Nummern geladener Sessions; die übrigen stehen als „#?“ da.
     let labels = raw::session_labels(view, &Default::default());
@@ -687,6 +718,7 @@ fn haiku_input_of(
         &raw::raw_markdown(&phase.key, entries, &labels),
         to_order,
         &spur,
+        &tidy::unexplained_section(unexplained),
     );
     Ok((input, spur.is_empty()))
 }

@@ -8,7 +8,7 @@ Folgeplan zu „Review-Bericht abschaltbar“ (`docs/archive/2026-11/2026-11-27_
 |---|---|---|---|---|
 | 1 | Core: Ordnen sichtbar, jederzeit, abbrechbar; Fertigmeldung ohne Bericht | heikel | opusplan | complete |
 | 2 | Core: Repos außerhalb des Vorhabens, Stopps aus dem Diff, Weg aus dem Verlauf | heikel | opusplan | complete |
-| 3 | Core: Haiku erklärt den Diff | standard | sonnet | pending |
+| 3 | Core: Haiku erklärt den Diff | standard | sonnet | complete |
 | 4 | Oberfläche: Zustandsleiste, Seite nach Vorschlag C | standard | sonnet | pending |
 | 5 | Kontrast im Theme, Plan fertig | mechanisch | sonnet | pending |
 
