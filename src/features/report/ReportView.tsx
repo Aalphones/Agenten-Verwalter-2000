@@ -6,6 +6,7 @@ import { ReportBar } from '@/features/report/ReportBar';
 import { ReportCommentsProvider } from '@/features/report/ReportCommentsProvider';
 import { ReportOverview } from '@/features/report/ReportOverview';
 import { ReportPhasePage, type ReportPageLink } from '@/features/report/ReportPhasePage';
+import { ReportTidyToast } from '@/features/report/ReportTidyToast';
 import { ReportToc } from '@/features/report/ReportToc';
 import {
   acceptableStationId,
@@ -24,6 +25,7 @@ import {
 import { useReport, type ReportState } from '@/features/report/useReport';
 import { useReportAccept } from '@/features/report/useReportAccept';
 import { useReportSend } from '@/features/report/useReportSend';
+import { useTidyNotice } from '@/features/report/useTidyNotice';
 import type { ImplementationView } from '@/lib/bindings/ImplementationView';
 import type { ReportPhase } from '@/lib/bindings/ReportPhase';
 import type { ReportView as ReportData } from '@/lib/bindings/ReportView';
@@ -75,6 +77,7 @@ export function ReportView({
   const acceptStationId: string | null =
     report === null ? null : acceptableStationId(report, implementation);
   const accept = useReportAccept(implementationId, acceptStationId);
+  const { notice, dismiss } = useTidyNotice(report);
 
   // Eine Phase, die es nicht (mehr) gibt oder noch nicht begonnen hat, fällt auf den Überblick zurück.
   const phase: ReportPhase | undefined =
@@ -232,6 +235,17 @@ export function ReportView({
             <div className="report-view__doc">{renderPage(report)}</div>
           </div>
         </div>
+        {notice !== null && (
+          <ReportTidyToast
+            text={notice.text}
+            onShow={(): void => {
+              showPage(notice.phaseKey);
+              pageElement?.scrollTo({ top: 0 });
+              dismiss();
+            }}
+            onClose={dismiss}
+          />
+        )}
         {isTocOpen && (
           <Dialog
             labelledBy={TOC_TITLE_ID}

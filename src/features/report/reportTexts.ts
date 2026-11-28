@@ -14,12 +14,55 @@ export const LOADING_TEXT = 'Der Bericht wird gelesen …';
 export const EMPTY_TEXT =
   'Noch nichts zu lesen: der Bericht füllt sich, sobald eine Phase Stopps anlegt oder fertig wird.';
 export const NOT_STARTED_PAGE_TEXT = 'Diese Phase ist noch nicht begonnen.';
-export const RUNNING_BANNER_TITLE = 'Läuft.';
-export const RUNNING_BANNER_TEXT =
-  'Stopps entstehen beim Schreiben, Ergebnis und Weg ordnet Haiku am Phasenende.';
-export const NO_RESULT_TEXT = 'Zu dieser Phase gibt es noch kein geordnetes Ergebnis.';
 export const RETIDY_LABEL = 'Neu ordnen';
-export const RETIDY_HINT_TITLE = 'Ordnen fehlgeschlagen.';
+export const RETIDY_CONFIRM_LABEL = 'Trotzdem neu ordnen';
+export const RETIDY_FAILED_PREFIX = 'Ordnen ließ sich nicht starten';
+export const ORDER_LIVE_LABEL = 'Zwischenstand ordnen';
+export const ORDER_HISTORY_LABEL = 'Aus Verlauf ordnen';
+export const EXPLAIN_LABEL = 'Haiku erklären lassen';
+export const CANCEL_LABEL = 'Abbrechen';
+export const CANCEL_FAILED_PREFIX = 'Abbrechen fehlgeschlagen';
+export const ASK_STATION_LABEL = 'Station nachfragen';
+export const ASK_STATION_SENT_LABEL = 'Nachfrage gesendet';
+export const ASK_STATION_FAILED_PREFIX = 'Nachfrage nicht gesendet';
+export const ASK_STATION_TEXT =
+  'Erkläre deine Änderungen dieser Phase nachträglich im Review-Bericht: je zusammengehöriger Änderung ein mcp__verwalter__report_note mit dem Warum in zwei, drei Sätzen und at auf die Stelle. Melde die Station nicht erneut fertig.';
+export const TIDY_LIVE_OPEN_TITLE = 'Läuft · noch nicht geordnet.';
+export const TIDY_LIVE_RUNNING_TITLE = 'Haiku ordnet den Zwischenstand.';
+export const TIDY_DONE_RUNNING_TITLE = 'Haiku ordnet.';
+export const TIDY_RUNNING_HINT = 'Abbruch nach 2 min · du kannst weiterlesen';
+export const TIDY_EMPTY_TITLE = 'Keine Erklärung der Station.';
+export const TIDY_UNORDERED_TITLE = 'Noch nicht geordnet.';
+export const TIDY_FAILED_TITLE = 'Ordnen fehlgeschlagen.';
+export const TIDY_FAILED_HINT = 'die Meldung der Station bleibt stehen';
+export const TIDY_LIVE_FAILED_PREFIX = 'Letztes Ordnen fehlgeschlagen';
+export const HAIKU_NAME = 'Haiku';
+export const HAIKU_FROM_HISTORY = 'aus Verlauf und Diff';
+export const HAIKU_FROM_ENTRIES = 'aus den Erklärungen der Station';
+export const STATION_RESULT_TITLE = 'Meldung der Station';
+export const STATION_RESULT_UNORDERED = 'beim Fertigmelden, ungeordnet';
+export const OUTSIDE_LABEL = 'außerhalb des Vorhabens';
+export const DERIVED_STOP_LABEL = 'Stopp aus dem Diff, nicht von der Station';
+export const UNEXPLAINED_TEXT = 'Keine Erklärung der Station.';
+export const TOC_LIVE_OPEN_TEXT = 'läuft · nicht geordnet';
+export const TOC_TIDYING_TEXT = 'Haiku ordnet …';
+export const TOC_EMPTY_TEXT = 'ohne Erklärung';
+export const TOC_UNORDERED_TEXT = 'nicht geordnet';
+export const TOC_FAILED_TEXT = 'Ordnen fehlgeschlagen';
+export const TIDYING_TAB_TITLE = 'Haiku ordnet';
+export const NOTICE_LIVE_TEXT = 'Zwischenstand geordnet.';
+export const NOTICE_SHOW_LABEL = 'Ansehen';
+/** Wie lange der Hinweis nach dem Ordnen stehen bleibt, in ms. */
+export const NOTICE_MS = 8000;
+export const WAY_RUNNING_LABEL = 'läuft';
+
+export function phaseTidiedText(phaseKey: string): string {
+  return `Phase ${phaseKey} geordnet.`;
+}
+
+export function liveOrderedTitle(clock: string): string {
+  return `Läuft · Zwischenstand von ${clock}.`;
+}
 export const RETIDY_FINISHED_CONFIRM =
   'Beim Neuordnen einer fertigen Phase werden auch die Prüfwerte neu gelesen. Liegen die Berichtsdateien nicht mehr vor, werden sie leer oder kleiner. Trotzdem neu ordnen?';
 export const FILES_BUTTON_LABEL = 'Im Reiter Dateien';

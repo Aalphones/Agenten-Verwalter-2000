@@ -282,10 +282,63 @@
     white-space: normal;
   }
 
-  &__aside {
-    position: relative;
+  /* Die Randspalte: oben, was dem ganzen Block gilt, darunter die Notizen auf Höhe ihrer Zeilen. */
+  &__side {
+    min-width: 0;
     border-left: 1px solid var(--color-border-subtle);
     background: var(--color-bg-sidebar);
+  }
+
+  &__aside {
+    position: relative;
+  }
+
+  &__haiku,
+  &__unexplained {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg) var(--space-md) var(--space-md);
+    border-left: 2px solid transparent;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  &__haiku {
+    border-left-color: var(--color-status-script);
+    background: color-mix(in srgb, var(--color-status-script) 8%, transparent);
+
+    b {
+      color: var(--color-status-script);
+      font-weight: 600;
+    }
+  }
+
+  &__unexplained {
+    color: var(--color-fg-muted);
+  }
+
+  &__below {
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  &__omitted {
+    margin: 0;
+    padding: var(--space-md) var(--space-xl);
+    color: var(--color-fg-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  &__fresh {
+    padding: 0 var(--space-sm);
+    border: 1px solid currentColor;
+    border-radius: var(--radius-sm);
+    color: var(--color-status-running);
+    font-size: var(--font-size-2xs);
+    line-height: 18px;
   }
 
   &__slot {

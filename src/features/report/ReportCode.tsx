@@ -1,8 +1,9 @@
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent, ReactElement } from 'react';
+import type { MouseEvent, ReactElement, ReactNode } from 'react';
 import { ReportCommentCards } from '@/features/report/ReportCommentCards';
 import { ReportIcon } from '@/features/report/ReportIcon';
 import { layoutNotes, type NoteBox, type NoteLayout } from '@/features/report/layoutNotes';
+import { formatClock } from '@/features/report/reportTidy';
 import {
   useReportCommenting,
   type ReportCommenting,
@@ -23,12 +24,20 @@ import './ReportCode.css';
 
 /** Abstand zwischen zwei Randnotizen, in px. */
 const NOTE_GAP = 6;
+/** Marke von Haikus Erklärung zu einem Stopp aus dem Diff; sie gilt dem Block, keiner Zeile. */
+const HAIKU_NOTE_LABEL = 'H';
+/** Dateien aus Repositorys, die die Changes nicht kennen: „Im Reiter Dateien“ hätte kein Ziel. */
+const EXTERNAL_KEY_PREFIX = 'extern:';
 const SIGN: Record<ReportRow['kind'], string> = { add: '+', context: ' ', removed: '−' };
 
 interface ReportCodeBlockProps {
   code: ReportCodeData;
   /** `true`: Notizen im Rand neben dem Code, sonst als Zeile unter dem Ende ihres Bereichs. */
   hasMargin: boolean;
+  /** Stand der gültigen Ordnung der Phase: ein danach geschriebener Block trägt „neu seit …“. */
+  tidiedAt: number | null;
+  /** Hinweis am Rand, wenn niemand den Block erklärt hat; sonst `null`. */
+  unexplained: ReactNode;
   onOpenFile: (repositoryKey: string, path: string, line: number | null) => void;
 }
 
@@ -47,6 +56,9 @@ function placeNotes(code: ReportCodeData): { placed: PlacedNote[]; loose: Report
   const placed: PlacedNote[] = [];
   const loose: ReportNote[] = [];
   for (const note of code.notes) {
+    if (note.label === HAIKU_NOTE_LABEL) {
+      continue;
+    }
     const inside: number[] = shown.filter((line: number) => line >= note.from && line <= note.to);
     const startLine: number | undefined = inside[0];
     const endLine: number | undefined = inside[inside.length - 1];
@@ -120,6 +132,8 @@ function NoteView({ note, isHot, onHot }: NoteViewProps): ReactElement {
 export function ReportCodeBlock({
   code,
   hasMargin,
+  tidiedAt,
+  unexplained,
   onOpenFile,
 }: ReportCodeBlockProps): ReactElement {
   const [hotLabel, setHotLabel] = useState<string | null>(null);
@@ -324,6 +338,28 @@ export function ReportCodeBlock({
     return removedRunAt(code.rows, start) > REMOVED_FOLD_MIN && !openRuns.includes(start);
   }
 
+  const haikuNote: ReportNote | undefined = code.notes.find(
+    (note: ReportNote) => note.label === HAIKU_NOTE_LABEL,
+  );
+  const hasBlockNote: boolean = haikuNote !== undefined || unexplained !== null;
+  const hasAside: boolean = hasMargin && (placed.length > 0 || hasBlockNote);
+
+  /** Was dem ganzen Block gilt: Haikus Erklärung oder der Hinweis, dass keine da ist. */
+  function renderBlockNote(): ReactElement | null {
+    if (haikuNote !== undefined) {
+      return (
+        <div className="report-code__haiku">
+          <b>{haikuNote.by}</b>
+          <span>{haikuNote.text}</span>
+        </div>
+      );
+    }
+    if (unexplained === null) {
+      return null;
+    }
+    return <div className="report-code__unexplained">{unexplained}</div>;
+  }
+
   return (
     <section className="report-code">
       <header className="report-code__head">
@@ -334,49 +370,64 @@ export function ReportCodeBlock({
         </span>
         <span className="report-code__added">+{code.added}</span>
         {code.removed > 0 && <span className="report-code__removed">−{code.removed}</span>}
+        {code.fresh && tidiedAt !== null && (
+          <span className="report-code__fresh">neu seit {formatClock(tidiedAt)}</span>
+        )}
         <span className="report-code__spacer" />
-        <button
-          type="button"
-          className="report-code__button"
-          onClick={(): void => {
-            onOpenFile(code.repositoryKey, code.path, firstLine());
-          }}
-        >
-          <ReportIcon name="ext" />
-          {FILES_BUTTON_LABEL}
-        </button>
+        {!code.repositoryKey.startsWith(EXTERNAL_KEY_PREFIX) && (
+          <button
+            type="button"
+            className="report-code__button"
+            onClick={(): void => {
+              onOpenFile(code.repositoryKey, code.path, firstLine());
+            }}
+          >
+            <ReportIcon name="ext" />
+            {FILES_BUTTON_LABEL}
+          </button>
+        )}
       </header>
       <div className="report-code__body">
-        <div
-          className={`report-code__grid${hasMargin && placed.length > 0 ? ' report-code__grid--margin' : ''}`}
-        >
+        <div className={`report-code__grid${hasAside ? ' report-code__grid--margin' : ''}`}>
           <div className="report-code__scroll">
-            <table ref={tableRef} className="report-code__lines">
-              <tbody>{code.rows.map(renderRow)}</tbody>
-            </table>
+            {code.omittedRows > 0 ? (
+              <p className="report-code__omitted">Diff zu lang ({code.omittedRows} Zeilen)</p>
+            ) : (
+              <table ref={tableRef} className="report-code__lines">
+                <tbody>{code.rows.map(renderRow)}</tbody>
+              </table>
+            )}
           </div>
-          {hasMargin && placed.length > 0 && (
-            <aside
-              ref={asideRef}
-              className="report-code__aside"
-              style={layout === null ? undefined : { minHeight: layout.height }}
-            >
-              {placed.map((entry: PlacedNote, position: number) => (
-                <div
-                  key={entry.note.label}
-                  className="report-code__slot"
-                  style={{ top: layout?.tops[position] ?? 0 }}
+          {hasAside && (
+            <div className="report-code__side">
+              {renderBlockNote()}
+              {placed.length > 0 && (
+                <aside
+                  ref={asideRef}
+                  className="report-code__aside"
+                  style={layout === null ? undefined : { minHeight: layout.height }}
                 >
-                  <NoteView
-                    note={entry.note}
-                    isHot={hotLabel === entry.note.label}
-                    onHot={setHotLabel}
-                  />
-                </div>
-              ))}
-            </aside>
+                  {placed.map((entry: PlacedNote, position: number) => (
+                    <div
+                      key={entry.note.label}
+                      className="report-code__slot"
+                      style={{ top: layout?.tops[position] ?? 0 }}
+                    >
+                      <NoteView
+                        note={entry.note}
+                        isHot={hotLabel === entry.note.label}
+                        onHot={setHotLabel}
+                      />
+                    </div>
+                  ))}
+                </aside>
+              )}
+            </div>
           )}
         </div>
+        {!hasMargin && hasBlockNote && (
+          <div className="report-code__below">{renderBlockNote()}</div>
+        )}
         {loose.length > 0 && (
           <div className="report-code__moved">
             <p className="report-code__moved-title">

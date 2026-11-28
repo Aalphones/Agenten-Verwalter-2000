@@ -33,7 +33,9 @@ export function useReportOfSession(sessionId: string | null, isStation: boolean)
 
     read();
     // Der erste Eintrag oder die erste fertige Phase lässt den Reiter erscheinen.
-    onReportChanged(read)
+    onReportChanged(() => {
+      read();
+    })
       .then((stop: UnlistenFn) => {
         if (controller.signal.aborted) {
           stop();

@@ -1,6 +1,6 @@
 # Phase 4 — Oberfläche: Zustandsleiste, Seite nach Vorschlag C
 
-Status: pending · Rating: standard · Modell: sonnet
+Status: complete · Rating: standard · Modell: sonnet
 
 ## Kontext
 
@@ -42,19 +42,35 @@ Lesen vor dem ersten Edit:
 
 ## Checkliste
 
-- [ ] `src/lib/report.ts`: `cancelTidy(phaseId)` → `report_cancel_tidy`, `tidyingPhases(implementationId)` → `report_tidying`; `onReportChanged(callback: (implementationId: string, tidyingPhaseIds: string[]) => void)`; bestehende Aufrufer anpassen.
-- [ ] `src/features/report/reportTidy.ts`: `reportTidyState` (AK 1), `formatClock(ms)` („HH:MM“).
-- [ ] `src/features/report/useReportTidying.ts`: `useReportTidying(implementationId: string | null): readonly string[]` — Startwert über `tidyingPhases`, danach aus dem Ereignis; `[]` ohne ID.
-- [ ] `ReportTidyState.tsx` + `.css` nach Entwurf (`.state`, `.state--running`, `.state--empty`, `.state__bar`, `.spin`; Farben über `--color-status-running` bzw. `--color-status-waiting`); Sekundenzähler mit `setInterval` im Effect, `setState` nur im Callback; Aktionen über `useActionError` wie in `ReportTidyHint`: `retidyReport`, `cancelTidy`, „Station nachfragen“ = `sendMessage(phase.stationSessionId, ASK_STATION_TEXT, [], [])`, danach Knopftext „Nachfrage gesendet“ und deaktiviert.
-- [ ] `ASK_STATION_TEXT`: „Erkläre deine Änderungen dieser Phase nachträglich im Review-Bericht: je zusammengehöriger Änderung ein mcp__verwalter__report_note mit dem Warum in zwei, drei Sätzen und at auf die Stelle. Melde die Station nicht erneut fertig.“
-- [ ] `ReportPhasePage.tsx`: `renderResult` → Leiste + Herkunftszeile + Ergebnis (AK 3); Kopfzeile nach AK 4 (`repositories` leer → bisherige Anzeige); `ReportChecks` nur, wenn Phase fertig.
-- [ ] `ReportDisclosure`: Prop `defaultOpen?: boolean` → `<details open={…}>` nur beim ersten Rendern (unkontrolliert, Attribut über `defaultOpen` per Ref setzen, damit der Browser das Auf-/Zuklappen weiter selbst hält).
-- [ ] `ReportWay.tsx` + `.css` nach AK 5 und Entwurf (`.way__text`, `.way__time`, `.way__calls`, `.way__files`, Schild `läuft` im Ton `--color-status-running`).
-- [ ] `ReportStop.tsx`, `ReportCode.tsx` + `.css` nach AK 6; Ton `report-code__tone--haiku` (`--report-tone: var(--color-status-script)`); `tidiedAt` und `isTidying` über Props von `ReportPhasePage` durchreichen.
-- [ ] `ReportToc.tsx` + `.css` nach AK 7 (zweite Zeile `report-toc__state`, Punkte `--tidying`, `--empty`, `--failed`).
-- [ ] Reiter-Punkt (AK 8): `App.tsx` und `ImplementationView.tsx` berechnen `isReportTidying = useReportTidying(<Umsetzung>).length > 0` und reichen es an `SessionHeader` bzw. `ImplementationHeader`; dort neben dem bestehenden Frisch-Punkt `session-header__tab-dot--tidying` bzw. das Gegenstück, Titel `TIDYING_TAB_TITLE = 'Haiku ordnet'`, Farbe `--color-status-running`; sind beide fällig, zeigt der Reiter nur den blauen Punkt.
-- [ ] Hinweis nach dem Ordnen (AK 9): `ReportTidyToast.tsx` nach dem Muster `ReportAcceptToast`; `ReportView` merkt sich die zuletzt geordneten Phasen-IDs (vorher in `tidyingPhaseIds`, jetzt nicht mehr, `tidyError === null`).
-- [ ] Selbstprüfung: Vite-Prüfseite im Scratchpad (nicht im Repo) mit nachgestellter `ReportView`-Antwort je Zustand; Bilder per Headless-Edge hell und dunkel bei 390 und 1366 px, neben den Entwurf gelegt; Abweichungen im Report-Back.
-- [ ] `docs/glossary.md`: „Zustandsleiste des Berichts“. `scripts/check.ps1` grün; Commit mit einzeln genannten Dateien.
+- [x] `src/lib/report.ts`: `cancelTidy(phaseId)` → `report_cancel_tidy`, `tidyingPhases(implementationId)` → `report_tidying`; `onReportChanged(callback: (implementationId: string, tidyingPhaseIds: string[]) => void)`; bestehende Aufrufer anpassen.
+- [x] `src/features/report/reportTidy.ts`: `reportTidyState` (AK 1), `formatClock(ms)` („HH:MM“).
+- [x] `src/features/report/useReportTidying.ts`: `useReportTidying(implementationId: string | null): readonly string[]` — Startwert über `tidyingPhases`, danach aus dem Ereignis; `[]` ohne ID.
+- [x] `ReportTidyState.tsx` + `.css` nach Entwurf (`.state`, `.state--running`, `.state--empty`, `.state__bar`, `.spin`; Farben über `--color-status-running` bzw. `--color-status-waiting`); Sekundenzähler mit `setInterval` im Effect, `setState` nur im Callback; Aktionen über `useActionError` wie in `ReportTidyHint`: `retidyReport`, `cancelTidy`, „Station nachfragen“ = `sendMessage(phase.stationSessionId, ASK_STATION_TEXT, [], [])`, danach Knopftext „Nachfrage gesendet“ und deaktiviert.
+- [x] `ASK_STATION_TEXT`: „Erkläre deine Änderungen dieser Phase nachträglich im Review-Bericht: je zusammengehöriger Änderung ein mcp__verwalter__report_note mit dem Warum in zwei, drei Sätzen und at auf die Stelle. Melde die Station nicht erneut fertig.“
+- [x] `ReportPhasePage.tsx`: `renderResult` → Leiste + Herkunftszeile + Ergebnis (AK 3); Kopfzeile nach AK 4 (`repositories` leer → bisherige Anzeige); `ReportChecks` nur, wenn Phase fertig.
+- [x] `ReportDisclosure`: Prop `defaultOpen?: boolean` → `<details open={…}>` nur beim ersten Rendern (unkontrolliert, Attribut über `defaultOpen` per Ref setzen, damit der Browser das Auf-/Zuklappen weiter selbst hält).
+- [x] `ReportWay.tsx` + `.css` nach AK 5 und Entwurf (`.way__text`, `.way__time`, `.way__calls`, `.way__files`, Schild `läuft` im Ton `--color-status-running`).
+- [x] `ReportStop.tsx`, `ReportCode.tsx` + `.css` nach AK 6; Ton `report-code__tone--haiku` (`--report-tone: var(--color-status-script)`); `tidiedAt` und `isTidying` über Props von `ReportPhasePage` durchreichen.
+- [x] `ReportToc.tsx` + `.css` nach AK 7 (zweite Zeile `report-toc__state`, Punkte `--tidying`, `--empty`, `--failed`).
+- [x] Reiter-Punkt (AK 8): `App.tsx` und `ImplementationView.tsx` berechnen `isReportTidying = useReportTidying(<Umsetzung>).length > 0` und reichen es an `SessionHeader` bzw. `ImplementationHeader`; dort neben dem bestehenden Frisch-Punkt `session-header__tab-dot--tidying` bzw. das Gegenstück, Titel `TIDYING_TAB_TITLE = 'Haiku ordnet'`, Farbe `--color-status-running`; sind beide fällig, zeigt der Reiter nur den blauen Punkt.
+- [x] Hinweis nach dem Ordnen (AK 9): `ReportTidyToast.tsx` nach dem Muster `ReportAcceptToast`; `ReportView` merkt sich die zuletzt geordneten Phasen-IDs (vorher in `tidyingPhaseIds`, jetzt nicht mehr, `tidyError === null`).
+- [x] Selbstprüfung: Vite-Prüfseite im Scratchpad (nicht im Repo) mit nachgestellter `ReportView`-Antwort je Zustand; Bilder per Headless-Edge hell und dunkel bei 390 und 1366 px, neben den Entwurf gelegt; Abweichungen im Report-Back.
+- [x] `docs/glossary.md`: „Zustandsleiste des Berichts“. `scripts/check.ps1` grün; Commit mit einzeln genannten Dateien.
 
 ## Report-Back
+
+AK 1–11 am Code und an der Prüfseite abgeglichen; `scripts/check.ps1` endet mit `exit 0`.
+
+**Selbstprüfung:** Vite-Prüfseite im Scratchpad mit nachgestellter `report_load`-Antwort, Bilder je Zustand hell und dunkel bei 390 und 1366 px. Gemessen bei 390 px: Dokument und Seite 390/390 (keine waagerechte Bildlaufleiste), Leistenknöpfe 44 px hoch, ein Knopf 331 px breit, zwei Knöpfe teilen sich die Zeile. Klickpfade: „Ansehen“ springt vom Überblick zur Phase und schließt den Hinweis, ohne Klick ist er nach 8,5 s weg, „zum Diff ↓“ rollt zum Stopp; keine Laufzeitfehler.
+
+**Abweichungen von Checkliste und Entwurf:**
+
+- Der Hinweis nach dem Ordnen liest den Bericht statt `tidyingPhaseIds`: er erscheint nur, wenn `tidiedAt` neuer ist als der beobachtete Beginn (`useTidyNotice`). So bleibt er nach Abbruch und bei „nichts zu ordnen“ aus.
+- Die Rückfrage `RETIDY_FINISHED_CONFIRM` gilt für jedes Ordnen einer fertigen Phase mit Prüfwerten, auch „Aus Verlauf ordnen“ und „Haiku erklären lassen“: jedes überschreibt die Prüfwerte. Der Entwurf zeigt dort keine Rückfrage.
+- Laufende Phase mit `tidyError`: Fehlerzeile in der Leiste, „Neu ordnen“ auch ohne Neuigkeit (AK 1 kennt dort keinen Fehlerzustand).
+- Fertig, ungeordnet, aber mit Einträgen: Titel „Noch nicht geordnet.“ mit der echten Zahl.
+- „arbeitet seit N min“ kommt aus der ersten Etappe des Wegs und entfällt ohne sie.
+- „Keine Erklärung der Station“ steht nur an Stopps aus dem Diff, in denen kein Block eine Notiz hat. Blöcke mit `extern:`-Schlüssel haben keinen Knopf „Im Reiter Dateien“; Zeilen-Kommentare nennen den Pfad ohne `extern:`.
+- Der Weg hat Nummern wie im Entwurf; die Grundstile hatten sie auch dem Weg aus Haikus Ordnung genommen.
+
+**Grenzen:** Nicht in der laufenden App und nicht gegen echte Daten gelaufen. Der blaue Punkt am Reiter „Review“ ist nur am Code geprüft (die Prüfseite zeichnet die Kopfzeilen nicht). „Station nachfragen“ und „Abbrechen“ wurden nicht ausgelöst.

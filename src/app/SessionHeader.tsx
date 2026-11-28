@@ -7,7 +7,7 @@ import { formatCount } from '@/features/changes/changesScope';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { PencilIcon } from '@/features/notes/PencilIcon';
 import { useNow } from '@/features/background/useNow';
-import { FRESH_TITLE } from '@/features/report/reportTexts';
+import { FRESH_TITLE, TIDYING_TAB_TITLE } from '@/features/report/reportTexts';
 import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { NotePlacement } from '@/lib/bindings/NotePlacement';
@@ -55,6 +55,8 @@ interface SessionHeaderProps {
   hasReport: boolean;
   /** Eine Phase ist fertig, seit der Bericht zuletzt offen war: Punkt am Reiter. */
   hasFreshReport: boolean;
+  /** Haiku ordnet gerade eine Phase des Berichts: blauer Punkt am Reiter. */
+  isReportTidying: boolean;
   /** Laufende Prozesse und Subagenten der Session. */
   runningBackgroundCount: number;
   isBackgroundOpen: boolean;
@@ -77,6 +79,7 @@ export function SessionHeader({
   artifactCount,
   hasReport,
   hasFreshReport,
+  isReportTidying,
   runningBackgroundCount,
   isBackgroundOpen,
   onToggleBackground,
@@ -309,7 +312,13 @@ export function SessionHeader({
                 {formatCount(reviewCount)}
               </span>
             )}
-            {view === 'review' && hasFreshReport && view !== activeView && (
+            {view === 'review' && isReportTidying && (
+              <span
+                className="session-header__tab-dot session-header__tab-dot--tidying"
+                title={TIDYING_TAB_TITLE}
+              />
+            )}
+            {view === 'review' && !isReportTidying && hasFreshReport && view !== activeView && (
               <span className="session-header__tab-dot" title={FRESH_TITLE} />
             )}
             {view === 'files' && filesCount !== null && filesCount > 0 && (

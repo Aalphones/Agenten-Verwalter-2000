@@ -172,6 +172,10 @@
     height: 7px;
     border-radius: var(--radius-full);
     background: var(--color-accent);
+
+    &--tidying {
+      background: var(--color-status-running);
+    }
   }
 
   &__tools {

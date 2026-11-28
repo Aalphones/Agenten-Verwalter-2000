@@ -48,6 +48,27 @@
     margin-left: auto;
   }
 
+  &__added {
+    color: var(--color-diff-add-fg);
+  }
+
+  &__removed {
+    color: var(--color-diff-del-fg);
+  }
+
+  &__tag {
+    padding: 0 var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-2xs);
+    line-height: 18px;
+
+    &--outside {
+      border-color: currentColor;
+      color: var(--color-status-waiting);
+    }
+  }
+
   &__look {
     display: flex;
     flex-wrap: wrap;

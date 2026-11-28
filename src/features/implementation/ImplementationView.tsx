@@ -17,6 +17,7 @@ import {
 import { NoteView } from '@/features/notes/NoteView';
 import { ReportPanel } from '@/features/implementation/ReportPanel';
 import { freshPhaseIds, hasBegunPhase } from '@/features/report/reportDigest';
+import { useReportTidying } from '@/features/report/useReportTidying';
 import { ReportView } from '@/features/report/ReportView';
 import { Timeline } from '@/features/implementation/Timeline';
 import type { Effort } from '@/lib/bindings/Effort';
@@ -140,6 +141,8 @@ export function ImplementationView({
     (state) => state.visitedByImplementation[implementation.id] ?? NOTHING_VISITED,
   );
   const hasFreshReport: boolean = freshPhaseIds(implementation, visitedPhases).length > 0;
+  const isReportTidying: boolean =
+    useReportTidying(isReportEnabled ? implementation.id : null).length > 0;
   const isTicking: boolean = stations.some((ref: StationRef) =>
     ['running', 'starting', 'waitsForScript', 'countdown', 'waitsForLimit'].includes(
       ref.station.state,
@@ -409,6 +412,7 @@ export function ImplementationView({
         artifactCount={artifactCount}
         hasReport={hasReport}
         hasFreshReport={hasFreshReport}
+        isReportTidying={isReportTidying}
         onShowView={onShowView}
         onOpenProject={onOpenProject}
         terminalCount={terminalCount}

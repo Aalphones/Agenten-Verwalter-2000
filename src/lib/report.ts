@@ -25,8 +25,20 @@ export function retidyReport(phaseId: string): Promise<void> {
   return invoke('report_retidy', { phaseId });
 }
 
-export function onReportChanged(callback: (implementationId: string) => void): Promise<UnlistenFn> {
+/** Bricht die laufende Ordnung der Phase ab; ohne eine passiert nichts. */
+export function cancelTidy(phaseId: string): Promise<void> {
+  return invoke('report_cancel_tidy', { phaseId });
+}
+
+/** Die Phasen der Umsetzung, die Haiku gerade ordnet. */
+export function tidyingPhases(implementationId: string): Promise<string[]> {
+  return invoke<string[]>('report_tidying', { implementationId });
+}
+
+export function onReportChanged(
+  callback: (implementationId: string, tidyingPhaseIds: string[]) => void,
+): Promise<UnlistenFn> {
   return listen<ReportChangedEvent>(REPORT_CHANGED_EVENT, (event: Event<ReportChangedEvent>) => {
-    callback(event.payload.implementationId);
+    callback(event.payload.implementationId, event.payload.tidyingPhaseIds);
   });
 }

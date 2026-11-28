@@ -118,7 +118,8 @@ function reportComment(
   return {
     target,
     repositoryKey: line.code.repositoryKey,
-    repositoryName: line.code.repositoryKey,
+    // Ein Repository außerhalb des Vorhabens heißt `extern:<Pfad>`; dem Agenten nützt der Pfad.
+    repositoryName: line.code.repositoryKey.replace(/^extern:/, ''),
     path: line.code.path,
     kind: line.row.kind === 'add' ? 'added' : 'context',
     line: line.row.new ?? 0,

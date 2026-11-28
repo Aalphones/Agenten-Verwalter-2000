@@ -27,6 +27,7 @@ import { NoteView } from '@/features/notes/NoteView';
 import { freshPhaseIds } from '@/features/report/reportDigest';
 import { ReportView } from '@/features/report/ReportView';
 import { useReportOfSession } from '@/features/report/useReportOfSession';
+import { useReportTidying } from '@/features/report/useReportTidying';
 import { ImplementationView as ImplementationMain } from '@/features/implementation/ImplementationView';
 import { StationTrail } from '@/features/implementation/StationTrail';
 import { useInquiry } from '@/features/implementation/useInquiry';
@@ -317,6 +318,7 @@ export function App(): ReactElement {
   const hasFreshReport: boolean =
     reportImplementation !== undefined &&
     freshPhaseIds(reportImplementation, reportVisited).length > 0;
+  const isReportTidying: boolean = useReportTidying(reportImplementation?.id ?? null).length > 0;
   const isReportView: boolean =
     isStationShown && activeView === 'review' && reportImplementation !== undefined;
   // Bei offener Umsetzung zählt die Station im Fokus als die gezeigte.
@@ -863,6 +865,7 @@ export function App(): ReactElement {
             artifactCount={artifactCount}
             hasReport={reportImplementation !== undefined}
             hasFreshReport={hasFreshReport}
+            isReportTidying={isReportTidying}
             runningBackgroundCount={countRunning(backgroundItems)}
             isBackgroundOpen={isBackgroundOpen}
             onToggleBackground={handleToggleBackground}
