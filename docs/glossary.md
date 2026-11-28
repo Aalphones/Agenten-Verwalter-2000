@@ -110,6 +110,7 @@ Ein Begriff = eine Bedeutung. Code, Doku und Oberfläche verwenden diese Begriff
 | **MCP-Zugang** | MCP-Server des Verwalters auf `127.0.0.1`, über den der Agent einer Session Werkzeuge des Verwalters aufruft (`mcp__verwalter__…`); ein Schlüssel je Session und App-Start bindet jeden Aufruf an deren Vorhaben ([ADR 046](decisions/046-mcp-zugang.md)). |
 | **Werkzeug-Satz** | Die Werkzeuge eines Features im MCP-Zugang mit gemeinsamem Präfix (z. B. `artifact_`), angemeldet an einer Stelle (`mcp_access::tool_sets`). |
 | **Subagent** | Ein vom Agenten selbst gestarteter Hilfs-Agent für eine Teilaufgabe. Läuft innerhalb der Session, wird dort angezeigt. |
+| **Ausgabe** (Prozess / Subagent) | Beim Hintergrundprozess die Terminal-Ausgabe aus seiner Ausgabedatei. Beim Subagenten seine Zwischentexte und Werkzeug-Schritte sowie das Ergebnis; was seine Werkzeuge zurückgeben, wird nicht gespeichert. |
 | **Hintergrundprozess** | Ein vom Agenten mit `run_in_background` gestarteter Bash-Befehl, der weiterläuft, während der Agent arbeitet (z.B. ein Dev-Server). Seine Ausgabe schreibt die Kommandozeile in eine eigene Ausgabedatei; die App kann ihn anhalten. |
 | **Ausgeführter Befehl** | Ein Bash-Aufruf des Agenten im Vordergrund; steht als Zeile im Verlauf mit Ausgabe und Dauer. |
 | **Scratchpad** | Ordner einer Session für Arbeitsdateien außerhalb der Repositories (`<Workspace>\.scratchpad\<session-id>`); die App legt ihn beim Start des Agenten an und schreibt ihn ihm per Systemprompt-Zusatz vor ([ADR 022](decisions/022-scratchpad-im-workspace.md)). |
