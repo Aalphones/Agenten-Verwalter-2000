@@ -1,0 +1,186 @@
+.background-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  /* Die Linie setzt unter der Mitte des Zustandspunkts an und verbindet Kopf und Inhalt. */
+  margin: var(--space-xs) 0 var(--space-2xs) 3.5px;
+  padding: var(--space-2xs) 0 var(--space-2xs) var(--space-2xl);
+  border-left: 1px solid var(--color-border);
+
+  @container main (max-width: 559px) {
+    padding-left: var(--space-lg);
+  }
+
+  &__state {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-lg);
+    color: var(--color-fg-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  &__label {
+    font-weight: 600;
+
+    &--running {
+      color: var(--color-status-running);
+    }
+
+    &--completed {
+      color: var(--color-status-completed);
+    }
+
+    &--error {
+      color: var(--color-status-error);
+    }
+
+    &--paused {
+      color: var(--color-fg-muted);
+    }
+  }
+
+  &__live {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-fg-muted);
+  }
+
+  &__pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-status-running);
+    animation: background-detail-pulse 1.4s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  /* Prozess-Ausgabe und Subagent-Verlauf teilen sich denselben Rahmen. */
+  .output-pane,
+  &__trail {
+    flex-grow: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: var(--space-md) var(--space-xl);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+  }
+
+  &__trail {
+    color: var(--color-fg-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    line-height: 19px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  &__text {
+    margin: var(--space-sm) 0 var(--space-xs);
+    color: var(--color-fg-primary);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-md);
+    line-height: 1.5;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  &__result-label {
+    margin: var(--space-md) 0 0;
+    color: var(--color-fg-primary);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+  }
+
+  &__result {
+    color: var(--color-fg-primary);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-md);
+    line-height: 1.5;
+  }
+
+  &__hint {
+    margin: var(--space-md) 0 0;
+    color: var(--color-fg-muted);
+    font-family: var(--font-sans);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  &__action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 28px;
+    padding: 0 var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-fg-primary);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-fg-muted);
+      background: var(--color-bg-hover);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    > svg {
+      flex-shrink: 0;
+    }
+
+    &--danger {
+      border-color: color-mix(in srgb, var(--color-status-error) 45%, var(--color-border));
+      color: var(--color-status-error);
+    }
+
+    &--danger:hover:not(:disabled) {
+      border-color: var(--color-status-error);
+      background: var(--color-status-error-subtle);
+    }
+
+    @container main (max-width: 559px) {
+      flex: 1 1 auto;
+      justify-content: center;
+      min-height: 44px;
+    }
+  }
+}
+
+@keyframes background-detail-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}

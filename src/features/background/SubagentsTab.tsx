@@ -153,5 +153,8 @@ function detailMeta(item: BackgroundItem, now: number): string {
 }
 
 function stepLines(steps: readonly SubagentStep[]): string {
-  return steps.map((step: SubagentStep) => `⎿ ${step.tool}  ${step.target}`).join('\n');
+  return steps
+    .filter((step: SubagentStep) => step.text === null)
+    .map((step: SubagentStep) => `⎿ ${step.tool}  ${step.target}`)
+    .join('\n');
 }

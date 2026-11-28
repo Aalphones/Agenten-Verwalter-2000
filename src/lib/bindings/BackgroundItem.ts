@@ -26,7 +26,7 @@ startedAt: number, endedAt: number | null, exitCode: number | null, url: string 
  */
 model: string | null, toolUses: number, 
 /**
- * Höchstens die letzten 200; ältere fallen weg.
+ * Werkzeugaufrufe und Texte in Reihenfolge, höchstens die letzten 200; ältere fallen weg.
  */
 steps: Array<SubagentStep>, result: string | null, 
 /**

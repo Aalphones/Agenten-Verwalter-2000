@@ -30,11 +30,19 @@ Heute schneidet der Kern vom Subagenten nur Werkzeug + Ziel je Schritt mit; jede
 
 ## Checkliste
 
-- [ ] Kern: Feld `text` in `SubagentStep` (`model.rs`), Werkzeugschritt in `registry.rs` mit `text: None`, Textschritt beim `SubagentText` laut AK (Kürzen als kleine Funktion `clip_step_text` neben dem Handler); `pnpm bindings`. `stepLines` in `SubagentsTab.tsx` überspringt Textschritte (`step.text !== null` → auslassen), damit der alte Reiter bis Phase 3 weiter läuft.
-- [ ] Neu `src/features/chat/BackgroundDetail.tsx` (+ `.css`, BEM `background-detail__…`): Props `sessionId: string`, `item: BackgroundItem`. Prozess/Befehl: `useItemOutput` → `OutputPane`. Subagent: eigene Liste der Schritte laut AK in einem scrollbaren Rahmen wie `OutputPane` (höchstens 240 px hoch). Knöpfe laut AK; Verdrahtung und `run`-Helfer aus `ProcessesTab.tsx` übernehmen.
-- [ ] `BackgroundLine.tsx`: Props `isExpanded: boolean`, `onToggle: () => void`; `openItem`-Nutzung entfernen; äußerer Wrapper `div.background-line-block`, darin der bestehende `button.background-line` (Klick → `onToggle`, `aria-expanded`), darunter bei `isExpanded` `<BackgroundDetail …/>`. Pfeil wie `Chevron` in `ToolGroup.tsx` (offen = `M3.5 5.5 7 9l3.5-3.5`). Doc-Kommentar der Komponente anpassen.
-- [ ] `ChatTimeline.tsx` Block `background` (Z. ~500): `isExpanded={expandedKeys.has(block.key)}` und `onToggle` mit derselben Umschalt-Funktion, die der Block `tool-group` (Z. ~488) für `block.key` nutzt.
-- [ ] Docs: `docs/code-map.md` Chat-/Hintergrund-Zeile: `BackgroundLine` klappt auf, `BackgroundDetail` zeigt Ausgabe und Aktionen.
-- [ ] `powershell -File scripts/check.ps1` grün.
+- [x] Kern: Feld `text` in `SubagentStep` (`model.rs`), Werkzeugschritt in `registry.rs` mit `text: None`, Textschritt beim `SubagentText` laut AK (Kürzen als kleine Funktion `clip_step_text` neben dem Handler); `pnpm bindings`. `stepLines` in `SubagentsTab.tsx` überspringt Textschritte (`step.text !== null` → auslassen), damit der alte Reiter bis Phase 3 weiter läuft.
+- [x] Neu `src/features/chat/BackgroundDetail.tsx` (+ `.css`, BEM `background-detail__…`): Props `sessionId: string`, `item: BackgroundItem`. Prozess/Befehl: `useItemOutput` → `OutputPane`. Subagent: eigene Liste der Schritte laut AK in einem scrollbaren Rahmen wie `OutputPane` (höchstens 240 px hoch). Knöpfe laut AK; Verdrahtung und `run`-Helfer aus `ProcessesTab.tsx` übernehmen.
+- [x] `BackgroundLine.tsx`: Props `isExpanded: boolean`, `onToggle: () => void`; `openItem`-Nutzung entfernen; äußerer Wrapper `div.background-line-block`, darin der bestehende `button.background-line` (Klick → `onToggle`, `aria-expanded`), darunter bei `isExpanded` `<BackgroundDetail …/>`. Pfeil wie `Chevron` in `ToolGroup.tsx` (offen = `M3.5 5.5 7 9l3.5-3.5`). Doc-Kommentar der Komponente anpassen.
+- [x] `ChatTimeline.tsx` Block `background` (Z. ~500): `isExpanded={expandedKeys.has(block.key)}` und `onToggle` mit derselben Umschalt-Funktion, die der Block `tool-group` (Z. ~488) für `block.key` nutzt.
+- [x] Docs: `docs/code-map.md` Chat-/Hintergrund-Zeile: `BackgroundLine` klappt auf, `BackgroundDetail` zeigt Ausgabe und Aktionen.
+- [x] `powershell -File scripts/check.ps1` grün.
 
 ## Report-Back
+
+Status: complete. Prüfkette grün (Schritte von `scripts/check.ps1` einzeln, weil die Ausführungsrichtlinie das Skript sperrte). Nicht in der laufenden App geprüft.
+
+- Der letzte Textschritt wird ausgeblendet, wenn er dem darunter stehenden „Ergebnis“ entspricht (sonst doppelt).
+- Zustandszeile auch bei Befehl und Prozess (Entwurf); Zustandswörter wie in der zugeklappten Zeile („fertig“, „angehalten“).
+- Zugeklappte Zeile unverändert, auch schmal (der Umbruch des Entwurfs unter 560 px ist nicht übernommen); neu nur die Hover-Farbe.
+- Aktionsfehler stehen in der Fehlerleiste der Session; „Beenden“ ist bis zur Meldung des Agenten gesperrt („Wird beendet …“).
+- Gemeinsam ausgelagert: `useStickToBottom`, `outputNotice`.

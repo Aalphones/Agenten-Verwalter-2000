@@ -19,22 +19,18 @@ import { DetailHead } from '@/features/background/DetailHead';
 import type { DetailAction } from '@/features/background/DetailHead';
 import { mentionInChat } from '@/features/background/mention';
 import { OutputPane } from '@/features/background/OutputPane';
+import { outputNotice } from '@/features/background/outputNotice';
 import { PanelLayout } from '@/features/background/PanelLayout';
 import { useActionError } from '@/lib/useActionError';
 import { useCopyFeedback } from '@/features/background/useCopyFeedback';
 import { useItemOutput } from '@/features/background/useItemOutput';
 import { VirtualPanelList } from '@/features/background/VirtualPanelList';
 import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
-import type { TextPreview } from '@/lib/bindings/TextPreview';
 import { stopBackgroundItem } from '@/lib/background';
 import { useBackgroundStore } from '@/stores/background';
 
 const RUNNING_LABEL = 'läuft';
 const EXIT_LABEL_PREFIX = 'Exit ';
-const TRUNCATED_NOTICE = 'Gekürzt — nur das Ende wird gezeigt.';
-const MISSING_NOTICE = 'Ausgabe nicht mehr verfügbar.';
-const MISSING_RUNNING_NOTICE =
-  'Ausgabe noch nicht verfügbar — sie liegt erst vor, wenn der Befehl endet.';
 const COPY_LABEL: Record<'idle' | 'copied' | 'failed', string> = {
   idle: 'Ausgabe kopieren',
   copied: 'Kopiert',
@@ -182,16 +178,6 @@ export function ProcessesTab({ sessionId, items, now }: ProcessesTabProps): Reac
   );
 
   return <PanelLayout listRef={listRef} list={list} detail={renderDetail()} />;
-}
-
-function outputNotice(output: TextPreview | null, state: BackgroundItem['state']): string | null {
-  if (output === null) {
-    return null;
-  }
-  if (output.missing) {
-    return state === 'running' ? MISSING_RUNNING_NOTICE : MISSING_NOTICE;
-  }
-  return output.truncated ? TRUNCATED_NOTICE : null;
 }
 
 function elapsedSince(item: BackgroundItem, now: number): string {

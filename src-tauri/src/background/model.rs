@@ -33,6 +33,9 @@ pub enum BackgroundState {
 pub struct SubagentStep {
     pub tool: String,
     pub target: String,
+    /// Zwischentext des Subagenten; ein Textschritt hat leeres `tool` und `target`.
+    #[serde(default)]
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -56,7 +59,7 @@ pub struct BackgroundItem {
     /// Modell-ID, wie die Kommandozeile sie meldet.
     pub model: Option<String>,
     pub tool_uses: u32,
-    /// Höchstens die letzten 200; ältere fallen weg.
+    /// Werkzeugaufrufe und Texte in Reihenfolge, höchstens die letzten 200; ältere fallen weg.
     pub steps: Vec<SubagentStep>,
     pub result: Option<String>,
     /// Vorgang der Kommandozeile zu einem Befehl; bei Prozess und Subagent steht er in `id`.

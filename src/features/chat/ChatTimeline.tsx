@@ -497,7 +497,16 @@ export function ChatTimeline({
       );
     }
     if (block.kind === 'background') {
-      return <BackgroundLine sessionId={session.id} item={block.item} />;
+      return (
+        <BackgroundLine
+          sessionId={session.id}
+          item={block.item}
+          isExpanded={expandedKeys.has(block.key)}
+          onToggle={(): void => {
+            toggleExpanded(block.key);
+          }}
+        />
+      );
     }
     return renderEntry(block.key, block.entry);
   }

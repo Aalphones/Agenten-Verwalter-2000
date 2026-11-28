@@ -112,6 +112,7 @@ const CHAT_ENTRY_EVENT: &str = "chat://entry";
 const BACKGROUND_CHANGED_EVENT: &str = "background://changed";
 const CONTEXT_CHANGED_EVENT: &str = "context://changed";
 const MAX_SUBAGENT_STEPS: usize = 200;
+const MAX_SUBAGENT_TEXT_CHARS: usize = 2000;
 /// Ordner neben dem Scratchpad der Kommandozeile mit der Ausgabe ihrer Vorgänge (gemessen mit
 /// Claude Code 2.1.322 unter Windows).
 const CLI_TASKS_DIR: &str = "tasks";
@@ -2305,6 +2306,25 @@ impl SessionRegistry {
 }
 
 /// Getrimmt und auf die Höchstlänge gekürzt; leer ist ein Fehler.
+/// Hängt einen Schritt an; über `MAX_SUBAGENT_STEPS` fällt der älteste weg.
+fn push_subagent_step(steps: &mut Vec<SubagentStep>, step: SubagentStep) {
+    steps.push(step);
+    if steps.len() > MAX_SUBAGENT_STEPS {
+        steps.remove(0);
+    }
+}
+
+/// Höchstens `MAX_SUBAGENT_TEXT_CHARS` Zeichen samt `…`; die Schritte werden bei jeder Änderung
+/// des Eintrags mitgespeichert.
+fn clip_step_text(text: &str) -> String {
+    if text.chars().count() <= MAX_SUBAGENT_TEXT_CHARS {
+        return text.to_owned();
+    }
+    let mut clipped: String = text.chars().take(MAX_SUBAGENT_TEXT_CHARS - 1).collect();
+    clipped.push('…');
+    clipped
+}
+
 fn trimmed_name(name: &str) -> Result<String, CommandError> {
     let name: String = name.trim().chars().take(MAX_NAME_CHARS).collect();
     if name.is_empty() {
@@ -3447,11 +3467,12 @@ impl SessionState {
                 self.note_ticket_worktrees(outbox, &used_paths);
                 self.note_touched_files(outbox, &tool, &used_paths);
                 if let Some(index) = self.subagent_index(&parent_tool_use_id) {
-                    let steps = &mut self.background[index].steps;
-                    steps.push(SubagentStep { tool, target });
-                    if steps.len() > MAX_SUBAGENT_STEPS {
-                        steps.remove(0);
-                    }
+                    let step = SubagentStep {
+                        tool,
+                        target,
+                        text: None,
+                    };
+                    push_subagent_step(&mut self.background[index].steps, step);
                     self.touch_background(outbox, index);
                 }
             }
@@ -3460,6 +3481,12 @@ impl SessionState {
                 text,
             } => {
                 if let Some(index) = self.subagent_index(&parent_tool_use_id) {
+                    let step = SubagentStep {
+                        tool: String::new(),
+                        target: String::new(),
+                        text: Some(clip_step_text(&text)),
+                    };
+                    push_subagent_step(&mut self.background[index].steps, step);
                     self.background[index].result = Some(text);
                     self.touch_background(outbox, index);
                 }
