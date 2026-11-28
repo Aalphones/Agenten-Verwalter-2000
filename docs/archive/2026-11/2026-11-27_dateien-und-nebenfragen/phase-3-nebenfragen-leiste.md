@@ -25,12 +25,14 @@ Verstanden (Chesterton): Die Reiter Prozesse/Subagenten/Scratchpad waren die Obe
 
 ## Checkliste
 
-- [ ] `BackgroundPanel.tsx` auf `SideTab` reduzieren (Reiterleiste, `countFor`, `renderTab`, Imports der Reiter weg).
-- [ ] `stores/background.ts` verschlanken laut AK; `SideTab.tsx` auf neue `select`-Signatur.
-- [ ] `SessionHeader.tsx`: `BACKGROUND_LABEL` → `'Nebenfragen'`, `BACKGROUND_TITLE` laut AK, Knopf-SVG tauschen, Punkt-SVG und `runningBackgroundCount`-Prop entfernen, Zähler aus `useSideQuestions`. `App.tsx`: `countRunning`-Aufruf und Prop-Weitergabe entfernen.
-- [ ] Dateien und Funktionen laut AK löschen; Imports nachziehen.
-- [ ] Kern: Befehle entfernen, `pnpm bindings`, Bindings prüfen.
-- [ ] Docs: Code-Map (Z. 17, 47, 49, 79, 83), Glossar (Hintergrund-Panel → „Nebenfragen-Leiste“, Z. 113–116, 122, 133), `docs/PROJECT.md` Stellen zum Hintergrund-Panel prüfen; neue `docs/decisions/076-nebenfragen-leiste.md` (Kontext / Optionen: Leiste behalten · Prozesse behalten · nur Nebenfragen + Chat-Zeile / Entscheidung / Konsequenzen; verweist auf ADR 007, 044, 071).
-- [ ] `powershell -File scripts/check.ps1` grün.
+- [x] `BackgroundPanel.tsx` auf `SideTab` reduzieren (Reiterleiste, `countFor`, `renderTab`, Imports der Reiter weg).
+- [x] `stores/background.ts` verschlanken laut AK; `SideTab.tsx` auf neue `select`-Signatur.
+- [x] `SessionHeader.tsx`: `BACKGROUND_LABEL` → `'Nebenfragen'`, `BACKGROUND_TITLE` laut AK, Knopf-SVG tauschen, Punkt-SVG und `runningBackgroundCount`-Prop entfernen, Zähler aus `useSideQuestions`. `App.tsx`: `countRunning`-Aufruf und Prop-Weitergabe entfernen.
+- [x] Dateien und Funktionen laut AK löschen; Imports nachziehen.
+- [x] Kern: Befehle entfernen, `pnpm bindings`, Bindings prüfen.
+- [x] Docs: Code-Map (Z. 17, 47, 49, 79, 83), Glossar (Hintergrund-Panel → „Nebenfragen-Leiste“, Z. 113–116, 122, 133), `docs/PROJECT.md` Stellen zum Hintergrund-Panel prüfen; neue `docs/decisions/076-nebenfragen-leiste.md` (Kontext / Optionen: Leiste behalten · Prozesse behalten · nur Nebenfragen + Chat-Zeile / Entscheidung / Konsequenzen; verweist auf ADR 007, 044, 071).
+- [x] `powershell -File scripts/check.ps1` grün.
 
 ## Report-Back
+
+Complete, `scripts/check.ps1` grün; nicht in der laufenden App geprüft. Abweichungen: Der Kern meldet jetzt auch das Entfernen einer Nebenfrage mit `side://changed` (sonst bliebe die Zahl im Knopf veraltet). Der Ladefehler der Hintergrund-Daten steht nur noch im Konsolen-Log. `BackgroundRow` ist um die nur von den alten Reitern genutzten Zweige gekürzt. `ScratchpadListing`/`ScratchpadEntry` werden weiter als Bindings erzeugt.

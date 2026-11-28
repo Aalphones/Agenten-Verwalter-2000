@@ -8,7 +8,7 @@ Zwei Wünsche aus dem Alltag: (1) Sessions ohne Repository haben keinen Reiter �
 |---|---|---|---|---|
 | 1 | Reiter „Dateien“ ohne Repository | standard | sonnet | complete |
 | 2 | Verlaufszeile im Chat: aufklappbar mit Ausgabe, Subagent-Text, Beenden, Kopieren | standard | sonnet | complete |
-| 3 | Seitenleiste nur Nebenfragen, Fragezeichen, Aufräumen | standard | sonnet | pending |
+| 3 | Seitenleiste nur Nebenfragen, Fragezeichen, Aufräumen | standard | sonnet | complete |
 
 Reihenfolge ist zwingend: Phase 2 übernimmt Bausteine (`useItemOutput`, `OutputPane`, `stopBackgroundItem`), die Phase 3 sonst mit den Reitern löschen würde.
 
@@ -45,10 +45,21 @@ Entwurf der Verlaufszeile (verbindlich für Phase 2): [artifacts/entwurf-verlauf
 
 ## Summary
 
+Abgeschlossen am 2026-11-28, alle 3 Phasen complete, `scripts/check.ps1` grün; nicht in der laufenden App geprüft.
+
 ## Files touched
+
+`src/features/{files,chat,background,side}/`, `src/app/`, `src/stores/background.ts`, `src/lib/{background,side}.ts`, `src-tauri/src/{background,commands,sessions}/`, Code-Map, Glossar, PROJECT.md, ADR 007, 071, 076.
 
 ## Commits
 
+`379604c` (Phase 1), `ee6bc84` (Phase 2), `4a5c478` (Phase 3).
+
 ## Deviations from plan
 
+Siehe Report-Back der Phasen-Dateien.
+
 ## Follow-ups
+
+- `ScratchpadListing`/`ScratchpadEntry` tragen noch den TypeScript-Export, die Oberfläche nutzt ihn nicht.
+- Ladefehler der Hintergrund-Daten haben keine Anzeige in der Oberfläche.

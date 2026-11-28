@@ -1,8 +1,9 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-11-27_dateien-und-nebenfragen/`
-**Phase:** 3/3 — Seitenleiste nur Nebenfragen (pending; Phase 1 und 2 complete, nicht in der laufenden App geprüft)
-**Nächster Schritt:** Phase 3 umsetzen; danach ist der geparkte Plan „Bibliothek bearbeiten“ offen.
+**Aktiver Plan:** keiner
+**Nächster Schritt:** den geparkten Plan „Bibliothek bearbeiten“ starten.
+
+**Zuletzt archiviert (Dateien ohne Repository, Nebenfragen-Leiste):** `docs/archive/2026-11/2026-11-27_dateien-und-nebenfragen/` (ADR 076, Nachtrag ADR 071, keine Migration), Release `v0.77.0` — alle 3 Phasen complete; nicht in der laufenden App geprüft.
 
 **Zuletzt archiviert (Bericht-Zustand):** `docs/archive/2026-11/2026-11-27_bericht-zustand/` (ADR 075, keine Migration), Release `v0.76.0` — alle 5 Phasen complete; nicht in der laufenden App gelaufen; Grenzen (`git commit -q`, Ladezeit auf G:) in den README-Follow-ups.
 
