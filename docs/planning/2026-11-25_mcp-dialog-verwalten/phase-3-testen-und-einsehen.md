@@ -18,11 +18,13 @@
 
 ## Checkliste
 
-- [ ] `client.rs`: Feld `instructions: Option<String>` + Getter; `handshake` liest es aus der Antwort.
-- [ ] `server_config` auf `pub(crate)`.
-- [ ] `config_files.rs`: `pub fn probe_config(...) -> Result<ServerConfig, String>` für Entwurf und gespeicherten Eintrag.
-- [ ] Registry/Commands `mcp_probe`, `mcp_inspect`; Wrapper `probeMcpServer`, `inspectMcpServer` in `src/lib/mcp.ts`.
-- [ ] Konfidenz-Check aus der README (`dispatch` mit Anweisungen, ein Server ohne) fahren.
-- [ ] `pnpm check`, `cargo clippy` grün; Code-Map-Zeile ergänzen.
+- [x] `client.rs`: Feld `instructions: Option<String>` + Getter; `handshake` liest es aus der Antwort.
+- [x] `server_config` auf `pub(crate)`.
+- [x] `config_files.rs`: `pub fn probe_config(...) -> Result<ServerConfig, String>` für Entwurf und gespeicherten Eintrag.
+- [x] Registry/Commands `mcp_probe`, `mcp_inspect`; Wrapper `probeMcpServer`, `inspectMcpServer` in `src/lib/mcp.ts`.
+- [x] Konfidenz-Check aus der README (`dispatch` mit Anweisungen, ein Server ohne) fahren.
+- [x] `pnpm check`, `cargo clippy` grün; Code-Map-Zeile ergänzen.
 
 ## Report-Back
+
+Umgesetzt (2026-11-28). Konfidenz-Check mit einem Wegwerf-Prüfprogramm über `probe::run`: `dispatch` (37 Werkzeuge) und `garage` (50) liefern Anweisungen ohne Agent; stdio-Attrappe ohne Anweisungen → `instructions: None`, mit Anweisungen im Workspace gestartet; stumme Attrappe → Zeitsatz nach 20 s; Attrappe, die ihr Token auf stderr schreibt → geschwärzt; kein Restprozess. Der Anmelde-Satz (401/403) und die Tauri-Befehle selbst sind nicht gelaufen. Abweichung: `LoadedConfig::probe_draft`/`probe_stored` statt `probe_config`.

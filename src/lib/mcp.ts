@@ -3,6 +3,7 @@ import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { McpChangedEvent } from '@/lib/bindings/McpChangedEvent';
 import type { McpConfigView } from '@/lib/bindings/McpConfigView';
 import type { McpDraft } from '@/lib/bindings/McpDraft';
+import type { McpProbeResult } from '@/lib/bindings/McpProbeResult';
 import type { SessionMcp } from '@/lib/bindings/SessionMcp';
 
 const MCP_CHANGED_EVENT = 'mcp://changed';
@@ -71,6 +72,24 @@ export async function removeMcpServer(
   name: string,
 ): Promise<void> {
   await invoke('mcp_config_remove', { sessionId, sourceId, name });
+}
+
+/** Testet einen Entwurf, ohne ihn zu speichern und ohne Agenten (höchstens etwa 20 s). Ein Paar
+ *  ohne `value` nimmt den gespeicherten Wert. Verbindungsfehler stehen als Satz in `error`.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `io` ohne Benutzerordner, `internal` */
+export function probeMcpServer(sessionId: string, draft: McpDraft): Promise<McpProbeResult> {
+  return invoke<McpProbeResult>('mcp_probe', { sessionId, draft });
+}
+
+/** Werkzeuge und Anweisungen des gespeicherten Servers `name` aus der Quelle `sourceId`, ohne
+ *  Agenten (höchstens etwa 20 s). Verbindungsfehler stehen als Satz in `error`.
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `io` ohne Benutzerordner, `internal` */
+export function inspectMcpServer(
+  sessionId: string,
+  sourceId: string,
+  name: string,
+): Promise<McpProbeResult> {
+  return invoke<McpProbeResult>('mcp_inspect', { sessionId, sourceId, name });
 }
 
 /** Meldet jede Änderung am MCP-Stand einer Session; danach `loadMcp` neu laden. */

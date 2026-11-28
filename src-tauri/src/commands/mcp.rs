@@ -1,5 +1,9 @@
+use std::path::PathBuf;
+
 use crate::error::CommandError;
-use crate::mcp::model::{McpConfigView, McpDraft, SessionMcp};
+use crate::mcp::config_files::ProbeTarget;
+use crate::mcp::model::{McpConfigView, McpDraft, McpProbeResult, SessionMcp};
+use crate::mcp::probe;
 use crate::sessions::registry::SessionRegistry;
 
 // `async`, damit der Zugriff auf den Session-Zustand nicht auf dem Haupt-Thread läuft.
@@ -79,6 +83,40 @@ pub async fn mcp_config_remove(
     name: String,
 ) -> Result<(), CommandError> {
     registry.remove_mcp_server(&app, &session_id, &source_id, &name)
+}
+
+/// Testet einen Entwurf, ohne ihn zu speichern; braucht keinen Agenten. Verbindungsfehler stehen
+/// in `error` des Ergebnisses.
+#[tauri::command]
+pub async fn mcp_probe(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    draft: McpDraft,
+) -> Result<McpProbeResult, CommandError> {
+    let (config, folder) = registry.mcp_probe_context(&session_id)?;
+    probe_in_background(config.probe_draft(&draft), folder).await
+}
+
+/// Liest Werkzeuge und Anweisungen eines gespeicherten Servers; braucht keinen Agenten.
+#[tauri::command]
+pub async fn mcp_inspect(
+    registry: tauri::State<'_, SessionRegistry>,
+    session_id: String,
+    source_id: String,
+    name: String,
+) -> Result<McpProbeResult, CommandError> {
+    let (config, folder) = registry.mcp_probe_context(&session_id)?;
+    probe_in_background(config.probe_stored(&source_id, &name), folder).await
+}
+
+/// Der Server darf bis zu 20 s brauchen — nicht auf dem Thread der übrigen Befehle.
+async fn probe_in_background(
+    target: Result<ProbeTarget, String>,
+    folder: PathBuf,
+) -> Result<McpProbeResult, CommandError> {
+    tauri::async_runtime::spawn_blocking(move || probe::run(target, &folder))
+        .await
+        .map_err(|error| CommandError::Internal(error.to_string()))
 }
 
 /// Die Server aus den Konfigurationsdateien; braucht keinen Agenten.

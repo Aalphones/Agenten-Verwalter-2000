@@ -18,7 +18,8 @@ use crate::mcp::model::{
     McpConfigEntry, McpDraft, McpPair, McpPairDraft, McpSource, McpSourceKind, McpTransport,
 };
 use crate::standalone::mcp::config::{
-    ReadFailure, folder_key, is_variable_reference, project_entries, try_read_json,
+    ReadFailure, ServerConfig, Transport, folder_key, is_variable_reference, project_entries,
+    referenced_values, server_config, try_read_json,
 };
 
 const USER_CONFIG_FILE: &str = ".claude.json";
@@ -184,6 +185,77 @@ impl LoadedConfig {
         self.disabled.contains(name)
             || (kind == McpSourceKind::Workspace && self.disabled_workspace.contains(name))
     }
+
+    /// Der gespeicherte Eintrag zum Testen.
+    pub fn probe_stored(&self, source_id: &str, name: &str) -> Result<ProbeTarget, String> {
+        let entry = self
+            .entry(source_id, name)
+            .ok_or_else(|| missing_server(name))?;
+        Ok(probe_target(name, entry))
+    }
+
+    /// Der Entwurf aus dem Formular zum Testen, ohne ihn zu speichern. Verborgene Werte kommen wie
+    /// beim Speichern aus dem bearbeiteten Eintrag; der Name muss noch nicht gültig sein.
+    pub fn probe_draft(&self, draft: &McpDraft) -> Result<ProbeTarget, String> {
+        validate_connection(draft).map_err(|error: CommandError| error.to_string())?;
+        let previous = match draft.original_name.as_deref() {
+            Some(original) => Some(
+                self.entry(&draft.source_id, original)
+                    .ok_or_else(|| missing_server(original))?,
+            ),
+            None => None,
+        };
+        let entry =
+            build_entry(previous, draft).map_err(|error: CommandError| error.to_string())?;
+        Ok(probe_target(&draft.name, &entry))
+    }
+
+    fn entry(&self, source_id: &str, name: &str) -> Option<&Value> {
+        self.sources
+            .iter()
+            .find(|source: &&LoadedSource| source.id == source_id)?
+            .servers
+            .get(name)
+    }
+}
+
+/// Ein Eintrag, bereit zum Verbinden. Kein `Debug`: enthält Zugangsdaten.
+pub struct ProbeTarget {
+    pub server: ServerConfig,
+    /// Was in keiner Fehlermeldung stehen darf: Header- und Umgebungswerte, roh und ersetzt, dazu
+    /// jede eingesetzte Umgebungsvariable.
+    pub secrets: Vec<String>,
+}
+
+fn probe_target(name: &str, entry: &Value) -> ProbeTarget {
+    let server = server_config(name.to_owned(), "", entry);
+    let mut secrets: Vec<String> = match &server.transport {
+        Transport::Stdio { env: pairs, .. } | Transport::Http { headers: pairs, .. } => pairs
+            .iter()
+            .map(|(_, value): &(String, String)| value.clone())
+            .collect(),
+        Transport::Unsupported(_) => Vec::new(),
+    };
+    collect_secrets(entry, &mut secrets);
+    ProbeTarget { server, secrets }
+}
+
+fn collect_secrets(entry: &Value, secrets: &mut Vec<String>) {
+    for key in ["env", "headers"] {
+        let raw = entry.get(key).and_then(Value::as_object);
+        secrets.extend(
+            raw.into_iter()
+                .flat_map(Map::values)
+                .filter_map(Value::as_str)
+                .map(str::to_owned),
+        );
+    }
+    // Verweise stehen auch in Adresse, Befehl und Argumenten.
+    secrets.extend(referenced_values(&entry.to_string()));
+}
+
+fn missing_server(name: &str) -> String {
+    format!("Der Server {name} ist in dieser Quelle nicht mehr vorhanden.")
 }
 
 /// Legt einen Server an oder ersetzt einen (`original_name`, auch zum Umbenennen). Nicht
@@ -349,6 +421,11 @@ fn validate(draft: &McpDraft) -> Result<(), CommandError> {
             "Der Name darf nur Buchstaben, Ziffern, Punkt, Unterstrich und Bindestrich enthalten und höchstens 64 Zeichen lang sein.",
         ));
     }
+    validate_connection(draft)
+}
+
+/// Was zum Verbinden nötig ist, ohne den Namen.
+fn validate_connection(draft: &McpDraft) -> Result<(), CommandError> {
     match draft.transport {
         McpTransport::Stdio => {
             let command = draft.command.as_deref().unwrap_or_default().trim();

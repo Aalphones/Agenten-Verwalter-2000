@@ -8,7 +8,7 @@ Der Dialog „MCP-Server“ zeigt Server auch ohne laufenden Agenten, gruppiert 
 |---|---|---|---|---|
 | 1 | Core: Konfiguration lesen | heikel | opusplan | complete |
 | 2 | Core: Konfiguration schreiben, Neustart bei Änderung | heikel | opusplan | complete |
-| 3 | Core: Verbindung testen, Werkzeuge und Anweisungen lesen | standard | sonnet | pending |
+| 3 | Core: Verbindung testen, Werkzeuge und Anweisungen lesen | standard | sonnet | complete |
 | 4 | Oberfläche: Liste nach Ablageort | standard | sonnet | pending |
 | 5 | Oberfläche: Formular, Test, Werkzeug-Ansicht | standard | sonnet | pending |
 
@@ -109,7 +109,7 @@ Jede Schreib-Aktion sendet danach `mcp://changed` für **alle** Sessions (Benutz
 
 - 🟡 Gleichzeitiges Schreiben von `~/.claude.json` durch eine laufende Kommandozeile kann eine Änderung des Verwalters überschreiben. Check (Phase 2): in Session A einen Server ausschalten, während Session B arbeitet; nach Bs nächster Antwort `projects[<Workspace A>].disabledMcpServers` in `~/.claude.json` prüfen.
 - 🟡 Ob `mcp_status` für Repository-Server bei `scope` `dynamic` bleibt und ob die Namen eindeutig zuordenbar sind. Check (Phase 4): Dialog in einer laufenden Session mit Repository-`.mcp.json` öffnen, Zuordnung ansehen.
-- 🟡 Initialize-Antwort mit `instructions`: nicht jeder Server liefert sie. Check (Phase 3): `mcp_inspect` gegen `dispatch` (liefert Anweisungen) und einen Server ohne.
+- 🟡 Initialize-Antwort mit `instructions`: nicht jeder Server liefert sie. Check (Phase 3) gefahren: `dispatch` und `garage` liefern sie, eine Attrappe ohne ergibt `None`.
 
 Fehlerklassen geprüft (Vault: typescript, react, claude-code; rust und tauri ohne Eintrag): keine einschlägig.
 

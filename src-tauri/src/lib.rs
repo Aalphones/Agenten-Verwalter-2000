@@ -182,6 +182,8 @@ pub fn run() {
             commands::mcp::mcp_config_load,
             commands::mcp::mcp_config_save,
             commands::mcp::mcp_config_remove,
+            commands::mcp::mcp_probe,
+            commands::mcp::mcp_inspect,
             commands::usage::usage_load,
             commands::usage::usage_refresh,
             commands::account::account_load,

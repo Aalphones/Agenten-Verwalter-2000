@@ -37,7 +37,8 @@ const MAX_TOOL_PAGES: usize = 100;
 const ERROR_BODY_CHARS: usize = 300;
 
 const METHOD_NOT_FOUND: i64 = -32601;
-const OAUTH_UNSUPPORTED: &str = "Anmeldung (OAuth) wird im autarken Agenten nicht unterstützt.";
+pub(crate) const OAUTH_UNSUPPORTED: &str =
+    "Anmeldung (OAuth) wird im autarken Agenten nicht unterstützt.";
 const SESSION_HEADER: &str = "Mcp-Session-Id";
 const PROTOCOL_HEADER: &str = "MCP-Protocol-Version";
 const ACCEPT_VALUE: &str = "application/json, text/event-stream";
@@ -54,6 +55,7 @@ pub struct McpTool {
 pub struct McpClient {
     connection: Connection,
     tools: Vec<McpTool>,
+    instructions: Option<String>,
 }
 
 enum Connection {
@@ -64,9 +66,19 @@ enum Connection {
 impl McpClient {
     /// Verbindet, schüttelt die Hand und liest alle Werkzeuge.
     pub fn connect(config: &ServerConfig, cancel: &AtomicBool) -> Result<McpClient, String> {
+        McpClient::connect_in(config, None, cancel)
+    }
+
+    /// Wie `connect`; ein stdio-Server startet in `folder` statt im Arbeitsordner des eigenen
+    /// Prozesses.
+    pub fn connect_in(
+        config: &ServerConfig,
+        folder: Option<&Path>,
+        cancel: &AtomicBool,
+    ) -> Result<McpClient, String> {
         let connection = match &config.transport {
             Transport::Stdio { command, args, env } => {
-                Connection::Stdio(StdioConnection::start(command, args, env)?)
+                Connection::Stdio(StdioConnection::start(command, args, env, folder)?)
             }
             Transport::Http { url, headers } => {
                 Connection::Http(HttpConnection::new(url.clone(), headers.clone()))
@@ -76,13 +88,11 @@ impl McpClient {
         let mut client = McpClient {
             connection,
             tools: Vec::new(),
+            instructions: None,
         };
         // Scheitert der Handschlag, darf kein Serverprozess zurückbleiben.
         match client.handshake(cancel) {
-            Ok(tools) => {
-                client.tools = tools;
-                Ok(client)
-            }
+            Ok(()) => Ok(client),
             Err(error) => {
                 client.close();
                 Err(error)
@@ -92,6 +102,11 @@ impl McpClient {
 
     pub fn tools(&self) -> &[McpTool] {
         &self.tools
+    }
+
+    /// Die Anweisungen, die der Server beim Handschlag mitgibt.
+    pub fn instructions(&self) -> Option<&str> {
+        self.instructions.as_deref()
     }
 
     /// Text des Ergebnisses und ob der Server es als Fehler meldet (`isError`).
@@ -117,7 +132,7 @@ impl McpClient {
         }
     }
 
-    fn handshake(&self, cancel: &AtomicBool) -> Result<Vec<McpTool>, String> {
+    fn handshake(&mut self, cancel: &AtomicBool) -> Result<(), String> {
         let params = json!({
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": {},
@@ -132,8 +147,14 @@ impl McpClient {
                 .unwrap_or(PROTOCOL_VERSION);
             *lock(&http.protocol_version) = Some(version.to_owned());
         }
+        self.instructions = answer
+            .get("instructions")
+            .and_then(Value::as_str)
+            .filter(|text: &&str| !text.trim().is_empty())
+            .map(str::to_owned);
         self.notify("notifications/initialized")?;
-        self.list_tools(cancel)
+        self.tools = self.list_tools(cancel)?;
+        Ok(())
     }
 
     fn list_tools(&self, cancel: &AtomicBool) -> Result<Vec<McpTool>, String> {
@@ -276,14 +297,15 @@ impl StdioConnection {
         command: &str,
         args: &[String],
         env: &[(String, String)],
+        folder: Option<&Path>,
     ) -> Result<StdioConnection, String> {
-        let mut child = match spawn(command, args, env, false) {
+        let mut child = match spawn(command, args, env, folder, false) {
             // Windows-Starter wie `npx` sind `.cmd`-Dateien, die nur `cmd` findet.
             Err(error)
                 if error.kind() == std::io::ErrorKind::NotFound
                     && Path::new(command).extension().is_none() =>
             {
-                spawn(command, args, env, true)
+                spawn(command, args, env, folder, true)
             }
             other => other,
         }
@@ -366,6 +388,7 @@ fn spawn(
     command: &str,
     args: &[String],
     env: &[(String, String)],
+    folder: Option<&Path>,
     through_cmd: bool,
 ) -> std::io::Result<Child> {
     let mut process = if through_cmd {
@@ -384,6 +407,9 @@ fn spawn(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    if let Some(folder) = folder {
+        process.current_dir(folder);
+    }
     hide_console(&mut process);
     process.spawn()
 }

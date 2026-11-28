@@ -69,6 +69,27 @@ impl SessionRegistry {
         })
     }
 
+    /// Was ein Test ohne Agent braucht: den gelesenen Stand der Dateien und den Arbeitsordner für
+    /// stdio-Server. Ohne Workspace (er entsteht hier nicht) ist das der Benutzerordner.
+    pub fn mcp_probe_context(
+        &self,
+        session_id: &str,
+    ) -> Result<(LoadedConfig, PathBuf), CommandError> {
+        let session = self.get(session_id)?;
+        let home = home_or_error()?;
+        let config = config_files::load(
+            &home,
+            &session.workspace,
+            &repository_folders(&session, &session.repositories()),
+        );
+        let folder = if session.workspace.is_dir() {
+            session.workspace.clone()
+        } else {
+            home
+        };
+        Ok((config, folder))
+    }
+
     /// Legt einen Server an oder ersetzt einen, in der Datei der gewählten Quelle (ADR 070).
     /// Ein laufender Agent bemerkt es erst mit seinem nächsten Start.
     pub fn save_mcp_server(

@@ -178,7 +178,7 @@ fn servers_of(value: Option<&Value>) -> Map<String, Value> {
         .unwrap_or_default()
 }
 
-fn server_config(name: String, scope: &'static str, entry: &Value) -> ServerConfig {
+pub(crate) fn server_config(name: String, scope: &'static str, entry: &Value) -> ServerConfig {
     let command = entry.get("command").and_then(Value::as_str);
     let url = entry.get("url").and_then(Value::as_str);
     let declared = entry.get("type").and_then(Value::as_str);
@@ -254,6 +254,14 @@ fn expanded(text: &str) -> String {
             }
         })
         .into_owned()
+}
+
+/// Die Werte der Umgebungsvariablen, auf die `text` verweist und die gesetzt sind.
+pub(crate) fn referenced_values(text: &str) -> Vec<String> {
+    VARIABLE_PATTERN
+        .captures_iter(text)
+        .filter_map(|captures: Captures<'_>| env::var(&captures[1]).ok())
+        .collect()
 }
 
 /// Warum eine vorhandene Konfigurationsdatei nicht zu lesen ist — ohne Inhalt der Datei.
