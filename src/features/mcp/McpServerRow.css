@@ -1,14 +1,18 @@
 .mcp-server {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out);
 
-  &--expanded {
+  &:hover {
     border-color: var(--color-border);
-    background: var(--color-bg-hover);
   }
 
+  /* Feste Spalten: Name, Status-Wort, Knöpfe, Schalter. */
   &__head {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 128px auto 60px;
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-xs);
@@ -16,7 +20,6 @@
 
   &__toggle {
     display: flex;
-    flex-grow: 1;
     align-items: center;
     gap: var(--space-lg);
     min-width: 0;
@@ -38,16 +41,19 @@
 
   &__chevron {
     display: flex;
+    flex-shrink: 0;
     color: var(--color-fg-muted);
     transition: transform var(--duration-base) var(--ease-out);
   }
 
+  /* Ohne Zustand (Startet mit Agent, Aus überall …): hohler Ring. */
   &__dot {
+    box-sizing: border-box;
     flex-shrink: 0;
     width: 8px;
     height: 8px;
+    border: 1.5px solid var(--color-fg-muted);
     border-radius: var(--radius-full);
-    background: var(--color-fg-muted);
   }
 
   &__text {
@@ -59,41 +65,66 @@
   &__name {
     overflow: hidden;
     font-family: var(--font-mono);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   &__sub {
     overflow: hidden;
-    font-size: var(--font-size-2xs);
+    font-size: var(--font-size-xs);
     color: var(--color-fg-muted);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &__status {
-    flex-shrink: 0;
-    font-size: var(--font-size-xs);
-    color: var(--color-fg-muted);
+  &__sub-status {
+    display: none;
   }
 
-  &__reconnect {
+  &__status {
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-width: 88px;
+  }
+
+  &__action {
     display: flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     padding: 0;
-    border: 1px solid var(--color-border);
+    border: 0;
     border-radius: var(--radius-md);
     background: transparent;
     color: var(--color-fg-secondary);
     cursor: pointer;
 
+    &:hover:not(:disabled) {
+      background: var(--color-bg-hover);
+      color: var(--color-fg-primary);
+    }
+
+    &--danger:hover:not(:disabled) {
+      color: var(--color-status-error);
+    }
+
     &:disabled {
       color: var(--color-fg-muted);
+      opacity: 0.45;
       cursor: default;
     }
 
@@ -103,14 +134,26 @@
     }
   }
 
+  &__lock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    /* So breit wie Bearbeiten und Entfernen, damit „Neu verbinden“ in jeder Zeile gleich steht. */
+    width: 58px;
+    height: 28px;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
   &__login {
     flex-shrink: 0;
-    height: 30px;
+    height: 26px;
     padding: 0 var(--space-lg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: transparent;
-    color: var(--color-fg-secondary);
+    color: var(--color-fg-primary);
     font: inherit;
     font-size: var(--font-size-xs);
     cursor: pointer;
@@ -130,104 +173,24 @@
     }
   }
 
-  &__reconnect-icon--spinning {
+  &__spinning {
     animation: mcp-server-spin 0.9s linear infinite;
     transform-origin: 50% 50%;
   }
 
   &__switch {
     display: flex;
-    margin-left: var(--space-xs);
+    justify-content: flex-end;
   }
+}
 
-  &__details {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-    padding: var(--space-xs) var(--space-2xl) 14px 46px;
-    border-top: 1px solid var(--color-border-subtle);
-  }
+.mcp-server--expanded {
+  border-color: var(--color-border);
+  background: var(--color-bg-hover);
+}
 
-  &__facts {
-    display: grid;
-    grid-template-columns: 90px minmax(0, 1fr);
-    gap: var(--space-xs) var(--space-xl);
-    margin: 0;
-    padding-top: var(--space-md);
-    font-size: var(--font-size-xs);
-  }
-
-  &__fact-term {
-    color: var(--color-fg-muted);
-  }
-
-  &__fact-value {
-    margin: 0;
-    overflow-wrap: anywhere;
-
-    &--mono {
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-    }
-  }
-
-  &__tools-block {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-  }
-
-  &__tools-title {
-    font-size: var(--font-size-xs);
-    color: var(--color-fg-muted);
-  }
-
-  &__tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs);
-    overflow-y: auto;
-    max-height: 148px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__tool {
-    padding: var(--space-2xs) 7px;
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-base);
-    color: var(--color-fg-secondary);
-    font-family: var(--font-mono);
-    font-size: var(--font-size-2xs);
-  }
-
-  &__error {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2xs);
-    padding: var(--space-md) var(--space-lg);
-    border-radius: var(--radius-md);
-    background: var(--color-status-error-subtle);
-    color: var(--color-status-error);
-    font-size: var(--font-size-xs);
-  }
-
-  &__error-title {
-    font-weight: 600;
-  }
-
-  &__error-text {
-    font-family: var(--font-mono);
-    font-size: 11.5px;
-    overflow-wrap: anywhere;
-  }
-
-  &__note {
-    margin: 0;
-    font-size: var(--font-size-xs);
-    color: var(--color-fg-muted);
-  }
+.mcp-server--fresh {
+  border-color: var(--color-accent);
 }
 
 .mcp-server--expanded .mcp-server__chevron {
@@ -236,40 +199,105 @@
 
 .mcp-server--off .mcp-server__name,
 .mcp-server--off .mcp-server__sub {
+  opacity: 0.55;
+}
+
+/* Status-Wort je Zustand; alles ohne eigene Farbe bleibt gedämpft. */
+.mcp-server__status {
   color: var(--color-fg-muted);
 }
 
-/* Aus und Unbekannt behalten das gedämpfte Grau des Grundstils. */
+.mcp-server .mcp-server__tone--connected {
+  color: var(--color-status-completed);
+}
+
+.mcp-server .mcp-server__tone--pending {
+  color: var(--color-status-running);
+}
+
+.mcp-server .mcp-server__tone--failed {
+  color: var(--color-status-error);
+}
+
+.mcp-server .mcp-server__tone--needsAuth,
+.mcp-server .mcp-server__tone--fresh {
+  color: var(--color-status-waiting);
+}
+
 .mcp-server__dot--connected {
+  border-color: var(--color-status-completed);
   background: var(--color-status-completed);
 }
 
 .mcp-server__dot--pending {
+  border-color: var(--color-status-running);
   background: var(--color-status-running);
 }
 
 .mcp-server__dot--failed {
+  border-color: var(--color-status-error);
   background: var(--color-status-error);
 }
 
-.mcp-server__dot--needsAuth {
+.mcp-server__dot--needsAuth,
+.mcp-server__dot--fresh {
+  border-color: var(--color-status-waiting);
   background: var(--color-status-waiting);
 }
 
-.mcp-server__status--connected {
-  color: var(--color-status-completed);
+.mcp-server__dot--off {
+  background: var(--color-fg-muted);
 }
 
-.mcp-server__status--pending {
-  color: var(--color-status-running);
-}
+@container mcp-stage (max-width: 600px) {
+  .mcp-server {
+    &__head {
+      grid-template-areas:
+        'toggle switch'
+        'actions actions';
+      grid-template-columns: minmax(0, 1fr) 76px;
+      row-gap: 0;
+    }
 
-.mcp-server__status--failed {
-  color: var(--color-status-error);
-}
+    &__toggle {
+      grid-area: toggle;
+    }
 
-.mcp-server__status--needsAuth {
-  color: var(--color-status-waiting);
+    &__switch {
+      grid-area: switch;
+    }
+
+    /* Das Status-Wort wandert vor die Metazeile. */
+    &__status {
+      display: none;
+    }
+
+    &__sub-status {
+      display: inline;
+    }
+
+    &__actions {
+      grid-area: actions;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      padding: 0 0 var(--space-xs) 34px;
+    }
+
+    &__action {
+      width: 40px;
+      height: 40px;
+    }
+
+    &__lock {
+      width: auto;
+      height: 40px;
+      padding: 0 var(--space-sm);
+    }
+
+    &__login {
+      height: 40px;
+    }
+  }
 }
 
 @keyframes mcp-server-spin {
@@ -283,7 +311,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mcp-server__reconnect-icon--spinning {
+  .mcp-server__spinning {
     animation: none;
   }
 }

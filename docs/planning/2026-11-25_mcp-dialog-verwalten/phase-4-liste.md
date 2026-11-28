@@ -24,11 +24,13 @@
 
 ## Checkliste
 
-- [ ] `mcpTexts.ts`: `groupServers` durch `mergeServers` ersetzen (Typ `McpRowGroup { id, title, where, kind, rows: McpRow[] }`), neue Texte als Konstanten; alte, ungenutzte Konstanten (`NEW_SESSION_TEXT`, `AGENT_IDLE_TEXT`) entfernen.
-- [ ] `McpDialog.tsx`/`.css`: Kopf, Werkzeugzeile, Hinweise, Gruppen, Rückgängig-Logik (Zustand `pendingRemoval` + Timer), Fußzeile; Containerabfrage für < 600 px.
-- [ ] `McpServerRow.tsx`/`.css`: Spalten, Knöpfe, Schloss, Details nach AK 6–7.
-- [ ] `useSessionMcp.ts`: Konfiguration mitladen.
-- [ ] Gegen Entwurf prüfen (hell/dunkel, 390/860/1366 px) — Layout, Gruppen, Zeilenspalten.
-- [ ] `pnpm check` grün; Code-Map-Zeile aktualisieren.
+- [x] `mcpTexts.ts`: `groupServers` durch `mergeServers` ersetzen (Typ `McpRowGroup { id, title, where, kind, rows: McpRow[] }`), neue Texte als Konstanten; alte, ungenutzte Konstanten (`NEW_SESSION_TEXT`, `AGENT_IDLE_TEXT`) entfernen.
+- [x] `McpDialog.tsx`/`.css`: Kopf, Werkzeugzeile, Hinweise, Gruppen, Rückgängig-Logik (Zustand `pendingRemoval` + Timer), Fußzeile; Containerabfrage für < 600 px.
+- [x] `McpServerRow.tsx`/`.css`: Spalten, Knöpfe, Schloss, Details nach AK 6–7.
+- [x] `useSessionMcp.ts`: Konfiguration mitladen.
+- [x] Gegen Entwurf prüfen (hell/dunkel, 390/860/1366 px) — Layout, Gruppen, Zeilenspalten.
+- [x] `pnpm check` grün; Code-Map-Zeile aktualisieren.
 
 ## Report-Back
+
+Status: complete. `pnpm check` grün; Oberfläche nur in einer Vite-Prüfseite mit nachgestellten Antworten des Core gegen den Entwurf verglichen (hell/dunkel, 390/860/1366 px; Rückgängig und Schalter durchgeklickt), nicht in der laufenden App. Der Konfidenz-Check der Phase (Zuordnung bei laufender Session mit Repository-`.mcp.json`) ist offen. Abweichungen: README „Deviations from plan“.

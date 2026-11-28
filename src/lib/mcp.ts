@@ -35,12 +35,12 @@ export function authenticateMcpServer(sessionId: string, server: string): Promis
   return invoke<boolean>('mcp_authenticate', { sessionId, server });
 }
 
-/** Schaltet einen Server ein oder aus. Mit zuhörendem Agenten geht eine Steueranfrage hinaus, ohne
- *  Agent schreibt der Core die Datei (`disabledMcpServers` des Workspace); beide Wege liefern `true`.
+/** Schaltet einen Server ein oder aus. Meldet der laufende Agent ihn, geht eine Steueranfrage hinaus,
+ *  sonst schreibt der Core die Datei (`disabledMcpServers` des Workspace); beide Wege liefern `true`.
  *  `everywhere`: beim Ausschalten in allen Vorhaben des Verwalters aus (bleibt gespeichert, gilt auch
  *  für neue Vorhaben). Einschalten nimmt den Namen wieder aus der Liste und schaltet ihn überall ein;
  *  `enabled: false, everywhere: false` für einen Namen aus der Liste: nur hier aus, überall sonst an.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `internal` bei einem Servernamen, den der zuhörende Agent nicht kennt, `invalid` oder `io` bei nicht schreibbaren Dateien */
+ *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`, `invalid` oder `io` bei nicht schreibbaren Dateien */
 export function toggleMcpServer(
   sessionId: string,
   server: string,

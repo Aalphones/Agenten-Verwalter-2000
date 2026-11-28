@@ -198,8 +198,8 @@ impl SessionRegistry {
         )
     }
 
-    /// Schaltet einen Server aus oder ein. Zuhört der Agent, geht eine Steueranfrage hinaus;
-    /// sonst schreibt der Core `disabledMcpServers` des Workspace. `everywhere` beim Ausschalten
+    /// Schaltet einen Server aus oder ein. Meldet der laufende Agent ihn, geht eine Steueranfrage
+    /// hinaus; sonst schreibt der Core `disabledMcpServers` des Workspace. `everywhere` beim Ausschalten
     /// nimmt den Namen in die Liste „überall aus“, Einschalten nimmt ihn heraus und wieder ein
     /// in allen Vorhaben des Verwalters. Immer `true`, sobald der Wechsel angewendet ist.
     pub fn toggle_mcp(
@@ -211,14 +211,19 @@ impl SessionRegistry {
         everywhere: bool,
     ) -> Result<bool, CommandError> {
         let session = self.get(session_id)?;
-        let is_listening = session.lock().is_listening();
-        self.update_disabled_everywhere(&session, server, enabled, everywhere, is_listening)?;
+        // Für einen Server, den der laufende Agent noch nicht meldet (neu angelegt), lehnt
+        // `start_mcp_action` die Steueranfrage ab: er geht wie ohne Agent in die Datei.
+        let is_reported = {
+            let state = session.lock();
+            state.is_listening() && state.reports_mcp_server(server)
+        };
+        self.update_disabled_everywhere(&session, server, enabled, everywhere, is_reported)?;
         let action = if enabled {
             McpAction::Enable
         } else {
             McpAction::Disable
         };
-        let is_sent = is_listening
+        let is_sent = is_reported
             && update(
                 app,
                 &session,
@@ -241,14 +246,14 @@ impl SessionRegistry {
 
     /// Führt die Liste „überall aus“ nach und schaltet die anderen Vorhaben des Verwalters
     /// wieder ein, wenn der Name sie verlässt. Der eigene Workspace bleibt aus, wenn er aus
-    /// bleiben soll oder der zuhörende Agent ihn selbst schaltet.
+    /// bleiben soll oder der laufende Agent ihn selbst schaltet.
     fn update_disabled_everywhere(
         &self,
         session: &Session,
         server: &str,
         enabled: bool,
         everywhere: bool,
-        is_listening: bool,
+        is_reported: bool,
     ) -> Result<(), CommandError> {
         let mut names = settings::mcp_disabled_everywhere(&self.database)?;
         let was_listed = names.iter().any(|name: &String| name == server);
@@ -268,7 +273,7 @@ impl SessionRegistry {
             .workspace
             .parent()
             .ok_or_else(|| CommandError::Io("Workspace-Ordner unbekannt".to_owned()))?;
-        let keep_own = !enabled || is_listening;
+        let keep_own = !enabled || is_reported;
         config_files::clear_disabled_under(
             &home_or_error()?,
             workspace_root,
@@ -338,6 +343,14 @@ fn repository_folders(
 }
 
 impl SessionState {
+    fn reports_mcp_server(&self, server: &str) -> bool {
+        self.mcp_servers
+            .as_ref()
+            .is_some_and(|servers: &Vec<McpServer>| {
+                servers.iter().any(|known: &McpServer| known.name == server)
+            })
+    }
+
     fn start_mcp_action(
         &mut self,
         outbox: &mut Outbox,
@@ -348,13 +361,7 @@ impl SessionState {
         if !self.is_listening() {
             return Ok(false);
         }
-        let is_known = self
-            .mcp_servers
-            .as_ref()
-            .is_some_and(|servers: &Vec<McpServer>| {
-                servers.iter().any(|known: &McpServer| known.name == server)
-            });
-        if !is_known {
+        if !self.reports_mcp_server(server) {
             return Err(CommandError::Internal(format!(
                 "MCP-Server unbekannt: {server}"
             )));

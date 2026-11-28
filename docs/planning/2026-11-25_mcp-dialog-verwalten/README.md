@@ -9,7 +9,7 @@ Der Dialog „MCP-Server“ zeigt Server auch ohne laufenden Agenten, gruppiert 
 | 1 | Core: Konfiguration lesen | heikel | opusplan | complete |
 | 2 | Core: Konfiguration schreiben, Neustart bei Änderung | heikel | opusplan | complete |
 | 3 | Core: Verbindung testen, Werkzeuge und Anweisungen lesen | standard | sonnet | complete |
-| 4 | Oberfläche: Liste nach Ablageort | standard | sonnet | pending |
+| 4 | Oberfläche: Liste nach Ablageort | standard | sonnet | complete |
 | 5 | Oberfläche: Formular, Test, Werkzeug-Ansicht | standard | sonnet | pending |
 
 ## Kontrakt (Core ↔ Oberfläche)
@@ -120,5 +120,12 @@ Fehlerklassen geprüft (Vault: typescript, react, claude-code; rust und tauri oh
 ## Commits
 
 ## Deviations from plan
+
+- Phase 4, Core: `toggle_mcp` schickt eine Steueranfrage nur noch für Server, die der laufende Agent meldet; neu angelegte gehen wie ohne Agent in die Datei (vorher `internal`-Fehler).
+- Phase 4: Die Fußzeile zeigt nur „Schalter: links überall aus · Mitte hier aus · rechts an.“ (AK 11 und Entwurf) statt des Satzes aus Phasen-AK 9; ausgeschaltet heißt „Aus hier“/„Aus überall“ (AK 11) statt „Aus“.
+- Phase 4: zusätzliche Zustände „Überdeckt“ (eingeschalteter, überdeckter Eintrag) und „Lädt …“ (Agent läuft, Liste fehlt noch; Schalter gesperrt).
+- Phase 4: `mergeServers` bekommt zusätzlich die hier entfernten Namen; bei geänderter Konfiguration stehen sie und verschwundene Datei-Server nicht unter „Fest eingebunden“. Grenze: ein von außen gelöschter Repository-Server steht dort bis zum Neustart des Agenten.
+- Phase 4: Lesefehler einer Quelle stehen als Zeile in ihrer Gruppe; „Vorhaben-Ordner“ nennt „nur dieses Vorhaben“.
+- Phase 4, bis Phase 5: „Server hinzufügen“, „Hier hinzufügen“ und „Bearbeiten“ gesperrt, Werkzeugnamen bleiben in den Details, der Leerzustand nennt „Oder JSON einfügen“ noch nicht.
 
 ## Follow-ups

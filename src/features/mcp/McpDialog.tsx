@@ -2,113 +2,213 @@ import { useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { Dialog } from '@/components/Dialog';
 import { ExternalLink } from '@/components/ExternalLink';
+import { McpGroupPlace } from '@/features/mcp/McpGroupPlace';
+import { ClockIcon, CloseIcon, GroupIcon, PlusIcon, SearchIcon } from '@/features/mcp/McpIcons';
+import { McpServerRow } from '@/features/mcp/McpServerRow';
 import {
   actionErrorText,
-  AGENT_IDLE_TEXT,
+  ADD_LONG_SUFFIX,
+  ADD_SHORT_LABEL,
+  AGENT_NEW_TEXT,
+  AGENT_RESTING_TEXT,
+  AGENT_RUNNING_TEXT,
   authWaitText,
+  CONFIG_CHANGED_HINT,
+  filterGroups,
   FOOT_NOTE,
-  groupServers,
   LOADING_TEXT,
-  NEW_SESSION_TEXT,
+  LOCAL_ADD_LABEL,
+  LOCAL_EMPTY_TEXT,
+  mergeServers,
   NO_SERVERS_TEXT,
+  NO_SERVERS_TITLE,
+  OFFLINE_HINT,
+  offlineSummaryText,
   RECONNECT_LABEL,
   REOPEN_LABEL,
+  rowStatus,
   summaryText,
+  switchPosition,
 } from '@/features/mcp/mcpTexts';
-import type { McpGroup } from '@/features/mcp/mcpTexts';
-import { McpServerRow } from '@/features/mcp/McpServerRow';
+import type { McpRow, McpRowGroup, McpSwitchPosition } from '@/features/mcp/mcpTexts';
+import { McpUndoRow } from '@/features/mcp/McpUndoRow';
 import { useSessionMcp } from '@/features/mcp/useSessionMcp';
+import { useUndoableRemoval } from '@/features/mcp/useUndoableRemoval';
 import type { McpAuthWait } from '@/lib/bindings/McpAuthWait';
+import type { McpConfigView } from '@/lib/bindings/McpConfigView';
 import type { McpServer } from '@/lib/bindings/McpServer';
-import type { SessionMcp } from '@/lib/bindings/SessionMcp';
-import type { SessionStatus } from '@/lib/bindings/SessionStatus';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
 import { commandErrorText } from '@/lib/errors';
 import { authenticateMcpServer, reconnectMcpServer, toggleMcpServer } from '@/lib/mcp';
 import './McpDialog.css';
 
 const TITLE_ID = 'mcp-dialog-title';
+const SKELETON_ROWS: readonly number[] = [0, 1, 2, 3, 4];
 
 interface McpDialogProps {
   session: SessionSummary;
   onClose: () => void;
 }
 
-/** Dialog „MCP-Server“: die Server der Session mit Status, Herkunft und Werkzeugen; Anmelden, Neu verbinden und Ein-/Ausschalten. */
+/** Dialog „MCP-Server“: die Server der Session nach Ablageort, auch ohne Agenten; Schalten,
+ *  Entfernen mit Rückgängig, Anmelden und Neu verbinden. */
 export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
   const [filter, setFilter] = useState<string>('');
   const [expanded, setExpanded] = useState<string | null>(null);
-  // Ein abgelehnter Command (die Aktion kam gar nicht beim Agenten an); Fehler der Aktion selbst stehen in `mcp.error`.
+  // Ein abgelehnter Command (die Aktion kam gar nicht an); Fehler der Aktion beim Agenten stehen in `mcp.error`.
   const [actionFailure, setActionFailure] = useState<string | null>(null);
-  const mcp: SessionMcp | null = useSessionMcp(session.id, true);
-  const servers: McpServer[] | null = mcp?.servers ?? null;
+  const { mcp, config, configFailure, reloadConfig } = useSessionMcp(session.id, true);
+  const removal = useUndoableRemoval(reloadConfig, setActionFailure);
 
-  function reconnect(name: string): void {
+  const isAgentRunning: boolean = mcp?.isAgentRunning ?? false;
+  const live: McpServer[] | null = isAgentRunning ? (mcp?.servers ?? null) : null;
+  const groups: McpRowGroup[] =
+    config === null ? [] : mergeServers(config, live, removal.removedNames);
+  // Ohne die offene und die gerade geschriebene Entfernung: so zählen Köpfe und Fußzeile.
+  const rows: McpRow[] = groups
+    .flatMap((group: McpRowGroup) => group.rows)
+    .filter((row: McpRow) => !isRemoved(row.key));
+  const hasNothing: boolean =
+    rows.length === 0 &&
+    removal.pendingKey === null &&
+    groups.every((group: McpRowGroup) => group.error === null);
+
+  function isRemoved(key: string): boolean {
+    return removal.pendingKey === key || removal.committingKeys.has(key);
+  }
+
+  function run(action: Promise<boolean>): void {
     // Die Antwort kommt als `mcp://changed`; hier gibt es nichts abzuwarten.
     setActionFailure(null);
-    reconnectMcpServer(session.id, name).catch((reason: unknown) => {
+    action.catch((reason: unknown) => {
       setActionFailure(commandErrorText(reason));
     });
+  }
+
+  function reconnect(name: string): void {
+    run(reconnectMcpServer(session.id, name));
   }
 
   function authenticate(name: string): void {
-    // Die Anmeldeseite öffnet der Core, sobald die Antwort da ist; Beginn und Ende melden `mcp://changed`.
-    setActionFailure(null);
-    authenticateMcpServer(session.id, name).catch((reason: unknown) => {
-      setActionFailure(commandErrorText(reason));
+    // Die Anmeldeseite öffnet der Core, sobald die Antwort da ist.
+    run(authenticateMcpServer(session.id, name));
+  }
+
+  function setPosition(name: string, position: McpSwitchPosition): void {
+    run(toggleMcpServer(session.id, name, position === 'on', position === 'all'));
+  }
+
+  function removeRow(row: McpRow): void {
+    if (row.sourceId === null) {
+      return;
+    }
+    if (expanded === row.key) {
+      setExpanded(null);
+    }
+    removal.remove({
+      key: row.key,
+      sessionId: session.id,
+      sourceId: row.sourceId,
+      name: row.name,
     });
   }
 
-  function setEnabled(name: string, enabled: boolean): void {
-    setActionFailure(null);
-    toggleMcpServer(session.id, name, enabled, false).catch((reason: unknown) => {
-      setActionFailure(commandErrorText(reason));
-    });
-  }
-
-  function toggleExpanded(name: string): void {
-    if (expanded === name) {
+  function toggleExpanded(key: string): void {
+    if (expanded === key) {
       setExpanded(null);
     } else {
-      setExpanded(name);
+      setExpanded(key);
     }
   }
 
-  function failureText(loaded: SessionMcp): string | null {
+  function agentText(): string {
+    if (isAgentRunning) {
+      return AGENT_RUNNING_TEXT;
+    }
+    if (session.status === 'new') {
+      return AGENT_NEW_TEXT;
+    }
+    return AGENT_RESTING_TEXT;
+  }
+
+  function failureText(): string | null {
     if (actionFailure !== null) {
       return actionFailure;
     }
-    if (loaded.error !== null) {
-      return actionErrorText(loaded.error);
+    if (mcp !== null && mcp.error !== null) {
+      return actionErrorText(mcp.error);
     }
-    return null;
+    return configFailure;
   }
 
   function renderBody(): ReactElement {
-    if (mcp === null || servers === null || servers.length === 0) {
-      return renderEmpty();
+    if (config === null) {
+      return renderLoading();
     }
-    return renderList(mcp, servers);
+    if (hasNothing) {
+      return renderNoServers();
+    }
+    return renderList(config);
   }
 
-  function renderEmpty(): ReactElement {
-    return <p className="mcp-dialog__empty">{emptyText(mcp, session.status)}</p>;
+  function renderLoading(): ReactElement {
+    if (configFailure !== null) {
+      return (
+        <p className="mcp-dialog__error" role="alert">
+          {configFailure}
+        </p>
+      );
+    }
+    return (
+      <div className="mcp-dialog__list" aria-hidden="true">
+        {SKELETON_ROWS.map((index: number) => (
+          <div key={index} className="mcp-dialog__skeleton" />
+        ))}
+      </div>
+    );
   }
 
-  function renderList(loaded: SessionMcp, loadedServers: readonly McpServer[]): ReactElement {
-    const groups: McpGroup[] = groupServers(loadedServers, filter);
-    const failure: string | null = failureText(loaded);
+  function renderNoServers(): ReactElement {
+    return (
+      <div className="mcp-dialog__empty">
+        <h3 className="mcp-dialog__empty-title">{NO_SERVERS_TITLE}</h3>
+        <span>{NO_SERVERS_TEXT}</span>
+        {renderAddButton()}
+      </div>
+    );
+  }
+
+  /** Das Formular dazu gibt es noch nicht. */
+  function renderAddButton(): ReactElement {
+    return (
+      <button type="button" className="mcp-dialog__button mcp-dialog__button--primary" disabled>
+        <PlusIcon />
+        <span>
+          {ADD_SHORT_LABEL} <span className="mcp-dialog__add-long">{ADD_LONG_SUFFIX}</span>
+        </span>
+      </button>
+    );
+  }
+
+  function renderList(loadedConfig: McpConfigView): ReactElement {
+    const shown: McpRowGroup[] = filterGroups(
+      groups,
+      filter,
+      removal.committingKeys,
+      removal.pendingKey,
+    );
+    const failure: string | null = failureText();
     return (
       <>
-        <div className="mcp-dialog__filter">
-          <label className="mcp-dialog__filter-label">
-            <span className="mcp-dialog__filter-icon">
+        <div className="mcp-dialog__tools">
+          <label className="mcp-dialog__search">
+            <span className="mcp-dialog__search-icon">
               <SearchIcon />
             </span>
-            <span className="mcp-dialog__filter-text">Server filtern</span>
+            <span className="mcp-dialog__search-text">Server filtern</span>
             <input
               type="text"
-              className="mcp-dialog__filter-input"
+              className="mcp-dialog__search-input"
               placeholder="Server filtern …"
               value={filter}
               onChange={(event: ChangeEvent<HTMLInputElement>) => {
@@ -116,16 +216,19 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
               }}
             />
           </label>
+          {renderAddButton()}
         </div>
-        {loaded.auth !== null && renderAuthWait(loaded, loaded.auth)}
+        {isAgentRunning && loadedConfig.configChanged && renderHint(CONFIG_CHANGED_HINT, 'wait')}
+        {mcp !== null && !isAgentRunning && renderHint(OFFLINE_HINT, 'quiet')}
+        {mcp !== null && mcp.auth !== null && renderAuthWait(mcp.auth, mcp.busy)}
         {failure !== null && (
           <p className="mcp-dialog__error" role="alert">
             {failure}
           </p>
         )}
         <div className="mcp-dialog__list">
-          {groups.map((group: McpGroup) => renderGroup(loaded, group))}
-          {groups.length === 0 && (
+          {shown.map((group: McpRowGroup) => renderGroup(loadedConfig, group))}
+          {shown.length === 0 && (
             <p className="mcp-dialog__no-match">Kein Server passt zu „{filter.trim()}“.</p>
           )}
         </div>
@@ -133,15 +236,24 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     );
   }
 
-  function renderAuthWait(loaded: SessionMcp, auth: McpAuthWait): ReactElement {
+  function renderHint(text: string, tone: 'wait' | 'quiet'): ReactElement {
+    return (
+      <p className={`mcp-dialog__hint mcp-dialog__hint--${tone}`} role="status">
+        <ClockIcon />
+        <span>{text}</span>
+      </p>
+    );
+  }
+
+  function renderAuthWait(auth: McpAuthWait, busy: readonly string[]): ReactElement {
     return (
       <div className="mcp-dialog__auth" role="status">
         <p className="mcp-dialog__auth-text">{authWaitText(auth)}</p>
         {!auth.callbackExpected && (
           <button
             type="button"
-            className="mcp-dialog__auth-reconnect"
-            disabled={!loaded.isAgentRunning || loaded.busy.includes(auth.server)}
+            className="mcp-dialog__button mcp-dialog__button--small"
+            disabled={!isAgentRunning || busy.includes(auth.server)}
             onClick={() => {
               reconnect(auth.server);
             }}
@@ -156,44 +268,104 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     );
   }
 
-  function renderGroup(loaded: SessionMcp, group: McpGroup): ReactElement {
+  function renderGroup(loadedConfig: McpConfigView, group: McpRowGroup): ReactElement {
+    const count: number = group.rows.filter((row: McpRow) => !isRemoved(row.key)).length;
     return (
-      <section key={group.scope}>
-        <h3 className="mcp-dialog__group">{group.title}</h3>
-        <ul className="mcp-dialog__servers">
-          {group.servers.map((server: McpServer) => (
-            <McpServerRow
-              key={server.name}
-              server={server}
-              isExpanded={expanded === server.name}
-              isBusy={loaded.busy.includes(server.name)}
-              canAct={loaded.isAgentRunning}
-              onToggleExpanded={() => {
-                toggleExpanded(server.name);
-              }}
-              onReconnect={() => {
-                reconnect(server.name);
-              }}
-              onAuthenticate={() => {
-                authenticate(server.name);
-              }}
-              onSetEnabled={(enabled: boolean) => {
-                setEnabled(server.name, enabled);
-              }}
-            />
-          ))}
-        </ul>
+      <section key={group.id} className="mcp-dialog__group">
+        <div className="mcp-dialog__group-head">
+          <h3 className="mcp-dialog__group-name">
+            <GroupIcon kind={group.kind} />
+            {group.title}
+          </h3>
+          {count > 0 && <span className="mcp-dialog__group-count">{count}</span>}
+          <span className="mcp-dialog__group-where">
+            <McpGroupPlace where={group.where} />
+          </span>
+        </div>
+        {group.error !== null && (
+          <p className="mcp-dialog__group-error" role="alert">
+            {group.error}
+          </p>
+        )}
+        {group.rows.length > 0 && (
+          <ul className="mcp-dialog__servers">
+            {group.rows.map((row: McpRow) => renderRow(loadedConfig, group, row))}
+          </ul>
+        )}
+        {group.rows.length === 0 && group.error === null && renderLocalEmpty()}
       </section>
     );
   }
 
-  function renderFootText(loadedServers: readonly McpServer[] | null): ReactElement {
-    if (loadedServers === null || loadedServers.length === 0) {
+  function renderLocalEmpty(): ReactElement {
+    return (
+      <div className="mcp-dialog__group-empty">
+        {LOCAL_EMPTY_TEXT}
+        {/* Das Formular dazu gibt es noch nicht. */}
+        <button type="button" className="mcp-dialog__link" disabled>
+          {LOCAL_ADD_LABEL}
+        </button>
+      </div>
+    );
+  }
+
+  function renderRow(loadedConfig: McpConfigView, group: McpRowGroup, row: McpRow): ReactElement {
+    if (removal.pendingKey === row.key) {
+      return <McpUndoRow key={row.key} row={row} group={group} onUndo={removal.undo} />;
+    }
+    const position: McpSwitchPosition = switchPosition(row, loadedConfig.disabledEverywhere);
+    return (
+      <McpServerRow
+        key={row.key}
+        row={row}
+        group={group}
+        position={position}
+        status={rowStatus(row, position, isAgentRunning, live !== null)}
+        isExpanded={expanded === row.key}
+        isBusy={mcp?.busy.includes(row.name) ?? false}
+        isAgentRunning={isAgentRunning}
+        isAgentLoading={isAgentRunning && live === null}
+        onToggleExpanded={() => {
+          toggleExpanded(row.key);
+        }}
+        onReconnect={() => {
+          reconnect(row.name);
+        }}
+        onAuthenticate={() => {
+          authenticate(row.name);
+        }}
+        onSwitch={(next: McpSwitchPosition) => {
+          setPosition(row.name, next);
+        }}
+        onRemove={() => {
+          removeRow(row);
+        }}
+      />
+    );
+  }
+
+  function footSummary(loadedConfig: McpConfigView): string {
+    if (live !== null) {
+      return summaryText(live);
+    }
+    const enabled: number = rows.filter(
+      (row: McpRow) => switchPosition(row, loadedConfig.disabledEverywhere) === 'on',
+    ).length;
+    return offlineSummaryText(rows.length, enabled);
+  }
+
+  function renderFootText(): ReactElement {
+    if (config === null) {
+      return (
+        <span className="mcp-dialog__foot-text">{configFailure === null && LOADING_TEXT}</span>
+      );
+    }
+    if (hasNothing) {
       return <span className="mcp-dialog__foot-text" />;
     }
     return (
       <span className="mcp-dialog__foot-text">
-        <span>{summaryText(loadedServers)}</span>
+        <span>{footSummary(config)}</span>
         <span>{FOOT_NOTE}</span>
       </span>
     );
@@ -209,6 +381,14 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
           <span className="mcp-dialog__subtitle">
             Session #{session.number} {session.name}
           </span>
+          {mcp !== null && (
+            <span className="mcp-dialog__agent">
+              <span
+                className={`mcp-dialog__agent-dot${isAgentRunning ? ' mcp-dialog__agent-dot--running' : ''}`}
+              />
+              {agentText()}
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -221,64 +401,11 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
       </div>
       {renderBody()}
       <div className="mcp-dialog__foot">
-        {renderFootText(servers)}
-        <button type="button" className="mcp-dialog__done" onClick={onClose}>
+        {renderFootText()}
+        <button type="button" className="mcp-dialog__button" onClick={onClose}>
           Schließen
         </button>
       </div>
     </Dialog>
-  );
-}
-
-/** Was statt der Liste steht: wartet die Liste noch auf den Agenten, ist er nie gestartet oder ruht er, oder gibt es keine Server. */
-function emptyText(mcp: SessionMcp | null, status: SessionStatus): string {
-  if (mcp === null) {
-    return LOADING_TEXT;
-  }
-  if (mcp.servers !== null) {
-    return NO_SERVERS_TEXT;
-  }
-  if (mcp.isAgentRunning) {
-    return LOADING_TEXT;
-  }
-  if (status === 'new') {
-    return NEW_SESSION_TEXT;
-  }
-  return AGENT_IDLE_TEXT;
-}
-
-function CloseIcon(): ReactElement {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M4 4l8 8" />
-      <path d="M12 4l-8 8" />
-    </svg>
-  );
-}
-
-function SearchIcon(): ReactElement {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <circle cx="7" cy="7" r="4.5" />
-      <path d="M10.5 10.5L14 14" />
-    </svg>
   );
 }

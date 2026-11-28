@@ -1,0 +1,48 @@
+.mcp-undo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--space-md) var(--space-xl);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+
+  &__text {
+    flex-grow: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__name {
+    font-family: var(--font-mono);
+  }
+
+  /* Der Balken läuft über die Zeit zum Rückgängigmachen leer. */
+  &__time {
+    overflow: hidden;
+    flex-shrink: 0;
+    width: 60px;
+    height: 4px;
+    border-radius: var(--radius-sm);
+    background: var(--color-border);
+  }
+
+  &__time-left {
+    display: block;
+    height: 100%;
+    background: var(--color-fg-muted);
+    transform-origin: left;
+    animation: mcp-undo-drain var(--mcp-undo-duration) linear forwards;
+  }
+}
+
+@keyframes mcp-undo-drain {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
