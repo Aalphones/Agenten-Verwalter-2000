@@ -10,19 +10,27 @@ interface DialogProps {
   /** Setzt die Breite (und was sonst das Feld braucht); die Hülle gibt nur die Form vor. */
   className?: string;
   onClose: () => void;
+  /** Esc führt woandershin als Schließen, etwa aus einer Unteransicht zurück. */
+  onEscape?: () => void;
   children: ReactNode;
 }
 
 /** Modale Hülle für Dialoge mittig über der App; Gegenstück zu `Popover` für Inhalte,
  *  die nicht an einem Auslöser hängen. Der Fokus bleibt im Feld und kehrt beim Schließen zurück. */
-export function Dialog({ labelledBy, className, onClose, children }: DialogProps): ReactElement {
+export function Dialog({
+  labelledBy,
+  className,
+  onClose,
+  onEscape,
+  children,
+}: DialogProps): ReactElement {
   const panelRef = useRef<HTMLElement>(null);
-  const onCloseRef = useRef<() => void>(onClose);
+  const onEscapeRef = useRef<() => void>(onEscape ?? onClose);
 
   // Der Listener-Effekt läuft nur einmal; über die Ref sieht er stets den aktuellen Callback,
   // ohne dass ein neuer Callback pro Render den Fokus erneut auf das erste Element setzt.
   useEffect(() => {
-    onCloseRef.current = onClose;
+    onEscapeRef.current = onEscape ?? onClose;
   });
 
   useEffect(() => {
@@ -61,7 +69,7 @@ export function Dialog({ labelledBy, className, onClose, children }: DialogProps
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onCloseRef.current();
+        onEscapeRef.current();
       } else if (event.key === 'Tab') {
         trapTab(event);
       }

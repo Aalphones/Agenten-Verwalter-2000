@@ -131,6 +131,8 @@ export const NO_SERVERS_TITLE = 'Noch keine MCP-Server';
 export const NO_SERVERS_TEXT =
   'Ein MCP-Server gibt dem Agenten zusätzliche Werkzeuge, z. B. Zugriff auf ein Ticketsystem.';
 
+export const NO_SERVERS_JSON_HINT = 'Oder eine vorhandene Konfiguration als JSON einfügen.';
+
 export const SWITCH_LABELS: Readonly<Record<McpSwitchPosition, string>> = {
   all: 'Überall aus – auch in neuen Vorhaben',
   here: 'Aus in diesem Vorhaben',

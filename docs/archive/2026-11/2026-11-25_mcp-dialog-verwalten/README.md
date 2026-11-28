@@ -1,6 +1,6 @@
 # MCP-Server im Dialog verwalten
 
-Der Dialog „MCP-Server“ zeigt Server auch ohne laufenden Agenten, gruppiert sie nach Ablageort und kann Server hinzufügen, bearbeiten, entfernen, testen und ihre Werkzeuge samt Server-Anweisungen zeigen. Entscheidungen: [ADR 070](../../decisions/070-mcp-server-verwalten.md). Entwurf (verbindlich): [artifacts/mcp-dialog-entwurf.html](artifacts/mcp-dialog-entwurf.html).
+Der Dialog „MCP-Server“ zeigt Server auch ohne laufenden Agenten, gruppiert sie nach Ablageort und kann Server hinzufügen, bearbeiten, entfernen, testen und ihre Werkzeuge samt Server-Anweisungen zeigen. Entscheidungen: [ADR 070](../../../decisions/070-mcp-server-verwalten.md). Entwurf (verbindlich): [artifacts/mcp-dialog-entwurf.html](artifacts/mcp-dialog-entwurf.html).
 
 ## Overview
 
@@ -10,7 +10,9 @@ Der Dialog „MCP-Server“ zeigt Server auch ohne laufenden Agenten, gruppiert 
 | 2 | Core: Konfiguration schreiben, Neustart bei Änderung | heikel | opusplan | complete |
 | 3 | Core: Verbindung testen, Werkzeuge und Anweisungen lesen | standard | sonnet | complete |
 | 4 | Oberfläche: Liste nach Ablageort | standard | sonnet | complete |
-| 5 | Oberfläche: Formular, Test, Werkzeug-Ansicht | standard | sonnet | pending |
+| 5 | Oberfläche: Formular, Test, Werkzeug-Ansicht | standard | sonnet | complete |
+
+**Status:** abgeschlossen am 2026-11-28.
 
 ## Kontrakt (Core ↔ Oberfläche)
 
@@ -53,6 +55,7 @@ pub struct McpConfigView {
 pub struct McpDraft {
     pub source_id: String,
     pub original_name: Option<String>, // Some = Bearbeiten
+    pub original_source_id: Option<String>, // Some = Verschieben: der Eintrag steht noch dort
     pub name: String,
     pub transport: McpTransport,       // Stdio | Http | Sse
     pub url: Option<String>,
@@ -115,9 +118,18 @@ Fehlerklassen geprüft (Vault: typescript, react, claude-code; rust und tauri oh
 
 ## Summary
 
+Der Dialog „MCP-Server“ zeigt alle Server aus den Konfigurationsdateien nach Ablageort, auch ohne Agent. Server lassen sich hinzufügen (Felder oder JSON), bearbeiten, zwischen Quellen verschieben, mit Rückgängig entfernen, dreistufig schalten und ohne Agent testen; die Details zeigen Werkzeuge mit Beschreibung und die Server-Anweisungen.
+
 ## Files touched
 
+- Core: `src-tauri/src/mcp/` (`model.rs`, `config_files.rs`, `probe.rs`), `src-tauri/src/commands/mcp.rs`, `src-tauri/src/sessions/registry.rs`, `registry/mcp.rs`
+- Oberfläche: `src/features/mcp/`, `src/lib/mcp.ts`, `src/lib/bindings/`, `src/components/Dialog.tsx` (`onEscape`)
+- Doku: ADR 070, `docs/code-map.md`
+
 ## Commits
+
+- Phase 1: `17e3ff3` · Phase 2: `935367c` · Phase 3: `95f038e` · Phase 4: `a9f11fd`
+- Phase 5: der Commit, der diesen Plan archiviert
 
 ## Deviations from plan
 
@@ -126,6 +138,17 @@ Fehlerklassen geprüft (Vault: typescript, react, claude-code; rust und tauri oh
 - Phase 4: zusätzliche Zustände „Überdeckt“ (eingeschalteter, überdeckter Eintrag) und „Lädt …“ (Agent läuft, Liste fehlt noch; Schalter gesperrt).
 - Phase 4: `mergeServers` bekommt zusätzlich die hier entfernten Namen; bei geänderter Konfiguration stehen sie und verschwundene Datei-Server nicht unter „Fest eingebunden“. Grenze: ein von außen gelöschter Repository-Server steht dort bis zum Neustart des Agenten.
 - Phase 4: Lesefehler einer Quelle stehen als Zeile in ihrer Gruppe; „Vorhaben-Ordner“ nennt „nur dieses Vorhaben“.
-- Phase 4, bis Phase 5: „Server hinzufügen“, „Hier hinzufügen“ und „Bearbeiten“ gesperrt, Werkzeugnamen bleiben in den Details, der Leerzustand nennt „Oder JSON einfügen“ noch nicht.
+- Phase 4, bis Phase 5: „Server hinzufügen“, „Hier hinzufügen“ und „Bearbeiten“ gesperrt, Werkzeugnamen bleiben in den Details, der Leerzustand nennt „Oder JSON einfügen“ noch nicht. Mit Phase 5 erledigt.
+- Phase 5, Core: `McpDraft.original_source_id`; ohne das Feld ließ sich ein Server mit verborgenen Werten nicht verschieben, weil die Oberfläche die Werte nicht kennt.
+- Phase 5: Das Öffnen des Formulars schreibt eine noch offene Entfernung sofort, statt die 6 s abzuwarten (AK 4).
+- Phase 5: „Verbindung testen“ meldet wie im Entwurf nur die Anzahl der Werkzeuge; Namen, Beschreibungen und Anweisungen zeigt die Werkzeug-Ansicht (AK 7).
+- Phase 5: zusätzliche Fehler „Namensformat“ und „verborgener Wert muss neu eingegeben werden“ (Schlüssel oder Art geändert); `Dialog` bekommt `onEscape`, damit Esc im Formular zur Liste führt.
+- Phase 5: neue Texte in `mcpFormTexts.ts`; zusätzlich zur Checkliste `McpScopeCards`, `McpPairRows`, `mcpFormState.ts`.
+- Phase 5: Die Geheimnis-Warnung gilt nur im Felder-Modus und nur bei angehaktem „geheim“; JSON einfügen übernimmt nur `type`, `url`, `command`, `args`, `headers`, `env`.
 
 ## Follow-ups
+
+- Konfidenz-Check offen: gleichzeitiges Schreiben von `~/.claude.json` (siehe „Konfidenz“, erster Punkt).
+- Konfidenz-Check offen: Zuordnung von `mcp_status` zu Repository-Servern bei laufendem Agenten.
+- Nicht in der laufenden App gelaufen: Liste, Schalten, Formular, Verschieben (Core), Test und Werkzeug-Ansicht; die Oberfläche ist auf einer Prüfseite mit nachgestelltem Core geprüft.
+- Möglich: Geheimnis-Warnung auch für eingefügtes JSON und für nicht angehakte Werte.

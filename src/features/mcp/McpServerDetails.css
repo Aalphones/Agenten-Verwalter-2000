@@ -38,6 +38,12 @@
     margin: 0;
     font-size: var(--font-size-2xs);
     color: var(--color-fg-muted);
+
+    /* Das Schloss steht im Satz; ohne das setzt die Grundformatierung es auf eine eigene Zeile. */
+    & svg {
+      display: inline-block;
+      vertical-align: -2px;
+    }
   }
 
   &__problem {

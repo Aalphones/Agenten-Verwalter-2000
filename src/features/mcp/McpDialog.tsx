@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, ReactElement } from 'react';
 import { Dialog } from '@/components/Dialog';
 import { ExternalLink } from '@/components/ExternalLink';
 import { McpGroupPlace } from '@/features/mcp/McpGroupPlace';
 import { ClockIcon, CloseIcon, GroupIcon, PlusIcon, SearchIcon } from '@/features/mcp/McpIcons';
+import { McpServerForm } from '@/features/mcp/McpServerForm';
 import { McpServerRow } from '@/features/mcp/McpServerRow';
+import { defaultSourceId, LOCAL_SOURCE_ID } from '@/features/mcp/mcpFormState';
+import type { McpFormTarget } from '@/features/mcp/mcpFormState';
 import {
   actionErrorText,
   ADD_LONG_SUFFIX,
@@ -22,6 +25,7 @@ import {
   mergeServers,
   NO_SERVERS_TEXT,
   NO_SERVERS_TITLE,
+  NO_SERVERS_JSON_HINT,
   OFFLINE_HINT,
   offlineSummaryText,
   RECONNECT_LABEL,
@@ -51,14 +55,29 @@ interface McpDialogProps {
 }
 
 /** Dialog „MCP-Server“: die Server der Session nach Ablageort, auch ohne Agenten; Schalten,
- *  Entfernen mit Rückgängig, Anmelden und Neu verbinden. */
+ *  Hinzufügen und Bearbeiten, Entfernen mit Rückgängig, Anmelden und Neu verbinden. */
 export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
   const [filter, setFilter] = useState<string>('');
   const [expanded, setExpanded] = useState<string | null>(null);
   // Ein abgelehnter Command (die Aktion kam gar nicht an); Fehler der Aktion beim Agenten stehen in `mcp.error`.
   const [actionFailure, setActionFailure] = useState<string | null>(null);
+  // Gesetzt: das Formular ersetzt die Liste.
+  const [formTarget, setFormTarget] = useState<McpFormTarget | null>(null);
+  // Die gerade gespeicherte Zeile rückt ins Bild und bekommt den Fokus.
+  const [revealKey, setRevealKey] = useState<string | null>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const shouldFocusCloseRef = useRef<boolean>(false);
   const { mcp, config, configFailure, reloadConfig } = useSessionMcp(session.id, true);
   const removal = useUndoableRemoval(reloadConfig, setActionFailure);
+
+  const sessionLabel = `Session #${String(session.number)} ${session.name}`;
+
+  useEffect(() => {
+    if (formTarget === null && shouldFocusCloseRef.current) {
+      shouldFocusCloseRef.current = false;
+      closeRef.current?.focus();
+    }
+  }, [formTarget]);
 
   const isAgentRunning: boolean = mcp?.isAgentRunning ?? false;
   const live: McpServer[] | null = isAgentRunning ? (mcp?.servers ?? null) : null;
@@ -113,6 +132,39 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     });
   }
 
+  function openForm(target: McpFormTarget): void {
+    // Die Rückgängig-Zeile wäre im Formular unsichtbar, und Strg+Z gehört dort den Feldern.
+    removal.flush();
+    setActionFailure(null);
+    setRevealKey(null);
+    setFormTarget(target);
+  }
+
+  function addServer(sourceId: string): void {
+    openForm({ kind: 'add', sourceId });
+  }
+
+  function editRow(row: McpRow): void {
+    if (row.sourceId !== null && row.entry !== null) {
+      openForm({ kind: 'edit', sourceId: row.sourceId, entry: row.entry });
+    }
+  }
+
+  function leaveForm(): void {
+    shouldFocusCloseRef.current = true;
+    setFormTarget(null);
+  }
+
+  function showSaved(key: string, leftover: string | null): void {
+    void reloadConfig().then(() => {
+      setFilter('');
+      setExpanded(key);
+      setRevealKey(key);
+      setActionFailure(leftover);
+      setFormTarget(null);
+    });
+  }
+
   function toggleExpanded(key: string): void {
     if (expanded === key) {
       setExpanded(null);
@@ -146,7 +198,7 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
       return renderLoading();
     }
     if (hasNothing) {
-      return renderNoServers();
+      return renderNoServers(config);
     }
     return renderList(config);
   }
@@ -168,23 +220,30 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     );
   }
 
-  function renderNoServers(): ReactElement {
+  function renderNoServers(loadedConfig: McpConfigView): ReactElement {
     return (
       <div className="mcp-dialog__empty">
         <h3 className="mcp-dialog__empty-title">{NO_SERVERS_TITLE}</h3>
         <span>{NO_SERVERS_TEXT}</span>
-        {renderAddButton()}
+        {renderAddButton(loadedConfig, '')}
+        <span className="mcp-dialog__empty-note">{NO_SERVERS_JSON_HINT}</span>
       </div>
     );
   }
 
-  /** Das Formular dazu gibt es noch nicht. */
-  function renderAddButton(): ReactElement {
+  /** `suffixClass`: in der Werkzeugzeile fällt „hinzufügen“ auf schmaler Breite weg. */
+  function renderAddButton(loadedConfig: McpConfigView, suffixClass: string): ReactElement {
     return (
-      <button type="button" className="mcp-dialog__button mcp-dialog__button--primary" disabled>
+      <button
+        type="button"
+        className="mcp-dialog__button mcp-dialog__button--primary"
+        onClick={() => {
+          addServer(defaultSourceId(loadedConfig));
+        }}
+      >
         <PlusIcon />
         <span>
-          {ADD_SHORT_LABEL} <span className="mcp-dialog__add-long">{ADD_LONG_SUFFIX}</span>
+          {ADD_SHORT_LABEL} <span className={suffixClass}>{ADD_LONG_SUFFIX}</span>
         </span>
       </button>
     );
@@ -216,7 +275,7 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
               }}
             />
           </label>
-          {renderAddButton()}
+          {renderAddButton(loadedConfig, 'mcp-dialog__add-long')}
         </div>
         {isAgentRunning && loadedConfig.configChanged && renderHint(CONFIG_CHANGED_HINT, 'wait')}
         {mcp !== null && !isAgentRunning && renderHint(OFFLINE_HINT, 'quiet')}
@@ -301,8 +360,13 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     return (
       <div className="mcp-dialog__group-empty">
         {LOCAL_EMPTY_TEXT}
-        {/* Das Formular dazu gibt es noch nicht. */}
-        <button type="button" className="mcp-dialog__link" disabled>
+        <button
+          type="button"
+          className="mcp-dialog__link"
+          onClick={() => {
+            addServer(LOCAL_SOURCE_ID);
+          }}
+        >
           {LOCAL_ADD_LABEL}
         </button>
       </div>
@@ -317,8 +381,16 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     return (
       <McpServerRow
         key={row.key}
+        sessionId={session.id}
         row={row}
         group={group}
+        shouldReveal={revealKey === row.key}
+        onRevealed={() => {
+          setRevealKey(null);
+        }}
+        onEdit={() => {
+          editRow(row);
+        }}
         position={position}
         status={rowStatus(row, position, isAgentRunning, live !== null)}
         isExpanded={expanded === row.key}
@@ -371,41 +443,71 @@ export function McpDialog({ session, onClose }: McpDialogProps): ReactElement {
     );
   }
 
-  return (
-    <Dialog labelledBy={TITLE_ID} className="mcp-dialog" onClose={onClose}>
-      <div className="mcp-dialog__head">
-        <div className="mcp-dialog__heading">
-          <h2 id={TITLE_ID} className="mcp-dialog__title">
-            MCP-Server
-          </h2>
-          <span className="mcp-dialog__subtitle">
-            Session #{session.number} {session.name}
-          </span>
-          {mcp !== null && (
-            <span className="mcp-dialog__agent">
-              <span
-                className={`mcp-dialog__agent-dot${isAgentRunning ? ' mcp-dialog__agent-dot--running' : ''}`}
-              />
-              {agentText()}
-            </span>
-          )}
+  function renderView(): ReactElement {
+    if (formTarget !== null && config !== null) {
+      return (
+        <McpServerForm
+          sessionId={session.id}
+          titleId={TITLE_ID}
+          sessionLabel={sessionLabel}
+          config={config}
+          target={formTarget}
+          onCancel={leaveForm}
+          onSaved={showSaved}
+          onClose={onClose}
+        />
+      );
+    }
+    return renderListView();
+  }
+
+  function renderListView(): ReactElement {
+    return (
+      <>
+        <div className="mcp-dialog__head">
+          <div className="mcp-dialog__heading">
+            <h2 id={TITLE_ID} className="mcp-dialog__title">
+              MCP-Server
+            </h2>
+            <span className="mcp-dialog__subtitle">{sessionLabel}</span>
+            {mcp !== null && (
+              <span className="mcp-dialog__agent">
+                <span
+                  className={`mcp-dialog__agent-dot${isAgentRunning ? ' mcp-dialog__agent-dot--running' : ''}`}
+                />
+                {agentText()}
+              </span>
+            )}
+          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            className="mcp-dialog__close"
+            aria-label="Schließen"
+            onClick={onClose}
+          >
+            <CloseIcon />
+          </button>
         </div>
-        <button
-          type="button"
-          className="mcp-dialog__close"
-          aria-label="Schließen"
-          onClick={onClose}
-        >
-          <CloseIcon />
-        </button>
-      </div>
-      {renderBody()}
-      <div className="mcp-dialog__foot">
-        {renderFootText()}
-        <button type="button" className="mcp-dialog__button" onClick={onClose}>
-          Schließen
-        </button>
-      </div>
+        {renderBody()}
+        <div className="mcp-dialog__foot">
+          {renderFootText()}
+          <button type="button" className="mcp-dialog__button" onClick={onClose}>
+            Schließen
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <Dialog
+      labelledBy={TITLE_ID}
+      className="mcp-dialog"
+      onClose={onClose}
+      {...(formTarget === null ? {} : { onEscape: leaveForm })}
+    >
+      {renderView()}
     </Dialog>
   );
 }

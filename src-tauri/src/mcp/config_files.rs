@@ -200,7 +200,7 @@ impl LoadedConfig {
         validate_connection(draft).map_err(|error: CommandError| error.to_string())?;
         let previous = match draft.original_name.as_deref() {
             Some(original) => Some(
-                self.entry(&draft.source_id, original)
+                self.entry(origin_source(draft), original)
                     .ok_or_else(|| missing_server(original))?,
             ),
             None => None,
@@ -258,8 +258,17 @@ fn missing_server(name: &str) -> String {
     format!("Der Server {name} ist in dieser Quelle nicht mehr vorhanden.")
 }
 
+/// Die Quelle, in der der bearbeitete Eintrag steht.
+fn origin_source(draft: &McpDraft) -> &str {
+    draft
+        .original_source_id
+        .as_deref()
+        .unwrap_or(&draft.source_id)
+}
+
 /// Legt einen Server an oder ersetzt einen (`original_name`, auch zum Umbenennen). Nicht
-/// angefasste Felder des bearbeiteten Eintrags bleiben stehen.
+/// angefasste Felder des bearbeiteten Eintrags bleiben stehen. Zieht er um
+/// (`original_source_id`), entsteht er in der Zielquelle neu; den alten entfernt `remove`.
 pub fn save(
     home: &Path,
     workspace: &Path,
@@ -267,16 +276,26 @@ pub fn save(
     draft: &McpDraft,
 ) -> Result<(), CommandError> {
     validate(draft)?;
-    if draft.original_name.is_none() && draft.source_id == WORKSPACE_SOURCE_ID {
+    let is_move = origin_source(draft) != draft.source_id;
+    let is_new = draft.original_name.is_none() || is_move;
+    if is_new && draft.source_id == WORKSPACE_SOURCE_ID {
         return Err(invalid(
             "In die Datei des Vorhaben-Ordners lässt sich nichts Neues eintragen.",
         ));
     }
     let target = locate(home, repositories, workspace, &draft.source_id)?;
-    let is_new = draft.original_name.is_none();
+    let moved: Option<Value> = match draft.original_name.as_deref() {
+        Some(name) if is_move => Some(
+            load(home, workspace, repositories)
+                .entry(origin_source(draft), name)
+                .cloned()
+                .ok_or_else(|| invalid(missing_server(name)))?,
+        ),
+        _ => None,
+    };
     rewrite(&target.file, |root: &mut Value| {
         let maps = server_maps_mut(root, &target.node, workspace, is_new)?;
-        let original = draft.original_name.as_deref();
+        let original = draft.original_name.as_deref().filter(|_| !is_move);
         // Beim Bearbeiten gilt die Map, in der der Eintrag steht; ein Neuer geht in die erste.
         let servers = maps
             .into_iter()
@@ -289,7 +308,7 @@ pub fn save(
                     original.unwrap_or_default()
                 ))
             })?;
-        replace_server(servers, draft)?;
+        replace_server(servers, draft, original, moved.as_ref())?;
         Ok(true)
     })
 }
@@ -567,17 +586,22 @@ fn update_disabled(
     Ok(items.len() != before)
 }
 
-/// Setzt den Eintrag an die Stelle des alten (Umbenennen) bzw. ans Ende (neu).
-fn replace_server(servers: &mut Map<String, Value>, draft: &McpDraft) -> Result<(), CommandError> {
+/// Setzt den Eintrag an die Stelle des alten (`original`, auch zum Umbenennen) bzw. ans Ende
+/// (neu oder umgezogen; dann liefert `moved` die bisherigen Felder).
+fn replace_server(
+    servers: &mut Map<String, Value>,
+    draft: &McpDraft,
+    original: Option<&str>,
+    moved: Option<&Value>,
+) -> Result<(), CommandError> {
     let name = draft.name.as_str();
-    let original = draft.original_name.as_deref();
     if original != Some(name) && servers.contains_key(name) {
         return Err(invalid(format!(
             "Der Name {name} gibt es in dieser Quelle schon."
         )));
     }
     let previous: Option<Value> = original.and_then(|old: &str| servers.get(old).cloned());
-    let entry = build_entry(previous.as_ref(), draft)?;
+    let entry = build_entry(previous.as_ref().or(moved), draft)?;
     let Some(old) = original else {
         servers.insert(name.to_owned(), entry);
         return Ok(());

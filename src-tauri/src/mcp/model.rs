@@ -175,6 +175,9 @@ pub struct McpDraft {
     pub source_id: String,
     /// Gesetzt beim Bearbeiten.
     pub original_name: Option<String>,
+    /// Gesetzt, wenn der bearbeitete Eintrag in eine andere Quelle zieht: dort steht er noch.
+    /// Seine verborgenen und nicht angefassten Felder gehen mit.
+    pub original_source_id: Option<String>,
     pub name: String,
     pub transport: McpTransport,
     pub url: Option<String>,

@@ -3,7 +3,7 @@
 ## Kontext
 
 - [README.md](README.md) — Kontrakt, Typen, Commands
-- [ADR 070](../../decisions/070-mcp-server-verwalten.md), [ADR 013](../../decisions/013-mcp-server-im-dialog.md)
+- [ADR 070](../../../decisions/070-mcp-server-verwalten.md), [ADR 013](../../../decisions/013-mcp-server-im-dialog.md)
 - `src-tauri/src/standalone/mcp/config.rs` — liest dieselben Orte für den autarken Agenten: `load`, `project_entries`, `folder_key`, `server_config`, `read_json`, `expanded`, Rangfolge lokal > `--mcp-config` > Projekt > Benutzer
 - `src-tauri/src/agents/claude/process.rs` — `project_mcp_configs` (welche `.mcp.json` der Agent bekommt)
 - `src-tauri/src/worktrees/` — `SessionRepository::working_dir(workspace)` liefert den Arbeitsordner eines Repositories **ohne** etwas anzulegen; `ensure` legt an und ist hier verboten

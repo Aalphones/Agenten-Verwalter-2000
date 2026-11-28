@@ -1,0 +1,108 @@
+.mcp-inspect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+
+  &__start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  &__note {
+    margin: 0;
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
+  &__running {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-status-running);
+  }
+
+  &__failure {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-xl);
+    border-left: 3px solid var(--color-status-error);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: var(--color-status-error-subtle);
+    font-size: var(--font-size-sm);
+  }
+
+  &__reason {
+    overflow-y: auto;
+    align-self: stretch;
+    max-height: 148px;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &__title {
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-muted);
+  }
+
+  /* Anweisungen und Beschreibungen kommen mehrzeilig vom Server; lange rollen in sich. */
+  &__instructions {
+    overflow-y: auto;
+    max-height: 200px;
+    margin: 0;
+    padding: var(--space-md) var(--space-xl);
+    border-left: 2px solid var(--color-border);
+    font-size: var(--font-size-sm);
+    color: var(--color-fg-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &__tools {
+    overflow-y: auto;
+    max-height: 320px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    list-style: none;
+  }
+
+  &__tool + &__tool {
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  &__tool-name {
+    padding: var(--space-sm) var(--space-lg);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    /* `break-all`: sonst rutscht ein langer Name als Ganzes unter das Aufklapp-Zeichen. */
+    word-break: break-all;
+    cursor: pointer;
+  }
+
+  &__tool-text {
+    margin: 0;
+    padding: 0 var(--space-lg) var(--space-md) 22px;
+    font-size: var(--font-size-xs);
+    color: var(--color-fg-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+@container mcp-stage (max-width: 600px) {
+  .mcp-inspect__tool-name {
+    min-height: 40px;
+    box-sizing: border-box;
+    align-content: center;
+  }
+}

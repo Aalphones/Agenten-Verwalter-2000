@@ -9,6 +9,15 @@ export const UNDO_MS = 6000;
  *  das Schließen des Dialogs hinaus, weil eine offene Entfernung erst dabei geschrieben wird. */
 const removedNames = new Set<string>();
 
+/** Auch ein Umbenennen lässt den alten Namen beim laufenden Agenten zurück. */
+export function rememberRemovedName(name: string): void {
+  removedNames.add(name);
+}
+
+export function forgetRemovedName(name: string): void {
+  removedNames.delete(name);
+}
+
 export interface RemovalTarget {
   key: string;
   sessionId: string;
@@ -24,6 +33,8 @@ export interface UndoableRemoval {
   removedNames: ReadonlySet<string>;
   remove: (target: RemovalTarget) => void;
   undo: () => void;
+  /** Schreibt eine offene Entfernung sofort, etwa wenn die Liste dem Formular weicht. */
+  flush: () => void;
 }
 
 interface Pending {
@@ -117,5 +128,5 @@ export function useUndoableRemoval(
     };
   }, [pendingKey, undo]);
 
-  return { pendingKey, committingKeys, removedNames, remove, undo };
+  return { pendingKey, committingKeys, removedNames, remove, undo, flush: commit };
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { ChevronIcon, EditIcon, LockIcon, ReconnectIcon, TrashIcon } from '@/features/mcp/McpIcons';
 import { McpServerDetails } from '@/features/mcp/McpServerDetails';
@@ -18,7 +19,12 @@ import type { McpRow, McpRowGroup, McpRowStatus, McpSwitchPosition } from '@/fea
 import './McpServerRow.css';
 
 interface McpServerRowProps {
+  sessionId: string;
   row: McpRow;
+  /** Gerade gespeichert: die Zeile rückt ins Bild und bekommt den Fokus. */
+  shouldReveal: boolean;
+  onRevealed: () => void;
+  onEdit: () => void;
   group: McpRowGroup;
   position: McpSwitchPosition;
   status: McpRowStatus;
@@ -36,7 +42,11 @@ interface McpServerRowProps {
 }
 
 export function McpServerRow({
+  sessionId,
   row,
+  shouldReveal,
+  onRevealed,
+  onEdit,
   group,
   position,
   status,
@@ -50,6 +60,16 @@ export function McpServerRow({
   onSwitch,
   onRemove,
 }: McpServerRowProps): ReactElement {
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (shouldReveal) {
+      toggleRef.current?.focus({ preventScroll: true });
+      toggleRef.current?.closest('li')?.scrollIntoView({ block: 'nearest' });
+      onRevealed();
+    }
+  }, [shouldReveal, onRevealed]);
+
   const canReconnect: boolean = isAgentRunning && row.live !== null && position === 'on' && !isBusy;
   const classNames: string = [
     'mcp-server',
@@ -75,13 +95,12 @@ export function McpServerRow({
     }
     return (
       <>
-        {/* Das Formular dazu gibt es noch nicht. */}
         <button
           type="button"
           className="mcp-server__action"
           aria-label={`${row.name} bearbeiten`}
           title={EDIT_LABEL}
-          disabled
+          onClick={onEdit}
         >
           <EditIcon />
         </button>
@@ -102,6 +121,7 @@ export function McpServerRow({
     <li className={classNames}>
       <div className="mcp-server__head">
         <button
+          ref={toggleRef}
           type="button"
           className="mcp-server__toggle"
           aria-expanded={isExpanded}
@@ -158,7 +178,14 @@ export function McpServerRow({
         </span>
       </div>
       {isExpanded && (
-        <McpServerDetails row={row} group={group} position={position} status={status} />
+        <McpServerDetails
+          sessionId={sessionId}
+          row={row}
+          group={group}
+          position={position}
+          status={status}
+          isAgentRunning={isAgentRunning}
+        />
       )}
     </li>
   );

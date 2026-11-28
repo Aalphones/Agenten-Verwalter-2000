@@ -9,4 +9,9 @@ export type McpDraft = { sourceId: string,
 /**
  * Gesetzt beim Bearbeiten.
  */
-originalName: string | null, name: string, transport: McpTransport, url: string | null, command: string | null, args: Array<string>, pairs: Array<McpPairDraft>, };
+originalName: string | null, 
+/**
+ * Gesetzt, wenn der bearbeitete Eintrag in eine andere Quelle zieht: dort steht er noch.
+ * Seine verborgenen und nicht angefassten Felder gehen mit.
+ */
+originalSourceId: string | null, name: string, transport: McpTransport, url: string | null, command: string | null, args: Array<string>, pairs: Array<McpPairDraft>, };

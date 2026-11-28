@@ -347,6 +347,11 @@
     color: var(--color-fg-secondary);
   }
 
+  &__empty-note {
+    font-size: var(--font-size-2xs);
+    color: var(--color-fg-muted);
+  }
+
   &__empty-title {
     margin: 0;
     font-size: var(--font-size-lg);

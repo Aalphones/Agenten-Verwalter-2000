@@ -21,11 +21,13 @@
 
 ## Checkliste
 
-- [ ] `src/features/mcp/McpServerForm.tsx` + `.css` (neu); `McpDialog` schaltet zwischen Liste und Formular (`view: 'list' | 'form'`).
-- [ ] `src/features/mcp/parseMcpJson.ts` (neu): JSON → `McpDraft[]`, Befehl-Aufteilung `splitCommand`.
-- [ ] `src/features/mcp/McpToolInspect.tsx` (neu) für AK 8, eingebunden in `McpServerRow`.
-- [ ] Texte in `mcpTexts.ts`.
-- [ ] Gegen Entwurf prüfen (hell/dunkel, 390/1366 px), jedes Bedienelement einmal.
-- [ ] `pnpm check` grün; Code-Map-Zeile um die neuen Dateien ergänzen.
+- [x] `src/features/mcp/McpServerForm.tsx` + `.css` (neu); `McpDialog` schaltet zwischen Liste und Formular (`view: 'list' | 'form'`).
+- [x] `src/features/mcp/parseMcpJson.ts` (neu): JSON → `McpDraft[]`, Befehl-Aufteilung `splitCommand`.
+- [x] `src/features/mcp/McpToolInspect.tsx` (neu) für AK 8, eingebunden in `McpServerRow`.
+- [x] Texte in `mcpTexts.ts`.
+- [x] Gegen Entwurf prüfen (hell/dunkel, 390/1366 px), jedes Bedienelement einmal.
+- [x] `pnpm check` grün; Code-Map-Zeile um die neuen Dateien ergänzen.
 
 ## Report-Back
+
+**Status:** complete (2026-11-28). `pnpm check` grün. Oberfläche auf einer Prüfseite mit nachgestelltem Core gegen den Entwurf geprüft (hell/dunkel, 390/1366 px); nicht in der laufenden App. Dabei behoben: langer Werkzeugname brach unter das Aufklapp-Zeichen, Schloss-Hinweis bei fest eingebundenen Servern stand zweizeilig. Abweichungen: README → „Deviations from plan“.

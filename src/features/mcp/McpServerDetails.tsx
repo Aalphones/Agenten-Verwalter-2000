@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { LockIcon } from '@/features/mcp/McpIcons';
 import { McpGroupPlace } from '@/features/mcp/McpGroupPlace';
+import { McpToolInspect } from '@/features/mcp/McpToolInspect';
 import {
   AUTH_BOX_TEXT,
   AUTH_BOX_TITLE,
@@ -21,18 +22,23 @@ import type { McpServer } from '@/lib/bindings/McpServer';
 import './McpServerDetails.css';
 
 interface McpServerDetailsProps {
+  sessionId: string;
   row: McpRow;
   group: McpRowGroup;
   position: McpSwitchPosition;
   status: McpRowStatus;
+  isAgentRunning: boolean;
 }
 
-/** Der aufgeklappte Teil einer Zeile: Fehler bzw. Anmeldung, Ablage und Verbindung, Werkzeugnamen. */
+/** Der aufgeklappte Teil einer Zeile: Fehler bzw. Anmeldung, Ablage und Verbindung, dazu Werkzeuge
+ *  und Anweisungen auf Anfrage (fest eingebunden: nur die Namen vom Agenten). */
 export function McpServerDetails({
+  sessionId,
   row,
   group,
   position,
   status,
+  isAgentRunning,
 }: McpServerDetailsProps): ReactElement {
   function renderProblem(): ReactElement | null {
     if (status === 'failed') {
@@ -127,7 +133,15 @@ export function McpServerDetails({
         </dd>
         {renderConnection()}
       </dl>
-      {status === 'connected' && row.live !== null && renderTools(row.live)}
+      {row.sourceId !== null && (
+        <McpToolInspect
+          sessionId={sessionId}
+          sourceId={row.sourceId}
+          name={row.name}
+          isAgentRunning={isAgentRunning}
+        />
+      )}
+      {row.entry === null && status === 'connected' && row.live !== null && renderTools(row.live)}
       {position !== 'on' && <p className="mcp-details__hint">{OFF_NOTE}</p>}
       {row.entry === null && row.live !== null && (
         <p className="mcp-details__hint">

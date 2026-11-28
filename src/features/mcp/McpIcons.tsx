@@ -134,3 +134,27 @@ export function GroupIcon({ kind }: { kind: McpGroupKind }): ReactElement {
       return <LockIcon />;
   }
 }
+
+export function BackIcon(): ReactElement {
+  return (
+    <Icon size={16}>
+      <path d="M10 3.5L5.5 8l4.5 4.5" />
+    </Icon>
+  );
+}
+
+export function CheckIcon(): ReactElement {
+  return (
+    <Icon size={14}>
+      <path d="M3.5 8.5l3 3 6-7" />
+    </Icon>
+  );
+}
+
+export function WarnIcon(): ReactElement {
+  return (
+    <Icon size={14}>
+      <path d="M8 2.5l6 11H2zM8 6.5v3M8 11.5v.01" />
+    </Icon>
+  );
+}
