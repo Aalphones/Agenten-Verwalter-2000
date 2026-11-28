@@ -1,7 +1,8 @@
 # STATE
 
-**Aktiver Plan:** keiner
-**Nächster Schritt:** den geparkten Plan „Bibliothek bearbeiten“ starten.
+**Aktiver Plan:** `docs/planning/2026-11-27_dateien-und-nebenfragen/`
+**Phase:** 2/3 — Verlaufszeile im Chat (pending; Phase 1 complete)
+**Nächster Schritt:** Phase 2 umsetzen; danach ist der geparkte Plan „Bibliothek bearbeiten“ offen.
 
 **Zuletzt archiviert (Bericht-Zustand):** `docs/archive/2026-11/2026-11-27_bericht-zustand/` (ADR 075, keine Migration), Release `v0.76.0` — alle 5 Phasen complete; nicht in der laufenden App gelaufen; Grenzen (`git commit -q`, Ladezeit auf G:) in den README-Follow-ups.
 

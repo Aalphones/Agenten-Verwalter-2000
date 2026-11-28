@@ -51,6 +51,8 @@ interface SessionHeaderProps {
   gitStatus: GitSessionStatus | null;
   /** Artefakte des Vorhabens; „Artefakte“ erscheint erst ab dem ersten. */
   artifactCount: number;
+  /** Ohne Repository erscheint „Dateien“ nur mit Session-Dateien. */
+  hasSessionFiles: boolean;
   /** Der Bericht der Umsetzung hat Inhalt: „Review“ erscheint (nur bei Stations-Sessions). */
   hasReport: boolean;
   /** Eine Phase ist fertig, seit der Bericht zuletzt offen war: Punkt am Reiter. */
@@ -77,6 +79,7 @@ export function SessionHeader({
   changes,
   gitStatus,
   artifactCount,
+  hasSessionFiles,
   hasReport,
   hasFreshReport,
   isReportTidying,
@@ -122,13 +125,13 @@ export function SessionHeader({
   const notePlacement: NotePlacement = useSettingsStore(
     (state) => state.settings?.notePlacement ?? 'dock',
   );
-  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt,
+  // „Dateien“ gibt es nur mit Repository oder Session-Datei, „Artefakte“ nur mit mindestens einem Artefakt,
   // „Notiz“ nur mit der Einstellung „Als Reiter oben“.
   const views: readonly SessionView[] = SESSION_VIEWS.filter(
     (view: SessionView) =>
       view === 'chat' ||
       (view === 'review' && hasReport) ||
-      (view === 'files' && session.repositoryCount > 0) ||
+      (view === 'files' && (session.repositoryCount > 0 || hasSessionFiles)) ||
       (view === 'artifacts' && artifactCount > 0) ||
       (view === 'note' && notePlacement === 'tab'),
   );

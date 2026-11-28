@@ -6,7 +6,7 @@ Zwei Wünsche aus dem Alltag: (1) Sessions ohne Repository haben keinen Reiter �
 
 | Phase | Titel | Rating | Modell | Status |
 |---|---|---|---|---|
-| 1 | Reiter „Dateien“ ohne Repository | standard | sonnet | pending |
+| 1 | Reiter „Dateien“ ohne Repository | standard | sonnet | complete |
 | 2 | Verlaufszeile im Chat: aufklappbar mit Ausgabe, Subagent-Text, Beenden, Kopieren | standard | sonnet | pending |
 | 3 | Seitenleiste nur Nebenfragen, Fragezeichen, Aufräumen | standard | sonnet | pending |
 

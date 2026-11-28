@@ -31,6 +31,8 @@ interface ProjectHeaderProps {
   changesCount: number | null;
   /** Artefakte des Vorhabens; „Artefakte“ erscheint erst ab dem ersten. */
   artifactCount: number;
+  /** Ohne Repository erscheint „Dateien“ nur mit Session-Dateien. */
+  hasSessionFiles: boolean;
   /** Laufende Terminals des Vorhabens. */
   terminalCount: number;
   isTerminalOpen: boolean;
@@ -44,6 +46,7 @@ export function ProjectHeader({
   activeView,
   changesCount,
   artifactCount,
+  hasSessionFiles,
   terminalCount,
   isTerminalOpen,
   onToggleTerminal,
@@ -82,12 +85,12 @@ export function ProjectHeader({
   const notePlacement: NotePlacement = useSettingsStore(
     (state) => state.settings?.notePlacement ?? 'dock',
   );
-  // „Dateien“ gibt es nur mit mindestens einem Repository, „Artefakte“ nur mit mindestens einem Artefakt,
+  // „Dateien“ gibt es nur mit Repository oder Session-Datei, „Artefakte“ nur mit mindestens einem Artefakt,
   // „Notiz“ nur mit der Einstellung „Als Reiter oben“.
   const views: readonly ProjectView[] = PROJECT_VIEWS.filter(
     (view: ProjectView) =>
       view === 'overview' ||
-      (view === 'files' && project.repositoryNames.length > 0) ||
+      (view === 'files' && (project.repositoryNames.length > 0 || hasSessionFiles)) ||
       (view === 'artifacts' && artifactCount > 0) ||
       (view === 'note' && notePlacement === 'tab'),
   );

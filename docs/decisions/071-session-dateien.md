@@ -31,3 +31,7 @@ Löst ab: in ADR 023 die Sicherheitsgrenze „nur im Vorhaben“ für das Ansehe
 - Große Scratchpads werden bei jedem Laden der Liste gelesen, gedeckelt bei 2.000 Einträgen und 6 Ebenen.
 - Die Ausschlussliste kann einen exotischen ausführbaren Typ übersehen; sie wird ergänzt, sobald einer auffällt.
 - Der Scratchpad der Kommandozeile liegt unter `%TEMP%` und kann von Windows geleert werden; die Liste zeigt seine Dateien dann nicht mehr.
+
+## Nachtrag 2026-11-27: Sessions ohne Repository
+
+Session-Dateien brauchen kein Repository. In Sessions und Übersichten ohne Repository erscheint der Reiter „Dateien“ deshalb, sobald das Vorhaben mindestens eine Session-Datei hat; die Ansicht einer Umsetzung bleibt unverändert. Die Ansicht ist dann schlank: ohne Leiste, Übersicht, Verlauf und Baumschalter, nur der Knoten „Session-Dateien“ und der Betrachter. Weil der Stempel der Changes ohne Repository nie wechselt, laden Zähler und Liste beim Statuswechsel der Session nach; der Zähler lädt zusätzlich, wenn ein Dateilink auf eine Session-Datei wartet.

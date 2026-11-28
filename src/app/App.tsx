@@ -36,9 +36,12 @@ import { countChangedFiles } from '@/features/changes/changesScope';
 import { useSessionChanges } from '@/features/changes/useSessionChanges';
 import { FilesView } from '@/features/files/FilesView';
 import type { FilesSession } from '@/features/files/FilesView';
+import { filesViewKeyOfSession } from '@/features/files/openFromLink';
+import { useSessionFileCount } from '@/features/files/useSessionFileCount';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import { useFilesStore } from '@/stores/files';
+import type { PendingLink } from '@/stores/files';
 import { ProjectOverview } from '@/features/projects/ProjectOverview';
 import { sessionsOf } from '@/features/projects/projectStatus';
 import { useProjectSummaries } from '@/features/projects/useProjectSummaries';
@@ -330,13 +333,41 @@ export function App(): ReactElement {
     stationId: shownStationId,
   });
 
-  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; ohne Repository gibt es keine Dateien.
-  const isFilesView: boolean = isOverview
-    ? (isImplementation ? implementationView : projectView) === 'files' && hasProjectRepositories
-    : !isMainReplaced &&
+  // Ohne Repository zeigt „Dateien“ nur die Session-Dateien; ob es welche gibt, wird dafür eigens gezählt.
+  const fileCountSessionId: string | null =
+    !isMainReplaced &&
+    currentSession !== undefined &&
+    !isImplementation &&
+    (isOverview ? !hasProjectRepositories : currentSession.repositoryCount === 0)
+      ? currentSession.id
+      : null;
+  // Ein Dateilink mitten im Zug kann auf die erste Session-Datei zeigen: er muss neu zählen lassen, sonst
+  // öffnet sich der Reiter erst beim nächsten Statuswechsel.
+  const waitingSessionFile: string = useFilesStore((state) => {
+    const link: PendingLink | null | undefined =
+      state.selections[filesViewKeyOfSession(fileCountSessionId ?? '')]?.pendingLink;
+    return link?.kind === 'session' ? link.path : '';
+  });
+  const sessionFileCount: number | null = useSessionFileCount(
+    fileCountSessionId,
+    `${currentSession?.status ?? ''}|${waitingSessionFile}`,
+  );
+  const hasSessionFiles: boolean = (sessionFileCount ?? 0) > 0;
+
+  // Der gewählte Reiter bleibt beim Session-Wechsel stehen; ohne Repository gibt es „Dateien“ nur mit
+  // Session-Dateien.
+  let isFilesView: boolean;
+  if (!isOverview) {
+    isFilesView =
+      !isMainReplaced &&
       activeView === 'files' &&
       currentSession !== undefined &&
-      currentSession.repositoryCount > 0;
+      (currentSession.repositoryCount > 0 || hasSessionFiles);
+  } else if (isImplementation) {
+    isFilesView = implementationView === 'files' && hasProjectRepositories;
+  } else {
+    isFilesView = projectView === 'files' && (hasProjectRepositories || hasSessionFiles);
+  }
   // Die Artefakte gehören dem Vorhaben; in der Übersicht fragt die neueste Session ab (wie bei den Changes).
   const { list: artifacts }: { list: ArtifactList | null } = useProjectArtifacts(
     isMainReplaced ? null : (currentSession?.id ?? null),
@@ -631,6 +662,8 @@ export function App(): ReactElement {
         key={filesViewKey}
         viewKey={filesViewKey}
         sessionId={session.id}
+        hasRepositories={isOverview ? hasProjectRepositories : session.repositoryCount > 0}
+        activityStamp={session.status}
         projectChanges={projectChanges}
         projectError={projectChangesError}
         filteredChanges={filteredSession === null ? null : filteredChanges}
@@ -659,6 +692,7 @@ export function App(): ReactElement {
           activeView={projectViewShown()}
           changesCount={changes === null ? null : countChangedFiles(changes)}
           artifactCount={artifactCount}
+          hasSessionFiles={hasSessionFiles}
           onShowView={showProjectView}
           terminalCount={runningTerminalCount}
           isTerminalOpen={isTerminalOpen}
@@ -863,6 +897,7 @@ export function App(): ReactElement {
             changes={changes}
             gitStatus={gitStatus}
             artifactCount={artifactCount}
+            hasSessionFiles={hasSessionFiles}
             hasReport={reportImplementation !== undefined}
             hasFreshReport={hasFreshReport}
             isReportTidying={isReportTidying}

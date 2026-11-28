@@ -24,17 +24,19 @@ Heute: Die Sperre `repositoryCount > 0` steht in `SessionHeader.tsx:128`, `App.t
 
 ## Checkliste
 
-- [ ] Neu `src/features/files/useSessionFileCount.ts`: `export function useSessionFileCount(sessionId: string | null, stamp: string): number | null`. `sessionId === null` → kein Aufruf, Rückgabe `null`. Sonst `listSessionFiles(sessionId)` bei jedem Wechsel von `sessionId` oder `stamp`; Ergebnis = Summe von `group.files.length` über `listing.groups`; Fehler → `console.error` und `null` behalten. Veraltete Antworten per Laufnummer verwerfen (Muster: `useSessionFiles.ts` `sequenceRef`). Beim Wechsel der `sessionId` bis zur Antwort `null`.
-- [ ] `App.tsx`: nach `hasProjectRepositories` (Z. 286) und `currentSession` berechnen:
+- [x] Neu `src/features/files/useSessionFileCount.ts`: `export function useSessionFileCount(sessionId: string | null, stamp: string): number | null`. `sessionId === null` → kein Aufruf, Rückgabe `null`. Sonst `listSessionFiles(sessionId)` bei jedem Wechsel von `sessionId` oder `stamp`; Ergebnis = Summe von `group.files.length` über `listing.groups`; Fehler → `console.error` und `null` behalten. Veraltete Antworten per Laufnummer verwerfen (Muster: `useSessionFiles.ts` `sequenceRef`). Beim Wechsel der `sessionId` bis zur Antwort `null`.
+- [x] `App.tsx`: nach `hasProjectRepositories` (Z. 286) und `currentSession` berechnen:
   - `const fileCountSessionId: string | null = !isMainReplaced && currentSession !== undefined && !isImplementation && (isOverview ? !hasProjectRepositories : currentSession.repositoryCount === 0) ? currentSession.id : null;`
   - `const sessionFileCount = useSessionFileCount(fileCountSessionId, currentSession?.status ?? '');`
   - `const hasSessionFiles: boolean = (sessionFileCount ?? 0) > 0;`
-- [ ] `App.tsx` `isFilesView` (Z. 332–337) ersetzen: Übersicht → `isImplementation ? implementationView === 'files' && hasProjectRepositories : projectView === 'files' && (hasProjectRepositories || hasSessionFiles)`; Session → `… && (currentSession.repositoryCount > 0 || hasSessionFiles)`. Kommentar Z. 331 anpassen („ohne Repository nur mit Session-Dateien“).
-- [ ] `SessionHeader.tsx`: Prop `hasSessionFiles: boolean` (mit Doc-Kommentar) ergänzen; Z. 128 → `(view === 'files' && (session.repositoryCount > 0 || hasSessionFiles))`; Kommentar Z. 122 anpassen. In `App.tsx` beim `<SessionHeader` übergeben.
-- [ ] `ProjectHeader.tsx`: gleiche Prop, Z. 90 → `(view === 'files' && (project.repositoryNames.length > 0 || hasSessionFiles))`, Kommentar anpassen; in `App.tsx` `renderOverview` übergeben.
-- [ ] `FilesView.tsx`: Props `hasRepositories: boolean` und `activityStamp: string` (Doc-Kommentare). `useSessionFiles(sessionId, \`${stamp}|${activityStamp}\`)`. Bei `!hasRepositories`: `FilesToolbar`, Home-Knopf und `files-view__left-head` nicht rendern; in `renderDetail` bei `selection.open === null` den Hinweis aus der AK statt Übersicht/Git-Seite.
-- [ ] `App.tsx` `renderFiles`: `hasRepositories={isOverview ? hasProjectRepositories : session.repositoryCount > 0}` und `activityStamp={session.status}` übergeben.
-- [ ] Docs: `docs/code-map.md` Zeile „Session-Dateien“ um `useSessionFileCount` (Zähler für die Sichtbarkeit des Reiters ohne Repository) ergänzen; `docs/glossary.md` „Session-Datei“: Satz „Ohne Repository zeigt der Reiter ‚Dateien‘ nur diesen Knoten; er erscheint, sobald es eine Session-Datei gibt.“; `docs/decisions/071-session-dateien.md` Abschnitt „Nachtrag 2026-11-27: Sessions ohne Repository“ (3–5 Sätze: Sichtbarkeit, schlanke Ansicht, Nachladen am Status).
-- [ ] `powershell -File scripts/check.ps1` grün.
+- [x] `App.tsx` `isFilesView` (Z. 332–337) ersetzen: Übersicht → `isImplementation ? implementationView === 'files' && hasProjectRepositories : projectView === 'files' && (hasProjectRepositories || hasSessionFiles)`; Session → `… && (currentSession.repositoryCount > 0 || hasSessionFiles)`. Kommentar Z. 331 anpassen („ohne Repository nur mit Session-Dateien“).
+- [x] `SessionHeader.tsx`: Prop `hasSessionFiles: boolean` (mit Doc-Kommentar) ergänzen; Z. 128 → `(view === 'files' && (session.repositoryCount > 0 || hasSessionFiles))`; Kommentar Z. 122 anpassen. In `App.tsx` beim `<SessionHeader` übergeben.
+- [x] `ProjectHeader.tsx`: gleiche Prop, Z. 90 → `(view === 'files' && (project.repositoryNames.length > 0 || hasSessionFiles))`, Kommentar anpassen; in `App.tsx` `renderOverview` übergeben.
+- [x] `FilesView.tsx`: Props `hasRepositories: boolean` und `activityStamp: string` (Doc-Kommentare). `useSessionFiles(sessionId, \`${stamp}|${activityStamp}\`)`. Bei `!hasRepositories`: `FilesToolbar`, Home-Knopf und `files-view__left-head` nicht rendern; in `renderDetail` bei `selection.open === null` den Hinweis aus der AK statt Übersicht/Git-Seite.
+- [x] `App.tsx` `renderFiles`: `hasRepositories={isOverview ? hasProjectRepositories : session.repositoryCount > 0}` und `activityStamp={session.status}` übergeben.
+- [x] Docs: `docs/code-map.md` Zeile „Session-Dateien“ um `useSessionFileCount` (Zähler für die Sichtbarkeit des Reiters ohne Repository) ergänzen; `docs/glossary.md` „Session-Datei“: Satz „Ohne Repository zeigt der Reiter ‚Dateien‘ nur diesen Knoten; er erscheint, sobald es eine Session-Datei gibt.“; `docs/decisions/071-session-dateien.md` Abschnitt „Nachtrag 2026-11-27: Sessions ohne Repository“ (3–5 Sätze: Sichtbarkeit, schlanke Ansicht, Nachladen am Status).
+- [x] `powershell -File scripts/check.ps1` grün.
 
 ## Report-Back
+
+Complete, `scripts/check.ps1` grün; nicht in der laufenden App angesehen. Abweichungen: Der Zähler lädt zusätzlich nach, wenn ein Dateilink auf eine Session-Datei wartet (sonst bliebe der Klick auf die erste Datei mitten im Zug wirkungslos). Der Hinweis ohne offene Datei trägt in schmaler Breite „← Baum“.

@@ -78,6 +78,11 @@ interface FilesViewProps {
   viewKey: string;
   /** Session, über die der Core das Vorhaben liest (Bäume, Verlauf, Diff ohne Filter). */
   sessionId: string;
+  /** Ohne Repository ist die Ansicht schlank: keine Git-Teile, nur Session-Dateien und Betrachter. */
+  hasRepositories: boolean;
+  /** Ändert er sich, lädt die Liste der Session-Dateien neu — ohne Repository wechselt der Stempel der
+   *  Changes nie. */
+  activityStamp: string;
   /** Changes der Reichweite `project`. */
   projectChanges: SessionChanges | null;
   projectError: string | null;
@@ -229,6 +234,8 @@ function treeWidthStyle(width: number): CSSProperties {
 export function FilesView({
   viewKey,
   sessionId,
+  hasRepositories,
+  activityStamp,
   projectChanges,
   projectError,
   filteredChanges,
@@ -302,7 +309,7 @@ export function FilesView({
     error: sessionListError,
     isLoading: isSessionListLoading,
     reload: reloadSessionFiles,
-  } = useSessionFiles(sessionId, stamp);
+  } = useSessionFiles(sessionId, `${stamp}|${activityStamp}`);
   const ownSessionId: string | null = canComment ? sessionId : null;
   const sessionExpanded: ReadonlySet<string> = useMemo(
     () => new Set(selection.sessionExpanded ?? defaultSessionExpanded(ownSessionId)),
@@ -789,25 +796,42 @@ export function FilesView({
   function renderOpenFile(open: OpenTarget): ReactElement {
     return (
       <>
-        <div className="files-view__narrow-only files-view__bar files-view__bar--plain">
-          <button
-            type="button"
-            className="files-button files-button--small"
-            onClick={(): void => {
-              update({ pane: 'tree' });
-            }}
-          >
-            ← Baum
-          </button>
-        </div>
+        {renderBackToTree()}
         {renderViewer(open)}
       </>
+    );
+  }
+
+  function renderBackToTree(): ReactElement {
+    return (
+      <div className="files-view__narrow-only files-view__bar files-view__bar--plain">
+        <button
+          type="button"
+          className="files-button files-button--small"
+          onClick={(): void => {
+            update({ pane: 'tree' });
+          }}
+        >
+          ← Baum
+        </button>
+      </div>
     );
   }
 
   function renderDetail(): ReactElement {
     if (selection.open !== null) {
       return renderOpenFile(selection.open);
+    }
+    if (!hasRepositories) {
+      return (
+        <>
+          {renderBackToTree()}
+          <div className="files-view__hint">
+            <b>Keine Datei geöffnet</b>
+            <span>Links eine Datei der Sessions wählen.</span>
+          </div>
+        </>
+      );
     }
     if (shownChanges === null) {
       return (
@@ -819,17 +843,7 @@ export function FilesView({
     const page: FilesPage = selection.page;
     return (
       <>
-        <div className="files-view__narrow-only files-view__bar files-view__bar--plain">
-          <button
-            type="button"
-            className="files-button files-button--small"
-            onClick={(): void => {
-              update({ pane: 'tree' });
-            }}
-          >
-            ← Baum
-          </button>
-        </div>
+        {renderBackToTree()}
         {page !== 'overview' && git !== null ? renderGitPage(page.git, git) : renderOverview()}
       </>
     );
@@ -896,124 +910,137 @@ export function FilesView({
   const isHome: boolean = selection.open === null;
   return (
     <div className="files-view" onKeyDown={handleKeyDown}>
-      <FilesToolbar
-        filterNumber={filterSession?.number ?? null}
-        isPickerOpen={isPickerOpen}
-        picker={
-          isPickerOpen && (
-            <SessionPicker
-              sessions={pickerSessions}
-              selectedId={sessionFilter}
-              onSelect={setFilter}
-              onClose={(): void => {
-                setPickerOpen(false);
+      {hasRepositories && (
+        <FilesToolbar
+          filterNumber={filterSession?.number ?? null}
+          isPickerOpen={isPickerOpen}
+          picker={
+            isPickerOpen && (
+              <SessionPicker
+                sessions={pickerSessions}
+                selectedId={sessionFilter}
+                onSelect={setFilter}
+                onClose={(): void => {
+                  setPickerOpen(false);
+                }}
+              />
+            )
+          }
+          search={
+            <FileSearch
+              groups={groups}
+              trees={trees}
+              query={selection.query}
+              onQuery={(query: string): void => {
+                update({ query });
               }}
+              onActivate={loadAll}
+              focusRequest={selection.focusSearch}
+              focusDone={selection.focusDone}
+              onFocusHandled={markSearchFocusHandled}
+              onSelect={openSearchHit}
             />
-          )
-        }
-        search={
-          <FileSearch
-            groups={groups}
-            trees={trees}
-            query={selection.query}
-            onQuery={(query: string): void => {
-              update({ query });
-            }}
-            onActivate={loadAll}
-            focusRequest={selection.focusSearch}
-            focusDone={selection.focusDone}
-            onFocusHandled={markSearchFocusHandled}
-            onSelect={openSearchHit}
-          />
-        }
-        onTogglePicker={(): void => {
-          setPickerOpen(!isPickerOpen);
-        }}
-        onClearFilter={(): void => {
-          setFilter(null);
-        }}
-        scope={scope}
-        onScope={(next: ChangeScope): void => {
-          update({ scope: next });
-        }}
-        fileCount={fileCount}
-        added={added}
-        deleted={deleted}
-      />
+          }
+          onTogglePicker={(): void => {
+            setPickerOpen(!isPickerOpen);
+          }}
+          onClearFilter={(): void => {
+            setFilter(null);
+          }}
+          scope={scope}
+          onScope={(next: ChangeScope): void => {
+            update({ scope: next });
+          }}
+          fileCount={fileCount}
+          added={added}
+          deleted={deleted}
+        />
+      )}
       <div className="files-view__body" data-pane={selection.pane}>
         <div className="files-view__left" style={treeWidthStyle(treeWidth.width)}>
-          <button
-            type="button"
-            className={`files-view__home${isHome ? ' files-view__home--on' : ''}`}
-            aria-current={isHome ? 'page' : undefined}
-            onClick={showOverview}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
-              <path
-                d="M7 4v3.2l2 1.3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className="files-view__home-label">Übersicht · Verlauf</span>
-            <span className="files-view__home-count">
-              {commitTotal === null ? '… Commits' : `${formatCount(commitTotal)} Commits`}
-            </span>
-          </button>
-          <div className="files-view__left-head">
-            <FilesSegment
-              label="Umfang des Baums"
-              options={modeOptions}
-              value={mode}
-              onChange={(next: FilesMode): void => {
-                update({ mode: next });
-              }}
-            />
-            <span className="files-view__spacer" />
-            <button
-              type="button"
-              className="files-button files-button--small files-button--quiet"
-              title={expandTitle}
-              aria-label={expandTitle}
-              onClick={(): void => {
-                setExpanded(expandAllKeys(groups));
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                <path
-                  d="M4 5.5l3-3 3 3M4 8.5l3 3 3-3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+          {hasRepositories && (
+            <>
+              <button
+                type="button"
+                className={`files-view__home${isHome ? ' files-view__home--on' : ''}`}
+                aria-current={isHome ? 'page' : undefined}
+                onClick={showOverview}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <circle
+                    cx="7"
+                    cy="7"
+                    r="5.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                  />
+                  <path
+                    d="M7 4v3.2l2 1.3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className="files-view__home-label">Übersicht · Verlauf</span>
+                <span className="files-view__home-count">
+                  {commitTotal === null ? '… Commits' : `${formatCount(commitTotal)} Commits`}
+                </span>
+              </button>
+              <div className="files-view__left-head">
+                <FilesSegment
+                  label="Umfang des Baums"
+                  options={modeOptions}
+                  value={mode}
+                  onChange={(next: FilesMode): void => {
+                    update({ mode: next });
+                  }}
                 />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="files-button files-button--small files-button--quiet"
-              title="Alle Ordner einklappen"
-              aria-label="Alle Ordner einklappen"
-              onClick={(): void => {
-                setExpanded(collapseAllKeys(groups));
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                <path
-                  d="M4 2.5l3 3 3-3M4 11.5l3-3 3 3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
+                <span className="files-view__spacer" />
+                <button
+                  type="button"
+                  className="files-button files-button--small files-button--quiet"
+                  title={expandTitle}
+                  aria-label={expandTitle}
+                  onClick={(): void => {
+                    setExpanded(expandAllKeys(groups));
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <path
+                      d="M4 5.5l3-3 3 3M4 8.5l3 3 3-3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="files-button files-button--small files-button--quiet"
+                  title="Alle Ordner einklappen"
+                  aria-label="Alle Ordner einklappen"
+                  onClick={(): void => {
+                    setExpanded(collapseAllKeys(groups));
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <path
+                      d="M4 2.5l3 3 3-3M4 11.5l3-3 3 3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
           {renderTree()}
         </div>
         <ResizeHandle edge="end" label="Breite der Dateiliste" {...treeWidth.handleProps} />
