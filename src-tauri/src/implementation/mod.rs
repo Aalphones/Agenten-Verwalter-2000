@@ -555,8 +555,10 @@ fn change_view(change: &ChangeRow, numbers: &HashMap<String, u32>) -> ChangeView
     }
 }
 
+/// Fertig heißt fertig gemeldet. Nicht am Zustand prüfen: die Station meldet sich während ihrer
+/// Antwort fertig und zeigt dann noch „läuft“ — die Folgestation muss trotzdem starten dürfen.
 pub fn is_done(station: &StationView) -> bool {
-    station.state == StationState::Done
+    station.completed_at.is_some()
 }
 
 fn count(value: usize) -> u32 {

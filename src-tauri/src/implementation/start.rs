@@ -208,8 +208,11 @@ fn fire(app: &AppHandle, implementation_id: &str, station_id: &str, token: u64) 
         {
             eprintln!("Halt der Umsetzung nicht gespeichert: {error}");
         }
-    } else if view.auto_start && start_now(app, implementation_id, station_id).is_ok() {
-        return;
+    } else if view.auto_start {
+        match start_now(app, implementation_id, station_id) {
+            Ok(()) => return,
+            Err(error) => eprintln!("Station nicht automatisch gestartet: {error}"),
+        }
     }
     // Nicht gestartet: die Station steht wieder bereit (▶), die Oberfläche zeigt das.
     if let Ok(fresh) = registry.implementation_view(implementation_id) {
