@@ -10,7 +10,7 @@ Folgeplan zu „Review-Bericht abschaltbar“ (`docs/archive/2026-11/2026-11-27_
 | 2 | Core: Repos außerhalb des Vorhabens, Stopps aus dem Diff, Weg aus dem Verlauf | heikel | opusplan | complete |
 | 3 | Core: Haiku erklärt den Diff | standard | sonnet | complete |
 | 4 | Oberfläche: Zustandsleiste, Seite nach Vorschlag C | standard | sonnet | complete |
-| 5 | Kontrast im Theme, Plan fertig | mechanisch | sonnet | pending |
+| 5 | Kontrast im Theme, Plan fertig | mechanisch | sonnet | complete |
 
 ## Kontrakt (Core ↔ Oberfläche)
 
@@ -89,10 +89,27 @@ Tauri-Befehle (Phase 1): `report_retidy(phaseId)` bleibt und ordnet jetzt auch l
 
 ## Summary
 
+Abgeschlossen am 2026-11-28. Der Review-Bericht zeigt, ob eine Phase geordnet ist, gerade geordnet wird oder gescheitert ist; Ordnen geht jederzeit und ist abbrechbar. Ohne Einträge der Station erscheinen alle Änderungen (auch aus Repositorys außerhalb des Vorhabens) als Stopps aus dem Diff, auf Wunsch von Haiku erklärt, dazu der Weg aus dem Verlauf. Akzent und Bernstein im hellen Theme erreichen 4,5:1.
+
 ## Files touched
+
+- Core: `src-tauri/src/report/` (neu u. a. `outside.rs`, `way.rs`), `sessions/registry/report.rs`, `skins/model.rs`
+- Oberfläche: `src/features/report/`, `src/features/implementation/`, `src/app/`, `src/lib/report.ts`, `src/lib/bindings/`, `src/styles/theme.css`, `src/features/skins/styleDefaults.ts`
+- Doku: ADR 075, Code-Map, Glossar
 
 ## Commits
 
+- Phase 1: `9d2c584` · Phase 2: `6efce2d` · Phase 3: `40322e7` · Phase 4: `c17873a`
+- Phase 5: `0c5bcda` und der Commit, der diesen Plan archiviert
+
 ## Deviations from plan
 
+Je Phase im Report-Back der Phasen-Dateien.
+
 ## Follow-ups
+
+- Nicht in der laufenden App gelaufen: Abbruch eines Ordnungs-Laufs, Start-Ereignis, Ablehnung der ersten Fertigmeldung, die neue Oberfläche mit echten Daten, der Punkt am Reiter „Review“.
+- Der Weg aus dem Verlauf zeigt bei `git commit -q` keinen Commit.
+- Berichte mit Dateien auf `G:` laden warm bis 15 s, beim ersten Zugriff gemessen bis 92 s.
+- Die Patchs gehen ungefiltert an das Ordnungs-Modell.
+- `src-tauri/src/artifacts/bridge.js` und `viewers/shell.html` tragen den alten Akzent `#c4572f` fest.

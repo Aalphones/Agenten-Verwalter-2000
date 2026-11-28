@@ -1,8 +1,9 @@
 # STATE
 
-**Aktiver Plan:** `docs/planning/2026-11-27_bericht-zustand/` (ADR 075)
-**Phase:** 4/5 — Oberfläche: Zustandsleiste, Seite nach Vorschlag C (pending); Phase 1 bis 3 complete. Nicht in der laufenden App gelaufen: Abbruch, Start-Ereignis, Ablehnung der Fertigmeldung und der Bericht mit Repositorys, Stopps aus dem Diff und Weg (Phase 2 nur per `report-probe view` belegt). Grenzen: Commit je Etappe fehlt bei `git commit -q`; Berichte mit Dateien auf G: laden warm bis 15 s, beim ersten Zugriff bis 92 s gemessen (Report-Back Phase 2).
-**Nächster Schritt:** Phase 4 umsetzen.
+**Aktiver Plan:** keiner
+**Nächster Schritt:** den geparkten Plan „Bibliothek bearbeiten“ starten.
+
+**Zuletzt archiviert (Bericht-Zustand):** `docs/archive/2026-11/2026-11-27_bericht-zustand/` (ADR 075, keine Migration), Release `v0.76.0` — alle 5 Phasen complete; nicht in der laufenden App gelaufen; Grenzen (`git commit -q`, Ladezeit auf G:) in den README-Follow-ups.
 
 **Zuletzt archiviert (MCP-Server im Dialog verwalten):** `docs/archive/2026-11/2026-11-25_mcp-dialog-verwalten/` (ADR 070, keine Migration), Release `v0.75.0` — alle 5 Phasen complete; Liste, Schalten, Formular, Verschieben, Test und Werkzeug-Ansicht nicht in der laufenden App gelaufen (Oberfläche nur auf einer Prüfseite mit nachgestelltem Core); offene Konfidenz-Checks (gleichzeitiges Schreiben von `~/.claude.json`, Zuordnung bei laufendem Agenten) in den README-Follow-ups.
 **Zuletzt archiviert (Review-Bericht):** `docs/archive/2026-11/2026-11-26_review-bericht/` (ADR 073, Migration 023), Release `v0.73.0` — alle 8 Phasen complete: Review-Bericht je Umsetzung im Reiter „Review“ mit `report_note`/`report_figure`/`report_screen`, Haiku-Ordnung, Prüfwerten, Kommentaren an die Rückfrage und „Abnehmen“; User-Skills und facepass-Projekt-Skills ohne HTML-Abnahme (facepass: in `master` gemergt und gepusht, Merge `8e1e943`). Werkzeuge, Auslöser, Befehle und Oberfläche nicht in der laufenden App gelaufen; Follow-ups in der README.

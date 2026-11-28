@@ -1,6 +1,6 @@
 # Phase 5 — Kontrast im Theme, Plan fertig
 
-Status: pending · Rating: mechanisch · Modell: sonnet
+Status: complete · Rating: mechanisch · Modell: sonnet
 
 ## Kontext
 
@@ -27,3 +27,15 @@ Lesen vor dem ersten Edit:
 - [ ] Commits mit einzeln genannten Dateien; vorher `git status` und `git diff --cached --stat` lesen.
 
 ## Report-Back
+
+`scripts/check.ps1`: exit 0. Kontrast (Rückgabewert 0):
+
+```text
+#8a5700 auf #ffffff: 6.10:1
+#8a5700 auf #f8f8f8: 5.74:1
+#ffffff auf #a8461f: 5.90:1
+```
+
+- Akzent-Fundstellen: keine Regel unterscheidet Zustände allein zwischen `--color-accent` und `--color-accent-text` (hell jetzt derselbe Ton). Schalter (`--color-toggle-on`) bleiben beim helleren Ton.
+- Zusätzlich zur Checkliste: Skin-Standardfarben (`styleDefaults.ts`, `skins/model.rs`) auf `#a8461f`, veralteter Kommentar in `ReportButton.css` entfernt.
+- Nicht am Bildschirm angesehen.
