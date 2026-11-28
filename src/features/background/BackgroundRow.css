@@ -11,18 +11,15 @@
   color: var(--color-fg-primary);
   font: inherit;
   text-align: left;
+  cursor: pointer;
 
-  &--pickable {
-    cursor: pointer;
+  &:hover {
+    background: var(--color-bg-hover);
+  }
 
-    &:hover {
-      background: var(--color-bg-hover);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-accent);
-      outline-offset: 2px;
-    }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   &--current,
@@ -71,10 +68,6 @@
     font-size: var(--font-size-sm);
     white-space: nowrap;
     text-overflow: ellipsis;
-
-    &--mono {
-      font-family: var(--font-mono);
-    }
   }
 
   &__subtitle {
@@ -83,10 +76,6 @@
     font-size: 11.5px;
     white-space: nowrap;
     text-overflow: ellipsis;
-  }
-
-  &__command {
-    font-family: var(--font-mono);
   }
 
   &__right {

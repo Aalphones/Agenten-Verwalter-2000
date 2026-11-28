@@ -11,11 +11,7 @@ import { useEnvironmentCheck } from '@/features/environment/useEnvironment';
 import { ArchiveDialog } from '@/features/archive/ArchiveDialog';
 import { VaultSearchDialog } from '@/features/vault/VaultSearchDialog';
 import { BackgroundPanel } from '@/features/background/BackgroundPanel';
-import {
-  commandDurations,
-  countRunning,
-  indexByToolUseId,
-} from '@/features/background/backgroundItems';
+import { commandDurations, indexByToolUseId } from '@/features/background/backgroundItems';
 import { useSessionBackground } from '@/features/background/useSessionBackground';
 import { IMPLEMENTATION_ARTIFACTS_HEADING } from '@/features/artifacts/artifactTexts';
 import { ArtifactsView } from '@/features/artifacts/ArtifactsView';
@@ -39,6 +35,7 @@ import type { FilesSession } from '@/features/files/FilesView';
 import { filesViewKeyOfSession } from '@/features/files/openFromLink';
 import { useSessionFileCount } from '@/features/files/useSessionFileCount';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
+import type { SessionBackground } from '@/lib/bindings/SessionBackground';
 import type { SessionChanges } from '@/lib/bindings/SessionChanges';
 import { useFilesStore } from '@/stores/files';
 import type { PendingLink } from '@/stores/files';
@@ -492,7 +489,7 @@ export function App(): ReactElement {
     reloadChanges();
     reloadProjectChanges();
   }, [reloadGit, reloadChanges, reloadProjectChanges]);
-  const { background, error: backgroundError } = useSessionBackground(
+  const background: SessionBackground | null = useSessionBackground(
     visibleSession === null ? null : visibleSession.id,
   );
   const backgroundItems: readonly BackgroundItem[] = useMemo(
@@ -533,7 +530,7 @@ export function App(): ReactElement {
   const isDockFilling: boolean =
     isDockShown && isTerminalMaximized && terminalPlacement === 'bottom';
 
-  // Rechts teilen sich Dock und Hintergrund-Panel den Platz: das eine schließt das andere.
+  // Rechts teilen sich Dock und Nebenfragen-Leiste den Platz: das eine schließt das andere.
   const handleToggleTerminal = useCallback((): void => {
     if (!isTerminalOpen && terminalPlacement === 'right') {
       closeBackground();
@@ -901,7 +898,6 @@ export function App(): ReactElement {
             hasReport={reportImplementation !== undefined}
             hasFreshReport={hasFreshReport}
             isReportTidying={isReportTidying}
-            runningBackgroundCount={countRunning(backgroundItems)}
             isBackgroundOpen={isBackgroundOpen}
             onToggleBackground={handleToggleBackground}
             terminalCount={runningTerminalCount}
@@ -970,15 +966,13 @@ export function App(): ReactElement {
         <>
           <ResizeHandle
             edge="start"
-            label="Breite des Hintergrunds"
+            label="Breite der Nebenfragen"
             {...backgroundWidth.handleProps}
           />
           <BackgroundPanel
             key={visibleSession.id}
             width={backgroundWidth.width}
             session={visibleSession}
-            background={background}
-            error={backgroundError}
           />
         </>
       )}

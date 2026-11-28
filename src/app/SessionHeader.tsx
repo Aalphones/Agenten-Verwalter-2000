@@ -7,6 +7,7 @@ import { formatCount } from '@/features/changes/changesScope';
 import { GitBranchPill } from '@/features/git/GitBranchPill';
 import { PencilIcon } from '@/features/notes/PencilIcon';
 import { useNow } from '@/features/background/useNow';
+import { useSideQuestions } from '@/features/side/useSideQuestions';
 import { FRESH_TITLE, TIDYING_TAB_TITLE } from '@/features/report/reportTexts';
 import { activeRun, headerStatus, headerStatusLabel } from '@/features/sessions/sessionStatus';
 import type { GitSessionStatus } from '@/lib/bindings/GitSessionStatus';
@@ -25,9 +26,8 @@ const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 
-const BACKGROUND_LABEL = 'Hintergrund';
-const BACKGROUND_TITLE =
-  'Dev-Server, Subagenten, ausgeführte Skripte und Scratchpad dieser Session';
+const SIDE_LABEL = 'Nebenfragen';
+const SIDE_TITLE = 'Nebenfragen dieser Session — Strg+; stellt eine neue';
 
 const MORE_MENU_WIDTH = 200;
 
@@ -59,8 +59,6 @@ interface SessionHeaderProps {
   hasFreshReport: boolean;
   /** Haiku ordnet gerade eine Phase des Berichts: blauer Punkt am Reiter. */
   isReportTidying: boolean;
-  /** Laufende Prozesse und Subagenten der Session. */
-  runningBackgroundCount: number;
   isBackgroundOpen: boolean;
   onToggleBackground: () => void;
   /** Laufende Terminals des Vorhabens. */
@@ -83,7 +81,6 @@ export function SessionHeader({
   hasReport,
   hasFreshReport,
   isReportTidying,
-  runningBackgroundCount,
   isBackgroundOpen,
   onToggleBackground,
   terminalCount,
@@ -100,6 +97,7 @@ export function SessionHeader({
   const scriptNow: number = useNow(
     session.awaitedScript !== null || session.runningCommand !== null,
   );
+  const sideQuestionCount: number = useSideQuestions(session.id).questions.length;
   const isTicking: boolean = session.runningSince !== null;
 
   useEffect(() => {
@@ -141,10 +139,6 @@ export function SessionHeader({
       ? undefined
       : `${formatCount(reviewCount)} ${reviewCount === 1 ? 'Kommentar wartet' : 'Kommentare warten'} im Chat`;
 
-  const backgroundLabel: string =
-    runningBackgroundCount > 0
-      ? `${String(runningBackgroundCount)} im Hintergrund`
-      : BACKGROUND_LABEL;
   const statusLabel: string = headerStatusLabel(session, scriptNow);
 
   function runAction(action: (sessionId: string) => Promise<void>): void {
@@ -351,25 +345,15 @@ export function SessionHeader({
           type="button"
           className={`session-header__background${isBackgroundOpen ? ' session-header__background--active' : ''}`}
           aria-pressed={isBackgroundOpen}
-          aria-label={`Hintergrund: ${backgroundLabel}`}
-          title={`${backgroundLabel} — ${BACKGROUND_TITLE}`}
+          aria-label={
+            sideQuestionCount > 0 ? `${SIDE_LABEL}: ${String(sideQuestionCount)}` : SIDE_LABEL
+          }
+          title={SIDE_TITLE}
           onClick={onToggleBackground}
         >
-          {runningBackgroundCount > 0 && (
-            <svg
-              className="session-header__background-dot"
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              aria-hidden="true"
-            >
-              <circle cx="6" cy="6" r="5.5" fill="currentColor" opacity="0.22" />
-              <circle cx="6" cy="6" r="3" fill="currentColor" />
-            </svg>
-          )}
           <svg
-            width="13"
-            height="13"
+            width="14"
+            height="14"
             viewBox="0 0 14 14"
             fill="none"
             stroke="currentColor"
@@ -378,17 +362,14 @@ export function SessionHeader({
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
-            <path d="M4 5.5 6 7 4 8.5M7.5 9h2.5" />
+            <circle cx="7" cy="7" r="5.5" />
+            <path d="M5.3 5.4a1.8 1.8 0 1 1 2.5 1.6c-.5.3-.8.6-.8 1.2v.3" />
+            <circle cx="7" cy="10.3" r=".7" fill="currentColor" stroke="none" />
           </svg>
-          {runningBackgroundCount > 0 && (
-            <span className="session-header__background-count">
-              {String(runningBackgroundCount)}
-            </span>
+          <span className="session-header__background-label">{SIDE_LABEL}</span>
+          {sideQuestionCount > 0 && (
+            <span className="session-header__background-count">{String(sideQuestionCount)}</span>
           )}
-          <span className="session-header__background-label">
-            {runningBackgroundCount > 0 ? 'im Hintergrund' : BACKGROUND_LABEL}
-          </span>
         </button>
         <SessionGauge session={session} runtime={formatRuntime(runningMs)} />
         {renderControls()}

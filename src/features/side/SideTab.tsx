@@ -31,13 +31,13 @@ interface SideTabProps {
 export function SideTab({ session }: SideTabProps): ReactElement {
   const { questions, error, reload } = useSideQuestions(session.id);
   const selectedId: string | null = useBackgroundStore(
-    (state) => state.selections[session.id]?.side ?? null,
+    (state) => state.selections[session.id] ?? null,
   );
   const select = useBackgroundStore((state) => state.select);
   const open = useSideStore((state) => state.open);
 
   function pick(question: SideQuestion): void {
-    select(session.id, 'side', question.id);
+    select(session.id, question.id);
     open(session.id, { questionId: question.id });
   }
 
@@ -57,7 +57,6 @@ export function SideTab({ session }: SideTabProps): ReactElement {
             icon={STATE_ICON[question.state]}
             iconTone={STATE_TONE[question.state]}
             title={question.question}
-            isMono={false}
             subtitle={previewOf(question)}
             right={formatTime(question.askedAt)}
             rightTone={question.state === 'failed' ? 'error' : 'muted'}

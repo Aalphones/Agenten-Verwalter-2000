@@ -8,7 +8,7 @@ import { loadSide, subscribeSide } from '@/lib/side';
 export interface SideQuestionsState {
   questions: readonly SideQuestion[];
   error: string | null;
-  /** Lädt die Liste noch einmal, etwa nach `dismissSide`, das kein Ereignis meldet. */
+  /** Lädt die Liste noch einmal, ohne auf `side://changed` zu warten. */
   reload: () => void;
 }
 

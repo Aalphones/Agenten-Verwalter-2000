@@ -23,7 +23,7 @@ export function loadSide(sessionId: string): Promise<SideQuestion[]> {
   return invoke<SideQuestion[]>('side_load', { sessionId });
 }
 
-/** Entfernt eine Nebenfrage; meldet kein Ereignis, der Aufrufer lädt selbst neu.
+/** Entfernt eine Nebenfrage; der Core meldet das mit `side://changed`.
  *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
 export async function dismissSide(sessionId: string, id: string): Promise<void> {
   await invoke('side_dismiss', { sessionId, id });

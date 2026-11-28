@@ -36,6 +36,8 @@ Meilenstein 2b ergänzt die Eingabeleiste um Anhänge (Knopf `+`, Hineinziehen, 
 
 ### Hintergrund
 
+Die Oberfläche (Hintergrund-Panel) ist abgelöst durch [ADR 076](076-nebenfragen-leiste.md); die Erfassung gilt weiter.
+
 - **Drei Arten:** `command` (Bash im Vordergrund), `process` (Bash mit `run_in_background`), `subagent` (Werkzeug `Agent`). Befehle von Subagenten sind Schritte ihres Subagenten, keine eigenen Einträge.
 - **Zustände:** `running`, `completed`, `failed`, `stopped` (von der App angehalten), `interrupted` (der Agent-Prozess endete, während der Eintrag lief — er kann trotzdem weitergelaufen sein).
 - **Ausgabe:** `command` aus dem `tool_result` (höchstens 64 KiB, in SQLite); `process` aus Claudes Ausgabedatei (höchstens die letzten 256 KiB). Die Liste lädt nie Ausgaben mit.

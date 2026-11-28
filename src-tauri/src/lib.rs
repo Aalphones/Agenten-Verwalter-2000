@@ -214,8 +214,6 @@ pub fn run() {
             commands::background::background_load,
             commands::background::background_output,
             commands::background::background_stop,
-            commands::background::scratchpad_list,
-            commands::background::scratchpad_read,
             commands::tool_details::tool_detail,
             commands::repositories::repository_list,
             commands::repositories::repository_add,

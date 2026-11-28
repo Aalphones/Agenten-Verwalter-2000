@@ -6,71 +6,42 @@ interface BackgroundRowProps {
   icon: string;
   iconTone: RowTone;
   title: string;
-  /** Überschrift in Festbreitenschrift (Befehle, Dateinamen). */
-  isMono: boolean;
-  subtitle: string | null;
-  /** Der Befehl in Festbreitenschrift vor der Unterzeile, wenn die Überschrift eine Beschreibung ist. */
-  command?: string | null;
+  subtitle: string;
   right: string;
   rightTone: RowTone;
-  /** Einzug links in Pixeln; Ordner im Scratchpad-Baum rücken ein. */
+  /** Einzug links in Pixeln. */
   indent: number;
   isCurrent: boolean;
-  /** `null`: Zeile ist nicht wählbar (Ordner). */
-  onPick: (() => void) | null;
+  onPick: () => void;
 }
 
 export function BackgroundRow({
   icon,
   iconTone,
   title,
-  isMono,
   subtitle,
-  command = null,
   right,
   rightTone,
   indent,
   isCurrent,
   onPick,
 }: BackgroundRowProps): ReactElement {
-  const content: ReactElement = (
-    <>
+  return (
+    <button
+      type="button"
+      className={`background-row${isCurrent ? ' background-row--current' : ''}`}
+      style={{ paddingLeft: `${String(indent)}px` }}
+      aria-current={isCurrent}
+      onClick={onPick}
+    >
       <span className={`background-row__icon background-row__icon--${iconTone}`} aria-hidden="true">
         {icon}
       </span>
       <span className="background-row__text">
-        <span className={`background-row__title${isMono ? ' background-row__title--mono' : ''}`}>
-          {title}
-        </span>
-        {(subtitle !== null || command !== null) && (
-          <span className="background-row__subtitle">
-            {command !== null && <span className="background-row__command">{command}</span>}
-            {command !== null && subtitle !== null && ' · '}
-            {subtitle}
-          </span>
-        )}
+        <span className="background-row__title">{title}</span>
+        <span className="background-row__subtitle">{subtitle}</span>
       </span>
       <span className={`background-row__right background-row__right--${rightTone}`}>{right}</span>
-    </>
-  );
-  const style = { paddingLeft: `${String(indent)}px` };
-
-  if (onPick === null) {
-    return (
-      <div className="background-row" style={style}>
-        {content}
-      </div>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={`background-row background-row--pickable${isCurrent ? ' background-row--current' : ''}`}
-      style={style}
-      aria-current={isCurrent}
-      onClick={onPick}
-    >
-      {content}
     </button>
   );
 }

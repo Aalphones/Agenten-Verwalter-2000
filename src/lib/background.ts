@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event, type UnlistenFn } from '@tauri-apps/api/event';
 import type { BackgroundChangedEvent } from '@/lib/bindings/BackgroundChangedEvent';
-import type { ScratchpadListing } from '@/lib/bindings/ScratchpadListing';
 import type { SessionBackground } from '@/lib/bindings/SessionBackground';
 import type { TextPreview } from '@/lib/bindings/TextPreview';
 
@@ -26,19 +25,6 @@ export function loadBackgroundOutput(sessionId: string, itemId: string): Promise
  *    `internal` (Eintrag läuft nicht), `agentStopped` */
 export async function stopBackgroundItem(sessionId: string, itemId: string): Promise<void> {
   await invoke('background_stop', { sessionId, itemId });
-}
-
-/** Der Scratchpad-Ordner als flache, nach Pfad sortierte Liste; leer, solange der Agent nie lief.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound` */
-export function listScratchpad(sessionId: string): Promise<ScratchpadListing> {
-  return invoke<ScratchpadListing>('scratchpad_list', { sessionId });
-}
-
-/** Anfang einer Scratchpad-Datei (höchstens 256 KiB); `path` relativ, mit `/`.
- *  @throws {import('@/lib/bindings/CommandError').CommandError} `sessionNotFound`,
- *    `io` (ungültiger Pfad, Ordner, kein Scratchpad bekannt, nicht lesbar) */
-export function readScratchpadFile(sessionId: string, path: string): Promise<TextPreview> {
-  return invoke<TextPreview>('scratchpad_read', { sessionId, path });
 }
 
 /** Meldet jede Änderung an einem Hintergrund-Eintrag einer Session; danach `loadBackground` neu laden. */

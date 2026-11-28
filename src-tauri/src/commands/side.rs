@@ -25,9 +25,10 @@ pub async fn side_load(
 
 #[tauri::command]
 pub async fn side_dismiss(
+    app: tauri::AppHandle,
     registry: tauri::State<'_, SessionRegistry>,
     session_id: String,
     id: String,
 ) -> Result<(), CommandError> {
-    registry.dismiss_side(&session_id, &id)
+    registry.dismiss_side(&app, &session_id, &id)
 }

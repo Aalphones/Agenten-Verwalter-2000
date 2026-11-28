@@ -1,18 +1,13 @@
-//! Der Scratchpad-Ordner einer Session: anlegen, auflisten und einzelne Dateien lesen, ohne aus dem
-//! Ordner auszubrechen.
-use std::fs::{self, File};
-use std::io::{self, Read};
-use std::path::{Component, Path, PathBuf};
+//! Der Scratchpad-Ordner einer Session: anlegen und auflisten.
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::model::{ScratchpadEntry, ScratchpadListing, TextPreview};
-use super::output::{MAX_PREVIEW_BYTES, preview_of};
-use crate::error::CommandError;
+use super::model::{ScratchpadEntry, ScratchpadListing};
 
 const MAX_DEPTH: usize = 6;
 const MAX_ENTRIES: usize = 2_000;
-const INVALID_PATH: &str = "Ungültiger Pfad";
-const DIRECTORY_PREVIEW: &str = "Ordner haben keine Vorschau";
 const WORKSPACE_FOLDER: &str = ".scratchpad";
 
 /// `<Workspace>\.scratchpad\<session-id>`, auch wenn es ihn nicht gibt.
@@ -81,38 +76,4 @@ fn collect(folder: &Path, prefix: &str, depth: usize, listing: &mut ScratchpadLi
             collect(&entry.path(), &path, depth + 1, listing);
         }
     }
-}
-
-/// Die Datei `relative` im Ordner `dir`, vom Anfang bis `MAX_PREVIEW_BYTES`. Der Pfad kommt aus der
-/// Oberfläche: `..`, Wurzel und Laufwerk sind verboten, und das kanonische Ziel muss unter dem
-/// kanonischen Ordner liegen — sonst führte ein Symlink im Scratchpad nach draußen.
-pub fn read(dir: &Path, relative: &str) -> Result<TextPreview, CommandError> {
-    let has_escape = Path::new(relative)
-        .components()
-        .any(|component: Component| {
-            matches!(
-                component,
-                Component::ParentDir | Component::RootDir | Component::Prefix(_)
-            )
-        });
-    if relative.trim().is_empty() || has_escape {
-        return Err(invalid_path());
-    }
-    let root = fs::canonicalize(dir)?;
-    let target = fs::canonicalize(dir.join(relative)).map_err(|_| invalid_path())?;
-    if !target.starts_with(&root) {
-        return Err(invalid_path());
-    }
-    if target.is_dir() {
-        return Err(CommandError::Io(DIRECTORY_PREVIEW.to_owned()));
-    }
-    let file = File::open(&target)?;
-    let length = file.metadata()?.len();
-    let mut bytes: Vec<u8> = Vec::new();
-    file.take(MAX_PREVIEW_BYTES).read_to_end(&mut bytes)?;
-    Ok(preview_of(&bytes, length > MAX_PREVIEW_BYTES))
-}
-
-fn invalid_path() -> CommandError {
-    CommandError::Io(INVALID_PATH.to_owned())
 }

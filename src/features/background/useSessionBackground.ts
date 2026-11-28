@@ -3,22 +3,16 @@ import type { UnlistenFn } from '@tauri-apps/api/event';
 import type { BackgroundChangedEvent } from '@/lib/bindings/BackgroundChangedEvent';
 import type { SessionBackground } from '@/lib/bindings/SessionBackground';
 import { loadBackground, onBackgroundChanged } from '@/lib/background';
-import { commandErrorText } from '@/lib/errors';
 
-export interface SessionBackgroundState {
-  background: SessionBackground | null;
-  error: string | null;
-}
-
-interface LoadedState extends SessionBackgroundState {
+interface LoadedState {
   sessionId: string;
+  background: SessionBackground;
 }
-
-const NOTHING: SessionBackgroundState = { background: null, error: null };
 
 /** Befehle, Prozesse und Subagenten der Session ohne Ausgaben: beim Wählen und bei jedem `background://changed`
- *  dieser Session. Läuft auch bei geschlossenem Panel, weil Kopfzeile (Zähler) und Verlauf (Zeilen) die Daten brauchen. */
-export function useSessionBackground(sessionId: string | null): SessionBackgroundState {
+ *  dieser Session. Der Verlauf (Zeilen, Dauern) braucht die Daten;
+ *  nach einem Ladefehler bleibt der letzte gute Stand derselben Session stehen. */
+export function useSessionBackground(sessionId: string | null): SessionBackground | null {
   const [state, setState] = useState<LoadedState | null>(null);
   const requestRef = useRef<number>(0);
 
@@ -37,19 +31,11 @@ export function useSessionBackground(sessionId: string | null): SessionBackgroun
       loadBackground(currentId)
         .then((background: SessionBackground) => {
           if (!controller.signal.aborted && requestRef.current === request) {
-            setState({ sessionId: currentId, background, error: null });
+            setState({ sessionId: currentId, background });
           }
         })
         .catch((reason: unknown) => {
-          if (controller.signal.aborted || requestRef.current !== request) {
-            return;
-          }
-          // Der letzte gute Stand derselben Session bleibt stehen, der Fehler kommt dazu.
-          setState((current: LoadedState | null) => ({
-            sessionId: currentId,
-            background: current?.sessionId === currentId ? current.background : null,
-            error: commandErrorText(reason),
-          }));
+          console.error('Hintergrund nicht ladbar', reason);
         });
     }
 
@@ -69,14 +55,6 @@ export function useSessionBackground(sessionId: string | null): SessionBackgroun
       })
       .catch((reason: unknown) => {
         console.error('Hintergrund-Ereignisse nicht abonnierbar', reason);
-        if (controller.signal.aborted) {
-          return;
-        }
-        setState((current: LoadedState | null) => ({
-          sessionId: currentId,
-          background: current?.sessionId === currentId ? current.background : null,
-          error: `Hintergrund wird nicht mehr aktualisiert: ${commandErrorText(reason)}`,
-        }));
       });
 
     return (): void => {
@@ -88,7 +66,7 @@ export function useSessionBackground(sessionId: string | null): SessionBackgroun
   }, [sessionId]);
 
   if (state === null || state.sessionId !== sessionId) {
-    return NOTHING;
+    return null;
   }
-  return { background: state.background, error: state.error };
+  return state.background;
 }

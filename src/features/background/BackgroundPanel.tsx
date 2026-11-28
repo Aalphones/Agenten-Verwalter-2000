@@ -1,108 +1,28 @@
 import type { ReactElement } from 'react';
-import { selectSubagents, splitProcesses } from '@/features/background/backgroundItems';
-import type { ProcessGroups } from '@/features/background/backgroundItems';
-import { ProcessesTab } from '@/features/background/ProcessesTab';
-import { ScratchpadTab } from '@/features/background/ScratchpadTab';
-import { SubagentsTab } from '@/features/background/SubagentsTab';
-import { useNow } from '@/features/background/useNow';
 import { SideTab } from '@/features/side/SideTab';
-import { useSideQuestions } from '@/features/side/useSideQuestions';
-import type { BackgroundItem } from '@/lib/bindings/BackgroundItem';
-import type { SessionBackground } from '@/lib/bindings/SessionBackground';
 import type { SessionSummary } from '@/lib/bindings/SessionSummary';
-import { BACKGROUND_TABS, useBackgroundStore } from '@/stores/background';
-import type { BackgroundTab } from '@/stores/background';
+import { useBackgroundStore } from '@/stores/background';
 import './BackgroundPanel.css';
 
-const TAB_LABEL: Record<BackgroundTab, string> = {
-  processes: 'Prozesse',
-  subagents: 'Subagenten',
-  scratchpad: 'Scratchpad',
-  side: 'Nebenfragen',
-};
-
-const NO_ITEMS: readonly BackgroundItem[] = [];
+const PANEL_TITLE = 'Nebenfragen';
 
 interface BackgroundPanelProps {
   /** Gezogene Breite in Pixeln. */
   width: number;
   session: SessionSummary;
-  background: SessionBackground | null;
-  /** Fehler beim Laden der Einträge; `null` ohne. */
-  error: string | null;
 }
 
-export function BackgroundPanel({
-  width,
-  session,
-  background,
-  error,
-}: BackgroundPanelProps): ReactElement {
-  const tab: BackgroundTab = useBackgroundStore((state) => state.tab);
-  const showTab = useBackgroundStore((state) => state.showTab);
+export function BackgroundPanel({ width, session }: BackgroundPanelProps): ReactElement {
   const close = useBackgroundStore((state) => state.close);
-  const sideQuestions = useSideQuestions(session.id);
-
-  const items: readonly BackgroundItem[] = background === null ? NO_ITEMS : background.items;
-  const now: number = useNow(items.some((item: BackgroundItem) => item.state === 'running'));
-
-  function countFor(target: BackgroundTab): number | null {
-    if (target === 'subagents') {
-      return selectSubagents(items).length;
-    }
-    if (target === 'processes') {
-      const groups: ProcessGroups = splitProcesses(items);
-      return groups.running.length + groups.executed.length;
-    }
-    if (target === 'side') {
-      return sideQuestions.questions.length;
-    }
-    // Die Zahl der Dateien kennt nur der geöffnete Reiter.
-    return null;
-  }
-
-  function renderTab(): ReactElement {
-    switch (tab) {
-      case 'processes':
-        return <ProcessesTab sessionId={session.id} items={items} now={now} />;
-      case 'subagents':
-        return <SubagentsTab sessionId={session.id} items={items} now={now} />;
-      case 'scratchpad':
-        return <ScratchpadTab session={session} />;
-      case 'side':
-        return <SideTab session={session} />;
-    }
-  }
 
   return (
-    <aside className="background-panel" aria-label="Hintergrund der Session" style={{ width }}>
+    <aside className="background-panel" aria-label={PANEL_TITLE} style={{ width }}>
       <div className="background-panel__head">
-        <div className="background-panel__tabs" role="tablist" aria-label="Hintergrund">
-          {BACKGROUND_TABS.map((target: BackgroundTab) => {
-            const count: number | null = countFor(target);
-            return (
-              <button
-                key={target}
-                type="button"
-                className={`background-panel__tab${target === tab ? ' background-panel__tab--active' : ''}`}
-                role="tab"
-                aria-selected={target === tab}
-                onClick={(): void => {
-                  showTab(target);
-                }}
-              >
-                {TAB_LABEL[target]}
-                {count !== null && count > 0 && (
-                  <span className="background-panel__tab-count">{String(count)}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <h2 className="background-panel__title">{PANEL_TITLE}</h2>
         <button
           type="button"
           className="background-panel__close"
-          aria-label="Hintergrund schließen"
+          aria-label="Nebenfragen schließen"
           onClick={close}
         >
           <svg
@@ -119,12 +39,7 @@ export function BackgroundPanel({
           </svg>
         </button>
       </div>
-      {error !== null && (
-        <p className="background-panel__error" role="alert">
-          {error}
-        </p>
-      )}
-      {renderTab()}
+      <SideTab session={session} />
     </aside>
   );
 }

@@ -1,5 +1,5 @@
 //! Nebenfragen einer Session (ADR 044): der Zustand liegt nur im Speicher, die Kommandozeile läuft
-//! in einem eigenen Thread. Beginn und Ende jeder Frage melden `side://changed`.
+//! in einem eigenen Thread. Beginn, Ende und Entfernen jeder Frage melden `side://changed`.
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
@@ -172,12 +172,18 @@ impl SessionRegistry {
         Ok(state.side.clone())
     }
 
-    pub fn dismiss_side(&self, session_id: &str, id: &str) -> Result<(), CommandError> {
+    pub fn dismiss_side(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        id: &str,
+    ) -> Result<(), CommandError> {
         let session = self.get(session_id)?;
         session
             .lock()
             .side
             .retain(|entry: &SideQuestion| entry.id != id);
+        emit_side_changed(app, &session.id);
         Ok(())
     }
 }

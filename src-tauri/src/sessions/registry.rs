@@ -397,7 +397,7 @@ pub struct NewSession<'a> {
     pub mode: Mode,
 }
 
-/// Angaben für einen neuen Eintrag im Hintergrund-Panel (`start_background`).
+/// Angaben für einen neuen Eintrag des Session-Hintergrunds (`start_background`).
 struct NewBackground {
     id: String,
     tool_use_id: String,
@@ -2216,13 +2216,6 @@ impl SessionRegistry {
                 Ok(true)
             },
         )
-    }
-
-    /// Claudes Scratchpad-Ordner der Session; `None`, solange der Agent nie lief.
-    pub fn scratchpad_dir(&self, session_id: &str) -> Result<Option<PathBuf>, CommandError> {
-        let session = self.get(session_id)?;
-        let dir = session.lock().scratchpad_dir.clone();
-        Ok(dir.map(PathBuf::from))
     }
 
     /// Beendet den Agenten jeder Session, die seit mindestens `idle_ms` ruht (`completed`/`paused`),

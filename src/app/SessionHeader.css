@@ -218,10 +218,6 @@
     }
   }
 
-  &__background-dot {
-    color: var(--color-status-running);
-  }
-
   &__background-label {
     white-space: nowrap;
   }
