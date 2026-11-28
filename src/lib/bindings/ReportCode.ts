@@ -2,4 +2,12 @@
 import type { ReportNote } from "./ReportNote";
 import type { ReportRow } from "./ReportRow";
 
-export type ReportCode = { repositoryKey: string, path: string, added: number, removed: number, rows: Array<ReportRow>, notes: Array<ReportNote>, uncovered: Array<number>, };
+export type ReportCode = { repositoryKey: string, path: string, added: number, removed: number, rows: Array<ReportRow>, notes: Array<ReportNote>, uncovered: Array<number>, 
+/**
+ * Nach der gültigen Ordnung noch einmal geschrieben.
+ */
+fresh: boolean, 
+/**
+ * Größer 0: der Diff ist zu lang, `rows` ist leer.
+ */
+omittedRows: number, };

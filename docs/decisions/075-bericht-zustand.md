@@ -20,6 +20,9 @@ Station #14 hatte keinen Eintrag im Bericht. Haiku lief nicht, und die Seite zei
 - Die erste Fertigmeldung einer Station mit geschriebenen Dateien und ohne Bericht-Eintrag wird mit einem Hinweis abgelehnt, die zweite geht durch. Gemerkt wird das nur im Speicher; ein Lesefehler lehnt nie ab.
 - Repositorys außerhalb des Vorhabens findet der Bericht über `session_files` und liest sie aus Git; der Diff kommt nie aus Werkzeug-Eingaben.
 - Dateien ohne Erklärung bekommen je Repository einen Stopp aus dem Diff.
+- Aus einem Repository außerhalb zählt nur, was Stationen der Phase geschrieben haben, und ein Commit nur, wenn er im Zeitfenster einer Station eine ihrer Dateien dort ändert; solche Commits verschieben das Ende der Bereiche im Vorhaben nicht.
+- Ohne Ordnung entsteht der Weg ohne Modell aus den Werkzeug-Aufrufen der Spur: eine neue Etappe beginnt mit einem anderen Repository oder nach der Zeile, die `git commit` als Kopf druckt (`[Branch Hash]`); Befehle haben keinen Ort, die erste Befehls-Beschreibung ist der Text der Etappe.
+- Höchstens zwölf Etappen; die ältesten werden zu einer zusammengelegt.
 
 ## Konsequenzen
 

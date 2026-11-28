@@ -43,6 +43,69 @@ pub fn toplevel(dir: &Path) -> Result<PathBuf, CommandError> {
     Ok(native_path(&output))
 }
 
+/// Wurzelordner des Repositorys wie `toplevel` und der Ort von `dir` darin: relativ mit `/` am
+/// Ende, in der Wurzel leer. Führt `dir` über eine Verknüpfung ins Repository, gelten beide für
+/// den echten Ordner.
+pub fn place_in_repository(dir: &Path) -> Result<(PathBuf, String), CommandError> {
+    let output = run(
+        dir,
+        &args(&["rev-parse", "--show-toplevel", "--show-prefix"]),
+    )?;
+    let mut lines = output.lines();
+    let toplevel = lines
+        .next()
+        .ok_or_else(|| CommandError::Git("rev-parse ohne Wurzelordner".to_owned()))?;
+    let prefix = lines.next().unwrap_or_default();
+    Ok((native_path(toplevel), prefix.to_owned()))
+}
+
+/// Ein Commit samt den Dateien, die er ändert.
+pub struct ChangingCommit {
+    pub id: String,
+    /// Committer-Zeit in Sekunden seit 1970, wie `--since` und `--until` sie vergleichen.
+    pub committed_at: i64,
+    /// Relativ zum Repository, mit `/`; eine Umbenennung nennt beide Namen, ein Merge keine.
+    pub files: Vec<String>,
+}
+
+/// Die Commits ab `HEAD` aus dem Zeitfenster (Sekunden seit 1970), die jüngsten zuerst. Ohne
+/// Pfadfilter: mit Pfaden ohne Rücksicht auf Groß-/Kleinschreibung dauerte `git log` auf einem
+/// Cloud-Laufwerk ein Vielfaches, beim ersten Mal über eine Minute.
+pub fn commits_in_window(
+    repo: &Path,
+    since_seconds: i64,
+    until_seconds: Option<i64>,
+) -> Result<Vec<ChangingCommit>, CommandError> {
+    let since = format!("--since=@{since_seconds}");
+    let until = until_seconds.map(|seconds: i64| format!("--until=@{seconds}"));
+    // `%x01` beginnt jeden Commit; `-z` trennt die Namen und lässt sie unmaskiert.
+    let mut arguments: Vec<&str> = vec![
+        "log",
+        "-z",
+        "--name-only",
+        "--no-renames",
+        "--format=%x01%H %ct",
+        &since,
+    ];
+    arguments.extend(until.as_deref());
+    let output = run(repo, &args(&arguments))?;
+    Ok(output
+        .split('\u{1}')
+        .filter_map(|record: &str| {
+            let mut fields = record.split('\0');
+            let (id, committed_at) = fields.next()?.trim().split_once(' ')?;
+            Some(ChangingCommit {
+                id: id.to_owned(),
+                committed_at: committed_at.parse().ok()?,
+                files: fields
+                    .map(|field: &str| field.trim_start_matches('\n').to_owned())
+                    .filter(|file: &String| !file.is_empty())
+                    .collect(),
+            })
+        })
+        .collect())
+}
+
 pub fn head_commit(repo: &Path) -> Result<String, CommandError> {
     run(repo, &args(&["rev-parse", "--verify", "HEAD"]))
 }

@@ -7,7 +7,7 @@ Folgeplan zu „Review-Bericht abschaltbar“ (`docs/archive/2026-11/2026-11-27_
 | Phase | Titel | Rating | Modell | Status |
 |---|---|---|---|---|
 | 1 | Core: Ordnen sichtbar, jederzeit, abbrechbar; Fertigmeldung ohne Bericht | heikel | opusplan | complete |
-| 2 | Core: Repos außerhalb des Vorhabens, Stopps aus dem Diff, Weg aus dem Verlauf | heikel | opusplan | pending |
+| 2 | Core: Repos außerhalb des Vorhabens, Stopps aus dem Diff, Weg aus dem Verlauf | heikel | opusplan | complete |
 | 3 | Core: Haiku erklärt den Diff | standard | sonnet | pending |
 | 4 | Oberfläche: Zustandsleiste, Seite nach Vorschlag C | standard | sonnet | pending |
 | 5 | Kontrast im Theme, Plan fertig | mechanisch | sonnet | pending |
@@ -63,6 +63,8 @@ pub struct ReportChangedEvent {
     pub tidying_phase_ids: Vec<String>,  // Phasen der Umsetzung, die Haiku gerade ordnet (Phase 1)
 }
 ```
+
+`ReportCode.repository_key` eines Repositorys, das nicht aus den Changes kommt, ist `extern:<Pfad>` (Phase 2).
 
 ReportNote bekommt kein neues Feld: eine Notiz von Haiku hat `entry: None`, `kind: Why`, `label: "H"`, `by: "Haiku · aus dem Diff"` (Phase 3).
 

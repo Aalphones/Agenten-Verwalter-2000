@@ -8,10 +8,12 @@ pub mod assemble;
 pub mod checks;
 pub mod images;
 pub mod model;
+pub mod outside;
 pub mod range;
 pub mod raw;
 pub mod tidy;
 pub mod tools;
+pub mod way;
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -22,6 +24,7 @@ use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::agents::claude::print::{CANCELLED, HaikuRequest, ask_haiku, print_program};
+use crate::agents::event::ChatEntry;
 use crate::artifacts::server::ArtifactServer;
 use crate::changes::ChangesInput;
 use crate::changes::model::ChangesReach;
@@ -29,6 +32,7 @@ use crate::changes::sources::{self, Source};
 use crate::db::Database;
 use crate::db::report::{EntryRow, PhaseRow};
 use crate::db::session_files::SessionFileRow;
+use crate::db::tool_details::ToolSummary;
 use crate::error::CommandError;
 use crate::filesystem::workspace::data_dir;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
@@ -80,6 +84,9 @@ pub fn load(app: &AppHandle, implementation_id: &str) -> Result<ReportView, Comm
             .unwrap_or_default()
     };
     let mut context = context_of(&registry, &view, &image_url)?;
+    context.traces = unordered_traces(&view, &phases, &context.labels, |session_id: &str| {
+        registry.history_of(session_id)
+    })?;
     let runs = app.state::<TidyRuns>();
     context.tidying = view
         .phases
@@ -96,24 +103,92 @@ fn context_of<'a>(
     image_url: &'a (dyn Fn(&str, &str) -> String + Sync),
 ) -> Result<AssembleContext<'a>, CommandError> {
     let sessions = registry.report_sessions(view)?;
-    let (checkouts, touched) =
-        sessions
-            .changes
-            .map_or_else(Default::default, |input: ChangesInput| {
-                (
-                    range::checkouts(&sources::sources(&input)),
-                    input.own.touched,
-                )
-            });
-    Ok(AssembleContext {
-        checkouts,
+    let mut context = AssembleContext {
+        checkouts: Vec::new(),
         commits: sessions.commits,
-        touched,
+        touched: HashMap::new(),
+        written_as: HashMap::new(),
         labels: raw::session_labels(view, &sessions.numbers),
         files: sessions.files,
         tidying: HashMap::new(),
+        traces: HashMap::new(),
         image_url,
-    })
+    };
+    if let Some(input) = sessions.changes {
+        add_repositories(view, input, &mut context);
+    }
+    Ok(context)
+}
+
+/// Hängt die Repository-Einträge der Changes an `context` und dahinter die Repositorys außerhalb
+/// des Vorhabens, in die Stationen geschrieben haben. `context.commits` und `context.files` müssen
+/// schon stehen.
+pub fn add_repositories(
+    view: &ImplementationView,
+    input: ChangesInput,
+    context: &mut AssembleContext<'_>,
+) {
+    let found = sources::sources(&input);
+    let known_dirs: Vec<PathBuf> = found
+        .iter()
+        .map(|source: &Source| source.dir.clone())
+        .collect();
+    context.checkouts = range::checkouts(&found);
+    context.touched = input.own.touched;
+    outside::extend(view, &known_dirs, context);
+}
+
+/// Je Phase ohne gültige Ordnung der Verlauf ihrer Spur, für den Weg aus dem Verlauf.
+pub fn unordered_traces(
+    view: &ImplementationView,
+    rows: &[PhaseRow],
+    labels: &HashMap<String, String>,
+    mut history_of: impl FnMut(
+        &str,
+    )
+        -> Result<(Vec<ChatEntry>, HashMap<String, ToolSummary>), CommandError>,
+) -> Result<HashMap<String, Vec<StationTrace>>, CommandError> {
+    let is_ordered = |phase_id: &str| {
+        rows.iter()
+            .find(|row: &&PhaseRow| row.phase_id == phase_id)
+            .and_then(|row: &PhaseRow| row.tidy_json.as_deref())
+            .is_some_and(|json: &str| serde_json::from_str::<TidyAnswer>(json).is_ok())
+    };
+    view.phases
+        .iter()
+        .filter(|phase: &&PhaseView| !is_ordered(&phase.id))
+        .map(|phase: &PhaseView| {
+            let traces = traces_of(phase, labels, &mut history_of)?;
+            Ok((phase.id.clone(), traces))
+        })
+        .collect()
+}
+
+/// Der Verlauf der Stationen der Spur in ihrer Folge.
+fn traces_of(
+    phase: &PhaseView,
+    labels: &HashMap<String, String>,
+    mut history_of: impl FnMut(
+        &str,
+    )
+        -> Result<(Vec<ChatEntry>, HashMap<String, ToolSummary>), CommandError>,
+) -> Result<Vec<StationTrace>, CommandError> {
+    let mut traces: Vec<StationTrace> = Vec::new();
+    for station in tidy::spur_stations(phase) {
+        let Some(session_id) = &station.session_id else {
+            continue;
+        };
+        let (entries, details) = history_of(session_id)?;
+        traces.push(StationTrace {
+            label: labels
+                .get(session_id)
+                .cloned()
+                .unwrap_or_else(|| format!("#? {}", station.stage)),
+            entries,
+            details,
+        });
+    }
+    Ok(traces)
 }
 
 /// Die Adresse hinter einem frischen Handle des Datei-Servers (ADR 071); `None`, wenn es die Datei
@@ -594,30 +669,20 @@ fn haiku_input_of(
 ) -> Result<(String, bool), CommandError> {
     // Die Ansicht nennt nur die Nummern geladener Sessions; die übrigen stehen als „#?“ da.
     let labels = raw::session_labels(view, &Default::default());
-    let mut traces: Vec<StationTrace> = Vec::new();
-    let mut sources: Option<Vec<Source>> = None;
-    for station in tidy::spur_stations(phase) {
-        let Some(session_id) = &station.session_id else {
-            continue;
-        };
-        if sources.is_none() {
-            // Für eine archivierte Session gibt es keine Changes; dann hilft die nächste.
-            sources = registry
+    let traces = traces_of(phase, &labels, |session_id: &str| {
+        registry.history_of(session_id)
+    })?;
+    // Für eine archivierte Session gibt es keine Changes; dann hilft die nächste.
+    let found: Option<Vec<Source>> = tidy::spur_stations(phase)
+        .iter()
+        .filter_map(|station: &&StationView| station.session_id.as_ref())
+        .find_map(|session_id: &String| {
+            registry
                 .changes_input(session_id, ChangesReach::Project)
                 .ok()
-                .map(|input| sources::sources(&input));
-        }
-        let (history, details) = registry.history_of(session_id)?;
-        traces.push(StationTrace {
-            label: labels
-                .get(session_id)
-                .cloned()
-                .unwrap_or_else(|| format!("#? {}", station.stage)),
-            entries: history,
-            details,
+                .map(|input| sources::sources(&input))
         });
-    }
-    let spur = tidy::spur(&traces, &sources.unwrap_or_default());
+    let spur = tidy::spur(&traces, &found.unwrap_or_default());
     let input = tidy::haiku_input(
         &raw::raw_markdown(&phase.key, entries, &labels),
         to_order,

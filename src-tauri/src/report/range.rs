@@ -33,6 +33,13 @@ pub struct Checkout {
     pub group: String,
     pub dir: PathBuf,
     pub is_main: bool,
+    /// Das Repository ist nicht im Vorhaben eingetragen.
+    pub outside: bool,
+    /// Anzeigename des Repositorys, für alle seine Arbeitsbäume gleich.
+    pub label: String,
+    /// Kein Eintrag der Changes (`report::outside`): der Arbeitsbaum kann fremde Arbeit tragen,
+    /// im Bericht zählt daraus nur, was die Stationen der Phase geschrieben haben.
+    pub written_only: bool,
 }
 
 /// Die lesbaren Einträge aus `changes::sources`.
@@ -45,6 +52,9 @@ pub fn checkouts(sources: &[Source]) -> Vec<Checkout> {
             group: source.group.clone(),
             dir: source.dir.clone(),
             is_main: source.is_main,
+            outside: false,
+            label: source.group_name.clone(),
+            written_only: false,
         })
         .collect()
 }
@@ -138,6 +148,8 @@ pub struct PhaseSpan<'a> {
     pub is_latest: bool,
     /// Die Einträge, die Notizen der Phase nennen.
     pub preferred: HashSet<&'a str>,
+    /// Die von den Sessions der Phase geschriebenen Dateien, normalisiert wie `touched`.
+    pub written: HashSet<String>,
 }
 
 /// Eine Datei eines Bereichs mit ihren Zeilenzahlen.
@@ -163,6 +175,8 @@ pub struct RepoRange {
     /// In Commit-Reihenfolge, ungekürzt.
     pub commits: Vec<String>,
     pub files: Vec<FileStat>,
+    /// Wie `Checkout.written_only`.
+    pub written_only: bool,
 }
 
 impl RepoRange {
@@ -184,13 +198,26 @@ pub fn phase_ranges(
     if span.state == ReportPhaseState::NotStarted {
         return Vec::new();
     }
-    let has_commits = catalog.groups.values().any(|heads| {
-        span.commits
+    let has_commits_in = |group: &str| {
+        catalog.groups.get(group).is_some_and(|heads: &Heads| {
+            span.commits
+                .iter()
+                .any(|id: &String| heads.contains_key(id))
+        })
+    };
+    let ends_at_working_tree = |has_commits: bool| {
+        span.has_agents
+            && (span.state == ReportPhaseState::Running || (!has_commits && span.is_latest))
+    };
+    let has_commits = checkouts
+        .iter()
+        .any(|checkout: &Checkout| has_commits_in(&checkout.group));
+    // Commits außerhalb des Vorhabens ändern nichts daran, wo die Einträge der Changes enden.
+    let to_working_tree = ends_at_working_tree(
+        checkouts
             .iter()
-            .any(|id: &String| heads.contains_key(id))
-    });
-    let to_working_tree = span.has_agents
-        && (span.state == ReportPhaseState::Running || (!has_commits && span.is_latest));
+            .any(|checkout: &Checkout| !checkout.written_only && has_commits_in(&checkout.group)),
+    );
     if !to_working_tree && !has_commits {
         return Vec::new();
     }
@@ -211,7 +238,13 @@ pub fn phase_ranges(
                     !member.is_main,
                 )
             });
-            repository_ranges(&members, heads, span, to_working_tree, touched)
+            // Ein Repository, das nur über geschriebene Dateien dazukam, zählt für sich.
+            let to_tree = if members.iter().all(|member: &&Checkout| member.written_only) {
+                ends_at_working_tree(has_commits_in(&first.group))
+            } else {
+                to_working_tree
+            };
+            repository_ranges(&members, heads, span, to_tree, touched)
         })
         .collect()
 }
@@ -243,11 +276,11 @@ fn repository_ranges(
     let mut ranges: Vec<RepoRange> = Vec::new();
     for (member, own) in &assigned {
         if to_working_tree {
-            ranges.extend(range_of(member, heads, own.clone(), None, touched));
+            ranges.extend(range_of(member, heads, own.clone(), None, span, touched));
             continue;
         }
         for (tip, chain) in chains(&member.dir, own) {
-            ranges.extend(range_of(member, heads, chain, Some(tip), touched));
+            ranges.extend(range_of(member, heads, chain, Some(tip), span, touched));
         }
     }
     // Was in keinem Arbeitsbaum steht: auf einem anderen Branch zählt es mit. Sonst ersetzt
@@ -263,7 +296,7 @@ fn repository_ranges(
         on_a_ref
     };
     for (tip, chain) in chains(&main.dir, &rest) {
-        ranges.extend(range_of(main, heads, chain, Some(tip), touched));
+        ranges.extend(range_of(main, heads, chain, Some(tip), span, touched));
     }
     if to_working_tree {
         for member in members {
@@ -277,7 +310,7 @@ fn repository_ranges(
                 .started_at
                 .filter(|_: &f64| span.state == ReportPhaseState::Running);
             if let Some(start) = start_commit(&member.dir, started_at) {
-                ranges.extend(open_range(member, start, touched));
+                ranges.extend(open_range(member, start, span, touched));
             }
         }
     }
@@ -373,6 +406,7 @@ fn range_of(
     heads: &Heads,
     commits: Vec<String>,
     to: Option<String>,
+    span: &PhaseSpan<'_>,
     touched: &HashMap<String, f64>,
 ) -> Option<RepoRange> {
     let oldest = heads.get(commits.first()?)?;
@@ -383,7 +417,7 @@ fn range_of(
         .unwrap_or_else(|| EMPTY_TREE.to_owned());
     let mut range = empty_range(checkout, from, to);
     range.commits = commits;
-    range.files = read_stats(&range, touched);
+    range.files = read_stats(&range, span, touched);
     Some(range)
 }
 
@@ -391,10 +425,11 @@ fn range_of(
 fn open_range(
     checkout: &Checkout,
     from: String,
+    span: &PhaseSpan<'_>,
     touched: &HashMap<String, f64>,
 ) -> Option<RepoRange> {
     let mut range = empty_range(checkout, from, None);
-    range.files = read_stats(&range, touched);
+    range.files = read_stats(&range, span, touched);
     (!range.files.is_empty()).then_some(range)
 }
 
@@ -407,6 +442,7 @@ fn empty_range(checkout: &Checkout, from: String, to: Option<String>) -> RepoRan
         to,
         commits: Vec::new(),
         files: Vec::new(),
+        written_only: checkout.written_only,
     }
 }
 
@@ -421,10 +457,24 @@ fn start_commit(dir: &Path, started_at: Option<f64>) -> Option<String> {
         .or_else(|| git::head_commit(dir).ok())
 }
 
-/// Die Zahlen je Datei; kann Git den Bereich nicht lesen, hat er keine.
-fn read_stats(range: &RepoRange, touched: &HashMap<String, f64>) -> Vec<FileStat> {
+/// Die Zahlen je Datei; kann Git den Bereich nicht lesen, hat er keine. In einem Bereich
+/// `written_only` bleiben nur die Dateien der Phase.
+fn read_stats(
+    range: &RepoRange,
+    span: &PhaseSpan<'_>,
+    touched: &HashMap<String, f64>,
+) -> Vec<FileStat> {
     match numstat(range, touched) {
-        Ok(files) => files,
+        Ok(mut files) => {
+            if range.written_only {
+                files.retain(|file: &FileStat| {
+                    let full = range.folder.join(native_path(&file.path));
+                    span.written
+                        .contains(&normalize_path(&full.to_string_lossy()))
+                });
+            }
+            files
+        }
         Err(error) => {
             eprintln!(
                 "Bericht: Bereich in {} nicht gelesen: {error}",

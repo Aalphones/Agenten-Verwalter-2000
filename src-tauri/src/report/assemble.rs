@@ -3,23 +3,30 @@
 use std::collections::{HashMap, HashSet};
 use std::thread::{self, ScopedJoinHandle};
 
+use crate::changes::attribution::{NORMALIZED_SEPARATOR, normalize_path};
 use crate::changes::model::{DiffLine, DiffLineKind};
 use crate::changes::parse;
 use crate::db::report::{EntryRow, EntryTool, PhaseRow};
 use crate::db::session_files::SessionFileRow;
+use crate::filesystem::native_path;
 use crate::implementation::model::{ImplementationView, PhaseView, StationView};
 use crate::report::model::{
     CheckGap, CheckGapKind, ImageRow, PhaseChecks, ReportAcceptance, ReportBlock, ReportCode,
     ReportFigure, ReportFinding, ReportImage, ReportLead, ReportLocation, ReportNote,
-    ReportNoteKind, ReportPhase, ReportPhaseState, ReportReview, ReportRow, ReportRowKind,
-    ReportScreen, ReportShot, ReportStep, ReportStop, ReportView, ReportWayStep, ScreenRow,
-    ShotRow, StepRow,
+    ReportNoteKind, ReportPhase, ReportPhaseState, ReportRepository, ReportReview, ReportRow,
+    ReportRowKind, ReportScreen, ReportShot, ReportStep, ReportStop, ReportView, ReportWayStep,
+    ScreenRow, ShotRow, StepRow,
 };
 use crate::report::range::{self, Checkout, CommitCatalog, FileStat, PhaseSpan, RepoRange};
-use crate::report::tidy::{self, StopKind, TidyAnswer, TidyStop, TidyWay};
+use crate::report::tidy::{self, StationTrace, StopKind, TidyAnswer, TidyStop, TidyWay};
+use crate::report::way::{self, HistoryStep};
 
 /// So viele Zeilen Umgebung zeigt ein Code-Block vor und nach den Zeilen seiner Notizen.
 const BLOCK_CONTEXT: u32 = 3;
+/// Längere Blöcke eines Stopps aus dem Diff zeigen nur ihre Zeilenzahl.
+const DERIVED_MAX_ROWS: usize = 300;
+/// So viele Dateien liest ein Git-Aufruf; Windows begrenzt die Länge der Befehlszeile.
+const FILES_PER_LOAD: usize = 100;
 /// Bildschirme bis zu dieser Breite in Pixeln gelten als schmal.
 const NARROW_MAX_WIDTH: u32 = 600;
 const SHORT_COMMIT_CHARS: usize = 7;
@@ -28,8 +35,15 @@ const UNTITLED_STOP: &str = "Notiz";
 
 /// Was das Zusammensetzen neben den Zeilen der Datenbank braucht.
 pub struct AssembleContext<'a> {
-    /// Die Repository-Einträge der Changes (`range::checkouts`).
+    /// Die Repository-Einträge der Changes (`range::checkouts`), danach die Repositorys außerhalb
+    /// des Vorhabens (`outside::extend`).
     pub checkouts: Vec<Checkout>,
+    /// Normalisierter Pfad, wie eine Datei geschrieben wurde → der, unter dem Git sie führt; nur
+    /// wo sie sich unterscheiden (`outside::extend`).
+    pub written_as: HashMap<String, String>,
+    /// Phase → Verlauf ihrer Spur-Stationen, für den Weg aus dem Verlauf; nur Phasen ohne gültige
+    /// Ordnung.
+    pub traces: HashMap<String, Vec<StationTrace>>,
     /// Die Paare `(Session, Commit)` der Stationen.
     pub commits: Vec<(String, String)>,
     /// Die von den Sessions geschriebenen Dateien, wie `Ownership.touched`.
@@ -42,6 +56,54 @@ pub struct AssembleContext<'a> {
     pub tidying: HashMap<String, f64>,
     /// Die Adresse eines Bildes aus Phasen-ID und Dateiname.
     pub image_url: &'a (dyn Fn(&str, &str) -> String + Sync),
+}
+
+impl AssembleContext<'_> {
+    /// Der Vergleichsschlüssel eines Pfads, wie ein Werkzeug-Aufruf ihn nennt.
+    fn canonical(&self, path: &str) -> String {
+        let normalized = normalize_path(path);
+        self.written_as
+            .get(&normalized)
+            .cloned()
+            .unwrap_or(normalized)
+    }
+
+    /// Das Label des innersten Repositorys, in dem der Pfad liegt.
+    fn label_at(&self, path: &str) -> Option<String> {
+        let wanted = self.canonical(path);
+        self.checkouts
+            .iter()
+            .map(|checkout: &Checkout| (normalize_path(&checkout.dir.to_string_lossy()), checkout))
+            .filter(|(dir, _): &(String, &Checkout)| {
+                wanted.strip_prefix(dir.as_str()).is_some_and(|rest: &str| {
+                    rest.is_empty() || rest.starts_with(NORMALIZED_SEPARATOR)
+                })
+            })
+            .max_by_key(|(dir, _): &(String, &Checkout)| dir.len())
+            .map(|(_, checkout): (String, &Checkout)| checkout.label.clone())
+    }
+
+    fn checkout(&self, key: &str) -> Option<&Checkout> {
+        self.checkouts
+            .iter()
+            .find(|checkout: &&Checkout| checkout.key == key)
+    }
+
+    /// Die Vergleichsschlüssel, unter denen die Datei eines Code-Blocks geschrieben sein kann: je
+    /// Arbeitsbaum ihres Repositorys einer, denn der Bereich kann in einem anderen liegen als dem,
+    /// in dem geschrieben wurde.
+    fn file_keys(&self, repository_key: &str, path: &str) -> HashSet<String> {
+        let Some(own) = self.checkout(repository_key) else {
+            return HashSet::new();
+        };
+        self.checkouts
+            .iter()
+            .filter(|checkout: &&Checkout| checkout.group == own.group)
+            .map(|checkout: &Checkout| {
+                normalize_path(&checkout.dir.join(native_path(path)).to_string_lossy())
+            })
+            .collect()
+    }
 }
 
 /// Der Bericht der Umsetzung; die Phasen entstehen nebeneinander, jede in einem eigenen Thread.
@@ -227,6 +289,7 @@ fn empty_phase(phase: &PhaseView, ctx: &AssembleContext<'_>) -> ReportPhase {
         station_session_id: spur_stations
             .first()
             .and_then(|station: &&StationView| station.session_id.clone()),
+        repositories: Vec::new(),
     }
 }
 
@@ -290,7 +353,11 @@ fn phase_of(
         loaded: HashMap::new(),
     };
     files.preload(entries);
-    let writer = Writer { phase, ctx };
+    let writer = Writer {
+        phase,
+        ctx,
+        tidied_at: report.tidied_at,
+    };
     let answer: Option<TidyAnswer> = row
         .and_then(|row: &PhaseRow| row.tidy_json.as_deref())
         .and_then(|json: &str| serde_json::from_str(json).ok());
@@ -306,11 +373,30 @@ fn phase_of(
     let mut stops = stops_of_phase(&plans, &writer, &mut files);
     report.review = review_of_phase(&writer, entries, &mut stops, &mut files);
     label_notes(&mut stops);
+    // Auch hinter den Stopps, die die Ordnung nennt und die entfallen sind: `way[].stop` darf auf
+    // keinen Stopp aus dem Diff zeigen.
+    let next_index = stops
+        .iter()
+        .map(|stop: &ReportStop| stop.index.saturating_add(1))
+        .max()
+        .unwrap_or_default()
+        .max(
+            answer
+                .as_ref()
+                .map_or(0, |answer: &TidyAnswer| count(answer.stops.len())),
+        );
+    let derived = derived_stops(&writer, &stops, next_index, &mut files);
+    stops.extend(derived);
+    report.repositories = repositories_of(ranges, &stops, ctx);
 
     if let Some(answer) = &answer {
         report.ordered = true;
         report.result = Some(answer.result.clone());
         report.way = way_of(answer, &stops);
+    } else if let Some(traces) = ctx.traces.get(&phase.id) {
+        let is_running = report.state == ReportPhaseState::Running;
+        let steps = way::history_way(traces, &|path: &str| ctx.label_at(path), is_running);
+        report.way = linked_way(steps, &stops, ctx);
     }
     report.stops = stops;
     report.screens = screens_of(entries, &writer);
@@ -334,6 +420,12 @@ fn span_of<'a>(
 ) -> PhaseSpan<'a> {
     let sessions = sessions_of(phase);
     PhaseSpan {
+        written: ctx
+            .files
+            .iter()
+            .filter(|(session, _, _): &&SessionFileRow| sessions.contains(session.as_str()))
+            .map(|(_, path, _): &SessionFileRow| normalize_path(path))
+            .collect(),
         commits: ctx
             .commits
             .iter()
@@ -358,24 +450,224 @@ fn span_of<'a>(
     }
 }
 
-/// Dateien, Zeilenzahlen und Kurz-Hashes über alle Bereiche; eine Datei in zwei Bereichen desselben
-/// Repositorys zählt einmal.
-fn count_changes(report: &mut ReportPhase, ranges: &[RepoRange]) {
+/// Was mehrere Bereiche zusammen geändert haben.
+#[derive(Default)]
+struct Tally {
+    files: u32,
+    added: u32,
+    removed: u32,
+    /// Kurz-Hashes.
+    commits: Vec<String>,
+}
+
+/// Eine Datei in zwei Bereichen desselben Repositorys zählt einmal.
+fn tally<'a>(ranges: impl IntoIterator<Item = &'a RepoRange>) -> Tally {
+    let mut sum = Tally::default();
     let mut paths: HashSet<(&str, &str)> = HashSet::new();
     for range in ranges {
         for file in &range.files {
             paths.insert((range.group.as_str(), file.path.as_str()));
-            report.added = report.added.saturating_add(file.added);
-            report.removed = report.removed.saturating_add(file.removed);
+            sum.added = sum.added.saturating_add(file.added);
+            sum.removed = sum.removed.saturating_add(file.removed);
         }
         for commit in &range.commits {
             let short: String = commit.chars().take(SHORT_COMMIT_CHARS).collect();
-            if !report.commits.contains(&short) {
-                report.commits.push(short);
+            if !sum.commits.contains(&short) {
+                sum.commits.push(short);
             }
         }
     }
-    report.files = count(paths.len());
+    sum.files = count(paths.len());
+    sum
+}
+
+/// Dateien, Zeilenzahlen und Kurz-Hashes über alle Bereiche.
+fn count_changes(report: &mut ReportPhase, ranges: &[RepoRange]) {
+    let sum = tally(ranges);
+    report.files = sum.files;
+    report.added = sum.added;
+    report.removed = sum.removed;
+    report.commits = sum.commits;
+}
+
+/// Je Repository mit Änderungen eine Zeile: zuerst die mit Stopps aus Einträgen in deren Folge,
+/// dann die übrigen in Reihenfolge der Checkouts, wie ihre Stopps aus dem Diff.
+fn repositories_of(
+    ranges: &[RepoRange],
+    stops: &[ReportStop],
+    ctx: &AssembleContext<'_>,
+) -> Vec<ReportRepository> {
+    let explained = stops
+        .iter()
+        .filter(|stop: &&ReportStop| !stop.derived)
+        .flat_map(code_blocks)
+        .filter_map(|code: &ReportCode| ctx.checkout(&code.repository_key));
+    let mut seen: HashSet<&str> = HashSet::new();
+    explained
+        .chain(&ctx.checkouts)
+        .filter(|checkout: &&Checkout| seen.insert(checkout.group.as_str()))
+        .filter_map(|checkout: &Checkout| {
+            let sum = tally(
+                ranges
+                    .iter()
+                    .filter(|range: &&RepoRange| range.group == checkout.group),
+            );
+            (sum.files > 0 || !sum.commits.is_empty()).then(|| ReportRepository {
+                label: checkout.label.clone(),
+                outside: checkout.outside,
+                files: sum.files,
+                added: sum.added,
+                removed: sum.removed,
+                commits: sum.commits,
+            })
+        })
+        .collect()
+}
+
+fn code_blocks(stop: &ReportStop) -> impl Iterator<Item = &ReportCode> {
+    stop.blocks
+        .iter()
+        .filter_map(|block: &ReportBlock| match block {
+            ReportBlock::Code(code) => Some(code),
+            ReportBlock::Figure(_) => None,
+        })
+}
+
+/// Jede geänderte Datei, die kein Stopp zeigt, in einem Stopp je Repository (ADR 075). Eine neue
+/// Datei ohne lesbaren Text fehlt: es gäbe nichts zu zeigen.
+fn derived_stops(
+    writer: &Writer<'_>,
+    stops: &[ReportStop],
+    first_index: u32,
+    files: &mut Files<'_>,
+) -> Vec<ReportStop> {
+    let ctx = writer.ctx;
+    let group_of = |key: &str| {
+        ctx.checkout(key).map_or_else(
+            || key.to_owned(),
+            |checkout: &Checkout| checkout.group.clone(),
+        )
+    };
+    let mut shown: HashSet<(String, String)> = stops
+        .iter()
+        .flat_map(code_blocks)
+        .map(|code: &ReportCode| (group_of(&code.repository_key), code.path.clone()))
+        .collect();
+    // Je Repository seine Dateien, die Repositorys in Reihenfolge ihrer Bereiche.
+    let mut groups: Vec<(String, Vec<Target>)> = Vec::new();
+    for (index, range) in files.ranges.iter().enumerate() {
+        let targets: Vec<Target> = range
+            .files
+            .iter()
+            .filter(|file: &&FileStat| !(file.untracked && file.added == 0))
+            .filter(|file: &&FileStat| shown.insert((range.group.clone(), file.path.clone())))
+            .map(|file: &FileStat| Target {
+                key: range.repository_key.clone(),
+                path: file.path.clone(),
+                range: Some(index),
+            })
+            .collect();
+        if targets.is_empty() {
+            continue;
+        }
+        files.load(Some(index), &targets);
+        match groups
+            .iter_mut()
+            .find(|(group, _): &&mut (String, Vec<Target>)| *group == range.group)
+        {
+            Some((_, known)) => known.extend(targets),
+            None => groups.push((range.group.clone(), targets)),
+        }
+    }
+    groups
+        .into_iter()
+        .enumerate()
+        .map(
+            |(offset, (group, targets)): (usize, (String, Vec<Target>))| {
+                let checkout = ctx
+                    .checkouts
+                    .iter()
+                    .find(|checkout: &&Checkout| checkout.group == group);
+                ReportStop {
+                    index: first_index.saturating_add(count(offset)),
+                    title: checkout.map_or(group, |checkout: &Checkout| checkout.label.clone()),
+                    kind: StopKind::Flow.as_str().to_owned(),
+                    look: None,
+                    by: String::new(),
+                    lead: None,
+                    blocks: targets
+                        .iter()
+                        .map(|target: &Target| {
+                            ReportBlock::Code(derived_block(target, writer, files))
+                        })
+                        .collect(),
+                    derived: true,
+                    outside: checkout.is_some_and(|checkout: &Checkout| checkout.outside),
+                }
+            },
+        )
+        .collect()
+}
+
+/// Alle Abschnitte des Patchs; ein zu langer nennt nur seine Zeilenzahl.
+fn derived_block(target: &Target, writer: &Writer<'_>, files: &mut Files<'_>) -> ReportCode {
+    let mut code = code_block(target, &[], writer, files);
+    if code.rows.len() > DERIVED_MAX_ROWS {
+        code.omitted_rows = count(code.rows.len());
+        code.rows = Vec::new();
+    }
+    code
+}
+
+/// Ob eine Station der Phase die Datei nach der gültigen Ordnung geschrieben hat.
+fn is_fresh(
+    ctx: &AssembleContext<'_>,
+    phase: &PhaseView,
+    target: &Target,
+    tidied_at: Option<f64>,
+) -> bool {
+    let Some(tidied_at) = tidied_at else {
+        return false;
+    };
+    let sessions = sessions_of(phase);
+    let keys = ctx.file_keys(&target.key, &target.path);
+    ctx.files
+        .iter()
+        .any(|(session, path, touched_at): &SessionFileRow| {
+            *touched_at > tidied_at
+                && sessions.contains(session.as_str())
+                && keys.contains(&normalize_path(path))
+        })
+}
+
+/// Hängt an jede Etappe den ersten Stopp, der ihre erste geschriebene Datei zeigt.
+fn linked_way(
+    steps: Vec<HistoryStep>,
+    stops: &[ReportStop],
+    ctx: &AssembleContext<'_>,
+) -> Vec<ReportWayStep> {
+    let shown: Vec<(u32, HashSet<String>)> = stops
+        .iter()
+        .flat_map(|stop: &ReportStop| {
+            code_blocks(stop).map(|code: &ReportCode| {
+                (stop.index, ctx.file_keys(&code.repository_key, &code.path))
+            })
+        })
+        .collect();
+    steps
+        .into_iter()
+        .map(|history: HistoryStep| {
+            let mut step = history.step;
+            step.stop = history.first_written.and_then(|path: String| {
+                let wanted = ctx.canonical(&path);
+                shown
+                    .iter()
+                    .find(|(_, keys): &&(u32, HashSet<String>)| keys.contains(&wanted))
+                    .map(|(index, _): &(u32, HashSet<String>)| *index)
+            });
+            step
+        })
+        .collect()
 }
 
 fn count(length: usize) -> u32 {
@@ -463,17 +755,21 @@ impl Files<'_> {
             }
         }
         for (range, targets) in by_range {
-            let range = range.and_then(|index: usize| self.ranges.get(index));
-            self.loaded
-                .extend(load_files(range, self.checkouts, &targets));
+            self.load(range, &targets);
+        }
+    }
+
+    /// Liest Dateien desselben Bereichs zusammen.
+    fn load(&mut self, range: Option<usize>, targets: &[Target]) {
+        let range = range.and_then(|index: usize| self.ranges.get(index));
+        for chunk in targets.chunks(FILES_PER_LOAD) {
+            self.loaded.extend(load_files(range, self.checkouts, chunk));
         }
     }
 
     fn read(&mut self, target: &Target) -> &FileData {
         if !self.loaded.contains_key(&target.file()) {
-            let range = target.range.and_then(|index: usize| self.ranges.get(index));
-            let read = load_files(range, self.checkouts, std::slice::from_ref(target));
-            self.loaded.extend(read);
+            self.load(target.range, std::slice::from_ref(target));
         }
         self.loaded.entry(target.file()).or_default()
     }
@@ -819,6 +1115,8 @@ fn raw_title(entries: &[&EntryRow]) -> String {
 struct Writer<'a> {
     phase: &'a PhaseView,
     ctx: &'a AssembleContext<'a>,
+    /// Der Stand der gültigen Ordnung.
+    tidied_at: Option<f64>,
 }
 
 impl Writer<'_> {
@@ -938,23 +1236,32 @@ fn stop_of(plan: &StopPlan<'_>, writer: &Writer<'_>, files: &mut Files<'_>) -> R
             }),
         }
     }
-    ReportStop {
+    let blocks: Vec<ReportBlock> = blocks
+        .into_iter()
+        .map(|block: BlockPlan<'_>| match block {
+            BlockPlan::Figure(entry) => ReportBlock::Figure(writer.figure(entry)),
+            BlockPlan::Code { target, notes } => {
+                ReportBlock::Code(code_block(&target, &notes, writer, files))
+            }
+        })
+        .collect();
+    let mut stop = ReportStop {
         index: plan.index,
         title: plan.title.clone(),
         kind: plan.kind.as_str().to_owned(),
         look: plan.look.clone(),
         by: first.map_or_else(String::new, |entry: &EntryRow| writer.author(entry)),
         lead,
-        blocks: blocks
-            .into_iter()
-            .map(|block: BlockPlan<'_>| match block {
-                BlockPlan::Figure(entry) => ReportBlock::Figure(writer.figure(entry)),
-                BlockPlan::Code { target, notes } => {
-                    ReportBlock::Code(code_block(&target, &notes, writer, files))
-                }
-            })
-            .collect(),
-    }
+        blocks,
+        derived: false,
+        outside: false,
+    };
+    let outside = code_blocks(&stop)
+        .next()
+        .and_then(|code: &ReportCode| writer.ctx.checkout(&code.repository_key))
+        .is_some_and(|checkout: &Checkout| checkout.outside);
+    stop.outside = outside;
+    stop
 }
 
 fn code_block(
@@ -982,6 +1289,8 @@ fn code_block(
         rows: block_rows(file, &places),
         notes,
         uncovered: Vec::new(),
+        fresh: is_fresh(writer.ctx, writer.phase, target, writer.tidied_at),
+        omitted_rows: 0,
     }
 }
 
@@ -1226,6 +1535,13 @@ fn way_of(answer: &TidyAnswer, stops: &[ReportStop]) -> Vec<ReportWayStep> {
             stop: step
                 .stop
                 .filter(|index: &u32| stops.iter().any(|stop: &ReportStop| stop.index == *index)),
+            at: None,
+            location: None,
+            commit: None,
+            calls: Vec::new(),
+            reads: 0,
+            writes: 0,
+            running: false,
         })
         .collect()
 }

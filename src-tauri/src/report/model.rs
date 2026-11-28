@@ -68,6 +68,22 @@ pub struct ReportPhase {
     pub station_result: Option<String>,
     /// Die Session der ersten Spur-Station: Ziel von „Station nachfragen“.
     pub station_session_id: Option<String>,
+    /// Die Repositorys mit Änderungen der Phase, Reihenfolge wie die Stopps.
+    pub repositories: Vec<ReportRepository>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportRepository {
+    /// Ordnername des Repositorys bzw. Name seines Eintrags.
+    pub label: String,
+    /// Nicht im Vorhaben eingetragen.
+    pub outside: bool,
+    pub files: u32,
+    pub added: u32,
+    pub removed: u32,
+    /// Kurz-Hashes.
+    pub commits: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -118,6 +134,22 @@ pub struct ReportWayStep {
     pub files: Vec<String>,
     pub detour: bool,
     pub stop: Option<u32>,
+    /// Erster Aufruf der Etappe, ms seit der Epoche. Wie die folgenden Felder nur im Weg aus dem
+    /// Verlauf (`report::way`) gefüllt.
+    #[ts(type = "number | null")]
+    pub at: Option<f64>,
+    /// `ReportRepository.label` des Repositorys der Etappe.
+    pub location: Option<String>,
+    /// Kurz-Hash, mit dem die Etappe endet.
+    pub commit: Option<String>,
+    /// Die Beschreibungen der Befehls-Aufrufe.
+    pub calls: Vec<String>,
+    /// Lese- und Such-Aufrufe.
+    pub reads: u32,
+    /// Schreib-Aufrufe.
+    pub writes: u32,
+    /// Letzte Etappe einer laufenden Phase.
+    pub running: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -157,6 +189,10 @@ pub struct ReportStop {
     pub by: String,
     pub lead: Option<ReportLead>,
     pub blocks: Vec<ReportBlock>,
+    /// Aus dem Diff gebaut, nicht aus Einträgen: die Dateien eines Repositorys ohne Erklärung.
+    pub derived: bool,
+    /// Das Repository des (ersten) Code-Blocks ist nicht im Vorhaben eingetragen.
+    pub outside: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -183,6 +219,10 @@ pub struct ReportCode {
     pub rows: Vec<ReportRow>,
     pub notes: Vec<ReportNote>,
     pub uncovered: Vec<u32>,
+    /// Nach der gültigen Ordnung noch einmal geschrieben.
+    pub fresh: bool,
+    /// Größer 0: der Diff ist zu lang, `rows` ist leer.
+    pub omitted_rows: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

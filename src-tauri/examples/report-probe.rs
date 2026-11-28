@@ -44,7 +44,9 @@ use verwalter_lib::report::model::{
     ReportScreen, ReportShot, ReportStop, ReportView,
 };
 use verwalter_lib::report::tidy::{self, StationTrace, TidyAnswer};
-use verwalter_lib::report::{NO_REPORT_HINT, anchor, is_unreported, range, raw};
+use verwalter_lib::report::{
+    NO_REPORT_HINT, add_repositories, anchor, is_unreported, raw, unordered_traces,
+};
 use verwalter_lib::settings::{self, model::Settings};
 use verwalter_lib::worktrees;
 
@@ -392,27 +394,35 @@ fn load_report(database: &Database, implementation_id: &str) -> Result<LoadedRep
             .with(|connection| project_input(connection, &rows, session_id))
             .ok()
     });
-    let (checkouts, touched) = input.map_or_else(Default::default, |input: ChangesInput| {
-        (
-            range::checkouts(&sources::sources(&input)),
-            input.own.touched,
-        )
-    });
-    let labels = raw::session_labels(&view, &numbers);
+    let mut context = AssembleContext {
+        checkouts: Vec::new(),
+        commits,
+        touched: HashMap::new(),
+        written_as: HashMap::new(),
+        labels: raw::session_labels(&view, &numbers),
+        files,
+        // Die Probe läuft ohne App: nichts wird gerade geordnet.
+        tidying: HashMap::new(),
+        traces: HashMap::new(),
+        image_url: &image_path,
+    };
+    if let Some(input) = input {
+        add_repositories(&view, input, &mut context);
+    }
+    context.traces = unordered_traces(&view, &phases, &context.labels, |session_id: &str| {
+        database.with(|connection| {
+            Ok((
+                chat_entries::load_all(connection, session_id)?,
+                tool_details::load_summaries(connection, session_id)?,
+            ))
+        })
+    })
+    .map_err(text_of)?;
     Ok(LoadedReport {
         view,
         entries,
         phases,
-        context: AssembleContext {
-            checkouts,
-            commits,
-            touched,
-            labels,
-            files,
-            // Die Probe läuft ohne App: nichts wird gerade geordnet.
-            tidying: HashMap::new(),
-            image_url: &image_path,
-        },
+        context,
     })
 }
 
@@ -611,8 +621,34 @@ fn print_phase(phase: &ReportPhase, lines: &mut Vec<String>) {
     if let Some(result) = &phase.result {
         lines.push(format!("Ergebnis: {result}"));
     }
+    for repository in &phase.repositories {
+        lines.push(format!(
+            "Repository {} · {} · {} Dateien +{}/−{} · Commits: {}",
+            repository.label,
+            if repository.outside {
+                "außen"
+            } else {
+                "im Vorhaben"
+            },
+            repository.files,
+            repository.added,
+            repository.removed,
+            repository.commits.join(" ")
+        ));
+    }
     for step in &phase.way {
-        lines.push(format!("Weg (Stopp {:?}): {}", step.stop, step.text));
+        lines.push(format!(
+            "Weg (Stopp {:?}): um {} · Ort {} · Commit {} · lesen {} / schreiben {} · läuft={} · {} · {}",
+            step.stop,
+            time_text(step.at),
+            step.location.as_deref().unwrap_or("–"),
+            step.commit.as_deref().unwrap_or("–"),
+            step.reads,
+            step.writes,
+            step.running,
+            step.text,
+            step.files.join(", ")
+        ));
     }
     for screen in &phase.screens {
         print_screen(screen, lines);
@@ -677,8 +713,8 @@ fn print_screen(screen: &ReportScreen, lines: &mut Vec<String>) {
 
 fn print_stop(stop: &ReportStop, lines: &mut Vec<String>) {
     lines.push(format!(
-        "Stopp {} „{}“ ({}) · {}",
-        stop.index, stop.title, stop.kind, stop.by
+        "Stopp {} „{}“ ({}) · abgeleitet={} außen={} · {}",
+        stop.index, stop.title, stop.kind, stop.derived, stop.outside, stop.by
     ));
     if let Some(lead) = &stop.lead {
         lines.push(format!("  Warum n{}: {}", lead.entry, lead.text));
@@ -701,14 +737,16 @@ fn print_code(code: &ReportCode, lines: &mut Vec<String>) {
             .count()
     };
     lines.push(format!(
-        "  Block {}:{} +{}/−{} · Zeilen: {} neu, {} unverändert, {} entfernt",
+        "  Block {}:{} +{}/−{} · Zeilen: {} neu, {} unverändert, {} entfernt, {} ausgelassen · frisch={}",
         code.repository_key,
         code.path,
         code.added,
         code.removed,
         count_of(ReportRowKind::Add),
         count_of(ReportRowKind::Context),
-        count_of(ReportRowKind::Removed)
+        count_of(ReportRowKind::Removed),
+        code.omitted_rows,
+        code.fresh
     ));
     for note in &code.notes {
         print_note(note, lines);

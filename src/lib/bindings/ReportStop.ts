@@ -2,4 +2,12 @@
 import type { ReportBlock } from "./ReportBlock";
 import type { ReportLead } from "./ReportLead";
 
-export type ReportStop = { index: number, title: string, kind: string, look: string | null, by: string, lead: ReportLead | null, blocks: Array<ReportBlock>, };
+export type ReportStop = { index: number, title: string, kind: string, look: string | null, by: string, lead: ReportLead | null, blocks: Array<ReportBlock>, 
+/**
+ * Aus dem Diff gebaut, nicht aus Einträgen: die Dateien eines Repositorys ohne Erklärung.
+ */
+derived: boolean, 
+/**
+ * Das Repository des (ersten) Code-Blocks ist nicht im Vorhaben eingetragen.
+ */
+outside: boolean, };
