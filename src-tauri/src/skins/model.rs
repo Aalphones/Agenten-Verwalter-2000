@@ -193,7 +193,7 @@ impl StyleColors {
             surface: "#ffffff".to_owned(),
             fg: "#3c3c3c".to_owned(),
             muted: "#6e6e6e".to_owned(),
-            accent: "#c4572f".to_owned(),
+            accent: "#a8461f".to_owned(),
             border: "#d9d9d9".to_owned(),
         }
     }

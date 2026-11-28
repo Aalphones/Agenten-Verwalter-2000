@@ -19,7 +19,7 @@ export const STANDARD_LIGHT: StyleColors = {
   surface: '#ffffff',
   fg: '#3c3c3c',
   muted: '#6e6e6e',
-  accent: '#c4572f',
+  accent: '#a8461f',
   border: '#d9d9d9',
 };
 

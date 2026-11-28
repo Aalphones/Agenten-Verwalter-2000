@@ -28,7 +28,6 @@
     cursor: default;
   }
 
-  /* Fläche in der Akzent-Textfarbe: der Akzent selbst trägt weiße Schrift nicht mit 4,5:1. */
   &--primary {
     border-color: var(--color-accent-text);
     background: var(--color-accent-text);

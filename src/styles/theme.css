@@ -35,7 +35,7 @@
   --color-violet-400: #a78bfa;
   --color-violet-600: #7c3aed;
   --color-amber-400: #f2b33d;
-  --color-amber-700: #a86a00;
+  --color-amber-700: #8a5700;
   --color-orange-300: #eea283;
   --color-orange-400: #e0825c;
   --color-orange-600: #c4572f;
@@ -121,7 +121,7 @@
   --color-fg-primary: var(--color-neutral-700);
   --color-fg-secondary: var(--color-neutral-600);
   --color-fg-muted: var(--color-neutral-500);
-  --color-accent: var(--color-orange-600);
+  --color-accent: var(--color-orange-700);
   --color-fg-on-accent: var(--color-neutral-0);
   --color-accent-subtle: color-mix(in srgb, var(--color-orange-600) 10%, transparent);
   --color-accent-text: var(--color-orange-700);
